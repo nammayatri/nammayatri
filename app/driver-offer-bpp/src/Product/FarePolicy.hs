@@ -33,13 +33,13 @@ updateFarePolicy admin fpId req = withFlowHandlerAPI $ do
   let updatedFarePolicy =
         farePolicy
           { baseDistancePerKmFare = realToFrac req.baseDistancePerKmFare,
-            baseDistance = req.baseDistance,
+            baseDistanceMeters = req.baseDistance,
             extraKmFare = realToFrac req.extraKmFare,
-            deadKmFare = realToFrac req.deadKmFare,
-            driverExtraFeeList = map realToFrac req.driverExtraFeeList,
+            deadKmFare = req.deadKmFare,
+            driverExtraFeeList = req.driverExtraFeeList,
             nightShiftStart = req.nightShiftStart,
             nightShiftEnd = req.nightShiftEnd,
-            nightShiftRate = realToFrac <$> req.nightShiftRate
+            nightShiftRate = req.nightShiftRate
           } ::
           DFarePolicy.FarePolicy
   let Just orgId = admin.organizationId

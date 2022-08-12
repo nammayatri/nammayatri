@@ -3,7 +3,6 @@ module Product.FareCalculator.Calculator
     fareSumRounded,
     baseFareSumRounded,
     calculateFareParameters,
-    driverSelectedFareRounded,
   )
 where
 
@@ -19,22 +18,21 @@ import Data.Time
   )
 import Domain.Types.FareParams
 import Domain.Types.FarePolicy
-import Types.Money (RoundedMoney)
 import Utils.Common
 
 type TripStartTime = UTCTime
 
 type Distance = HighPrecMeters
 
-mkBreakupList :: (RoundedMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
+mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
   -- TODO: what should be here?
   let dayPartRate = calculateDayPartRate fareParams
-      fareForPickupFinalRounded = roundToIntegral $ fareParams.baseFare * dayPartRate
+      fareForPickupFinalRounded = roundToIntegral $ fromIntegral fareParams.baseFare * dayPartRate
       fareForPickupCaption = mconcat ["Base fare: ", show fareForPickupFinalRounded, " INR"]
       fareForPickupItem = mkBreakupItem fareForPickupCaption (mkPrice fareForPickupFinalRounded)
 
-      mbExtraKmFareRounded = fareParams.extraKmFare <&> roundToIntegral . (* dayPartRate)
+      mbExtraKmFareRounded = fareParams.extraKmFare <&> roundToIntegral . (* dayPartRate) . fromIntegral
       extraDistanceFareCaption extraKmFare = mconcat ["Extra distance fare: ", show extraKmFare, " INR"]
       extraDistanceFareItem =
         mbExtraKmFareRounded <&> \extraKmFareRounded ->
@@ -43,7 +41,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       mkSelectedFareCaption selFare = mconcat ["Fare selected by driver: ", show selFare, " INR"]
       mbSelectedFareItem =
         fareParams.driverSelectedFare <&> \selFare ->
-          mkBreakupItem (mkSelectedFareCaption $ roundToIntegral @_ @Int selFare) (mkPrice $ roundToIntegral selFare)
+          mkBreakupItem (mkSelectedFareCaption selFare) (mkPrice selFare)
 
       totalFareFinalRounded = fareSumRounded fareParams
       totalFareCaption = mconcat ["Total fare: ", show totalFareFinalRounded, " INR"]
@@ -51,34 +49,22 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
   catMaybes [Just totalFareItem, Just fareForPickupItem, extraDistanceFareItem, mbSelectedFareItem]
 
 -- TODO: make some tests for it
-fareSum :: FareParameters -> Amount
-fareSum fareParams = do
-  baseFareSum fareParams + fromMaybe 0 fareParams.driverSelectedFare
+fareSumRounded :: FareParameters -> Money
+fareSumRounded fareParams = do
+  baseFareSumRounded fareParams + fromMaybe 0 fareParams.driverSelectedFare
 
-fareSumRounded :: FareParameters -> RoundedMoney
-fareSumRounded = roundToIntegral . fareSum
-
-baseFareSum :: FareParameters -> Amount
-baseFareSum fareParams = do
+baseFareSumRounded :: FareParameters -> Money
+baseFareSumRounded fareParams = roundToIntegral $ do
   let dayPartCoef = calculateDayPartRate fareParams
   dayPartCoef
     * sum
       ( catMaybes
-          [ Just fareParams.baseFare,
-            fareParams.extraKmFare
+          [ Just $ fromIntegral fareParams.baseFare,
+            fmap fromIntegral fareParams.extraKmFare
           ]
       )
 
-baseFareSumRounded :: FareParameters -> RoundedMoney
-baseFareSumRounded = roundToIntegral . baseFareSum
-
-getDriverSelectedFare :: FareParameters -> Amount
-getDriverSelectedFare fp = fromMaybe 0 fp.driverSelectedFare
-
-driverSelectedFareRounded :: FareParameters -> Amount
-driverSelectedFareRounded = roundToUnits . getDriverSelectedFare
-
-calculateDayPartRate :: FareParameters -> Amount
+calculateDayPartRate :: FareParameters -> Double
 calculateDayPartRate fareParams = do
   let defaultDayPartRate = 1
   if fareParams.nightCoefIncluded
@@ -89,14 +75,14 @@ calculateFareParameters ::
   FarePolicy ->
   Distance ->
   TripStartTime ->
-  Maybe Amount ->
+  Maybe Money ->
   FareParameters
 calculateFareParameters fp distance startTime mbExtraFare = do
-  let baseDistanceFare = fp.baseDistancePerKmFare
+  let baseDistanceFare = roundToIntegral $ fp.baseDistancePerKmFare * distanceToAmountKm fp.baseDistanceMeters
       mbExtraDistance =
-        distance - fp.baseDistance
+        distance - fp.baseDistanceMeters
           & (\dist -> if dist > 0 then Just dist else Nothing)
-      mbExtraKmFare = mbExtraDistance <&> \ex -> distanceToAmountKm ex * fp.extraKmFare
+      mbExtraKmFare = mbExtraDistance <&> \ex -> roundToIntegral $ distanceToAmountKm ex * fp.extraKmFare
       nightCoefIncluded = defineWhetherNightCoefIncluded fp startTime
 
   FareParameters

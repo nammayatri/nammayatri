@@ -31,7 +31,7 @@ instance TType FullBookingT Domain.Booking where
         pure $
           Domain.OneWayDetails
             Domain.OneWayBookingDetails
-              { estimatedDistance = HighPrecMeters estimatedDistance',
+              { estimatedDistance = roundToIntegral estimatedDistance',
                 toLocation
               }
       RentalDetailsT rentalBookingT -> do
@@ -43,6 +43,9 @@ instance TType FullBookingT Domain.Booking where
           riderId = fromKey <$> riderId,
           providerId = fromKey providerId,
           bapUri = pUrl,
+          estimatedFare = roundToIntegral estimatedFare,
+          estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          discount = roundToIntegral <$> discount,
           ..
         }
   toTType Domain.Booking {..} = do
@@ -58,9 +61,12 @@ instance TType FullBookingT Domain.Booking where
             { id = getId id,
               riderId = toKey <$> riderId,
               fromLocationId = toKey fromLocation.id,
-              estimatedDistance = getHighPrecMeters <$> estimatedDistance,
+              estimatedDistance = fromIntegral <$> estimatedDistance,
               providerId = toKey providerId,
               bapUri = showBaseUrl bapUri,
+              estimatedFare = fromIntegral estimatedFare,
+              estimatedTotalFare = fromIntegral estimatedTotalFare,
+              discount = fromIntegral <$> discount,
               ..
             }
     let fromLocT = toTType fromLocation

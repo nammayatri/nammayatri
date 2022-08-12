@@ -18,7 +18,7 @@ data Status = PreRide | ActualRide
 
 data GetLocationRes = GetLocationRes
   { currPoint :: LatLong,
-    totalDistance :: HighPrecMeters,
+    totalDistance :: Meters,
     status :: Status,
     lastUpdate :: UTCTime
   }
@@ -42,6 +42,6 @@ getLocation rideId = do
     DrLoc.findById driver.id
       >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
-  let totalDistance = ride.traveledDistance
+  let totalDistance = roundToIntegral ride.traveledDistance.getHighPrecMeters
       currPoint = GoogleMaps.getCoordinates currLocation
   return $ GetLocationRes {..}

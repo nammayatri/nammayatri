@@ -22,7 +22,6 @@ import SharedLogic.DriverPool
 import qualified Storage.Queries.BusinessEvent as QBE
 import Storage.Queries.Person (DriverPoolResult)
 import qualified Storage.Queries.SearchRequest as QSReq
-import Types.Money
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
@@ -44,7 +43,7 @@ data DSearchRes = DSearchRes
 data EstimateItem = EstimateItem
   { vehicleVariant :: Variant.Variant,
     distanceToPickup :: Meters,
-    baseFare :: RoundedMoney
+    baseFare :: Money
   }
 
 data TransporterInfo = TransporterInfo

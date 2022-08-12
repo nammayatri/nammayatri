@@ -20,6 +20,7 @@ module Types.API.Driver
 where
 
 import Beckn.External.FCM.Types (FCMRecipientToken)
+import Beckn.Types.Common (Money)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import Beckn.Utils.GenericPretty (PrettyShow)
@@ -155,7 +156,7 @@ newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
   deriving anyclass (ToJSON, FromJSON, ToSchema, PrettyShow)
 
 data DriverOfferReq = DriverOfferReq
-  { offeredFare :: Maybe Double,
+  { offeredFare :: Maybe Money,
     searchRequestId :: Id DSReq.SearchRequest
   }
   deriving stock (Generic)

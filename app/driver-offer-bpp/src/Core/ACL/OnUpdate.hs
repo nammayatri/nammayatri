@@ -20,7 +20,6 @@ import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import Product.FareCalculator.Calculator
 import Types.Error
-import Types.Money (RoundedMoney)
 import Utils.Common
 
 data OnUpdateBuildReq
@@ -34,7 +33,7 @@ data OnUpdateBuildReq
       }
   | RideCompletedBuildReq
       { ride :: DRide.Ride,
-        finalFare :: RoundedMoney,
+        finalFare :: Money,
         fareParams :: Fare.FareParameters
       }
   | BookingCancelledBuildReq
@@ -105,7 +104,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             value = fare,
             computed_value = fare
           }
-      breakup = mkBreakupList (OnUpdate.BreakupPrice currency . realToFrac) OnUpdate.BreakupItem req.fareParams
+      breakup = mkBreakupList (OnUpdate.BreakupPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideCompleted

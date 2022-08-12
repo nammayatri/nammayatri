@@ -46,13 +46,13 @@ instance TType DiscountT Domain.Discount where
       Domain.Discount
         { id = Id id,
           organizationId = fromKey organizationId,
-          discount = toRational discount,
+          discount = roundToIntegral discount,
           ..
         }
   toTType Domain.Discount {..} =
     DiscountT
       { id = getId id,
         organizationId = toKey organizationId,
-        discount = fromRational discount,
+        discount = fromIntegral discount,
         ..
       }

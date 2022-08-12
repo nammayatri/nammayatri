@@ -10,6 +10,7 @@ module Storage.Tabular.SearchRequestForDriver where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common (Meters (..))
+import qualified Beckn.Types.Common as Common
 import Beckn.Types.Id
 import Beckn.Types.Time
 import qualified Domain.Types.SearchRequestForDriver as Domain
@@ -17,7 +18,6 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
-import Types.Money (RoundedMoney)
 
 mkPersist
   defaultSqlSettings
@@ -30,7 +30,7 @@ mkPersist
       durationToPickup Seconds
       vehicleVariant Variant.Variant
       distance Double
-      baseFare RoundedMoney
+      baseFare Common.Money
       searchRequestValidTill UTCTime
       driverId PersonTId
       createdAt UTCTime

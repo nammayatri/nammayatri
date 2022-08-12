@@ -154,5 +154,5 @@ shouldReturnErrorCode description code eithRes =
     Left _ -> expectationFailure $ cs $ description <> ": unexpected error"
     Right _ -> expectationFailure $ cs $ description <> ": unexpected success"
 
-equalsEps :: Double -> Double -> Double -> Bool
+equalsEps :: (Ord a, Num a) => a -> a -> a -> Bool
 equalsEps eps x y = abs (x - y) < eps

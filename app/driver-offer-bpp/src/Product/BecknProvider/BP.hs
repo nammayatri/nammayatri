@@ -20,7 +20,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Metrics (CoreMetrics)
 import Types.Error
-import Types.Money (RoundedMoney)
 import Utils.Common
 
 sendRideAssignedUpdateToBAP ::
@@ -68,7 +67,7 @@ sendRideCompletedUpdateToBAP ::
   SRB.Booking ->
   SRide.Ride ->
   Fare.FareParameters ->
-  RoundedMoney ->
+  Money ->
   m ()
 sendRideCompletedUpdateToBAP booking ride fareParams finalFare = do
   transporter <-

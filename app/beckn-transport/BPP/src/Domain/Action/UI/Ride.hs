@@ -6,7 +6,6 @@ module Domain.Action.UI.Ride
 where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
@@ -25,18 +24,18 @@ data DriverRideRes = DriverRideRes
     status :: SRide.RideStatus,
     fromLocation :: DBLoc.BookingLocationAPIEntity,
     toLocation :: Maybe DBLoc.BookingLocationAPIEntity,
-    discount :: Maybe Amount,
+    discount :: Maybe Money,
     driverName :: Text,
     driverNumber :: Maybe Text,
     vehicleVariant :: Variant,
     vehicleModel :: Text,
     vehicleColor :: Text,
     vehicleNumber :: Text,
-    estimatedFare :: Amount,
-    estimatedTotalFare :: Amount,
-    computedFare :: Maybe Amount,
-    computedTotalFare :: Maybe Amount,
-    actualRideDistance :: HighPrecMeters,
+    estimatedFare :: Money,
+    estimatedTotalFare :: Money,
+    computedFare :: Maybe Money,
+    computedTotalFare :: Maybe Money,
+    actualRideDistance :: Meters,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     tripStartTime :: Maybe UTCTime,
@@ -87,7 +86,7 @@ buildDriverRideRes (ride, booking) = do
         vehicleModel = vehicle.model,
         computedFare = ride.fare,
         computedTotalFare = ride.totalFare,
-        actualRideDistance = ride.traveledDistance,
+        actualRideDistance = roundToIntegral ride.traveledDistance.getHighPrecMeters,
         createdAt = ride.createdAt,
         updatedAt = ride.updatedAt,
         tripStartTime = ride.tripStartTime,

@@ -9,7 +9,6 @@ module Storage.Tabular.DiscountTransaction where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
 import Beckn.Types.Id
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.DiscountTransaction as Domain
@@ -22,7 +21,7 @@ mkPersist
     DiscountTransactionT sql=discount_transaction
       bookingId BookingTId sql=booking_id
       organizationId OrganizationTId
-      discount Amount
+      discount Double
       createdAt UTCTime
       Primary bookingId
       deriving Generic
@@ -39,11 +38,13 @@ instance TType DiscountTransactionT Domain.DiscountTransaction where
       Domain.DiscountTransaction
         { bookingId = fromKey bookingId,
           organizationId = fromKey organizationId,
+          discount = roundToIntegral discount,
           ..
         }
   toTType Domain.DiscountTransaction {..} =
     DiscountTransactionT
       { bookingId = toKey bookingId,
         organizationId = toKey organizationId,
+        discount = fromIntegral discount,
         ..
       }

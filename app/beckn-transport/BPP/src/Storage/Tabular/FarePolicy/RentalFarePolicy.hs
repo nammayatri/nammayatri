@@ -42,13 +42,15 @@ instance TEntityKey RentalFarePolicyT where
 
 instance TType RentalFarePolicyT Domain.RentalFarePolicy where
   fromTType RentalFarePolicyT {..} = do
-    let descriptions = Domain.mkDescriptions extraKmFare extraMinuteFare driverAllowanceForDay
+    let descriptions = Domain.mkDescriptions extraKmFare extraMinuteFare (roundToIntegral <$> driverAllowanceForDay)
     return $
       Domain.RentalFarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
           baseDistance = Kilometers baseDistance,
           baseDuration = Hours baseDuration,
+          baseFare = roundToIntegral baseFare,
+          driverAllowanceForDay = roundToIntegral <$> driverAllowanceForDay,
           ..
         }
   toTType Domain.RentalFarePolicy {..} =
@@ -58,5 +60,7 @@ instance TType RentalFarePolicyT Domain.RentalFarePolicy where
         deleted = False,
         baseDistance = getKilometers baseDistance,
         baseDuration = getHours baseDuration,
+        baseFare = fromIntegral baseFare,
+        driverAllowanceForDay = fromIntegral <$> driverAllowanceForDay,
         ..
       }

@@ -1,14 +1,14 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module SharedLogic.FareCalculator.RentalFareCalculator.Calculator
-  ( RentalFareParameters,
+  ( RentalFareParameters (..),
     calculateRentalFareParameters,
     rentalFareSum,
     rentalFareSumWithDiscount,
   )
 where
 
-import Beckn.Prelude (roundToUnits)
+import Beckn.Prelude
 import Beckn.Types.Amount (Amount (..))
 import Beckn.Types.Common
 import Beckn.Utils.Common
@@ -21,35 +21,34 @@ import Data.Time
   )
 import Domain.Types.FarePolicy.RentalFarePolicy (RentalFarePolicy)
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
-import EulerHS.Prelude
 
 type TripStartTime = UTCTime
 
 type TripStopTime = UTCTime
 
 data RentalFareParameters = RentalFareParameters
-  { baseFare :: Amount,
-    extraDistanceFare :: Amount,
-    extraTimeFare :: Amount,
-    nextDaysFare :: Maybe Amount, --use 0 instead of Nothing?
-    discount :: Maybe Amount,
+  { baseFare :: Money,
+    extraDistanceFare :: Money,
+    extraTimeFare :: Money,
+    nextDaysFare :: Maybe Money,
+    discount :: Maybe Money,
     farePolicy :: RentalFarePolicy
   }
   deriving stock (Show, Eq)
 
-rentalFareSum :: RentalFareParameters -> Amount
+rentalFareSum :: RentalFareParameters -> Money
 rentalFareSum RentalFareParameters {..} = do
   let nextDaysFare' = fromMaybe 0 nextDaysFare
-  roundToUnits $ baseFare + extraDistanceFare + extraTimeFare + nextDaysFare'
+  baseFare + extraDistanceFare + extraTimeFare + nextDaysFare'
 
-rentalFareSumWithDiscount :: RentalFareParameters -> Amount
+rentalFareSumWithDiscount :: RentalFareParameters -> Money
 rentalFareSumWithDiscount fp@RentalFareParameters {..} = do
   let fareSumm = rentalFareSum fp
-  roundToUnits $ max 0 $ maybe fareSumm (fareSumm -) discount
+  max 0 $ maybe fareSumm (fareSumm -) discount
 
 calculateRentalFareParameters ::
   DRentalFP.RentalFarePolicy ->
-  HighPrecMeters ->
+  Meters ->
   TripStartTime ->
   TripStopTime ->
   RentalFareParameters
@@ -63,10 +62,10 @@ calculateRentalFareParameters farePolicy distance startTime stopTime = do
 
 calculateExtraDistanceFare ::
   RentalFarePolicy ->
-  HighPrecMeters ->
-  Amount
-calculateExtraDistanceFare farePolicy distance = do
-  let distanceInKm = metersToKilometers $ highPrecMetersToMeters distance
+  Meters ->
+  Money
+calculateExtraDistanceFare farePolicy distance = roundToIntegral $ do
+  let distanceInKm = metersToKilometers distance
   let extraDistance = distanceInKm - farePolicy.baseDistance
   if extraDistance > 0
     then Amount (toRational extraDistance) * farePolicy.extraKmFare
@@ -76,8 +75,8 @@ calculateExtraTimeFare ::
   RentalFarePolicy ->
   TripStartTime ->
   TripStopTime ->
-  Amount
-calculateExtraTimeFare farePolicy tripStartTime tripStopTime = do
+  Money
+calculateExtraTimeFare farePolicy tripStartTime tripStopTime = roundToIntegral $ do
   let tripTime = diffUTCTime tripStopTime tripStartTime
       tripTimeInMinutes = nominalDiffTimeToSeconds tripTime `div` 60
       extraTime = toInteger tripTimeInMinutes - toInteger farePolicy.baseDuration * 60
@@ -89,15 +88,15 @@ calculateNextDaysFare ::
   RentalFarePolicy ->
   TripStartTime ->
   TripStopTime ->
-  Maybe Amount
+  Maybe Money
 calculateNextDaysFare farePolicy tripStartTime tripStopTime = do
   let tripDays = calcTripDays tripStartTime tripStopTime
   if tripDays > 0
     then calcNextDaysFare tripDays <$> farePolicy.driverAllowanceForDay
     else Nothing
   where
-    calcNextDaysFare :: Integer -> Amount -> Amount
-    calcNextDaysFare tripDays nextDaysFare = Amount (toRational tripDays) * nextDaysFare
+    calcNextDaysFare :: Integer -> Money -> Money
+    calcNextDaysFare tripDays nextDaysFare = fromIntegral tripDays * nextDaysFare
 
 timeZoneIST :: TimeZone
 timeZoneIST = minutesToTimeZone 330 -- TODO: Should be configurable. Hardcoded to IST +0530

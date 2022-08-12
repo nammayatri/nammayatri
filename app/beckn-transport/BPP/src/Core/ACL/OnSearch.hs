@@ -3,7 +3,6 @@ module Core.ACL.OnSearch (mkOnSearchMessage) where
 import Beckn.Prelude
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import Beckn.Types.MapSearch (LatLong (..))
-import Core.ACL.Common
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.OnSearch.OneWay as DOneWaySearch
 import qualified Domain.Action.Beckn.OnSearch.Rental as DRentalSearch
@@ -61,8 +60,8 @@ mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
       price =
         OnSearch.ItemPrice
           { currency = "INR",
-            value = amountToRoundedDecimal estimatedFare,
-            offered_value = amountToRoundedDecimal estimatedTotalFare
+            value = fromIntegral estimatedFare,
+            offered_value = fromIntegral estimatedTotalFare
           }
       tags =
         OnSearch.ItemTags
@@ -131,8 +130,8 @@ mkRentalItem DRentalSearch.QuoteInfo {..} offer_id fulfillment_id = do
       price =
         OnSearch.ItemPrice
           { currency = "INR",
-            value = amountToRoundedDecimal estimatedFare,
-            offered_value = amountToRoundedDecimal estimatedTotalFare
+            value = fromIntegral estimatedFare,
+            offered_value = fromIntegral estimatedTotalFare
           }
   OnSearch.Item
     { category_id = OnSearch.RENTAL_TRIP,

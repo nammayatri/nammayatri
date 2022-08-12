@@ -2,6 +2,7 @@ module Mobility.ARDU.Utils (module Mobility.ARDU.Utils) where
 
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess)
+import Beckn.Types.Common (Money)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common
@@ -141,11 +142,11 @@ getNearbySearchRequestForDriver driver estimateId =
     )
     ((.searchRequestsForDriver) <$> callBPP (API.getNearbySearchRequests driver.token))
 
-offerQuote :: DriverTestData -> Double -> Id ArduSReq.SearchRequest -> ClientsM ()
+offerQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM ()
 offerQuote driver fare bppSearchRequestId =
   void $ callBPP $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
-offerQuoteEither :: DriverTestData -> Double -> Id ArduSReq.SearchRequest -> ClientsM (Either ClientError APISuccess)
+offerQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM (Either ClientError APISuccess)
 offerQuoteEither driver fare bppSearchRequestId =
   callBppEither $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 

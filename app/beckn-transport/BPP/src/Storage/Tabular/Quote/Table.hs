@@ -9,7 +9,6 @@ module Storage.Tabular.Quote.Table where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.FareProduct as Domain
 import qualified Domain.Types.Quote as Domain
@@ -26,9 +25,9 @@ mkPersist
       id Text
       fareProductType Domain.FareProductType
       requestId SearchRequestTId
-      estimatedFare Amount
-      discount Amount Maybe
-      estimatedTotalFare Amount
+      estimatedFare Double
+      discount Double Maybe
+      estimatedTotalFare Double
       providerId OrganizationTId
       vehicleVariant Vehicle.Variant
       createdAt UTCTime

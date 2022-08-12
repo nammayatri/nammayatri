@@ -147,7 +147,7 @@ mkItem categoryId fulfillmentId q =
     }
   where
     price_ = do
-      let value_ = realToFrac q.estimatedFare
+      let value_ = fromIntegral q.estimatedFare
       OS.ItemPrice
         { currency = "INR",
           value = value_,

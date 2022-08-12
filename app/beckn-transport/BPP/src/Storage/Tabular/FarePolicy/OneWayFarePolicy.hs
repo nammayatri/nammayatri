@@ -56,8 +56,7 @@ instance TType FullOneWayFarePolicyT Domain.OneWayFarePolicy where
       Domain.OneWayFarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
-          baseFare = toRational <$> baseFare,
-          nightShiftRate = toRational <$> nightShiftRate,
+          baseFare = roundToIntegral <$> baseFare,
           ..
         }
   toTType Domain.OneWayFarePolicy {..} = do
@@ -67,8 +66,7 @@ instance TType FullOneWayFarePolicyT Domain.OneWayFarePolicy where
     ( OneWayFarePolicyT
         { id = getId id,
           organizationId = toKey organizationId,
-          baseFare = fromRational <$> baseFare,
-          nightShiftRate = fromRational <$> nightShiftRate,
+          baseFare = fromIntegral <$> baseFare,
           ..
         },
       perExtraKmRateTTypeList,

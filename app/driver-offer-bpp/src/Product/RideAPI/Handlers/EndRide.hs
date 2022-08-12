@@ -1,7 +1,6 @@
 module Product.RideAPI.Handlers.EndRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
@@ -17,7 +16,6 @@ import Product.FareCalculator.Calculator as Fare
 import Types.API.Ride (EndRideReq)
 import Types.App (Driver)
 import Types.Error
-import Types.Money (RoundedMoney)
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle
@@ -25,15 +23,15 @@ data ServiceHandle m = ServiceHandle
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
     endRideTransaction :: Id SRB.Booking -> Ride.Ride -> Id Driver -> m (),
-    notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> RoundedMoney -> m (),
+    notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> Money -> m (),
     calculateFare ::
       Id Organization ->
       Variant ->
       HighPrecMeters ->
       UTCTime ->
-      Maybe Amount ->
+      Maybe Money ->
       m Fare.FareParameters,
-    putDiffMetric :: Amount -> HighPrecMeters -> m (),
+    putDiffMetric :: Money -> HighPrecMeters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     addLastWaypointAndRecalcDistanceOnEnd :: Id Person.Person -> LatLong -> m ()
   }
@@ -66,7 +64,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
 
   let updRide =
         ride{tripEndTime = Just now,
-             fare = Just fare
+             fare = Just $ fromIntegral fare
             }
 
   endRideTransaction booking.id updRide (cast driverId)

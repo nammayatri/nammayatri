@@ -4,7 +4,6 @@ import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -29,10 +28,10 @@ import Tools.Metrics (CoreMetrics, HasBPPMetrics)
 data QuoteInfo = QuoteInfo
   { quoteId :: Id DQuote.Quote,
     vehicleVariant :: DVeh.Variant,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
-    distanceToNearestDriver :: HighPrecMeters,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
+    distanceToNearestDriver :: Meters,
     fromLocation :: MapSearch.LatLong,
     toLocation :: MapSearch.LatLong,
     startTime :: UTCTime
@@ -68,7 +67,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   -- we take nearest one and calculate fare and make PI for him
 
   distance <-
-    metersToHighPrecMeters . (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) fromLocation toLocation
+    (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) fromLocation toLocation
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
@@ -77,7 +76,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
         fareParams
         transporterId
         distance
-        (metersToHighPrecMeters poolResult.distanceToPickup)
+        poolResult.distanceToPickup
         poolResult.variant now
   Esq.runTransaction $
     for_ listOfQuotes QQuote.create
@@ -88,8 +87,8 @@ buildOneWayQuote ::
   DSearchRequest.SearchRequest ->
   Fare.OneWayFareParameters ->
   Id DOrg.Organization ->
-  HighPrecMeters ->
-  HighPrecMeters ->
+  Meters ->
+  Meters ->
   DVeh.Variant ->
   UTCTime ->
   m DQuote.Quote
@@ -109,7 +108,7 @@ buildOneWayQuote productSearchRequest fareParams transporterId distance distance
         ..
       }
 
-mkQuoteInfo :: DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> UTCTime -> HighPrecMeters -> DQuote.Quote -> QuoteInfo
+mkQuoteInfo :: DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> UTCTime -> Meters -> DQuote.Quote -> QuoteInfo
 mkQuoteInfo fromLoc toLoc startTime distanceToNearestDriver DQuote.Quote {..} = do
   let fromLocation = getCoordinates fromLoc
       toLocation = getCoordinates toLoc

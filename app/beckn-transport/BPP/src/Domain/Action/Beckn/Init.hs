@@ -6,7 +6,6 @@ import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Tools.Metrics.CoreMetrics
-import Beckn.Types.Amount (Amount)
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
@@ -87,7 +86,7 @@ initOneWayTrip req oneWayReq transporterId now = do
   unlessM (rideServiceableDefault QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
     throwError RideNotServiceable
   distance <-
-    metersToHighPrecMeters . (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.fromLocation oneWayReq.toLocation
+    (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.fromLocation oneWayReq.toLocation
   fareParams <- calculateFare transporterId req.vehicleVariant distance req.startTime
   toLoc <- buildRBLoc oneWayReq.toLocation now
   let estimatedFare = fareSum fareParams
@@ -161,9 +160,9 @@ buildBooking ::
   MonadFlow m =>
   InitReq ->
   Id DOrg.Organization ->
-  Amount ->
-  Maybe Amount ->
-  Amount ->
+  Money ->
+  Maybe Money ->
+  Money ->
   DRB.BookingDetails ->
   DLoc.BookingLocation ->
   UTCTime ->

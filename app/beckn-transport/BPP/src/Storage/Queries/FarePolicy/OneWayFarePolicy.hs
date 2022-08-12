@@ -48,10 +48,10 @@ updateOneWayFarePolicy farePolicy = do
   withFullEntity farePolicy $ \(farePolicyT, perExtraKmRateList, _) -> do
     upsert'
       farePolicyT
-      [ OneWayFarePolicyBaseFare =. val (fromRational <$> farePolicy.baseFare),
+      [ OneWayFarePolicyBaseFare =. val (fromIntegral <$> farePolicy.baseFare),
         OneWayFarePolicyNightShiftStart =. val (farePolicy.nightShiftStart),
         OneWayFarePolicyNightShiftEnd =. val (farePolicy.nightShiftEnd),
-        OneWayFarePolicyNightShiftRate =. val (fromRational <$> farePolicy.nightShiftRate),
+        OneWayFarePolicyNightShiftRate =. val farePolicy.nightShiftRate,
         OneWayFarePolicyUpdatedAt =. val now
       ]
 

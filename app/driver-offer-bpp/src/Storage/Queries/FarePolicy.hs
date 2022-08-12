@@ -2,7 +2,6 @@ module Storage.Queries.FarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount (amountToDouble)
 import Beckn.Types.Id
 import Domain.Types.FarePolicy
 import Domain.Types.Organization
@@ -45,10 +44,10 @@ updateFarePolicy farePolicy = do
       set
         tbl
         [ FarePolicyBaseDistancePerKmFare =. val farePolicy.baseDistancePerKmFare,
-          FarePolicyBaseDistance =. val farePolicy.baseDistance.getHighPrecMeters,
+          FarePolicyBaseDistanceMeters =. val farePolicy.baseDistanceMeters.getHighPrecMeters,
           FarePolicyExtraKmFare =. val farePolicy.extraKmFare,
-          FarePolicyDeadKmFare =. val farePolicy.deadKmFare,
-          FarePolicyDriverExtraFeeList =. val (PostgresList $ map amountToDouble farePolicy.driverExtraFeeList),
+          FarePolicyDeadKmFare =. val (fromIntegral farePolicy.deadKmFare),
+          FarePolicyDriverExtraFeeList =. val (PostgresList $ map fromIntegral farePolicy.driverExtraFeeList),
           FarePolicyNightShiftStart =. val farePolicy.nightShiftStart,
           FarePolicyNightShiftEnd =. val farePolicy.nightShiftEnd,
           FarePolicyNightShiftRate =. val farePolicy.nightShiftRate,

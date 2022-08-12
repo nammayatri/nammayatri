@@ -19,7 +19,6 @@ import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()
-import Types.Money (RoundedMoney)
 
 derivePersistField "Domain.BookingStatus"
 
@@ -41,7 +40,7 @@ mkPersist
       estimatedDistance Double
       createdAt UTCTime
       updatedAt UTCTime
-      estimatedFare RoundedMoney
+      estimatedFare Money
       fareParametersId Fare.FareParametersTId
 
       Primary id

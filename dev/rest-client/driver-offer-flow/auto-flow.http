@@ -142,7 +142,7 @@ token: {{token1}}
 content-type: application/json
 
 {
-    "offeredFare": 30.5,
+    "offeredFare": 30,
     "searchRequestId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchRequestId}}"
 }
 
@@ -285,7 +285,7 @@ content-type: application/json
 
 {
   "point": {
-    "lat": 10.080241882783683,
+    "lat": 15.080241882783683,
     "lon": 76.33893232031218
   }
 }

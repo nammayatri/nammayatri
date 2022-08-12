@@ -1,7 +1,6 @@
 module Domain.Types.Booking.API where
 
 import Beckn.External.Encryption
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -27,9 +26,9 @@ import qualified Tools.Schema as S
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,
     status :: BookingStatus,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     fromLocation :: DLoc.BookingLocationAPIEntity,
     rideList :: [DRide.RideAPIEntity],
     tripTerms :: [Text],

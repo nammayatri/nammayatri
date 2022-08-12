@@ -10,7 +10,6 @@ module SharedLogic.FareCalculator.OneWayFareCalculator.Flow
 where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.Booking
@@ -46,7 +45,7 @@ calculateFare ::
   EsqDBFlow m r =>
   Id Organization ->
   Vehicle.Variant ->
-  HighPrecMeters ->
+  Meters ->
   UTCTime ->
   m OneWayFareParameters
 calculateFare = doCalculateFare serviceHandle
@@ -56,7 +55,7 @@ doCalculateFare ::
   ServiceHandle m ->
   Id Organization ->
   Vehicle.Variant ->
-  HighPrecMeters ->
+  Meters ->
   TripStartTime ->
   m OneWayFareParameters
 doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
@@ -78,21 +77,21 @@ buildOneWayFareBreakups fareParams bookingId = do
 buildBaseFareBreakup :: MonadGuid m => OneWayFareParameters -> Id Booking -> m FareBreakup
 buildBaseFareBreakup OneWayFareParameters {..} bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = roundToUnits $ nightShiftRate * baseFare
-      description = "Base fare is " <> showRounded amount <> " rupees"
+  let amount = nightShiftRate * fromIntegral baseFare
+      description = "Base fare is " <> show amount <> " rupees"
   pure FareBreakup {..}
 
 buildDistanceFareBreakup :: MonadGuid m => OneWayFareParameters -> Id Booking -> m FareBreakup
 buildDistanceFareBreakup OneWayFareParameters {..} bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = roundToUnits $ nightShiftRate * distanceFare
-      description = "Distance fare is " <> showRounded amount <> " rupees"
+  let amount = nightShiftRate * fromIntegral distanceFare
+      description = "Distance fare is " <> show amount <> " rupees"
   pure FareBreakup {..}
 
-buildDiscountFareBreakup :: MonadGuid m => Maybe Amount -> Id Booking -> m (Maybe FareBreakup)
+buildDiscountFareBreakup :: MonadGuid m => Maybe Money -> Id Booking -> m (Maybe FareBreakup)
 buildDiscountFareBreakup mbDiscount bookingId = do
   forM mbDiscount $ \discount -> do
     id <- Id <$> generateGUIDText
-    let amount = roundToUnits $ negate discount -- this amount should be always below zero
-        description = "Discount is " <> showRounded discount <> " rupees"
+    let amount = fromIntegral $ negate discount -- this amount should be always below zero
+        description = "Discount is " <> show discount <> " rupees"
     pure FareBreakup {..}

@@ -6,7 +6,6 @@ module Product.FareCalculator.Flow
 where
 
 import Beckn.Storage.Esqueleto (Transactionable)
-import Beckn.Types.Amount
 import Beckn.Types.Id
 import Domain.Types.FareParams
 import Domain.Types.FarePolicy (FarePolicy)
@@ -38,7 +37,7 @@ calculateFare ::
   Variant ->
   HighPrecMeters ->
   UTCTime ->
-  Maybe Amount ->
+  Maybe Money ->
   m FareParameters
 calculateFare = doCalculateFare serviceHandle
 
@@ -49,7 +48,7 @@ doCalculateFare ::
   Variant ->
   HighPrecMeters ->
   UTCTime ->
-  Maybe Amount ->
+  Maybe Money ->
   m FareParameters
 doCalculateFare ServiceHandle {..} orgId variant distance startTime driverSelectedFare = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ ""

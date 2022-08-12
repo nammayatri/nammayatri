@@ -1,8 +1,7 @@
 module Domain.Action.UI.Ride.EndRide where
 
-import Beckn.Prelude (ToSchema)
+import Beckn.Prelude (ToSchema, roundToIntegral)
 import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
@@ -29,19 +28,19 @@ data ServiceHandle m = ServiceHandle
     calculateFare ::
       Id Organization ->
       Vehicle.Variant ->
-      HighPrecMeters ->
+      Meters ->
       UTCTime ->
       m Fare.OneWayFareParameters,
     calculateRentalFare ::
       Id DRentalFP.RentalFarePolicy ->
-      HighPrecMeters ->
+      Meters ->
       UTCTime ->
       UTCTime ->
       m RentalFare.RentalFareParameters,
     buildOneWayFareBreakups :: Fare.OneWayFareParameters -> Id SRB.Booking -> m [DFareBreakup.FareBreakup],
     buildRentalFareBreakups :: RentalFare.RentalFareParameters -> Id SRB.Booking -> m [DFareBreakup.FareBreakup],
     recalculateFareEnabled :: m Bool,
-    putDiffMetric :: Amount -> HighPrecMeters -> m (),
+    putDiffMetric :: Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     addLastWaypointAndRecalcDistanceOnEnd :: Id Person.Person -> LatLong -> m ()
   }
@@ -97,7 +96,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
       let transporterId = booking.providerId
           vehicleVariant = booking.vehicleVariant
 
-          actualDistance = ride.traveledDistance
+          actualDistance = roundToIntegral ride.traveledDistance.getHighPrecMeters
           oldDistance = oneWayDetails.estimatedDistance
 
           estimatedFare = booking.estimatedFare
@@ -111,7 +110,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           let fareDiff = updatedFare - estimatedFare
           logTagInfo "Fare recalculation" $
             "Fare difference: "
-              <> show (amountToDouble fareDiff)
+              <> show fareDiff
               <> ", Distance difference: "
               <> show distanceDiff
           putDiffMetric fareDiff distanceDiff
@@ -124,21 +123,21 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           pure (oldDistance, estimatedFare, booking.estimatedTotalFare, fareBreakups)
 
     calcRentalFare booking ride rentalDetails now = do
-      let actualDistance = ride.traveledDistance
+      let actualDistance = roundToIntegral ride.traveledDistance.getHighPrecMeters
       fareParams <- calculateRentalFare rentalDetails.rentalFarePolicyId actualDistance booking.startTime now
       let fare = RentalFare.rentalFareSum fareParams
           totalFare = RentalFare.rentalFareSumWithDiscount fareParams
       logTagInfo "Rental fare calculation" $
         "Base fare: "
-          <> show (amountToDouble fareParams.baseFare)
+          <> show fareParams.baseFare
           <> ", Extra distance fare: "
-          <> show (amountToDouble fareParams.extraDistanceFare)
+          <> show fareParams.extraDistanceFare
           <> ", Extra time fare: "
-          <> show (amountToDouble fareParams.extraTimeFare)
+          <> show fareParams.extraTimeFare
           <> ", Next days fare: "
-          <> show (amountToDouble (fromMaybe 0 fareParams.nextDaysFare))
+          <> show (fromMaybe 0 fareParams.nextDaysFare)
           <> ", Discount: "
-          <> show (amountToDouble (fromMaybe 0 fareParams.discount))
+          <> show (fromMaybe 0 fareParams.discount)
       -- Do we ned this metrics in rental case?
       -- putDiffMetric fareDiff distanceDiff
       fareBreakups <- buildRentalFareBreakups fareParams booking.id

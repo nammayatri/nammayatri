@@ -1,8 +1,10 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Ride where
 
-import Beckn.Types.Amount
+import Beckn.Prelude (roundToIntegral)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Aeson
@@ -41,10 +43,10 @@ data Ride = Ride
     driverId :: Id DPers.Person,
     otp :: Text,
     trackingUrl :: BaseUrl,
-    fare :: Maybe Amount,
-    totalFare :: Maybe Amount,
+    fare :: Maybe Money,
+    totalFare :: Maybe Money,
     traveledDistance :: HighPrecMeters,
-    chargeableDistance :: Maybe HighPrecMeters,
+    chargeableDistance :: Maybe Meters,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
     createdAt :: UTCTime,
@@ -62,9 +64,9 @@ data RideAPIEntity = RideAPIEntity
     vehicleModel :: Text,
     vehicleColor :: Text,
     vehicleNumber :: Text,
-    computedFare :: Maybe Amount,
-    computedTotalFare :: Maybe Amount,
-    actualRideDistance :: HighPrecMeters,
+    computedFare :: Maybe Money,
+    computedTotalFare :: Maybe Money,
+    actualRideDistance :: Meters,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -84,7 +86,7 @@ makeRideAPIEntity ride driver vehicle =
       vehicleModel = vehicle.model,
       computedFare = ride.fare,
       computedTotalFare = ride.totalFare,
-      actualRideDistance = ride.traveledDistance,
+      actualRideDistance = roundToIntegral ride.traveledDistance.getHighPrecMeters,
       createdAt = ride.createdAt,
       updatedAt = ride.updatedAt
     }

@@ -21,7 +21,6 @@ import SharedLogic.DriverPool
 import Storage.Queries.Person
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
-import Types.Money
 import qualified Utils.Notifications as Notify
 
 data DSelectReq = DSelectReq
@@ -77,7 +76,7 @@ handler orgId sReq = do
     buildSearchRequestForDriver ::
       (MonadFlow m) =>
       DSearchReq.SearchRequest ->
-      RoundedMoney ->
+      Money ->
       Double ->
       GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong ->
       m SearchRequestForDriver

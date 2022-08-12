@@ -9,7 +9,6 @@ module Storage.Tabular.Booking.Table where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Vehicle as Veh
@@ -35,9 +34,9 @@ mkPersist
       fromLocationId BookingLocationTId
       toLocationId BookingLocationTId Maybe
       vehicleVariant Veh.Variant
-      estimatedFare Amount
-      discount Amount Maybe
-      estimatedTotalFare Amount
+      estimatedFare Double
+      discount Double Maybe
+      estimatedTotalFare Double
       estimatedDistance Double Maybe
       reallocationsCount Int
       createdAt UTCTime

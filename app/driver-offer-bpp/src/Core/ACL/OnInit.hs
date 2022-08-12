@@ -8,9 +8,9 @@ import Product.FareCalculator.Calculator
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
 mkOnInitMessage res = do
   let rb = res.booking
-      fareDecimalValue = realToFrac $ rb.estimatedFare
+      fareDecimalValue = fromIntegral rb.estimatedFare
       currency = "INR"
-      breakup_ = mkBreakupList (OnInit.BreakupItemPrice currency . realToFrac) OnInit.BreakupItem rb.fareParams
+      breakup_ = mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
 
   OnInit.OnInitMessage
     { order =

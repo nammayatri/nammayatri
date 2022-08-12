@@ -7,6 +7,7 @@ import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import Environment
+import Product.FareCalculator.Calculator (baseFareSumRounded)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
@@ -38,14 +39,15 @@ buildDriverRideRes (ride, booking) = do
         status = ride.status,
         fromLocation = DBLoc.makeBookingLocationAPIEntity booking.fromLocation,
         toLocation = DBLoc.makeBookingLocationAPIEntity booking.toLocation,
-        totalFare = booking.estimatedFare, -- we don't recalculate fare so it's true
         driverName = driver.firstName,
         driverNumber = driverNumber,
         vehicleNumber = vehicle.registrationNo,
         vehicleColor = vehicle.color,
         vehicleVariant = vehicle.variant,
         vehicleModel = vehicle.model,
-        computedFare = ride.fare,
+        computedFare = realToFrac <$> ride.fare,
+        estimatedBaseFare = fromIntegral $ baseFareSumRounded booking.fareParams,
+        driverSelectedFare = fromIntegral $ fromMaybe 0 booking.fareParams.driverSelectedFare,
         actualRideDistance = ride.traveledDistance,
         createdAt = ride.createdAt,
         updatedAt = ride.updatedAt,

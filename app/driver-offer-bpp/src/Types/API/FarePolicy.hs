@@ -24,8 +24,8 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
   { baseDistancePerKmFare :: Double,
     baseDistance :: HighPrecMeters,
     extraKmFare :: Double,
-    deadKmFare :: Double, -- constant value
-    driverExtraFeeList :: [Double],
+    deadKmFare :: Money, -- constant value
+    driverExtraFeeList :: [Money],
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double
@@ -40,8 +40,8 @@ validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
     [ validateField "baseDistancePerKmFare" baseDistancePerKmFare $ InRange @Double 0 500,
       validateField "baseDistance" baseDistance $ InRange @HighPrecMeters 0 500,
       validateField "extraKmFare" extraKmFare $ InRange @Double 0 500,
-      validateField "deadKmFare" deadKmFare $ InRange @Double 0 500,
-      validateList "driverExtraFeeList" driverExtraFeeList $ \x -> validateField "fee" x $ InRange @Double 0 500,
+      validateField "deadKmFare" deadKmFare $ InRange @Money 0 500,
+      validateList "driverExtraFeeList" driverExtraFeeList $ \x -> validateField "fee" x $ InRange @Money 0 500,
       validateField "nightShiftRate" nightShiftRate . InMaybe $ InRange @Double 1 2,
       validateField "nightShiftStart" nightShiftStart . InMaybe $ InRange (TimeOfDay 18 0 0) (TimeOfDay 23 30 0),
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)

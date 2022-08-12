@@ -3,7 +3,6 @@ module Domain.Action.Beckn.OnSearch.Rental where
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
@@ -23,9 +22,9 @@ import Tools.Metrics (CoreMetrics, HasBPPMetrics)
 data QuoteInfo = QuoteInfo
   { quoteId :: Id DQuote.Quote,
     vehicleVariant :: DVeh.Variant,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     baseDistance :: Kilometers,
     baseDuration :: Hours,
     descriptions :: [Text],
@@ -71,7 +70,7 @@ buildRentalQuote searchRequestId now rentalFarePolicy@DRentalFP.RentalFarePolicy
   quoteId <- Id <$> generateGUID
   let estimatedFare = baseFare
       discount = Nothing -- FIXME we don't have discount in RentalFarePolicy now
-      estimatedTotalFare = baseFare
+      estimatedTotalFare = estimatedFare
   -- FIXME this request is duplicating
   pure $
     DQuote.Quote

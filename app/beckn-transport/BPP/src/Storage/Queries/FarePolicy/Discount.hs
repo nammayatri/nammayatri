@@ -53,7 +53,7 @@ update discId disc = do
       [ DiscountFromDate =. val disc.fromDate,
         DiscountToDate =. val disc.toDate,
         DiscountEnabled =. val disc.enabled,
-        DiscountDiscount =. val (fromRational disc.discount),
+        DiscountDiscount =. val (fromIntegral disc.discount),
         DiscountUpdatedAt =. val now
       ]
     where_ $ tbl ^. DiscountId ==. val (getId discId)

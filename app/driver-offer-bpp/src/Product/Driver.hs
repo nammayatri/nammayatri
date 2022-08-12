@@ -21,7 +21,6 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Amount
 import Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import Beckn.Types.Id
@@ -335,8 +334,8 @@ getNearbySearchRequests driverId = withFlowHandlerAPI $ do
             distance = nearbyReq.distance
           }
 
-isAllowedExtraFee :: [Amount] -> Amount -> Bool
-isAllowedExtraFee list val = let eps = 0.1 in any (\x -> abs (x - val) < eps) list
+isAllowedExtraFee :: [Money] -> Money -> Bool
+isAllowedExtraFee list val = val `elem` list
 
 offerQuote ::
   Id SP.Person ->
@@ -347,7 +346,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
   sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
   now <- getCurrentTime
   when (sReq.validTill < now) $ throwError SearchRequestExpired
-  let mbOfferedFareAmount = fmap realToFrac req.offeredFare
+  let mbOfferedFare = req.offeredFare
   organization <- QOrg.findById sReq.providerId >>= fromMaybeM (OrgDoesNotExist sReq.providerId.getId)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driverUnlockDelay <- asks (.driverUnlockDelay)
@@ -358,10 +357,10 @@ offerQuote driverId req = withFlowHandlerAPI $ do
     QSRD.findByDriverAndSearchReq driverId sReq.id
       >>= fromMaybeM NoSearchRequestForDriver
   farePolicy <- findFarePolicyByOrgAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
-  whenJust mbOfferedFareAmount $ \off ->
+  whenJust mbOfferedFare $ \off ->
     unless (isAllowedExtraFee farePolicy.driverExtraFeeList off) $
-      throwError $ NotAllowedExtraFee $ amountToString off
-  fareParams <- calculateFare organization.id sReqFD.vehicleVariant (HighPrecMeters sReqFD.distance) sReqFD.startTime mbOfferedFareAmount
+      throwError $ NotAllowedExtraFee $ show off
+  fareParams <- calculateFare organization.id sReqFD.vehicleVariant (HighPrecMeters sReqFD.distance) sReqFD.startTime mbOfferedFare
   driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
   Esq.runTransaction $ QDrQt.create driverQuote
   context <- contextTemplate organization Context.SELECT sReq.bapId sReq.bapUri (Just sReq.transactionId) sReq.messageId

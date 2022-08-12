@@ -8,7 +8,6 @@ import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
 import Domain.Types.CancellationReason (CancellationReasonCode)
 import Domain.Types.Ride
 import Domain.Types.Vehicle.Variant
-import Types.Money (RoundedMoney)
 
 data StartRideReq = StartRideReq
   { rideOtp :: Text,
@@ -39,9 +38,9 @@ data DriverRideRes = DriverRideRes
     vehicleModel :: Text,
     vehicleColor :: Text,
     vehicleNumber :: Text,
-    computedFare :: Maybe Amount,
-    estimatedBaseFare :: Amount,
-    driverSelectedFare :: Amount,
+    computedFare :: Maybe Double,
+    estimatedBaseFare :: Double,
+    driverSelectedFare :: Double,
     actualRideDistance :: HighPrecMeters,
     rideRating :: Maybe Int,
     createdAt :: UTCTime,

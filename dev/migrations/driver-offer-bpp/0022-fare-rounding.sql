@@ -8,3 +8,5 @@ ALTER TABLE atlas_driver_offer_bpp.driver_quote ALTER COLUMN estimated_fare SET 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver
   ALTER COLUMN base_fare SET DATA TYPE integer
   USING round(base_fare);
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy RENAME COLUMN base_distance TO base_distance_meters;

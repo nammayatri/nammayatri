@@ -33,7 +33,7 @@ data CreateFarePolicyDiscountReq = CreateFarePolicyDiscountReq
   { vehicleVariant :: Veh.Variant,
     fromDate :: UTCTime,
     toDate :: UTCTime,
-    discount :: Double,
+    discount :: Money,
     enabled :: Bool
   }
   deriving (Generic, Show, FromJSON, ToSchema)
@@ -43,14 +43,14 @@ type CreateFarePolicyDiscountRes = APISuccess
 validateCreateFarePolicyDiscountReq :: Validate CreateFarePolicyDiscountReq
 validateCreateFarePolicyDiscountReq CreateFarePolicyDiscountReq {..} =
   sequenceA_
-    [ validateField "discount" discount $ Min @Double 0.01,
+    [ validateField "discount" discount $ Min @Money 1,
       validateField "fromDate" fromDate $ Max @UTCTime toDate
     ]
 
 data UpdateFarePolicyDiscountReq = UpdateFarePolicyDiscountReq
   { fromDate :: UTCTime,
     toDate :: UTCTime,
-    discount :: Double,
+    discount :: Money,
     enabled :: Bool
   }
   deriving (Generic, Show, FromJSON, ToSchema)
@@ -60,7 +60,7 @@ type UpdateFarePolicyDiscountRes = APISuccess
 validateUpdateFarePolicyDiscountReq :: Validate UpdateFarePolicyDiscountReq
 validateUpdateFarePolicyDiscountReq UpdateFarePolicyDiscountReq {..} =
   sequenceA_
-    [ validateField "discount" discount $ Min @Double 0.01,
+    [ validateField "discount" discount $ Min @Money 1,
       validateField "fromDate" fromDate $ Max @UTCTime toDate
     ]
 
@@ -93,7 +93,7 @@ createFarePolicyDiscount admin req = do
             fareProductType = DFProduct.ONE_WAY,
             fromDate = req.fromDate,
             toDate = req.toDate,
-            discount = toRational req.discount,
+            discount = req.discount,
             enabled = req.enabled,
             createdAt = currTime,
             updatedAt = currTime
@@ -110,7 +110,7 @@ updateFarePolicyDiscount admin discId req = do
   let updatedFarePolicy =
         discount{fromDate = req.fromDate,
                  toDate = req.toDate,
-                 discount = toRational req.discount,
+                 discount = req.discount,
                  enabled = req.enabled
                 }
   cooridinators <- QP.findAdminsByOrgId orgId

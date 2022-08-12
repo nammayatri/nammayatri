@@ -1,6 +1,5 @@
 module Domain.Types.Booking.Type where
 
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Data.Aeson
@@ -47,9 +46,9 @@ data Booking = Booking
     riderId :: Maybe (Id DRD.RiderDetails),
     fromLocation :: DLoc.BookingLocation,
     vehicleVariant :: DVeh.Variant,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     reallocationsCount :: Int,
     bookingDetails :: BookingDetails,
     createdAt :: UTCTime,
@@ -62,7 +61,7 @@ data BookingDetails = OneWayDetails OneWayBookingDetails | RentalDetails RentalB
 
 data OneWayBookingDetails = OneWayBookingDetails
   { toLocation :: DLoc.BookingLocation,
-    estimatedDistance :: HighPrecMeters
+    estimatedDistance :: Meters
   }
   deriving (Eq)
 

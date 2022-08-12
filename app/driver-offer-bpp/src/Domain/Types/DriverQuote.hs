@@ -10,7 +10,6 @@ import qualified Domain.Types.FareParams as Params
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import qualified Domain.Types.Vehicle.Variant as Variant
-import Types.Money (RoundedMoney)
 
 data DriverQuoteStatus = Active | Inactive
   deriving (Show, Read)
@@ -30,7 +29,7 @@ data DriverQuote = DriverQuote
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     validTill :: UTCTime,
-    estimatedFare :: RoundedMoney,
+    estimatedFare :: Money,
     fareParams :: Params.FareParameters
   }
   deriving (Generic, Show, PrettyShow)

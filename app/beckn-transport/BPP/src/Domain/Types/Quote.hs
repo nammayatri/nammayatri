@@ -1,6 +1,5 @@
 module Domain.Types.Quote where
 
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time
@@ -15,9 +14,9 @@ import GHC.Records.Extra
 data Quote = Quote
   { id :: Id Quote,
     requestId :: Id DSR.SearchRequest,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     providerId :: Id DOrg.Organization,
     vehicleVariant :: DVeh.Variant,
     createdAt :: UTCTime,
@@ -27,8 +26,8 @@ data Quote = Quote
 data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails DRentalFP.RentalFarePolicy
 
 data OneWayQuoteDetails = OneWayQuoteDetails
-  { distance :: HighPrecMeters,
-    distanceToNearestDriver :: HighPrecMeters
+  { distance :: Meters,
+    distanceToNearestDriver :: Meters
   }
 
 getFareProductType :: QuoteDetails -> DFareProduct.FareProductType

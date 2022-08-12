@@ -2,7 +2,7 @@ module Domain.Types.FarePolicy where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
-import Beckn.Types.Common (HighPrecMeters)
+import Beckn.Types.Common (HighPrecMeters, Money)
 import Beckn.Types.Id (Id)
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -12,11 +12,11 @@ data FarePolicy = FarePolicy
     organizationId :: Id Organization.Organization,
     vehicleVariant :: Variant.Variant,
     baseDistancePerKmFare :: Amount,
-    baseDistance :: HighPrecMeters,
+    baseDistanceMeters :: HighPrecMeters,
     extraKmFare :: Amount,
-    deadKmFare :: Amount,
-    driverExtraFeeList :: [Amount],
-    nightShiftRate :: Maybe Amount,
+    deadKmFare :: Money,
+    driverExtraFeeList :: [Money],
+    nightShiftRate :: Maybe Double,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     createdAt :: UTCTime,
@@ -32,10 +32,10 @@ data FarePolicyAPIEntity = FarePolicyAPIEntity
   { id :: Id FarePolicy,
     vehicleVariant :: Variant.Variant,
     baseDistancePerKmFare :: Double,
-    baseDistance :: HighPrecMeters,
+    baseDistanceMeters :: HighPrecMeters,
     extraKmFare :: Double,
-    deadKmFare :: Double,
-    driverExtraFeeList :: [Double],
+    deadKmFare :: Money,
+    driverExtraFeeList :: [Money],
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double
@@ -47,8 +47,8 @@ makeFarePolicyAPIEntity FarePolicy {..} =
   FarePolicyAPIEntity
     { baseDistancePerKmFare = amountToDouble baseDistancePerKmFare,
       extraKmFare = amountToDouble extraKmFare,
-      deadKmFare = amountToDouble deadKmFare,
-      driverExtraFeeList = map amountToDouble driverExtraFeeList,
-      nightShiftRate = amountToDouble <$> nightShiftRate,
+      deadKmFare = deadKmFare,
+      driverExtraFeeList = driverExtraFeeList,
+      nightShiftRate = nightShiftRate,
       ..
     }

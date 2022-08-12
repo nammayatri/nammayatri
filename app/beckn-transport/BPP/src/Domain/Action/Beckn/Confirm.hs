@@ -10,7 +10,6 @@ import Beckn.External.Encryption (encrypt)
 import Beckn.External.GoogleMaps.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
 import Beckn.Types.Registry (Subscriber (..))
 import Beckn.Utils.Common
@@ -172,7 +171,7 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
             updatedAt = now
           }
 
-mkDiscountTransaction :: SRB.Booking -> Amount -> UTCTime -> DiscountTransaction
+mkDiscountTransaction :: SRB.Booking -> Money -> UTCTime -> DiscountTransaction
 mkDiscountTransaction booking discount currTime =
   DiscountTransaction
     { bookingId = booking.id,

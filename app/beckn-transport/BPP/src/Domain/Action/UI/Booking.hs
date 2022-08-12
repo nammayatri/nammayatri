@@ -19,7 +19,6 @@ import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -60,9 +59,9 @@ data RideInfo = RideInfo
     etaForPickupLoc :: Minutes,
     distanceToPickupLoc :: Meters,
     notificationExpiryTime :: UTCTime,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money
   }
   deriving (Generic, ToJSON, FromJSON, Show, ToSchema)
 

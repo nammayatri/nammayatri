@@ -179,9 +179,9 @@ updateAll rideId ride = do
     set
       tbl
       [ RideStatus =. val ride.status,
-        RideFare =. val ride.fare,
-        RideTotalFare =. val ride.totalFare,
-        RideChargeableDistance =. val (getHighPrecMeters <$> ride.chargeableDistance),
+        RideFare =. val (fromIntegral <$> ride.fare),
+        RideTotalFare =. val (fromIntegral <$> ride.totalFare),
+        RideChargeableDistance =. val (fromIntegral <$> ride.chargeableDistance),
         RideTripEndTime =. val ride.tripEndTime,
         RideUpdatedAt =. val now
       ]

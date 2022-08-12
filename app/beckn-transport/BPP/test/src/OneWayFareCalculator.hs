@@ -1,6 +1,6 @@
 module OneWayFareCalculator where
 
-import Beckn.Types.Amount
+import Beckn.Prelude (roundToIntegral)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time hiding (parseTime)
@@ -29,7 +29,7 @@ defaultOneWayFarePolicy =
     { id = "fare_config_id",
       vehicleVariant = Vehicle.HATCHBACK,
       organizationId = orgID,
-      baseFare = Just 120.0,
+      baseFare = Just 120,
       perExtraKmRateList = defaultPerExtraKmRate :| [],
       discountList = [],
       nightShiftStart = Just midnight,
@@ -39,7 +39,7 @@ defaultOneWayFarePolicy =
       updatedAt = mockTime 0
     }
 
-mkDiscount :: Vehicle.Variant -> UTCTime -> UTCTime -> Rational -> Bool -> Discount
+mkDiscount :: Vehicle.Variant -> UTCTime -> UTCTime -> Money -> Bool -> Discount
 mkDiscount vehVar from to disc isOn = Discount (Id "") vehVar (Id "") ONE_WAY from to disc isOn (mockTime 11) (mockTime 11)
 
 mockTime :: Int -> UTCTime
@@ -66,10 +66,10 @@ hatchback20km = testCase "Calculate fare for 20km for Hatchback" $ do
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  totalFare @?= Amount 300.0
+  totalFare @?= 300
   where
     startTime = mockTime 2
-    distance = HighPrecMeters 20000.0
+    distance = Meters 20000
 
 sedan10km :: TestTree
 sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
@@ -81,17 +81,17 @@ sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  totalFare @?= Amount 250.0
+  totalFare @?= 250
   where
     startTime = mockTime 2
-    distance = HighPrecMeters 10000.0
+    distance = Meters 10000
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
-                                        baseFare = Just 175.0,
+                                        baseFare = Just 175,
                                         perExtraKmRateList =
                                           defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
                                             :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
@@ -109,17 +109,17 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  totalFare @?= Amount 475.0
+  totalFare @?= 475
   where
     startTime = mockTime 2
-    distance = HighPrecMeters 20000.0
+    distance = Meters 20000
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
-                                        baseFare = Just 175.0,
+                                        baseFare = Just 175,
                                         perExtraKmRateList =
                                           defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
                                             :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
@@ -137,17 +137,17 @@ sedan30km = testCase "Calculate fare for 30km for Sedan" $ do
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  totalFare @?= Amount 775.0
+  totalFare @?= 775
   where
     startTime = mockTime 2
-    distance = HighPrecMeters 30000.0
+    distance = Meters 30000
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
-                                        baseFare = Just 175.0,
+                                        baseFare = Just 175,
                                         perExtraKmRateList =
                                           defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
                                             :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
@@ -165,10 +165,10 @@ suv20km = testCase "Calculate fare for 20km for SUV" $ do
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  totalFare @?= Amount 320.0
+  totalFare @?= 320
   where
     startTime = mockTime 2
-    distance = HighPrecMeters 20000.0
+    distance = Meters 20000
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
@@ -196,17 +196,17 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km for Hatchback
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  totalFare @?= Amount 331.1
+  totalFare @?= 331
   where
     startTime = mockTime 21
-    distance = HighPrecMeters 20000.0
+    distance = Meters 20000
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.HATCHBACK,
-                                        baseFare = Just 100.0,
+                                        baseFare = Just 100,
                                         perExtraKmRateList =
                                           defaultPerExtraKmRate{distanceRangeStart = 4000}
                                             :| [ defaultPerExtraKmRate{distanceRangeStart = 14000, fare = 13.5},
@@ -228,17 +228,17 @@ nightSedan20km = testCase "Calculate night shift fare for 20km for Sedan" $ do
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  totalFare @?= Amount 357.5
+  totalFare @?= 358
   where
     startTime = mockTime 21
-    distance = HighPrecMeters 20000.0
+    distance = Meters 20000
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
-                                        baseFare = Just 100.0,
+                                        baseFare = Just 100,
                                         perExtraKmRateList =
                                           defaultPerExtraKmRate{distanceRangeStart = 3000}
                                             :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 15},
@@ -260,17 +260,17 @@ nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  totalFare @?= Amount 451.0
+  totalFare @?= 451
   where
     startTime = mockTime 21
-    distance = HighPrecMeters 20000.0
+    distance = Meters 20000
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
-                                        baseFare = Just 150.0,
+                                        baseFare = Just 150,
                                         perExtraKmRateList =
                                           defaultPerExtraKmRate{distanceRangeStart = 3000}
                                             :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
@@ -292,17 +292,17 @@ nightSuv20kmWithDiscount = testCase "Calculate night shift fare for 20km for SUV
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  totalFare @?= Amount 401.0
+  totalFare @?= 401
   where
     startTime = mockTime 21
-    distance = HighPrecMeters 20000.0
+    distance = Meters 20000
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
-                                        baseFare = Just 150.0,
+                                        baseFare = Just 150,
                                         perExtraKmRateList =
                                           defaultPerExtraKmRate{distanceRangeStart = 3000}
                                             :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
@@ -328,17 +328,17 @@ nightSuv20kmWithDiscountOff = testCase "Calculate night shift fare for 20km for 
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  totalFare @?= Amount 451.0
+  totalFare @?= 451
   where
     startTime = mockTime 21
-    distance = HighPrecMeters 20000.0
+    distance = Meters 20000
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
-                                        baseFare = Just 150.0,
+                                        baseFare = Just 150,
                                         perExtraKmRateList =
                                           defaultPerExtraKmRate{distanceRangeStart = 3000}
                                             :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
@@ -361,17 +361,17 @@ nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  totalFare @?= Amount 351.0
+  totalFare @?= 351
   where
     startTime = mockTime 21
-    distance = HighPrecMeters 20000.0
+    distance = Meters 20000
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
-                                        baseFare = Just 150.0,
+                                        baseFare = Just 150,
                                         perExtraKmRateList =
                                           defaultPerExtraKmRate{distanceRangeStart = 3000}
                                             :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
@@ -398,17 +398,17 @@ fareBreakupSum = testCase "Sum of fare breakup should be equal to total fare" $ 
       startTime
   let totalFare = fareSumWithDiscount fareParams
   fareBreakups <- buildOneWayFareBreakups fareParams "bookingId"
-  sum (fareBreakups <&> (.amount)) `shouldBe` totalFare
+  roundToIntegral (sum (fareBreakups <&> (.amount))) `shouldBe` totalFare
   where
     startTime = mockTime 19
-    distance = HighPrecMeters 18000.0
+    distance = Meters 18000
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
-                                        baseFare = Just 120.0,
+                                        baseFare = Just 120,
                                         perExtraKmRateList =
                                           defaultPerExtraKmRate{distanceRangeStart = 3100}
                                             :| [ defaultPerExtraKmRate{distanceRangeStart = 14000, fare = 21},
@@ -437,7 +437,7 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
     `shouldThrow` (== NoFarePolicy)
   where
     startTime = mockTime 21
-    distance = HighPrecMeters 0.0
+    distance = Meters 0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant -> pure Nothing

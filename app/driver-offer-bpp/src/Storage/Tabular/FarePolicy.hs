@@ -26,14 +26,14 @@ mkPersist
       vehicleVariant Variant.Variant
 
       baseDistancePerKmFare Amount
-      baseDistance Double
+      baseDistanceMeters Double
       extraKmFare Amount
       deadKmFare Amount
       driverExtraFeeList (PostgresList Double)
 
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
-      nightShiftRate Amount Maybe
+      nightShiftRate Double Maybe
       createdAt UTCTime
       updatedAt UTCTime
       UniqueFarePolicyId id
@@ -52,9 +52,10 @@ instance TType FarePolicyT Domain.FarePolicy where
       Domain.FarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
-          baseDistance = HighPrecMeters baseDistance,
-          nightShiftRate = Amount . toRational <$> nightShiftRate,
-          driverExtraFeeList = map realToFrac $ unPostgresList driverExtraFeeList,
+          baseDistanceMeters = HighPrecMeters baseDistanceMeters,
+          nightShiftRate = nightShiftRate,
+          driverExtraFeeList = map roundToIntegral $ unPostgresList driverExtraFeeList,
+          deadKmFare = roundToIntegral deadKmFare,
           ..
         }
 
@@ -62,7 +63,8 @@ instance TType FarePolicyT Domain.FarePolicy where
     FarePolicyT
       { id = getId id,
         organizationId = toKey organizationId,
-        baseDistance = baseDistance.getHighPrecMeters,
-        driverExtraFeeList = PostgresList $ map amountToDouble driverExtraFeeList,
+        baseDistanceMeters = baseDistanceMeters.getHighPrecMeters,
+        driverExtraFeeList = PostgresList $ map fromIntegral driverExtraFeeList,
+        deadKmFare = fromIntegral deadKmFare,
         ..
       }

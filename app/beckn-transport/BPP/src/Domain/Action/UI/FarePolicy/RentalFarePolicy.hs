@@ -38,12 +38,12 @@ newtype CreateRentalFarePolicyReq = CreateRentalFarePolicyReq
 
 data CreateRentalFarePolicyItem = CreateRentalFarePolicyItem
   { vehicleVariant :: Vehicle.Variant,
-    baseFare :: Double,
+    baseFare :: Money,
     baseDistance :: Kilometers, -- Distance
     baseDuration :: Hours,
     extraKmFare :: Double,
     extraMinuteFare :: Double,
-    driverAllowanceForDay :: Maybe Double
+    driverAllowanceForDay :: Maybe Money
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -51,12 +51,12 @@ data CreateRentalFarePolicyItem = CreateRentalFarePolicyItem
 validateCreateRentalsFarePolicyRequest :: Validate CreateRentalFarePolicyItem
 validateCreateRentalsFarePolicyRequest CreateRentalFarePolicyItem {..} =
   sequenceA_
-    [ validateField "baseFare" baseFare $ Min @Double 0,
+    [ validateField "baseFare" baseFare $ Min @Money 0,
       validateField "baseDistance" baseDistance $ Min @Kilometers 0,
       validateField "baseDuration" baseDuration $ Min @Hours 0,
       validateField "extraKmFare" extraKmFare $ Min @Double 0,
       validateField "extraMinuteFare" extraMinuteFare $ Min @Double 0,
-      validateField "driverAllowanceForDay" driverAllowanceForDay $ InMaybe $ Min @Double 0
+      validateField "driverAllowanceForDay" driverAllowanceForDay $ InMaybe $ Min @Money 0
     ]
 
 createRentalFarePolicy :: (EsqDBFlow m r) => SP.Person -> CreateRentalFarePolicyReq -> m APISuccess
@@ -75,11 +75,11 @@ createRentalFarePolicy admin req = do
     toDomainType orgId guid CreateRentalFarePolicyItem {..} = do
       let extraKmFare' = realToFrac extraKmFare
           extraMinuteFare' = realToFrac extraMinuteFare
-          driverAllowanceForDay' = realToFrac <$> driverAllowanceForDay
+          driverAllowanceForDay' = driverAllowanceForDay
       RentalFarePolicy
         { id = guid,
           organizationId = orgId,
-          baseFare = realToFrac baseFare,
+          baseFare = baseFare,
           extraKmFare = extraKmFare',
           extraMinuteFare = extraMinuteFare',
           driverAllowanceForDay = driverAllowanceForDay',

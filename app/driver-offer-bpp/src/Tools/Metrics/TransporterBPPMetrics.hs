@@ -4,7 +4,6 @@ module Tools.Metrics.TransporterBPPMetrics
   )
 where
 
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Time
@@ -15,10 +14,10 @@ import GHC.Records.Extra
 import Prometheus as P
 import Tools.Metrics.TransporterBPPMetrics.Types as Reexport
 
-putFareAndDistanceDeviations :: (MonadMonitor m, HasTransporterMetrics m r) => Amount -> HighPrecMeters -> m ()
+putFareAndDistanceDeviations :: (MonadMonitor m, HasTransporterMetrics m r) => Money -> HighPrecMeters -> m ()
 putFareAndDistanceDeviations fareDiff distanceDiff = do
   TransporterMetricsContainer {..} <- asks (.transporterMetrics)
-  P.observe realFareDeviation $ amountToDouble fareDiff
+  P.observe realFareDeviation $ fromIntegral fareDiff
   P.observe realDistanceDeviation distanceDiff.getHighPrecMeters
 
 type SearchMetricsMVar = MVar Milliseconds
