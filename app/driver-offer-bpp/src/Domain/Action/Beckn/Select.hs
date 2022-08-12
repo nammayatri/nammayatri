@@ -4,7 +4,6 @@ import Beckn.Prelude
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -22,6 +21,7 @@ import SharedLogic.DriverPool
 import Storage.Queries.Person
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import Types.Money
 import qualified Utils.Notifications as Notify
 
 data DSelectReq = DSelectReq
@@ -46,7 +46,7 @@ handler orgId sReq = do
 
   fareParams <- calculateFare orgId sReq.variant distance sReq.pickupTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation orgId sReq
-  let baseFare = amountToDouble $ fareSumRounded fareParams
+  let baseFare = fareSumRounded fareParams
   logDebug $
     "search request id=" <> show searchReq.id
       <> "; estimated distance = "
@@ -77,7 +77,7 @@ handler orgId sReq = do
     buildSearchRequestForDriver ::
       (MonadFlow m) =>
       DSearchReq.SearchRequest ->
-      Double ->
+      RoundedMoney ->
       Double ->
       GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong ->
       m SearchRequestForDriver

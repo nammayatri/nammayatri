@@ -17,6 +17,7 @@ import Product.FareCalculator.Calculator as Fare
 import Types.API.Ride (EndRideReq)
 import Types.App (Driver)
 import Types.Error
+import Types.Money (RoundedMoney)
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle
@@ -24,7 +25,7 @@ data ServiceHandle m = ServiceHandle
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
     endRideTransaction :: Id SRB.Booking -> Ride.Ride -> Id Driver -> m (),
-    notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> Amount -> m (),
+    notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> RoundedMoney -> m (),
     calculateFare ::
       Id Organization ->
       Variant ->

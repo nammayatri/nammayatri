@@ -9,7 +9,6 @@ module Storage.Tabular.Booking where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as Domain
@@ -20,6 +19,7 @@ import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()
+import Types.Money (RoundedMoney)
 
 derivePersistField "Domain.BookingStatus"
 
@@ -41,7 +41,7 @@ mkPersist
       estimatedDistance Double
       createdAt UTCTime
       updatedAt UTCTime
-      estimatedFare Amount
+      estimatedFare RoundedMoney
       fareParametersId Fare.FareParametersTId
 
       Primary id

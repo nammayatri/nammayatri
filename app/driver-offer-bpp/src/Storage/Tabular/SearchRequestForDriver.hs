@@ -17,6 +17,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
+import Types.Money (RoundedMoney)
 
 mkPersist
   defaultSqlSettings
@@ -29,7 +30,7 @@ mkPersist
       durationToPickup Seconds
       vehicleVariant Variant.Variant
       distance Double
-      baseFare Double
+      baseFare RoundedMoney
       searchRequestValidTill UTCTime
       driverId PersonTId
       createdAt UTCTime

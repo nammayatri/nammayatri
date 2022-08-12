@@ -1,7 +1,6 @@
 module Types.API.Ride where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
@@ -9,6 +8,7 @@ import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
 import Domain.Types.CancellationReason (CancellationReasonCode)
 import Domain.Types.Ride
 import Domain.Types.Vehicle.Variant
+import Types.Money (RoundedMoney)
 
 data StartRideReq = StartRideReq
   { rideOtp :: Text,

@@ -4,7 +4,6 @@ import Beckn.Prelude
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -23,6 +22,7 @@ import SharedLogic.DriverPool
 import qualified Storage.Queries.BusinessEvent as QBE
 import Storage.Queries.Person (DriverPoolResult)
 import qualified Storage.Queries.SearchRequest as QSReq
+import Types.Money
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
@@ -44,7 +44,7 @@ data DSearchRes = DSearchRes
 data EstimateItem = EstimateItem
   { vehicleVariant :: Variant.Variant,
     distanceToPickup :: Meters,
-    baseFare :: Amount
+    baseFare :: RoundedMoney
   }
 
 data TransporterInfo = TransporterInfo
@@ -87,7 +87,7 @@ mkEstimate org dSReq dist g = do
   let variant = g.origin.vehicle.variant
   fareParams <- calculateFare org.id variant dist dSReq.pickupTime Nothing
   let baseFare = fareSumRounded fareParams
-  logDebug $ "baseFare: " <> show (amountToString baseFare)
+  logDebug $ "baseFare: " <> show baseFare
   logDebug $ "distance: " <> show g.distance
   pure
     EstimateItem

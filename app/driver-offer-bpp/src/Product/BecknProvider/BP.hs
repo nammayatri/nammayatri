@@ -6,7 +6,6 @@ module Product.BecknProvider.BP
   )
 where
 
-import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common
 import qualified Core.ACL.OnUpdate as ACL
 import qualified Domain.Types.Booking as SRB
@@ -21,6 +20,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Metrics (CoreMetrics)
 import Types.Error
+import Types.Money (RoundedMoney)
 import Utils.Common
 
 sendRideAssignedUpdateToBAP ::
@@ -68,7 +68,7 @@ sendRideCompletedUpdateToBAP ::
   SRB.Booking ->
   SRide.Ride ->
   Fare.FareParameters ->
-  Amount ->
+  RoundedMoney ->
   m ()
 sendRideCompletedUpdateToBAP booking ride fareParams finalFare = do
   transporter <-

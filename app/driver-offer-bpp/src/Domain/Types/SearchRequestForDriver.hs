@@ -8,6 +8,7 @@ import Domain.Types.Person
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Types.Money (RoundedMoney)
 
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
@@ -19,7 +20,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     durationToPickup :: Seconds,
     vehicleVariant :: Variant.Variant,
     distance :: Double,
-    baseFare :: Double,
+    baseFare :: RoundedMoney,
     createdAt :: UTCTime
   }
   deriving (Generic, Show, PrettyShow)
@@ -30,7 +31,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     searchRequestValidTill :: UTCTime,
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
-    baseFare :: Double,
+    baseFare :: RoundedMoney,
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: DLoc.SearchReqLocation,
     distance :: Double

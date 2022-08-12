@@ -5,7 +5,6 @@ module Core.ACL.OnUpdate
 where
 
 import Beckn.Prelude
-import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
@@ -21,6 +20,7 @@ import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import Product.FareCalculator.Calculator
 import Types.Error
+import Types.Money (RoundedMoney)
 import Utils.Common
 
 data OnUpdateBuildReq
@@ -34,7 +34,7 @@ data OnUpdateBuildReq
       }
   | RideCompletedBuildReq
       { ride :: DRide.Ride,
-        finalFare :: Amount,
+        finalFare :: RoundedMoney,
         fareParams :: Fare.FareParameters
       }
   | BookingCancelledBuildReq

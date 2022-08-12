@@ -9,7 +9,6 @@ module Storage.Tabular.DriverQuote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common (Meters (..), Seconds (..))
 import Beckn.Types.Id
 import qualified Domain.Types.DriverQuote as Domain
@@ -18,6 +17,7 @@ import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Person (PersonTId)
 import qualified Storage.Tabular.SearchRequest as SReq
 import Storage.Tabular.Vehicle ()
+import Types.Money (RoundedMoney)
 
 derivePersistField "Domain.DriverQuoteStatus"
 
@@ -38,7 +38,7 @@ mkPersist
       validTill UTCTime
       createdAt UTCTime
       updatedAt UTCTime
-      estimatedFare Amount
+      estimatedFare RoundedMoney
       fareParametersId Fare.FareParametersTId
 
       Primary id
