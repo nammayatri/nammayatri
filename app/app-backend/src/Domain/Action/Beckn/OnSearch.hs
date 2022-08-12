@@ -82,8 +82,8 @@ searchCbService registryUrl DOnSearchReq {..} = do
   _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
-  unless (_searchRequest.merchantId == merchant.id) $ throwError AccessDenied
+  merchant <- QMerch.findByRegistryUrl registryUrl
+  unless (elem _searchRequest.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
 
   now <- getCurrentTime
   estimates <- traverse (buildEstimate requestId providerInfo now) estimatesInfo

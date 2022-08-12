@@ -28,9 +28,9 @@ findByExoPhone countryCode exoPhone = do
         &&. merchant ^. MerchantExoPhone ==. val (Just exoPhone)
     return merchant
 
-findByRegistryUrl :: Transactionable m => BaseUrl -> m (Maybe Merchant)
+findByRegistryUrl :: Transactionable m => BaseUrl -> m [Merchant]
 findByRegistryUrl registryUrl =
-  findOne $ do
+  findAll $ do
     merchant <- from $ table @MerchantT
     where_ $ merchant ^. MerchantRegistryUrl ==. val (showBaseUrl registryUrl)
     return merchant

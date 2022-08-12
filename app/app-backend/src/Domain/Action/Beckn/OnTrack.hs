@@ -26,8 +26,8 @@ onTrack registryUrl req = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
-  unless (booking.merchantId == merchant.id) $ throwError AccessDenied
+  merchant <- QMerch.findByRegistryUrl registryUrl
+  unless (elem booking.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
 
   DB.runTransaction $ do
     QRide.updateTrackingUrl ride.id req.trackUrl

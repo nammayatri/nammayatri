@@ -42,8 +42,8 @@ onInit registryUrl req = do
   bookingOld <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
-  unless (bookingOld.merchantId == merchant.id) $ throwError AccessDenied
+  merchant <- QMerch.findByRegistryUrl registryUrl
+  unless (elem bookingOld.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
 
   DB.runTransaction $ do
     QRideB.updateBPPBookingId req.bookingId req.bppBookingId

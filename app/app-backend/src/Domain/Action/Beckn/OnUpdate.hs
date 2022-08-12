@@ -77,8 +77,8 @@ onUpdate registryUrl RideAssignedReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
-  unless (booking.merchantId == merchant.id) $ throwError AccessDenied
+  merchant <- QMerch.findByRegistryUrl registryUrl
+  unless (elem booking.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
 
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
   ride <- buildRide booking
@@ -114,8 +114,8 @@ onUpdate registryUrl RideStartedReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
-  unless (booking.merchantId == merchant.id) $ throwError AccessDenied
+  merchant <- QMerch.findByRegistryUrl registryUrl
+  unless (elem booking.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
 
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
@@ -133,8 +133,8 @@ onUpdate registryUrl RideCompletedReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
-  unless (booking.merchantId == merchant.id) $ throwError AccessDenied
+  merchant <- QMerch.findByRegistryUrl registryUrl
+  unless (elem booking.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
 
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
@@ -166,8 +166,8 @@ onUpdate registryUrl BookingCancelledReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
-  unless (booking.merchantId == merchant.id) $ throwError AccessDenied
+  merchant <- QMerch.findByRegistryUrl registryUrl
+  unless (elem booking.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
 
   unless (isBookingCancellable booking) $
     throwError (BookingInvalidStatus (show booking.status))
@@ -188,8 +188,8 @@ onUpdate registryUrl BookingReallocationReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
-  unless (booking.merchantId == merchant.id) $ throwError AccessDenied
+  merchant <- QMerch.findByRegistryUrl registryUrl
+  unless (elem booking.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
 
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   DB.runTransaction $ do

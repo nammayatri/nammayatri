@@ -68,8 +68,8 @@ onSelect registryUrl DOnSelectReq {..} = do
       >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
-  unless (searchRequest.merchantId == merchant.id) $ throwError AccessDenied
+  merchant <- QMerch.findByRegistryUrl registryUrl
+  unless (elem searchRequest.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
 
   let personId = searchRequest.riderId
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
