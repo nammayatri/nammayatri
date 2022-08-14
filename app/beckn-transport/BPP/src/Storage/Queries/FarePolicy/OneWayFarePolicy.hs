@@ -45,7 +45,7 @@ findById fpId =
 updateOneWayFarePolicy :: OneWayFarePolicy -> SqlDB ()
 updateOneWayFarePolicy farePolicy = do
   now <- getCurrentTime
-  withFullEntity farePolicy $ \(farePolicyT, _, perExtraKmRateList) -> do
+  withFullEntity farePolicy $ \(farePolicyT, perExtraKmRateList, _) -> do
     upsert'
       farePolicyT
       [ OneWayFarePolicyBaseFare =. val (fromRational <$> farePolicy.baseFare),
