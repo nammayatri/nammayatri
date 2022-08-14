@@ -23,7 +23,7 @@ notifyOnNewSearchRequestAvailable ::
   SearchRequestForDriverAPIEntity ->
   m ()
 notifyOnNewSearchRequestAvailable personId mbDeviceToken entityData = do
-  FCM.notifyPersonDefault notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonWithPriorityDefault (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.NEW_RIDE_AVAILABLE
     notificationData =
