@@ -76,6 +76,7 @@ type UIAPI =
     :<|> OrganizationAPI
     :<|> FarePolicyAPI
     :<|> LocationAPI
+    :<|> RouteAPI
     :<|> RideAPI
     :<|> CallAPIs
     :<|> IdfyHandlerAPI
@@ -96,6 +97,7 @@ uiServer =
     :<|> organizationFlow
     :<|> farePolicyFlow
     :<|> locationFlow
+    :<|> routeFlow
     :<|> rideFlow
     :<|> callFlow
     :<|> idfyHandlerFlow
@@ -266,6 +268,15 @@ locationFlow :: FlowServer LocationAPI
 locationFlow =
   Location.getLocation
     :<|> Location.updateLocation
+
+type RouteAPI =
+  "route"
+    :> TokenAuth
+    :> ReqBody '[JSON] Location.Request
+    :> Post '[JSON] Location.Response
+
+routeFlow :: FlowServer RouteAPI
+routeFlow = Location.getRoute
 
 type IdfyHandlerAPI =
   "ext" :> "idfy"
