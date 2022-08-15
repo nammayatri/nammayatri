@@ -1,9 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Product.DriveronBoarding.DriverOnBoarding where
 
@@ -12,9 +8,6 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (isNothing)
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
-import Beckn.Types.Predicate
-import Beckn.Types.Validation
-import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
 import qualified Domain.Types.Driveronboarding.DriverDrivingLicense as DDL
 import qualified Domain.Types.Driveronboarding.VehicleRegistrationCert as DVR hiding (VALID)
@@ -23,27 +16,13 @@ import Environment
 import qualified EulerHS.Language as L
 import qualified Storage.Queries.Driveronboarding.DriverDrivingLicense as QDDL
 import qualified Storage.Queries.Driveronboarding.VehicleRegistrationCert as QVR
-import qualified Storage.Queries.Person as QPerson
 import Types.API.Driveronboarding.DriverOnBoarding
-import Types.Error
 import Utils.Common
-
-validateDriverDrivingLicense :: Validate DriverOnBoardingReq
-validateDriverDrivingLicense DriverOnBoardingReq {..} =
-  sequenceA_
-    [ validateField "driverLicenseNumber" driverLicenseNumber $ MinLength 5 `And` text
-    ]
-  where
-    extractMaybe (Just x) = x
-    text = star $ alphanum \/ ","
 
 registrationHandler :: Id SP.Person -> DriverOnBoardingReq -> FlowHandler DriverOnBoardingRes
 registrationHandler personId req@DriverOnBoardingReq {..} = withFlowHandlerAPI $ do
-  runRequestValidation validateDriverDrivingLicense DriverOnBoardingReq {..}
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  task_id <- L.generateGUID -- task_id for idfy request
-  let group_id = personId -- group_id for idfy request
   now <- getCurrentTime
+  runRequestValidation (validateDriverOnBoardingReq now) DriverOnBoardingReq {..}
   driverDLDetails <- QDDL.findByDId personId
   vehicleRCDetails <- QVR.findByPId personId
   handleDLVerification req personId driverDLDetails

@@ -383,12 +383,11 @@ orgBecknApiFlow orgId aurhRes =
 
 type OnBoardingAPI =
   "driver"
-    :> ( "register"
-           :> TokenAuth
+    :> "register"
+    :> ( TokenAuth
            :> ReqBody '[JSON] DriverOnBoardingReq
            :> Post '[JSON] DriverOnBoardingRes
-           :<|> "register"
-           :> "status"
+           :<|> "status"
            :> TokenAuth
            :> Get '[JSON] StatusRes
        )
