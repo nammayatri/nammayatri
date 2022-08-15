@@ -18,7 +18,7 @@ import qualified Domain.Types.FareParams as Fare
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
-import Product.FareCalculator.Calculator (fareSum, mkBreakupList)
+import Product.FareCalculator.Calculator (mkBreakupList)
 import Types.Error
 import Utils.Common
 
@@ -94,14 +94,14 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
             fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId
           }
 buildOnUpdateMessage req@RideCompletedBuildReq {} = do
+  fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
   let currency = "INR"
-      totalFare = amountToDecimalValue $ fareSum req.fareParams
       ride = req.ride
       price =
         RideCompletedOU.QuotePrice
           { currency,
-            value = totalFare,
-            computed_value = totalFare
+            value = fare,
+            computed_value = fare
           }
       breakup = mkBreakupList (OnUpdate.BreakupPrice currency . amountToDecimalValue) OnUpdate.BreakupItem req.fareParams
   return $

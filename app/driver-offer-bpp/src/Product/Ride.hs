@@ -46,7 +46,10 @@ buildDriverRideRes (ride, booking) = do
         vehicleColor = vehicle.color,
         vehicleVariant = vehicle.variant,
         vehicleModel = vehicle.model,
+        computedFare = ride.fare,
         actualRideDistance = ride.traveledDistance,
         createdAt = ride.createdAt,
-        updatedAt = ride.updatedAt
+        updatedAt = ride.updatedAt,
+        tripStartTime = ride.tripStartTime,
+        tripEndTime = ride.tripEndTime
       }

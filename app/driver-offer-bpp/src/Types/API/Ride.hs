@@ -39,11 +39,14 @@ data DriverRideRes = DriverRideRes
     vehicleModel :: Text,
     vehicleColor :: Text,
     vehicleNumber :: Text,
+    computedFare :: Maybe Amount,
     estimatedBaseFare :: Amount,
     driverSelectedFare :: Amount,
     actualRideDistance :: HighPrecMeters,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    tripStartTime :: Maybe UTCTime,
+    tripEndTime :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

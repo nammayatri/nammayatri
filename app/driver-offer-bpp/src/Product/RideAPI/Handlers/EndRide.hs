@@ -61,10 +61,11 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   now <- getCurrentTime
-  putDiffs booking ride
+  fare <- recalculateFare booking ride
 
   let updRide =
-        ride{tripEndTime = Just now
+        ride{tripEndTime = Just now,
+             fare = Just fare
             }
 
   endRideTransaction booking.id updRide (cast driverId)
@@ -73,7 +74,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
 
   return APISuccess.Success
   where
-    putDiffs booking ride = do
+    recalculateFare booking ride = do
       let transporterId = booking.providerId
           actualDistance = ride.traveledDistance
           oldDistance = booking.estimatedDistance
@@ -91,3 +92,4 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric fareDiff distanceDiff
+      return updatedBaseFare
