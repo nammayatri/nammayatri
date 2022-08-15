@@ -1,7 +1,7 @@
 let common = ./common.dhall
 let sec = ./secrets/beckn-transport.dhall
 
-let GeoRestriction = < Unrestricted | Regions : List Text>
+let GeoRestriction = < Unrestricted | Regions : List Text >
 
 let postgresConfig =
   { connectHost = "adb.primary.beckn.juspay.net"
@@ -32,8 +32,8 @@ let rcfg =
 
 let smsConfig =
   { sessionConfig = common.smsSessionConfig
-  , credConfig = {
-      username = common.smsUserName
+  , credConfig =
+    { username = common.smsUserName
     , password = common.smsPassword
     , otpHash = sec.smsOtpHash
     }
@@ -43,23 +43,15 @@ let smsConfig =
   }
 
 let geofencingConfig =
-{ origin = GeoRestriction.Regions ["Ernakulam"]
-, destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
+{ origin = GeoRestriction.Regions [ "Ernakulam" ]
+, destination = GeoRestriction.Regions [ "Ernakulam", "Kerala" ]
 }
 
-let apiRateLimitOptions =
-  { limit = +4
-  , limitResetTimeInSec = +600
-  }
+let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
-let encTools =
-  { service = common.passetto
-  , hashSalt = sec.encHashSalt
-  }
+let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
-let kafkaProducerCfg =
-  { brokers = ["FIXME"]
-  }
+let kafkaProducerCfg = { brokers = [] : List Text }
 
 in
 
@@ -88,7 +80,7 @@ in
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
 , fcmJsonPath = common.fcmJsonPath
-, fcmTokenKeyPrefix = "FIXME"
+, fcmTokenKeyPrefix = "transporter-bpp"
 , graphhopperUrl = common.graphhopperUrl
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters

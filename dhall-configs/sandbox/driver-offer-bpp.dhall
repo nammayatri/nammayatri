@@ -5,7 +5,7 @@ let GeoRestriction = < Unrestricted | Regions : List Text>
 
 let postgresConfig =
   { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
-  , connectPort = 5434
+  , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
   , connectDatabase = "atlas_driver_offer_bpp"
@@ -24,7 +24,7 @@ let rcfg =
   { connectHost = "beckn-redis-001-001.zkt6uh.0001.aps1.cache.amazonaws.com"
   , connectPort = 6379
   , connectAuth = None Text
-  , connectDatabase = +0
+  , connectDatabase = +1
   , connectMaxConnections = +50
   , connectMaxIdleTime = +30
   , connectTimeout = None Integer
@@ -38,7 +38,7 @@ let smsConfig =
     , otpHash = sec.smsOtpHash
     }
   , useFakeSms = Some 7891
-  , url = "http://localhost:4343"
+  , url = "https://http.myvfirst.com"
   , sender = "JUSPAY"
   }
 
@@ -66,34 +66,39 @@ in
 
 { esqDBCfg = esqDBCfg
 , redisCfg = rcfg
+, hedisCfg = rcfg
 , port = +8016
 , metricsPort = +9997
 , hostName = "juspay.in"
-, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/dobpp/cab/v1"
+, nwAddress = "https://api.beckn.juspay.in/dobpp/beckn"
+, selfUIUrl = "https://api.beckn.juspay.in/dobpp/ui"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
-, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log"}
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False}
+, updateLocationRefreshPeriod = +1
+, updateLocationAllowedDelay = +60
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
 , graceTerminationPeriod = +90
 , registryUrl = common.registryUrl
 , encTools = encTools
 , authTokenCacheExpiry = +600
+, minimumDriverRatesCount = +5
 , disableSignatureAuth = False
 , httpClientOptions = common.httpClientOptions
 , fcmUrl = common.fcmUrl
 , fcmJsonPath = common.fcmJsonPath
-, fcmTokenKeyPrefix = "FIXME"
+, fcmTokenKeyPrefix = "driver-offer-bpp"
 , apiRateLimitOptions = apiRateLimitOptions
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , smsCfg = smsConfig
 , driverPositionInfoExpiry = None Integer
-, searchRequestExpirationSeconds = +3600
+, searchRequestExpirationSeconds = +120
 , driverQuoteExpirationSeconds = +15
 , defaultRadiusOfSearch = +5000 -- meters
 , driverUnlockDelay = +2 -- seconds

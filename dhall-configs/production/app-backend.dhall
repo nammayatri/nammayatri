@@ -1,8 +1,6 @@
 let common = ./common.dhall
 let sec = ./secrets/app-backend.dhall
 
-let GeoRestriction = < Unrestricted | Regions: List Text>
-
 let esqDBCfg =
   { connectHost = "adb.primary.beckn.juspay.net"
   , connectPort = 5432
@@ -34,8 +32,8 @@ let hcfg =
 
 let smsConfig =
   { sessionConfig = common.smsSessionConfig
-  , credConfig = {
-      username = common.smsUserName
+  , credConfig =
+    { username = common.smsUserName
     , password = common.smsPassword
     , otpHash = sec.smsOtpHash
     }
@@ -45,38 +43,30 @@ let smsConfig =
   }
 
 let sesConfig =
-  { issuesConfig = {
-      from = "no-reply@juspay.in"
-    , to = ["support@supportyatri.freshdesk.com"]
-    , replyTo = []: List Text
-    , cc = []: List Text
+  { issuesConfig =
+    { from = "no-reply@juspay.in"
+    , to = [ "support@supportyatri.freshdesk.com" ]
+    , replyTo = [] : List Text
+    , cc = [] : List Text
     , region = "eu-west-1"
-    , fromArn = Some "arn:aws:ses:eu-west-1:980691203742:identity/no-reply@juspay.in"
+    , fromArn = Some
+        "arn:aws:ses:eu-west-1:980691203742:identity/no-reply@juspay.in"
     }
   }
 
-let gwUri = "https://gateway-1.beckn.nsdl.co.in"
+let gwUri = "https://api.beckn.juspay.in/gateway/v1"
+
+let nsdlGwUri = "https://gateway-1.beckn.nsdl.co.in"
 
 let providerUri = "https://api.beckn.juspay.in/transport/v2"
 
-let apiRateLimitOptions =
-  { limit = +4
-  , limitResetTimeInSec = +600
-  }
+let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
-let httpClientOptions =
-  { timeoutMs = +2000
-  , maxRetries = +3
-  }
+let httpClientOptions = { timeoutMs = +2000, maxRetries = +3 }
 
-let encTools =
-  { service = common.passetto
-  , hashSalt = sec.encHashSalt
-  }
+let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
-let kafkaProducerCfg =
-  { brokers = ["FIXME"]
-  }
+let kafkaProducerCfg = { brokers = [] : List Text }
 
 in
 
@@ -99,10 +89,7 @@ in
   { cabs = "https://api.beckn.juspay.in/bap/cab/v1"
   , metro = "https://api.beckn.juspay.in/bap/metro/v1"
   }
-, bapSelfUniqueKeyIds =
-  { cabs = "3"
-  , metro = "4"
-  }
+, bapSelfUniqueKeyIds = { cabs = "3", metro = "4" }
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
 , searchConfirmExpiry = Some +600
@@ -122,7 +109,7 @@ in
 , httpClientOptions = httpClientOptions
 , authTokenCacheExpiry = +600
 , registryUrl = common.registryUrl
-, gatewayUrl = gwUri
+, gatewayUrl = nsdlGwUri
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools

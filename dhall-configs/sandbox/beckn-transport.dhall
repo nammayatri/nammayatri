@@ -1,7 +1,7 @@
 let common = ./common.dhall
 let sec = ./secrets/beckn-transport.dhall
 
-let GeoRestriction = < Unrestricted | Regions : List Text>
+let GeoRestriction = < Unrestricted | Regions : List Text >
 
 let postgresConfig =
   { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
@@ -32,8 +32,8 @@ let rcfg =
 
 let smsConfig =
   { sessionConfig = common.smsSessionConfig
-  , credConfig = {
-      username = common.smsUserName
+  , credConfig =
+    { username = common.smsUserName
     , password = common.smsPassword
     , otpHash = sec.smsOtpHash
     }
@@ -47,24 +47,15 @@ let geofencingConfig =
 , destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
 }
 
-let apiRateLimitOptions =
-  { limit = +4
-  , limitResetTimeInSec = +600
-  }
+let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
-let httpClientOptions =
-  { timeoutMs = +2000
-  , maxRetries = +3
-  }
+let httpClientOptions = { timeoutMs = +2000, maxRetries = +3 }
 
-let encTools =
-  { service = common.passetto
-  , hashSalt = sec.encHashSalt
-  }
+let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kafkaProducerCfg =
-  { brokers = ["alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"]
-  }
+      { brokers = [ "alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092" ]
+      }
 
 in
 
@@ -88,12 +79,12 @@ in
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
 , geofencingConfig = geofencingConfig
-, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
+, loggerConfig = common.loggerConfig // { logFilePath = "/tmp/beckn-transport.log" }
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
 , fcmJsonPath = common.fcmJsonPath
-, fcmTokenKeyPrefix = "FIXME"
+, fcmTokenKeyPrefix = "transporter-bpp"
 , graphhopperUrl = common.graphhopperUrl
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
