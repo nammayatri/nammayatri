@@ -4,6 +4,7 @@ import qualified API.Beckn as Beckn
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Driver as Driver
 import qualified API.UI.Location as Location
+import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
@@ -20,7 +21,6 @@ import qualified Product.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Product.DriverOnboarding.Idfy as Idfy
 import qualified Product.DriverOnboarding.Status as DriverOnboarding
 import qualified Product.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
-import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Transporter as Transporter
 import Servant
 import Servant.OpenApi
@@ -29,7 +29,6 @@ import qualified Types.API.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Types.API.DriverOnboarding.Status as DriverOnboarding
 import qualified Types.API.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import Types.API.Idfy
-import qualified Types.API.OrgAdmin as OrgAdminAPI
 import Types.API.Transporter
 import Utils.Auth (AdminTokenAuth, TokenAuth)
 
@@ -46,7 +45,7 @@ type UIAPI =
     :> ( HealthCheckAPI
           :<|> Registration.API
           :<|> DriverOnboardingAPI
-          :<|> OrgAdminAPI
+          :<|> OrgAdmin.API
           :<|> Driver.API
           :<|> Vehicle.API
           :<|> OrganizationAPI
@@ -67,7 +66,7 @@ uiServer =
   pure "App is UP"
     :<|> Registration.handler
     :<|> driverOnboardingFlow
-    :<|> orgAdminFlow
+    :<|> OrgAdmin.handler
     :<|> Driver.handler
     :<|> Vehicle.handler
     :<|> organizationFlow
@@ -123,19 +122,6 @@ driverOnboardingFlow =
              :<|> DriverOnboarding.validateRCImage
          )
     :<|> DriverOnboarding.statusHandler
-    
-type OrgAdminAPI =
-  "orgAdmin" :> "profile"
-    :> AdminTokenAuth
-    :> Get '[JSON] OrgAdminAPI.OrgAdminProfileRes
-    :<|> AdminTokenAuth
-      :> ReqBody '[JSON] OrgAdminAPI.UpdateOrgAdminProfileReq
-      :> Post '[JSON] OrgAdminAPI.UpdateOrgAdminProfileRes
-
-orgAdminFlow :: FlowServer OrgAdminAPI
-orgAdminFlow =
-  OrgAdmin.getProfile
-    :<|> OrgAdmin.updateProfile
 
 -- Following is organization creation
 type OrganizationAPI =
