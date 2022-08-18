@@ -21,6 +21,7 @@ getPersonDetails personId = withFlowHandlerAPI $ do
 
 updatePerson :: Id Person.Person -> Profile.UpdateProfileReq -> FlowHandler APISuccess.APISuccess
 updatePerson personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  _ <- (QPerson.findByEmail >=> fromMaybeM PersonEmailExists) `mapM` req.email
   mbEncEmail <- encrypt `mapM` req.email
   runTransaction $
     QPerson.updatePersonalInfo
