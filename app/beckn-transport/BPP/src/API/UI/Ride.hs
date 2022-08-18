@@ -35,9 +35,11 @@ import qualified SharedLogic.FareCalculator.RentalFareCalculator as RentalFare
 import SharedLogic.LocationUpdates
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as DrLoc
+import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
+import Tools.Error (RentalFarePolicyError (NoRentalFarePolicy))
 import Tools.Metrics (putFareAndDistanceDeviations)
 
 type API =
@@ -85,7 +87,7 @@ startRide personId rideId req = withFlowHandlerAPI $ do
           notifyBAPRideStarted = sendRideStartedUpdateToBAP,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
           addFirstWaypoint = \driverId pt -> do
-            clearPointsList defaultRideInterpolationHandler driverId
+            clearLocationUpdatesOnRideEnd defaultRideInterpolationHandler driverId
             addPoints defaultRideInterpolationHandler driverId $ pt :| []
         }
 
@@ -102,14 +104,15 @@ endRide personId rideId req = withFlowHandlerAPI $ do
           endRideTransaction = EInternal.endRideTransaction,
           calculateFare = Fare.calculateFare,
           calculateRentalFare = RentalFare.calculateRentalFare,
+          getRentalFarePolicy = QRentalFP.findById >=> fromMaybeM NoRentalFarePolicy,
           buildRentalFareBreakups = RentalFare.buildRentalFareBreakups,
           buildOneWayFareBreakups = Fare.buildOneWayFareBreakups,
           recalculateFareEnabled = asks (.recalculateFareEnabled),
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
-          addLastWaypointAndRecalcDistanceOnEnd = \driverId pt -> do
-            addPoints defaultRideInterpolationHandler driverId $ pt :| []
-            recalcDistanceBatches defaultRideInterpolationHandler True driverId
+          addLastWaypointAndRecalcDistanceOnEnd = \driverId pt ->
+            processWaypoints defaultRideInterpolationHandler driverId True $ pt :| [],
+          thereWasFailedDistanceRecalculation = isDistanceCalculationFailed
         }
 
 cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess

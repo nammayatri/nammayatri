@@ -49,16 +49,15 @@ updateLocation personId waypoints = withFlowHandlerAPI $ do
   where
     constructHandler = do
       refreshPeriod <- fromIntegral <$> asks (.updateLocationRefreshPeriod)
-      allowedDelay <- fromIntegral <$> asks (.updateLocationAllowedDelay)
       pure $
         DLocation.Handler
           { refreshPeriod,
-            allowedDelay,
             findPersonById = Person.findById,
             findDriverLocationById = DrLoc.findById,
             upsertDriverLocation = \driverId point timestamp ->
               Esq.runTransaction $ DrLoc.upsertGpsCoord driverId point timestamp,
             getInProgressByDriverId = QRide.getInProgressByDriverId,
+            thereWasFailedDistanceRecalculation = isDistanceCalculationFailed,
             interpolationHandler = defaultRideInterpolationHandler
           }
 

@@ -37,12 +37,16 @@ data ServiceHandle m = ServiceHandle
       UTCTime ->
       UTCTime ->
       m RentalFare.RentalFareParameters,
+    getRentalFarePolicy ::
+      Id DRentalFP.RentalFarePolicy ->
+      m DRentalFP.RentalFarePolicy,
     buildOneWayFareBreakups :: Fare.OneWayFareParameters -> Id SRB.Booking -> m [DFareBreakup.FareBreakup],
     buildRentalFareBreakups :: RentalFare.RentalFareParameters -> Id SRB.Booking -> m [DFareBreakup.FareBreakup],
     recalculateFareEnabled :: m Bool,
     putDiffMetric :: Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
-    addLastWaypointAndRecalcDistanceOnEnd :: Id Person.Person -> LatLong -> m ()
+    addLastWaypointAndRecalcDistanceOnEnd :: Id Person.Person -> LatLong -> m (),
+    thereWasFailedDistanceRecalculation :: Id Person.Person -> m Bool
   }
 
 newtype EndRideReq = EndRideReq
@@ -102,7 +106,9 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           estimatedFare = booking.estimatedFare
           estimatedTotalFare = booking.estimatedTotalFare
       shouldRecalculateFare <- recalculateFareEnabled
-      if shouldRecalculateFare
+      distanceCalculationFailed <- thereWasFailedDistanceRecalculation requestorId
+
+      if shouldRecalculateFare && not distanceCalculationFailed
         then do
           fareParams <- calculateFare transporterId vehicleVariant actualDistance oneWayDetails.estimatedFinishTime
           let updatedFare = Fare.fareSum fareParams
@@ -123,13 +129,23 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
               fareBreakups
             )
         else do
+          when distanceCalculationFailed $
+            logWarning "Failed to calculate actual distance for this ride, using estimated distance"
           -- calculate fare again with old data for creating fare breakup
           fareParams <- calculateFare transporterId vehicleVariant oldDistance booking.startTime
           fareBreakups <- buildOneWayFareBreakups fareParams booking.id
           pure (oldDistance, estimatedFare, booking.estimatedTotalFare, fareBreakups)
 
     calcRentalFare booking ride rentalDetails now = do
-      let actualDistance = roundToIntegral ride.traveledDistance.getHighPrecMeters
+      distanceCalculationFailed <- thereWasFailedDistanceRecalculation requestorId
+      actualDistance <-
+        if not distanceCalculationFailed
+          then pure $ roundToIntegral ride.traveledDistance.getHighPrecMeters
+          else do
+            logWarning "Failed to calculate distance for this ride, using booking distance"
+            rentalFPBaseDistance <- (.baseDistance) <$> getRentalFarePolicy rentalDetails.rentalFarePolicyId
+            pure $ kilometersToMeters rentalFPBaseDistance
+
       fareParams <- calculateRentalFare rentalDetails.rentalFarePolicyId actualDistance booking.startTime now
       let fare = RentalFare.rentalFareSum fareParams
           totalFare = RentalFare.rentalFareSumWithDiscount fareParams
@@ -144,7 +160,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           <> show (fromMaybe 0 fareParams.nextDaysFare)
           <> ", Discount: "
           <> show (fromMaybe 0 fareParams.discount)
-      -- Do we ned this metrics in rental case?
+      -- Do we need this metrics in rental case?
       -- putDiffMetric fareDiff distanceDiff
       fareBreakups <- buildRentalFareBreakups fareParams booking.id
       pure (actualDistance, fare, totalFare, fareBreakups)

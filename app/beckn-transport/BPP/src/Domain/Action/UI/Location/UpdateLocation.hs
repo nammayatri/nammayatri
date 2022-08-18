@@ -28,11 +28,11 @@ type MonadHandler m = (MonadFlow m, MonadThrow m, Log m, MonadGuid m, MonadTime 
 
 data Handler m = Handler
   { refreshPeriod :: NominalDiffTime,
-    allowedDelay :: NominalDiffTime,
     findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findDriverLocationById :: Id Person.Person -> m (Maybe DriverLocation),
     upsertDriverLocation :: Id Person.Person -> LatLong -> UTCTime -> m (),
     getInProgressByDriverId :: Id Person.Person -> m (Maybe SRide.Ride),
+    thereWasFailedDistanceRecalculation :: Id Person.Person -> m Bool,
     interpolationHandler :: RideInterpolationHandler m
   }
 
@@ -66,7 +66,12 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
         getInProgressByDriverId driver.id
           >>= maybe
             (logInfo "No ride is assigned to driver, ignoring")
-            (const $ processWaypoints interpolationHandler driver.id $ NE.map (.pt) waypoints)
+            ( \_ -> do
+              failedDistanceForRide <- thereWasFailedDistanceRecalculation driverId
+              if failedDistanceForRide
+                then logInfo "Failed to calculate actual distance for this ride, ignoring"
+                else processWaypoints interpolationHandler driver.id False $ NE.map (.pt) waypoints
+            )
     Redis.unlockRedis lockKey
   pure Success
   where
@@ -78,14 +83,3 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
 
 makeLockKey :: Id Person.Person -> Text
 makeLockKey (Id driverId) = "beckn-transport:driverLocationUpdate:" <> driverId
-
-processWaypoints ::
-  (Monad m, Log m) =>
-  RideInterpolationHandler m ->
-  Id Person.Person ->
-  NonEmpty LatLong ->
-  m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId waypoints = do
-  addPoints driverId waypoints
-  let ending = False
-  recalcDistanceBatches ih ending driverId
