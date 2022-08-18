@@ -3,15 +3,16 @@ module App.Routes where
 import qualified API.Beckn as Beckn
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Driver as Driver
+import qualified API.UI.Location as Location
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
+import qualified API.UI.Route as Route
 import App.Routes.FarePolicy
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.OpenApi
 import Domain.Types.Organization (Organization)
 import Domain.Types.Person as SP
-import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude
@@ -20,7 +21,6 @@ import qualified Product.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Product.DriverOnboarding.Idfy as Idfy
 import qualified Product.DriverOnboarding.Status as DriverOnboarding
 import qualified Product.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
-import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
@@ -31,7 +31,6 @@ import qualified Types.API.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Types.API.DriverOnboarding.Status as DriverOnboarding
 import qualified Types.API.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import Types.API.Idfy
-import Types.API.Location as Location
 import qualified Types.API.OrgAdmin as OrgAdminAPI
 import Types.API.Transporter
 import Types.API.Vehicle
@@ -55,8 +54,8 @@ type UIAPI =
           :<|> VehicleAPI
           :<|> OrganizationAPI
           :<|> FarePolicyAPI
-          :<|> LocationAPI
-          :<|> RouteAPI
+          :<|> Location.API
+          :<|> Route.API
           :<|> Ride.API
           :<|> CallAPIs
           :<|> IdfyHandlerAPI
@@ -76,8 +75,8 @@ uiServer =
     :<|> vehicleFlow
     :<|> organizationFlow
     :<|> farePolicyFlow
-    :<|> locationFlow
-    :<|> routeFlow
+    :<|> Location.handler
+    :<|> Route.handler
     :<|> Ride.handler
     :<|> callFlow
     :<|> idfyHandlerFlow
@@ -182,30 +181,6 @@ organizationFlow :: FlowServer OrganizationAPI
 organizationFlow =
   Transporter.getTransporter
     :<|> Transporter.updateTransporter
-
--- Location update and get for tracking is as follows
-type LocationAPI =
-  "driver" :> "location"
-    :> ( Capture "rideId" (Id DRide.Ride) -- TODO: add auth
-           :> Get '[JSON] GetLocationRes
-           :<|> TokenAuth
-             :> ReqBody '[JSON] UpdateLocationReq
-             :> Post '[JSON] UpdateLocationRes
-       )
-
-locationFlow :: FlowServer LocationAPI
-locationFlow =
-  Location.getLocation
-    :<|> Location.updateLocation
-
-type RouteAPI =
-  "route"
-    :> TokenAuth
-    :> ReqBody '[JSON] Location.Request
-    :> Post '[JSON] Location.Response
-
-routeFlow :: FlowServer RouteAPI
-routeFlow = Location.getRoute
 
 type IdfyHandlerAPI =
   "ext" :> "idfy"

@@ -1,8 +1,8 @@
 module Mobility.ARDU.APICalls where
 
 import qualified "driver-offer-bpp" API.UI.Driver as DriverAPI
+import "driver-offer-bpp" API.UI.Location as LocationAPI
 import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
-import "driver-offer-bpp" App.Routes as DrOfRoutes
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Id
@@ -12,7 +12,6 @@ import qualified "driver-offer-bpp" Domain.Types.Ride as TRide
 import EulerHS.Prelude
 import Servant hiding (Context)
 import Servant.Client
-import "driver-offer-bpp" Types.API.Location
 
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TRide.Ride -> RideAPI.EndRideReq -> ClientM APISuccess
@@ -43,15 +42,15 @@ buildStartRideReq otp initialPoint =
       point = initialPoint
     }
 
-updateLocation :: RegToken -> NonEmpty Waypoint -> ClientM APISuccess
-(_ :<|> updateLocation) = client (Proxy @LocationAPI)
+updateLocation :: RegToken -> NonEmpty LocationAPI.Waypoint -> ClientM APISuccess
+(_ :<|> updateLocation) = client (Proxy @LocationAPI.API)
 
-buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty Waypoint)
+buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty LocationAPI.Waypoint)
 buildUpdateLocationRequest pts = do
   now <- getCurrentTime
   pure $
     flip fmap pts $ \ll ->
-      Waypoint
+      LocationAPI.Waypoint
         { pt = ll,
           ts = now,
           acc = Nothing
