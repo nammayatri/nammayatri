@@ -11,7 +11,7 @@ import EulerHS.Prelude
 import qualified Storage.Queries.Person as QPerson
 import qualified Types.API.Profile as Profile
 import Types.Error
-import Utils.Common (fromMaybeM, withFlowHandlerAPI)
+import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 
 getPersonDetails :: Id Person.Person -> FlowHandler Profile.ProfileRes
 getPersonDetails personId = withFlowHandlerAPI $ do
@@ -21,7 +21,8 @@ getPersonDetails personId = withFlowHandlerAPI $ do
 
 updatePerson :: Id Person.Person -> Profile.UpdateProfileReq -> FlowHandler APISuccess.APISuccess
 updatePerson personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  _ <- (QPerson.findByEmail >=> fromMaybeM PersonEmailExists) `mapM` req.email
+  mPerson <- join <$> QPerson.findByEmail `mapM` req.email
+  whenJust mPerson (\_ -> throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
   runTransaction $
     QPerson.updatePersonalInfo
