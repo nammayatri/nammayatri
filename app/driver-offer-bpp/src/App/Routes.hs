@@ -7,13 +7,12 @@ import qualified API.UI.Location as Location
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
+import qualified API.UI.Vehicle as Vehicle
 import App.Routes.FarePolicy
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.OpenApi
 import Domain.Types.Organization (Organization)
-import Domain.Types.Person as SP
-import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude
 import qualified Product.Call as Call
@@ -23,7 +22,6 @@ import qualified Product.DriverOnboarding.Status as DriverOnboarding
 import qualified Product.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Transporter as Transporter
-import qualified Product.Vehicle as Vehicle
 import Servant
 import Servant.OpenApi
 import qualified Types.API.Call as CallAPI
@@ -33,7 +31,6 @@ import qualified Types.API.DriverOnboarding.VehicleRegistrationCertificate as Dr
 import Types.API.Idfy
 import qualified Types.API.OrgAdmin as OrgAdminAPI
 import Types.API.Transporter
-import Types.API.Vehicle
 import Utils.Auth (AdminTokenAuth, TokenAuth)
 
 type DriverOfferAPI =
@@ -51,7 +48,7 @@ type UIAPI =
           :<|> DriverOnboardingAPI
           :<|> OrgAdminAPI
           :<|> Driver.API
-          :<|> VehicleAPI
+          :<|> Vehicle.API
           :<|> OrganizationAPI
           :<|> FarePolicyAPI
           :<|> Location.API
@@ -72,7 +69,7 @@ uiServer =
     :<|> driverOnboardingFlow
     :<|> orgAdminFlow
     :<|> Driver.handler
-    :<|> vehicleFlow
+    :<|> Vehicle.handler
     :<|> organizationFlow
     :<|> farePolicyFlow
     :<|> Location.handler
@@ -139,32 +136,6 @@ orgAdminFlow :: FlowServer OrgAdminAPI
 orgAdminFlow =
   OrgAdmin.getProfile
     :<|> OrgAdmin.updateProfile
-
--- Following is vehicle flow
-type VehicleAPI =
-  "org" :> "vehicle"
-    :> ( "list"
-           :> AdminTokenAuth
-           :> QueryParam "variant" Variant.Variant
-           :> QueryParam "registrationNo" Text
-           :> QueryParam "limit" Int
-           :> QueryParam "offset" Int
-           :> Get '[JSON] ListVehicleRes
-           :<|> AdminTokenAuth
-             :> Capture "driverId" (Id Person)
-             :> ReqBody '[JSON] UpdateVehicleReq
-             :> Post '[JSON] UpdateVehicleRes
-           :<|> TokenAuth
-             :> QueryParam "registrationNo" Text
-             :> QueryParam "driverId" (Id Person)
-             :> Get '[JSON] GetVehicleRes
-       )
-
-vehicleFlow :: FlowServer VehicleAPI
-vehicleFlow =
-  Vehicle.listVehicles
-    :<|> Vehicle.updateVehicle
-    :<|> Vehicle.getVehicle
 
 -- Following is organization creation
 type OrganizationAPI =
