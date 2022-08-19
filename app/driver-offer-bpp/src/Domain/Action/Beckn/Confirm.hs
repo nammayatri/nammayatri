@@ -20,6 +20,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
 import Servant.Client (BaseUrl (..))
+import qualified SharedLogic.CallBAP as BP
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -32,7 +33,6 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Utils.Notifications as Notify
-import qualified SharedLogic.CallBAP as BP
 
 data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,

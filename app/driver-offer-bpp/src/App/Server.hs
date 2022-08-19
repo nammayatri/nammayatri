@@ -1,6 +1,6 @@
 module App.Server where
 
-import App.Routes
+import API
 import Beckn.Tools.Metrics.Init
 import Beckn.Types.Flow
 import Beckn.Utils.App

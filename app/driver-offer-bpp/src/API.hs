@@ -8,7 +8,7 @@ import EulerHS.Prelude
 import Servant
 import Servant.OpenApi
 
-type TransportAPI =
+type DriverOfferAPI =
   MainAPI
     :<|> SwaggerAPI
 
@@ -16,16 +16,16 @@ type MainAPI =
   UI.API
     :<|> Beckn.API
 
-transporterAPI :: Proxy TransportAPI
-transporterAPI = Proxy
+driverOfferAPI :: Proxy DriverOfferAPI
+driverOfferAPI = Proxy
 
 mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
     :<|> Beckn.handler
 
-transporterServer :: FlowServer TransportAPI
-transporterServer =
+driverOfferServer :: FlowServer DriverOfferAPI
+driverOfferServer =
   mainServer
     :<|> writeSwaggerJSONFlow
 
@@ -37,7 +37,7 @@ swagger = do
   openApi
     { _openApiInfo =
         (_openApiInfo openApi)
-          { _infoTitle = "Yatri Partner",
+          { _infoTitle = "Namma Yatri Partner",
             _infoVersion = "1.0"
           }
     }
