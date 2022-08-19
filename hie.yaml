@@ -188,3 +188,6 @@ cradle:
     
     - path: "lib/beckn-services/src"
       component: "beckn-services:lib"   
+
+    - path: "lib/location-updates/src"
+      component: "location-updates:lib"

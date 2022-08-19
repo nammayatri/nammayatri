@@ -5,6 +5,7 @@ module API.UI.Ride
   )
 where
 
+import Beckn.LocationUpdates
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import qualified Beckn.Types.APISuccess as APISuccess

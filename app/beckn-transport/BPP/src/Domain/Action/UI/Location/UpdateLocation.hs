@@ -8,6 +8,7 @@ module Domain.Action.UI.Location.UpdateLocation
   )
 where
 
+import Beckn.LocationUpdates
 import Beckn.Prelude hiding (Handler)
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
@@ -22,7 +23,6 @@ import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
-import SharedLogic.LocationUpdates
 
 type MonadHandler m = (MonadFlow m, MonadThrow m, Log m, MonadGuid m, MonadTime m)
 
@@ -33,7 +33,7 @@ data Handler m = Handler
     upsertDriverLocation :: Id Person.Person -> LatLong -> UTCTime -> m (),
     getInProgressByDriverId :: Id Person.Person -> m (Maybe SRide.Ride),
     thereWasFailedDistanceRecalculation :: Id Person.Person -> m Bool,
-    interpolationHandler :: RideInterpolationHandler m
+    interpolationHandler :: RideInterpolationHandler Person.Person m
   }
 
 type UpdateLocationReq = NonEmpty Waypoint

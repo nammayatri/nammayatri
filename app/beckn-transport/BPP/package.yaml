@@ -97,6 +97,7 @@ library:
   dependencies:
     - beckn-core
     - beckn-spec
+    - location-updates
 
 executables:
   beckn-transport-exe:

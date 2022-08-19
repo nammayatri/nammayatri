@@ -48,6 +48,7 @@ packages:
   - app/scheduler-example
   - lib/beckn-spec
   - lib/beckn-services
+  - lib/location-updates
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
