@@ -73,8 +73,6 @@ dependencies:
   - http-media
   - kleene
   - lattices
-  - postgresql-simple
-  - postgresql-migration
   - prometheus-client
   - prometheus-proc
   - wai-middleware-prometheus

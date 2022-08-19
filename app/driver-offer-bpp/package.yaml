@@ -75,7 +75,6 @@ dependencies:
   - time
   - stm
   - random-strings
-  - postgresql-simple
   - resource-pool
   - uuid
   - prometheus-client

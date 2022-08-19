@@ -80,7 +80,6 @@ dependencies:
   - random-strings
   - record-hasfield
   - record-dot-preprocessor
-  - postgresql-simple
   - servant-openapi3
   - openapi3
   - persistent
