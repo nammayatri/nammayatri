@@ -1,2 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.person DROP CONSTRAINT person_unique_mobile_number_country_code;
-ALTER TABLE atlas_driver_offer_bpp.person ADD CONSTRAINT person_unique_mobile_number_country_code_organization_id UNIQUE (mobile_country_code, mobile_number_hash,organization_id);
