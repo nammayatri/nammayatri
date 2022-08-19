@@ -1,6 +1,7 @@
 module App.Routes where
 
 import qualified API.Beckn as Beckn
+import qualified API.UI.Call as Call
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Driver as Driver
 import qualified API.UI.Location as Location
@@ -15,14 +16,12 @@ import Beckn.Utils.Common
 import Data.OpenApi
 import Environment
 import EulerHS.Prelude
-import qualified Product.Call as Call
 import qualified Product.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Product.DriverOnboarding.Idfy as Idfy
 import qualified Product.DriverOnboarding.Status as DriverOnboarding
 import qualified Product.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import Servant
 import Servant.OpenApi
-import qualified Types.API.Call as CallAPI
 import qualified Types.API.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Types.API.DriverOnboarding.Status as DriverOnboarding
 import qualified Types.API.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
@@ -50,7 +49,7 @@ type UIAPI =
           :<|> Location.API
           :<|> Route.API
           :<|> Ride.API
-          :<|> CallAPIs
+          :<|> Call.API
           :<|> IdfyHandlerAPI
           :<|> CancellationReason.API
        )
@@ -71,7 +70,7 @@ uiServer =
     :<|> Location.handler
     :<|> Route.handler
     :<|> Ride.handler
-    :<|> callFlow
+    :<|> Call.handler
     :<|> idfyHandlerFlow
     :<|> CancellationReason.handler
 
@@ -134,39 +133,6 @@ idfyHandlerFlow :: FlowServer IdfyHandlerAPI
 idfyHandlerFlow =
   Idfy.idfyDrivingLicense --update handler
     :<|> Idfy.idfyRCLicense --update handler
-
--------- Direct call (Exotel) APIs
-type CallAPIs =
-  "exotel"
-    :> "call"
-    :> ( "customer"
-           :> "number"
-           :> MandatoryQueryParam "CallSid" Text
-           :> MandatoryQueryParam "CallFrom" Text
-           :> MandatoryQueryParam "CallTo" Text
-           :> MandatoryQueryParam "CallStatus" Text
-           :> Get '[JSON] CallAPI.MobileNumberResp
-           :<|> "statusCallback"
-           :> MandatoryQueryParam "CallSid" Text
-           :> MandatoryQueryParam "DialCallStatus" Text
-           :> MandatoryQueryParam "RecordingUrl" Text
-           :> QueryParam "Legs[0][OnCallDuration]" Int
-           :> Get '[JSON] CallAPI.CallCallbackRes
-       )
-
--- :<|> "ride"
---   :> Capture "rideId" (Id DRide.Ride)
---   :> "call"
---   :> "status"
---   :> TokenAuth
---   :> Get '[JSON] CallAPI.GetCallStatusRes
-
-callFlow :: FlowServer CallAPIs
-callFlow =
-  Call.getCustomerMobileNumber
-    :<|> Call.directCallStatusCallback
-
--- :<|> Call.getCallStatus
 
 type HealthCheckAPI = Get '[JSON] Text
 
