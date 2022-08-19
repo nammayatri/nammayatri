@@ -8,12 +8,11 @@ import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
+import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
 import App.Routes.FarePolicy
-import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.OpenApi
-import Domain.Types.Organization (Organization)
 import Environment
 import EulerHS.Prelude
 import qualified Product.Call as Call
@@ -21,7 +20,6 @@ import qualified Product.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Product.DriverOnboarding.Idfy as Idfy
 import qualified Product.DriverOnboarding.Status as DriverOnboarding
 import qualified Product.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
-import qualified Product.Transporter as Transporter
 import Servant
 import Servant.OpenApi
 import qualified Types.API.Call as CallAPI
@@ -29,8 +27,7 @@ import qualified Types.API.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Types.API.DriverOnboarding.Status as DriverOnboarding
 import qualified Types.API.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import Types.API.Idfy
-import Types.API.Transporter
-import Utils.Auth (AdminTokenAuth, TokenAuth)
+import Utils.Auth (TokenAuth)
 
 type DriverOfferAPI =
   MainAPI
@@ -48,7 +45,7 @@ type UIAPI =
           :<|> OrgAdmin.API
           :<|> Driver.API
           :<|> Vehicle.API
-          :<|> OrganizationAPI
+          :<|> Transporter.API
           :<|> FarePolicyAPI
           :<|> Location.API
           :<|> Route.API
@@ -69,7 +66,7 @@ uiServer =
     :<|> OrgAdmin.handler
     :<|> Driver.handler
     :<|> Vehicle.handler
-    :<|> organizationFlow
+    :<|> Transporter.handler
     :<|> farePolicyFlow
     :<|> Location.handler
     :<|> Route.handler
@@ -122,22 +119,6 @@ driverOnboardingFlow =
              :<|> DriverOnboarding.validateRCImage
          )
     :<|> DriverOnboarding.statusHandler
-
--- Following is organization creation
-type OrganizationAPI =
-  "transporter"
-    :> ( TokenAuth
-           :> Get '[JSON] TransporterRec
-           :<|> AdminTokenAuth
-           :> Capture "orgId" (Id Organization)
-           :> ReqBody '[JSON] UpdateTransporterReq
-           :> Post '[JSON] UpdateTransporterRes
-       )
-
-organizationFlow :: FlowServer OrganizationAPI
-organizationFlow =
-  Transporter.getTransporter
-    :<|> Transporter.updateTransporter
 
 type IdfyHandlerAPI =
   "ext" :> "idfy"
