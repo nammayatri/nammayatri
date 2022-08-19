@@ -72,9 +72,6 @@ data PersonE e = Person
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,
-    -- FIXME: fix unique constraint for mobile phone to
-    -- unique mobile/merchantId pair, allowing man to be registered
-    -- in several merchants
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
