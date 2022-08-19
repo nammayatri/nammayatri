@@ -1,22 +1,36 @@
-module Product.DriverOnboarding.Status where
+module Domain.Action.UI.DriverOnboarding.Status
+  ( ResponseStatus (..),
+    StatusRes (..),
+    statusImpl,
+  )
+where
 
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto (EsqDBFlow)
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Error
 import Beckn.Types.Id (Id)
 import Beckn.Utils.Error
 import qualified Domain.Types.DriverOnboarding.ClassOfVehicle as COV
 import qualified Domain.Types.Person as SP
-import Environment (FlowHandler)
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDDL
 import qualified Storage.Queries.DriverOnboarding.OperatingCity as DO
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as DVehicle
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Person as QPerson
-import Types.API.DriverOnboarding.Status
 
-statusHandler :: Id SP.Person -> FlowHandler StatusRes
-statusHandler personId = withFlowHandlerAPI $ do
+data ResponseStatus = VERIFICATION_PENDING | VERIFIED | VERIFICATION_FAILED | WAITING_INPUT
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
+
+data StatusRes = StatusRes
+  { dlVerificationStatus :: ResponseStatus,
+    rcVerificationStatus :: ResponseStatus,
+    operatingCity :: Text
+  }
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+statusImpl :: (EsqDBFlow m r) => Id SP.Person -> m StatusRes
+statusImpl personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   vehicleRegCertM <- DVehicle.findByPersonId personId

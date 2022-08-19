@@ -4,6 +4,7 @@ import qualified API.Beckn as Beckn
 import qualified API.UI.Call as Call
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Driver as Driver
+import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.FarePolicy as FarePolicy
 import qualified API.UI.Location as Location
 import qualified API.UI.OrgAdmin as OrgAdmin
@@ -12,21 +13,11 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
-import Beckn.Utils.Common
 import Data.OpenApi
 import Environment
 import EulerHS.Prelude
-import qualified Product.DriverOnboarding.DriverLicense as DriverOnboarding
-import qualified Product.DriverOnboarding.Idfy as Idfy
-import qualified Product.DriverOnboarding.Status as DriverOnboarding
-import qualified Product.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import Servant
 import Servant.OpenApi
-import qualified Types.API.DriverOnboarding.DriverLicense as DriverOnboarding
-import qualified Types.API.DriverOnboarding.Status as DriverOnboarding
-import qualified Types.API.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
-import Types.API.Idfy
-import Utils.Auth (TokenAuth)
 
 type DriverOfferAPI =
   MainAPI
@@ -39,19 +30,18 @@ type MainAPI =
 type UIAPI =
   "ui"
     :> ( HealthCheckAPI
-          :<|> Registration.API
-          :<|> DriverOnboardingAPI
-          :<|> OrgAdmin.API
-          :<|> Driver.API
-          :<|> Vehicle.API
-          :<|> Transporter.API
-          :<|> FarePolicy.API
-          :<|> Location.API
-          :<|> Route.API
-          :<|> Ride.API
-          :<|> Call.API
-          :<|> IdfyHandlerAPI
-          :<|> CancellationReason.API
+           :<|> Registration.API
+           :<|> DriverOnboarding.API
+           :<|> OrgAdmin.API
+           :<|> Driver.API
+           :<|> Vehicle.API
+           :<|> Transporter.API
+           :<|> FarePolicy.API
+           :<|> Location.API
+           :<|> Route.API
+           :<|> Ride.API
+           :<|> Call.API
+           :<|> CancellationReason.API
        )
 
 driverOfferAPI :: Proxy DriverOfferAPI
@@ -61,7 +51,7 @@ uiServer :: FlowServer UIAPI
 uiServer =
   pure "App is UP"
     :<|> Registration.handler
-    :<|> driverOnboardingFlow
+    :<|> DriverOnboarding.handler
     :<|> OrgAdmin.handler
     :<|> Driver.handler
     :<|> Vehicle.handler
@@ -71,7 +61,6 @@ uiServer =
     :<|> Route.handler
     :<|> Ride.handler
     :<|> Call.handler
-    :<|> idfyHandlerFlow
     :<|> CancellationReason.handler
 
 mainServer :: FlowServer MainAPI
@@ -83,56 +72,6 @@ driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =
   mainServer
     :<|> writeSwaggerJSONFlow
-
-type DriverOnboardingAPI =
-  "driver" :> "register"
-    :> ( "dl"
-           :> ( TokenAuth
-                  :> ReqBody '[JSON] DriverOnboarding.DriverDLReq
-                  :> Post '[JSON] DriverOnboarding.DriverDLRes
-                  :<|> "image"
-                    :> TokenAuth
-                    :> ReqBody '[JSON] DriverOnboarding.DriverDLImageReq
-                    :> Post '[JSON] DriverOnboarding.DriverDLRes
-              )
-           :<|> "rc"
-             :> ( TokenAuth
-                    :> ReqBody '[JSON] DriverOnboarding.DriverRCReq
-                    :> Post '[JSON] DriverOnboarding.DriverRCRes
-                    :<|> "image"
-                      :> TokenAuth
-                      :> ReqBody '[JSON] DriverOnboarding.DriverRCImageReq
-                      :> Post '[JSON] DriverOnboarding.DriverRCRes
-                )
-           :<|> "status"
-             :> TokenAuth
-             :> Get '[JSON] DriverOnboarding.StatusRes
-       )
-
-driverOnboardingFlow :: FlowServer DriverOnboardingAPI
-driverOnboardingFlow =
-  ( DriverOnboarding.verifyDL
-      :<|> DriverOnboarding.validateDLImage
-  )
-    :<|> ( DriverOnboarding.verifyRC
-             :<|> DriverOnboarding.validateRCImage
-         )
-    :<|> DriverOnboarding.statusHandler
-
-type IdfyHandlerAPI =
-  "ext" :> "idfy"
-    :> ( "drivingLicense"
-           :> ReqBody '[JSON] IdfyDLReq
-           :> Post '[JSON] AckResponse
-           :<|> "vehicleRegistrationCert"
-             :> ReqBody '[JSON] IdfyRCReq
-             :> Post '[JSON] AckResponse
-       )
-
-idfyHandlerFlow :: FlowServer IdfyHandlerAPI
-idfyHandlerFlow =
-  Idfy.idfyDrivingLicense --update handler
-    :<|> Idfy.idfyRCLicense --update handler
 
 type HealthCheckAPI = Get '[JSON] Text
 

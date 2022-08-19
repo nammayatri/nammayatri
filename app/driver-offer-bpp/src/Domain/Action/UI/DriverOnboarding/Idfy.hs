@@ -1,18 +1,68 @@
-module Product.DriverOnboarding.Idfy where
+module Domain.Action.UI.DriverOnboarding.Idfy
+  ( IdfyDLReq (..),
+    DLVerificationResult (..),
+    SourceOutput (..),
+    CovDetails (..),
+    IdfyRCReq (..),
+    RCVerificationResult (..),
+    ExtractionOutput (..),
+    idfyDrivingLicense,
+    idfyRCLicense,
+  )
+where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto (Transactionable (runTransaction))
 import qualified Data.Text as T
 import Data.Time.Format
 import Domain.Types.DriverOnboarding.ClassOfVehicle
-import Environment
 import Storage.Queries.DriverOnboarding.DriverLicense (updateDLDetails)
 import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate (updateRCDetails)
-import Types.API.Idfy
 import Utils.Common
 
-idfyDrivingLicense :: IdfyDLReq -> FlowHandler AckResponse
-idfyDrivingLicense req = withFlowHandlerAPI $ do
+data IdfyDLReq = IdfyDLReq
+  { request_id :: Text,
+    status :: Text,
+    result :: DLVerificationResult
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+newtype DLVerificationResult = DLVerificationResult {source_output :: SourceOutput}
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+data SourceOutput = SourceOutput
+  { name :: Text,
+    field :: [CovDetails],
+    nt_validity_from :: Maybe Text,
+    nt_validity_to :: Maybe Text
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+newtype CovDetails = CovDetails {cov :: Text}
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+data IdfyRCReq = IdfyRCReq
+  { status :: Text,
+    request_id :: Text,
+    result :: RCVerificationResult
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+newtype RCVerificationResult = RCVerificationResult {extraction_output :: ExtractionOutput}
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+data ExtractionOutput = ExtractionOutput
+  { registration_date :: Maybe Text,
+    fitness_upto :: Maybe Text,
+    insurance_validity :: Maybe Text,
+    permit_validity :: Maybe Text,
+    vehicle_class :: Maybe Text,
+    registration_number :: Maybe Text
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+
+idfyDrivingLicense :: EsqDBFlow m r => IdfyDLReq -> m AckResponse
+idfyDrivingLicense req = do
   now <- getCurrentTime
   let validFrom = getUTCTimeFromDate req.result.source_output.nt_validity_from
   let validTill = getUTCTimeFromDate req.result.source_output.nt_validity_to
@@ -23,8 +73,8 @@ idfyDrivingLicense req = withFlowHandlerAPI $ do
   where
     f = \x acc -> x.cov : acc
 
-idfyRCLicense :: IdfyRCReq -> FlowHandler AckResponse
-idfyRCLicense req = withFlowHandlerAPI $ do
+idfyRCLicense :: EsqDBFlow m r => IdfyRCReq -> m AckResponse
+idfyRCLicense req = do
   now <- getCurrentTime
   let fitness_upto_ = getUTCTimeFromDate req.result.extraction_output.fitness_upto
   let insurance_validity_ = getUTCTimeFromDate req.result.extraction_output.insurance_validity
