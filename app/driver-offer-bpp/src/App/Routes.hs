@@ -4,6 +4,7 @@ import qualified API.Beckn as Beckn
 import qualified API.UI.Call as Call
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Driver as Driver
+import qualified API.UI.FarePolicy as FarePolicy
 import qualified API.UI.Location as Location
 import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Registration as Registration
@@ -11,7 +12,6 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
-import App.Routes.FarePolicy
 import Beckn.Utils.Common
 import Data.OpenApi
 import Environment
@@ -45,7 +45,7 @@ type UIAPI =
           :<|> Driver.API
           :<|> Vehicle.API
           :<|> Transporter.API
-          :<|> FarePolicyAPI
+          :<|> FarePolicy.API
           :<|> Location.API
           :<|> Route.API
           :<|> Ride.API
@@ -66,7 +66,7 @@ uiServer =
     :<|> Driver.handler
     :<|> Vehicle.handler
     :<|> Transporter.handler
-    :<|> farePolicyFlow
+    :<|> FarePolicy.handler
     :<|> Location.handler
     :<|> Route.handler
     :<|> Ride.handler
