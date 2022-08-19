@@ -5,7 +5,6 @@ module API.UI.Ride
   )
 where
 
-import Beckn.LocationUpdates
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -29,6 +28,7 @@ import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import Environment
+import qualified Lib.LocationUpdates as LocUpd
 import Servant
 import SharedLogic.CallBAP
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
@@ -87,9 +87,7 @@ startRide personId rideId req = withFlowHandlerAPI $ do
           startRideAndUpdateLocation = SInternal.startRideTransaction,
           notifyBAPRideStarted = sendRideStartedUpdateToBAP,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
-          addFirstWaypoint = \driverId pt -> do
-            clearLocationUpdatesOnRideEnd defaultRideInterpolationHandler driverId
-            addPoints defaultRideInterpolationHandler driverId $ pt :| []
+          addFirstWaypoint = LocUpd.startRide defaultRideInterpolationHandler
         }
 
 endRide :: Id SP.Person -> Id SRide.Ride -> EHandler.EndRideReq -> FlowHandler APISuccess.APISuccess
@@ -111,9 +109,8 @@ endRide personId rideId req = withFlowHandlerAPI $ do
           recalculateFareEnabled = asks (.recalculateFareEnabled),
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
-          addLastWaypointAndRecalcDistanceOnEnd = \driverId pt ->
-            processWaypoints defaultRideInterpolationHandler driverId True $ pt :| [],
-          thereWasFailedDistanceRecalculation = isDistanceCalculationFailed
+          addLastWaypointAndRecalcDistanceOnEnd = LocUpd.endRide defaultRideInterpolationHandler,
+          thereWasFailedDistanceRecalculation = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler
         }
 
 cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess

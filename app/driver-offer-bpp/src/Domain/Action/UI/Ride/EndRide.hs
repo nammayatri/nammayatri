@@ -43,6 +43,7 @@ data ServiceHandle m = ServiceHandle
       m Fare.FareParameters,
     putDiffMetric :: Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
+    thereWasFailedDistanceRecalculation :: Id Person.Person -> m Bool,
     addLastWaypointAndRecalcDistanceOnEnd :: Id Person.Person -> LatLong -> m ()
   }
 
@@ -70,12 +71,18 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   now <- getCurrentTime
-  (chargeableDistance, chargeableFare) <- recalculateFare booking ride
+
+  distanceCalculationFailed <- thereWasFailedDistanceRecalculation requestorId
+  when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
+  (finalDistance, finalFare) <-
+    if not distanceCalculationFailed
+      then recalculateFare booking ride
+      else pure (booking.estimatedDistance, booking.estimatedFare)
 
   let updRide =
         ride{tripEndTime = Just now,
-             chargeableDistance = Just chargeableDistance,
-             fare = Just chargeableFare
+             chargeableDistance = Just finalDistance,
+             fare = Just finalFare
             }
 
   endRide booking.id updRide (cast driverId)
@@ -90,16 +97,18 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           oldDistance = booking.estimatedDistance
 
       -- maybe compare only distance fare?
-      let estimatedBaseFare = booking.estimatedFare
+      let estimatedFare = fareSum booking.fareParams
 
-      fareParams <- calculateFare transporterId booking.vehicleVariant actualDistance booking.estimatedFinishTime booking.fareParams.driverSelectedFare
-      let updatedBaseFare = Fare.fareSumRounded fareParams
+-- wtf? finish time?
+--      fareParams <- calculateFare transporterId booking.vehicleVariant actualDistance booking.estimatedFinishTime booking.fareParams.driverSelectedFare
+      fareParams <- calculateFare transporterId booking.vehicleVariant actualDistance booking.startTime booking.fareParams.driverSelectedFare
+      let updatedFare = Fare.fareSum fareParams
       let distanceDiff = actualDistance - oldDistance
-      let fareDiff = updatedBaseFare - estimatedBaseFare
+      let fareDiff = updatedFare - estimatedFare
       logTagInfo "Fare recalculation" $
         "Fare difference: "
           <> show (realToFrac @_ @Double fareDiff)
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric fareDiff distanceDiff
-      return (max actualDistance oldDistance, max updatedBaseFare estimatedBaseFare)
+      return (max actualDistance oldDistance, max updatedFare estimatedFare)

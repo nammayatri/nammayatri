@@ -1,6 +1,5 @@
 module Product.RideAPI.StartRide where
 
-import Beckn.LocationUpdates
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
@@ -12,6 +11,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import Environment (FlowHandler)
 import EulerHS.Prelude hiding (id)
+import qualified Lib.LocationUpdates as LocUpd
 import Product.BecknProvider.BP
 import qualified Product.RideAPI.Handlers.StartRide as Handler
 import SharedLogic.LocationUpdates
@@ -35,9 +35,7 @@ startRide personId rideId req = withFlowHandlerAPI $ do
           startRideAndUpdateLocation = startRideTransaction,
           notifyBAPRideStarted = sendRideStartedUpdateToBAP,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
-          addFirstWaypoint = \driverId pt -> do
-            clearLocationUpdatesOnRideEnd defaultRideInterpolationHandler driverId
-            addPoints defaultRideInterpolationHandler driverId $ pt :| []
+          addFirstWaypoint = LocUpd.startRide defaultRideInterpolationHandler
         }
 
 startRideTransaction :: EsqDBFlow m r => Id SRide.Ride -> Id SRB.Booking -> Id SP.Person -> LatLong -> m ()

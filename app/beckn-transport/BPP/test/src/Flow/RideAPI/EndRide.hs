@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Flow.RideAPI.EndRide (endRideTests) where
 
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -79,7 +81,9 @@ handle =
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure (),
       findDriverLocById = \_ -> pure Nothing,
-      addLastWaypointAndRecalcDistanceOnEnd = \_ _ -> pure ()
+      addLastWaypointAndRecalcDistanceOnEnd = \_ _ -> pure (),
+      getRentalFarePolicy = undefined, -- not required for current test cases
+      thereWasFailedDistanceRecalculation = \_ -> pure False
     }
 
 endRide ::

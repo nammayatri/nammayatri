@@ -87,3 +87,22 @@ library:
     - -Werror
   dependencies:
     - beckn-core
+
+tests:
+  location-updates-tests:
+    main: Main.hs
+    source-dirs:
+      - test/app
+      - test/src
+    dependencies:
+      - location-updates
+      - beckn-core
+      - beckn-spec
+      - tasty
+      - tasty-hunit
+      - tasty-hspec
+      - QuickCheck
+      - tasty-quickcheck
+    ghc-options:
+      - -Wall
+      - -Werror

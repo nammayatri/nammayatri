@@ -1,16 +1,16 @@
-module Beckn.LocationUpdates
+module Lib.LocationUpdates.Internal
   ( RideInterpolationHandler (..),
     recalcDistanceBatches,
-    --- next functions are needed for tests:
     addPointsImplementation,
     getWaypointsNumberImplementation,
     getFirstNwaypointsImplementation,
     deleteFirstNwaypointsImplementation,
-    clearLocationUpdatesOnRideEndImplementation,
-    isDistanceCalculationFailed,
+    clearLocationUpdatesImplementation,
+    isDistanceCalculationFailedImplementation,
     wrapDistanceCalculationImplementation,
     processWaypoints,
     mkHandlerWithDefaultRedisFuncs,
+    callSnapToRoad,
   )
 where
 
@@ -19,11 +19,9 @@ import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.Common
-import Beckn.Types.Error (GenericError (InvalidRequest))
 import Beckn.Types.Id (Id)
 import Beckn.Types.MapSearch
 import Beckn.Utils.CalculateDistance
-import Beckn.Utils.Common (throwError)
 import Beckn.Utils.Logging
 import qualified Control.Monad.Catch as C
 import EulerHS.Prelude hiding (id, state)
@@ -32,12 +30,13 @@ import GHC.Records.Extra
 data RideInterpolationHandler person m = RideInterpolationHandler
   { batchSize :: Integer,
     addPoints :: Id person -> NonEmpty LatLong -> m (),
-    clearLocationUpdatesOnRideEnd :: Id person -> m (),
+    clearLocationUpdates :: Id person -> m (),
     getWaypointsNumber :: Id person -> m Integer,
     getFirstNwaypoints :: Id person -> Integer -> m [LatLong],
     deleteFirstNwaypoints :: Id person -> Integer -> m (),
     interpolatePoints :: [LatLong] -> m [LatLong],
     wrapDistanceCalculation :: Id person -> m () -> m (),
+    isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> m ()
   }
 
@@ -53,8 +52,8 @@ wrapDistanceCalculationImplementation driverId action =
 getFailedDistanceCalculationKey :: Id person -> Text
 getFailedDistanceCalculationKey driverId = mconcat [driverId.getId, ":locationUpdatesFailed"]
 
-isDistanceCalculationFailed :: (HedisFlow m r) => Id person -> m Bool
-isDistanceCalculationFailed driverId = isJust <$> Hedis.get @() (getFailedDistanceCalculationKey driverId)
+isDistanceCalculationFailedImplementation :: (HedisFlow m r) => Id person -> m Bool
+isDistanceCalculationFailedImplementation driverId = isJust <$> Hedis.get @() (getFailedDistanceCalculationKey driverId)
 
 resetFailedDistanceCalculationFlag :: (HedisFlow m r) => Id person -> m ()
 resetFailedDistanceCalculationFlag driverId = Hedis.del $ getFailedDistanceCalculationKey driverId
@@ -66,11 +65,13 @@ processWaypoints ::
   Bool ->
   NonEmpty LatLong ->
   m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId ending waypoints =
-  ih.wrapDistanceCalculation driverId $ do
-    void $ throwError $ InvalidRequest "test"
-    addPoints driverId waypoints
-    recalcDistanceBatches ih ending driverId
+processWaypoints ih@RideInterpolationHandler {..} driverId ending waypoints = do
+  calculationFailed <- ih.isDistanceCalculationFailed driverId
+  if calculationFailed
+    then logWarning "Failed to calculate actual distance for this ride, ignoring"
+    else ih.wrapDistanceCalculation driverId $ do
+      addPoints driverId waypoints
+      recalcDistanceBatches ih ending driverId
 
 recalcDistanceBatches ::
   (Monad m, Log m) =>
@@ -125,14 +126,15 @@ mkHandlerWithDefaultRedisFuncs ::
   RideInterpolationHandler person m
 mkHandlerWithDefaultRedisFuncs updateDistance =
   RideInterpolationHandler
-    { batchSize = 3,
+    { batchSize = 98,
       addPoints = addPointsImplementation,
-      clearLocationUpdatesOnRideEnd = clearLocationUpdatesOnRideEndImplementation,
+      clearLocationUpdates = clearLocationUpdatesImplementation,
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
       interpolatePoints = callSnapToRoad,
       updateDistance,
+      isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation
     }
 
@@ -147,8 +149,8 @@ addPointsImplementation driverId waypoints = do
   rPush key pointsList
   logInfo $ mconcat ["added ", show numPoints, " points for driverId = ", driverId.getId]
 
-clearLocationUpdatesOnRideEndImplementation :: (HedisFlow m env) => Id person -> m ()
-clearLocationUpdatesOnRideEndImplementation driverId = do
+clearLocationUpdatesImplementation :: (HedisFlow m env) => Id person -> m ()
+clearLocationUpdatesImplementation driverId = do
   let key = makeWaypointsRedisKey driverId
   clearList key
   logInfo $ mconcat ["cleared location updates for driverId = ", driverId.getId]

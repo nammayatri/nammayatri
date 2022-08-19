@@ -1,79 +1,41 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module LocationUpdates where
+module RedisAlgorithm where
 
-import Beckn.Mock.App hiding (run)
 import Beckn.Prelude
-import Beckn.Storage.Hedis.Config
-import qualified Beckn.Storage.Hedis.Queries as Hedis
 import Beckn.Types.Id (Id (Id))
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import Beckn.Types.MonadGuid
 import Beckn.Utils.Common
-import Beckn.Utils.IOLogging
 import qualified Data.List.NonEmpty as NE
-import Domain.Action.UI.Location.UpdateLocation
-import qualified Domain.Types.Person as Person
-import SharedLogic.LocationUpdates
+import Lib.LocationUpdates.Internal
 import Test.QuickCheck
 import Test.QuickCheck.Monadic
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
+import Types
 
 locationUpdatesTree :: AppEnv -> TestTree
 locationUpdatesTree appEnv =
   testProperty "Location updates property tests" $ withMaxSuccess 100 $ qcTest appEnv
 
--------------------------------------------------
---------------------run types--------------------
-data AppEnv = AppEnv
-  { loggerConfig :: LoggerConfig,
-    loggerEnv :: LoggerEnv,
-    hedisEnv :: HedisEnv
-  }
-
-type TestM = MockM AppEnv
-
-------------------- utility functions ---------------------
-
-wrapTests :: (AppEnv -> IO a) -> IO a
-wrapTests func = do
-  withHedisEnv defaultHedisCfg ("locationUpdatesTest:" <>) $ \hedisEnv -> do
-    let loggerConfig = defaultLoggerConfig {logToFile = True, prettyPrinting = True}
-    withLoggerEnv loggerConfig Nothing $ \loggerEnv -> do
-      let appEnv = AppEnv loggerConfig loggerEnv hedisEnv
-      func appEnv
-
-incrDistance :: Id Person.Person -> HighPrecMeters -> TestM Double
-incrDistance driverId = Hedis.incrByFloat driverId.getId . getHighPrecMeters
-
-updateDistanceTest :: Id Person.Person -> HighPrecMeters -> TestM ()
-updateDistanceTest driverId dist = void $ incrDistance driverId dist
-
-checkTraveledDistance :: Id Person.Person -> TestM Double
-checkTraveledDistance driverId = incrDistance driverId 0
-
-deleteDistanceKey :: Id Person.Person -> TestM ()
-deleteDistanceKey driverId = Hedis.del driverId.getId
-
-equalsEps :: Double -> Double -> Double -> Bool
-equalsEps eps x y = abs (x - y) < eps
-
 ------------------- test handler ---------------------
 -------------------(all redis functions are real)-----
 
-testInterpolationHandler :: Integer -> RideInterpolationHandler TestM
+testInterpolationHandler :: Integer -> RideInterpolationHandler Person TestM
 testInterpolationHandler batchSize =
   RideInterpolationHandler
     { batchSize,
       addPoints = addPointsImplementation,
-      clearPointsList = clearPointsListImplementation,
+      clearLocationUpdates = clearLocationUpdatesImplementation,
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
       interpolatePoints = pure,
-      updateDistance = updateDistanceTest
+      updateDistance = updateDistanceTest,
+      wrapDistanceCalculation = wrapDistanceCalculationImplementation,
+      isDistanceCalculationFailed = isDistanceCalculationFailedImplementation
     }
 
 ------------------- generating test points batches ----
@@ -152,7 +114,8 @@ qcTest appEnv (BatchSize batchSize) (PointsNum numPoints) (GroupingList grouping
     (div_, mod_) = numPoints `divMod` fromIntegral batchSize
 
     runner :: TestM Property -> Property
-    runner = ioProperty . runMock appEnv
+    --    runner = ioProperty . runMock appEnv
+    runner = ioProperty . runFlow "" appEnv
 
 qcTest' :: Integer -> Int -> [Int] -> PropertyM TestM ()
 qcTest' batchSize numPoints groupingList = do
@@ -168,14 +131,14 @@ qcTest' batchSize numPoints groupingList = do
   assert $ equalsEps 100 (fromIntegral (numPoints - 1) * segmentLength) totalDistance
   run $ deleteDistanceKey driverId
 
-processPointsGroup :: RideInterpolationHandler TestM -> Id Person.Person -> [LatLong] -> PropertyM TestM ()
+processPointsGroup :: RideInterpolationHandler Person TestM -> Id Person -> [LatLong] -> PropertyM TestM ()
 processPointsGroup ih driverId pointsGroup = do
   run $ logPretty DEBUG "points group" pointsGroup
   distanceBefore <- run $ checkTraveledDistance driverId
   pointsBefore <- run $ ih.getWaypointsNumber driverId
   let currentLength = fromIntegral $ length pointsGroup :: Integer
 
-  run $ processWaypoints ih driverId $ NE.fromList pointsGroup
+  run $ processWaypoints ih driverId False $ NE.fromList pointsGroup
 
   distanceAfter <- run $ checkTraveledDistance driverId
   pointsAfter <- run $ ih.getWaypointsNumber driverId

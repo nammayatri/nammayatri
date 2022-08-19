@@ -1,6 +1,5 @@
 module API.UI.Location (module Reexport, API, handler) where
 
-import Beckn.LocationUpdates
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess (..))
@@ -58,7 +57,6 @@ updateLocation personId waypoints = withFlowHandlerAPI $ do
             upsertDriverLocation = \driverId point timestamp ->
               Esq.runTransaction $ DrLoc.upsertGpsCoord driverId point timestamp,
             getInProgressByDriverId = QRide.getInProgressByDriverId,
-            thereWasFailedDistanceRecalculation = isDistanceCalculationFailed,
             interpolationHandler = defaultRideInterpolationHandler
           }
 

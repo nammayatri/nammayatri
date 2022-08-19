@@ -1,6 +1,5 @@
 module Product.Location where
 
-import Beckn.LocationUpdates
 import Beckn.Prelude hiding (Handler)
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Esqueleto as Esq
@@ -17,6 +16,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment
 import GHC.Records.Extra
+import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.LocationUpdates
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as Person
@@ -33,8 +33,7 @@ data Handler m = Handler
     findDriverLocationById :: Id Person.Person -> m (Maybe DriverLocation),
     upsertDriverLocation :: Id Person.Person -> LatLong -> UTCTime -> m (),
     getInProgressByDriverId :: Id Person.Person -> m (Maybe SRide.Ride),
-    thereWasFailedDistanceRecalculation :: Id Person.Person -> m Bool,
-    interpolationHandler :: RideInterpolationHandler Person.Person m
+    interpolationHandler :: LocUpd.RideInterpolationHandler Person.Person m
   }
 
 updateLocation :: Id Person.Person -> UpdateLocationReq -> FlowHandler APISuccess
@@ -54,7 +53,6 @@ updateLocation personId waypoints = withFlowHandlerAPI $ do
             upsertDriverLocation = \driverId point timestamp ->
               Esq.runTransaction $ DrLoc.upsertGpsCoord driverId point timestamp,
             getInProgressByDriverId = QRide.getInProgressByDriverId,
-            thereWasFailedDistanceRecalculation = isDistanceCalculationFailed,
             interpolationHandler = defaultRideInterpolationHandler
           }
 
@@ -77,12 +75,7 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
       getInProgressByDriverId driver.id
         >>= maybe
           (logInfo "No ride is assigned to driver, ignoring")
-          ( \_ -> do
-              failedDistanceForRide <- thereWasFailedDistanceRecalculation driverId
-              if failedDistanceForRide
-                then logInfo "Failed to calculate actual distance for this ride, ignoring"
-                else processWaypoints interpolationHandler driver.id False $ NE.map (.pt) waypoints
-          )
+          (const $ LocUpd.updateIntermediateRideLocation interpolationHandler driver.id $ NE.map (.pt) waypoints)
   pure Success
 
 getLocation :: Id SRide.Ride -> FlowHandler GetLocationRes

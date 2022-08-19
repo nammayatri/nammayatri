@@ -4,11 +4,9 @@ module Domain.Action.UI.Location.UpdateLocation
     Waypoint (..),
     UpdateLocationRes,
     updateLocationHandler,
-    processWaypoints,
   )
 where
 
-import Beckn.LocationUpdates
 import Beckn.Prelude hiding (Handler)
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
@@ -23,6 +21,7 @@ import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
+import Lib.LocationUpdates
 
 type MonadHandler m = (MonadFlow m, MonadThrow m, Log m, MonadGuid m, MonadTime m)
 
@@ -32,7 +31,6 @@ data Handler m = Handler
     findDriverLocationById :: Id Person.Person -> m (Maybe DriverLocation),
     upsertDriverLocation :: Id Person.Person -> LatLong -> UTCTime -> m (),
     getInProgressByDriverId :: Id Person.Person -> m (Maybe SRide.Ride),
-    thereWasFailedDistanceRecalculation :: Id Person.Person -> m Bool,
     interpolationHandler :: RideInterpolationHandler Person.Person m
   }
 
@@ -66,12 +64,8 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
         getInProgressByDriverId driver.id
           >>= maybe
             (logInfo "No ride is assigned to driver, ignoring")
-            ( \_ -> do
-              failedDistanceForRide <- thereWasFailedDistanceRecalculation driverId
-              if failedDistanceForRide
-                then logInfo "Failed to calculate actual distance for this ride, ignoring"
-                else processWaypoints interpolationHandler driver.id False $ NE.map (.pt) waypoints
-            )
+            (const $ updateIntermediateRideLocation interpolationHandler driver.id $ NE.map (.pt) waypoints)
+
     Redis.unlockRedis lockKey
   pure Success
   where

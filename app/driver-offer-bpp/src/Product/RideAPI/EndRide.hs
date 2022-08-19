@@ -1,6 +1,5 @@
 module Product.RideAPI.EndRide where
 
-import Beckn.LocationUpdates
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
@@ -10,6 +9,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment (FlowHandler)
 import EulerHS.Prelude hiding (id)
+import qualified Lib.LocationUpdates as LocUpd
 import Product.BecknProvider.BP
 import qualified Product.FareCalculator.Flow as Fare
 import qualified Product.RideAPI.Handlers.EndRide as Handler
@@ -39,8 +39,8 @@ endRide personId rideId req = withFlowHandlerAPI $ do
           calculateFare = Fare.calculateFare,
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
-          addLastWaypointAndRecalcDistanceOnEnd = \driverId pt -> do
-            processWaypoints defaultRideInterpolationHandler driverId True $ pt :| []
+          thereWasFailedDistanceRecalculation = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
+          addLastWaypointAndRecalcDistanceOnEnd = LocUpd.endRide defaultRideInterpolationHandler
         }
 
 endRideTransaction :: EsqDBFlow m r => Id SRB.Booking -> Ride.Ride -> Id Driver -> m ()
