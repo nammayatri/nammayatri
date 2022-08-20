@@ -43,6 +43,7 @@ data DriverRideRes = DriverRideRes
     estimatedBaseFare :: Amount,
     driverSelectedFare :: Amount,
     actualRideDistance :: HighPrecMeters,
+    rideRating :: Maybe Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     tripStartTime :: Maybe UTCTime,

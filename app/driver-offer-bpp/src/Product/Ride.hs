@@ -9,6 +9,7 @@ import qualified Domain.Types.Ride as SRide
 import Environment
 import Product.FareCalculator.Calculator
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Types.API.Ride as API
@@ -30,6 +31,7 @@ buildDriverRideRes (ride, booking) = do
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverNumber <- SP.getPersonNumber driver
+  mbRating <- QRating.findByRideId ride.id
   let fareParams = booking.fareParams
   pure
     API.DriverRideRes
@@ -51,5 +53,6 @@ buildDriverRideRes (ride, booking) = do
         createdAt = ride.createdAt,
         updatedAt = ride.updatedAt,
         tripStartTime = ride.tripStartTime,
-        tripEndTime = ride.tripEndTime
+        tripEndTime = ride.tripEndTime,
+        rideRating = mbRating <&> (.ratingValue)
       }
