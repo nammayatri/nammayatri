@@ -107,6 +107,7 @@ onUpdate registryUrl RideAssignedReq {..} = do
             updatedAt = now,
             rideStartTime = Nothing,
             rideEndTime = Nothing,
+            rideRating = Nothing,
             ..
           }
     isAssignable booking = booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT]

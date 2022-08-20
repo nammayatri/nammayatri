@@ -53,6 +53,7 @@ data Ride = Ride
     chargeableDistance :: Maybe Double,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
+    rideRating :: Maybe Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -75,6 +76,7 @@ data RideAPIEntity = RideAPIEntity
     chargeableRideDistance :: Maybe Double,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
+    rideRating :: Maybe Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

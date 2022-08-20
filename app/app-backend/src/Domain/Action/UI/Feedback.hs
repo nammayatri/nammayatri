@@ -2,6 +2,7 @@ module Domain.Action.UI.Feedback where
 
 import qualified App.Types as App
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Ride as DRide
@@ -29,6 +30,8 @@ feedback request = do
   unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus "Feedback available only for completed rides.")
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  DB.runTransaction $ do
+    QRide.updateRideRating rideId ratingValue
   pure
     DRatingReq
       { providerId = booking.providerId,
