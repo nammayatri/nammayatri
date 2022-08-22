@@ -63,7 +63,6 @@ dependencies:
 - servant
 - servant-server
 - euler-hs
-- http-types
 
 ghc-options:
   - -fwrite-ide-info

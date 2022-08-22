@@ -76,14 +76,12 @@ library:
     - bytestring
     - clock
     - containers
-    - http-types
     - servant-server
     - stm
     - text
     - time
     - time-units
     - wai
-    - wai-extra
     - warp
 
 executables:

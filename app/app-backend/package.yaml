@@ -56,14 +56,9 @@ dependencies:
   - base >= 4.7 && < 5
   - base64-bytestring
   - bytestring
-  - containers
   - cryptonite
   - euler-hs
-  - http-api-data
-  - http-client
-  - http-types
   - lens
-  - mtl
   - prometheus-client
   - wai-middleware-prometheus
   - prometheus-metrics-ghc
@@ -74,10 +69,8 @@ dependencies:
   - servant-server
   - text
   - wai
-  - wai-extra
   - warp
   - time
-  - random-strings
   - record-hasfield
   - record-dot-preprocessor
   - servant-openapi3
@@ -85,7 +78,6 @@ dependencies:
   - persistent
   - extra
   - text-conversions
-  - fmt
 
 ghc-options:
   - -fwrite-ide-info
