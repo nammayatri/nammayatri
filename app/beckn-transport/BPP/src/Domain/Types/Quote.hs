@@ -7,7 +7,6 @@ import Data.Time
 import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Organization as DOrg
-import Domain.Types.Products (Products)
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
@@ -16,7 +15,6 @@ import GHC.Records.Extra
 data Quote = Quote
   { id :: Id Quote,
     requestId :: Id DSR.SearchRequest,
-    productId :: Id Products, -- do we need this field?
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,

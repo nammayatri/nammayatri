@@ -37,7 +37,6 @@ instance TType FullQuoteT Domain.Quote where
       Domain.Quote
         { id = Id id,
           requestId = fromKey requestId,
-          productId = fromKey productId,
           providerId = fromKey providerId,
           ..
         }
@@ -54,7 +53,6 @@ instance TType FullQuoteT Domain.Quote where
             { id = getId id,
               fareProductType = Domain.getFareProductType quoteDetails,
               requestId = toKey requestId,
-              productId = toKey productId,
               providerId = toKey providerId,
               ..
             }

@@ -16,7 +16,6 @@ defaultQuote = do
   Quote.Quote
     { id = Id "1",
       requestId = Id "1",
-      productId = Id "1",
       estimatedFare = 0,
       estimatedTotalFare = 0,
       discount = Nothing,

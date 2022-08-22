@@ -17,9 +17,7 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFarePolicy
-import qualified Storage.Queries.Products as QProduct
 import qualified Storage.Queries.Quote as QQuote
-import Tools.Error
 import Tools.Metrics (CoreMetrics, HasBPPMetrics)
 
 data QuoteInfo = QuoteInfo
@@ -75,14 +73,10 @@ buildRentalQuote searchRequestId now rentalFarePolicy@DRentalFP.RentalFarePolicy
       discount = Nothing -- FIXME we don't have discount in RentalFarePolicy now
       estimatedTotalFare = baseFare
   -- FIXME this request is duplicating
-  products <-
-    QProduct.findByName (show vehicleVariant)
-      >>= fromMaybeM ProductsNotFound
   pure $
     DQuote.Quote
       { id = quoteId,
         requestId = searchRequestId,
-        productId = products.id,
         providerId = organizationId,
         createdAt = now,
         quoteDetails = DQuote.RentalDetails rentalFarePolicy,

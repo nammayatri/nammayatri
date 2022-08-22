@@ -16,7 +16,6 @@ import qualified Domain.Types.Quote as Domain
 import qualified Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.FarePolicy.FareProduct ()
 import Storage.Tabular.Organization (OrganizationTId)
-import Storage.Tabular.Products (ProductsTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 
@@ -27,7 +26,6 @@ mkPersist
       id Text
       fareProductType Domain.FareProductType
       requestId SearchRequestTId
-      productId ProductsTId
       estimatedFare Amount
       discount Amount Maybe
       estimatedTotalFare Amount

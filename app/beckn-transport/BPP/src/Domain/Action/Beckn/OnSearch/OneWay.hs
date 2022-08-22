@@ -23,9 +23,7 @@ import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.FareCalculator.OneWayFareCalculator
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Flow as Fare
 import qualified Storage.Queries.BusinessEvent as QBE
-import qualified Storage.Queries.Products as QProduct
 import qualified Storage.Queries.Quote as QQuote
-import Tools.Error
 import Tools.Metrics (CoreMetrics, HasBPPMetrics)
 
 data QuoteInfo = QuoteInfo
@@ -100,13 +98,11 @@ buildOneWayQuote productSearchRequest fareParams transporterId distance distance
   let estimatedFare = fareSum fareParams
       discount = fareParams.discount
       estimatedTotalFare = fareSumWithDiscount fareParams
-  products <- QProduct.findByName (show vehicleVariant) >>= fromMaybeM ProductsNotFound
   let oneWayQuoteDetails = DQuote.OneWayQuoteDetails {..}
   pure
     DQuote.Quote
       { id = quoteId,
         requestId = productSearchRequest.id,
-        productId = products.id,
         providerId = transporterId,
         createdAt = now,
         quoteDetails = DQuote.OneWayDetails oneWayQuoteDetails,
