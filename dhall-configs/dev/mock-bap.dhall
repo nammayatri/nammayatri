@@ -1,5 +1,5 @@
 let common = ./common.dhall
-let sec = ./secrets/fmd-wrapper.dhall
+let sec = ./secrets/app-backend.dhall
 
 in
 

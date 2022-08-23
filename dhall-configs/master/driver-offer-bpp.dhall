@@ -79,7 +79,6 @@ in
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"
-, domainVersion = "0.9.3"
 , loggerConfig = common.loggerConfig //  { logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False }
 , updateLocationRefreshPeriod = +1
 , updateLocationAllowedDelay = +60

@@ -10,7 +10,7 @@ import qualified Domain.Action.Beckn.Cancel as DCancel
 import EulerHS.Prelude
 
 buildCancelReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Cancel.CancelReq ->
   m DCancel.CancelReq
 buildCancelReq req = do

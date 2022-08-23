@@ -4,8 +4,7 @@ let globalCommon = ../generic/common.dhall
 -- To be substituted during deployment
 let branchName = "$DEPLOY_VARIANT"
 
-in { defaultPoolConfig = globalCommon.defaultPoolConfig
-   , smsSessionConfig = globalCommon.smsSessionConfig
+in { smsSessionConfig = globalCommon.smsSessionConfig
    , autoMigrate = globalCommon.autoMigrate
    , loggerConfig = globalCommon.loggerConfig // { logRawSql = True }
    , LogLevel = globalCommon.LogLevel
@@ -22,7 +21,6 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/"
-   , graphhopperUrl = "https://api.sandbox.beckn.juspay.in/map/grphr/"
    , registryUrl = "https://api.sandbox.beckn.juspay.in/dev/registry"
    , authServiceUrl = "http://beckn-app-backend-master.atlas:8013"
    }

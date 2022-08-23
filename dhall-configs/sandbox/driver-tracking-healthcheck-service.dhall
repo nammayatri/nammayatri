@@ -12,7 +12,6 @@ in  { driverAllowedDelay = +300
     , graceTerminationPeriod = appCfg.graceTerminationPeriod
     , redisCfg = appCfg.redisCfg
     , esqDBCfg = appCfg.esqDBCfg
-    , nwAddress = appCfg.nwAddress
     , fcmUrl = appCfg.fcmUrl
     , fcmJsonPath = appCfg.fcmJsonPath
     , fcmTokenKeyPrefix = "transporter-healthcheck"

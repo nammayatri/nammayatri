@@ -26,7 +26,6 @@ data AppCfg = AppCfg
     port :: Int,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
-    metricsSearchDurationTimeout :: Seconds, -- we don't use it
     selfId :: Text,
     selfURI :: BaseUrl,
     httpClientOptions :: HttpClientOptions,

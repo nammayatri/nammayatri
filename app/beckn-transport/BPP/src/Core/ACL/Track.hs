@@ -12,7 +12,7 @@ import EulerHS.Prelude
 import Tools.Error
 
 buildTrackReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Subscriber.Subscriber ->
   Track.TrackReq ->
   m DTrack.DTrackReq

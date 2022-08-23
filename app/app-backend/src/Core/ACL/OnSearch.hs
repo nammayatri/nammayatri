@@ -20,7 +20,7 @@ import Types.Error
 import Utils.Common
 
 buildOnSearchReq ::
-  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],
+  ( HasFlowEnv m r '["coreVersion" ::: Text],
     EsqDBFlow m r
   ) =>
   BecknCallbackReq OnSearch.OnSearchMessage ->

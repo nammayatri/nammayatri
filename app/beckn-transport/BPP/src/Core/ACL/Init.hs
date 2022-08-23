@@ -13,7 +13,7 @@ import qualified Domain.Types.Vehicle as Veh
 import Tools.Error
 
 buildInitReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Subscriber.Subscriber ->
   Init.InitReq ->
   m DInit.InitReq

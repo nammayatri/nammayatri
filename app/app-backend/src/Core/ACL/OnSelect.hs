@@ -14,7 +14,7 @@ import Types.Error
 import Utils.Common
 
 buildOnSelectReq ::
-  HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text] =>
+  HasFlowEnv m r '["coreVersion" ::: Text] =>
   OnSelect.OnSelectReq ->
   m (Maybe DOnSelect.DOnSelectReq)
 buildOnSelectReq req = do

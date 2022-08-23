@@ -70,7 +70,6 @@ in
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
 , port = +8014
-, bgtmPort = +8114
 , metricsPort = +9997
 , hostName = "localhost"
 , nwAddress = "http://localhost:8014/v1/"
@@ -81,7 +80,6 @@ in
 , migrationPath = Some (env:BECKN_TRANSPORT_MIGRATION_PATH as Text ? "dev/migrations/beckn-transport")
 , autoMigrate = True
 , coreVersion = "0.9.3"
-, domainVersion = "0.9.3"
 , geofencingConfig = geofencingConfig
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 , googleMapsUrl = common.googleMapsUrl
@@ -89,7 +87,6 @@ in
 , fcmUrl = common.fcmUrl
 , fcmJsonPath = common.fcmJsonPath
 , fcmTokenKeyPrefix = "transporter-bpp"
-, graphhopperUrl = common.graphhopperUrl
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
 , driverPositionInfoExpiry = None Integer
@@ -102,7 +99,6 @@ in
 , updateLocationAllowedDelay = +60
 , metricsSearchDurationTimeout = +45
 , registryUrl = common.registryUrl
-, registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg

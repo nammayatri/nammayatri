@@ -154,8 +154,7 @@ buildDriverPoolResults pickup ndResults = do
 
 filterOutDriversWithDistanceAboveThreshold ::
   ( EsqDBFlow m r,
-    CoreMetrics m,
-    HasGoogleMaps m r
+    CoreMetrics m
   ) =>
   Integer ->
   NonEmpty DriverPoolResult ->

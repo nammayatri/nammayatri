@@ -10,7 +10,7 @@ import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import Utils.Common
 
 buildOnConfirmReq ::
-  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]
+  ( HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
   OnConfirm.OnConfirmReq ->
   m (Maybe DOnConfirm.OnConfirmReq)

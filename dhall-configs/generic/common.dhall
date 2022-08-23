@@ -13,12 +13,6 @@ let ExotelCfg =
   , callerId : Text
   }
 
-let defaultPoolConfig =
-    { stripes = +1
-    , keepAlive = +10
-    , resourcesPerStripe = +50
-    }
-
 let smsSessionConfig =
   { attempts = +3
   , authExpiry = +3
@@ -38,8 +32,7 @@ let httpClientOptions =
   , maxRetries = +3
   }
 
-in { defaultPoolConfig = defaultPoolConfig
-   , smsSessionConfig = smsSessionConfig
+in { smsSessionConfig = smsSessionConfig
    , autoMigrate = False
    , loggerConfig = loggerConfig
    , LogLevel = LogLevel

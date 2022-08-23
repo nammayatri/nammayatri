@@ -12,7 +12,6 @@ in  { driverAllowedDelay = +300
     , graceTerminationPeriod = appCfg.graceTerminationPeriod
     , redisCfg = appCfg.redisCfg
     , esqDBCfg = appCfg.esqDBCfg
-    , nwAddress = appCfg.nwAddress
     , fcmJsonPath = appCfg.fcmJsonPath
     , fcmUrl = appCfg.fcmUrl
     , fcmTokenKeyPrefix = "FIXME"

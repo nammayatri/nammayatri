@@ -17,7 +17,7 @@ import Types.Error
 import Utils.Common
 
 buildSelectReq ::
-  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],
+  ( HasFlowEnv m r '["coreVersion" ::: Text],
     GoogleMaps.HasGoogleMaps m r,
     CoreMetrics m
   ) =>

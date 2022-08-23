@@ -13,7 +13,6 @@ let esqDBCfg =
 in
 
 { port = +8020
-, signatureExpiry = common.signatureExpiry
 , graceTerminationPeriod = +90
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-registry.log"}
 , esqDBCfg = esqDBCfg

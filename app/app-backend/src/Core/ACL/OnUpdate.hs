@@ -13,7 +13,7 @@ import EulerHS.Prelude hiding (state)
 import Utils.Common
 
 buildOnUpdateReq ::
-  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],
+  ( HasFlowEnv m r '["coreVersion" ::: Text],
     EsqDBFlow m r
   ) =>
   BecknCallbackReq OnUpdate.OnUpdateMessage ->

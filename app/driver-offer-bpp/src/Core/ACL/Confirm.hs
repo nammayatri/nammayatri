@@ -14,7 +14,7 @@ import Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
 
 buildConfirmReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Confirm.ConfirmReq ->
   m DConfirm.DConfirmReq
 buildConfirmReq req = do

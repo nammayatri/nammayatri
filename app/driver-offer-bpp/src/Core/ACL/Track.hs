@@ -12,7 +12,7 @@ import Types.Error
 import Utils.Common
 
 buildTrackReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Subscriber.Subscriber ->
   Track.TrackReq ->
   m DTrack.DTrackReq

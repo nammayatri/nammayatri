@@ -6,8 +6,7 @@ let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
 
 
-in { defaultPoolConfig = globalCommon.defaultPoolConfig
-   , smsSessionConfig = globalCommon.smsSessionConfig
+in { smsSessionConfig = globalCommon.smsSessionConfig
    , autoMigrate = globalCommon.autoMigrate
    , loggerConfig = globalCommon.loggerConfig // { logToFile = True, logRawSql = True, prettyPrinting = True }
    , LogLevel = globalCommon.LogLevel
@@ -24,7 +23,6 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "http://localhost:4545/"
-   , graphhopperUrl = "https://api.sandbox.beckn.juspay.in/map/grphr/"
    , registryUrl = mockRegistryUrl
    , authServiceUrl = "http://localhost:8013/"
    }

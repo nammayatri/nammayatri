@@ -5,7 +5,7 @@ let exotelCfg =
   , apiToken = "xxxxxxx"
   , sid = "xxxxxxx"
   , callerId = "xxxxxxx"
-  }
+  } : globalCommon.ExotelCfg
 
 let s3Config =
   { secretAccessKey = "xxxxxxx"

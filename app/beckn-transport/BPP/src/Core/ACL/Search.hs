@@ -12,7 +12,7 @@ import EulerHS.Prelude hiding (state)
 import Tools.Error
 
 buildSearchReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Subscriber.Subscriber ->
   Search.SearchReq ->
   m DSearch.DSearchReq

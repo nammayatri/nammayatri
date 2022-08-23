@@ -3,7 +3,6 @@
 module Environment where
 
 import Beckn.External.Encryption (EncTools)
-import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.Common
 import Beckn.Types.Flow (FlowR)
@@ -49,7 +48,6 @@ data AppCfg = AppCfg
     fcmUrl :: BaseUrl,
     fcmJsonPath :: Maybe Text,
     fcmTokenKeyPrefix :: Text,
-    exotelCfg :: Maybe ExotelCfg,
     defaultRadiusOfSearch :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     graceTerminationPeriod :: Seconds,
@@ -59,7 +57,7 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { appCfg :: App.AppCfg, --should we flatten it too?
+  { appCfg :: App.AppCfg,
     httpClientOptions :: HttpClientOptions,
     driverNotificationExpiry :: Seconds,
     rideAllocationExpiry :: Seconds,
@@ -76,7 +74,6 @@ data AppEnv = AppEnv
     fcmUrl :: BaseUrl,
     fcmJsonPath :: Maybe Text,
     fcmTokenKeyPrefix :: Text,
-    exotelCfg :: Maybe ExotelCfg,
     defaultRadiusOfSearch :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     graceTerminationPeriod :: Seconds,

@@ -10,7 +10,7 @@ import qualified Types.API.Search as API
 import Utils.Common
 
 buildSearchRequest ::
-  ( (HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "graphhopperUrl" ::: BaseUrl]),
+  ( (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]),
     EsqDBFlow m r,
     CoreMetrics m
   ) =>

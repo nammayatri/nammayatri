@@ -12,7 +12,6 @@ where
 
 import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
-import Beckn.SesConfig (SesConfig)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis.AppPrefixes (appBackendPrefix)
@@ -45,32 +44,26 @@ data AppCfg = AppCfg
     hedisCfg :: HedisCfg,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
-    sesCfg :: SesConfig,
     port :: Int,
     metricsPort :: Int,
-    xProviderUri :: BaseUrl,
     hostName :: Text,
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,
     bapSelfUniqueKeyIds :: BAPs Text,
-    searchConfirmExpiry :: Maybe Seconds,
     searchRequestExpiry :: Maybe Seconds,
     exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     coreVersion :: Text,
-    domainVersion :: Text,
     loggerConfig :: LoggerConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
-    graphhopperUrl :: BaseUrl,
     metricsSearchDurationTimeout :: Seconds,
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
     registryUrl :: BaseUrl,
-    registrySecrets :: RegistrySecrets,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     disableSignatureAuth :: Bool,
@@ -81,29 +74,24 @@ data AppCfg = AppCfg
   }
   deriving (Generic, FromDhall)
 
+-- TODO coreVersion should be hardcoded in spec, because we can't change coreVersion without changing code
 data AppEnv = AppEnv
   { smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
-    sesCfg :: SesConfig,
-    xProviderUri :: BaseUrl,
     hostName :: Text,
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,
-    searchConfirmExpiry :: Maybe Seconds,
     searchRequestExpiry :: Maybe Seconds,
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
-    domainVersion :: Text,
     loggerConfig :: LoggerConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
-    graphhopperUrl :: BaseUrl,
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
     registryUrl :: BaseUrl,
-    registrySecrets :: RegistrySecrets,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     disableSignatureAuth :: Bool,

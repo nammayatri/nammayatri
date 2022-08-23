@@ -12,7 +12,7 @@ import Types.Error
 import Utils.Common
 
 buildSearchReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Subscriber.Subscriber ->
   Search.SearchReq ->
   m DSearch.DSearchReq

@@ -14,7 +14,7 @@ import qualified Domain.Types.Booking.BookingLocation as DBL
 import Tools.Error
 
 buildConfirmReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Subscriber.Subscriber ->
   Confirm.ConfirmReq ->
   m DConfirm.DConfirmReq

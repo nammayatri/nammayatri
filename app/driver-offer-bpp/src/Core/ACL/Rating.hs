@@ -11,7 +11,7 @@ import Types.Error
 import Utils.Common
 
 buildRatingReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Subscriber.Subscriber ->
   Rating.RatingReq ->
   m DRating.DRatingReq

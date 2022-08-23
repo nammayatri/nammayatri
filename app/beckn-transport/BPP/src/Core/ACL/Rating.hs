@@ -12,7 +12,7 @@ import EulerHS.Prelude hiding (state)
 import Tools.Error
 
 buildRatingReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Subscriber.Subscriber ->
   Rating.RatingReq ->
   m DRating.DRatingReq

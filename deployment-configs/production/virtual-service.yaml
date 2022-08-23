@@ -10,17 +10,6 @@ spec:
   - '*'
   http:
   - match:
-    - uri:
-        prefix: /map/grphr/
-    rewrite:
-      uri: /
-    route:
-    - destination:
-        host: graphhopper
-        port:
-          number: 8989
-    timeout: 40s
-  - match:
     - headers:
         authorization:
           prefix: Signature
