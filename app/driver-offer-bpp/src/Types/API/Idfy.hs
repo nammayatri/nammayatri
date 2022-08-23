@@ -2,12 +2,11 @@ module Types.API.Idfy where
 
 import Data.OpenApi (ToSchema (..))
 import Data.Text
-import Domain.Types.Driveronboarding.VehicleRegistrationCert (IdfyStatus)
 import EulerHS.Prelude
 
 data IdfyDLReq = IdfyDLReq
   { request_id :: Text,
-    status :: IdfyStatus,
+    status :: Text,
     result :: DLVerificationResult
   }
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
@@ -27,7 +26,7 @@ newtype CovDetails = CovDetails {cov :: Text}
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 data IdfyRCReq = IdfyRCReq
-  { status :: IdfyStatus,
+  { status :: Text,
     request_id :: Text,
     result :: RCVerificationResult
   }

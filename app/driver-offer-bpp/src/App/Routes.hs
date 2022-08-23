@@ -31,9 +31,10 @@ import qualified Product.BecknProvider.Track as BP
 import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Driver as Driver
-import Product.DriveronBoarding.DriverOnBoarding as DO
-import qualified Product.DriveronBoarding.Idfy as Idfy
-import Product.DriveronBoarding.Status as Status
+import qualified Product.DriverOnboarding.DriverLicense as DriverOnboarding
+import qualified Product.DriverOnboarding.Idfy as Idfy
+import qualified Product.DriverOnboarding.Status as DriverOnboarding
+import qualified Product.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Registration as Registration
@@ -48,8 +49,9 @@ import Servant.OpenApi
 import qualified Types.API.Call as CallAPI
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Driver as DriverAPI
-import Types.API.Driveronboarding.DriverOnBoarding
-import Types.API.Driveronboarding.Status
+import qualified Types.API.DriverOnboarding.DriverLicense as DriverOnboarding
+import qualified Types.API.DriverOnboarding.Status as DriverOnboarding
+import qualified Types.API.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import Types.API.Idfy
 import Types.API.Location as Location
 import qualified Types.API.OrgAdmin as OrgAdminAPI
@@ -70,6 +72,7 @@ type MainAPI =
 type UIAPI =
   HealthCheckAPI
     :<|> RegistrationAPI
+    :<|> DriverOnboardingAPI
     :<|> OrgAdminAPI
     :<|> DriverAPI
     :<|> VehicleAPI
@@ -80,7 +83,6 @@ type UIAPI =
     :<|> RideAPI
     :<|> CallAPIs
     :<|> IdfyHandlerAPI
-    :<|> OnBoardingAPI
     :<|> RideAPI
     :<|> CancellationReasonAPI
 
@@ -91,6 +93,7 @@ uiServer :: FlowServer UIAPI
 uiServer =
   pure "App is UP"
     :<|> registrationFlow
+    :<|> driverOnboardingFlow
     :<|> orgAdminFlow
     :<|> driverFlow
     :<|> vehicleFlow
@@ -101,7 +104,6 @@ uiServer =
     :<|> rideFlow
     :<|> callFlow
     :<|> idfyHandlerFlow
-    :<|> onBoardingAPIFlow
     :<|> rideFlow
     :<|> cancellationReasonFlow
 
@@ -139,6 +141,41 @@ registrationFlow =
     :<|> Registration.verify
     :<|> Registration.resend
     :<|> Registration.logout
+
+type DriverOnboardingAPI =
+  "driver" :> "register"
+    :> ( "dl"
+           :> ( TokenAuth
+                  :> ReqBody '[JSON] DriverOnboarding.DriverDLReq
+                  :> Post '[JSON] DriverOnboarding.DriverDLRes
+                  :<|> "image"
+                    :> TokenAuth
+                    :> ReqBody '[JSON] DriverOnboarding.DriverDLImageReq
+                    :> Post '[JSON] DriverOnboarding.DriverDLRes
+              )
+           :<|> "rc"
+             :> ( TokenAuth
+                    :> ReqBody '[JSON] DriverOnboarding.DriverRCReq
+                    :> Post '[JSON] DriverOnboarding.DriverRCRes
+                    :<|> "image"
+                      :> TokenAuth
+                      :> ReqBody '[JSON] DriverOnboarding.DriverRCImageReq
+                      :> Post '[JSON] DriverOnboarding.DriverRCRes
+                )
+           :<|> "status"
+             :> TokenAuth
+             :> Get '[JSON] DriverOnboarding.StatusRes
+       )
+
+driverOnboardingFlow :: FlowServer DriverOnboardingAPI
+driverOnboardingFlow =
+  ( DriverOnboarding.verifyDL
+      :<|> DriverOnboarding.validateDLImage
+  )
+    :<|> ( DriverOnboarding.verifyRC
+             :<|> DriverOnboarding.validateRCImage
+         )
+    :<|> DriverOnboarding.statusHandler
 
 type OrgAdminAPI =
   "orgAdmin" :> "profile"
@@ -380,22 +417,6 @@ orgBecknApiFlow orgId aurhRes =
     :<|> BP.track orgId aurhRes
     :<|> BP.cancel orgId aurhRes
     :<|> BP.rating orgId aurhRes
-
-type OnBoardingAPI =
-  "driver"
-    :> "register"
-    :> ( TokenAuth
-           :> ReqBody '[JSON] DriverOnBoardingReq
-           :> Post '[JSON] DriverOnBoardingRes
-           :<|> "status"
-           :> TokenAuth
-           :> Get '[JSON] StatusRes
-       )
-
-onBoardingAPIFlow :: FlowServer OnBoardingAPI
-onBoardingAPIFlow =
-  DO.registrationHandler
-    :<|> Status.statusHandler
 
 type CancellationReasonAPI =
   "cancellationReason"

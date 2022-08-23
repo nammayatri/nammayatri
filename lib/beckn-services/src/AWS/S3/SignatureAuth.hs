@@ -1,5 +1,11 @@
-module S3.SignatureAuth where
+module AWS.S3.SignatureAuth
+  ( prepareS3AuthManager,
+    modFlowRtWithS3AuthManagers,
+  )
+where
 
+import AWS.S3.Types
+import AWS.S3.Utils
 import Beckn.Prelude
 import Beckn.Types.App
 import Beckn.Types.Flow
@@ -19,8 +25,6 @@ import Network.HTTP.Client as Http
 import Network.HTTP.Client.TLS as Http
 import Network.HTTP.Types as HttpTypes
 import qualified Network.URI.Encode as URIEncode
-import S3.Types
-import S3.Utils
 
 fetchReqData :: Http.Request -> DB.ByteString -> S3AuthParams
 fetchReqData req reqBody =

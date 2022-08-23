@@ -1,13 +1,13 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Storage.Queries.Driveronboarding.OperatingCity where
+module Storage.Queries.DriverOnboarding.OperatingCity where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Domain.Types.Driveronboarding.OperatingCity
+import Domain.Types.DriverOnboarding.OperatingCity
 import Domain.Types.Organization
-import Storage.Tabular.Driveronboarding.OperatingCity
+import Storage.Tabular.DriverOnboarding.OperatingCity
 
 create :: OperatingCity -> SqlDB ()
 create = Esq.create

@@ -1,4 +1,4 @@
-module Types.API.Driveronboarding.Status where
+module Types.API.DriverOnboarding.Status where
 
 import Beckn.Prelude
 

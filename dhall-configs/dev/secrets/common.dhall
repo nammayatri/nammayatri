@@ -13,6 +13,7 @@ let s3Config =
   , accessKeyId = "xxxxxxx"
   , bucketName = "xxxxxxx"
   , region = "xxxxxxx"
+  , pathPrefix = "xxxxxxx"
   }
 
 in

@@ -1,4 +1,4 @@
-module S3.Utils where
+module AWS.S3.Utils where
 
 import qualified Crypto.Hash.SHA256 as SHA256
 import Crypto.MAC.HMAC (hmac)

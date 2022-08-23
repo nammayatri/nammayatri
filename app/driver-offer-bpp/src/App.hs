@@ -1,5 +1,6 @@
 module App where
 
+import AWS.S3 (prepareS3AuthManager)
 import qualified App.Server as App
 import Beckn.Exit
 import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
@@ -10,6 +11,7 @@ import Beckn.Types.Flow
 import Beckn.Utils.App
 import Beckn.Utils.Dhall
 import qualified Beckn.Utils.FlowLogging as L
+import Beckn.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt)
 import qualified Data.Text as T
 import Environment
 import EulerHS.Prelude
@@ -21,7 +23,6 @@ import Network.Wai.Handler.Warp
     setInstallShutdownHandler,
     setPort,
   )
-import S3.SignatureAuth
 import qualified Storage.Queries.Organization as Storage
 import System.Environment (lookupEnv)
 import Tools.SignatureAuth

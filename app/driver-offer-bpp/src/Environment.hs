@@ -2,6 +2,7 @@
 
 module Environment where
 
+import AWS.S3 (S3AuthenticatingEntity (..), S3Config)
 import Beckn.External.Encryption (EncTools)
 import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config
@@ -24,7 +25,6 @@ import Beckn.Utils.Servant.Client
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
-import S3.Types
 import System.Environment (lookupEnv)
 import Tools.Metrics.TransporterBPPMetrics.Types
 

@@ -1,4 +1,4 @@
-module Domain.Types.Driveronboarding.OperatingCity where
+module Domain.Types.DriverOnboarding.OperatingCity where
 
 import Beckn.Prelude
 import Beckn.Types.Id

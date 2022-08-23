@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
-module S3.Error where
+module AWS.S3.Error where
 
 import Beckn.Types.Error.BaseError
 import Beckn.Types.Error.BaseError.HTTPError

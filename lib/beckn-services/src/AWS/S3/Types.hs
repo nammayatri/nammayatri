@@ -1,11 +1,10 @@
-module S3.Types where
+module AWS.S3.Types where
 
 import Beckn.Prelude hiding (show)
 import Beckn.Utils.Dhall (FromDhall)
 import Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text.Encoding as T
-import EulerHS.Prelude hiding (decodeUtf8, show, traceShowId)
 import qualified Network.HTTP.Media as M
 import Network.HTTP.Types as HttpTypes
 import Servant
@@ -36,7 +35,8 @@ data S3Config = S3Config
   { accessKeyId :: Text,
     secretAccessKey :: Text,
     bucketName :: Text,
-    region :: Text
+    region :: Text,
+    pathPrefix :: Text
   }
   deriving (Generic, FromDhall)
 

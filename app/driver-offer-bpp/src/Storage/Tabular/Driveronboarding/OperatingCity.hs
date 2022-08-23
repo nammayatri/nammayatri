@@ -5,12 +5,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Driveronboarding.OperatingCity where
+module Storage.Tabular.DriverOnboarding.OperatingCity where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.Driveronboarding.OperatingCity as Domain
+import qualified Domain.Types.DriverOnboarding.OperatingCity as Domain
 import Storage.Tabular.Organization (OrganizationTId)
 
 mkPersist
