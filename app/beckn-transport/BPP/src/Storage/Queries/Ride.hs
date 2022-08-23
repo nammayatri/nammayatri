@@ -9,12 +9,14 @@ import Beckn.Utils.Common
 import Domain.Types.Booking.Type as Booking
 import Domain.Types.Organization
 import Domain.Types.Person
+import Domain.Types.Rating
 import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle
 import Storage.Queries.Booking
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Person as Person
+import Storage.Tabular.Rating as Rating
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.Vehicle as Vehicle
 
@@ -73,10 +75,10 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
       fullBooking <- buildFullBooking fullBookingT
       return $ (extractSolidType rideT,) <$> fullBooking
 
-findAllRideAPIEntityDataByRBId :: Transactionable m => Id Booking -> m [(Ride, Maybe Vehicle, Maybe Person)]
+findAllRideAPIEntityDataByRBId :: Transactionable m => Id Booking -> m [(Ride, Maybe Vehicle, Maybe Person, Maybe Rating)]
 findAllRideAPIEntityDataByRBId rbId =
   Esq.findAll $ do
-    (ride :& mbVehicle :& mbPerson) <-
+    (ride :& mbVehicle :& mbPerson :& mbRating) <-
       from $
         table @RideT
           `leftJoin` table @VehicleT
@@ -87,10 +89,14 @@ findAllRideAPIEntityDataByRBId rbId =
             `Esq.on` ( \(ride :& _ :& mbPerson) ->
                          just (ride ^. Ride.RideDriverId) ==. mbPerson ?. Person.PersonTId
                      )
+          `leftJoin` table @RatingT
+            `Esq.on` ( \(ride :& _ :& _ :& mbRating) ->
+                         just (ride ^. Ride.RideTId) ==. mbRating ?. Rating.RatingRideId
+                     )
     where_ $
       ride ^. Ride.RideBookingId ==. val (toKey rbId)
     orderBy [desc $ ride ^. RideCreatedAt]
-    return (ride, mbVehicle, mbPerson)
+    return (ride, mbVehicle, mbPerson, mbRating)
 
 getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getInProgressByDriverId driverId =

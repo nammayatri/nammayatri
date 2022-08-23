@@ -5,7 +5,7 @@ module Domain.Types.Rating where
 import Beckn.Types.Id
 import Data.Time (UTCTime)
 import Domain.Types.Person (Person)
-import Domain.Types.Ride (Ride)
+import Domain.Types.Ride.Type (Ride)
 import EulerHS.Prelude hiding (id)
 
 data Rating = Rating

@@ -13,6 +13,7 @@ import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
@@ -89,11 +90,11 @@ buildBookingAPIEntity booking = do
         updatedAt = booking.updatedAt
       }
   where
-    buildRideAPIEntity :: (EsqDBFlow m r, EncFlow m r) => UTCTime -> (DRide.Ride, Maybe DVeh.Vehicle, Maybe DP.Person) -> m DRide.RideAPIEntity
-    buildRideAPIEntity now (ride, mbVehicle, mbDriver) = do
+    buildRideAPIEntity :: (EsqDBFlow m r, EncFlow m r) => UTCTime -> (DRide.Ride, Maybe DVeh.Vehicle, Maybe DP.Person, Maybe DRating.Rating) -> m DRide.RideAPIEntity
+    buildRideAPIEntity now (ride, mbVehicle, mbDriver, mbRating) = do
       let vehicle = fromMaybe (vehicleDefault now) mbVehicle
       decDriver <- maybe (return $ driverDefault now) decrypt mbDriver
-      return $ DRide.makeRideAPIEntity ride decDriver vehicle
+      return $ DRide.makeRideAPIEntity ride decDriver vehicle mbRating
 
     buildBookingAPIDetails :: EsqDBFlow m r => BookingDetails -> m (BookingDetailsAPIEntity, [Text])
     buildBookingAPIDetails = \case
