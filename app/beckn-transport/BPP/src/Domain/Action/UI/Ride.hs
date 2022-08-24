@@ -11,11 +11,11 @@ import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Vehicle (Variant)
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
@@ -70,13 +70,12 @@ buildDriverRideRes ::
   DVeh.Vehicle ->
   DP.Person ->
   Maybe Text ->
-  (DRide.Ride, DRB.Booking) ->
+  (DRide.Ride, DRB.Booking, Maybe DRating.Rating) ->
   m DriverRideRes
-buildDriverRideRes vehicle driver driverNumber (ride, booking) = do
+buildDriverRideRes vehicle driver driverNumber (ride, booking, mbRating) = do
   let mbToLocation = case booking.bookingDetails of
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.RentalDetails _ -> Nothing
-  mbRating <- QRating.findByRideId ride.id
   pure
     DriverRideRes
       { id = ride.id,

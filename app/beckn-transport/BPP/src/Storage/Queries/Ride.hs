@@ -50,18 +50,22 @@ findAllByDriverId ::
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
-  m [(Ride, Booking)]
+  m [(Ride, Booking, Maybe Rating)]
 findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
   res <- Esq.findAll' $ do
-    (ride :& (booking :& fromLoc :& mbOneWayBooking :& mbToLoc :& mbRentalBooking)) <-
+    (ride :& (booking :& fromLoc :& mbOneWayBooking :& mbToLoc :& mbRentalBooking) :& mbRating) <-
       from $
         table @RideT
           `innerJoin` fullBookingTable
             `Esq.on` ( \(ride :& (booking :& _ :& _ :& _ :& _)) ->
                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                     )
+          `leftJoin` table @RatingT
+            `Esq.on` ( \(ride :& _ :& mbRating) ->
+                         just (ride ^. Ride.RideTId) ==. mbRating ?. Rating.RatingRideId
                      )
     where_ $
       ride ^. RideDriverId ==. val (toKey driverId)
@@ -69,11 +73,13 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     orderBy [desc $ ride ^. RideCreatedAt]
     limit limitVal
     offset offsetVal
-    return (ride, (booking, fromLoc, mbOneWayBooking, mbToLoc, mbRentalBooking))
+    return (ride, (booking, fromLoc, mbOneWayBooking, mbToLoc, mbRentalBooking), mbRating)
   fmap catMaybes $
-    for res $ \(rideT :: RideT, fullBookingT) -> do
-      fullBooking <- buildFullBooking fullBookingT
-      return $ (extractSolidType rideT,) <$> fullBooking
+    for res $ \(rideT :: RideT, fullBookingT, mbRatingT :: Maybe RatingT) -> do
+      mbFullBooking <- buildFullBooking fullBookingT
+      let ride = extractSolidType rideT
+      let mbRating = extractSolidType <$> mbRatingT
+      return $ mbFullBooking <&> (ride,,mbRating)
 
 findAllRideAPIEntityDataByRBId :: Transactionable m => Id Booking -> m [(Ride, Maybe Vehicle, Maybe Person, Maybe Rating)]
 findAllRideAPIEntityDataByRBId rbId =
