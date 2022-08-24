@@ -8,20 +8,22 @@ where
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
-import qualified Domain.Types.Person as SP
-import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DRide
 import Domain.Types.Vehicle (Variant)
+import qualified Domain.Types.Vehicle as DVeh
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 
 data DriverRideRes = DriverRideRes
-  { id :: Id SRide.Ride,
-    shortRideId :: ShortId SRide.Ride,
-    status :: SRide.RideStatus,
+  { id :: Id DRide.Ride,
+    shortRideId :: ShortId DRide.Ride,
+    status :: DRide.RideStatus,
     fromLocation :: DBLoc.BookingLocationAPIEntity,
     toLocation :: Maybe DBLoc.BookingLocationAPIEntity,
     discount :: Maybe Money,
@@ -36,6 +38,7 @@ data DriverRideRes = DriverRideRes
     computedFare :: Maybe Money,
     computedTotalFare :: Maybe Money,
     actualRideDistance :: Meters,
+    rideRating :: Maybe Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     tripStartTime :: Maybe UTCTime,
@@ -50,24 +53,30 @@ newtype DriverRideListRes = DriverRideListRes
 
 listDriverRides ::
   (EsqDBFlow m r, EncFlow m r) =>
-  Id SP.Person ->
+  Id DP.Person ->
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
   m DriverRideListRes
 listDriverRides driverId mbLimit mbOffset mbOnlyActive = do
   rideData <- QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive
-  DriverRideListRes <$> traverse buildDriverRideRes rideData
+  vehicle <- QVeh.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driverNumber <- DP.getPersonNumber driver
+  DriverRideListRes <$> traverse (buildDriverRideRes vehicle driver driverNumber) rideData
 
-buildDriverRideRes :: (EsqDBFlow m r, EncFlow m r) => (SRide.Ride, SRB.Booking) -> m DriverRideRes
-buildDriverRideRes (ride, booking) = do
+buildDriverRideRes ::
+  (EsqDBFlow m r, EncFlow m r) =>
+  DVeh.Vehicle ->
+  DP.Person ->
+  Maybe Text ->
+  (DRide.Ride, DRB.Booking) ->
+  m DriverRideRes
+buildDriverRideRes vehicle driver driverNumber (ride, booking) = do
   let mbToLocation = case booking.bookingDetails of
-        SRB.OneWayDetails details -> Just details.toLocation
-        SRB.RentalDetails _ -> Nothing
-
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  driverNumber <- SP.getPersonNumber driver
+        DRB.OneWayDetails details -> Just details.toLocation
+        DRB.RentalDetails _ -> Nothing
+  mbRating <- QRating.findByRideId ride.id
   pure
     DriverRideRes
       { id = ride.id,
@@ -86,7 +95,8 @@ buildDriverRideRes (ride, booking) = do
         vehicleModel = vehicle.model,
         computedFare = ride.fare,
         computedTotalFare = ride.totalFare,
-        actualRideDistance = roundToIntegral ride.traveledDistance.getHighPrecMeters,
+        actualRideDistance = roundToIntegral ride.traveledDistance,
+        rideRating = mbRating <&> (.ratingValue),
         createdAt = ride.createdAt,
         updatedAt = ride.updatedAt,
         tripStartTime = ride.tripStartTime,
