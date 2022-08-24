@@ -9,8 +9,7 @@ module Storage.Tabular.FarePolicy.RentalFarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
-import Beckn.Types.Common (Hours (..), Kilometers (..))
+import Beckn.Types.Common (HighPrecMoney, Hours (..), Kilometers (..))
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import qualified Domain.Types.Vehicle as Vehicle
@@ -24,12 +23,12 @@ mkPersist
       id Text
       organizationId OrganizationTId
       vehicleVariant Vehicle.Variant
-      baseFare Amount
+      baseFare HighPrecMoney
       baseDistance Int
       baseDuration Int
-      extraKmFare Amount
-      extraMinuteFare Amount
-      driverAllowanceForDay Amount Maybe
+      extraKmFare HighPrecMoney
+      extraMinuteFare HighPrecMoney
+      driverAllowanceForDay HighPrecMoney Maybe
       deleted Bool
       Primary id
       deriving Generic

@@ -32,9 +32,9 @@ updateFarePolicy admin fpId req = withFlowHandlerAPI $ do
   unless (admin.organizationId == Just farePolicy.organizationId) $ throwError AccessDenied
   let updatedFarePolicy =
         farePolicy
-          { baseDistancePerKmFare = realToFrac req.baseDistancePerKmFare,
+          { baseDistancePerKmFare = req.baseDistancePerKmFare,
             baseDistanceMeters = req.baseDistance,
-            extraKmFare = realToFrac req.extraKmFare,
+            perExtraKmFare = req.perExtraKmFare,
             deadKmFare = req.deadKmFare,
             driverExtraFeeList = req.driverExtraFeeList,
             nightShiftStart = req.nightShiftStart,

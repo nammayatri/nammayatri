@@ -45,10 +45,10 @@ wrapTests func = do
       let appEnv = AppEnv loggerConfig loggerEnv hedisEnv
       func appEnv
 
-incrDistance :: Id Person.Person -> Double -> TestM Double
-incrDistance driverId = Hedis.incrByFloat driverId.getId
+incrDistance :: Id Person.Person -> HighPrecMeters -> TestM Double
+incrDistance driverId = Hedis.incrByFloat driverId.getId . getHighPrecMeters
 
-updateDistanceTest :: Id Person.Person -> Double -> TestM ()
+updateDistanceTest :: Id Person.Person -> HighPrecMeters -> TestM ()
 updateDistanceTest driverId dist = void $ incrDistance driverId dist
 
 checkTraveledDistance :: Id Person.Person -> TestM Double

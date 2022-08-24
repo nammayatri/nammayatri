@@ -66,8 +66,8 @@ buildQuoteInfo item = do
     OnSelect.DRIVER_OFFER_ESTIMATE -> throwError $ InvalidRequest "Estimates are only supported in on_search"
   let itemCode = item.descriptor.code
       vehicleVariant = itemCode.vehicleVariant
-      estimatedFare = realToFrac item.price.value
-      estimatedTotalFare = realToFrac item.price.offered_value
+      estimatedFare = roundToIntegral item.price.value
+      estimatedTotalFare = roundToIntegral item.price.offered_value
       descriptions = item.quote_terms
   validatePrices estimatedFare estimatedTotalFare
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare

@@ -4,7 +4,6 @@
 module Domain.Types.Quote (module Domain.Types.Quote, module Types.Common) where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
@@ -21,9 +20,9 @@ import Types.Common
 data Quote = Quote
   { id :: Id Quote,
     requestId :: Id DSearchRequest.SearchRequest,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     providerId :: Text,
     providerUrl :: BaseUrl,
     providerName :: Text,
@@ -51,9 +50,9 @@ newtype OneWayQuoteDetails = OneWayQuoteDetails
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
     vehicleVariant :: VehicleVariant,
-    estimatedFare :: Amount,
-    estimatedTotalFare :: Amount,
-    discount :: Maybe Amount,
+    estimatedFare :: Money,
+    estimatedTotalFare :: Money,
+    discount :: Maybe Money,
     agencyName :: Text,
     agencyNumber :: Text,
     agencyCompletedRidesCount :: Int,

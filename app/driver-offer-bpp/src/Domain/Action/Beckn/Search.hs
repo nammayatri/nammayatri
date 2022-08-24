@@ -64,7 +64,7 @@ handler org sReq = do
       listOfProtoQuotes = nubBy ((==) `on` getVariant) driverPool
 
   distance <-
-    metersToHighPrecMeters . (.distance)
+    (.distance)
       <$> GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
 
   estimates <- mapM (mkEstimate org sReq distance) listOfProtoQuotes
@@ -79,7 +79,7 @@ mkEstimate ::
   (MonadFlow m, Esq.Transactionable m) =>
   DOrg.Organization ->
   DSearchReq ->
-  HighPrecMeters ->
+  Meters ->
   GoogleMaps.GetDistanceResult DriverPoolResult a ->
   m EstimateItem
 mkEstimate org dSReq dist g = do

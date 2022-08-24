@@ -9,8 +9,7 @@ module Storage.Tabular.FarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
-import Beckn.Types.Common (HighPrecMeters (HighPrecMeters))
+import Beckn.Types.Common (HighPrecMoney, Meters, Money)
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -25,11 +24,11 @@ mkPersist
       organizationId OrganizationTId
       vehicleVariant Variant.Variant
 
-      baseDistancePerKmFare Amount
-      baseDistanceMeters Double
-      extraKmFare Amount
-      deadKmFare Amount
-      driverExtraFeeList (PostgresList Double)
+      baseDistancePerKmFare HighPrecMoney
+      baseDistanceMeters Meters
+      perExtraKmFare HighPrecMoney
+      deadKmFare Money
+      driverExtraFeeList (PostgresList Money)
 
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
@@ -52,10 +51,7 @@ instance TType FarePolicyT Domain.FarePolicy where
       Domain.FarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
-          baseDistanceMeters = HighPrecMeters baseDistanceMeters,
-          nightShiftRate = nightShiftRate,
-          driverExtraFeeList = map roundToIntegral $ unPostgresList driverExtraFeeList,
-          deadKmFare = roundToIntegral deadKmFare,
+          driverExtraFeeList = unPostgresList driverExtraFeeList,
           ..
         }
 
@@ -63,8 +59,6 @@ instance TType FarePolicyT Domain.FarePolicy where
     FarePolicyT
       { id = getId id,
         organizationId = toKey organizationId,
-        baseDistanceMeters = baseDistanceMeters.getHighPrecMeters,
-        driverExtraFeeList = PostgresList $ map fromIntegral driverExtraFeeList,
-        deadKmFare = fromIntegral deadKmFare,
+        driverExtraFeeList = PostgresList driverExtraFeeList,
         ..
       }

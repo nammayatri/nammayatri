@@ -321,18 +321,7 @@ getNearbySearchRequests driverId = withFlowHandlerAPI $ do
     buildSearchRequestForDriverAPIEntity nearbyReq = do
       let sId = nearbyReq.searchRequestId
       searchRequest <- QSReq.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
-      return
-        SearchRequestForDriverAPIEntity
-          { searchRequestId = sId,
-            startTime = nearbyReq.startTime,
-            searchRequestValidTill = nearbyReq.searchRequestValidTill,
-            distanceToPickup = nearbyReq.distanceToPickup,
-            durationToPickup = nearbyReq.durationToPickup,
-            baseFare = nearbyReq.baseFare,
-            fromLocation = searchRequest.fromLocation,
-            toLocation = searchRequest.toLocation,
-            distance = nearbyReq.distance
-          }
+      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest
 
 isAllowedExtraFee :: [Money] -> Money -> Bool
 isAllowedExtraFee list val = val `elem` list
@@ -360,7 +349,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
   whenJust mbOfferedFare $ \off ->
     unless (isAllowedExtraFee farePolicy.driverExtraFeeList off) $
       throwError $ NotAllowedExtraFee $ show off
-  fareParams <- calculateFare organization.id sReqFD.vehicleVariant (HighPrecMeters sReqFD.distance) sReqFD.startTime mbOfferedFare
+  fareParams <- calculateFare organization.id sReqFD.vehicleVariant sReqFD.distance sReqFD.startTime mbOfferedFare
   driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
   Esq.runTransaction $ QDrQt.create driverQuote
   context <- contextTemplate organization Context.SELECT sReq.bapId sReq.bapUri (Just sReq.transactionId) sReq.messageId

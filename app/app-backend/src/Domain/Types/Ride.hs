@@ -3,7 +3,7 @@
 module Domain.Types.Ride where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -48,9 +48,9 @@ data Ride = Ride
     vehicleVariant :: VehicleVariant,
     otp :: Text,
     trackingUrl :: Maybe BaseUrl,
-    fare :: Maybe Amount,
-    totalFare :: Maybe Amount,
-    chargeableDistance :: Maybe Double,
+    fare :: Maybe Money,
+    totalFare :: Maybe Money,
+    chargeableDistance :: Maybe HighPrecMeters,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
@@ -72,8 +72,8 @@ data RideAPIEntity = RideAPIEntity
     vehicleVariant :: VehicleVariant,
     vehicleModel :: Text,
     rideOtp :: Text,
-    computedPrice :: Maybe Amount,
-    chargeableRideDistance :: Maybe Double,
+    computedPrice :: Maybe Money,
+    chargeableRideDistance :: Maybe HighPrecMeters,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,

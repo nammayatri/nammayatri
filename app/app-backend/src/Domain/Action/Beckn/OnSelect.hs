@@ -6,7 +6,6 @@ where
 import App.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -40,9 +39,9 @@ data ProviderInfo = ProviderInfo
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     quoteDetails :: DriverOfferQuoteDetails,
     descriptions :: [Text]
   }

@@ -3,7 +3,6 @@
 module Domain.Types.Booking where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Aeson
@@ -50,9 +49,9 @@ data Booking = Booking
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
     fromLocation :: DLoc.BookingLocation,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     vehicleVariant :: VehicleVariant,
     bookingDetails :: BookingDetails,
     tripTerms :: Maybe DTripTerms.TripTerms,

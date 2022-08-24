@@ -2,7 +2,6 @@ module Domain.Action.Beckn.OnUpdate (onUpdate, OnUpdateReq (..), OnUpdateFareBre
 
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis.Config (HedisFlow)
-import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -41,10 +40,10 @@ data OnUpdateReq
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
-        fare :: Amount,
-        totalFare :: Amount,
+        fare :: Money,
+        totalFare :: Money,
         fareBreakups :: [OnUpdateFareBreakup],
-        chargeableDistance :: Double
+        chargeableDistance :: HighPrecMeters
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -56,7 +55,7 @@ data OnUpdateReq
       }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
-  { amount :: Amount,
+  { amount :: HighPrecMoney,
     description :: Text
   }
 

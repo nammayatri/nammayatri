@@ -155,7 +155,7 @@ updateStatusByIds ids status = do
 
 updateDistance ::
   Id Person ->
-  Double ->
+  HighPrecMeters ->
   SqlDB ()
 updateDistance driverId distance = do
   now <- getCurrentTime

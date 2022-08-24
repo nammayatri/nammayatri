@@ -1,5 +1,6 @@
 module Core.ACL.OnSearch where
 
+import Beckn.Prelude
 import Beckn.Product.Validation.Context (validateContext)
 import Beckn.Storage.Esqueleto (runTransaction)
 import Beckn.Types.Common hiding (id)
@@ -79,8 +80,8 @@ buildEstimateOrQuoteInfo ::
 buildEstimateOrQuoteInfo item = do
   let itemCode = item.descriptor.code
       vehicleVariant = castVehicleVariant itemCode.vehicleVariant
-      estimatedFare = realToFrac item.price.value
-      estimatedTotalFare = realToFrac item.price.offered_value
+      estimatedFare = roundToIntegral item.price.value
+      estimatedTotalFare = roundToIntegral item.price.offered_value
       descriptions = item.quote_terms
   validatePrices estimatedFare estimatedTotalFare
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare

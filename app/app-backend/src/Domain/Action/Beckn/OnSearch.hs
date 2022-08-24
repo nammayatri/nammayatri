@@ -2,7 +2,6 @@ module Domain.Action.Beckn.OnSearch where
 
 import App.Types
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.Estimate as DEstimate
@@ -37,17 +36,17 @@ data ProviderInfo = ProviderInfo
 
 data EstimateInfo = EstimateInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     descriptions :: [Text]
   }
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     quoteDetails :: QuoteDetails,
     descriptions :: [Text]
   }

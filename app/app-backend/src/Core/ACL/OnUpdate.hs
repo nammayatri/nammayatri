@@ -1,5 +1,6 @@
 module Core.ACL.OnUpdate (buildOnUpdateReq) where
 
+import Beckn.Prelude (roundToIntegral)
 import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
@@ -61,8 +62,8 @@ parseEvent (OnUpdate.RideCompleted rcEvent) = do
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id rcEvent.id,
         bppRideId = Id rcEvent.fulfillment.id,
-        fare = realToFrac rcEvent.quote.price.value,
-        totalFare = realToFrac rcEvent.quote.price.computed_value,
+        fare = roundToIntegral rcEvent.quote.price.value,
+        totalFare = roundToIntegral rcEvent.quote.price.computed_value,
         chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup
       }

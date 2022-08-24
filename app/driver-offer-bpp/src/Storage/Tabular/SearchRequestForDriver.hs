@@ -9,8 +9,7 @@ module Storage.Tabular.SearchRequestForDriver where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Meters (..))
-import qualified Beckn.Types.Common as Common
+import Beckn.Types.Common (Meters, Money)
 import Beckn.Types.Id
 import Beckn.Types.Time
 import qualified Domain.Types.SearchRequestForDriver as Domain
@@ -29,8 +28,8 @@ mkPersist
       distanceToPickup Meters
       durationToPickup Seconds
       vehicleVariant Variant.Variant
-      distance Double
-      baseFare Common.Money
+      distance Meters
+      baseFare Money
       searchRequestValidTill UTCTime
       driverId PersonTId
       createdAt UTCTime

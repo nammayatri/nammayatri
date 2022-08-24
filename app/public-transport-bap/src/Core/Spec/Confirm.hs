@@ -3,7 +3,7 @@
 module Core.Spec.Confirm (module Core.Spec.Confirm, module Reexport) where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.Common.Billing
@@ -33,7 +33,7 @@ instance ToSchema Order where
 
 data Params = Params
   { currency :: Text,
-    amount :: Amount
+    amount :: HighPrecMoney
   }
   deriving (Generic, Eq, Show, PrettyShow, FromJSON, ToJSON)
 
@@ -42,5 +42,5 @@ deriving anyclass instance PrettyShow (Payment Params)
 instance ToSchema Params where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-rupeeParams :: Amount -> Params
+rupeeParams :: HighPrecMoney -> Params
 rupeeParams = Params "INR"

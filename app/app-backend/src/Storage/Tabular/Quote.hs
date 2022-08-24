@@ -9,7 +9,7 @@ module Storage.Tabular.Quote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
+import Beckn.Types.Common (HighPrecMeters, HighPrecMoney)
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
@@ -25,15 +25,15 @@ mkPersist
       id Text
       fareProductType Domain.FareProductType
       requestId SSearchRequest.SearchRequestTId
-      estimatedFare Amount
-      discount Amount Maybe
-      estimatedTotalFare Amount
+      estimatedFare HighPrecMoney
+      discount HighPrecMoney Maybe
+      estimatedTotalFare HighPrecMoney
       providerId Text
       providerUrl Text
       providerName Text
       providerMobileNumber Text
       providerCompletedRidesCount Int
-      distanceToNearestDriver Double Maybe
+      distanceToNearestDriver HighPrecMeters Maybe
       vehicleVariant VehVar.VehicleVariant
       tripTermsId STripTerms.TripTermsTId Maybe
       rentalSlabId SRentalSlab.RentalSlabTId Maybe

@@ -1,6 +1,5 @@
 module Types.API.Booking where
 
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
@@ -19,9 +18,9 @@ data BookingStatusRes = BookingStatusRes
     status :: BookingStatus,
     agencyName :: Text,
     agencyNumber :: Text,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     fromLocation :: BookingLocationAPIEntity,
     rideList :: [RideAPIEntity],
     tripTerms :: [Text],

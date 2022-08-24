@@ -44,10 +44,10 @@ updateFarePolicy farePolicy = do
       set
         tbl
         [ FarePolicyBaseDistancePerKmFare =. val farePolicy.baseDistancePerKmFare,
-          FarePolicyBaseDistanceMeters =. val farePolicy.baseDistanceMeters.getHighPrecMeters,
-          FarePolicyExtraKmFare =. val farePolicy.extraKmFare,
-          FarePolicyDeadKmFare =. val (fromIntegral farePolicy.deadKmFare),
-          FarePolicyDriverExtraFeeList =. val (PostgresList $ map fromIntegral farePolicy.driverExtraFeeList),
+          FarePolicyBaseDistanceMeters =. val farePolicy.baseDistanceMeters,
+          FarePolicyPerExtraKmFare =. val farePolicy.perExtraKmFare,
+          FarePolicyDeadKmFare =. val farePolicy.deadKmFare,
+          FarePolicyDriverExtraFeeList =. val (PostgresList farePolicy.driverExtraFeeList),
           FarePolicyNightShiftStart =. val farePolicy.nightShiftStart,
           FarePolicyNightShiftEnd =. val farePolicy.nightShiftEnd,
           FarePolicyNightShiftRate =. val farePolicy.nightShiftRate,

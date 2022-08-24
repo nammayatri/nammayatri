@@ -4,7 +4,7 @@
 module Domain.Types.Estimate where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
 import qualified Domain.Types.SearchRequest as DSearchRequest
@@ -14,9 +14,9 @@ import Domain.Types.VehicleVariant (VehicleVariant)
 data Estimate = Estimate
   { id :: Id Estimate,
     requestId :: Id DSearchRequest.SearchRequest,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     providerId :: Text,
     providerUrl :: BaseUrl,
     providerName :: Text,
@@ -31,9 +31,9 @@ data Estimate = Estimate
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
     vehicleVariant :: VehicleVariant,
-    estimatedFare :: Amount,
-    estimatedTotalFare :: Amount,
-    discount :: Maybe Amount,
+    estimatedFare :: Money,
+    estimatedTotalFare :: Money,
+    discount :: Maybe Money,
     agencyName :: Text,
     agencyNumber :: Text,
     agencyCompletedRidesCount :: Int,

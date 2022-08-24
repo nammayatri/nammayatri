@@ -3,7 +3,6 @@ module Product.Quote where
 import App.Types
 import Beckn.Storage.Hedis as Hedis
 import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
-import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as Person
@@ -74,7 +73,7 @@ getEstimates searchRequestId = do
   let estimates = DEstimate.mkEstimateAPIEntity <$> sortByEstimatedFare estimateList
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
-sortByEstimatedFare :: (HasField "estimatedFare" r Amount) => [r] -> [r]
+sortByEstimatedFare :: (HasField "estimatedFare" r Money) => [r] -> [r]
 sortByEstimatedFare resultList = do
   let sortFunc = compare `on` (.estimatedFare)
   sortBy sortFunc resultList

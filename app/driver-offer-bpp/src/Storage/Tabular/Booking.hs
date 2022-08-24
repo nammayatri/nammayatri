@@ -37,11 +37,11 @@ mkPersist
       fromLocationId BookingLocationTId
       toLocationId BookingLocationTId
       vehicleVariant Veh.Variant
-      estimatedDistance Double
-      createdAt UTCTime
-      updatedAt UTCTime
+      estimatedDistance Meters
       estimatedFare Money
       fareParametersId Fare.FareParametersTId
+      createdAt UTCTime
+      updatedAt UTCTime
 
       Primary id
       deriving Generic
@@ -66,7 +66,6 @@ instance TType (BookingT, BookingLocationT, BookingLocationT, Fare.FareParameter
           toLocation = toLoc_,
           bapUri = pUrl,
           riderId = fromKey <$> riderId,
-          estimatedDistance = HighPrecMeters estimatedDistance,
           fareParams = Fare.mkDomainFromTabularFareParams fareParametersT,
           ..
         }
@@ -80,7 +79,6 @@ instance TType (BookingT, BookingLocationT, BookingLocationT, Fare.FareParameter
               toLocationId = toKey toLocation.id,
               bapUri = showBaseUrl bapUri,
               riderId = toKey <$> riderId,
-              estimatedDistance = getHighPrecMeters estimatedDistance,
               fareParametersId = toKey fareParamsId,
               ..
             },

@@ -33,7 +33,7 @@ data RideInterpolationHandler m = RideInterpolationHandler
     getFirstNwaypoints :: Id Person.Person -> Integer -> m [LatLong],
     deleteFirstNwaypoints :: Id Person.Person -> Integer -> m (),
     interpolatePoints :: [LatLong] -> m [LatLong],
-    updateDistance :: Id Person.Person -> Double -> m ()
+    updateDistance :: Id Person.Person -> HighPrecMeters -> m ()
   }
 
 --------------------------------------------------------------------------------
@@ -67,7 +67,7 @@ recalcDistanceBatchStep ::
   (Monad m, Log m) =>
   RideInterpolationHandler m ->
   Id Person.Person ->
-  m Double
+  m HighPrecMeters
 recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
   interpolatedWps <- interpolatePoints batchWaypoints

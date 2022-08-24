@@ -23,7 +23,7 @@ data DriverQuote = DriverQuote
     driverName :: Text,
     driverRating :: Maybe Double,
     vehicleVariant :: Variant.Variant,
-    distance :: Double,
+    distance :: Meters,
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     createdAt :: UTCTime,

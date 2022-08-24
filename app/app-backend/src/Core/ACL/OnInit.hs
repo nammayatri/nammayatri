@@ -27,9 +27,9 @@ buildOnInitReq req = do
     let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
     return $
       DOnInit.OnInitReq
-        { estimatedFare = realToFrac estimatedFare,
-          estimatedTotalFare = realToFrac estimatedTotalFare,
-          discount = realToFrac <$> discount,
+        { estimatedFare = roundToIntegral estimatedFare,
+          estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          discount = roundToIntegral <$> discount,
           ..
         }
 

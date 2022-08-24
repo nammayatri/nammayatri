@@ -21,9 +21,9 @@ newtype ListFarePolicyRes = ListFarePolicyRes
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data UpdateFarePolicyReq = UpdateFarePolicyReq
-  { baseDistancePerKmFare :: Double,
-    baseDistance :: HighPrecMeters,
-    extraKmFare :: Double,
+  { baseDistancePerKmFare :: HighPrecMoney,
+    baseDistance :: Meters,
+    perExtraKmFare :: HighPrecMoney,
     deadKmFare :: Money, -- constant value
     driverExtraFeeList :: [Money],
     nightShiftStart :: Maybe TimeOfDay,
@@ -37,9 +37,9 @@ type UpdateFarePolicyRes = APISuccess
 validateUpdateFarePolicyRequest :: Validate UpdateFarePolicyReq
 validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
   sequenceA_ --FIXME: ask for lower and upper bounds for all the values
-    [ validateField "baseDistancePerKmFare" baseDistancePerKmFare $ InRange @Double 0 500,
-      validateField "baseDistance" baseDistance $ InRange @HighPrecMeters 0 500,
-      validateField "extraKmFare" extraKmFare $ InRange @Double 0 500,
+    [ validateField "baseDistancePerKmFare" baseDistancePerKmFare $ InRange @HighPrecMoney 0 500,
+      validateField "baseDistance" baseDistance $ InRange @Meters 0 500,
+      validateField "perExtraKmFare" perExtraKmFare $ InRange @HighPrecMoney 0 500,
       validateField "deadKmFare" deadKmFare $ InRange @Money 0 500,
       validateList "driverExtraFeeList" driverExtraFeeList $ \x -> validateField "fee" x $ InRange @Money 0 500,
       validateField "nightShiftRate" nightShiftRate . InMaybe $ InRange @Double 1 2,

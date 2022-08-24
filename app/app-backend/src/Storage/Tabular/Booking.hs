@@ -9,7 +9,6 @@ module Storage.Tabular.Booking where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Error
@@ -42,10 +41,10 @@ mkPersist
       riderId SPerson.PersonTId
       fromLocationId SLoc.BookingLocationTId
       toLocationId SLoc.BookingLocationTId Maybe
-      estimatedFare Amount
-      discount Amount Maybe
-      estimatedTotalFare Amount
-      distance Double Maybe
+      estimatedFare HighPrecMoney
+      discount HighPrecMoney Maybe
+      estimatedTotalFare HighPrecMoney
+      distance HighPrecMeters Maybe
       vehicleVariant VehVar.VehicleVariant
       tripTermsId STripTerms.TripTermsTId Maybe
       rentalSlabId SRentalSlab.RentalSlabTId Maybe
@@ -81,6 +80,9 @@ instance TType FullBookingT Domain.Booking where
           riderId = fromKey riderId,
           providerUrl = pUrl,
           merchantId = fromKey merchantId,
+          estimatedFare = roundToIntegral estimatedFare,
+          discount = roundToIntegral <$> discount,
+          estimatedTotalFare = roundToIntegral estimatedTotalFare,
           ..
         }
     where
@@ -90,7 +92,7 @@ instance TType FullBookingT Domain.Booking where
         pure
           Domain.OneWayBookingDetails
             { toLocation,
-              distance = HighPrecMeters distance'
+              distance = distance'
             }
 
   toTType Domain.Booking {..} = do
@@ -112,8 +114,11 @@ instance TType FullBookingT Domain.Booking where
               fromLocationId = toKey fromLocation.id,
               providerUrl = showBaseUrl providerUrl,
               tripTermsId = toKey <$> (tripTerms <&> (.id)),
-              distance = getHighPrecMeters <$> distance,
+              distance = distance,
               merchantId = toKey merchantId,
+              estimatedFare = realToFrac estimatedFare,
+              discount = realToFrac <$> discount,
+              estimatedTotalFare = realToFrac estimatedTotalFare,
               ..
             }
     let fromLocT = toTType fromLocation

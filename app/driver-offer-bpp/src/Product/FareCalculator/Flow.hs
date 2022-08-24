@@ -35,7 +35,7 @@ calculateFare ::
   (Transactionable m, MonadFlow m) =>
   Id Organization ->
   Variant ->
-  HighPrecMeters ->
+  Meters ->
   UTCTime ->
   Maybe Money ->
   m FareParameters
@@ -46,7 +46,7 @@ doCalculateFare ::
   ServiceHandle m ->
   Id Organization ->
   Variant ->
-  HighPrecMeters ->
+  Meters ->
   UTCTime ->
   Maybe Money ->
   m FareParameters

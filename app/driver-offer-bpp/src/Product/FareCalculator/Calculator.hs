@@ -7,7 +7,6 @@ module Product.FareCalculator.Calculator
 where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
 import Data.Time
   ( LocalTime (localTimeOfDay),
     TimeOfDay (..),
@@ -22,7 +21,7 @@ import Utils.Common
 
 type TripStartTime = UTCTime
 
-type Distance = HighPrecMeters
+type Distance = Meters
 
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
@@ -78,11 +77,11 @@ calculateFareParameters ::
   Maybe Money ->
   FareParameters
 calculateFareParameters fp distance startTime mbExtraFare = do
-  let baseDistanceFare = roundToIntegral $ fp.baseDistancePerKmFare * distanceToAmountKm fp.baseDistanceMeters
+  let baseDistanceFare = roundToIntegral $ fp.baseDistancePerKmFare * realToFrac (distanceToKm fp.baseDistanceMeters)
       mbExtraDistance =
         distance - fp.baseDistanceMeters
           & (\dist -> if dist > 0 then Just dist else Nothing)
-      mbExtraKmFare = mbExtraDistance <&> \ex -> roundToIntegral $ distanceToAmountKm ex * fp.extraKmFare
+      mbExtraKmFare = mbExtraDistance <&> \ex -> roundToIntegral $ realToFrac (distanceToKm ex) * fp.perExtraKmFare
       nightCoefIncluded = defineWhetherNightCoefIncluded fp startTime
 
   FareParameters
@@ -93,8 +92,8 @@ calculateFareParameters fp distance startTime mbExtraFare = do
       nightCoefIncluded
     }
 
-distanceToAmountKm :: HighPrecMeters -> Amount
-distanceToAmountKm x = realToFrac $ x.getHighPrecMeters / 1000
+distanceToKm :: Meters -> Rational
+distanceToKm x = realToFrac x / 1000
 
 defineWhetherNightCoefIncluded ::
   FarePolicy ->

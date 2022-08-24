@@ -65,7 +65,7 @@ handler orgId req = do
             startTime = searchRequest.startTime,
             riderId = Nothing,
             vehicleVariant = driverQuote.vehicleVariant,
-            estimatedDistance = HighPrecMeters $ driverQuote.distance,
+            estimatedDistance = driverQuote.distance,
             createdAt = now,
             updatedAt = now,
             fromLocation,

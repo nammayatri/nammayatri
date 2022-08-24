@@ -3,7 +3,6 @@ module Domain.Action.Beckn.OnInit where
 import Beckn.External.Encryption (decrypt)
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Domain.Types.Booking (BPPBooking, Booking)
@@ -18,9 +17,9 @@ import Utils.Common
 data OnInitReq = OnInitReq
   { bookingId :: Id Booking,
     bppBookingId :: Id BPPBooking,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -31,7 +30,7 @@ data OnInitRes = OnInitRes
     bppUrl :: BaseUrl,
     fromLocationAddress :: DBL.LocationAddress,
     mbToLocationAddress :: Maybe DBL.LocationAddress,
-    estimatedTotalFare :: Amount,
+    estimatedTotalFare :: Money,
     riderPhoneCountryCode :: Text,
     riderPhoneNumber :: Text
   }

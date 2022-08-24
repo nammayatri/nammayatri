@@ -1,7 +1,7 @@
 module Domain.Types.Booking.API where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Types.Booking.Type
 import Domain.Types.PaymentTransaction
@@ -12,7 +12,7 @@ data BookingAPIEntity = BookingAPIEntity
     quantity :: Int,
     publicTransportSupportNumber :: Text,
     description :: Text,
-    fare :: Amount,
+    fare :: Money,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
     departureStation :: TransportStationAPIEntity,

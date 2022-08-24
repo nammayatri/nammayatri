@@ -51,7 +51,7 @@ buildQuote now txnId bppUrl bppId publicTransportLocations provider item = do
   fares <-
     find (\pl -> pl.id == fareId) fareList
       & fromMaybeM (InvalidRequest "Invalid provider.fares")
-  let fare = realToFrac fares.price.value
+  let fare = roundToIntegral fares.price.value
   departures <-
     find (\pl -> pl.id == departureId) departureList
       & fromMaybeM (InvalidRequest "Invalid provider.departures")

@@ -1,5 +1,6 @@
 module Product.RideAPI.Handlers.EndRide where
 
+import Beckn.Prelude (roundToIntegral)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -27,7 +28,7 @@ data ServiceHandle m = ServiceHandle
     calculateFare ::
       Id Organization ->
       Variant ->
-      HighPrecMeters ->
+      Meters ->
       UTCTime ->
       Maybe Money ->
       m Fare.FareParameters,
@@ -64,7 +65,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
 
   let updRide =
         ride{tripEndTime = Just now,
-             fare = Just $ fromIntegral fare
+             fare = Just fare
             }
 
   endRideTransaction booking.id updRide (cast driverId)
@@ -76,12 +77,12 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
     recalculateFare booking ride = do
       let transporterId = booking.providerId
           actualDistance = ride.traveledDistance
-          oldDistance = booking.estimatedDistance
+          oldDistance = realToFrac booking.estimatedDistance
 
       -- maybe compare only distance fare?
       let estimatedBaseFare = booking.estimatedFare
 
-      fareParams <- calculateFare transporterId booking.vehicleVariant actualDistance booking.startTime booking.fareParams.driverSelectedFare
+      fareParams <- calculateFare transporterId booking.vehicleVariant (roundToIntegral actualDistance) booking.startTime booking.fareParams.driverSelectedFare
       let updatedBaseFare = Fare.fareSumRounded fareParams
       let distanceDiff = actualDistance - oldDistance
       let fareDiff = updatedBaseFare - estimatedBaseFare

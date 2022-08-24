@@ -6,6 +6,7 @@ import Beckn.Types.Id
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Domain.Types.Person
 import Domain.Types.SearchRequest
+import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Variant
 
@@ -18,7 +19,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     vehicleVariant :: Variant.Variant,
-    distance :: Double,
+    distance :: Meters,
     baseFare :: Money,
     createdAt :: UTCTime
   }
@@ -33,6 +34,20 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     baseFare :: Money,
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: DLoc.SearchReqLocation,
-    distance :: Double
+    distance :: Meters
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
+
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSReq.SearchRequest -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest =
+  SearchRequestForDriverAPIEntity
+    { searchRequestId = searchRequest.id,
+      startTime = nearbyReq.startTime,
+      searchRequestValidTill = nearbyReq.searchRequestValidTill,
+      distanceToPickup = nearbyReq.distanceToPickup,
+      durationToPickup = nearbyReq.durationToPickup,
+      baseFare = nearbyReq.baseFare,
+      fromLocation = searchRequest.fromLocation,
+      toLocation = searchRequest.toLocation,
+      distance = nearbyReq.distance
+    }

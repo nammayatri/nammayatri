@@ -41,8 +41,8 @@ data CreateRentalFarePolicyItem = CreateRentalFarePolicyItem
     baseFare :: Money,
     baseDistance :: Kilometers, -- Distance
     baseDuration :: Hours,
-    extraKmFare :: Double,
-    extraMinuteFare :: Double,
+    extraKmFare :: HighPrecMoney,
+    extraMinuteFare :: HighPrecMoney,
     driverAllowanceForDay :: Maybe Money
   }
   deriving stock (Generic, Show)
@@ -54,8 +54,8 @@ validateCreateRentalsFarePolicyRequest CreateRentalFarePolicyItem {..} =
     [ validateField "baseFare" baseFare $ Min @Money 0,
       validateField "baseDistance" baseDistance $ Min @Kilometers 0,
       validateField "baseDuration" baseDuration $ Min @Hours 0,
-      validateField "extraKmFare" extraKmFare $ Min @Double 0,
-      validateField "extraMinuteFare" extraMinuteFare $ Min @Double 0,
+      validateField "extraKmFare" extraKmFare $ Min @HighPrecMoney 0,
+      validateField "extraMinuteFare" extraMinuteFare $ Min @HighPrecMoney 0,
       validateField "driverAllowanceForDay" driverAllowanceForDay $ InMaybe $ Min @Money 0
     ]
 
@@ -73,17 +73,13 @@ createRentalFarePolicy admin req = do
   where
     toDomainType :: Id Organization -> Id RentalFarePolicy -> CreateRentalFarePolicyItem -> RentalFarePolicy
     toDomainType orgId guid CreateRentalFarePolicyItem {..} = do
-      let extraKmFare' = realToFrac extraKmFare
-          extraMinuteFare' = realToFrac extraMinuteFare
-          driverAllowanceForDay' = driverAllowanceForDay
+      let driverAllowanceForDay' = driverAllowanceForDay
       RentalFarePolicy
         { id = guid,
           organizationId = orgId,
           baseFare = baseFare,
-          extraKmFare = extraKmFare',
-          extraMinuteFare = extraMinuteFare',
           driverAllowanceForDay = driverAllowanceForDay',
-          descriptions = mkDescriptions extraKmFare' extraMinuteFare' driverAllowanceForDay',
+          descriptions = mkDescriptions extraKmFare extraMinuteFare driverAllowanceForDay',
           ..
         }
 

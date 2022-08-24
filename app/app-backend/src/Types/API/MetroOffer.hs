@@ -1,6 +1,6 @@
 module Types.API.MetroOffer where
 
-import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Data.OpenApi (ToSchema)
@@ -20,7 +20,7 @@ data MetroRide = MetroRide
   { schedule :: [ScheduleElement],
     departureStation :: MetroStation,
     arrivalStation :: MetroStation,
-    price :: Amount
+    price :: Money
   }
   deriving (Show, Generic, ToSchema, FromJSON, ToJSON)
 

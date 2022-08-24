@@ -9,7 +9,7 @@ module Storage.Tabular.Ride where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (HighPrecMeters (HighPrecMeters))
+import Beckn.Types.Common (HighPrecMeters, HighPrecMoney)
 import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
 import Storage.Tabular.Booking (BookingTId)
@@ -28,10 +28,10 @@ mkPersist
       driverId PersonTId
       otp Text
       trackingUrl Text
-      fare Double Maybe
-      totalFare Double Maybe
-      traveledDistance Double
-      chargeableDistance Double Maybe
+      fare HighPrecMoney Maybe
+      totalFare HighPrecMoney Maybe
+      traveledDistance HighPrecMeters
+      chargeableDistance HighPrecMeters Maybe
       tripStartTime UTCTime Maybe
       tripEndTime UTCTime Maybe
       createdAt UTCTime
@@ -54,7 +54,7 @@ instance TType RideT Domain.Ride where
           bookingId = fromKey bookingId,
           shortId = ShortId shortId,
           driverId = fromKey driverId,
-          traveledDistance = HighPrecMeters traveledDistance,
+          traveledDistance = traveledDistance,
           chargeableDistance = roundToIntegral <$> chargeableDistance,
           trackingUrl = tUrl,
           fare = roundToIntegral <$> fare,
@@ -67,7 +67,7 @@ instance TType RideT Domain.Ride where
         bookingId = toKey bookingId,
         shortId = getShortId shortId,
         driverId = toKey driverId,
-        traveledDistance = traveledDistance.getHighPrecMeters,
+        traveledDistance = traveledDistance,
         chargeableDistance = fromIntegral <$> chargeableDistance,
         trackingUrl = showBaseUrl trackingUrl,
         fare = fromIntegral <$> fare,

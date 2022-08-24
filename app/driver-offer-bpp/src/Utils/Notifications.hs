@@ -45,7 +45,7 @@ notifyOnNewSearchRequestAvailable personId mbDeviceToken entityData = do
             show entityData.distanceToPickup.getMeters,
             "meters away from you. Estimated base fare is",
             show entityData.baseFare <> " INR, estimated distance is",
-            show $ floor @_ @Int entityData.distance,
+            show $ entityData.distance,
             "meters"
           ]
 

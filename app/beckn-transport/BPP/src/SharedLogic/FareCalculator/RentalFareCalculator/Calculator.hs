@@ -9,7 +9,6 @@ module SharedLogic.FareCalculator.RentalFareCalculator.Calculator
 where
 
 import Beckn.Prelude
-import Beckn.Types.Amount (Amount (..))
 import Beckn.Types.Common
 import Beckn.Utils.Common
 import Data.Time
@@ -68,7 +67,7 @@ calculateExtraDistanceFare farePolicy distance = roundToIntegral $ do
   let distanceInKm = metersToKilometers distance
   let extraDistance = distanceInKm - farePolicy.baseDistance
   if extraDistance > 0
-    then Amount (toRational extraDistance) * farePolicy.extraKmFare
+    then realToFrac (toRational extraDistance) * farePolicy.extraKmFare
     else 0
 
 calculateExtraTimeFare ::
@@ -81,7 +80,7 @@ calculateExtraTimeFare farePolicy tripStartTime tripStopTime = roundToIntegral $
       tripTimeInMinutes = nominalDiffTimeToSeconds tripTime `div` 60
       extraTime = toInteger tripTimeInMinutes - toInteger farePolicy.baseDuration * 60
   if extraTime > 0
-    then Amount (toRational extraTime) * farePolicy.extraMinuteFare
+    then realToFrac (toRational extraTime) * farePolicy.extraMinuteFare
     else 0
 
 calculateNextDaysFare ::

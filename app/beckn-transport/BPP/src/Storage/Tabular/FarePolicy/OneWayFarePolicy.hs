@@ -9,6 +9,7 @@ module Storage.Tabular.FarePolicy.OneWayFarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Common (HighPrecMoney)
 import Beckn.Types.Id
 import Beckn.Utils.Error (throwError)
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy as Domain
@@ -26,7 +27,7 @@ mkPersist
       id Text
       vehicleVariant Vehicle.Variant
       organizationId OrganizationTId
-      baseFare Double Maybe
+      baseFare HighPrecMoney Maybe
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
       nightShiftRate Double Maybe

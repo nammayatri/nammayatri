@@ -1,6 +1,5 @@
 module Core.ACL.Confirm (buildConfirmReq) where
 
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
@@ -85,7 +84,7 @@ mkFulfillment startLoc mbStopLoc =
             }
     }
 
-mkPayment :: Amount -> Confirm.Payment
+mkPayment :: Money -> Confirm.Payment
 mkPayment estimatedTotalFare =
   Confirm.Payment
     { collected_by = "BAP",

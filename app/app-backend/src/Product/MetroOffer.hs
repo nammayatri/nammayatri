@@ -1,6 +1,7 @@
 module Product.MetroOffer where
 
 import App.Types (FlowHandler)
+import Beckn.Prelude
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
@@ -13,9 +14,7 @@ import Beckn.Types.TimeRFC339
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List.NonEmpty as NE
-import Data.Traversable
 import Domain.Types.SearchRequest (SearchRequest)
-import EulerHS.Prelude hiding (id)
 import qualified Tools.Metrics as Metrics
 import Types.API.MetroOffer
 
@@ -104,7 +103,7 @@ uniteItemAndFulfillment items fulfillments = do
 offerInfoToMetroRide :: (MonadTime m, MonadThrow m, Log m) => (Item, NonEmpty Fulfillment) -> m MetroRide
 offerInfoToMetroRide (item, fulfillments) = do
   price <-
-    realToFrac <$> item.price.value
+    roundToIntegral <$> item.price.value
       & fromMaybeM (InvalidRequest "Missing price.value in item")
   now <- getCurrentTime
   let startTimes = fulfillments <&> (.start.time.timestamp)

@@ -40,7 +40,7 @@ handler orgId sReq = do
   toLocation <- buildSearchReqLocation sReq.dropLocation
   driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId False
   distance <-
-    metersToHighPrecMeters . (.distance)
+    (.distance)
       <$> GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
 
   fareParams <- calculateFare orgId sReq.variant distance sReq.pickupTime Nothing
@@ -52,32 +52,21 @@ handler orgId sReq = do
       <> show distance
       <> "; estimated base fare:"
       <> show baseFare
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare distance.getHighPrecMeters) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare distance) driverPool
   Esq.runTransaction $ do
     QSReq.create searchReq
     mapM_ QSRD.create searchRequestsForDrivers
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) ->
     when (not dPoolRes.origin.onRide) $ do
-      let entityData =
-            SearchRequestForDriverAPIEntity
-              { searchRequestId = searchReq.id,
-                startTime = sReqFD.startTime,
-                searchRequestValidTill = sReqFD.searchRequestValidTill,
-                distanceToPickup = sReqFD.distanceToPickup,
-                durationToPickup = sReqFD.durationToPickup,
-                baseFare = baseFare,
-                fromLocation = fromLocation,
-                toLocation = toLocation,
-                distance = sReqFD.distance
-              }
+      let entityData = makeSearchRequestForDriverAPIEntity sReqFD searchReq
       Notify.notifyOnNewSearchRequestAvailable sReqFD.driverId dPoolRes.origin.driverDeviceToken entityData
   where
     buildSearchRequestForDriver ::
       (MonadFlow m) =>
       DSearchReq.SearchRequest ->
       Money ->
-      Double ->
+      Meters ->
       GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong ->
       m SearchRequestForDriver
     buildSearchRequestForDriver searchRequest baseFare_ distance gdRes = do

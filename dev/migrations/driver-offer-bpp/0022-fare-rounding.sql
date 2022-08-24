@@ -10,3 +10,45 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver
   USING round(base_fare);
 
 ALTER TABLE atlas_driver_offer_bpp.fare_policy RENAME COLUMN base_distance TO base_distance_meters;
+
+ALTER TABLE atlas_driver_offer_bpp.booking
+  ALTER COLUMN estimated_distance SET DATA TYPE integer
+  USING round(estimated_distance);
+
+ALTER TABLE atlas_driver_offer_bpp.driver_quote
+  ALTER COLUMN distance SET DATA TYPE integer
+  USING round(distance);
+
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters
+  ALTER COLUMN base_fare SET DATA TYPE integer
+  USING round(base_fare);
+
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters
+  ALTER COLUMN extra_km_fare SET DATA TYPE integer
+  USING round(extra_km_fare);
+
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters
+  ALTER COLUMN driver_selected_fare SET DATA TYPE integer
+  USING round(driver_selected_fare);
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy RENAME COLUMN extra_km_fare TO per_extra_km_fare;
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy
+  ALTER COLUMN base_distance_meters SET DATA TYPE integer
+  USING round(base_distance_meters);
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy
+  ALTER COLUMN dead_km_fare SET DATA TYPE integer
+  USING round(dead_km_fare);
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy
+  ALTER COLUMN driver_extra_fee_list SET DATA TYPE integer []
+  USING array_agg(round(unnest(driver_extra_fee_list))); --doesn't work
+
+ALTER TABLE atlas_driver_offer_bpp.ride
+  ALTER COLUMN fare SET DATA TYPE integer
+  USING round(fare);
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver
+  ALTER COLUMN distance SET DATA TYPE integer
+  USING round(distance);
