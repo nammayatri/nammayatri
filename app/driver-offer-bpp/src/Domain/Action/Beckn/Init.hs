@@ -63,6 +63,7 @@ handler orgId req = do
             bapId = req.bapId,
             bapUri = req.bapUri,
             startTime = searchRequest.startTime,
+            estimatedFinishTime = searchRequest.estimatedFinishTime,
             riderId = Nothing,
             vehicleVariant = driverQuote.vehicleVariant,
             estimatedDistance = driverQuote.distance,

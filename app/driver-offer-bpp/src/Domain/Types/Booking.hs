@@ -42,6 +42,7 @@ data Booking = Booking
     bapId :: Text,
     bapUri :: BaseUrl,
     startTime :: UTCTime,
+    estimatedFinishTime :: UTCTime,
     riderId :: Maybe (Id DRD.RiderDetails),
     fromLocation :: DLoc.BookingLocation,
     toLocation :: DLoc.BookingLocation,

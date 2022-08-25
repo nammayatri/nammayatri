@@ -63,12 +63,13 @@ handler org sReq = do
   let getVariant x = x.origin.vehicle.variant
       listOfProtoQuotes = nubBy ((==) `on` getVariant) driverPool
 
-  distance <-
-    (.distance)
-      <$> GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
-
-  estimates <- mapM (mkEstimate org sReq distance) listOfProtoQuotes
-  searchReq <- buildSearchRequest fromLocation toLocation org.id sReq
+  distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
+  driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
+  let distance = distRes.distance
+      estimatedRideDuration = distRes.duration_in_traffic
+      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` sReq.pickupTime
+  estimates <- mapM (mkEstimate org estimatedRideFinishTime distance) listOfProtoQuotes
+  searchReq <- buildSearchRequest fromLocation toLocation org.id sReq estimatedRideFinishTime
   Esq.runTransaction $ do
     QSReq.create searchReq
     traverse_ (QBE.logDriverInPoolEvent ON_SEARCH Nothing) driverPool
@@ -78,13 +79,13 @@ handler org sReq = do
 mkEstimate ::
   (MonadFlow m, Esq.Transactionable m) =>
   DOrg.Organization ->
-  DSearchReq ->
+  UTCTime ->
   Meters ->
   GoogleMaps.GetDistanceResult DriverPoolResult a ->
   m EstimateItem
-mkEstimate org dSReq dist g = do
+mkEstimate org estimatedRideFinishTime dist g = do
   let variant = g.origin.vehicle.variant
-  fareParams <- calculateFare org.id variant dist dSReq.pickupTime Nothing
+  fareParams <- calculateFare org.id variant dist estimatedRideFinishTime Nothing
   let baseFare = fareSumRounded fareParams
   logDebug $ "baseFare: " <> show baseFare
   logDebug $ "distance: " <> show g.distance
@@ -105,8 +106,9 @@ buildSearchRequest ::
   DLoc.SearchReqLocation ->
   Id DOrg.Organization ->
   DSearchReq ->
+  UTCTime ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to orgId sReq = do
+buildSearchRequest from to orgId sReq estimatedRideFinishTime = do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -117,6 +119,7 @@ buildSearchRequest from to orgId sReq = do
         transactionId = fromMaybe "" sReq.transactionId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,
+        estimatedFinishTime = estimatedRideFinishTime,
         validTill = validTill_,
         providerId = orgId,
         fromLocation = from,

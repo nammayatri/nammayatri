@@ -14,11 +14,11 @@ import GHC.Records.Extra
 import Prometheus as P
 import Tools.Metrics.TransporterBPPMetrics.Types as Reexport
 
-putFareAndDistanceDeviations :: (MonadMonitor m, HasTransporterMetrics m r) => Money -> HighPrecMeters -> m ()
+putFareAndDistanceDeviations :: (MonadMonitor m, HasTransporterMetrics m r) => Money -> Meters -> m ()
 putFareAndDistanceDeviations fareDiff distanceDiff = do
   TransporterMetricsContainer {..} <- asks (.transporterMetrics)
   P.observe realFareDeviation $ fromIntegral fareDiff
-  P.observe realDistanceDeviation distanceDiff.getHighPrecMeters
+  P.observe realDistanceDeviation $ realToFrac distanceDiff
 
 type SearchMetricsMVar = MVar Milliseconds
 
