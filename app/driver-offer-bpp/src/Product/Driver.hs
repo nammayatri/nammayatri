@@ -30,6 +30,7 @@ import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.FareParams as Fare
+import Domain.Types.FarePolicy (ExtraFee)
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.SearchRequest as DSReq
@@ -323,8 +324,8 @@ getNearbySearchRequests driverId = withFlowHandlerAPI $ do
       searchRequest <- QSReq.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest
 
-isAllowedExtraFee :: [Money] -> Money -> Bool
-isAllowedExtraFee list val = val `elem` list
+isAllowedExtraFee :: ExtraFee -> Money -> Bool
+isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee
 
 offerQuote ::
   Id SP.Person ->
@@ -347,7 +348,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
       >>= fromMaybeM NoSearchRequestForDriver
   farePolicy <- findFarePolicyByOrgAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
   whenJust mbOfferedFare $ \off ->
-    unless (isAllowedExtraFee farePolicy.driverExtraFeeList off) $
+    unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
       throwError $ NotAllowedExtraFee $ show off
   fareParams <- calculateFare organization.id sReqFD.vehicleVariant sReqFD.distance sReqFD.startTime mbOfferedFare
   driverQuote <- buildDriverQuote driver sReq sReqFD fareParams

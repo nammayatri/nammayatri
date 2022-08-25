@@ -41,10 +41,6 @@ ALTER TABLE atlas_driver_offer_bpp.fare_policy
   ALTER COLUMN dead_km_fare SET DATA TYPE integer
   USING round(dead_km_fare);
 
-ALTER TABLE atlas_driver_offer_bpp.fare_policy
-  ALTER COLUMN driver_extra_fee_list SET DATA TYPE integer []
-  USING array_agg(round(unnest(driver_extra_fee_list))); --doesn't work
-
 ALTER TABLE atlas_driver_offer_bpp.ride
   ALTER COLUMN fare SET DATA TYPE integer
   USING round(fare);
@@ -52,3 +48,23 @@ ALTER TABLE atlas_driver_offer_bpp.ride
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver
   ALTER COLUMN distance SET DATA TYPE integer
   USING round(distance);
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN driver_min_extra_fee integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN driver_max_extra_fee integer;
+
+WITH ExtraFeeList AS (
+	SELECT id, unnest(driver_extra_fee_list) AS extraFee
+	FROM   atlas_driver_offer_bpp.fare_policy
+), MinMaxExtraFee AS (
+	SELECT id, min (extraFee), max (extraFee)
+	FROM ExtraFeeList
+	GROUP BY id
+)
+UPDATE atlas_driver_offer_bpp.fare_policy AS T1 SET driver_min_extra_fee = T2.min, driver_max_extra_fee = T2.max
+  FROM MinMaxExtraFee AS T2
+  WHERE T1.id = T2.id;
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN driver_min_extra_fee SET NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ALTER COLUMN driver_max_extra_fee SET NOT NULL;
+
+ALTER TABLE atlas_driver_offer_bpp.fare_policy DROP COLUMN driver_extra_fee_list;

@@ -36,7 +36,11 @@ updateFarePolicy admin fpId req = withFlowHandlerAPI $ do
             baseDistanceMeters = req.baseDistance,
             perExtraKmFare = req.perExtraKmFare,
             deadKmFare = req.deadKmFare,
-            driverExtraFeeList = req.driverExtraFeeList,
+            driverExtraFee =
+              ExtraFee
+                { minFee = req.driverMinExtraFee,
+                  maxFee = req.driverMaxExtraFee
+                },
             nightShiftStart = req.nightShiftStart,
             nightShiftEnd = req.nightShiftEnd,
             nightShiftRate = req.nightShiftRate

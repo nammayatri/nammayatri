@@ -21,8 +21,6 @@ import Utils.Common
 
 type TripStartTime = UTCTime
 
-type Distance = Meters
-
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
   -- TODO: what should be here?
@@ -72,7 +70,7 @@ calculateDayPartRate fareParams = do
 
 calculateFareParameters ::
   FarePolicy ->
-  Distance ->
+  Meters ->
   TripStartTime ->
   Maybe Money ->
   FareParameters

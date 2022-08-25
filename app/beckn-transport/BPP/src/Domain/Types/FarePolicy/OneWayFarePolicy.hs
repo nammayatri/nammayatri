@@ -26,7 +26,7 @@ data OneWayFarePolicy = OneWayFarePolicy
 data OneWayFarePolicyAPIEntity = OneWayFarePolicyAPIEntity
   { id :: Id OneWayFarePolicy,
     vehicleVariant :: Vehicle.Variant,
-    baseFare :: Maybe Double,
+    baseFare :: Maybe Money,
     perExtraKmRateList :: NonEmpty PerExtraKmRateAPIEntity,
     discountList :: [DiscountAPIEntity],
     nightShiftStart :: Maybe TimeOfDay,
@@ -39,7 +39,6 @@ makeOneWayFarePolicyAPIEntity :: OneWayFarePolicy -> OneWayFarePolicyAPIEntity
 makeOneWayFarePolicyAPIEntity OneWayFarePolicy {..} =
   OneWayFarePolicyAPIEntity
     { id = id,
-      baseFare = fromIntegral <$> baseFare,
       perExtraKmRateList = makePerExtraKmRateAPIEntity <$> perExtraKmRateList,
       discountList = makeDiscountAPIEntity <$> discountList,
       nightShiftStart = nightShiftStart,

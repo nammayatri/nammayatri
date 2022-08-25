@@ -9,6 +9,7 @@ module Storage.Tabular.FarePolicy.Discount where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Common (HighPrecMoney)
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.Discount as Domain
 import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
@@ -28,7 +29,7 @@ mkPersist
       fromDate UTCTime
       toDate UTCTime
       enabled Bool
-      discount Double
+      discount HighPrecMoney
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

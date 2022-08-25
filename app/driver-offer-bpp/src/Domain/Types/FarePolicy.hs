@@ -14,7 +14,7 @@ data FarePolicy = FarePolicy
     baseDistanceMeters :: Meters,
     perExtraKmFare :: HighPrecMoney,
     deadKmFare :: Money,
-    driverExtraFeeList :: [Money],
+    driverExtraFee :: ExtraFee,
     nightShiftRate :: Maybe Double,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
@@ -22,6 +22,12 @@ data FarePolicy = FarePolicy
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq)
+
+data ExtraFee = ExtraFee
+  { minFee :: Money,
+    maxFee :: Money
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 -- the formula is
 -- fare = (base fare * base distance) + deadKmFare + (extraKm * extraKmFare) + driver selected extra fee
@@ -34,7 +40,7 @@ data FarePolicyAPIEntity = FarePolicyAPIEntity
     baseDistanceMeters :: Meters,
     perExtraKmFare :: HighPrecMoney,
     deadKmFare :: Money,
-    driverExtraFeeList :: [Money],
+    driverExtraFee :: ExtraFee,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double

@@ -28,7 +28,8 @@ mkPersist
       baseDistanceMeters Meters
       perExtraKmFare HighPrecMoney
       deadKmFare Money
-      driverExtraFeeList (PostgresList Money)
+      driverMinExtraFee Money
+      driverMaxExtraFee Money
 
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
@@ -47,11 +48,15 @@ instance TEntityKey FarePolicyT where
 
 instance TType FarePolicyT Domain.FarePolicy where
   fromTType FarePolicyT {..} = do
+    let driverExtraFee =
+          Domain.ExtraFee
+            { minFee = driverMinExtraFee,
+              maxFee = driverMaxExtraFee
+            }
     return $
       Domain.FarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
-          driverExtraFeeList = unPostgresList driverExtraFeeList,
           ..
         }
 
@@ -59,6 +64,7 @@ instance TType FarePolicyT Domain.FarePolicy where
     FarePolicyT
       { id = getId id,
         organizationId = toKey organizationId,
-        driverExtraFeeList = PostgresList driverExtraFeeList,
+        driverMinExtraFee = driverExtraFee.minFee,
+        driverMaxExtraFee = driverExtraFee.maxFee,
         ..
       }
