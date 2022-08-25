@@ -137,6 +137,7 @@ handler subscriber transporterId req = do
             traveledDistance = 0,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
+            rideRating = Nothing,
             createdAt = now,
             updatedAt = now
           }

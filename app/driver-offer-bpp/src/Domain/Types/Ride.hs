@@ -43,6 +43,16 @@ data Ride = Ride
     traveledDistance :: HighPrecMeters,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
+    rideRating :: Maybe RideRating,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, Show, Eq)
+  
+data RideRating = RideRating
+  { id :: Id RideRating,
+    ratingValue :: Int,
+    feedbackDetails :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

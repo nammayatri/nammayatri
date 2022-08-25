@@ -5,7 +5,6 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.Person
 import Domain.Types.Rating
-import Domain.Types.Ride
 import Storage.Tabular.Rating
 import Utils.Common
 
@@ -25,13 +24,6 @@ updateRating ratingId driverId newRatingValue newFeedbackDetails = do
     where_ $
       tbl ^. RatingTId ==. val (toKey ratingId)
         &&. tbl ^. RatingDriverId ==. val (toKey driverId)
-
-findByRideId :: Transactionable m => Id Ride -> m (Maybe Rating)
-findByRideId rideId =
-  findOne $ do
-    rating <- from $ table @RatingT
-    where_ $ rating ^. RatingRideId ==. val (toKey rideId)
-    return rating
 
 findAllRatingsForPerson :: Transactionable m => Id Person -> m [Rating]
 findAllRatingsForPerson driverId =
