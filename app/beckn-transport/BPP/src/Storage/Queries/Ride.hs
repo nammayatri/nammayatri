@@ -54,11 +54,11 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
   res <- Esq.findAll' $ do
-    (ride :& (booking :& fromLoc :& mbToLoc :& mbRentalBooking)) <-
+    (ride :& (booking :& fromLoc :& mbOneWayBooking :& mbToLoc :& mbRentalBooking)) <-
       from $
         table @RideT
           `innerJoin` fullBookingTable
-            `Esq.on` ( \(ride :& (booking :& _ :& _ :& _)) ->
+            `Esq.on` ( \(ride :& (booking :& _ :& _ :& _ :& _)) ->
                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
                      )
     where_ $
@@ -67,7 +67,7 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     orderBy [desc $ ride ^. RideCreatedAt]
     limit limitVal
     offset offsetVal
-    return (ride, (booking, fromLoc, mbToLoc, mbRentalBooking))
+    return (ride, (booking, fromLoc, mbOneWayBooking, mbToLoc, mbRentalBooking))
   fmap catMaybes $
     for res $ \(rideT :: RideT, fullBookingT) -> do
       fullBooking <- buildFullBooking fullBookingT

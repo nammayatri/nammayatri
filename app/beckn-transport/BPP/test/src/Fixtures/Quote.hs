@@ -11,7 +11,8 @@ defaultQuote = do
   let quoteDetails =
         Quote.OneWayQuoteDetails
           { distance = 0,
-            distanceToNearestDriver = 0
+            distanceToNearestDriver = 0,
+            estimatedFinishTime = Fixtures.defaultTime
           }
   Quote.Quote
     { id = Id "1",

@@ -96,4 +96,5 @@ in
 , kafkaProducerCfg = kafkaProducerCfg
 , selfUIUrl = "https://api.beckn.juspay.in/bpp/cab/v2/"
 , schedulingReserveTime = +1800
+, driverEstimatedPickupDuration = +300 -- seconds
 }

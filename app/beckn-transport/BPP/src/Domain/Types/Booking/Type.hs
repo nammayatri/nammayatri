@@ -61,7 +61,8 @@ data BookingDetails = OneWayDetails OneWayBookingDetails | RentalDetails RentalB
 
 data OneWayBookingDetails = OneWayBookingDetails
   { toLocation :: DLoc.BookingLocation,
-    estimatedDistance :: Meters
+    estimatedDistance :: Meters,
+    estimatedFinishTime :: UTCTime
   }
   deriving (Eq)
 

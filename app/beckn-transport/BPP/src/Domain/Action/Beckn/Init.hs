@@ -50,6 +50,7 @@ data InitRes = InitRes
 init ::
   ( EsqDBFlow m r,
     HasField "geofencingConfig" r GeofencingConfig,
+    HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m,
     HasGoogleMaps m r
   ) =>
@@ -74,6 +75,7 @@ init transporterId req = do
 initOneWayTrip ::
   ( EsqDBFlow m r,
     HasField "geofencingConfig" r GeofencingConfig,
+    HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m,
     HasGoogleMaps m r
   ) =>
@@ -85,9 +87,12 @@ initOneWayTrip ::
 initOneWayTrip req oneWayReq transporterId now = do
   unlessM (rideServiceableDefault QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
     throwError RideNotServiceable
-  distance <-
-    (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.fromLocation oneWayReq.toLocation
-  fareParams <- calculateFare transporterId req.vehicleVariant distance req.startTime
+  driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
+  distRes <- MapSearch.getDistance (Just MapSearch.CAR) req.fromLocation oneWayReq.toLocation
+  let distance = distRes.distance
+      estimatedRideDuration = distRes.duration_in_traffic
+      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` req.startTime
+  fareParams <- calculateFare transporterId req.vehicleVariant distance estimatedRideFinishTime
   toLoc <- buildRBLoc oneWayReq.toLocation now
   let estimatedFare = fareSum fareParams
       discount = fareParams.discount
@@ -96,7 +101,8 @@ initOneWayTrip req oneWayReq transporterId now = do
         DRB.OneWayDetails $
           DRB.OneWayBookingDetails
             { DRB.toLocation = toLoc,
-              DRB.estimatedDistance = distance
+              DRB.estimatedDistance = distance,
+              DRB.estimatedFinishTime = estimatedRideFinishTime
             }
   fromLoc <- buildRBLoc req.fromLocation now
   booking <- buildBooking req transporterId estimatedFare discount estimatedTotalFare owDetails fromLoc now

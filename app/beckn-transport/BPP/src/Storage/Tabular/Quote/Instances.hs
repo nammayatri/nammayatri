@@ -30,7 +30,7 @@ instance TType FullQuoteT Domain.Quote where
           Domain.OneWayQuoteDetails
             { distance = oneWayQuoteEntity.distance,
               distanceToNearestDriver = oneWayQuoteEntity.distance,
-              ..
+              estimatedFinishTime = oneWayQuoteEntity.estimatedFinishTime
             }
     pure
       Domain.Quote
