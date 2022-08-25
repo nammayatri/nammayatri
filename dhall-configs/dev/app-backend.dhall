@@ -60,6 +60,10 @@ let kafkaProducerCfg =
   { brokers = ["localhost:29092"]
   }
 
+let rideConfig =
+  {
+    driverReachedDistance = +100
+  }
 in
 
 { esqDBCfg = esqDBCfg
@@ -103,4 +107,5 @@ in
 , disableSignatureAuth = False
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg
+, rideCfg = rideConfig
 }

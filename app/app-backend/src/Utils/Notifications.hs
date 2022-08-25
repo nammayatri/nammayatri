@@ -319,3 +319,55 @@ notifyOnQuoteReceived quote = do
           fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
         }
+
+notifyDriverOnTheWay ::
+  ( EsqDBFlow m r,
+    CoreMetrics m
+  ) =>
+  Id Person ->
+  m ()
+notifyDriverOnTheWay personId = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  config <- getFCMConfig person.merchantId
+  let notificationData =
+        FCM.FCMData
+          { fcmNotificationType = FCM.DRIVER_ON_THE_WAY,
+            fcmShowNotification = FCM.SHOW,
+            fcmEntityType = FCM.Product,
+            fcmEntityIds = getId personId,
+            fcmEntityData = (),
+            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_ON_THE_WAY
+          }
+      title = FCMNotificationTitle $ T.pack "Driver On The Way!"
+      body =
+        FCMNotificationBody $
+          unwords
+            [ "Driver is on the way"
+            ]
+  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+
+notifyDriverHasReached ::
+  ( EsqDBFlow m r,
+    CoreMetrics m
+  ) =>
+  Id Person ->
+  m ()
+notifyDriverHasReached personId = do
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  config <- getFCMConfig person.merchantId
+  let notificationData =
+        FCM.FCMData
+          { fcmNotificationType = FCM.DRIVER_HAS_REACHED,
+            fcmShowNotification = FCM.SHOW,
+            fcmEntityType = FCM.Product,
+            fcmEntityIds = getId personId,
+            fcmEntityData = (),
+            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_HAS_REACHED
+          }
+      title = FCMNotificationTitle $ T.pack "Driver Has Reached!"
+      body =
+        FCMNotificationBody $
+          unwords
+            [ "<Vehicle no> has reached your location. Use <OTP> to verify the ride"
+            ]
+  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken

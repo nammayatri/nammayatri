@@ -54,6 +54,10 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kafkaProducerCfg = { brokers = [] : List Text }
 
+let rideConfig =
+  {
+    driverReachedDistance = +100
+  }
 in
 
 { esqDBCfg = esqDBCfg
@@ -94,4 +98,5 @@ in
 , disableSignatureAuth = False
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg
+, rideCfg = rideConfig
 }

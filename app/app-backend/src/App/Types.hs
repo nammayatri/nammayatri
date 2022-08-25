@@ -70,7 +70,8 @@ data AppCfg = AppCfg
     gatewayUrl :: BaseUrl,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
-    selfUIUrl :: BaseUrl
+    selfUIUrl :: BaseUrl,
+    rideCfg :: RideConfig
   }
   deriving (Generic, FromDhall)
 
@@ -105,7 +106,8 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
-    kafkaEnvs :: BAPKafkaEnvs
+    kafkaEnvs :: BAPKafkaEnvs,
+    rideCfg :: RideConfig
   }
   deriving (Generic)
 
@@ -155,3 +157,9 @@ instance Cache Subscriber Flow where
 
 instance CacheEx Subscriber Flow where
   setKeyEx ttl = Cache.setKeyEx "taxi-bap:registry" ttl . lookupRequestToRedisKey
+
+newtype RideConfig = RideConfig 
+  {
+    driverReachedDistance :: Meters
+  }
+  deriving (Generic, FromDhall)

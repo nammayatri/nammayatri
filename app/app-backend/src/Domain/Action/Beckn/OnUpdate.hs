@@ -74,7 +74,6 @@ onUpdate ::
   m ()
 onUpdate registryUrl RideAssignedReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findByRegistryUrl registryUrl
   unless (elem booking.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
@@ -186,7 +185,6 @@ onUpdate registryUrl BookingCancelledReq {..} = do
       booking.status `elem` [SRB.NEW, SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
 onUpdate registryUrl BookingReallocationReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findByRegistryUrl registryUrl
   unless (elem booking.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")

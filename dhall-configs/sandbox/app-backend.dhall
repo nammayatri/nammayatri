@@ -55,6 +55,11 @@ let kafkaProducerCfg =
       { brokers = [ "alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092" ]
       }
 
+let rideConfig =
+  {
+    driverReachedDistance = +100
+  }
+
 in
 
 { esqDBCfg = esqDBCfg
@@ -95,4 +100,5 @@ in
 , disableSignatureAuth = False
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg
+, rideCfg = rideConfig
 }
