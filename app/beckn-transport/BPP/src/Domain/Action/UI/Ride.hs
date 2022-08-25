@@ -11,7 +11,6 @@ import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Vehicle (Variant)
 import qualified Domain.Types.Vehicle as DVeh
@@ -63,41 +62,39 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive = do
   vehicle <- QVeh.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driverNumber <- DP.getPersonNumber driver
-  DriverRideListRes <$> traverse (buildDriverRideRes vehicle driver driverNumber) rideData
+  pure . DriverRideListRes $ mkDriverRideRes vehicle driver driverNumber <$> rideData
 
-buildDriverRideRes ::
-  (EsqDBFlow m r, EncFlow m r) =>
+mkDriverRideRes ::
   DVeh.Vehicle ->
   DP.Person ->
   Maybe Text ->
-  (DRide.Ride, DRB.Booking, Maybe DRating.Rating) ->
-  m DriverRideRes
-buildDriverRideRes vehicle driver driverNumber (ride, booking, mbRating) = do
+  (DRide.Ride, DRB.Booking) ->
+  DriverRideRes
+mkDriverRideRes vehicle driver driverNumber (ride, booking) = do
   let mbToLocation = case booking.bookingDetails of
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.RentalDetails _ -> Nothing
-  pure
-    DriverRideRes
-      { id = ride.id,
-        shortRideId = ride.shortId,
-        status = ride.status,
-        fromLocation = DBLoc.makeBookingLocationAPIEntity booking.fromLocation,
-        toLocation = DBLoc.makeBookingLocationAPIEntity <$> mbToLocation,
-        estimatedFare = booking.estimatedFare,
-        estimatedTotalFare = booking.estimatedTotalFare,
-        discount = booking.discount,
-        driverName = driver.firstName,
-        driverNumber = driverNumber,
-        vehicleNumber = vehicle.registrationNo,
-        vehicleColor = vehicle.color,
-        vehicleVariant = vehicle.variant,
-        vehicleModel = vehicle.model,
-        computedFare = ride.fare,
-        computedTotalFare = ride.totalFare,
-        actualRideDistance = roundToIntegral ride.traveledDistance,
-        rideRating = mbRating <&> (.ratingValue),
-        createdAt = ride.createdAt,
-        updatedAt = ride.updatedAt,
-        tripStartTime = ride.tripStartTime,
-        tripEndTime = ride.tripEndTime
-      }
+  DriverRideRes
+    { id = ride.id,
+      shortRideId = ride.shortId,
+      status = ride.status,
+      fromLocation = DBLoc.makeBookingLocationAPIEntity booking.fromLocation,
+      toLocation = DBLoc.makeBookingLocationAPIEntity <$> mbToLocation,
+      estimatedFare = booking.estimatedFare,
+      estimatedTotalFare = booking.estimatedTotalFare,
+      discount = booking.discount,
+      driverName = driver.firstName,
+      driverNumber = driverNumber,
+      vehicleNumber = vehicle.registrationNo,
+      vehicleColor = vehicle.color,
+      vehicleVariant = vehicle.variant,
+      vehicleModel = vehicle.model,
+      computedFare = ride.fare,
+      computedTotalFare = ride.totalFare,
+      actualRideDistance = roundToIntegral ride.traveledDistance,
+      rideRating = ride.rideRating <&> (.ratingValue),
+      createdAt = ride.createdAt,
+      updatedAt = ride.updatedAt,
+      tripStartTime = ride.tripStartTime,
+      tripEndTime = ride.tripEndTime
+    }

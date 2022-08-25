@@ -115,6 +115,7 @@ assignDriver bookingId driverId = do
             chargeableDistance = Nothing,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
+            rideRating = Nothing,
             createdAt = now,
             updatedAt = now
           }
