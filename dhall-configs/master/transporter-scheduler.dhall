@@ -5,7 +5,7 @@ let transporter = ./beckn-transport.dhall
 let JobType = < AllocateRental | FakeType >
 
 let rcfg =
-  { connectHost = "beckn-redis-001-001.zkt6uh.0001.aps1.cache.amazonaws.com"
+  { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
   , connectPort = 6379
   , connectAuth = None Text
   , connectDatabase = +1
