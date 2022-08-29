@@ -77,8 +77,8 @@ in
 , port = +8016
 , metricsPort = +9997
 , hostName = "juspay.in"
-, nwAddress = "https://api.beckn.juspay.in/dobpp/beckn"
-, selfUIUrl = "https://api.beckn.juspay.in/dobpp/ui"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/dobpp/beckn"
+, selfUIUrl = "https://api.sandbox.beckn.juspay.in/dobpp/ui"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
 , s3Config = common.exotelCfg
