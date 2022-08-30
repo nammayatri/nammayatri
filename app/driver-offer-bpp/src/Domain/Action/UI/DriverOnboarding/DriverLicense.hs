@@ -2,15 +2,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Action.UI.DriverOnboarding.DriverLicense
-  ( DriverDLImageReq (..),
-    DriverDLReq (..),
+  ( DriverDLReq (..),
     DriverDLRes,
-    validateDLImage,
     verifyDL,
   )
 where
 
-import AWS.S3 as S3
 import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (isNothing)
@@ -22,26 +19,25 @@ import Beckn.Types.Validation
 import Beckn.Utils.Common
 import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
-import Data.Text as T
 import Data.Time (nominalDay)
 import qualified Domain.Types.DriverOnboarding.ClassOfVehicle as Domain
 import qualified Domain.Types.DriverOnboarding.DriverLicense as Domain
+import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.Person as Person
-import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
+import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
-import Tools.Metrics
-
-newtype DriverDLImageReq = DriverDLImageReq
-  {image :: Text}
-  deriving (Generic, ToSchema, ToJSON, FromJSON)
+import Tools.Error
 
 data DriverDLReq = DriverDLReq
   { driverLicenseNumber :: Text,
     operatingCity :: Text,
-    driverDateOfBirth :: UTCTime
+    driverDateOfBirth :: UTCTime,
+    imageId :: Id Image.Image
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+type DriverDLRes = APISuccess
 
 validateDriverDLReq :: UTCTime -> Validate DriverDLReq
 validateDriverDLReq now DriverDLReq {..} =
@@ -55,60 +51,53 @@ validateDriverDLReq now DriverDLReq {..} =
     t100YearsAgo = yearsAgo 100
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
 
-type DriverDLRes = APISuccess
-
-validateDLImage ::
-  ( EncFlow m r,
-    EsqDBFlow m r,
-    HasFlowEnv m r '["s3Config" ::: S3Config],
-    CoreMetrics m
-  ) =>
-  Id Person.Person ->
-  DriverDLImageReq ->
-  m DriverDLRes
-validateDLImage personId DriverDLImageReq {..} = do
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
-  mdriverLicense <- Query.findByDriverId personId
-  imagePath <- createPath personId.getId orgId.getId "dl"
-  now <- getCurrentTime
-
-  case mdriverLicense of
-    Nothing -> do
-      _ <- S3.put (T.unpack imagePath) image
-      rcEntity <- buildDriverLicenseEntry personId Nothing "dummy" Nothing now imagePath
-      runTransaction $ Query.create rcEntity
-    Just _ -> do
-      _ <- S3.put (T.unpack imagePath) image
-      runTransaction $ Query.updateImagePath personId imagePath
-
-  return Success
-
 verifyDL ::
-  ( EncFlow m r,
-    EsqDBFlow m r
+  ( EsqDBFlow m r,
+    EncFlow m r
   ) =>
-  Id Person.Person ->
-  DriverDLReq ->
+  Id Person.Person -> 
+  DriverDLReq -> 
   m DriverDLRes
 verifyDL personId req@DriverDLReq {..} = do
   now <- getCurrentTime
   runRequestValidation (validateDriverDLReq now) req
   _ <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
-  mdriverLicense <- Query.findByDriverId personId
+  imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
+  unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
+  unless (imageMetadata.imageType == Image.DriverLicense) $
+    throwError (InvalidImageType (show Image.DriverLicense) (show imageMetadata.imageType))
+
+  -- Uncomment this once Idfy service is ready
+  -- image <- S3.get imageMetadata.s3Path
+  -- extractOutput <- Idfy.extractImage image
+  -- unless (extractOutput.certificateNumber == vehicleRegistrationCertNumber) $
+  --   throwError (ImageDataNotMatching extractOutput.certificateNumber vehicleRegistrationCertNumber)
+
+  mdriverLicense <- Query.findActiveDL driverLicenseNumber
+
   case mdriverLicense of
-    Nothing -> do
-      rcEntity <- buildDriverLicenseEntry personId (Just req.driverDateOfBirth) req.driverLicenseNumber Nothing now T.empty
-      runTransaction $ Query.create rcEntity
     Just driverLicense -> do
-      dlNumber <- decrypt driverLicense.licenseNumber
-      when (dlNumber /= req.driverLicenseNumber) do
-        runTransaction $ Query.resetDLRequest personId req.driverLicenseNumber (Just req.driverDateOfBirth) Nothing now
+      when (driverLicense.driverId == personId) $ throwError AlreadyRegisteredSamePerson
+      throwError AlreadyRegisteredDiffPerson
+    Nothing -> do
+      mlatestDriverDL <- Query.findLatestByPersonId personId
+      latestVersion <-
+        maybe
+          (pure 1)
+          ( \latestDriverDL -> do
+              runTransaction $ Query.makeDLInactive latestDriverDL.id now
+              pure $ latestDriverDL.version + 1
+          )
+          mlatestDriverDL
+
+      rcEntity <- mkDriverLicenseEntry personId (Just driverDateOfBirth) driverLicenseNumber Nothing now latestVersion
+      runTransaction $ Query.create rcEntity
+
   return Success
 
-buildDriverLicenseEntry :: EncFlow m r => Id Person.Person -> Maybe UTCTime -> Text -> Maybe Text -> UTCTime -> Text -> m Domain.DriverLicense
-buildDriverLicenseEntry personId dob dlNumber reqId time path = do
+mkDriverLicenseEntry :: EncFlow m r => Id Person.Person -> Maybe UTCTime -> Text -> Maybe Text -> UTCTime -> Int -> m Domain.DriverLicense
+mkDriverLicenseEntry personId dob dlNumber reqId time version = do
   ddl <- encrypt dlNumber
   id <- generateGUID
   return $
@@ -123,8 +112,8 @@ buildDriverLicenseEntry personId dob dlNumber reqId time path = do
         verificationStatus = Domain.PENDING,
         idfyRequestId = reqId,
         idfyResponseDump = Nothing,
-        verificationTryCount = 0,
-        imageS3Path = path,
+        version,
+        active = True,
         consent = True,
         createdAt = time,
         updatedAt = time,

@@ -1,7 +1,7 @@
 module Domain.Action.UI.DriverOnboarding.Status
   ( ResponseStatus (..),
     StatusRes (..),
-    statusImpl,
+    statusHandler,
   )
 where
 
@@ -29,12 +29,12 @@ data StatusRes = StatusRes
   }
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-statusImpl :: (EsqDBFlow m r) => Id SP.Person -> m StatusRes
-statusImpl personId = do
+statusHandler :: (EsqDBFlow m r) => Id SP.Person -> m StatusRes
+statusHandler personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
-  vehicleRegCertM <- DVehicle.findByPersonId personId
-  driverDrivingLicenseM <- QDDL.findByDriverId personId
+  vehicleRegCertM <- DVehicle.findLatestByPersonId personId
+  driverDrivingLicenseM <- QDDL.findLatestByPersonId personId
   operatingCity <- DO.findByorgId orgId >>= fromMaybeM (PersonNotFound orgId.getId)
   let vehicleRCVerification = getVerificationStatus ((.verificationStatus) <$> vehicleRegCertM)
   let driverDLVerification = getVerificationStatus ((.verificationStatus) <$> driverDrivingLicenseM)

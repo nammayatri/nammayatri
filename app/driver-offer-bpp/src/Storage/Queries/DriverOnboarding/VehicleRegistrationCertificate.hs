@@ -20,26 +20,42 @@ findById ::
   m (Maybe VehicleRegistrationCertificate)
 findById = Esq.findById
 
-findByPersonId ::
+findLatestByPersonId ::
   Transactionable m =>
   Id Person ->
   m (Maybe VehicleRegistrationCertificate)
-findByPersonId personid = do
-  findOne $ do
+findLatestByPersonId personid = do
+  certs <- findAll $ do
     vechileRegCert <- from $ table @VehicleRegistrationCertificateT
     where_ $ vechileRegCert ^. VehicleRegistrationCertificateDriverId ==. val (toKey personid)
+    orderBy [asc $ vechileRegCert ^. VehicleRegistrationCertificateVersion]
+    return vechileRegCert
+  pure $ headMaybe certs
+  where 
+    headMaybe [] = Nothing
+    headMaybe (x : _) = Just x
+
+findActiveVehicleRC ::
+  Transactionable m =>
+  Text ->
+  m (Maybe VehicleRegistrationCertificate)
+findActiveVehicleRC certNumber = do
+  findOne $ do
+    vechileRegCert <- from $ table @VehicleRegistrationCertificateT
+    where_ $
+      vechileRegCert ^. VehicleRegistrationCertificateCertificateNumber ==. val certNumber
+        &&. vechileRegCert ^. VehicleRegistrationCertificateActive ==. val True
     return vechileRegCert
 
-updateImagePath ::
-  Id Person ->
-  Text ->
-  SqlDB ()
-updateImagePath personid path = do
+makeRCInactive :: Id VehicleRegistrationCertificate -> UTCTime -> SqlDB ()
+makeRCInactive id now = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [VehicleRegistrationCertificateImageS3Path =. val path]
-    where_ $ tbl ^. VehicleRegistrationCertificateDriverId ==. val (toKey personid)
+      [ VehicleRegistrationCertificateActive =. val False,
+        VehicleRegistrationCertificateUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. VehicleRegistrationCertificateTId ==. val (toKey id)
 
 updateRCDetails :: Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe UTCTime -> Maybe UTCTime -> VerificationStatus -> Maybe ClassOfVehicle -> UTCTime -> SqlDB ()
 updateRCDetails idfyRequestId permitStart permitValidity fitnessExpiry insuranceValidity verificationStatus cov now = do

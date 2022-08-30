@@ -199,3 +199,46 @@ instance IsHTTPError DriverQuoteError where
     NoSearchRequestForDriver -> E400
 
 instance IsAPIError DriverQuoteError
+
+data DriverOnboardingError
+  = ImageValidationExceedLimit Text
+  | InvalidImage
+  | InvalidImageType Text Text
+  | ImageNotFound Text
+  | ImageNotValid Text
+  | AlreadyRegisteredSamePerson
+  | AlreadyRegisteredDiffPerson
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
+
+instance IsBaseError DriverOnboardingError where
+  toMessage = \case
+    ImageValidationExceedLimit id_ -> Just $ "Number of validation try exceed for person \"" <> show id_ <> "\"."
+    InvalidImage -> Just "Image is not a valid document."
+    InvalidImageType provided actual -> Just $ "Provided image type \"" <> show provided <> "\" doesn't match actual type \"" <> show actual <> "\"."
+    ImageNotFound id_ -> Just $ "Image with imageId \"" <> show id_ <> "\" not found."
+    ImageNotValid id_ -> Just $ "Image with imageId \"" <> show id_ <> "\" is not valid."
+    AlreadyRegisteredSamePerson -> Just "Same person already registered with same document."
+    AlreadyRegisteredDiffPerson -> Just "Different person already registered with same document."
+
+instance IsHTTPError DriverOnboardingError where
+  toErrorCode = \case
+    ImageValidationExceedLimit _ -> "IMAGE_VALIDATION_EXCEED_LIMIT"
+    InvalidImage -> "INVALID_IMAGE"
+    InvalidImageType _ _ -> "INVALID_IMAGE_TYPE"
+    ImageNotFound _ -> "IMAGE_NOT_FOUND"
+    ImageNotValid _ -> "IMAGE_NOT_VALID"
+    AlreadyRegisteredSamePerson -> "ALREADY_REGISTERED_SAME_PERSON"
+    AlreadyRegisteredDiffPerson -> "ALREADY_REGISTERED_DIFF_PERSON"
+
+  toHttpCode = \case
+    ImageValidationExceedLimit _ -> E429
+    InvalidImage -> E400
+    InvalidImageType _ _ -> E400
+    ImageNotFound _ -> E500
+    ImageNotValid _ -> E500
+    AlreadyRegisteredSamePerson -> E400
+    AlreadyRegisteredDiffPerson -> E400
+
+instance IsAPIError DriverOnboardingError

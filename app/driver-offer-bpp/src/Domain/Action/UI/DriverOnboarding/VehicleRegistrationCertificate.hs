@@ -2,15 +2,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
-  ( DriverRCImageReq (..),
-    DriverRCReq (..),
+  ( DriverRCReq (..),
     DriverRCRes,
-    validateRCImage,
     verifyRC,
   )
 where
 
-import AWS.S3 as S3
 import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (isNothing)
@@ -21,24 +18,23 @@ import Beckn.Types.Predicate
 import Beckn.Utils.Common
 import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
-import Data.Text as T
 import qualified Domain.Types.DriverOnboarding.ClassOfVehicle as Domain
+import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
 import qualified Domain.Types.Person as Person
-import SharedLogic.DriverOnboarding
+import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as Query
 import qualified Storage.Queries.Person as Person
-import Tools.Metrics
-
-newtype DriverRCImageReq = DriverRCImageReq
-  {image :: Text}
-  deriving (Generic, ToSchema, ToJSON, FromJSON)
+import Tools.Error
 
 data DriverRCReq = DriverRCReq
   { vehicleRegistrationCertNumber :: Text,
+    imageId :: Id Image.Image,
     operatingCity :: Text
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+type DriverRCRes = APISuccess
 
 validateDriverRCReq :: Validate DriverRCReq
 validateDriverRCReq DriverRCReq {..} =
@@ -47,60 +43,53 @@ validateDriverRCReq DriverRCReq {..} =
   where
     certNum = LengthInRange 5 12 `And` star (latinUC \/ digit \/ ",")
 
-type DriverRCRes = APISuccess
-
-validateRCImage ::
-  ( EsqDBFlow m r,
-    HasFlowEnv m r '["s3Config" ::: S3Config],
-    EncFlow m r,
-    CoreMetrics m
-  ) =>
-  Id Person.Person ->
-  DriverRCImageReq ->
-  m DriverRCRes
-validateRCImage personId DriverRCImageReq {..} = do
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
-  mVehicleRC <- Query.findByPersonId personId
-  imagePath <- createPath personId.getId orgId.getId "rc"
-  now <- getCurrentTime
-
-  case mVehicleRC of
-    Nothing -> do
-      _ <- S3.put (T.unpack imagePath) image
-      rcEntity <- buildVehicleRegistrationCertEntry personId "req.certificateNumber" Nothing now imagePath
-      runTransaction $ Query.create rcEntity
-    Just _ -> do
-      _ <- S3.put (T.unpack imagePath) image
-      runTransaction $ Query.updateImagePath personId imagePath
-
-  return Success
-
 verifyRC ::
   ( EsqDBFlow m r,
     EncFlow m r
   ) =>
-  Id Person.Person ->
-  DriverRCReq ->
+  Id Person.Person -> 
+  DriverRCReq -> 
   m DriverRCRes
 verifyRC personId req@DriverRCReq {..} = do
   runRequestValidation validateDriverRCReq req
   _ <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
-  mVehicleRC <- Query.findByPersonId personId
-  now <- getCurrentTime
+  imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
+  unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
+  unless (imageMetadata.imageType == Image.VehicleRegistrationCertificate) $
+    throwError (InvalidImageType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
+
+  -- Uncomment this once Idfy service is ready
+  -- image <- S3.get imageMetadata.s3Path
+  -- extractOutput <- Idfy.extractImage image
+  -- unless (extractOutput.certificateNumber == vehicleRegistrationCertNumber) $
+  --   throwError (ImageDataNotMatching extractOutput.certificateNumber vehicleRegistrationCertNumber)
+
+  mVehicleRC <- Query.findActiveVehicleRC vehicleRegistrationCertNumber
+
   case mVehicleRC of
-    Nothing -> do
-      rcEntity <- buildVehicleRegistrationCertEntry personId req.vehicleRegistrationCertNumber Nothing now T.empty
-      runTransaction $ Query.create rcEntity
     Just vehicleRC -> do
-      rcNumber <- decrypt vehicleRC.certificateNumber
-      when (rcNumber /= req.vehicleRegistrationCertNumber) do
-        runTransaction $ Query.resetRCRequest personId req.vehicleRegistrationCertNumber Nothing now
+      when (vehicleRC.driverId == personId) $ throwError AlreadyRegisteredSamePerson
+      throwError AlreadyRegisteredDiffPerson
+    Nothing -> do
+      now <- getCurrentTime
+      mlatestDriverRC <- Query.findLatestByPersonId personId
+      latestVersion <-
+        maybe
+          (pure 1)
+          ( \latestDriverRC -> do
+              runTransaction $ Query.makeRCInactive latestDriverRC.id now
+              pure $ latestDriverRC.version + 1
+          )
+          mlatestDriverRC
+
+      rcEntity <- mkVehicleRegistrationCertEntry personId req.vehicleRegistrationCertNumber Nothing now latestVersion
+      runTransaction $ Query.create rcEntity
+
   return Success
 
-buildVehicleRegistrationCertEntry :: EncFlow m r => Id Person.Person -> Text -> Maybe Text -> UTCTime -> Text -> m Domain.VehicleRegistrationCertificate
-buildVehicleRegistrationCertEntry personId rcNumber reqID time path = do
+mkVehicleRegistrationCertEntry :: EncFlow m r => Id Person.Person -> Text -> Maybe Text -> UTCTime -> Int -> m Domain.VehicleRegistrationCertificate
+mkVehicleRegistrationCertEntry personId rcNumber reqID time version = do
   vrc <- encrypt rcNumber
   id <- generateGUID
   return $
@@ -118,11 +107,11 @@ buildVehicleRegistrationCertEntry personId rcNumber reqID time path = do
         vehicleModel = Nothing,
         vehicleClass = Nothing,
         idfyRequestId = reqID,
-        imageS3Path = path,
         idfyResponseDump = Nothing,
         insuranceValidity = Nothing,
-        verificationTryCount = 0,
         verificationStatus = Domain.PENDING,
+        version,
+        active = True,
         createdAt = time,
         updatedAt = time,
         consentTimestamp = time,

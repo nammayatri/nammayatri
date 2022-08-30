@@ -19,10 +19,10 @@ data DriverLicenseE e = DriverLicense
     idfyResponseDump :: Maybe Text,
     idfyRequestId :: Maybe Text,
     verificationStatus :: VerificationStatus,
-    imageS3Path :: Text,
+    version :: Int,
+    active :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    verificationTryCount :: Int,
     consent :: Bool,
     consentTimestamp :: UTCTime
   }

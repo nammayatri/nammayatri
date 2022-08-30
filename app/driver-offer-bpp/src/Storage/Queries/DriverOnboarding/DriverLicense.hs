@@ -20,26 +20,42 @@ findById ::
   m (Maybe DriverLicense)
 findById = Esq.findById
 
-findByDriverId ::
+findLatestByPersonId ::
   Transactionable m =>
   Id Person ->
   m (Maybe DriverLicense)
-findByDriverId personid = do
-  findOne $ do
+findLatestByPersonId personid = do
+  licenses <- findAll $ do
     driverLicense <- from $ table @DriverLicenseT
     where_ $ driverLicense ^. DriverLicenseDriverId ==. val (toKey personid)
+    orderBy [asc $ driverLicense ^. DriverLicenseVersion]
     return driverLicense
+  pure $ headMaybe licenses
+  where 
+    headMaybe [] = Nothing
+    headMaybe (x : _) = Just x
 
-updateImagePath ::
-  Id Person ->
+findActiveDL ::
+  Transactionable m =>
   Text ->
-  SqlDB ()
-updateImagePath personid path = do
+  m (Maybe DriverLicense)
+findActiveDL dlNumber = do
+  findOne $ do
+    dl <- from $ table @DriverLicenseT
+    where_ $
+      dl ^. DriverLicenseLicenseNumber ==. val dlNumber
+        &&. dl ^. DriverLicenseActive ==. val True
+    return dl
+
+makeDLInactive :: Id DriverLicense -> UTCTime -> SqlDB ()
+makeDLInactive id now = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [DriverLicenseImageS3Path =. val path]
-    where_ $ tbl ^. DriverLicenseDriverId ==. val (toKey personid)
+      [ DriverLicenseActive =. val False,
+        DriverLicenseUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverLicenseTId ==. val (toKey id)
 
 updateDLDetails :: Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> VerificationStatus -> [ClassOfVehicle] -> UTCTime -> SqlDB () -- [ClassOfVehicle] changed to Maybe [ClassOfVehicle]
 updateDLDetails idfyRequestId start expiry verificationStatus cov now = do

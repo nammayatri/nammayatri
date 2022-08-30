@@ -33,8 +33,8 @@ mkPersist
       idfyResponseDump Text Maybe
       idfyRequestId Text Maybe
       verificationStatus Domain.VerificationStatus
-      verificationTryCount Int
-      imageS3Path Text
+      version Int
+      active Bool
       consent Bool
       consentTimestamp UTCTime
       createdAt UTCTime
