@@ -185,3 +185,6 @@ cradle:
 
     - path: "lib/beckn-spec/src"
       component: "beckn-spec:lib"
+    
+    - path: "lib/beckn-services/src"
+      component: "beckn-services:lib"   

@@ -70,6 +70,8 @@ dependencies:
 - http-client
 - containers
 - http-media
+- servant-openapi3
+- openapi3
 
 ghc-options:
   - -fwrite-ide-info
