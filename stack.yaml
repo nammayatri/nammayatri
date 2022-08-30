@@ -39,6 +39,8 @@ packages:
   - app/search-result-aggregator
   - app/mock-sms
   - app/mock-fcm
+  - app/dashboard/BAPDashboard
+  - app/dashboard/BPPDashboard
   - app/example-service
   - app/mock-bap
   - app/mock-idfy

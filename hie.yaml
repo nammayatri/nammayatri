@@ -87,6 +87,18 @@ cradle:
     - path: "app/gateway/server/Paths_beckn_gateway.hs"
       component: "beckn-gateway:exe:beckn-gateway-exe"
 
+    - path: "app/dashboard/BAPDashboard/src"
+      component: "bap-dashboard:lib"
+
+    - path: "app/dashboard/BAPDashboard/server/Main.hs"
+      component: "bap-dashboard:exe:bap-dashboard-exe"
+
+    - path: "app/dashboard/BPPDashboard/src"
+      component: "bpp-dashboard:lib"
+
+    - path: "app/dashboard/BPPDashboard/server/Main.hs"
+      component: "bpp-dashboard:exe:bpp-dashboard-exe"
+
     - path: "app/example-service/src"
       component: "example-service:lib"
 
