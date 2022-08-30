@@ -40,6 +40,7 @@ mkPersist
       estimatedTotalFare HighPrecMoney
       estimatedDistance HighPrecMeters Maybe
       reallocationsCount Int
+      riderName Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

@@ -39,7 +39,8 @@ data DConfirmReq = DConfirmReq
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: DBL.LocationAddress,
-    toAddress :: DBL.LocationAddress
+    toAddress :: DBL.LocationAddress,
+    mbRiderName :: Maybe Text
   }
 
 data DConfirmRes = DConfirmRes
@@ -87,6 +88,7 @@ handler subscriber transporterId req = do
     QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
     QBL.updateAddress booking.fromLocation.id req.fromAddress
     QBL.updateAddress booking.toLocation.id req.toAddress
+    whenJust req.mbRiderName $ QRB.updateRiderName booking.id
     QDI.updateOnRide (cast driver.id) True
     QRide.create ride
     QBE.logRideConfirmedEvent booking.id

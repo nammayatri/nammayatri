@@ -28,6 +28,7 @@ buildConfirmReq subscriber req = do
       customerPhoneNumber = phone.number
       fulfillment = req.message.order.fulfillment
       fromAddress = castAddress fulfillment.start.location.address
+      mbRiderName = req.message.order.customer.person <&> (.name)
       toAddress = castAddress . (.location.address) <$> fulfillment.end
   return $
     DConfirm.DConfirmReq

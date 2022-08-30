@@ -185,6 +185,7 @@ buildBooking req orgId estimatedFare discount estimatedTotalFare bookingDetails 
         vehicleVariant = req.vehicleVariant,
         reallocationsCount = 0,
         bookingDetails = bookingDetails,
+        riderName = Nothing,
         createdAt = now,
         updatedAt = now
       }

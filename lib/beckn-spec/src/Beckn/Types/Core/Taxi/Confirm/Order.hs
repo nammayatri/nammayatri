@@ -20,8 +20,9 @@ data Order = Order
 instance ToSchema Order where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-newtype OrderCustomer = OrderCustomer
-  { contact :: Contact
+data OrderCustomer = OrderCustomer
+  { contact :: Contact,
+    person :: Maybe OrderPerson
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -43,4 +44,12 @@ data Phone = Phone
   deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema Phone where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype OrderPerson = OrderPerson
+  { name :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema OrderPerson where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

@@ -33,6 +33,7 @@ data BookingAPIEntity = BookingAPIEntity
     rideList :: [DRide.RideAPIEntity],
     tripTerms :: [Text],
     fareBreakup :: [FareBreakupAPIEntity],
+    riderName :: Maybe Text,
     bookingDetails :: BookingDetailsAPIEntity,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -81,6 +82,7 @@ buildBookingAPIEntity booking = do
         fromLocation = DLoc.makeBookingLocationAPIEntity booking.fromLocation,
         rideList = rideAPIEntityList,
         fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
+        riderName = booking.riderName,
         bookingDetails,
         tripTerms,
         createdAt = booking.createdAt,

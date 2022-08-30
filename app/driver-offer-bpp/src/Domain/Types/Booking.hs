@@ -49,6 +49,7 @@ data Booking = Booking
     estimatedDistance :: Meters,
     estimatedFare :: Money,
     fareParams :: FareParameters,
+    riderName :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

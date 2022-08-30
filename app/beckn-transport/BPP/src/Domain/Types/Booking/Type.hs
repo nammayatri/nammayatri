@@ -51,6 +51,7 @@ data Booking = Booking
     estimatedTotalFare :: Money,
     reallocationsCount :: Int,
     bookingDetails :: BookingDetails,
+    riderName :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

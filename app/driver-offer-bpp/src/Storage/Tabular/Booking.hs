@@ -40,6 +40,7 @@ mkPersist
       estimatedDistance Meters
       estimatedFare Money
       fareParametersId Fare.FareParametersTId
+      riderName Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
 

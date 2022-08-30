@@ -41,7 +41,8 @@ data DConfirmReq = DConfirmReq
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: SBL.LocationAddress,
-    toAddress :: Maybe SBL.LocationAddress
+    toAddress :: Maybe SBL.LocationAddress,
+    mbRiderName :: Maybe Text
   }
 
 data DConfirmRes = DConfirmRes
@@ -93,6 +94,7 @@ confirm transporterId subscriber req = do
         when isNewRider $ QRD.create riderDetails
         QRB.updateStatus booking.id SRB.CONFIRMED
         QRB.updateRiderId booking.id riderDetails.id
+        whenJust req.mbRiderName $ QRB.updateRiderName booking.id
         QBL.updateAddress booking.fromLocation.id req.fromAddress
         whenJust booking.discount $ \disc ->
           QDiscTransaction.create $ mkDiscountTransaction booking disc now

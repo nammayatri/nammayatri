@@ -50,6 +50,17 @@ updateRiderId rbId riderId = do
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey rbId)
 
+updateRiderName :: Id Booking -> Text -> SqlDB ()
+updateRiderName bookingId riderName = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ BookingRiderName =. val (Just riderName),
+        BookingUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
+
 fullBookingTable ::
   From
     ( Table BookingT

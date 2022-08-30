@@ -51,6 +51,7 @@ buildDriverRideRes (ride, booking) = do
         actualRideDistance = ride.traveledDistance,
         createdAt = ride.createdAt,
         updatedAt = ride.updatedAt,
+        riderName = booking.riderName,
         tripStartTime = ride.tripStartTime,
         tripEndTime = ride.tripEndTime,
         rideRating = mbRating <&> (.ratingValue)

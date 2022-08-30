@@ -7,7 +7,7 @@ import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Types.LocationAddress as DBL
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import ExternalAPI.Flow
 import Utils.Common
 
@@ -38,7 +38,12 @@ mkConfirmMessage res =
                             { country_code = res.riderPhoneCountryCode,
                               number = res.riderPhoneNumber
                             }
-                      }
+                      },
+                  person =
+                    res.mbRiderName <&> \riderName ->
+                      Confirm.OrderPerson
+                        { name = riderName
+                        }
                 },
             payment = mkPayment res.estimatedTotalFare
           }
@@ -49,39 +54,23 @@ mkFulfillment startLoc mbStopLoc =
   Confirm.FulfillmentInfo
     { start =
         Confirm.StartInfo
-          { location =
-              Confirm.Location
-                { address =
-                    Confirm.Address
-                      { area = startLoc.area,
-                        state = startLoc.state,
-                        country = startLoc.country,
-                        building = startLoc.building,
-                        door = startLoc.door,
-                        street = startLoc.street,
-                        city = startLoc.city,
-                        area_code = startLoc.areaCode
-                      }
-                }
+          { location = mkLocation startLoc
           },
       end =
         mbStopLoc <&> \stopLoc ->
           Confirm.StopInfo
-            { location =
-                Confirm.Location
-                  { address =
-                      Confirm.Address
-                        { area = stopLoc.area,
-                          state = stopLoc.state,
-                          country = stopLoc.country,
-                          building = stopLoc.building,
-                          door = stopLoc.door,
-                          street = stopLoc.street,
-                          city = stopLoc.city,
-                          area_code = stopLoc.areaCode
-                        }
-                  }
+            { location = mkLocation stopLoc
             }
+    }
+
+mkLocation :: DBL.LocationAddress -> Confirm.Location
+mkLocation DBL.LocationAddress {..} =
+  Confirm.Location
+    { address =
+        Confirm.Address
+          { area_code = areaCode,
+            ..
+          }
     }
 
 mkPayment :: Money -> Confirm.Payment

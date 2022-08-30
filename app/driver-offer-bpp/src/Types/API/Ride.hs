@@ -45,6 +45,7 @@ data DriverRideRes = DriverRideRes
     rideRating :: Maybe Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
+    riderName :: Maybe Text,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime
   }

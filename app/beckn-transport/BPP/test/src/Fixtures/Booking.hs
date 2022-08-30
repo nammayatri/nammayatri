@@ -30,6 +30,7 @@ defaultBooking = do
       estimatedTotalFare = 0,
       reallocationsCount = 0,
       bookingDetails = SRB.OneWayDetails details,
+      riderName = Just "John",
       createdAt = Fixtures.defaultTime,
       updatedAt = Fixtures.defaultTime
     }

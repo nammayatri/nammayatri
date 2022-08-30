@@ -32,7 +32,8 @@ data OnInitRes = OnInitRes
     mbToLocationAddress :: Maybe DBL.LocationAddress,
     estimatedTotalFare :: Money,
     riderPhoneCountryCode :: Text,
-    riderPhoneNumber :: Text
+    riderPhoneNumber :: Text,
+    mbRiderName :: Maybe Text
   }
   deriving (Generic, Show, PrettyShow)
 
@@ -65,5 +66,6 @@ onInit registryUrl req = do
         estimatedTotalFare = booking.estimatedTotalFare,
         fromLocationAddress = fromLocation.address,
         mbToLocationAddress = mbToLocation <&> (.address),
+        mbRiderName = decRider.firstName,
         ..
       }

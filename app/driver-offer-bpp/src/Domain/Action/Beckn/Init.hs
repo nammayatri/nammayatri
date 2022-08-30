@@ -71,6 +71,7 @@ handler orgId req = do
             fromLocation,
             toLocation,
             estimatedFare = driverQuote.estimatedFare,
+            riderName = Nothing,
             fareParams = driverQuote.fareParams,
             ..
           }
