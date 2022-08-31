@@ -99,6 +99,9 @@ cradle:
     - path: "app/dashboard/BPPDashboard/server/Main.hs"
       component: "bpp-dashboard:exe:bpp-dashboard-exe"
 
+    - path: "app/dashboard/Lib/src"
+      component: "bpp-dashboard:lib"
+
     - path: "app/example-service/src"
       component: "example-service:lib"
 

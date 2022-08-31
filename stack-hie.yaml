@@ -45,6 +45,7 @@ packages:
   - app/mock-fcm
   - app/dashboard/BAPDashboard
   - app/dashboard/BPPDashboard
+  - app/dashboard/Lib
   - app/example-service
   - app/mock-bap
   - app/mock-idfy

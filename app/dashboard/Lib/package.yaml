@@ -1,4 +1,4 @@
-name: bpp-dashboard
+name: lib-dashboard
 version: 0.1.0.0
 github: "juspay/beckn"
 license: AllRightsReserved
@@ -79,21 +79,4 @@ ghc-options:
 library:
   source-dirs: src
   ghc-options:
-    - -fhide-source-paths
     - -Wincomplete-uni-patterns
-  dependencies:
-    - lib-dashboard
-
-executables:
-  bpp-dashboard-exe:
-    main: Main.hs
-    source-dirs: server
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - '"-with-rtsopts=-N -T"'
-      - -Wincomplete-uni-patterns
-    dependencies:
-      - bpp-dashboard
-      - beckn-core
-      - beckn-spec
