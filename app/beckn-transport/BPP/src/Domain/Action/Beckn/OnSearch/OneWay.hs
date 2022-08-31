@@ -40,6 +40,7 @@ data QuoteInfo = QuoteInfo
 onSearchCallback ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    HasFlowEnv m r '["driverEstimatedPickupDuration" ::: Seconds],
     HasGoogleMaps m r,
     HasBPPMetrics m r,
     CoreMetrics m
@@ -65,18 +66,21 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   -- drivers sorted from nearest to furthest, so with `find`
   -- we take nearest one and calculate fare and make PI for him
 
-  distance <-
-    (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) fromLocation toLocation
+  driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
+  distRes <- MapSearch.getDistance (Just MapSearch.CAR) fromLocation toLocation
+  let distance = distRes.distance
+      estimatedRideDuration = distRes.duration_in_traffic
+      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` searchRequest.startTime
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
-      fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
+      fareParams <- calculateFare transporterId poolResult.variant distance estimatedRideFinishTime
       buildOneWayQuote
         searchRequest
         fareParams
         transporterId
         distance
         poolResult.distanceToPickup
-        poolResult.variant now
+        poolResult.variant estimatedRideFinishTime now
   Esq.runTransaction $
     for_ listOfQuotes QQuote.create
   pure $ mkQuoteInfo fromLocation toLocation now distance <$> listOfQuotes
@@ -90,8 +94,9 @@ buildOneWayQuote ::
   Meters ->
   DVeh.Variant ->
   UTCTime ->
+  UTCTime ->
   m DQuote.Quote
-buildOneWayQuote productSearchRequest fareParams transporterId distance distanceToNearestDriver vehicleVariant now = do
+buildOneWayQuote productSearchRequest fareParams transporterId distance distanceToNearestDriver vehicleVariant estimatedFinishTime now = do
   quoteId <- Id <$> generateGUID
   let estimatedFare = fareSum fareParams
       discount = fareParams.discount

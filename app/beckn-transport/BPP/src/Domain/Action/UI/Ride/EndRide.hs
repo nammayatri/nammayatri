@@ -103,7 +103,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
       shouldRecalculateFare <- recalculateFareEnabled
       if shouldRecalculateFare
         then do
-          fareParams <- calculateFare transporterId vehicleVariant actualDistance booking.startTime
+          fareParams <- calculateFare transporterId vehicleVariant actualDistance oneWayDetails.estimatedFinishTime
           let updatedFare = Fare.fareSum fareParams
               totalFare = Fare.fareSumWithDiscount fareParams
           let distanceDiff = actualDistance - oldDistance

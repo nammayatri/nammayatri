@@ -32,7 +32,7 @@ data ServiceHandle m = ServiceHandle
       UTCTime ->
       Maybe Money ->
       m Fare.FareParameters,
-    putDiffMetric :: Money -> HighPrecMeters -> m (),
+    putDiffMetric :: Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     addLastWaypointAndRecalcDistanceOnEnd :: Id Person.Person -> LatLong -> m ()
   }
@@ -76,13 +76,13 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
   where
     recalculateFare booking ride = do
       let transporterId = booking.providerId
-          actualDistance = ride.traveledDistance
-          oldDistance = realToFrac booking.estimatedDistance
+          actualDistance = roundToIntegral ride.traveledDistance
+          oldDistance = booking.estimatedDistance
 
       -- maybe compare only distance fare?
       let estimatedBaseFare = booking.estimatedFare
 
-      fareParams <- calculateFare transporterId booking.vehicleVariant (roundToIntegral actualDistance) booking.startTime booking.fareParams.driverSelectedFare
+      fareParams <- calculateFare transporterId booking.vehicleVariant actualDistance booking.estimatedFinishTime booking.fareParams.driverSelectedFare
       let updatedBaseFare = Fare.fareSumRounded fareParams
       let distanceDiff = actualDistance - oldDistance
       let fareDiff = updatedBaseFare - estimatedBaseFare

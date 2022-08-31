@@ -66,7 +66,8 @@ data AppCfg = AppCfg
     searchRequestExpirationSeconds :: Int,
     driverQuoteExpirationSeconds :: Int,
     httpClientOptions :: HttpClientOptions,
-    driverUnlockDelay :: Seconds
+    driverUnlockDelay :: Seconds,
+    driverEstimatedPickupDuration :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -108,7 +109,8 @@ data AppEnv = AppEnv
     transporterMetrics :: TransporterMetricsContainer,
     searchRequestExpirationSeconds :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
-    driverUnlockDelay :: Seconds
+    driverUnlockDelay :: Seconds,
+    driverEstimatedPickupDuration :: Seconds
   }
   deriving (Generic)
 

@@ -27,7 +27,8 @@ data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails DRentalFP.R
 
 data OneWayQuoteDetails = OneWayQuoteDetails
   { distance :: Meters,
-    distanceToNearestDriver :: Meters
+    distanceToNearestDriver :: Meters,
+    estimatedFinishTime :: UTCTime
   }
 
 getFareProductType :: QuoteDetails -> DFareProduct.FareProductType

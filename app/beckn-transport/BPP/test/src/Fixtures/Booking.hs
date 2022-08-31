@@ -13,7 +13,8 @@ defaultBooking = do
   let details =
         SRB.OneWayBookingDetails
           { toLocation = defaultBookingLocation,
-            estimatedDistance = 0
+            estimatedDistance = 0,
+            estimatedFinishTime = Fixtures.defaultTime
           }
   SRB.Booking
     { id = Id "1",

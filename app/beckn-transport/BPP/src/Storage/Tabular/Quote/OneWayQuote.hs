@@ -20,6 +20,7 @@ mkPersist
       quoteId QuoteTId
       distance Double
       distanceToNearestDriver Double
+      estimatedFinishTime UTCTime
       Primary quoteId
       deriving Generic
     |]
