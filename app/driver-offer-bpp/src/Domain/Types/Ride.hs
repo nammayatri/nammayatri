@@ -48,7 +48,7 @@ data Ride = Ride
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq)
-  
+
 data RideRating = RideRating
   { id :: Id RideRating,
     ratingValue :: Int,

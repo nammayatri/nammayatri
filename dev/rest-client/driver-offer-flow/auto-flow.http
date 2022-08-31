@@ -6,6 +6,7 @@
 GET {{driver-offer-bpp-host}}/ui
 
 ###
+
 # @name healthcheck
 GET {{app-host}}
 
@@ -30,13 +31,10 @@ content-type: application/json
 
 ###
 
-
 # @name setActive
 POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
 content-type: application/json
 token: {{token1}}
-
-###
 
 ###
 
@@ -62,8 +60,6 @@ token: ea37f941-427a-4085-a7d0-96240f166672
     "capacity": 120
   }
 }
-
-
 
 ###
 
@@ -154,9 +150,9 @@ content-type: application/json
 token: {{app-token}}
 
 ###
+
 @selectedQuoteId = {{selectedQuotes.response.body.selectedQuotes[0].id}}
 
-###
 # @name confirmQuote
 
 POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm
@@ -185,11 +181,13 @@ content-type: application/json
 token: {{app-token}}
 
 ###
+
 # @name driverList
 GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
 token: {{token1}}
 
 ###
+
 @rideId = {{driverList.response.body.list[0].id}}
 @otp = {{list2.response.body.list[0].rideList[0].rideOtp}}
 
@@ -291,6 +289,7 @@ content-type: application/json
 }
 
 ###
+
 # @name cancel
 POST {{app-host}}/rideBooking/{{bookingId}}/cancel
 content-type: application/json

@@ -22,6 +22,7 @@ defaultRide =
       chargeableDistance = Nothing,
       tripStartTime = Nothing,
       tripEndTime = Nothing,
+      rideRating = Nothing,
       createdAt = Fixtures.defaultTime,
       updatedAt = Fixtures.defaultTime
     }
