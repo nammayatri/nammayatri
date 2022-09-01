@@ -26,8 +26,8 @@ data TransporterInfo = TransporterInfo
     ridesConfirmed :: Int
   }
 
-oneWayCategory :: OS.Category
-oneWayCategory =
+driverOfferCategory :: OS.Category
+driverOfferCategory =
   OS.Category
     { id = OS.DRIVER_OFFER,
       descriptor =
@@ -84,7 +84,7 @@ data QuoteEntities = QuoteEntities
 mkQuoteEntities :: DOnSelectReq -> DQuote.DriverQuote -> QuoteEntities
 mkQuoteEntities dReq quote = do
   let fulfillment = mkFulfillment dReq quote
-      category = oneWayCategory
+      category = driverOfferCategory
       offer = Nothing
       item = mkItem category.id fulfillment.id quote
   QuoteEntities {..}

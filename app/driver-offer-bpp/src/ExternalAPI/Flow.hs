@@ -5,8 +5,10 @@ module ExternalAPI.Flow where
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
+import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
+import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
@@ -16,6 +18,7 @@ import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Organization as Org
+import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude
 import Tools.Metrics (CoreMetrics)
 import Utils.Common
@@ -41,9 +44,27 @@ withCallback' doWithCallback transporter action api context cbUrl f = do
           & #bpp_id ?~ transporter.shortId.getShortId
   withBecknCallbackMig doWithCallback (Just authKey) action api context' cbUrl f
 
+callOnSelect ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  Org.Organization ->
+  DSR.SearchRequest ->
+  OnSelect.OnSelectMessage ->
+  m ()
+callOnSelect transporter searchRequest content = do
+  let bapId = searchRequest.bapId
+      bapUri = searchRequest.bapUri
+  let bppShortId = getShortId $ transporter.shortId
+      authKey = getHttpManagerKey bppShortId
+  bppUri <- makeBppUrl (transporter.id)
+  let msgId = searchRequest.messageId
+  context <- buildTaxiContext Context.ON_SELECT msgId Nothing bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
+  logDebug $ "on_select request bpp: " <> show content
+  void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
+
 callOnUpdate ::
-  ( EsqDBFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
   Org.Organization ->
@@ -61,8 +82,7 @@ callOnUpdate transporter booking content = do
   void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 callOnConfirm ::
-  ( EsqDBFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
   Org.Organization ->
@@ -80,8 +100,7 @@ callOnConfirm transporter contextFromConfirm content = do
   void $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
 
 makeBppUrl ::
-  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   Id Org.Organization ->
   m BaseUrl

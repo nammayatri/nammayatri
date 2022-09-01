@@ -35,14 +35,11 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Core.Context as Context
-import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
-import Core.ACL.OnSelect
 import Data.OpenApi (ToSchema)
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -60,10 +57,10 @@ import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
-import ExternalAPI.Flow
 import GHC.Records.Extra
 import Product.FareCalculator.Calculator
 import Product.FareCalculator.Flow (calculateFare)
+import SharedLogic.CallBAP (sendDriverOffer)
 import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt
@@ -80,7 +77,6 @@ import Tools.Metrics
 import Types.Error
 import Utils.Auth (authTokenCacheKey)
 import Utils.Common
-import Utils.Context (contextTemplate)
 import qualified Utils.Notifications as Notify
 
 data DriverInformationRes = DriverInformationRes
@@ -493,7 +489,8 @@ offerQuote ::
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
-    CoreMetrics m
+    CoreMetrics m,
+    HasPrettyLogger m r
   ) =>
   Id SP.Person ->
   DriverOfferReq ->
@@ -519,13 +516,7 @@ offerQuote driverId req = do
   fareParams <- calculateFare organization.id sReqFD.vehicleVariant sReqFD.distance sReqFD.startTime mbOfferedFare
   driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
   Esq.runTransaction $ QDrQt.create driverQuote
-  context <- contextTemplate organization Context.SELECT sReq.bapId sReq.bapUri (Just sReq.transactionId) sReq.messageId
-  let callbackUrl = sReq.bapUri
-      action = do
-        onSelectReq <- buildOnSelectReq organization sReq [driverQuote] <&> mkOnSelectMessage
-        logDebug $ "on_select request bpp: " <> show onSelectReq
-        pure onSelectReq
-  void $ withCallback' withRetry organization Context.SELECT API.onSelectAPI context callbackUrl action
+  sendDriverOffer organization sReq driverQuote
   pure Success
   where
     buildDriverQuote ::
@@ -563,30 +554,3 @@ offerQuote driverId req = do
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
       logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
       pure $ not $ null activeQuotes
-
-buildOnSelectReq ::
-  (MonadTime m, HasPrettyLogger m r) =>
-  Org.Organization ->
-  DSReq.SearchRequest ->
-  [DDrQuote.DriverQuote] ->
-  m DOnSelectReq
-buildOnSelectReq org searchRequest quotes = do
-  now <- getCurrentTime
-  logPretty DEBUG "on_select: searchRequest" searchRequest
-  logPretty DEBUG "on_select: quotes" quotes
-  let transporterInfo =
-        TransporterInfo
-          { shortId = org.shortId,
-            name = org.name,
-            contacts = fromMaybe "" org.mobileNumber,
-            ridesInProgress = 0, -- FIXME
-            ridesCompleted = 0, -- FIXME
-            ridesConfirmed = 0 -- FIXME
-          }
-  pure $
-    DOnSelectReq
-      { transporterInfo,
-        quotes,
-        now,
-        searchRequest
-      }
