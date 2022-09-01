@@ -94,3 +94,4 @@ library:
     - -Werror
   dependencies:
     - beckn-core
+    - openapi3

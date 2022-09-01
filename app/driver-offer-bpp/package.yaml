@@ -113,3 +113,4 @@ executables:
       - driver-offer-bpp
       - beckn-core
       - beckn-spec
+      - beckn-services

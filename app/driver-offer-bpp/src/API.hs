@@ -3,8 +3,10 @@ module API where
 import qualified API.Beckn as Beckn
 import qualified API.UI as UI
 import Data.OpenApi
+import Domain.Action.UI.DriverOnboarding.Idfy
 import Environment
 import EulerHS.Prelude
+import qualified Idfy.Flow as Idfy
 import Servant
 import Servant.OpenApi
 
@@ -15,6 +17,7 @@ type DriverOfferAPI =
 type MainAPI =
   UI.API
     :<|> Beckn.API
+    :<|> Idfy.IdfyWebhookAPI
 
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
@@ -23,6 +26,7 @@ mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
     :<|> Beckn.handler
+    :<|> (Idfy.idfyWebhookHandler idfyDL idfyRC)
 
 driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =

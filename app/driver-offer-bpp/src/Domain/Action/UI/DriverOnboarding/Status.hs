@@ -11,7 +11,7 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Error
 import Beckn.Types.Id (Id)
 import Beckn.Utils.Error
-import qualified Domain.Types.DriverOnboarding.ClassOfVehicle as COV
+import qualified Domain.Types.DriverOnboarding.ClassOfVehicle as ClassOfVehicle
 import qualified Domain.Types.Person as SP
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDDL
 import qualified Storage.Queries.DriverOnboarding.OperatingCity as DO
@@ -43,9 +43,9 @@ statusImpl personId = do
   when (vehicleRCVerification == VERIFIED || driverDLVerification == VERIFIED) $ DB.runTransaction $ Person.setRegisteredTrue personId
   return response
 
-getVerificationStatus :: Maybe COV.VerificationStatus -> ResponseStatus
+getVerificationStatus :: Maybe ClassOfVehicle.VerificationStatus -> ResponseStatus
 getVerificationStatus = \case
-  Just COV.PENDING -> VERIFICATION_PENDING
-  Just COV.VALID -> VERIFIED
-  Just COV.INVALID -> VERIFICATION_FAILED
+  Just ClassOfVehicle.PENDING -> VERIFICATION_PENDING
+  Just ClassOfVehicle.VALID -> VERIFIED
+  Just ClassOfVehicle.INVALID -> VERIFICATION_FAILED
   Nothing -> WAITING_INPUT

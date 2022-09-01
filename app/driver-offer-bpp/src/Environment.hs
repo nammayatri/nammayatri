@@ -25,6 +25,7 @@ import Beckn.Utils.Servant.Client
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
+import qualified Idfy.Types.IdfyConfig as Idfy
 import System.Environment (lookupEnv)
 import Tools.Metrics.ARDUBPPMetrics.Types
 
@@ -67,7 +68,8 @@ data AppCfg = AppCfg
     driverQuoteExpirationSeconds :: Int,
     httpClientOptions :: HttpClientOptions,
     driverUnlockDelay :: Seconds,
-    driverEstimatedPickupDuration :: Seconds
+    driverEstimatedPickupDuration :: Seconds,
+    idfyCfg :: Idfy.IdfyConfig
   }
   deriving (Generic, FromDhall)
 
@@ -110,7 +112,8 @@ data AppEnv = AppEnv
     searchRequestExpirationSeconds :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
-    driverEstimatedPickupDuration :: Seconds
+    driverEstimatedPickupDuration :: Seconds,
+    idfyCfg :: Idfy.IdfyConfig
   }
   deriving (Generic)
 
