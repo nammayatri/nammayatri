@@ -8,6 +8,8 @@ import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Types.Id
 
+-- TODO make other roles
+
 data Role
   = USER
   | ADMIN

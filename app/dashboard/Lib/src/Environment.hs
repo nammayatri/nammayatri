@@ -2,7 +2,6 @@ module Environment where
 
 import Beckn.External.Encryption (EncTools)
 import Beckn.Prelude
-import Beckn.Sms.Config
 import Beckn.Storage.Esqueleto.Config
 import qualified Beckn.Storage.Redis.Config as Redis
 import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
@@ -19,8 +18,6 @@ import Tools.Metrics
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     redisCfg :: Redis.RedisConfig,
-    smsCfg :: SmsConfig,
-    otpSmsTemplate :: Text,
     port :: Int,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
@@ -29,24 +26,24 @@ data AppCfg = AppCfg
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
+    registrationTokenExpiry :: Days,
     encTools :: EncTools
   }
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { graceTerminationPeriod :: Seconds,
-    esqDBEnv :: EsqDBEnv,
-    isShuttingDown :: Shutdown,
+  { esqDBEnv :: EsqDBEnv,
+    port :: Int,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
-    encTools :: EncTools,
-    authTokenCacheExpiry :: Seconds,
-    port :: Int,
-    coreMetrics :: Metrics.CoreMetricsContainer,
+    graceTerminationPeriod :: Seconds,
+    apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
-    smsCfg :: SmsConfig,
-    otpSmsTemplate :: Text,
-    apiRateLimitOptions :: APIRateLimitOptions
+    authTokenCacheExpiry :: Seconds,
+    registrationTokenExpiry :: Days,
+    encTools :: EncTools,
+    coreMetrics :: Metrics.CoreMetricsContainer,
+    isShuttingDown :: Shutdown
   }
   deriving (Generic)
 

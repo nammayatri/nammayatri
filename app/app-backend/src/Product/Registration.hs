@@ -85,6 +85,7 @@ makePerson req merchantId = do
         updatedAt = now
       }
 
+-- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
 makeSession ::
   MonadFlow m =>
   SmsSessionConfig ->
