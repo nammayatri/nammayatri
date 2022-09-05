@@ -9,10 +9,10 @@ import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnSearch as ACL
 import qualified Core.ACL.Search as ACL
+import qualified Core.Beckn as CallBAP
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Organization as Org
 import Environment
-import qualified ExternalAPI.Flow as ExternalAPI
 import Servant
 import qualified SharedLogic.Transporter as Shared
 import Utils.Common
@@ -40,5 +40,5 @@ search transporterId (SignatureAuthResult _ subscriber _) (SignatureAuthResult _
     dSearchRes <- DSearch.handler transporter dSearchReq
     let context = req.context
     let callbackUrl = gateway.subscriber_url
-    ExternalAPI.withCallback' withRetry transporter Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
+    CallBAP.withCallback transporter Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
       pure $ ACL.mkOnSearchMessage dSearchRes

@@ -9,10 +9,10 @@ import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Init as ACL
 import qualified Core.ACL.OnInit as ACL
+import qualified Core.Beckn as CallBAP
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Organization as Org
 import Environment
-import ExternalAPI.Flow as ExternalAPI
 import Servant
 import Utils.Common
 
@@ -35,5 +35,5 @@ init transporterId (SignatureAuthResult _ subscriber _) req =
     dInitReq <- ACL.buildInitReq subscriber req
     let context = req.context
     dInitRes <- DInit.handler transporterId dInitReq
-    ExternalAPI.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
+    CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
       pure $ ACL.mkOnInitMessage dInitRes

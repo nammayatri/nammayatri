@@ -10,7 +10,6 @@ import qualified Core.ACL.OnConfirm as ACL
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Organization as Org
 import Environment
-import ExternalAPI.Flow as ExternalAPI
 import Servant
 import qualified SharedLogic.CallBAP as BP
 import Utils.Common
@@ -36,7 +35,7 @@ confirm transporterId (SignatureAuthResult _ subscriber _) req =
     dConfirmRes <- DConfirm.handler subscriber transporterId dConfirmReq
     now <- getCurrentTime
     fork "on_confirm/on_update" $ do
-      ExternalAPI.callOnConfirm dConfirmRes.transporter context $ ACL.mkOnConfirmMessage now dConfirmRes
+      BP.callOnConfirm dConfirmRes.transporter context $ ACL.mkOnConfirmMessage now dConfirmRes
       BP.sendRideAssignedUpdateToBAP dConfirmRes.booking dConfirmRes.ride
     -- FIXME: we might try to send these two events in one request
     pure Ack
