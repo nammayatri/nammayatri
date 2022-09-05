@@ -61,10 +61,13 @@ dependencies:
   - text
   - time
   - servant-server
+  - servant-client
+  - servant-openapi3
   - persistent
   - persistent-postgresql
   - esqueleto
   - template-haskell
+  - wai
 
 ghc-options:
   - -Wall

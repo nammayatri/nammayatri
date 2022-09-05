@@ -33,5 +33,4 @@ runService configModifier = do
   where
     context =
       verifyTokenAction @(FlowR AppEnv)
-        :. validateAdminAction @(FlowR AppEnv)
         :. EmptyContext

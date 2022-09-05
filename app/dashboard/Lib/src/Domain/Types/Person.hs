@@ -8,11 +8,10 @@ import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Types.Id
 
--- TODO make other roles
-
 data Role
   = USER
   | ADMIN
+  | JUSPAY_OPS
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, Enum, Bounded, ToSchema)
 
 data PersonE e = Person
