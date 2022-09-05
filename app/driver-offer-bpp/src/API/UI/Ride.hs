@@ -24,6 +24,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Lib.LocationUpdates as LocUpd
 import Servant
 import SharedLogic.CallBAP
 import qualified SharedLogic.CallBAP as CallBAP
@@ -81,9 +82,7 @@ startRide personId rideId req =
           startRideAndUpdateLocation = RideStart.startRideTransaction,
           notifyBAPRideStarted = sendRideStartedUpdateToBAP,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
-          addFirstWaypoint = \driverId pt -> do
-            clearPointsList defaultRideInterpolationHandler driverId
-            addPoints defaultRideInterpolationHandler driverId $ pt :| []
+          addFirstWaypoint = LocUpd.startRide defaultRideInterpolationHandler
         }
 
 endRide :: Id SP.Person -> Id Ride.Ride -> RideEnd.EndRideReq -> FlowHandler APISuccess
@@ -101,9 +100,8 @@ endRide personId rideId req =
           calculateFare = Fare.calculateFare,
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
-          addLastWaypointAndRecalcDistanceOnEnd = \driverId pt -> do
-            addPoints defaultRideInterpolationHandler driverId $ pt :| []
-            recalcDistanceBatches defaultRideInterpolationHandler True driverId
+          thereWasFailedDistanceRecalculation = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
+          addLastWaypointAndRecalcDistanceOnEnd = LocUpd.endRide defaultRideInterpolationHandler
         }
 
 cancelRide :: Id SP.Person -> Id Ride.Ride -> RideCancel.CancelRideReq -> FlowHandler APISuccess

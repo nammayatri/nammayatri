@@ -65,8 +65,8 @@ readTopSecrets = readDhallConfig "../../dhall-configs/dev/secrets/top-secret.dha
 incrDistance :: Id Person -> Double -> TestM Double
 incrDistance driverId = Hedis.incrByFloat driverId.getId
 
-updateDistanceTest :: Id Person -> Double -> TestM ()
-updateDistanceTest driverId dist = void $ incrDistance driverId dist
+updateDistanceTest :: Id Person -> HighPrecMeters -> TestM ()
+updateDistanceTest driverId dist = void $ incrDistance driverId dist.getHighPrecMeters
 
 checkTraveledDistance :: Id Person -> TestM Double
 checkTraveledDistance driverId = incrDistance driverId 0

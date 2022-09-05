@@ -1,8 +1,8 @@
 module SharedLogic.FareCalculator.Flow
   ( calculateFare,
     doCalculateFare,
-    fareSumRounded,
-    baseFareSumRounded,
+    fareSum,
+    baseFareSum,
     calculateFareParameters,
     mkBreakupList,
   )
@@ -17,9 +17,9 @@ import Domain.Types.Organization (Organization)
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
 import SharedLogic.FareCalculator.Calculator
-  ( baseFareSumRounded,
+  ( baseFareSum,
     calculateFareParameters,
-    fareSumRounded,
+    fareSum,
     mkBreakupList,
   )
 import qualified Storage.Queries.FarePolicy as FarePolicyS

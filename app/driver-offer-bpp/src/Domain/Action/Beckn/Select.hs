@@ -47,7 +47,7 @@ handler orgId sReq = do
 
   fareParams <- calculateFare orgId sReq.variant distance estimatedRideFinishTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation orgId sReq estimatedRideFinishTime
-  let baseFare = fareSumRounded fareParams
+  let baseFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
       <> "; estimated distance = "

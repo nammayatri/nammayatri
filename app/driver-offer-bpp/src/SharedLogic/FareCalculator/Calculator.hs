@@ -1,7 +1,7 @@
 module SharedLogic.FareCalculator.Calculator
   ( mkBreakupList,
-    fareSumRounded,
-    baseFareSumRounded,
+    fareSum,
+    baseFareSum,
     calculateFareParameters,
   )
 where
@@ -40,18 +40,18 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
         fareParams.driverSelectedFare <&> \selFare ->
           mkBreakupItem (mkSelectedFareCaption selFare) (mkPrice selFare)
 
-      totalFareFinalRounded = fareSumRounded fareParams
+      totalFareFinalRounded = fareSum fareParams
       totalFareCaption = mconcat ["Total fare: ", show totalFareFinalRounded, " INR"]
       totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
   catMaybes [Just totalFareItem, Just fareForPickupItem, extraDistanceFareItem, mbSelectedFareItem]
 
 -- TODO: make some tests for it
-fareSumRounded :: FareParameters -> Money
-fareSumRounded fareParams = do
-  baseFareSumRounded fareParams + fromMaybe 0 fareParams.driverSelectedFare
+fareSum :: FareParameters -> Money
+fareSum fareParams = do
+  baseFareSum fareParams + fromMaybe 0 fareParams.driverSelectedFare
 
-baseFareSumRounded :: FareParameters -> Money
-baseFareSumRounded fareParams = roundToIntegral $ do
+baseFareSum :: FareParameters -> Money
+baseFareSum fareParams = roundToIntegral $ do
   let dayPartCoef = calculateDayPartRate fareParams
   dayPartCoef
     * sum

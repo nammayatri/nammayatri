@@ -14,7 +14,7 @@ import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
-import SharedLogic.FareCalculator (baseFareSumRounded)
+import SharedLogic.FareCalculator
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
@@ -85,7 +85,7 @@ mkDriverRideRes vehicle driver driverNumber (ride, booking) = do
       vehicleVariant = vehicle.variant,
       vehicleModel = vehicle.model,
       computedFare = ride.fare,
-      estimatedBaseFare = baseFareSumRounded fareParams,
+      estimatedBaseFare = baseFareSum fareParams,
       driverSelectedFare = fromMaybe 0 fareParams.driverSelectedFare,
       actualRideDistance = ride.traveledDistance,
       createdAt = ride.createdAt,

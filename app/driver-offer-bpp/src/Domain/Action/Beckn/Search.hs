@@ -85,7 +85,7 @@ mkEstimate ::
 mkEstimate org estimatedRideFinishTime dist g = do
   let variant = g.origin.vehicle.variant
   fareParams <- calculateFare org.id variant dist estimatedRideFinishTime Nothing
-  let baseFare = fareSumRounded fareParams
+  let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare
   logDebug $ "distance: " <> show g.distance
   pure

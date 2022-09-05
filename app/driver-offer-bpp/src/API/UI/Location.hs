@@ -4,7 +4,6 @@ module API.UI.Location
     DLocation.GetLocationRes,
     DLocation.Waypoint (..),
     DLocation.UpdateLocationReq,
-    DLocation.UpdateLocationRes,
   )
 where
 
@@ -33,7 +32,7 @@ type API =
            :> Get '[JSON] DLocation.GetLocationRes
            :<|> TokenAuth
              :> ReqBody '[JSON] DLocation.UpdateLocationReq
-             :> Post '[JSON] DLocation.UpdateLocationRes
+             :> Post '[JSON] APISuccess
        )
 
 handler :: FlowServer API

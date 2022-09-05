@@ -1,7 +1,6 @@
 module Domain.Action.UI.Location.UpdateLocation
   ( UpdateLocationReq,
     Waypoint (..),
-    UpdateLocationRes,
     UpdateLocationHandler (..),
     updateLocation,
   )
@@ -21,7 +20,7 @@ import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
-import SharedLogic.LocationUpdates
+import Lib.LocationUpdates as LocUpd
 
 type UpdateLocationReq = NonEmpty Waypoint
 
@@ -33,8 +32,6 @@ data Waypoint = Waypoint
   }
   deriving (Generic, ToJSON, Show, FromJSON, ToSchema, PrettyShow)
 
-type UpdateLocationRes = APISuccess
-
 data UpdateLocationHandler m = UpdateLocationHandler
   { refreshPeriod :: NominalDiffTime,
     allowedDelay :: NominalDiffTime,
@@ -42,7 +39,7 @@ data UpdateLocationHandler m = UpdateLocationHandler
     findDriverLocationById :: Id Person.Person -> m (Maybe DriverLocation),
     upsertDriverLocation :: Id Person.Person -> LatLong -> UTCTime -> m (),
     getInProgressByDriverId :: Id Person.Person -> m (Maybe SRide.Ride),
-    interpolationHandler :: RideInterpolationHandler m
+    interpolationHandler :: RideInterpolationHandler Person.Person m
   }
 
 updateLocation :: (Log m, MonadFlow m, MonadThrow m, MonadTime m) => UpdateLocationHandler m -> Id Person.Person -> UpdateLocationReq -> m APISuccess
@@ -63,7 +60,7 @@ updateLocation UpdateLocationHandler {..} driverId waypoints = withLogTag "drive
         getInProgressByDriverId driver.id
           >>= maybe
             (logInfo "No ride is assigned to driver, ignoring")
-            (const $ processWaypoints interpolationHandler driver.id $ NE.map (.pt) waypoints)
+            (const $ LocUpd.updateIntermediateRideLocation interpolationHandler driver.id $ NE.map (.pt) waypoints)
     Redis.unlockRedis lockKey
   pure Success
   where
@@ -75,14 +72,3 @@ updateLocation UpdateLocationHandler {..} driverId waypoints = withLogTag "drive
 
 makeLockKey :: Id Person.Person -> Text
 makeLockKey (Id driverId) = "ARDU:driverLocationUpdate:" <> driverId
-
-processWaypoints ::
-  (Monad m, Log m) =>
-  RideInterpolationHandler m ->
-  Id Person.Person ->
-  NonEmpty LatLong ->
-  m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId waypoints = do
-  addPoints driverId waypoints
-  let ending = False
-  recalcDistanceBatches ih ending driverId

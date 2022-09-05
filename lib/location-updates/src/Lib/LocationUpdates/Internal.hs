@@ -102,7 +102,7 @@ recalcDistanceBatchStep ::
   (Monad m, Log m) =>
   RideInterpolationHandler person m ->
   Id person ->
-  m Double
+  m HighPrecMeters
 recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
   interpolatedWps <- interpolatePoints batchWaypoints
@@ -122,7 +122,7 @@ mkHandlerWithDefaultRedisFuncs ::
     HasField "googleMapsKey" env Text,
     EsqDBFlow m env
   ) =>
-  (Id person -> Double -> m ()) ->
+  (Id person -> HighPrecMeters -> m ()) ->
   RideInterpolationHandler person m
 mkHandlerWithDefaultRedisFuncs updateDistance =
   RideInterpolationHandler

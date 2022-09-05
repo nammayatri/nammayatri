@@ -60,7 +60,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
-import SharedLogic.FareCalculator (calculateFare, fareSumRounded)
+import SharedLogic.FareCalculator
 import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt
@@ -529,7 +529,7 @@ offerQuote driverId req = do
       guid <- generateGUID
       now <- getCurrentTime
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
-      let estimatedFare = fareSumRounded fareParams
+      let estimatedFare = fareSum fareParams
       pure
         DDrQuote.DriverQuote
           { id = guid,
