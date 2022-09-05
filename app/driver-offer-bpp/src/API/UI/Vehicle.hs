@@ -18,7 +18,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
-import Utils.Auth
+import Tools.Auth
 
 -- Following is vehicle flow
 type API =

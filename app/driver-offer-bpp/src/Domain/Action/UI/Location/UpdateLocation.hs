@@ -16,7 +16,6 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Utils.Common hiding (id)
 import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Logging
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person

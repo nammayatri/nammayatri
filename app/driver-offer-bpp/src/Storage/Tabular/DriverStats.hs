@@ -11,8 +11,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.DriverStats as Domain
+import Domain.Types.Person (Driver)
 import Storage.Tabular.Person (PersonTId)
-import Types.App (Driver)
 
 mkPersist
   defaultSqlSettings

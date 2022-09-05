@@ -17,6 +17,8 @@ import qualified Domain.Types.Organization as DOrg
 import EulerHS.Prelude hiding (id)
 import Servant.API
 
+data Driver -- = Person
+
 data Role
   = DRIVER
   | ADMIN

@@ -15,7 +15,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
-import Types.Error
+import Tools.Error
 
 data StartRideReq = StartRideReq
   { rideOtp :: Text,

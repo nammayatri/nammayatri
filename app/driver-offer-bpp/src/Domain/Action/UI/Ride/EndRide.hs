@@ -21,8 +21,7 @@ import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (pi)
 import qualified SharedLogic.FareCalculator as Fare
-import Types.App (Driver)
-import Types.Error
+import Tools.Error
 
 newtype EndRideReq = EndRideReq
   { point :: LatLong
@@ -33,7 +32,7 @@ data ServiceHandle m = ServiceHandle
   { findById :: Id Person.Person -> m (Maybe Person.Person),
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
-    endRide :: Id SRB.Booking -> Ride.Ride -> Id Driver -> m (),
+    endRide :: Id SRB.Booking -> Ride.Ride -> Id Person.Driver -> m (),
     notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> Money -> m (),
     calculateFare ::
       Id Organization ->

@@ -29,7 +29,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
 import Servant
-import Utils.Auth (TokenAuth)
+import Tools.Auth (TokenAuth)
 
 type API =
   "driver" :> "register"

@@ -1,4 +1,4 @@
-module Utils.Notifications where
+module Tools.Notifications where
 
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM

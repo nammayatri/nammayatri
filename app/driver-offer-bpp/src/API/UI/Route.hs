@@ -11,11 +11,10 @@ import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common hiding (id)
-import Beckn.Utils.Logging
 import qualified Domain.Types.Person as Person
 import Environment
 import Servant
-import Utils.Auth
+import Tools.Auth
 
 type API =
   "route"

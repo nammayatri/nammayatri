@@ -25,7 +25,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
-import Types.Error
+import Tools.Error
 
 data UpdateVehicleReq = UpdateVehicleReq
   { variant :: Maybe Variant.Variant,

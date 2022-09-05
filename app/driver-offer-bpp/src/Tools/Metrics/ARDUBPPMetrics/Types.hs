@@ -1,7 +1,6 @@
-module Tools.Metrics.TransporterBPPMetrics.Types
+module Tools.Metrics.ARDUBPPMetrics.Types
   ( HasBPPMetrics,
     BPPMetricsContainer (..),
-    module CoreMetrics,
     registerTransporterMetricsContainer,
     TransporterMetricsContainer (..),
     HasTransporterMetrics,
@@ -9,7 +8,6 @@ module Tools.Metrics.TransporterBPPMetrics.Types
   )
 where
 
-import Beckn.Tools.Metrics.CoreMetrics as CoreMetrics
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import Prometheus as P

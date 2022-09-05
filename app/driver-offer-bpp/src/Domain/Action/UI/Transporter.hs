@@ -19,7 +19,7 @@ import qualified Domain.Types.Organization as SO
 import qualified Domain.Types.Person as SP
 import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
-import Types.Error
+import Tools.Error
 
 newtype TransporterRec = TransporterRec
   { organization :: SO.OrganizationAPIEntity

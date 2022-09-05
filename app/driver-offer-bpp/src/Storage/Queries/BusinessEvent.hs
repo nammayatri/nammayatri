@@ -7,11 +7,11 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.Booking
 import Domain.Types.BusinessEvent
+import Domain.Types.Person (Driver)
 import Domain.Types.Ride
 import Domain.Types.Vehicle.Variant (Variant)
 import Storage.Queries.Person
 import Storage.Tabular.BusinessEvent ()
-import Types.App (Driver)
 
 logBusinessEvent ::
   Maybe (Id Driver) ->

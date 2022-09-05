@@ -18,7 +18,7 @@ import SharedLogic.FareCalculator (baseFareSumRounded)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
-import Types.Error
+import Tools.Error
 
 data DriverRideRes = DriverRideRes
   { id :: Id DRide.Ride,

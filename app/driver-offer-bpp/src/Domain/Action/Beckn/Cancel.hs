@@ -21,9 +21,9 @@ import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 newtype CancelReq = CancelReq
   { bookingId :: Id SRB.Booking

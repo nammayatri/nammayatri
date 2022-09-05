@@ -9,7 +9,7 @@ import qualified Beckn.Types.Registry.Subscriber as Subscriber
 import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
-import Types.Error
+import Tools.Error
 
 buildSearchReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>

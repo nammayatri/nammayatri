@@ -20,9 +20,9 @@ import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Person as SP
 import qualified Storage.Queries.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 newtype ListFarePolicyRes = ListFarePolicyRes
   { oneWayFarePolicies :: [FarePolicyAPIEntity]

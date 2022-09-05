@@ -15,7 +15,7 @@ import Domain.Types.CancellationReason
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
-import Types.Error
+import Tools.Error
 
 data CancelRideReq = CancelRideReq
   { reasonCode :: CancellationReasonCode,

@@ -20,7 +20,6 @@ import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
 import Storage.Tabular.Vehicle as Vehicle
-import Types.App (Driver)
 
 create :: Person -> SqlDB ()
 create = Esq.create

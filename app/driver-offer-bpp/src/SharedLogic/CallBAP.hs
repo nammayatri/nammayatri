@@ -39,8 +39,8 @@ import EulerHS.Prelude
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
+import Tools.Error
 import Tools.Metrics (CoreMetrics)
-import Types.Error
 
 callOnSelect ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

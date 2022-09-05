@@ -18,7 +18,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
-import Utils.Auth
+import Tools.Auth
 
 type API =
   "auth"

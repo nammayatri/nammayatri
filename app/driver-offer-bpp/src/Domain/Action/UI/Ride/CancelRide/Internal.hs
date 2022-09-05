@@ -16,9 +16,9 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 cancelRideImpl ::
   ( EsqDBFlow m r,

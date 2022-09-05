@@ -23,7 +23,7 @@ import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
-import Types.Error
+import Tools.Error
 
 type CallCallbackRes = AckResponse
 

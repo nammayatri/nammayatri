@@ -20,7 +20,7 @@ import SharedLogic.FareCalculator
 import Storage.Queries.Person
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 data DSelectReq = DSelectReq
   { messageId :: Text,

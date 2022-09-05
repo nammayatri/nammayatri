@@ -73,10 +73,10 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.Vehicle as QVehicle
+import Tools.Auth (authTokenCacheKey)
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Auth (authTokenCacheKey)
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,

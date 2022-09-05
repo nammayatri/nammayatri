@@ -26,7 +26,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
 import System.Environment (lookupEnv)
-import Tools.Metrics.TransporterBPPMetrics.Types
+import Tools.Metrics.ARDUBPPMetrics.Types
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,

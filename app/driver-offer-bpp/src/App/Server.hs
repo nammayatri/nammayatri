@@ -9,7 +9,7 @@ import Core.Beckn (logBecknRequest)
 import Environment
 import EulerHS.Prelude
 import Servant
-import Utils.Auth
+import Tools.Auth
 
 run :: Env -> Application
 run = withModifiedEnv $ \modifiedEnv ->

@@ -24,7 +24,7 @@ import SharedLogic.LocationUpdates
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
-import Utils.Auth
+import Tools.Auth
 
 -- Location update and get for tracking is as follows
 type API =

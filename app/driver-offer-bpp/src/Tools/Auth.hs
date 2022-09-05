@@ -1,4 +1,4 @@
-module Utils.Auth where
+module Tools.Auth where
 
 import Beckn.External.Encryption
 import Beckn.Storage.Esqueleto.Config
@@ -17,7 +17,7 @@ import EulerHS.Prelude hiding (id)
 import Servant hiding (throwError)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import Types.Error
+import Tools.Error
 
 instance
   SanitizedUrl (sub :: Type) =>

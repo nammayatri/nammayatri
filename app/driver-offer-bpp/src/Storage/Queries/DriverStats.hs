@@ -5,8 +5,8 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.DriverStats
+import Domain.Types.Person (Driver)
 import Storage.Tabular.DriverStats
-import Types.App
 
 createInitialDriverStats :: Id Driver -> SqlDB ()
 createInitialDriverStats driverId = do

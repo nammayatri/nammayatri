@@ -18,7 +18,7 @@ import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
-import Types.Error
+import Tools.Error
 
 data OrgAdminProfileRes = OrgAdminProfileRes
   { id :: Id SP.Person,

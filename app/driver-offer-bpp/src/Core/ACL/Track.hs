@@ -9,7 +9,7 @@ import qualified Beckn.Types.Registry.Subscriber as Subscriber
 import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Track as DTrack
 import EulerHS.Prelude
-import Types.Error
+import Tools.Error
 
 buildTrackReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>

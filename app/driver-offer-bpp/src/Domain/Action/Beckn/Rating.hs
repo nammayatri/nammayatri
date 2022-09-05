@@ -17,7 +17,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
-import Types.Error
+import Tools.Error
 
 data DRatingReq = DRatingReq
   { bookingId :: Id DBooking.Booking,

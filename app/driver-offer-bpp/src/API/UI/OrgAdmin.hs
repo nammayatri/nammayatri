@@ -13,7 +13,7 @@ import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
-import Utils.Auth
+import Tools.Auth
 
 type API =
   "orgAdmin" :> "profile"

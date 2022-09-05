@@ -8,7 +8,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
 import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Rating as DRating
-import Types.Error
+import Tools.Error
 
 buildRatingReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>

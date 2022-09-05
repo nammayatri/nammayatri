@@ -20,7 +20,7 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import SharedLogic.FareCalculator
-import Types.Error
+import Tools.Error
 
 data OnUpdateBuildReq
   = RideAssignedBuildReq

@@ -37,9 +37,9 @@ import qualified Storage.Queries.DriverInformation as QD
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import Tools.Auth (authTokenCacheKey)
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Auth (authTokenCacheKey)
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,

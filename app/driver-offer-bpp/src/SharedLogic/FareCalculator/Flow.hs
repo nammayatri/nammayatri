@@ -23,7 +23,7 @@ import SharedLogic.FareCalculator.Calculator
     mkBreakupList,
   )
 import qualified Storage.Queries.FarePolicy as FarePolicyS
-import Types.Error
+import Tools.Error
 
 type MonadHandler m = (MonadThrow m, Log m)
 

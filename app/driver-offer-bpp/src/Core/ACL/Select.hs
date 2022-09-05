@@ -13,8 +13,8 @@ import qualified Domain.Action.Beckn.Select as DSelect
 import qualified Domain.Action.UI.GoogleMaps as GoogleMaps
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import Domain.Types.Vehicle.Variant
+import Tools.Error
 import Tools.Metrics (CoreMetrics)
-import Types.Error
 
 buildSelectReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],

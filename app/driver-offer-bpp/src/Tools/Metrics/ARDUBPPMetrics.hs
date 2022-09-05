@@ -1,5 +1,5 @@
-module Tools.Metrics.TransporterBPPMetrics
-  ( module Tools.Metrics.TransporterBPPMetrics,
+module Tools.Metrics.ARDUBPPMetrics
+  ( module Tools.Metrics.ARDUBPPMetrics,
     module Reexport,
   )
 where
@@ -12,7 +12,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import GHC.Records.Extra
 import Prometheus as P
-import Tools.Metrics.TransporterBPPMetrics.Types as Reexport
+import Tools.Metrics.ARDUBPPMetrics.Types as Reexport
 
 putFareAndDistanceDeviations :: (MonadMonitor m, HasTransporterMetrics m r) => Money -> Meters -> m ()
 putFareAndDistanceDeviations fareDiff distanceDiff = do
