@@ -1,4 +1,4 @@
-module Product.FareCalculator.Calculator
+module SharedLogic.FareCalculator.Calculator
   ( mkBreakupList,
     fareSumRounded,
     baseFareSumRounded,

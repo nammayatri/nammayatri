@@ -58,9 +58,8 @@ import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
-import Product.FareCalculator.Calculator
-import Product.FareCalculator.Flow (calculateFare)
 import SharedLogic.CallBAP (sendDriverOffer)
+import SharedLogic.FareCalculator (calculateFare, fareSumRounded)
 import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt

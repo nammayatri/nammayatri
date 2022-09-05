@@ -1,7 +1,10 @@
-module Product.FareCalculator.Flow
-  ( ServiceHandle (..),
-    calculateFare,
+module SharedLogic.FareCalculator.Flow
+  ( calculateFare,
     doCalculateFare,
+    fareSumRounded,
+    baseFareSumRounded,
+    calculateFareParameters,
+    mkBreakupList,
   )
 where
 
@@ -12,8 +15,11 @@ import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.Organization (Organization)
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
-import Product.FareCalculator.Calculator
-  ( calculateFareParameters,
+import SharedLogic.FareCalculator.Calculator
+  ( baseFareSumRounded,
+    calculateFareParameters,
+    fareSumRounded,
+    mkBreakupList,
   )
 import qualified Storage.Queries.FarePolicy as FarePolicyS
 import Types.Error

@@ -23,10 +23,10 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment
 import EulerHS.Prelude hiding (id)
-import qualified Product.FareCalculator.Flow as Fare
 import Servant
 import SharedLogic.CallBAP
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.LocationUpdates
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as DrLoc

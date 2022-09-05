@@ -19,7 +19,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (pi)
-import Product.FareCalculator.Calculator as Fare
+import qualified SharedLogic.FareCalculator as Fare
 import Types.App (Driver)
 import Types.Error
 import Utils.Common

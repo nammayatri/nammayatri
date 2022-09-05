@@ -18,7 +18,7 @@ import qualified Domain.Types.FareParams as Fare
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
-import Product.FareCalculator.Calculator
+import SharedLogic.FareCalculator
 import Types.Error
 import Utils.Common
 

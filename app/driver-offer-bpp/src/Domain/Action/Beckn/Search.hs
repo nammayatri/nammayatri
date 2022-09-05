@@ -16,9 +16,8 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
 import Environment
-import Product.FareCalculator.Calculator
-import Product.FareCalculator.Flow
 import SharedLogic.DriverPool
+import SharedLogic.FareCalculator
 import qualified Storage.Queries.BusinessEvent as QBE
 import Storage.Queries.Person (DriverPoolResult)
 import qualified Storage.Queries.SearchRequest as QSReq

@@ -13,7 +13,7 @@ import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
-import Product.FareCalculator.Calculator (baseFareSumRounded)
+import SharedLogic.FareCalculator (baseFareSumRounded)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
