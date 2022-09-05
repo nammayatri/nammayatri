@@ -9,7 +9,6 @@ data Address = Address
     state :: Maybe Text,
     country :: Maybe Text,
     building :: Maybe Text,
-    door :: Maybe Text,
     street :: Maybe Text,
     city :: Maybe Text,
     area_code :: Maybe Text

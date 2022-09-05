@@ -1,5 +1,8 @@
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+
 module Domain.Action.Beckn.Select where
 
+import qualified Beckn.External.GoogleMaps.Client as ClientGoogleMaps
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
@@ -11,7 +14,6 @@ import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common (logDebug)
 import qualified Data.Map as M
 import Data.Time.Clock (addUTCTime)
-import qualified Domain.Action.UI.GoogleMaps as GoogleMaps
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -20,6 +22,7 @@ import Domain.Types.Vehicle.Variant (Variant)
 import Environment
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
+import SharedLogic.GoogleMaps (Address (..), mkLocation)
 import Storage.Queries.Person
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -168,19 +171,14 @@ buildLocWithAddr ::
   GoogleMaps.Language ->
   m DLoc.SearchReqLocation
 buildLocWithAddr searchReqLoc@DLoc.SearchReqLocation {..} language = do
-  placeNameResp <- GoogleMaps.getPlaceName (show searchReqLoc.lat <> "," <> show searchReqLoc.lon) (Just language)
-  pure
-    DLoc.SearchReqLocation
-      { street = Nothing,
-        door = Nothing,
-        city = Nothing,
-        state = Nothing,
-        country = Nothing,
-        building = Nothing,
-        areaCode = Nothing,
-        area = Just $ head $ placeNameResp.results <&> (.formatted_address),
-        ..
-      }
+  url <- asks (.googleMapsUrl)
+  apiKey <- asks (.googleMapsKey)
+  placeNameResp <- ClientGoogleMaps.getPlaceName url (show lat <> "," <> show lon) apiKey (Just language)
+  mkAddress <- mkLocation placeNameResp
+  buildSearchReqLocation (buildSearchReqLocationAPIEntity mkAddress lat lon)
+
+buildSearchReqLocationAPIEntity :: Address -> Double -> Double -> DLoc.SearchReqLocationAPIEntity
+buildSearchReqLocationAPIEntity Address {..} lat lon = DLoc.SearchReqLocationAPIEntity {..}
 
 addLanguageToDictionary ::
   ( MonadFlow m,

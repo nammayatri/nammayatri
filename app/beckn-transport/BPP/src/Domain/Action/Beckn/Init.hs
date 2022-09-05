@@ -150,7 +150,6 @@ buildRBLoc latLon now = do
         address =
           DLoc.LocationAddress
             { street = Nothing,
-              door = Nothing,
               city = Nothing,
               state = Nothing,
               country = Nothing,

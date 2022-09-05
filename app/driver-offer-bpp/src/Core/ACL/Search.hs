@@ -43,11 +43,11 @@ mkLocation (Search.Location Search.Gps {..}) =
   Location.SearchReqLocationAPIEntity
     { areaCode = Nothing,
       street = Nothing,
-      door = Nothing,
       city = Nothing,
       state = Nothing,
       country = Nothing,
       building = Nothing,
       area = Nothing,
+      full_address = Nothing,
       ..
     }

@@ -17,7 +17,6 @@ updateAddress blId LocationAddress {..} = do
     set
       tbl
       [ BookingLocationStreet =. val street,
-        BookingLocationDoor =. val door,
         BookingLocationCity =. val city,
         BookingLocationState =. val state,
         BookingLocationCountry =. val country,

@@ -83,6 +83,7 @@ dependencies:
   - persistent
   - text-conversions
   - beckn-services
+  - unordered-containers
 
 ghc-options:
   - -fwrite-ide-info

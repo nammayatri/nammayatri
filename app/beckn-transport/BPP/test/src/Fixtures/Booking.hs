@@ -51,7 +51,6 @@ defaultLocationAddress :: Loc.LocationAddress
 defaultLocationAddress =
   Loc.LocationAddress
     { street = Nothing,
-      door = Nothing,
       city = Nothing,
       state = Nothing,
       country = Nothing,

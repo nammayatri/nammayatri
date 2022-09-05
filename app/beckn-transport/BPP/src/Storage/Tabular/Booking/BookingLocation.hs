@@ -20,7 +20,6 @@ mkPersist
       lat Double
       lon Double
       street Text Maybe
-      door Text Maybe
       city Text Maybe
       state Text Maybe
       country Text Maybe
