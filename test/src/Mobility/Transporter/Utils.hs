@@ -1,6 +1,7 @@
 module Mobility.Transporter.Utils where
 
 import qualified "beckn-transport" API.UI.Booking as BookingAPI
+import "beckn-transport" API.UI.Location as LocationAPI
 import qualified "beckn-transport" API.UI.Ride as RideAPI
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
@@ -9,7 +10,6 @@ import Beckn.Types.MapSearch
 import Beckn.Types.Time
 import Beckn.Utils.Common
 import Common
-import qualified Data.List.NonEmpty as NE
 import qualified "beckn-transport" Domain.Action.UI.Booking as DUB
 import qualified "app-backend" Domain.Types.Booking as AppRB
 import qualified "app-backend" Domain.Types.Booking as BRB
@@ -164,7 +164,7 @@ acceptRide driver tBooking = do
     API.rideRespond tBooking.id driver.token $
       BookingAPI.SetDriverAcceptanceReq BookingAPI.ACCEPT
 
-  pollDesc ("ride with id=" <> tBooking.id.getId <> " should exist and should have status=NEW") $ do
+  pollDesc ("ride with booking id=" <> tBooking.id.getId <> " should exist and should have status=NEW") $ do
     tRide <- getBPPRide tBooking.id
     tRide.status `shouldBe` TRide.NEW
     return $ Just tRide
@@ -174,17 +174,12 @@ rejectRide appToken driver tBooking bBookingId = do
   void . callBPP $
     API.rideRespond tBooking.id driver.token $
       BookingAPI.SetDriverAcceptanceReq BookingAPI.REJECT
-
-  void . poll $
-    callBAP (API.appBookingStatus bBookingId appToken)
-      <&> (.status)
-      >>= (`shouldBe` AppRB.CANCELLED)
-      <&> Just
+  checkBookingBapStatus appToken bBookingId AppRB.CANCELLED
 
 cancelRideByApp :: Text -> Id AppRB.Booking -> ClientsM ()
 cancelRideByApp appToken bBookingId = do
   void . callBAP $ API.cancelRide bBookingId appRegistrationToken (API.mkAppCancelReq AppCR.OnConfirm)
-  checkRideBapStatus appToken bBookingId AppRB.CANCELLED
+  checkBookingBapStatus appToken bBookingId AppRB.CANCELLED
 
 cancelRideByDriver :: DriverTestData -> TRide.Ride -> ClientsM ()
 cancelRideByDriver driver tRide = do
@@ -198,19 +193,18 @@ cancelRideByDriver driver tRide = do
       tRide'.status `shouldBe` TRide.CANCELLED
       pure $ Just tRide'
 
-checkRideBapStatus :: Text -> Id AppRB.Booking -> AppRB.BookingStatus -> ClientsM ()
-checkRideBapStatus appToken bBookingId status =
-  void . poll $
+checkBookingBapStatus :: Text -> Id AppRB.Booking -> AppRB.BookingStatus -> ClientsM ()
+checkBookingBapStatus appToken bBookingId status =
+  void . pollDesc ("bap booking with id=" <> bBookingId.getId <> " should exist and should have status=" <> show status) $
     callBAP (API.appBookingStatus bBookingId appToken)
       <&> (.status)
-      --          >>= (`shouldBe` AppRB.AWAITING_REASSIGNMENT)
       >>= (`shouldBe` status)
       <&> Just
 
 getRideInfo :: DriverTestData -> Id TRB.Booking -> ClientsM DUB.RideInfo
 getRideInfo driver bppBookingId = do
   rideInfo2 <-
-    poll . callBPP $
+    pollDesc ("poll for rideInfo for driver with token:" <> show driver.token) . callBPP $
       API.getNotificationInfo bppBookingId driver.token
         <&> (.rideRequest)
   rideInfo2.bookingId `shouldBe` bppBookingId
@@ -232,17 +226,11 @@ startRide appToken driver origin tRide bBookingId = do
 
 updateLocation ::
   DriverTestData ->
-  NonEmpty LatLong ->
+  NonEmpty LocationAPI.Waypoint ->
   ClientsM ()
 updateLocation driver updatesList = do
-  let locationEps = 1e-18
-  initialUpdate <- liftIO $ API.buildUpdateLocationRequest updatesList
-  let lastUpdate = NE.last updatesList
   void . callBPP $
-    API.updateLocation driver.token initialUpdate
-
-  loc <- getBPPDriverLocation $ cast driver.driverId
-  loc `shouldSatisfy` \l -> equalsEps locationEps lastUpdate.lat l.lat && equalsEps locationEps lastUpdate.lon l.lon
+    API.updateLocation driver.token updatesList
 
 endRide ::
   Text ->

@@ -9,6 +9,7 @@ module Domain.Action.UI.Location.UpdateLocation
 where
 
 import Beckn.Prelude hiding (Handler)
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
@@ -23,7 +24,7 @@ import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
 import SharedLogic.LocationUpdates
 
-type MonadHandler m = (MonadThrow m, Log m, MonadGuid m, MonadTime m)
+type MonadHandler m = (MonadFlow m, MonadThrow m, Log m, MonadGuid m, MonadTime m)
 
 data Handler m = Handler
   { refreshPeriod :: NominalDiffTime,
@@ -54,20 +55,29 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
     findPersonById driverId
       >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
-  mbOldLoc <- findDriverLocationById driver.id
-  let currPoint = NE.last waypoints
-  upsertDriverLocation driver.id currPoint.pt currPoint.ts
-  now <- getCurrentTime
-  let calledBeforeRefreshPeriod =
-        mbOldLoc <&> (\loc -> now `diffUTCTime` loc.updatedAt < refreshPeriod)
-  if calledBeforeRefreshPeriod == Just True
-    then logWarning "Called before refresh period passed, ignoring"
-    else
-      getInProgressByDriverId driver.id
-        >>= maybe
-          (logInfo "No ride is assigned to driver, ignoring")
-          (const $ processWaypoints interpolationHandler driver.id $ NE.map (.pt) waypoints)
+  whenM (Redis.tryLockRedis lockKey 60) $ do
+    mbOldLoc <- findDriverLocationById driver.id
+    now <- getCurrentTime
+    case (isCalledBeforeRefreshPeriod mbOldLoc now, areIncomingPointsOutdated mbOldLoc) of
+      (True, _) -> logWarning "Called before refresh period passed, ignoring"
+      (_, True) -> logWarning "Incoming points are older than current one, ignoring"
+      _ -> do
+        upsertDriverLocation driver.id currPoint.pt currPoint.ts
+        getInProgressByDriverId driver.id
+          >>= maybe
+            (logInfo "No ride is assigned to driver, ignoring")
+            (const $ processWaypoints interpolationHandler driver.id $ NE.map (.pt) waypoints)
+    Redis.unlockRedis lockKey
   pure Success
+  where
+    isCalledBeforeRefreshPeriod mbLoc now =
+      maybe False (\loc -> now `diffUTCTime` loc.updatedAt < refreshPeriod) mbLoc
+    currPoint = NE.last waypoints
+    areIncomingPointsOutdated = maybe False (\loc -> currPoint.ts <= loc.coordinatesCalculatedAt)
+    lockKey = makeLockKey driverId
+
+makeLockKey :: Id Person.Person -> Text
+makeLockKey (Id driverId) = "beckn-transport:driverLocationUpdate:" <> driverId
 
 processWaypoints ::
   (Monad m, Log m) =>

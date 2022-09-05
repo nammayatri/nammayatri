@@ -21,7 +21,7 @@ mkTestTree = do
   ------------------------------------------------------------------
   return $
     testGroup
-      "Mobility"
+      "ARDU"
       [ hcSpec,
         after AllSucceed "HealthCheck" $
           testGroup

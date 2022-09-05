@@ -5,6 +5,7 @@ module Storage.Queries.DriverLocation where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Common (MonadTime (getCurrentTime))
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Domain.Types.DriverLocation
@@ -12,7 +13,8 @@ import Domain.Types.Person
 import Storage.Tabular.DriverLocation
 
 create :: Id Person -> LatLong -> UTCTime -> SqlDB ()
-create drLocationId latLong updateTime =
+create drLocationId latLong coordinatesUpdatedAt = do
+  now <- getCurrentTime
   -- Tricky query to be able to insert meaningful Point
   Esq.insertSelect $
     return $
@@ -21,8 +23,9 @@ create drLocationId latLong updateTime =
         <#> val latLong.lat
         <#> val latLong.lon
         <#> Esq.getPoint (val latLong.lat, val latLong.lon)
-        <#> val updateTime
-        <#> val updateTime
+        <#> val coordinatesUpdatedAt
+        <#> val now
+        <#> val now
 
 findById ::
   Transactionable m =>
@@ -31,16 +34,19 @@ findById ::
 findById = Esq.findById
 
 upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB ()
-upsertGpsCoord drLocationId latLong updateTime = do
+upsertGpsCoord drLocationId latLong coordinatesUpdatedAt = do
   mbDrLoc <- Esq.findById @DriverLocation drLocationId
   case mbDrLoc of
-    Nothing -> Storage.Queries.DriverLocation.create drLocationId latLong updateTime
-    Just _ -> Esq.update $ \tbl -> do
-      set
-        tbl
-        [ DriverLocationLat =. val latLong.lat,
-          DriverLocationLon =. val latLong.lon,
-          DriverLocationUpdatedAt =. val updateTime,
-          DriverLocationPoint =. Esq.getPoint (val latLong.lat, val latLong.lon)
-        ]
-      where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
+    Nothing -> Storage.Queries.DriverLocation.create drLocationId latLong coordinatesUpdatedAt
+    Just _ -> do
+      now <- getCurrentTime
+      Esq.update $ \tbl -> do
+        set
+          tbl
+          [ DriverLocationLat =. val latLong.lat,
+            DriverLocationLon =. val latLong.lon,
+            DriverLocationCoordinatesCalculatedAt =. val coordinatesUpdatedAt,
+            DriverLocationUpdatedAt =. val now,
+            DriverLocationPoint =. Esq.getPoint (val latLong.lat, val latLong.lon)
+          ]
+        where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)

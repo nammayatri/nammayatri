@@ -41,6 +41,7 @@ data Ride = Ride
     trackingUrl :: BaseUrl,
     fare :: Maybe Money,
     traveledDistance :: HighPrecMeters,
+    chargeableDistance :: Maybe Meters,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
     rideRating :: Maybe RideRating,

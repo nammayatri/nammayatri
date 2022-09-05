@@ -135,6 +135,7 @@ handler subscriber transporterId req = do
             trackingUrl = trackingUrl,
             fare = Nothing,
             traveledDistance = 0,
+            chargeableDistance = Nothing,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
             rideRating = Nothing,

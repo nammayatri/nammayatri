@@ -10,6 +10,7 @@ data DriverLocation = DriverLocation
   { driverId :: Id Person,
     lat :: Double,
     lon :: Double,
+    coordinatesCalculatedAt :: UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

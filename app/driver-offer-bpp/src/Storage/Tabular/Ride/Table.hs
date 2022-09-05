@@ -9,7 +9,7 @@ module Storage.Tabular.Ride.Table where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (HighPrecMeters (..), Money)
+import Beckn.Types.Common (HighPrecMeters, Meters, Money)
 import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
 import Storage.Tabular.Booking (BookingTId)
@@ -30,6 +30,7 @@ mkPersist
       trackingUrl Text
       fare Money Maybe
       traveledDistance HighPrecMeters
+      chargeableDistance Meters Maybe
       tripStartTime UTCTime Maybe
       tripEndTime UTCTime Maybe
       createdAt UTCTime

@@ -169,7 +169,7 @@ updateAll rideId ride = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ RideStatus =. val ride.status,
+      [ RideChargeableDistance =. val ride.chargeableDistance,
         RideFare =. val ride.fare,
         RideTripEndTime =. val ride.tripEndTime,
         RideUpdatedAt =. val now

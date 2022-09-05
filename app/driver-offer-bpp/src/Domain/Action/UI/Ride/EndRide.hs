@@ -71,11 +71,12 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   now <- getCurrentTime
-  fare <- recalculateFare booking ride
+  (chargeableDistance, chargeableFare) <- recalculateFare booking ride
 
   let updRide =
         ride{tripEndTime = Just now,
-             fare = Just fare
+             chargeableDistance = Just chargeableDistance,
+             fare = Just chargeableFare
             }
 
   endRide booking.id updRide (cast driverId)
@@ -102,4 +103,4 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric fareDiff distanceDiff
-      return updatedBaseFare
+      return (max actualDistance oldDistance, max updatedBaseFare estimatedBaseFare)

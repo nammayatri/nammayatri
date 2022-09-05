@@ -206,8 +206,7 @@ updateAll rideId ride = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ RideStatus =. val ride.status,
-        RideFare =. val (fromIntegral <$> ride.fare),
+      [ RideFare =. val (fromIntegral <$> ride.fare),
         RideTotalFare =. val (fromIntegral <$> ride.totalFare),
         RideChargeableDistance =. val (fromIntegral <$> ride.chargeableDistance),
         RideTripEndTime =. val ride.tripEndTime,

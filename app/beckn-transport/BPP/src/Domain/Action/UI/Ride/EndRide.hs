@@ -100,6 +100,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           oldDistance = oneWayDetails.estimatedDistance
 
           estimatedFare = booking.estimatedFare
+          estimatedTotalFare = booking.estimatedTotalFare
       shouldRecalculateFare <- recalculateFareEnabled
       if shouldRecalculateFare
         then do
@@ -115,7 +116,12 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
               <> show distanceDiff
           putDiffMetric fareDiff distanceDiff
           fareBreakups <- buildOneWayFareBreakups fareParams booking.id
-          pure (actualDistance, updatedFare, totalFare, fareBreakups)
+          pure
+            ( max actualDistance oldDistance,
+              max updatedFare estimatedFare,
+              max totalFare estimatedTotalFare,
+              fareBreakups
+            )
         else do
           -- calculate fare again with old data for creating fare breakup
           fareParams <- calculateFare transporterId vehicleVariant oldDistance booking.startTime

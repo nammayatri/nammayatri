@@ -29,7 +29,7 @@ spec = do
 
       Utils.cancelRideByDriver transporterDriver1 tRide1
 
-      Utils.checkRideBapStatus appRegistrationToken bBookingId AppRB.AWAITING_REASSIGNMENT
+      Utils.checkBookingBapStatus appRegistrationToken bBookingId AppRB.AWAITING_REASSIGNMENT
 
       void $ Utils.getRideInfo transporterDriver2 tBooking.id
 
@@ -37,6 +37,6 @@ spec = do
       tRide2 <- Utils.acceptRide transporterDriver2 tBooking
 
       Utils.cancelRideByDriver transporterDriver2 tRide2
-      Utils.checkRideBapStatus appRegistrationToken bBookingId AppRB.CANCELLED
+      Utils.checkBookingBapStatus appRegistrationToken bBookingId AppRB.CANCELLED
 
       mapM_ (liftIO . Utils.resetDriver) [transporterDriver1, transporterDriver2]
