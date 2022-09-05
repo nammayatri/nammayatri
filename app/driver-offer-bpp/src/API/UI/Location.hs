@@ -12,6 +12,7 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Id
+import Beckn.Utils.Common hiding (id)
 import qualified Domain.Action.UI.Location as DLocation
 import qualified Domain.Action.UI.Location.UpdateLocation as DLocation
 import qualified Domain.Types.Person as Person
@@ -24,7 +25,6 @@ import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import Utils.Auth
-import Utils.Common hiding (id)
 
 -- Location update and get for tracking is as follows
 type API =

@@ -17,13 +17,13 @@ where
 
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import Servant
 import Utils.Auth
-import Utils.Common
 
 type API =
   "org" :> "driver"

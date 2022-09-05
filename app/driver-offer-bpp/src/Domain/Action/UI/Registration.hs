@@ -23,6 +23,7 @@ import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import qualified Beckn.Types.Predicate as P
 import Beckn.Types.SlidingWindowLimiter
+import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation
@@ -39,7 +40,6 @@ import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Metrics
 import Types.Error
 import Utils.Auth (authTokenCacheKey)
-import Utils.Common
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,

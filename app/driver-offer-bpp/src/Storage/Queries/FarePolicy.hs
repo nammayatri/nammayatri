@@ -3,11 +3,11 @@ module Storage.Queries.FarePolicy where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.FarePolicy
 import Domain.Types.Organization
 import Domain.Types.Vehicle.Variant (Variant)
 import Storage.Tabular.FarePolicy
-import Utils.Common
 
 findFarePoliciesByOrg ::
   Transactionable m =>

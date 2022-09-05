@@ -12,13 +12,13 @@ import Beckn.External.FCM.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Control.Applicative
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import Types.Error
-import Utils.Common
 
 data OrgAdminProfileRes = OrgAdminProfileRes
   { id :: Id SP.Person,

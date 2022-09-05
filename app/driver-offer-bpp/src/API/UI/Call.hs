@@ -8,10 +8,10 @@ module API.UI.Call
 where
 
 import Beckn.Prelude
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.Call as DCall
 import Environment
 import Servant
-import Utils.Common
 
 -------- Direct call (Exotel) APIs
 type API =

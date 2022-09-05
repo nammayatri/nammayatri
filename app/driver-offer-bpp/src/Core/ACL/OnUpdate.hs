@@ -12,6 +12,7 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent 
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareParams as Fare
@@ -20,7 +21,6 @@ import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import SharedLogic.FareCalculator
 import Types.Error
-import Utils.Common
 
 data OnUpdateBuildReq
   = RideAssignedBuildReq

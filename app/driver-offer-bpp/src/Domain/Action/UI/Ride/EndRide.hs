@@ -10,6 +10,7 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Utils.Common
 import Data.OpenApi
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
@@ -22,7 +23,6 @@ import EulerHS.Prelude hiding (pi)
 import qualified SharedLogic.FareCalculator as Fare
 import Types.App (Driver)
 import Types.Error
-import Utils.Common
 
 newtype EndRideReq = EndRideReq
   { point :: LatLong

@@ -7,6 +7,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Id
 import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
+import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import Control.Lens.Operators ((?~))
 import Data.List (lookup)
@@ -17,7 +18,6 @@ import EulerHS.Prelude
 import qualified Network.Wai.Internal as Wai
 import Servant
 import SharedLogic.CallBAP (buildBppUrl)
-import Utils.Common
 
 withCallback ::
   HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions] =>

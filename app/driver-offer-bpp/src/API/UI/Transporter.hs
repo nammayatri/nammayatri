@@ -8,6 +8,7 @@ module API.UI.Transporter
 where
 
 import Beckn.Types.Id (Id (..))
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.Transporter as DTransporter
 import qualified Domain.Types.Organization as SO
 import qualified Domain.Types.Person as SP
@@ -15,7 +16,6 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
 import Utils.Auth
-import Utils.Common
 
 -- Following is organization creation
 type API =

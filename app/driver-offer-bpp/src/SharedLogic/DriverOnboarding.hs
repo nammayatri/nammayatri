@@ -2,9 +2,9 @@ module SharedLogic.DriverOnboarding where
 
 import AWS.S3 as S3
 import Beckn.Prelude
+import Beckn.Utils.Common
 import Data.Text as T
 import Data.Time.Format.ISO8601
-import Utils.Common
 
 createPath ::
   (HasFlowEnv m r '["s3Config" ::: S3.S3Config]) =>

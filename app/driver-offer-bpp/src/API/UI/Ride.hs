@@ -11,6 +11,7 @@ where
 
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
@@ -34,7 +35,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics
 import Utils.Auth
-import Utils.Common
 
 type API =
   "driver" :> "ride"

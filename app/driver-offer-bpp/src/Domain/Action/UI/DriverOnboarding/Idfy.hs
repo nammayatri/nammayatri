@@ -13,12 +13,12 @@ where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto (Transactionable (runTransaction))
+import Beckn.Utils.Common
 import qualified Data.Text as T
 import Data.Time.Format
 import Domain.Types.DriverOnboarding.ClassOfVehicle
 import Storage.Queries.DriverOnboarding.DriverLicense (updateDLDetails)
 import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate (updateRCDetails)
-import Utils.Common
 
 data IdfyDLReq = IdfyDLReq
   { request_id :: Text,

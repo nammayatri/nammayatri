@@ -18,6 +18,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Predicate
+import Beckn.Utils.Common
 import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
 import Data.Text as T
@@ -28,7 +29,6 @@ import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as Query
 import qualified Storage.Queries.Person as Person
 import Tools.Metrics
-import Utils.Common
 
 newtype DriverRCImageReq = DriverRCImageReq
   {image :: Text}

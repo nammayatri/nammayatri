@@ -3,6 +3,7 @@
 module Domain.Types.Ride where
 
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -12,7 +13,6 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import Utils.Common
 
 data RideStatus
   = NEW

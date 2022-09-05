@@ -14,6 +14,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto (runTransaction)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Data.Text as T
 import Data.Text.Conversions
 import qualified Domain.Types.CallStatus as SCS
@@ -23,7 +24,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import Types.Error
-import Utils.Common
 
 type CallCallbackRes = AckResponse
 

@@ -10,6 +10,7 @@ where
 
 import Beckn.Storage.Esqueleto (Transactionable)
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.FareParams
 import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.Organization (Organization)
@@ -23,7 +24,6 @@ import SharedLogic.FareCalculator.Calculator
   )
 import qualified Storage.Queries.FarePolicy as FarePolicyS
 import Types.Error
-import Utils.Common
 
 type MonadHandler m = (MonadThrow m, Log m)
 

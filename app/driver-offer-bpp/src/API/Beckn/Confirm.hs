@@ -4,6 +4,7 @@ import Beckn.Prelude
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Confirm as ACL
 import qualified Core.ACL.OnConfirm as ACL
@@ -12,7 +13,6 @@ import qualified Domain.Types.Organization as Org
 import Environment
 import Servant
 import qualified SharedLogic.CallBAP as BP
-import Utils.Common
 
 type API =
   Capture "orgId" (Id Org.Organization)

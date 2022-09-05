@@ -11,6 +11,7 @@ module API.UI.Vehicle
 where
 
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.Vehicle as DVehicle
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -18,7 +19,6 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
 import Utils.Auth
-import Utils.Common
 
 -- Following is vehicle flow
 type API =

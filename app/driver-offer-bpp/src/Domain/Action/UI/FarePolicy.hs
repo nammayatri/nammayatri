@@ -12,6 +12,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
+import Beckn.Utils.Common
 import Beckn.Utils.Validation
 import Data.Time
 import Domain.Types.FarePolicy
@@ -21,7 +22,6 @@ import qualified Storage.Queries.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
 import Tools.Metrics
 import Types.Error
-import Utils.Common
 import qualified Utils.Notifications as Notify
 
 newtype ListFarePolicyRes = ListFarePolicyRes

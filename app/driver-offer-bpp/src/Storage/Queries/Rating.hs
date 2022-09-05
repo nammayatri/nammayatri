@@ -3,10 +3,10 @@ module Storage.Queries.Rating where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Person
 import Domain.Types.Rating
 import Storage.Tabular.Rating
-import Utils.Common
 
 create :: Rating -> SqlDB ()
 create = Esq.create

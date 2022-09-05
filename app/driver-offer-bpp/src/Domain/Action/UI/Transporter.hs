@@ -11,6 +11,7 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
+import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Control.Applicative
@@ -19,7 +20,6 @@ import qualified Domain.Types.Person as SP
 import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
 import Types.Error
-import Utils.Common
 
 newtype TransporterRec = TransporterRec
   { organization :: SO.OrganizationAPIEntity

@@ -10,6 +10,7 @@ import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
+import Beckn.Utils.Common
 import Beckn.Utils.GenericPretty
 import qualified Data.Maybe as Mb
 import Domain.Types.Organization
@@ -20,7 +21,6 @@ import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
 import Storage.Tabular.Vehicle as Vehicle
 import Types.App (Driver)
-import Utils.Common
 
 create :: Person -> SqlDB ()
 create = Esq.create

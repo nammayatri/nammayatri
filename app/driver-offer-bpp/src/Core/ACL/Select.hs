@@ -8,13 +8,13 @@ import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified Beckn.Types.Core.Taxi.Common.ItemCode as OS
 import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
+import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Select as DSelect
 import qualified Domain.Action.UI.GoogleMaps as GoogleMaps
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import Domain.Types.Vehicle.Variant
 import Tools.Metrics (CoreMetrics)
 import Types.Error
-import Utils.Common
 
 buildSelectReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],

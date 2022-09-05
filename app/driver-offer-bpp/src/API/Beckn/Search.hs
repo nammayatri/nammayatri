@@ -6,6 +6,7 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnSearch as ACL
 import qualified Core.ACL.Search as ACL
@@ -15,7 +16,6 @@ import qualified Domain.Types.Organization as Org
 import Environment
 import Servant
 import qualified SharedLogic.Transporter as Shared
-import Utils.Common
 
 type API =
   Capture "orgId" (Id Org.Organization)

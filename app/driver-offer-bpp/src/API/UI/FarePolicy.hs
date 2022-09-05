@@ -8,6 +8,7 @@ module API.UI.FarePolicy
 where
 
 import Beckn.Types.Id (Id (..))
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.FarePolicy as DFarePolicy
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Person as SP
@@ -15,7 +16,6 @@ import Environment
 import EulerHS.Prelude
 import Servant
 import Utils.Auth
-import Utils.Common
 
 type API =
   "org"

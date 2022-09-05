@@ -8,6 +8,7 @@ where
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Person as DP
@@ -18,7 +19,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
 import Types.Error
-import Utils.Common
 
 data DriverRideRes = DriverRideRes
   { id :: Id DRide.Ride,

@@ -11,6 +11,7 @@ where
 
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.Registration as DRegistration
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
@@ -18,7 +19,6 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
 import Utils.Auth
-import Utils.Common
 
 type API =
   "auth"

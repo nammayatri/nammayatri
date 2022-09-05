@@ -6,9 +6,9 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
 import Beckn.Types.Id
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
+import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Rating as DRating
 import Types.Error
-import Utils.Common
 
 buildRatingReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>

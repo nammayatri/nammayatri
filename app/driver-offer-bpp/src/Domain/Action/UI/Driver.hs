@@ -37,6 +37,7 @@ import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Beckn.Types.Predicate
+import Beckn.Utils.Common
 import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
@@ -75,7 +76,6 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Metrics
 import Types.Error
 import Utils.Auth (authTokenCacheKey)
-import Utils.Common
 import qualified Utils.Notifications as Notify
 
 data DriverInformationRes = DriverInformationRes

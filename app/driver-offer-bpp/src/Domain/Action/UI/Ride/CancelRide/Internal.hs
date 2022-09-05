@@ -3,6 +3,7 @@ module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 import Beckn.External.GoogleMaps.Types
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Ride as SRide
@@ -17,7 +18,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics
 import Types.Error
-import Utils.Common
 import qualified Utils.Notifications as Notify
 
 cancelRideImpl ::

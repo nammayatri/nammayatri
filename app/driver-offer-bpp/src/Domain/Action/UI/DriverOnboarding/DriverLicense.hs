@@ -19,6 +19,7 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import Beckn.Types.Validation
+import Beckn.Utils.Common
 import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
 import Data.Text as T
@@ -30,7 +31,6 @@ import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
 import qualified Storage.Queries.Person as Person
 import Tools.Metrics
-import Utils.Common
 
 newtype DriverDLImageReq = DriverDLImageReq
   {image :: Text}

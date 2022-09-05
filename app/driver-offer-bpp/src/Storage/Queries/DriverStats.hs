@@ -3,10 +3,10 @@ module Storage.Queries.DriverStats where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.DriverStats
 import Storage.Tabular.DriverStats
 import Types.App
-import Utils.Common
 
 createInitialDriverStats :: Id Driver -> SqlDB ()
 createInitialDriverStats driverId = do

@@ -5,6 +5,7 @@ module Storage.Queries.Ride where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Booking as Booking
 import Domain.Types.Organization
 import Domain.Types.Person
@@ -13,7 +14,6 @@ import Storage.Queries.Booking (baseBookingTable)
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Rating as Rating
 import Storage.Tabular.Ride as Ride
-import Utils.Common
 
 create :: Ride -> SqlDB ()
 create dRide = Esq.runTransaction $

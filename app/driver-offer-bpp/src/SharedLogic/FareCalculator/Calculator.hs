@@ -7,6 +7,7 @@ module SharedLogic.FareCalculator.Calculator
 where
 
 import Beckn.Prelude
+import Beckn.Utils.Common
 import Data.Time
   ( LocalTime (localTimeOfDay),
     TimeOfDay (..),
@@ -17,7 +18,6 @@ import Data.Time
   )
 import Domain.Types.FareParams
 import Domain.Types.FarePolicy
-import Utils.Common
 
 type TripStartTime = UTCTime
 

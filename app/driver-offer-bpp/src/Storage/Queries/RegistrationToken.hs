@@ -3,10 +3,10 @@ module Storage.Queries.RegistrationToken where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Person
 import Domain.Types.RegistrationToken
 import Storage.Tabular.RegistrationToken
-import Utils.Common
 
 create :: RegistrationToken -> SqlDB ()
 create = Esq.create

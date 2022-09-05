@@ -5,6 +5,7 @@ module Domain.Action.Beckn.Rating where
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
@@ -17,7 +18,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import Types.Error
-import Utils.Common
 
 data DRatingReq = DRatingReq
   { bookingId :: Id DBooking.Booking,

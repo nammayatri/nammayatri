@@ -6,6 +6,7 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
 import qualified Beckn.Types.Core.Taxi.API.Track as Track
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnTrack as ACL
 import qualified Core.ACL.Track as ACL
@@ -14,7 +15,6 @@ import qualified Domain.Action.Beckn.Track as DTrack
 import qualified Domain.Types.Organization as Org
 import Environment
 import Servant
-import Utils.Common
 
 type API =
   Capture "orgId" (Id Org.Organization)
