@@ -1,17 +1,19 @@
-module Product.Init
-  ( onInit,
-  )
-where
+module API.Beckn.OnInit (API, handler) where
 
 import App.Types
-import Beckn.Prelude hiding (init)
+import Beckn.Prelude
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
+import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Confirm as ACL
 import qualified Core.ACL.OnInit as TaxiACL
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified ExternalAPI.Flow as ExternalAPI
-import Utils.Common
+
+type API = OnInit.OnInitAPI
+
+handler :: SignatureAuthResult -> FlowServer API
+handler = onInit
 
 onInit ::
   SignatureAuthResult ->

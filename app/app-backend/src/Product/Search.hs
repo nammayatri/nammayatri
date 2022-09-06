@@ -2,15 +2,10 @@ module Product.Search where
 
 import App.Types
 import Beckn.Types.Common hiding (id)
-import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import Beckn.Types.Id
 import Beckn.Utils.Logging
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Core.ACL.Metro.Search as MetroACL
-import qualified Core.ACL.OnSearch as TaxiACL
 import qualified Core.ACL.Search as TaxiACL
-import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Person as Person
@@ -44,13 +39,3 @@ rentalSearch personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ d
     becknReq <- TaxiACL.buildRentalSearchReq dSearchReq
     void $ ExternalAPI.search dSearchReq.gatewayUrl becknReq
   pure searchRes
-
-searchCb ::
-  SignatureAuthResult ->
-  SignatureAuthResult ->
-  OnSearch.OnSearchReq ->
-  FlowHandler AckResponse
-searchCb (SignatureAuthResult _ _ registryUrl) _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnSearchReq <- TaxiACL.buildOnSearchReq req
-  DOnSearch.searchCb registryUrl req.context.message_id mbDOnSearchReq
-  pure Ack

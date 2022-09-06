@@ -4,21 +4,15 @@
 module App.Routes where
 
 import qualified App.Routes.Dashboard as Dashboard
+import qualified API.Beckn as Beckn
+import qualified API.MetroBeckn as MetroBeckn
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.InternalAPI.Auth.API as Auth
 import Beckn.Types.APISuccess
 import Beckn.Types.App
-import qualified Beckn.Types.Core.Metro.API.OnSearch as Metro
-import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
-import qualified Beckn.Types.Core.Taxi.API.OnInit as API
-import qualified Beckn.Types.Core.Taxi.API.OnSearch as API
-import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
-import qualified Beckn.Types.Core.Taxi.API.OnTrack as API
-import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
-import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi (Info (..), OpenApi (..))
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CallStatus as SCS
@@ -36,9 +30,7 @@ import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Confirm as Confirm
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
-import qualified Product.Init as Init
 import qualified Product.Location as Location
-import qualified Product.MetroOffer as Metro
 import qualified Product.Profile as Profile
 import qualified Product.Quote as Quote
 import qualified Product.Registration as Registration
@@ -49,8 +41,6 @@ import qualified Product.Select as Select
 import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Support as Support
-import qualified Product.Track as Track
-import qualified Product.Update as Update
 import Servant hiding (throwError)
 import Servant.OpenApi
 import qualified Types.API.Booking as BookingAPI
@@ -76,15 +66,10 @@ type AppAPI =
 
 type MainAPI =
   "v2" :> UIAPI
-    :<|> "cab" :> "v1" :> BecknCabAPI
-    :<|> "metro" :> "v1" :> BecknMetroAPI
+    :<|> "cab" :> "v1" :> Beckn.API
+    :<|> "metro" :> "v1" :> MetroBeckn.API
     :<|> Auth.API
     :<|> Dashboard.API
-
-type BecknMetroAPI =
-  SignatureAuth "Authorization"
-    :> SignatureAuth "X-Gateway-Authorization"
-    :> Metro.OnSearchAPI
 
 type UIAPI =
   Get '[JSON] Text
@@ -119,8 +104,8 @@ appServer =
 mainServer :: FlowServer MainAPI
 mainServer =
   uiAPI
-    :<|> becknCabApi
-    :<|> becknMetroAPI
+    :<|> Beckn.handler
+    :<|> MetroBeckn.handler
     :<|> authAPI
     :<|> Dashboard.handler
 
@@ -146,10 +131,6 @@ uiAPI =
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
     :<|> savedLocationFlow
-
-becknMetroAPI :: FlowServer BecknMetroAPI
-becknMetroAPI =
-  Metro.searchCbMetro
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -192,31 +173,11 @@ profileFlow =
 
 -------- Search Flow --------
 
-type BecknCabAPI =
-  SignatureAuth "Authorization"
-    :> ( SignatureAuth "X-Gateway-Authorization"
-           :> API.OnSearchAPI
-           :<|> API.OnSelectAPI
-           :<|> API.OnInitAPI
-           :<|> API.OnConfirmAPI
-           :<|> API.OnUpdateAPI
-           :<|> API.OnTrackAPI
-       )
-
 type SearchAPI =
   "rideSearch"
     :> TokenAuth
     :> ReqBody '[JSON] Search.SearchReq
     :> Post '[JSON] Search.SearchRes
-
-becknCabApi :: FlowServer BecknCabAPI
-becknCabApi auth =
-  Search.searchCb auth
-    :<|> Select.onSelect auth
-    :<|> Init.onInit auth
-    :<|> Confirm.onConfirm auth
-    :<|> Update.onUpdate auth
-    :<|> Track.onTrack auth
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =

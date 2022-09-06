@@ -1,13 +1,17 @@
-module Product.Update (onUpdate) where
+module API.Beckn.OnUpdate (API, handler) where
 
 import App.Types
-import Beckn.Types.Core.Ack
+import Beckn.Prelude
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as OnUpdate
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Beckn.Utils.Common
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnUpdate as ACL
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
-import EulerHS.Prelude hiding (state)
-import Utils.Common
+
+type API = OnUpdate.OnUpdateAPI
+
+handler :: SignatureAuthResult -> FlowServer API
+handler = onUpdate
 
 onUpdate ::
   SignatureAuthResult ->
@@ -15,5 +19,5 @@ onUpdate ::
   FlowHandler AckResponse
 onUpdate (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnUpdateReq <- ACL.buildOnUpdateReq req
-  whenJust mbDOnUpdateReq (DOnUpdate.onUpdate registryUrl)
+  Beckn.Prelude.whenJust mbDOnUpdateReq (DOnUpdate.onUpdate registryUrl)
   pure Ack

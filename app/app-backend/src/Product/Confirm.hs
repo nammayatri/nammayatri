@@ -2,19 +2,14 @@ module Product.Confirm
   ( confirm,
     ConfirmAPI,
     ConfirmRes (..),
-    onConfirm,
   )
 where
 
 import App.Types
 import Beckn.Prelude hiding (init)
-import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (BecknAPICallError)
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Init as ACL
-import qualified Core.ACL.OnConfirm as ACL
-import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as SP
@@ -52,12 +47,3 @@ confirm personId quoteId =
       ConfirmRes
         { bookingId = dConfirmRes.booking.id
         }
-
-onConfirm ::
-  SignatureAuthResult ->
-  OnConfirm.OnConfirmReq ->
-  FlowHandler AckResponse
-onConfirm (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnConfirmReq <- ACL.buildOnConfirmReq req
-  whenJust mbDOnConfirmReq (DOnConfirm.onConfirm registryUrl)
-  pure Ack

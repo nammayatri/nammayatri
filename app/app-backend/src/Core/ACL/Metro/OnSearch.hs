@@ -1,80 +1,42 @@
-module Product.MetroOffer where
+module Core.ACL.Metro.OnSearch where
 
-import App.Types (FlowHandler)
 import Beckn.Prelude
-import qualified Beckn.Storage.Redis.Queries as Redis
+import Beckn.Product.Validation.Context
 import Beckn.Types.Common
-import Beckn.Types.Core.Context
-import Beckn.Types.Core.Metro.API.OnSearch (OnSearchReq)
+import qualified Beckn.Types.Core.Context as Context
+import qualified Beckn.Types.Core.Metro.API.OnSearch as OnSearch
 import Beckn.Types.Core.Metro.OnSearch
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
-import Beckn.Types.TimeRFC339
 import Beckn.Utils.Common
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.SearchRequest (SearchRequest)
-import qualified Tools.Metrics as Metrics
-import Types.API.MetroOffer
+import SharedLogic.MetroOffer
 
-searchCbMetro ::
-  SignatureAuthResult ->
-  SignatureAuthResult ->
-  OnSearchReq ->
-  FlowHandler AckResponse
-searchCbMetro _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  Metrics.finishSearchMetrics req.context.message_id
-  case req.contents of
-    Right msg -> setMetroOffers req.context msg.catalog
-    Left err -> logTagError "on_search req" $ "on_search error: " <> show err
-  return Ack
-
-buildContextMetro ::
-  (MonadTime m, MonadGuid m, MonadThrow m) =>
-  Action ->
-  Text ->
-  Text ->
-  BaseUrl ->
-  m Context
-buildContextMetro action message_id bapId bapUri = do
-  timestamp <- UTCTimeRFC3339 <$> getCurrentTime
-  return
-    Context
-      { domain = METRO,
-        country = "IND",
-        city = "Kochi",
-        core_version = "0.9.1",
-        bap_id = bapId,
-        bap_uri = bapUri,
-        bpp_id = Nothing,
-        bpp_uri = Nothing,
-        transaction_id = Nothing,
-        ..
-      }
-
-setMetroOffers ::
-  (MonadThrow m, Log m, MonadTime m) =>
-  MonadFlow m =>
-  Context ->
-  Catalog ->
-  m ()
-setMetroOffers context catalog = do
-  let searchReqId = Id context.message_id
-  val <- catalogToMetroOffers searchReqId catalog
-  Redis.setExRedis (metroOfferKey searchReqId) val (60 * 60 * 24)
-
-getMetroOffers ::
-  ( MonadFlow m,
-    FromJSON a
+buildMetroOffers ::
+  ( HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
-  Id SearchRequest ->
-  m [a]
-getMetroOffers searchReqId =
-  fromMaybe [] <$> Redis.getKeyRedis (metroOfferKey searchReqId)
+  OnSearch.OnSearchReq ->
+  m (Maybe [MetroOffer])
+buildMetroOffers req = do
+  validateContext Context.ON_SEARCH req.context
+  let searchReqId = Id req.context.message_id
+  handleError req.contents $ \message -> do
+    catalogToMetroOffers searchReqId message.catalog
 
-metroOfferKey :: Id SearchRequest -> Text
-metroOfferKey (Id id') = "BAP:Metro:" <> id'
+handleError ::
+  (MonadFlow m) =>
+  Either Error OnSearch.OnSearchCatalog ->
+  (OnSearch.OnSearchCatalog -> m [MetroOffer]) ->
+  m (Maybe [MetroOffer])
+handleError etr action =
+  case etr of
+    Right msg -> do
+      Just <$> action msg
+    Left err -> do
+      logTagError "on_search req" $ "on_search error: " <> show err
+      pure Nothing
 
 catalogToMetroOffers :: (MonadThrow m, Log m, MonadTime m) => Id SearchRequest -> Catalog -> m [MetroOffer]
 catalogToMetroOffers searchRequestId Catalog {bpp_providers} =

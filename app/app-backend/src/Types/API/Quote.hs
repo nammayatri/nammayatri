@@ -9,7 +9,7 @@ import Domain.Types.Estimate (EstimateAPIEntity)
 import Domain.Types.Quote (QuoteAPIEntity)
 import Domain.Types.SearchRequest.SearchReqLocation (SearchReqLocationAPIEntity)
 import EulerHS.Prelude hiding (id)
-import Types.API.MetroOffer
+import SharedLogic.MetroOffer (MetroOffer)
 
 data GetQuotesRes = GetQuotesRes
   { fromLocation :: SearchReqLocationAPIEntity,

@@ -1,4 +1,14 @@
-module Domain.Action.Beckn.OnSearch where
+module Domain.Action.Beckn.OnSearch
+  ( DOnSearchReq (..),
+    ProviderInfo (..),
+    EstimateInfo (..),
+    QuoteInfo (..),
+    QuoteDetails (..),
+    OneWayQuoteDetails (..),
+    RentalQuoteDetails (..),
+    onSearch,
+  )
+where
 
 import App.Types
 import qualified Beckn.Storage.Esqueleto as DB
@@ -64,20 +74,20 @@ data RentalQuoteDetails = RentalQuoteDetails
     baseDuration :: Hours
   }
 
-searchCb ::
+onSearch ::
   BaseUrl ->
   Text ->
   Maybe DOnSearchReq ->
   Flow ()
-searchCb registryUrl transactionId mbReq = do
+onSearch registryUrl transactionId mbReq = do
   Metrics.finishSearchMetrics transactionId -- move it to api handler or acl?
-  whenJust mbReq (searchCbService registryUrl)
+  whenJust mbReq (onSearchService registryUrl)
 
-searchCbService ::
+onSearchService ::
   BaseUrl ->
   DOnSearchReq ->
   Flow ()
-searchCbService registryUrl DOnSearchReq {..} = do
+onSearchService registryUrl DOnSearchReq {..} = do
   _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it

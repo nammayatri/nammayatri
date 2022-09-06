@@ -10,12 +10,11 @@ import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.SearchRequest as SSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import EulerHS.Prelude hiding (id)
-import qualified Product.MetroOffer as Metro
+import qualified SharedLogic.MetroOffer as Metro
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Quote as QRentalQuote
 import qualified Storage.Queries.SearchRequest as QSR
-import Types.API.MetroOffer (MetroOffer (..))
 import qualified Types.API.Quote as API
 import Types.Error
 import Utils.Common
@@ -58,7 +57,7 @@ getOffers searchRequest = do
         SQuote.DriverOfferDetails details -> Just details.distanceToPickup
     creationTime :: API.OfferRes -> UTCTime
     creationTime (API.OnDemandCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
-    creationTime (API.Metro MetroOffer {createdAt}) = createdAt
+    creationTime (API.Metro Metro.MetroOffer {createdAt}) = createdAt
     creationTime (API.PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
 getPubTransportOffers :: (HedisFlow m r, MonadFlow m) => Id SSR.SearchRequest -> m [PublicTransportQuote]
