@@ -8,10 +8,13 @@ import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Types.Id
 
+-- TODO move roles to DB
 data Role
-  = USER
-  | ADMIN
+  = CUSTOMER
+  | DRIVER
   | JUSPAY_OPS
+  | JUSPAY_ADMIN
+  | CUSTOMER_SERVICE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, Enum, Bounded, ToSchema)
 
 data PersonE e = Person
