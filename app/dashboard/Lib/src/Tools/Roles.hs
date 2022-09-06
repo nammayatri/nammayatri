@@ -1,31 +1,41 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Tools.Roles where
 
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Data.Singletons.TH
 import Domain.Types.Person as DP
 import Tools.Servant.HeaderAuth
 
-data USER
+data ApiAccessType = READ_ACCESS | WRITE_ACCESS
 
-data ADMIN
+genSingletons [''ApiAccessType]
 
-data JUSPAY_OPS
+data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING
 
--- We can use for api more complex payloads with different type level constructors, like this:
--- type UpdateBooking =
---   "updateBooking"
---     :> AccessLevel (WriteAccess [Rides, Bookings])
---     :> Post '[JSON] UpdateBookingReq
+genSingletons [''ApiEntity]
 
-instance (VerificationPayload Role) USER where
-  toPayloadType _ = USER
+-- AccessLevel is used only on type level, ApiAccessLevel for working with real data
+data ApiAccessLevel = ApiAccessLevel
+  { apiAccessType :: ApiAccessType,
+    apiEntity :: ApiEntity
+  }
 
-instance (VerificationPayload Role) ADMIN where
-  toPayloadType _ = ADMIN
+data AccessLevel at ae
 
-instance (VerificationPayload Role) JUSPAY_OPS where
-  toPayloadType _ = JUSPAY_OPS
+instance
+  forall (at :: ApiAccessType) (ae :: ApiEntity).
+  (SingI at, SingI ae) =>
+  (VerificationPayload ApiAccessLevel) (AccessLevel at ae)
+  where
+  toPayloadType _ =
+    ApiAccessLevel
+      { apiAccessType = fromSing (sing @at),
+        apiEntity = fromSing (sing @ae)
+      }
 
-verifyRole :: EsqDBFlow m r => DP.Role -> Id DP.Person -> m (Id DP.Person)
-verifyRole _pr _personId = error "TODO"
+verifyAccessLevel :: EsqDBFlow m r => ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
+verifyAccessLevel _requiredAccessLevel _personId = error "TODO"

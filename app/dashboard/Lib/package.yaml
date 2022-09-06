@@ -68,6 +68,7 @@ dependencies:
   - esqueleto
   - template-haskell
   - wai
+  - singletons
 
 ghc-options:
   - -Wall

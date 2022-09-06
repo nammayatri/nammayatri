@@ -36,7 +36,7 @@ instance VerificationMethod VerifyToken where
     \If you don't have a token, use registration endpoints."
 
 instance VerificationMethodWithPayload VerifyToken where
-  type VerificationPayloadType VerifyToken = DP.Role
+  type VerificationPayloadType VerifyToken = Roles.ApiAccessLevel
 
 verifyTokenAction ::
   ( EsqDBFlow m r,
@@ -49,10 +49,10 @@ verifyPerson ::
   ( EsqDBFlow m r,
     HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days]
   ) =>
-  DP.Role ->
+  Roles.ApiAccessLevel ->
   RegToken ->
   m (Id DP.Person)
-verifyPerson role token = do
+verifyPerson requiredAccessLevel token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   mbPersonId <- Redis.getKeyRedis key
@@ -63,7 +63,7 @@ verifyPerson role token = do
       let personId = sr.personId
       Redis.setExRedis key personId authTokenCacheExpiry
       return personId
-  Roles.verifyRole role personId
+  Roles.verifyAccessLevel requiredAccessLevel personId
 
 -- FIXME it should be different for bap and bpp
 authTokenCacheKey :: RegToken -> Text

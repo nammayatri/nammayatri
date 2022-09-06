@@ -13,15 +13,15 @@ type API =
 
 type UserTestAPI =
   "userTest"
-    :> TokenAuth USER
+    :> TokenAuth (AccessLevel 'READ_ACCESS 'CUSTOMERS)
     :> Get '[JSON] Text
 
 type AdminTestAPI =
   "adminTest"
-    :> TokenAuth ADMIN
+    :> TokenAuth (AccessLevel 'WRITE_ACCESS 'RIDES)
     :> Get '[JSON] Text
 
 type JuspayOpsTestAPI =
   "adminTest"
-    :> TokenAuth JUSPAY_OPS
+    :> TokenAuth (AccessLevel 'WRITE_ACCESS 'MONITORING)
     :> Get '[JSON] Text
