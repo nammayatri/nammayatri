@@ -30,7 +30,7 @@ newtype ListFarePolicyRes = ListFarePolicyRes
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data UpdateFarePolicyReq = UpdateFarePolicyReq
-  { baseDistancePerKmFare :: HighPrecMoney,
+  { baseDistanceFare :: HighPrecMoney,
     baseDistance :: Meters,
     perExtraKmFare :: HighPrecMoney,
     deadKmFare :: Money, -- constant value
@@ -47,7 +47,7 @@ type UpdateFarePolicyRes = APISuccess
 validateUpdateFarePolicyRequest :: Validate UpdateFarePolicyReq
 validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
   sequenceA_ --FIXME: ask for lower and upper bounds for all the values
-    [ validateField "baseDistancePerKmFare" baseDistancePerKmFare $ InRange @HighPrecMoney 0 500,
+    [ validateField "baseDistanceFare" baseDistanceFare $ InRange @HighPrecMoney 0 500,
       validateField "baseDistance" baseDistance $ InRange @Meters 0 500,
       validateField "perExtraKmFare" perExtraKmFare $ InRange @HighPrecMoney 0 500,
       validateField "deadKmFare" deadKmFare $ InRange @Money 0 500,
@@ -74,7 +74,7 @@ updateFarePolicy admin fpId req = do
   unless (admin.organizationId == Just farePolicy.organizationId) $ throwError AccessDenied
   let updatedFarePolicy =
         farePolicy
-          { baseDistancePerKmFare = req.baseDistancePerKmFare,
+          { baseDistanceFare = req.baseDistanceFare,
             baseDistanceMeters = req.baseDistance,
             perExtraKmFare = req.perExtraKmFare,
             deadKmFare = req.deadKmFare,

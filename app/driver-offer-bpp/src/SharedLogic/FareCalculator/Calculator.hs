@@ -75,7 +75,7 @@ calculateFareParameters ::
   Maybe Money ->
   FareParameters
 calculateFareParameters fp distance startTime mbExtraFare = do
-  let baseDistanceFare = roundToIntegral $ fp.baseDistancePerKmFare * realToFrac (distanceToKm fp.baseDistanceMeters)
+  let baseDistanceFare = roundToIntegral $ fp.baseDistanceFare
       mbExtraDistance =
         distance - fp.baseDistanceMeters
           & (\dist -> if dist > 0 then Just dist else Nothing)

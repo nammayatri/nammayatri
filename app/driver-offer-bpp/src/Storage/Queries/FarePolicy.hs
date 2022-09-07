@@ -43,7 +43,7 @@ updateFarePolicy farePolicy = do
     Esq.update $ \tbl -> do
       set
         tbl
-        [ FarePolicyBaseDistancePerKmFare =. val farePolicy.baseDistancePerKmFare,
+        [ FarePolicyBaseDistanceFare =. val farePolicy.baseDistanceFare,
           FarePolicyBaseDistanceMeters =. val farePolicy.baseDistanceMeters,
           FarePolicyPerExtraKmFare =. val farePolicy.perExtraKmFare,
           FarePolicyDeadKmFare =. val farePolicy.deadKmFare,

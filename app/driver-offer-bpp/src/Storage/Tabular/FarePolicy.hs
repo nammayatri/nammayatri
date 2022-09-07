@@ -24,7 +24,7 @@ mkPersist
       organizationId OrganizationTId
       vehicleVariant Variant.Variant
 
-      baseDistancePerKmFare HighPrecMoney
+      baseDistanceFare HighPrecMoney
       baseDistanceMeters Meters
       perExtraKmFare HighPrecMoney
       deadKmFare Money

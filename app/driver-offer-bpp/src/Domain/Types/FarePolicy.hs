@@ -10,7 +10,7 @@ data FarePolicy = FarePolicy
   { id :: Id FarePolicy,
     organizationId :: Id Organization.Organization,
     vehicleVariant :: Variant.Variant,
-    baseDistancePerKmFare :: HighPrecMoney,
+    baseDistanceFare :: HighPrecMoney,
     baseDistanceMeters :: Meters,
     perExtraKmFare :: HighPrecMoney,
     deadKmFare :: Money,
@@ -36,7 +36,7 @@ data ExtraFee = ExtraFee
 data FarePolicyAPIEntity = FarePolicyAPIEntity
   { id :: Id FarePolicy,
     vehicleVariant :: Variant.Variant,
-    baseDistancePerKmFare :: HighPrecMoney,
+    baseDistanceFare :: HighPrecMoney,
     baseDistanceMeters :: Meters,
     perExtraKmFare :: HighPrecMoney,
     deadKmFare :: Money,
