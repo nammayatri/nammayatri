@@ -1,7 +1,18 @@
-module Product.Registration (auth, verify, resend, logout) where
+module Domain.Action.UI.Registration
+  ( AuthReq (..),
+    AuthRes (..),
+    ResendAuthRes,
+    AuthVerifyReq (..),
+    AuthVerifyRes (..),
+    auth,
+    verify,
+    resend,
+    logout,
+  )
+where
 
-import App.Types
 import Beckn.External.Encryption (decrypt, encrypt)
+import Beckn.External.FCM.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Esqueleto as DB
@@ -10,27 +21,83 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
+import Beckn.Types.Predicate
+import Beckn.Types.SlidingWindowLimiter (APIRateLimitOptions)
+import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.SlidingWindowLimiter
-import Beckn.Utils.Validation (runRequestValidation)
+import Beckn.Utils.Validation
+import Data.OpenApi (ToSchema)
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
+import Domain.Types.Person (PersonAPIEntity)
 import qualified Domain.Types.Person as SP
+import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import Types.API.Registration
+import Tools.Metrics
 import Types.Error
 import Utils.Auth (authTokenCacheKey)
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
+data AuthReq = AuthReq
+  { mobileNumber :: Text,
+    mobileCountryCode :: Text,
+    merchantId :: ShortId Merchant
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+validateAuthReq :: Validate AuthReq
+validateAuthReq AuthReq {..} =
+  sequenceA_
+    [ validateField "mobileNumber" mobileNumber P.mobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    ]
+
+data AuthRes = AuthRes
+  { authId :: Id RegistrationToken,
+    attempts :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+type ResendAuthRes = AuthRes
+
+---------- Verify Login --------
+data AuthVerifyReq = AuthVerifyReq
+  { otp :: Text,
+    deviceToken :: FCMRecipientToken
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+validateAuthVerifyReq :: Validate AuthVerifyReq
+validateAuthVerifyReq AuthVerifyReq {..} =
+  sequenceA_
+    [ validateField "otp" otp $ ExactLength 4 `And` star P.digit
+    ]
+
+data AuthVerifyRes = AuthVerifyRes
+  { token :: Text,
+    person :: PersonAPIEntity
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCount"
 
-auth :: AuthReq -> FlowHandler AuthRes
-auth req = withFlowHandlerAPI $ do
+auth ::
+  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["otpSmsTemplate" ::: Text],
+    EsqDBFlow m r,
+    EncFlow m r,
+    CoreMetrics m
+  ) =>
+  AuthReq ->
+  m AuthRes
+auth req = do
   runRequestValidation validateAuthReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
@@ -118,8 +185,16 @@ makeSession SmsSessionConfig {..} entityId fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-verify :: Id SR.RegistrationToken -> AuthVerifyReq -> FlowHandler AuthVerifyRes
-verify tokenId req = withFlowHandlerAPI $ do
+verify ::
+  ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
+    EsqDBFlow m r,
+    EncFlow m r,
+    CoreMetrics m
+  ) =>
+  Id SR.RegistrationToken ->
+  AuthVerifyReq ->
+  m AuthVerifyRes
+verify tokenId req = do
   runRequestValidation validateAuthVerifyReq req
   regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
@@ -161,13 +236,21 @@ checkPersonExists :: EsqDBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
   Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
 
-resend :: Id SR.RegistrationToken -> FlowHandler ResendAuthRes
-resend tokenId = withFlowHandlerAPI $ do
+resend ::
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["otpSmsTemplate" ::: Text],
+    EsqDBFlow m r,
+    EncFlow m r,
+    CoreMetrics m
+  ) =>
+  Id SR.RegistrationToken ->
+  m ResendAuthRes
+resend tokenId = do
   SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
-  smsCfg <- smsCfg <$> ask
-  otpSmsTemplate <- otpSmsTemplate <$> ask
+  smsCfg <- asks (.smsCfg)
+  otpSmsTemplate <- asks (.otpSmsTemplate)
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   withLogTag ("personId_" <> entityId) $
@@ -183,8 +266,12 @@ cleanCachedTokens personId = do
     let key = authTokenCacheKey regToken.token
     void $ Redis.deleteKeyRedis key
 
-logout :: Id SP.Person -> FlowHandler APISuccess
-logout personId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+logout ::
+  ( EsqDBFlow m r
+  ) =>
+  Id SP.Person ->
+  m APISuccess
+logout personId = do
   cleanCachedTokens personId
   DB.runTransaction $ do
     Person.updateDeviceToken personId Nothing

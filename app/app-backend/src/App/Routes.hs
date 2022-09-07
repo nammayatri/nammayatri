@@ -6,6 +6,7 @@ module App.Routes where
 import qualified App.Routes.Dashboard as Dashboard
 import qualified API.Beckn as Beckn
 import qualified API.MetroBeckn as MetroBeckn
+import qualified API.UI.Registration as Registration
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.InternalAPI.Auth.API as Auth
@@ -18,7 +19,6 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.CancellationReason as SCancellationReason
 import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.RegistrationToken as SRT
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as SSR
 import EulerHS.Prelude
@@ -33,7 +33,6 @@ import qualified Product.Feedback as Feedback
 import qualified Product.Location as Location
 import qualified Product.Profile as Profile
 import qualified Product.Quote as Quote
-import qualified Product.Registration as Registration
 import qualified Product.Ride as Ride
 import qualified Product.SavedLocations as SavedLocations
 import qualified Product.Search as Search
@@ -51,7 +50,6 @@ import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Location as Location
 import qualified Types.API.Profile as Profile
 import qualified Types.API.Quote as QuoteAPI
-import Types.API.Registration
 import qualified Types.API.Ride as RideAPI
 import qualified Types.API.SavedLocations as SavedLocationsAPI
 import qualified Types.API.Search as Search
@@ -73,7 +71,7 @@ type MainAPI =
 
 type UIAPI =
   Get '[JSON] Text
-    :<|> RegistrationAPI
+    :<|> Registration.API
     :<|> ProfileAPI
     :<|> SearchAPI
     :<|> SelectAPI
@@ -112,7 +110,7 @@ mainServer =
 uiAPI :: FlowServer UIAPI
 uiAPI =
   pure "App is UP"
-    :<|> registrationFlow
+    :<|> Registration.handler
     :<|> profileFlow
     :<|> searchFlow
     :<|> selectFlow
@@ -131,31 +129,6 @@ uiAPI =
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
     :<|> savedLocationFlow
-
----- Registration Flow ------
-type RegistrationAPI =
-  "auth"
-    :> ( ReqBody '[JSON] AuthReq
-           :> Post '[JSON] AuthRes
-           :<|> Capture "authId" (Id SRT.RegistrationToken)
-             :> "verify"
-             :> ReqBody '[JSON] AuthVerifyReq
-             :> Post '[JSON] AuthVerifyRes
-           :<|> "otp"
-             :> Capture "authId" (Id SRT.RegistrationToken)
-             :> "resend"
-             :> Post '[JSON] ResendAuthRes
-           :<|> "logout"
-             :> TokenAuth
-             :> Post '[JSON] APISuccess
-       )
-
-registrationFlow :: FlowServer RegistrationAPI
-registrationFlow =
-  Registration.auth
-    :<|> Registration.verify
-    :<|> Registration.resend
-    :<|> Registration.logout
 
 type ProfileAPI =
   "profile"

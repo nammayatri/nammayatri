@@ -1,5 +1,6 @@
 module Mobility.AppBackend.APICalls where
 
+import qualified "app-backend" API.UI.Registration as Reg
 import "app-backend" App.Routes as AbeRoutes
 import Beckn.External.FCM.Types
 import Beckn.Types.APISuccess
@@ -20,7 +21,6 @@ import Servant hiding (Context)
 import Servant.Client
 import qualified "app-backend" Types.API.Booking as AppBooking
 import qualified "app-backend" Types.API.Feedback as AppFeedback
-import qualified "app-backend" Types.API.Registration as Reg
 import qualified "app-backend" Types.API.Select as AppSelect
 import qualified "app-backend" Types.API.Serviceability as AppServ
 
@@ -73,7 +73,7 @@ appAuth
   :<|> appVerify
   :<|> appReInitiateLogin
   :<|> logout =
-    client (Proxy :: Proxy AbeRoutes.RegistrationAPI)
+    client (Proxy :: Proxy Reg.API)
 
 mkAuthReq :: Reg.AuthReq
 mkAuthReq =

@@ -3,7 +3,7 @@ module API.Beckn (API, handler) where
 import qualified API.Beckn.OnConfirm as OnConfirm
 import qualified API.Beckn.OnInit as OnInit
 import qualified API.Beckn.OnSearch as OnSearch
-import qualified API.Beckn.OnSearch as OnSelect
+import qualified API.Beckn.OnSelect as OnSelect
 import qualified API.Beckn.OnTrack as OnTrack
 import qualified API.Beckn.OnUpdate as OnUpdate
 import App.Types
