@@ -7,7 +7,7 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Utils.Common as CoreCommon
+import Beckn.Utils.Common
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
@@ -42,17 +42,19 @@ verifyTokenAction ::
   ( EsqDBFlow m r,
     HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days]
   ) =>
+  (RegToken -> Text) ->
   VerificationActionWithPayload VerifyToken m
-verifyTokenAction = VerificationActionWithPayload verifyPerson
+verifyTokenAction authTokenCacheKey = VerificationActionWithPayload (verifyPerson authTokenCacheKey)
 
 verifyPerson ::
   ( EsqDBFlow m r,
     HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days]
   ) =>
+  (RegToken -> Text) ->
   Roles.ApiAccessLevel ->
   RegToken ->
   m (Id DP.Person)
-verifyPerson requiredAccessLevel token = do
+verifyPerson authTokenCacheKey requiredAccessLevel token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   mbPersonId <- Redis.getKeyRedis key
@@ -64,11 +66,6 @@ verifyPerson requiredAccessLevel token = do
       Redis.setExRedis key personId authTokenCacheExpiry
       return personId
   Roles.verifyAccessLevel requiredAccessLevel personId
-
--- FIXME it should be different for bap and bpp
-authTokenCacheKey :: RegToken -> Text
-authTokenCacheKey regToken =
-  "BAP-dashboard:authTokenCacheKey:" <> regToken
 
 verifyToken ::
   ( EsqDBFlow m r,

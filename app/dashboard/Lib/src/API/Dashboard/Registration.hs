@@ -79,3 +79,10 @@ buildRegistrationToken personId = do
         personId = personId,
         createdAt = now
       }
+
+-- cleanCachedTokens :: EsqDBFlow m r => Id SP.Person -> m ()
+-- cleanCachedTokens personId = do
+--   regTokens <- QR.findAllByPersonId personId
+--   for_ regTokens $ \regToken -> do
+--     let key = authTokenCacheKey regToken.token
+--     void $ Redis.deleteKeyRedis key
