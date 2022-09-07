@@ -38,8 +38,8 @@ buildSelectReq subscriber req = do
   item <- case order.items of
     [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
-  pickupLocation <- mkLocation pickup.location
-  dropLocation <- mkLocation dropOff.location
+  pickupLocation <- mkLocation pickup.location Nothing
+  dropLocation <- mkLocation dropOff.location Nothing
   pure
     DSelect.DSelectReq
       { messageId = messageId,
@@ -64,9 +64,10 @@ mkLocation ::
     CoreMetrics m
   ) =>
   Select.Location ->
+  Maybe GoogleMaps.Language ->
   m Location.SearchReqLocationAPIEntity
-mkLocation (Select.Location Select.Gps {..}) = do
-  placeNameResp <- GoogleMaps.getPlaceName (show lat <> "," <> show lon)
+mkLocation (Select.Location Select.Gps {..}) language = do
+  placeNameResp <- GoogleMaps.getPlaceName (show lat <> "," <> show lon) language
   pure
     Location.SearchReqLocationAPIEntity
       { areaCode = Nothing,

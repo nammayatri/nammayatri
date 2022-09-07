@@ -27,4 +27,4 @@ getPlaceName :: Id Person.Person -> Text -> FlowHandler GoogleMaps.GetPlaceNameR
 getPlaceName personId latLng = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
-  ClientGoogleMaps.getPlaceName url latLng apiKey
+  ClientGoogleMaps.getPlaceName url latLng apiKey Nothing

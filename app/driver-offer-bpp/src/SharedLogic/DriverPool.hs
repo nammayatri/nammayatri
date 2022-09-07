@@ -41,7 +41,7 @@ calculateDriverPool variant pickupLatLong orgId onlyNotOnRide = do
         radius
         orgId
         onlyNotOnRide
-  logPretty DEBUG "approxDriverPool" approxDriverPool
+  logDebug $ "approxDriverPool" <> show approxDriverPool
   case approxDriverPool of
     [] -> pure []
     (a : pprox) -> filterOutDriversWithDistanceAboveThreshold radius pickupLatLong (a :| pprox)
@@ -59,9 +59,9 @@ filterOutDriversWithDistanceAboveThreshold ::
   m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
 filterOutDriversWithDistanceAboveThreshold threshold pickupLatLong driverPoolResults = do
   getDistanceResults <- GoogleMaps.getDistances (Just GoogleMaps.CAR) driverPoolResults (pickupLatLong :| []) Nothing
-  logPretty DEBUG "get distance results" getDistanceResults
+  logDebug $ "get distance results" <> show getDistanceResults
   let result = NE.filter filterFunc getDistanceResults
-  logPretty DEBUG "secondly filtered driver pool" result
+  logDebug $ "secondly filtered driver pool" <> show result
   pure result
   where
     filterFunc estDist = getMeters estDist.distance <= fromIntegral threshold

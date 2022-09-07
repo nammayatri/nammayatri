@@ -160,6 +160,7 @@ makePerson req = do
         isNew = True,
         registered = False,
         deviceToken = Nothing,
+        language = Nothing,
         description = Nothing,
         createdAt = now,
         updatedAt = now

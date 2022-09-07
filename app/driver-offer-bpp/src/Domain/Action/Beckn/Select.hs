@@ -1,5 +1,6 @@
 module Domain.Action.Beckn.Select where
 
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
@@ -8,7 +9,9 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common (logDebug)
+import qualified Data.Map as M
 import Data.Time.Clock (addUTCTime)
+import qualified Domain.Action.UI.GoogleMaps as GoogleMaps
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -20,7 +23,8 @@ import SharedLogic.FareCalculator
 import Storage.Queries.Person
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
-import qualified Tools.Notifications as Notify
+import Tools.Metrics (CoreMetrics)
+import qualified Utils.Notifications as Notify
 
 data DSelectReq = DSelectReq
   { messageId :: Text,
@@ -33,6 +37,8 @@ data DSelectReq = DSelectReq
     variant :: Variant
   }
 
+type LanguageDictionary = M.Map GoogleMaps.Language DSearchReq.SearchRequest
+
 handler :: Id DOrg.Organization -> DSelectReq -> Flow ()
 handler orgId sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
@@ -43,9 +49,9 @@ handler orgId sReq = do
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
   let distance = distRes.distance
       estimatedRideDuration = distRes.duration_in_traffic
-      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` sReq.pickupTime
+      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) addUTCTime sReq.pickupTime
 
-  fareParams <- calculateFare orgId sReq.variant distance estimatedRideFinishTime Nothing
+fareParams <- calculateFare orgId sReq.variant distance estimatedRideFinishTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation orgId sReq estimatedRideFinishTime
   let baseFare = fareSum fareParams
   logDebug $
@@ -55,13 +61,16 @@ handler orgId sReq = do
       <> "; estimated base fare:"
       <> show baseFare
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare distance) driverPool
+  languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   Esq.runTransaction $ do
     QSReq.create searchReq
     mapM_ QSRD.create searchRequestsForDrivers
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) ->
     when (not dPoolRes.origin.onRide) $ do
-      let entityData = makeSearchRequestForDriverAPIEntity sReqFD searchReq
+      let language = fromMaybe GoogleMaps.ENGLISH dPoolRes.origin.language
+      let transletedSearchReq = fromMaybe searchReq  $ M.lookup language languageDictionary
+      let entityData = makeSearchRequestForDriverAPIEntity sReqFD transletedSearchReq
       Notify.notifyOnNewSearchRequestAvailable sReqFD.driverId dPoolRes.origin.driverDeviceToken entityData
   where
     buildSearchRequestForDriver ::
@@ -131,3 +140,61 @@ buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do
   let createdAt = now
       updatedAt = now
   pure DLoc.SearchReqLocation {..}
+
+transleteSearchReq ::
+  ( MonadFlow m,
+    GoogleMaps.HasGoogleMaps m r,
+    CoreMetrics m
+  )=>
+  DSearchReq.SearchRequest ->
+  GoogleMaps.Language -> 
+  m DSearchReq.SearchRequest
+transleteSearchReq defaultSearchReq@DSearchReq.SearchRequest {..} language = do
+  from <- mkLocation defaultSearchReq.fromLocation language
+  to <- mkLocation defaultSearchReq.toLocation language
+  pure DSearchReq.SearchRequest 
+        { fromLocation = from,
+          toLocation = to,
+          ..
+        }
+
+mkLocation ::
+  ( MonadFlow m,
+    GoogleMaps.HasGoogleMaps m r,
+    CoreMetrics m
+  ) => 
+  DLoc.SearchReqLocation ->
+  GoogleMaps.Language ->
+  m DLoc.SearchReqLocation
+mkLocation searchReqLoc@DLoc.SearchReqLocation {..} language = do
+  placeNameResp <- GoogleMaps.getPlaceName (show searchReqLoc.lat <> "," <> show searchReqLoc.lon) (Just language)
+  pure
+    DLoc.SearchReqLocation
+      { street = Nothing,
+        door = Nothing,
+        city = Nothing,
+        state = Nothing,
+        country = Nothing,
+        building = Nothing,
+        areaCode = Nothing,
+        area = Just $ head $ placeNameResp.results <&> (.formatted_address),
+        ..
+      }
+
+addLanguageToDictionary ::
+  ( MonadFlow m,
+    GoogleMaps.HasGoogleMaps m r,
+    CoreMetrics m
+  ) =>
+  DSearchReq.SearchRequest -> 
+  LanguageDictionary ->
+  (GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong) ->
+  m LanguageDictionary
+addLanguageToDictionary searchReq dict dPoolRes = do
+  let language = fromMaybe GoogleMaps.ENGLISH dPoolRes.origin.language
+  if isJust $ M.lookup language dict
+    then 
+      return dict
+    else do
+      transletedSearchReq <- transleteSearchReq searchReq language
+      pure $ M.insert language transletedSearchReq dict

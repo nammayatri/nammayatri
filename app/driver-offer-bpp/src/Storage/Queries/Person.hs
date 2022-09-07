@@ -5,6 +5,7 @@ module Storage.Queries.Person where
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.External.FCM.Types as FCM
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Storage.Esqueleto as Esq
@@ -175,13 +176,13 @@ updateAverageRating personId newAverageRating = do
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
+    language :: Maybe GoogleMaps.Language,
     onRide :: Bool,
     distanceToDriver :: Double,
     vehicle :: Vehicle,
     lat :: Double,
-    lon :: Double
-  }
-  deriving (Generic, PrettyShow, Show)
+    lon :: Double  }
+  deriving (Generic, Show)
 
 instance GoogleMaps.HasCoordinates DriverPoolResult where
   getCoordinates dpRes = LatLong dpRes.lat dpRes.lon
@@ -227,21 +228,21 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters orgId onlyNotOnRide = do
       return
         ( person ^. PersonTId,
           person ^. PersonDeviceToken,
+          person ^. PersonLanguage,
           driverInfo ^. DriverInformationOnRide,
           location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
           location ^. DriverLocationLat,
           location ^. DriverLocationLon,
           vehicle
         )
-    (personId, mbDeviceToken, onRide, dist, dlat, dlon, vehicleVariant) <- from withTable
+    (personId, mbDeviceToken, language, onRide, dist, dlat, dlon, vehicle) <- from withTable
     where_ $ dist <. val (fromIntegral radiusMeters)
     orderBy [asc dist]
-    return (personId, mbDeviceToken, onRide, dist, vehicleVariant, dlat, dlon)
+    return (personId, mbDeviceToken, language, onRide, dist, vehicle, dlat, dlon)
   return $ makeDriverPoolResult <$> res
   where
-    makeDriverPoolResult (personId, mbDeviceToken, onRide, dist, vehicleVariant, dlat, dlon) =
-      DriverPoolResult (cast personId) mbDeviceToken onRide dist vehicleVariant dlat dlon
-
+    makeDriverPoolResult (personId, mbDeviceToken, mblang, onRide, dist, vehicle, dlat, dlon) =
+      DriverPoolResult (cast personId) mbDeviceToken mblang onRide dist vehicle dlat dlon
 setRegisteredTrue :: Id Person -> SqlDB ()
 setRegisteredTrue personId = do
   now <- getCurrentTime
