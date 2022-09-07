@@ -5,8 +5,7 @@ module App
   )
 where
 
-import API.Handler
-import API.Types
+import API
 import Beckn.Exit
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)

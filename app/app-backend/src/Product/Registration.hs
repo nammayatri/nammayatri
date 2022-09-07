@@ -57,8 +57,8 @@ auth req = withFlowHandlerAPI $ do
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-makePerson :: EncFlow m r => AuthReq -> Id DMerchant.Merchant -> m SP.Person
-makePerson req merchantId = do
+buildPerson :: EncFlow m r => AuthReq -> Id DMerchant.Merchant -> m SP.Person
+buildPerson req merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   encMobNum <- encrypt req.mobileNumber
@@ -153,7 +153,7 @@ getRegistrationTokenE tokenId =
 
 createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Id DMerchant.Merchant -> m SP.Person
 createPerson req merchantId = do
-  person <- makePerson req merchantId
+  person <- buildPerson req merchantId
   DB.runTransaction $ Person.create person
   pure person
 

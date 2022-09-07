@@ -45,7 +45,6 @@ import GHC.Records.Extra
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as QOrganization
-import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -239,7 +238,7 @@ getInformation ::
   Id SP.Person ->
   m DriverInformationRes
 getInformation personId = do
-  _ <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound

@@ -23,12 +23,12 @@ mkPersist
       firstName Text Maybe
       lastName Text Maybe
       role Domain.Role
-      emailEncrypted Text Maybe
-      emailHash DbHash Maybe
+      emailEncrypted Text
+      emailHash DbHash
       mobileNumberEncrypted Text Maybe
       mobileNumberHash DbHash Maybe
       mobileCountryCode Text Maybe
-      passwordHash DbHash Maybe
+      passwordHash DbHash
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -45,15 +45,15 @@ instance TType PersonT Domain.Person where
     return $
       Domain.Person
         { id = Id id,
-          email = EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash,
+          email = EncryptedHashed (Encrypted emailEncrypted) emailHash,
           mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
           ..
         }
   toTType Domain.Person {..} =
     PersonT
       { id = getId id,
-        emailEncrypted = email <&> unEncrypted . (.encrypted),
-        emailHash = email <&> (.hash),
+        emailEncrypted = email & unEncrypted . (.encrypted),
+        emailHash = email.hash,
         mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber <&> (.hash),
         ..

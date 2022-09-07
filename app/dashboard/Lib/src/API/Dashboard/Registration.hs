@@ -1,4 +1,4 @@
-module API.Registration where
+module API.Dashboard.Registration where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
@@ -9,8 +9,25 @@ import Beckn.Utils.Common
 import Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
 import Environment
+import Servant
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import Tools.Auth
+import Tools.Roles
+
+-- FIXME access level should be like AccessLevel 'DASHBOARD_ACCESS 'USER
+type API =
+  "login"
+    :> ReqBody '[JSON] LoginReq
+    :> Post '[JSON] LoginRes
+    :<|> "logout"
+      :> TokenAuth (AccessLevel 'READ_ACCESS 'CUSTOMERS)
+      :> Post '[JSON] LogoutRes
+
+handler :: FlowServer API
+handler =
+  login
+    :<|> logout
 
 data LoginReq = LoginReq
   { email :: Text,

@@ -42,6 +42,6 @@ in
 , apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = common.httpClientOptions
 , authTokenCacheExpiry = +600 --seconds
-, registratinTokenExpiry = +365 --days
+, registrationTokenExpiry = +365 --days
 , encTools = encTools
 }

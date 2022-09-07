@@ -41,6 +41,7 @@ instance
         apiEntity = fromSing (sing @ae)
       }
 
+-- TODO make tests for this logic
 verifyAccessLevel :: EsqDBFlow m r => ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
 verifyAccessLevel requiredAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)

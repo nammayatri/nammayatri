@@ -1,7 +1,6 @@
 module API.UI.Driver (module Reexport, API, handler) where
 
 import Beckn.Types.APISuccess
-import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common (withFlowHandlerAPI)
@@ -81,10 +80,10 @@ createDriver admin = withFlowHandlerAPI . DDriver.createDriver admin
 getInformation :: Id SP.Person -> App.FlowHandler DriverInformationRes
 getInformation = withFlowHandlerAPI . DDriver.getInformation
 
-setActivity :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
+setActivity :: Id SP.Person -> Bool -> App.FlowHandler APISuccess
 setActivity personId = withFlowHandlerAPI . DDriver.setActivity personId
 
-setRental :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
+setRental :: Id SP.Person -> Bool -> App.FlowHandler APISuccess
 setRental personId = withFlowHandlerAPI . DDriver.setRental personId
 
 listDriver :: SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler ListDriverRes
