@@ -40,22 +40,22 @@ instance VerificationMethodWithPayload VerifyToken where
 
 verifyTokenAction ::
   ( EsqDBFlow m r,
-    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days]
+    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
-  (RegToken -> Text) ->
   VerificationActionWithPayload VerifyToken m
-verifyTokenAction authTokenCacheKey = VerificationActionWithPayload (verifyPerson authTokenCacheKey)
+verifyTokenAction = VerificationActionWithPayload verifyPerson
 
 verifyPerson ::
   ( EsqDBFlow m r,
-    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days]
+    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
-  (RegToken -> Text) ->
   Roles.ApiAccessLevel ->
   RegToken ->
   m (Id DP.Person)
-verifyPerson authTokenCacheKey requiredAccessLevel token = do
-  let key = authTokenCacheKey token
+verifyPerson requiredAccessLevel token = do
+  key <- authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   mbPersonId <- Redis.getKeyRedis key
   personId <- case mbPersonId of
@@ -66,6 +66,14 @@ verifyPerson authTokenCacheKey requiredAccessLevel token = do
       Redis.setExRedis key personId authTokenCacheExpiry
       return personId
   Roles.verifyAccessLevel requiredAccessLevel personId
+
+authTokenCacheKey ::
+  HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text] =>
+  RegToken ->
+  m Text
+authTokenCacheKey regToken = do
+  authTokenCacheKeyPrefix <- asks (.authTokenCacheKeyPrefix)
+  pure $ authTokenCacheKeyPrefix <> regToken
 
 verifyToken ::
   ( EsqDBFlow m r,

@@ -16,12 +16,12 @@ import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Servant.Server (runServerWithHealthCheck)
 import Environment
 import Servant (Context (..))
-import Tools.Auth
+import qualified Tools.Auth as Auth
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appCfg <- readDhallConfigDefault "bpp-dashboard" <&> configModifier
-  appEnv <- buildAppEnv appCfg
+  appEnv <- buildAppEnv authTokenCacheKeyPrefix appCfg
   -- Metrics.serve (appCfg.metricsPort) --  do we need it?
   runServerWithHealthCheck appEnv (Proxy @API) handler identity identity context releaseAppEnv \flowRt -> do
     try (prepareRedisConnections $ appCfg.redisCfg)
@@ -31,5 +31,8 @@ runService configModifier = do
     pure flowRt
   where
     context =
-      verifyTokenAction @(FlowR AppEnv)
+      Auth.verifyTokenAction @(FlowR AppEnv)
         :. EmptyContext
+
+    authTokenCacheKeyPrefix :: Text
+    authTokenCacheKeyPrefix = "BPP-dashboard:authTokenCacheKey:"

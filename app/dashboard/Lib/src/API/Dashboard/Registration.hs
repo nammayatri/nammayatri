@@ -2,6 +2,7 @@ module API.Dashboard.Registration where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -50,21 +51,26 @@ login LoginReq {..} = withFlowHandlerAPI $ do
   token <- generateToken person.id
   pure $ LoginRes token "Logged in successfully"
 
-generateToken :: EsqDBFlow m r => Id DP.Person -> m Text
+generateToken ::
+  ( EsqDBFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  Id DP.Person ->
+  m Text
 generateToken personId = do
   regToken <- buildRegistrationToken personId
   -- Clean old login session
-  -- FIXME We should also cleanup old token from Redis
+  cleanCachedTokens personId
   DB.runTransaction $ do
-    QR.deleteByPersonId personId
+    QR.deleteAllByPersonId personId
     QR.create regToken
   pure $ regToken.token
 
 logout :: Id DP.Person -> FlowHandler LogoutRes
 logout personId = withFlowHandlerAPI $ do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  -- FIXME We should also cleanup old token from Redis
-  DB.runTransaction (QR.deleteByPersonId person.id)
+  cleanCachedTokens personId
+  DB.runTransaction (QR.deleteAllByPersonId person.id)
   pure $ LogoutRes "Logged out successfully"
 
 buildRegistrationToken :: MonadFlow m => Id DP.Person -> m DR.RegistrationToken
@@ -80,9 +86,14 @@ buildRegistrationToken personId = do
         createdAt = now
       }
 
--- cleanCachedTokens :: EsqDBFlow m r => Id SP.Person -> m ()
--- cleanCachedTokens personId = do
---   regTokens <- QR.findAllByPersonId personId
---   for_ regTokens $ \regToken -> do
---     let key = authTokenCacheKey regToken.token
---     void $ Redis.deleteKeyRedis key
+cleanCachedTokens ::
+  ( EsqDBFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  Id DP.Person ->
+  m ()
+cleanCachedTokens personId = do
+  regTokens <- QR.findAllByPersonId personId
+  for_ regTokens $ \regToken -> do
+    key <- authTokenCacheKey regToken.token
+    void $ Redis.deleteKeyRedis key

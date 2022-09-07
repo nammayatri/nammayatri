@@ -43,12 +43,13 @@ data AppEnv = AppEnv
     registrationTokenExpiry :: Days,
     encTools :: EncTools,
     coreMetrics :: Metrics.CoreMetricsContainer,
-    isShuttingDown :: Shutdown
+    isShuttingDown :: Shutdown,
+    authTokenCacheKeyPrefix :: Text
   }
   deriving (Generic)
 
-buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv AppCfg {..} = do
+buildAppEnv :: Text -> AppCfg -> IO AppEnv
+buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

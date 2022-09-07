@@ -18,8 +18,15 @@ findByToken token =
     where_ $ regToken ^. RegistrationTokenToken ==. val token
     return regToken
 
-deleteByPersonId :: Id Person -> SqlDB ()
-deleteByPersonId personId =
+findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
+findAllByPersonId personId =
+  findAll $ do
+    regToken <- from $ table @RegistrationTokenT
+    where_ $ regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
+    return regToken
+
+deleteAllByPersonId :: Id Person -> SqlDB ()
+deleteAllByPersonId personId =
   Esq.delete $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
