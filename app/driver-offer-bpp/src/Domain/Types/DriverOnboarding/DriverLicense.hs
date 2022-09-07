@@ -5,22 +5,19 @@ module Domain.Types.DriverOnboarding.DriverLicense where
 import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Types.Id
-import Domain.Types.DriverOnboarding.ClassOfVehicle
+import Domain.Types.DriverOnboarding.IdfyVerification
 import Domain.Types.Person (Person)
+import Idfy.Types as Idfy
 
 data DriverLicenseE e = DriverLicense
   { id :: Id DriverLicense,
     driverId :: Id Person,
     driverDob :: Maybe UTCTime,
     licenseNumber :: EncryptedHashedField e Text,
-    licenseStart :: Maybe UTCTime,
-    licenseExpiry :: Maybe UTCTime,
-    classOfVehicles :: [ClassOfVehicle],
-    idfyResponseDump :: Maybe Text,
-    idfyRequestId :: Maybe Text,
+    licenseExpiry :: UTCTime,
+    classOfVehicles :: [Idfy.ClassOfVehicle],
+    failedRules :: [Text],
     verificationStatus :: VerificationStatus,
-    version :: Int,
-    active :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     consent :: Bool,

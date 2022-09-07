@@ -6,18 +6,19 @@ module Domain.Action.UI.DriverOnboarding.Image where
 import AWS.S3 as S3
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (isNothing)
+import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Types.Common
 import Beckn.Utils.Common
 import Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Person as Person
+import Environment
+import Idfy.Flow as Idfy
 import qualified Storage.Queries.DriverOnboarding.Image as Query
 import qualified Storage.Queries.Person as Person
 import Tools.Error
-import Tools.Metrics
 
 data ValidateImageReq = ValidateImageReq
   { image :: Text,
@@ -30,11 +31,10 @@ newtype ValidateImageRes = ValidateImageRes
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
 createPath ::
-  (HasFlowEnv m r '["s3Config" ::: S3.S3Config]) =>
   Text ->
   Text ->
   Domain.ImageType ->
-  m Text
+  Flow Text
 createPath driverId orgId imageType = do
   S3Config {..} <- asks (.s3Config)
   now <- getCurrentTime
@@ -50,15 +50,19 @@ createPath driverId orgId imageType = do
           <> ".png"
       )
 
-validateImage :: 
-  ( CoreMetrics m,
-    EsqDBFlow m r,
-    EncFlow m r,
-    HasFlowEnv m r '["s3Config" ::: S3Config]
-  ) =>
-  Id Person.Person -> 
-  ValidateImageReq -> 
-  m ValidateImageRes
+getDocType :: Domain.ImageType -> Text
+getDocType Domain.DriverLicense = "ind_driving_license"
+getDocType Domain.VehicleRegistrationCertificate = "ind_rc"
+
+getImageType :: Text -> Domain.ImageType
+getImageType "ind_driving_license" = Domain.DriverLicense
+getImageType "ind_rc" = Domain.VehicleRegistrationCertificate
+getImageType _ = Domain.VehicleRegistrationCertificate
+
+validateImage ::
+  Id Person.Person ->
+  ValidateImageReq ->
+  Flow ValidateImageRes
 validateImage personId ValidateImageReq {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
@@ -71,10 +75,9 @@ validateImage personId ValidateImageReq {..} = do
   imageEntity <- mkImage personId orgId imagePath imageType False
   runTransaction $ Query.create imageEntity
 
-  -- Idfy logic :: Uncomment this once Idfy service is ready
-  -- validationOutput <- Idfy.validateImage image >>= throwError InvalidImage
-  -- unless (validationOutput.docType == imageType) $ throwError (InvalidImageType imageType validationOutput.docType)
-  -- runTransaction $ Query.updateToValid imageEntity.id
+  validationOutput <- Idfy.validateImage image (getDocType imageType)
+  checkErrors imageType validationOutput.result
+  runTransaction $ Query.updateToValid imageEntity.id
 
   return $ ValidateImageRes {imageId = imageEntity.id}
   where
@@ -91,3 +94,13 @@ validateImage personId ValidateImageReq {..} = do
             isValid,
             createdAt = now
           }
+
+    checkErrors _ Nothing = throwError InvalidImage
+    checkErrors imgType (Just result) = do
+      let outputImageType = getImageType result.detected_doc_type
+      unless (outputImageType == imgType) $ throwError (InvalidImageType (show imgType) (show outputImageType))
+
+      unless (fromMaybe False result.is_readable) $ throwError $ InvalidRequest "Image not readable"
+
+      unless (maybe False (60 <) result.readability.confidence) $
+        throwError $ InvalidRequest "Image quality is not good"

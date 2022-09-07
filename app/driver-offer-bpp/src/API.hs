@@ -4,7 +4,8 @@ import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
 import qualified API.UI as UI
 import Data.OpenApi
-import Domain.Action.UI.DriverOnboarding.Idfy
+import Domain.Action.UI.DriverOnboarding.DriverLicense as DriverOnboarding
+import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import Environment
 import EulerHS.Prelude
 import qualified Idfy.Flow as Idfy
@@ -28,7 +29,7 @@ mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
     :<|> Beckn.handler
-    :<|> Idfy.idfyWebhookHandler idfyDL idfyRC
+    :<|> Idfy.idfyWebhookHandler DriverOnboarding.onVerifyDL DriverOnboarding.onVerifyRC
     :<|> Dashboard.handler
 
 driverOfferServer :: FlowServer DriverOfferAPI

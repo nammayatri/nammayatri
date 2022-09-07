@@ -13,7 +13,7 @@ data RCVerificationValue = RCVerificationValue
     created_at :: UTCTime,
     group_id :: Text,
     request_id :: Text,
-    result :: RCResult,
+    result :: Maybe RCResult,
     status :: Text,
     task_id :: Text,
     _type :: Text
@@ -26,7 +26,7 @@ data DLVerificationResponse = DLVerificationResponse
     created_at :: UTCTime,
     group_id :: Text,
     request_id :: Text,
-    result :: DLResult,
+    result :: Maybe DLResult,
     status :: Text,
     task_id :: Text,
     _type :: Text
@@ -61,7 +61,7 @@ data RCExtractionResult = RCExtractionResult
     registration_number :: Maybe Text,
     rto_name :: Maybe Text,
     status :: Maybe Text,
-    vehicle_class :: Maybe ClassOfVehicle,
+    vehicle_class :: Maybe Text,
     vehicle_financier :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)

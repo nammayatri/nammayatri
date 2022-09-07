@@ -12,12 +12,13 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Data.ByteString as BS
-import qualified Domain.Types.DriverOnboarding.ClassOfVehicle as Domain
 import qualified Domain.Types.DriverOnboarding.DriverLicense as Domain
+import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
+import qualified Idfy.Types as Idfy
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.VerificationStatus"
-derivePersistField "Domain.ClassOfVehicle"
+derivePersistField "Idfy.ClassOfVehicle"
 
 mkPersist
   defaultSqlSettings
@@ -27,18 +28,15 @@ mkPersist
       driverId PersonTId
       driverDob UTCTime Maybe
       licenseNumber Text
-      licenseStart UTCTime Maybe
-      licenseExpiry UTCTime Maybe
-      classOfVehicles (PostgresList Domain.ClassOfVehicle)
-      idfyResponseDump Text Maybe
-      idfyRequestId Text Maybe
+      licenseExpiry UTCTime
+      classOfVehicles (PostgresList Idfy.ClassOfVehicle)
+      failedRules (PostgresList Text)
       verificationStatus Domain.VerificationStatus
-      version Int
-      active Bool
       consent Bool
       consentTimestamp UTCTime
       createdAt UTCTime
       updatedAt UTCTime
+      UniqueDriverLicenseNumber licenseNumber
       Primary id
       deriving Generic
     |]
@@ -56,6 +54,7 @@ instance TType DriverLicenseT Domain.DriverLicense where
           driverId = fromKey driverId,
           licenseNumber = EncryptedHashed (Encrypted licenseNumber) (DbHash BS.empty),
           classOfVehicles = unPostgresList classOfVehicles,
+          failedRules = unPostgresList failedRules,
           ..
         }
   toTType Domain.DriverLicense {..} =
@@ -64,5 +63,6 @@ instance TType DriverLicenseT Domain.DriverLicense where
         driverId = toKey driverId,
         licenseNumber = licenseNumber & unEncrypted . (.encrypted),
         classOfVehicles = PostgresList classOfVehicles,
+        failedRules = PostgresList failedRules,
         ..
       }

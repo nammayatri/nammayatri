@@ -15,7 +15,6 @@ import Beckn.Types.Flow
 import Beckn.Utils.Common hiding (Error)
 import Beckn.Utils.IOLogging
 import EulerHS.Prelude
-import Idfy.External.Flow
 import Idfy.Types.IdfyConfig
 import Idfy.Types.VerificationResult
 import Idfy.WebhookHandler

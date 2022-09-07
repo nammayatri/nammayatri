@@ -5,11 +5,10 @@
 module Idfy.Types.ValidateImage where
 
 import Beckn.Utils.JSON
-import Data.Aeson hiding (Error)
 import Data.OpenApi
 import EulerHS.Prelude hiding (state)
 
-data ValidateImageReq = ValidateRCReq
+data ValidateImageReq = ValidateImageReq
   { task_id :: Text,
     group_id :: Text,
     _data :: ValidateDoc
@@ -37,7 +36,7 @@ data ValidateImageRes = ValidateImageRes
     created_at :: Maybe Text,
     group_id :: Maybe Text,
     request_id :: Maybe Text,
-    result :: ResultBody,
+    result :: Maybe ResultBody,
     status :: Text,
     task_id :: Maybe Text,
     _type :: Maybe Text
@@ -54,7 +53,7 @@ instance ToJSON ValidateImageRes where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data ResultBody = ResultBody
-  { detected_doc_type :: Maybe Text,
+  { detected_doc_type :: Text,
     is_readable :: Maybe Bool,
     readability :: ReadabilityBody
   }

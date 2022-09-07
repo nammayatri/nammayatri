@@ -8,9 +8,11 @@ import qualified Data.Text as T
 import Data.Time.Format
 import EulerHS.Prelude
 import Idfy.Auth
-import Idfy.External.Flow
+import qualified Idfy.External.Flow as EF
+import Idfy.Types.ExtractImage
 import Idfy.Types.IdfyConfig
 import Idfy.Types.IdfyRes
+import Idfy.Types.ValidateImage
 import Idfy.Types.VerificationResult
 import Idfy.Types.VerifyReq
 
@@ -68,7 +70,7 @@ verifyDL dlId dob = do
                 },
             ..
           }
-  verifyDLAsync idfyConfig.api_key idfyConfig.account_id idfyConfig.url req
+  EF.verifyDLAsync idfyConfig.api_key idfyConfig.account_id idfyConfig.url req
 
 verifyRC ::
   ( HasField "isShuttingDown" a (TMVar ()),
@@ -88,4 +90,79 @@ verifyRC rcId = do
           { _data = VerifyRCData rcId,
             ..
           }
-  verifyRCAsync idfyConfig.api_key idfyConfig.account_id idfyConfig.url req
+  EF.verifyRCAsync idfyConfig.api_key idfyConfig.account_id idfyConfig.url req
+
+validateImage ::
+  ( HasField "isShuttingDown" a (TMVar ()),
+    HasField "coreMetrics" a CoreMetricsContainer,
+    HasField "loggerEnv" a LoggerEnv,
+    CoreMetrics (FlowR a),
+    HasField "idfyCfg" a IdfyConfig
+  ) =>
+  Text ->
+  Text ->
+  FlowR a ValidateImageRes
+validateImage doc1 doctype = do
+  idfyConfig <- asks (.idfyCfg)
+  task_id <- generateGUID
+  group_id <- generateGUID
+  let req =
+        ValidateImageReq
+          { _data =
+              ValidateDoc
+                { document1 = doc1,
+                  doc_type = doctype
+                },
+            ..
+          }
+  EF.validateImage idfyConfig.api_key idfyConfig.account_id idfyConfig.url req
+
+extractRCImage ::
+  ( HasField "isShuttingDown" a (TMVar ()),
+    HasField "coreMetrics" a CoreMetricsContainer,
+    HasField "loggerEnv" a LoggerEnv,
+    CoreMetrics (FlowR a),
+    HasField "idfyCfg" a IdfyConfig
+  ) =>
+  Text ->
+  Maybe Text ->
+  FlowR a ExtractedRCDetails
+extractRCImage doc1 mbdoc2 = do
+  idfyConfig <- asks (.idfyCfg)
+  task_id <- generateGUID
+  group_id <- generateGUID
+  let req =
+        ExtractImageReq
+          { _data =
+              VerifyDocData
+                { document1 = doc1,
+                  document2 = mbdoc2
+                },
+            ..
+          }
+  EF.extractRCImage idfyConfig.api_key idfyConfig.account_id idfyConfig.url req
+
+extractDLImage ::
+  ( HasField "isShuttingDown" a (TMVar ()),
+    HasField "coreMetrics" a CoreMetricsContainer,
+    HasField "loggerEnv" a LoggerEnv,
+    CoreMetrics (FlowR a),
+    HasField "idfyCfg" a IdfyConfig
+  ) =>
+  Text ->
+  Maybe Text ->
+  FlowR a ExtractedDLDetails
+extractDLImage doc1 mbdoc2 = do
+  idfyConfig <- asks (.idfyCfg)
+  task_id <- generateGUID
+  group_id <- generateGUID
+  let req =
+        ExtractImageReq
+          { _data =
+              VerifyDocData
+                { document1 = doc1,
+                  document2 = mbdoc2
+                },
+            ..
+          }
+  EF.extractDLImage idfyConfig.api_key idfyConfig.account_id idfyConfig.url req

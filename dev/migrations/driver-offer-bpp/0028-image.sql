@@ -1,3 +1,5 @@
+ALTER TABLE atlas_driver_offer_bpp._operating_city_t RENAME TO operating_city;
+
 CREATE TABLE atlas_driver_offer_bpp.image
 (
     id character(36) NOT NULL,

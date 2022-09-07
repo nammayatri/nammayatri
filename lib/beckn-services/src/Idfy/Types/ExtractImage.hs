@@ -22,7 +22,7 @@ instance FromJSON ExtractImageReq where
 instance ToJSON ExtractImageReq where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
-data VerifyDocData = VerifyDLwithSourceData
+data VerifyDocData = VerifyDocData
   { document1 :: Text,
     document2 :: Maybe Text
   }

@@ -9,7 +9,6 @@ where
 
 import Beckn.Tools.Metrics.CoreMetrics.Types
 import Beckn.Types.Common
-import Beckn.Types.Error
 import Beckn.Utils.Common hiding (Error)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
@@ -20,7 +19,6 @@ import Idfy.Types.IdfyRes
 import Idfy.Types.ValidateImage
 import Idfy.Types.VerifyReq
 import Servant (Header, JSON, Post, ReqBody, (:>))
-import Servant.Client (ClientError)
 
 type VerifyDLAPI =
   "v3" :> "tasks" :> "async" :> "verify_with_source" :> "ind_driving_license"
@@ -96,8 +94,8 @@ validateImage ::
   AccountId ->
   BaseUrl ->
   ValidateImageReq ->
-  m StatusCheck
-validateImage apiKey accountId url req = callAPI url task "validateImage" >>= checkIdfyError url
+  m ValidateImageRes
+validateImage apiKey accountId url req = callIdfyAPI url task "validateImage"
   where
     task =
       T.client
@@ -124,8 +122,8 @@ extractRCImage ::
   AccountId ->
   BaseUrl ->
   ExtractImageReq ->
-  m StatusCheck
-extractRCImage apiKey accountId url req = callAPI url task "extractRCImage" >>= checkIdfyError url
+  m ExtractedRCDetails
+extractRCImage apiKey accountId url req = callIdfyAPI url task "extractRCImage"
   where
     task =
       T.client
@@ -152,8 +150,8 @@ extractDLImage ::
   AccountId ->
   BaseUrl ->
   ExtractImageReq ->
-  m StatusCheck
-extractDLImage apiKey accountId url req = callAPI url task "extractDLImage" >>= checkIdfyError url
+  m ExtractedDLDetails
+extractDLImage apiKey accountId url req = callIdfyAPI url task "extractDLImage"
   where
     task =
       T.client
@@ -162,19 +160,19 @@ extractDLImage apiKey accountId url req = callAPI url task "extractDLImage" >>= 
         (Just accountId)
         req
 
-idfyError :: BaseUrl -> ClientError -> ExternalAPICallError
-idfyError = ExternalAPICallError (Just "IDFY_API_ERROR")
+-- idfyError :: BaseUrl -> ClientError -> ExternalAPICallError
+-- idfyError = ExternalAPICallError (Just "IDFY_API_ERROR")
 
-checkIdfyError :: (MonadThrow m, Log m, HasField "status" a Text) => BaseUrl -> Either ClientError a -> m StatusCheck
-checkIdfyError url res =
-  fromEitherM (idfyError url) res >>= validateResponseStatus
+-- checkIdfyError :: (MonadThrow m, Log m, HasField "status" a Text) => BaseUrl -> Either ClientError a -> m StatusCheck
+-- checkIdfyError url res =
+--   fromEitherM (idfyError url) res >>= validateResponseStatus
 
-validateResponseStatus :: (MonadThrow m, Log m, HasField "status" a Text) => a -> m StatusCheck
-validateResponseStatus response =
-  case response.status of
-    "completed" -> return VALID
-    "failed" -> return INVALID
-    _ -> throwError IdfyServerError
+-- validateResponseStatus :: (MonadThrow m, Log m, HasField "status" a Text) => a -> m StatusCheck
+-- validateResponseStatus response =
+--   case response.status of
+--     "completed" -> return VALID
+--     "failed" -> return INVALID
+--     _ -> throwError IdfyServerError
 
 callIdfyAPI :: CallAPI env res
 callIdfyAPI = callApiUnwrappingApiError (identity @Error) Nothing Nothing

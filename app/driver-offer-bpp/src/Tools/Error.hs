@@ -206,8 +206,11 @@ data DriverOnboardingError
   | InvalidImageType Text Text
   | ImageNotFound Text
   | ImageNotValid Text
-  | AlreadyRegisteredSamePerson
-  | AlreadyRegisteredDiffPerson
+  | DriverAlreadyLinked
+  | DLAlreadyLinked
+  | DLAlreadyUpdated
+  | RCAlreadyLinked
+  | RCAlreadyUpdated
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
@@ -219,8 +222,11 @@ instance IsBaseError DriverOnboardingError where
     InvalidImageType provided actual -> Just $ "Provided image type \"" <> show provided <> "\" doesn't match actual type \"" <> show actual <> "\"."
     ImageNotFound id_ -> Just $ "Image with imageId \"" <> show id_ <> "\" not found."
     ImageNotValid id_ -> Just $ "Image with imageId \"" <> show id_ <> "\" is not valid."
-    AlreadyRegisteredSamePerson -> Just "Same person already registered with same document."
-    AlreadyRegisteredDiffPerson -> Just "Different person already registered with same document."
+    DriverAlreadyLinked -> Just "Other doc is already linked with driver."
+    DLAlreadyLinked -> Just "Driver license not available. Linked to other driver."
+    DLAlreadyUpdated -> Just "No action required. Driver license is already linked to driver."
+    RCAlreadyLinked -> Just "Vehicle RC not available. Linked to other driver."
+    RCAlreadyUpdated -> Just "No action required. Vehicle RC is already linked to driver."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -229,8 +235,11 @@ instance IsHTTPError DriverOnboardingError where
     InvalidImageType _ _ -> "INVALID_IMAGE_TYPE"
     ImageNotFound _ -> "IMAGE_NOT_FOUND"
     ImageNotValid _ -> "IMAGE_NOT_VALID"
-    AlreadyRegisteredSamePerson -> "ALREADY_REGISTERED_SAME_PERSON"
-    AlreadyRegisteredDiffPerson -> "ALREADY_REGISTERED_DIFF_PERSON"
+    DriverAlreadyLinked -> "DRIVER_ALREADY_LINKED"
+    DLAlreadyLinked -> "DL_ALREADY_LINKED"
+    DLAlreadyUpdated -> "DL_ALREADY_UPDATED"
+    RCAlreadyLinked -> "RC_ALREADY_LINKED"
+    RCAlreadyUpdated -> "RC_ALREADY_UPDATED"
 
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
@@ -238,7 +247,10 @@ instance IsHTTPError DriverOnboardingError where
     InvalidImageType _ _ -> E400
     ImageNotFound _ -> E500
     ImageNotValid _ -> E500
-    AlreadyRegisteredSamePerson -> E400
-    AlreadyRegisteredDiffPerson -> E400
+    DriverAlreadyLinked -> E400
+    DLAlreadyLinked -> E500
+    DLAlreadyUpdated -> E400
+    RCAlreadyLinked -> E500
+    RCAlreadyUpdated -> E400
 
 instance IsAPIError DriverOnboardingError

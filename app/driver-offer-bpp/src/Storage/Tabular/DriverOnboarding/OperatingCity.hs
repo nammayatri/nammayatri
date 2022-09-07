@@ -16,7 +16,7 @@ import Storage.Tabular.Organization (OrganizationTId)
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    OperatingCityT sql = _operating_city_t
+    OperatingCityT sql=operating_city
       id Text
       organizationId OrganizationTId
       cityName Text

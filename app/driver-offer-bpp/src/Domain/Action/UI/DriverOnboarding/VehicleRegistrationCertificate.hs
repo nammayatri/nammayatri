@@ -5,9 +5,11 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
   ( DriverRCReq (..),
     DriverRCRes,
     verifyRC,
+    onVerifyRC,
   )
 where
 
+import AWS.S3 as S3
 import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (isNothing)
@@ -18,12 +20,20 @@ import Beckn.Types.Predicate
 import Beckn.Utils.Common
 import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
-import qualified Domain.Types.DriverOnboarding.ClassOfVehicle as Domain
+import Data.Text as T
+import qualified Data.Time as DT
+import qualified Domain.Types.DriverOnboarding.DriverRCAssociation as Domain
+import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
 import qualified Domain.Types.Person as Person
+import Environment
+import qualified Idfy.Flow as Idfy
+import qualified Idfy.Types as Idfy
+import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
-import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as Query
+import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
 
@@ -44,12 +54,9 @@ validateDriverRCReq DriverRCReq {..} =
     certNum = LengthInRange 5 12 `And` star (latinUC \/ digit \/ ",")
 
 verifyRC ::
-  ( EsqDBFlow m r,
-    EncFlow m r
-  ) =>
-  Id Person.Person -> 
-  DriverRCReq -> 
-  m DriverRCRes
+  Id Person.Person ->
+  DriverRCReq ->
+  Flow DriverRCRes
 verifyRC personId req@DriverRCReq {..} = do
   runRequestValidation validateDriverRCReq req
   _ <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -59,61 +66,131 @@ verifyRC personId req@DriverRCReq {..} = do
   unless (imageMetadata.imageType == Image.VehicleRegistrationCertificate) $
     throwError (InvalidImageType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
 
-  -- Uncomment this once Idfy service is ready
-  -- image <- S3.get imageMetadata.s3Path
-  -- extractOutput <- Idfy.extractImage image
-  -- unless (extractOutput.certificateNumber == vehicleRegistrationCertNumber) $
-  --   throwError (ImageDataNotMatching extractOutput.certificateNumber vehicleRegistrationCertNumber)
+  image <- S3.get (T.unpack imageMetadata.s3Path)
+  extractOutput <- Idfy.extractRCImage image Nothing
+  unless (extractOutput.registration_number == Just vehicleRegistrationCertNumber) $
+    throwError (InvalidRequest "Id number not matching")
 
-  mVehicleRC <- Query.findActiveVehicleRC vehicleRegistrationCertNumber
+  now <- getCurrentTime
+  mDriverAssociation <- DAQuery.getActiveAssociationByDriver personId
 
-  case mVehicleRC of
-    Just vehicleRC -> do
-      when (vehicleRC.driverId == personId) $ throwError AlreadyRegisteredSamePerson
-      throwError AlreadyRegisteredDiffPerson
+  case mDriverAssociation of
+    Just driverAssociaion -> do
+      driverRC <- RCQuery.findById driverAssociaion.rcId >>= fromMaybeM (InvalidRequest "Missing RC entry")
+      rcNumber <- decrypt driverRC.certificateNumber
+      unless (rcNumber == vehicleRegistrationCertNumber) $ throwError DriverAlreadyLinked
+      unless (driverRC.fitnessExpiry < now) $ throwError RCAlreadyUpdated -- RC not expired
+      verifyRCFlow personId vehicleRegistrationCertNumber
     Nothing -> do
-      now <- getCurrentTime
-      mlatestDriverRC <- Query.findLatestByPersonId personId
-      latestVersion <-
-        maybe
-          (pure 1)
-          ( \latestDriverRC -> do
-              runTransaction $ Query.makeRCInactive latestDriverRC.id now
-              pure $ latestDriverRC.version + 1
-          )
-          mlatestDriverRC
-
-      rcEntity <- mkVehicleRegistrationCertEntry personId req.vehicleRegistrationCertNumber Nothing now latestVersion
-      runTransaction $ Query.create rcEntity
+      eRC <- encrypt vehicleRegistrationCertNumber
+      mVehicleRC <- RCQuery.findLastVehicleRC eRC
+      case mVehicleRC of
+        Just vehicleRC -> do
+          mRCAssociation <- DAQuery.getActiveAssociationByRC vehicleRC.id
+          when (isJust mRCAssociation) $ throwError RCAlreadyLinked
+          verifyRCFlow personId vehicleRegistrationCertNumber
+        Nothing -> do
+          verifyRCFlow personId vehicleRegistrationCertNumber
 
   return Success
 
-mkVehicleRegistrationCertEntry :: EncFlow m r => Id Person.Person -> Text -> Maybe Text -> UTCTime -> Int -> m Domain.VehicleRegistrationCertificate
-mkVehicleRegistrationCertEntry personId rcNumber reqID time version = do
-  vrc <- encrypt rcNumber
+verifyRCFlow :: Id Person.Person -> Text -> Flow ()
+verifyRCFlow personId rcNumber = do
+  now <- getCurrentTime
+  idfyRes <- Idfy.verifyRC rcNumber
+  idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now
+  runTransaction $ IVQuery.create idfyVerificationEntity
+  where
+    mkIdfyVerificationEntity requestId now = do
+      id <- generateGUID
+      return $
+        Domain.IdfyVerification
+          { id,
+            driverId = personId,
+            requestId,
+            docType = Image.VehicleRegistrationCertificate,
+            status = "PENDING",
+            idfyResponse = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
+
+onVerifyRC :: Idfy.RCVerificationResponse -> Flow AckResponse
+onVerifyRC [] = pure Ack
+onVerifyRC [resp] = do
+  verificationReq <- IVQuery.findByRequestId resp.request_id >>= fromMaybeM (InternalError "Verification request not found")
+  runTransaction $ IVQuery.updateResponse resp.request_id resp.status (show <$> resp.result)
+
+  person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
+  now <- getCurrentTime
+
+  mVehicleRC <- mkVehicleRCEntry now resp.result
+  case mVehicleRC of
+    Just vehicleRC -> do
+      runTransaction $ RCQuery.upsert vehicleRC
+
+      -- linking to driver
+      rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (InternalError "RC not found")
+      mRCAssociation <- DAQuery.getActiveAssociationByRC rc.id
+      when (isNothing mRCAssociation) $ do
+        driverRCAssoc <- mkAssociation person.id rc.id
+        runTransaction $ DAQuery.create driverRCAssoc
+      return Ack
+    _ -> return Ack
+  where
+    mkAssociation driverId rcId = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        Domain.DriverRCAssociation
+          { id,
+            driverId,
+            rcId,
+            associatedOn = now,
+            associatedTill = Nothing,
+            consent = True,
+            consentTimestamp = now
+          }
+onVerifyRC _ = pure Ack
+
+mkVehicleRCEntry :: UTCTime -> Maybe Idfy.RCResult -> Flow (Maybe Domain.VehicleRegistrationCertificate)
+mkVehicleRCEntry _ Nothing = return Nothing
+mkVehicleRCEntry now (Just result) = do
+  mEncryptedRC <- encrypt `mapM` result.extraction_output.registration_number
   id <- generateGUID
-  return $
-    Domain.VehicleRegistrationCertificate
-      { id,
-        driverId = personId,
-        certificateNumber = vrc,
-        fitnessExpiry = Nothing,
-        permitNumber = Nothing,
-        permitStart = Nothing,
-        permitExpiry = Nothing,
-        pucExpiry = Nothing,
-        vehicleColor = Nothing,
-        vehicleManufacturer = Nothing,
-        vehicleModel = Nothing,
-        vehicleClass = Nothing,
-        idfyRequestId = reqID,
-        idfyResponseDump = Nothing,
-        insuranceValidity = Nothing,
-        verificationStatus = Domain.PENDING,
-        version,
-        active = True,
-        createdAt = time,
-        updatedAt = time,
-        consentTimestamp = time,
-        consent = True
-      }
+  let mbFitnessEpiry = convertTextToUTC result.extraction_output.fitness_upto
+  return $ createRC result id now <$> mEncryptedRC <*> mbFitnessEpiry
+
+createRC :: Idfy.RCResult -> Id Domain.VehicleRegistrationCertificate -> UTCTime -> EncryptedHashedField 'AsEncrypted Text -> UTCTime -> Domain.VehicleRegistrationCertificate
+createRC result id now edl expiry = do
+  let insuranceValidity = convertTextToUTC result.extraction_output.insurance_validity
+  let vehicleClass = result.extraction_output.vehicle_class
+  let verificationStatus = validateRCStatus expiry insuranceValidity vehicleClass now
+  Domain.VehicleRegistrationCertificate
+    { id,
+      certificateNumber = edl,
+      fitnessExpiry = expiry,
+      permitExpiry = convertTextToUTC result.extraction_output.permit_validity,
+      pucExpiry = convertTextToUTC result.extraction_output.puc_number_upto,
+      vehicleClass,
+      vehicleManufacturer = result.extraction_output.manufacturer,
+      insuranceValidity,
+      verificationStatus,
+      failedRules = [],
+      createdAt = now,
+      updatedAt = now
+    }
+
+validateRCStatus :: UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Domain.VerificationStatus
+validateRCStatus expiry insuranceValidity cov now = do
+  let validCOV = maybe False isValidCOVRC cov
+  let validInsurance = maybe False (now <) insuranceValidity
+  if (now < expiry) && validCOV && validInsurance then Domain.VALID else Domain.INVALID
+
+convertTextToUTC :: Maybe Text -> Maybe UTCTime
+convertTextToUTC a = do
+  a_ <- a
+  DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
+
+isValidCOVRC :: Text -> Bool
+isValidCOVRC = T.isInfixOf "3WT"

@@ -12,11 +12,9 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Data.ByteString as BS
-import qualified Domain.Types.DriverOnboarding.ClassOfVehicle as Domain
+import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
-import Storage.Tabular.Person (PersonTId)
 
-derivePersistField "Domain.ClassOfVehicle"
 derivePersistField "Domain.VerificationStatus"
 
 mkPersist
@@ -24,27 +22,18 @@ mkPersist
   [defaultQQ|
     VehicleRegistrationCertificateT sql=vehicle_registration_certificate
       id Text
-      driverId PersonTId
       certificateNumber Text
-      fitnessExpiry UTCTime Maybe
-      permitNumber Text Maybe
-      permitStart UTCTime Maybe
+      fitnessExpiry UTCTime
       permitExpiry UTCTime Maybe
       pucExpiry UTCTime Maybe
-      vehicleClass Domain.ClassOfVehicle Maybe
-      vehicleColor Text Maybe
-      vehicleManufacturer Text Maybe
-      vehicleModel Text Maybe
       insuranceValidity  UTCTime Maybe
-      idfyRequestId Text Maybe
-      idfyResponseDump Text Maybe
+      vehicleClass Text Maybe
+      vehicleManufacturer Text Maybe
       verificationStatus Domain.VerificationStatus
-      version Int
-      active Bool
-      consent Bool
-      consentTimestamp UTCTime
+      failedRules (PostgresList Text)
       createdAt UTCTime
       updatedAt UTCTime
+      UniqueVehicleRegistrationCertificateRCId certificateNumber fitnessExpiry
       Primary id
       deriving Generic
     |]
@@ -59,14 +48,14 @@ instance TType VehicleRegistrationCertificateT Domain.VehicleRegistrationCertifi
     return $
       Domain.VehicleRegistrationCertificate
         { id = Id id,
-          driverId = fromKey driverId,
           certificateNumber = EncryptedHashed (Encrypted certificateNumber) (DbHash BS.empty),
+          failedRules = unPostgresList failedRules,
           ..
         }
   toTType Domain.VehicleRegistrationCertificate {..} =
     VehicleRegistrationCertificateT
       { id = getId id,
-        driverId = toKey driverId,
         certificateNumber = certificateNumber & unEncrypted . (.encrypted),
+        failedRules = PostgresList failedRules,
         ..
       }

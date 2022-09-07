@@ -7,32 +7,21 @@ module Domain.Types.DriverOnboarding.VehicleRegistrationCertificate where
 import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Types.Id
-import Domain.Types.DriverOnboarding.ClassOfVehicle
-import Domain.Types.Person (Person)
+import Domain.Types.DriverOnboarding.IdfyVerification
 
 data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   { id :: Id VehicleRegistrationCertificate,
-    driverId :: Id Person,
     certificateNumber :: EncryptedHashedField e Text,
-    fitnessExpiry :: Maybe UTCTime,
-    permitNumber :: Maybe Text,
-    permitStart :: Maybe UTCTime,
+    fitnessExpiry :: UTCTime,
     permitExpiry :: Maybe UTCTime,
     pucExpiry :: Maybe UTCTime,
-    vehicleClass :: Maybe ClassOfVehicle,
-    vehicleColor :: Maybe Text,
-    vehicleManufacturer :: Maybe Text,
-    vehicleModel :: Maybe Text,
     insuranceValidity :: Maybe UTCTime,
-    idfyRequestId :: Maybe Text,
-    idfyResponseDump :: Maybe Text,
+    vehicleClass :: Maybe Text,
+    failedRules :: [Text],
+    vehicleManufacturer :: Maybe Text,
     verificationStatus :: VerificationStatus,
-    version :: Int,
-    active :: Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    consent :: Bool,
-    consentTimestamp :: UTCTime
+    updatedAt :: UTCTime
   }
   deriving (Generic)
 
