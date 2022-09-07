@@ -1,0 +1,19 @@
+@bpp-dashboard-host = http://localhost:8018
+
+# access tokens with different roles
+@customer = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
+@driver = 223ed551-c9f8-4bae-b49a-30a696424b7f
+@juspay_ops = e789b47f-2e39-47a2-b297-33f8fd4b87d0
+@juspay_admin = 0f3378e2-da5b-4eac-a0f6-397ca48358de
+@customer_service = 07ef2a2a-b014-4a86-b1c0-e453e8b0b66e
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name driverList
+
+GET {{bpp-dashboard-host}}/bpp/driver/list
+content-type: application/json
+token: {{juspay_admin}}

@@ -1,6 +1,0 @@
-@bpp-dashboard-host = http://localhost:8018
-
-# @name healthcheck
-GET {{bpp-dashboard-host}}
-
-###

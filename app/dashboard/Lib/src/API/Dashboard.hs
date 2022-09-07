@@ -6,8 +6,10 @@ import Environment
 import Servant
 
 type API =
-  Person.API
-    :<|> Registration.API
+  "dashboard"
+    :> ( Person.API
+           :<|> Registration.API
+       )
 
 handler :: FlowServer API
 handler =

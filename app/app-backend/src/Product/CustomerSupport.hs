@@ -34,6 +34,7 @@ generateToken SP.Person {..} = do
   let personId = id
   regToken <- createSupportRegToken $ getId personId
   -- Clean Old Login Session
+  -- FIXME We should also cleanup old token from Redis
   DB.runTransaction $ do
     RegistrationToken.deleteByPersonId personId
     RegistrationToken.create regToken
@@ -43,6 +44,7 @@ logout :: Id SP.Person -> FlowHandler T.LogoutRes
 logout personId = withFlowHandlerAPI $ do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
+  -- FIXME We should also cleanup old token from Redis
   DB.runTransaction (RegistrationToken.deleteByPersonId person.id)
   pure $ T.LogoutRes "Logged out successfully"
 

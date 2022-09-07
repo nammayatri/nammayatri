@@ -1,6 +1,0 @@
-@bap-dashboard-host = http://localhost:8017
-
-# @name healthcheck
-GET {{bap-dashboard-host}}
-
-###

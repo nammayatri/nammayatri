@@ -1,0 +1,40 @@
+
+@bpp-dashboard-host = http://localhost:8018
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# use this creds for testing different roles:
+# name = customer, driver, juspay_ops, juspay_admin, customer_service
+# email = name@dashboard.com, password = name
+
+# @name login
+
+POST {{bpp-dashboard-host}}/dashboard/login
+content-type: application/json
+
+{
+  "email" : "juspay_admin@dashboard.com",
+  "password" : "juspay_admin"
+}
+
+###
+
+# @name logout
+
+@token = {{login.response.body.authToken}}
+
+POST {{bpp-dashboard-host}}/dashboard/logout
+content-type: application/json
+token: {{token}}
+
+###
+
+#  why do we have access after logout?
+# @name personList
+
+GET {{bpp-dashboard-host}}/dashboard/person/list
+content-type: application/json
+token: {{token}}

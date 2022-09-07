@@ -54,6 +54,7 @@ generateToken :: EsqDBFlow m r => Id DP.Person -> m Text
 generateToken personId = do
   regToken <- buildRegistrationToken personId
   -- Clean old login session
+  -- FIXME We should also cleanup old token from Redis
   DB.runTransaction $ do
     QR.deleteByPersonId personId
     QR.create regToken
@@ -62,6 +63,7 @@ generateToken personId = do
 logout :: Id DP.Person -> FlowHandler LogoutRes
 logout personId = withFlowHandlerAPI $ do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- FIXME We should also cleanup old token from Redis
   DB.runTransaction (QR.deleteByPersonId person.id)
   pure $ LogoutRes "Logged out successfully"
 
