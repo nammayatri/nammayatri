@@ -7,13 +7,13 @@ import Domain.Types.Person as DP
 import Environment
 import Servant
 import Tools.Auth
-import Tools.Roles
+import Tools.Roles.Instances
 
 type API =
   "bap"
     :> "customer"
     :> "list"
-    :> TokenAuth (AccessLevel 'READ_ACCESS 'CUSTOMERS)
+    :> TokenAuth (ApiAccessLevel 'READ_ACCESS 'CUSTOMERS)
     :> Get '[JSON] Text
 
 handler :: FlowServer API

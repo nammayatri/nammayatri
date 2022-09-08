@@ -7,13 +7,13 @@ import Domain.Types.Person as DP
 import Environment
 import Servant
 import Tools.Auth
-import Tools.Roles
+import Tools.Roles.Instances
 
 type API =
   "bpp"
     :> "driver"
     :> "list"
-    :> TokenAuth (AccessLevel 'READ_ACCESS 'DRIVERS)
+    :> TokenAuth (ApiAccessLevel 'READ_ACCESS 'DRIVERS)
     :> Get '[JSON] Text
 
 handler :: FlowServer API

@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Tools.Roles where
 
@@ -10,45 +9,52 @@ import Beckn.Utils.Common
 import Data.Singletons.TH
 import Domain.Types.Person as DP
 import qualified Storage.Queries.Person as QPerson
-import Tools.Servant.HeaderAuth
+
+-------- Possible user access levels for helper API --------
+
+data UserAccessType = USER_READ_ACCESS | USER_WRITE_ACCESS | USER_FULL_ACCESS | USER_NO_ACCESS
+
+-------- Required access levels for helper api --------
 
 data ApiAccessType = READ_ACCESS | WRITE_ACCESS
 
 genSingletons [''ApiAccessType]
 
-data UserAccessType = USER_READ_ACCESS | USER_WRITE_ACCESS | USER_FULL_ACCESS | USER_NO_ACCESS
-
 data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING
 
 genSingletons [''ApiEntity]
 
--- AccessLevel is used only on type level, ApiAccessLevel for working with real data
 data ApiAccessLevel = ApiAccessLevel
   { apiAccessType :: ApiAccessType,
     apiEntity :: ApiEntity
   }
 
-data AccessLevel at ae
+-------- Required access levels for dashboard api --------
 
-instance
-  forall (at :: ApiAccessType) (ae :: ApiEntity).
-  (SingI at, SingI ae) =>
-  (VerificationPayload ApiAccessLevel) (AccessLevel at ae)
-  where
-  toPayloadType _ =
-    ApiAccessLevel
-      { apiAccessType = fromSing (sing @at),
-        apiEntity = fromSing (sing @ae)
-      }
+data DashboardAccessType = DASHBOARD_USER | DASHBOARD_ADMIN
+
+genSingletons [''DashboardAccessType]
+
+-------- Required access levels for any api --------
+
+data RequiredAccessLevel = RequiredApiAccessLevel ApiAccessLevel | RequiredDashboardAccessLevel DashboardAccessType
 
 -- TODO make tests for this logic
-verifyAccessLevel :: EsqDBFlow m r => ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
+verifyAccessLevel :: EsqDBFlow m r => RequiredAccessLevel -> Id DP.Person -> m (Id DP.Person)
 verifyAccessLevel requiredAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  let userAccessType = accessMatrix person.role requiredAccessLevel.apiEntity
-  unless (checkUserAccess userAccessType requiredAccessLevel.apiAccessType) $
-    throwError AccessDenied
-  pure person.id
+  case requiredAccessLevel of
+    RequiredApiAccessLevel apiAccessLevel -> do
+      let userAccessType = accessMatrix person.role apiAccessLevel.apiEntity
+      unless (checkUserAccess userAccessType apiAccessLevel.apiAccessType) $
+        throwError AccessDenied
+      pure person.id
+    RequiredDashboardAccessLevel DASHBOARD_ADMIN ->
+      if person.role == JUSPAY_ADMIN
+        then pure person.id
+        else throwError AccessDenied
+    RequiredDashboardAccessLevel DASHBOARD_USER ->
+      pure person.id
 
 checkUserAccess :: UserAccessType -> ApiAccessType -> Bool
 checkUserAccess USER_FULL_ACCESS _ = True

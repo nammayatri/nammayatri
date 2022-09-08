@@ -31,7 +31,6 @@ token: {{token}}
 
 ###
 
-#  why do we have access after logout?
 # @name personList
 
 GET {{bap-dashboard-host}}/dashboard/person/list

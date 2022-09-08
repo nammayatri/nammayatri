@@ -14,15 +14,14 @@ import Servant
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth
-import Tools.Roles
+import Tools.Roles.Instances
 
--- FIXME access level should be like AccessLevel 'DASHBOARD_ACCESS 'USER
 type API =
   "login"
     :> ReqBody '[JSON] LoginReq
     :> Post '[JSON] LoginRes
     :<|> "logout"
-      :> TokenAuth (AccessLevel 'READ_ACCESS 'CUSTOMERS)
+      :> TokenAuth (DashboardAccessLevel 'DASHBOARD_USER)
       :> Post '[JSON] LogoutRes
 
 handler :: FlowServer API

@@ -10,13 +10,12 @@ import Environment
 import Servant hiding (Unauthorized, throwError)
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
-import Tools.Roles
+import Tools.Roles.Instances
 
--- FIXME access level should be like AccessLevel 'DASHBOARD_ACCESS 'ADMIN
 type API =
   "person"
     :> "list"
-    :> TokenAuth (AccessLevel 'READ_ACCESS 'DRIVERS)
+    :> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
     :> QueryParam "searchString" Text
     :> QueryParam "limit" Integer
     :> QueryParam "offset" Integer

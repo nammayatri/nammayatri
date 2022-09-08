@@ -36,7 +36,7 @@ instance VerificationMethod VerifyToken where
     \If you don't have a token, use registration endpoints."
 
 instance VerificationMethodWithPayload VerifyToken where
-  type VerificationPayloadType VerifyToken = Roles.ApiAccessLevel
+  type VerificationPayloadType VerifyToken = Roles.RequiredAccessLevel
 
 verifyTokenAction ::
   ( EsqDBFlow m r,
@@ -51,7 +51,7 @@ verifyPerson ::
     HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
-  Roles.ApiAccessLevel ->
+  Roles.RequiredAccessLevel ->
   RegToken ->
   m (Id DP.Person)
 verifyPerson requiredAccessLevel token = do
