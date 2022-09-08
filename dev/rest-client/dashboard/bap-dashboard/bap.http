@@ -16,4 +16,4 @@ GET {{bap-dashboard-host}}
 
 GET {{bap-dashboard-host}}/bap/customer/list
 content-type: application/json
-token: {{juspay_admin}}
+token: {{customer_service}}

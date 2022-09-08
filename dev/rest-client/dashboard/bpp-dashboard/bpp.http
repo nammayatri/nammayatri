@@ -16,4 +16,4 @@ GET {{bpp-dashboard-host}}
 
 GET {{bpp-dashboard-host}}/bpp/driver/list
 content-type: application/json
-token: {{juspay_admin}}
+token: {{customer_service}}
