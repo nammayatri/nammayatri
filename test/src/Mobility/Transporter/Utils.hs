@@ -3,6 +3,7 @@ module Mobility.Transporter.Utils where
 import qualified "beckn-transport" API.UI.Booking as BookingAPI
 import "beckn-transport" API.UI.Location as LocationAPI
 import qualified "beckn-transport" API.UI.Ride as RideAPI
+import qualified "app-backend" API.UI.Search as AppSearch
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
@@ -11,7 +12,6 @@ import Beckn.Types.Time
 import Beckn.Utils.Common
 import Common
 import qualified "beckn-transport" Domain.Action.UI.Booking as DUB
-import qualified "app-backend" Domain.Types.Booking as AppRB
 import qualified "app-backend" Domain.Types.Booking as BRB
 import qualified "beckn-transport" Domain.Types.Booking as TRB
 import qualified "app-backend" Domain.Types.CancellationReason as AppCR
@@ -32,7 +32,6 @@ import qualified "beckn-transport" Storage.Queries.DriverInformation as DriverIn
 import "beckn-transport" Storage.Queries.DriverLocation
 import qualified "beckn-transport" Storage.Queries.Ride as TQRide
 import "app-backend" Types.API.Quote
-import qualified "app-backend" Types.API.Search as AppSearch
 import Utils
 
 getFutureTime :: IO UTCTime
@@ -126,7 +125,7 @@ getOnSearchTaxiQuotesByTransporterName appToken searchId transporterName =
         _ -> Nothing
 
 {-
-initWithCheck :: Text -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking)
+initWithCheck :: Text -> Id AppQuote.Quote -> ClientsM (Id BRB.Booking)
 initWithCheck appToken quoteId = do
   bBookingId <- fmap (.bookingId) $ callBAP $ API.appInitRide appToken $ API.mkAppInitReq quoteId
   void . pollDesc "init result" $ do
@@ -136,7 +135,7 @@ initWithCheck appToken quoteId = do
   pure bBookingId
 -}
 
-confirmWithCheck :: Text -> DriverTestData -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking, TRB.Booking, DUB.RideInfo)
+confirmWithCheck :: Text -> DriverTestData -> Id AppQuote.Quote -> ClientsM (Id BRB.Booking, TRB.Booking, DUB.RideInfo)
 confirmWithCheck appToken driver quoteId = do
   bBookingId <- fmap (.bookingId) $ callBAP $ API.appConfirmRide appToken quoteId
   void . pollDesc "confirm result" $ do
@@ -147,7 +146,7 @@ confirmWithCheck appToken driver quoteId = do
   void . pollDesc "ride confirmed" $
     callBAP (API.appBookingStatus bBookingId appRegistrationToken)
       <&> (.status)
-      >>= (`shouldBe` AppRB.CONFIRMED)
+      >>= (`shouldBe` BRB.CONFIRMED)
       <&> Just
 
   tBooking <- pollDesc "ride booking id should exist and should be confirmed" $ do
@@ -169,17 +168,17 @@ acceptRide driver tBooking = do
     tRide.status `shouldBe` TRide.NEW
     return $ Just tRide
 
-rejectRide :: Text -> DriverTestData -> TRB.Booking -> Id AppRB.Booking -> ClientsM ()
+rejectRide :: Text -> DriverTestData -> TRB.Booking -> Id BRB.Booking -> ClientsM ()
 rejectRide appToken driver tBooking bBookingId = do
   void . callBPP $
     API.rideRespond tBooking.id driver.token $
       BookingAPI.SetDriverAcceptanceReq BookingAPI.REJECT
-  checkBookingBapStatus appToken bBookingId AppRB.CANCELLED
+  checkBookingBapStatus appToken bBookingId BRB.CANCELLED
 
-cancelRideByApp :: Text -> Id AppRB.Booking -> ClientsM ()
+cancelRideByApp :: Text -> Id BRB.Booking -> ClientsM ()
 cancelRideByApp appToken bBookingId = do
   void . callBAP $ API.cancelRide bBookingId appRegistrationToken (API.mkAppCancelReq AppCR.OnConfirm)
-  checkBookingBapStatus appToken bBookingId AppRB.CANCELLED
+  checkBookingBapStatus appToken bBookingId BRB.CANCELLED
 
 cancelRideByDriver :: DriverTestData -> TRide.Ride -> ClientsM ()
 cancelRideByDriver driver tRide = do
@@ -193,7 +192,7 @@ cancelRideByDriver driver tRide = do
       tRide'.status `shouldBe` TRide.CANCELLED
       pure $ Just tRide'
 
-checkBookingBapStatus :: Text -> Id AppRB.Booking -> AppRB.BookingStatus -> ClientsM ()
+checkBookingBapStatus :: Text -> Id BRB.Booking -> BRB.BookingStatus -> ClientsM ()
 checkBookingBapStatus appToken bBookingId status =
   void . pollDesc ("bap booking with id=" <> bBookingId.getId <> " should exist and should have status=" <> show status) $
     callBAP (API.appBookingStatus bBookingId appToken)
@@ -210,7 +209,7 @@ getRideInfo driver bppBookingId = do
   rideInfo2.bookingId `shouldBe` bppBookingId
   pure rideInfo2
 
-startRide :: Text -> DriverTestData -> LatLong -> TRide.Ride -> Id AppRB.Booking -> ClientsM ()
+startRide :: Text -> DriverTestData -> LatLong -> TRide.Ride -> Id BRB.Booking -> ClientsM ()
 startRide appToken driver origin tRide bBookingId = do
   void . callBPP $
     API.rideStart driver.token tRide.id $
@@ -219,7 +218,7 @@ startRide appToken driver origin tRide bBookingId = do
   void . pollDesc "trip started" $ do
     inprogressRBStatusResult <- callBAP (API.appBookingStatus bBookingId appToken)
     inprogressRBStatusResult.rideList `shouldSatisfy` not . null
-    inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED
+    inprogressRBStatusResult.status `shouldBe` BRB.TRIP_ASSIGNED
     let [inprogressRide] = inprogressRBStatusResult.rideList
     inprogressRide.status `shouldBe` BRide.INPROGRESS
     return $ Just ()
@@ -237,20 +236,20 @@ endRide ::
   DriverTestData ->
   LatLong ->
   TRide.Ride ->
-  Id AppRB.Booking ->
+  Id BRB.Booking ->
   ClientsM (Id BRide.Ride)
 endRide appToken driver destination tRide bBookingId = do
   void . callBPP $ API.rideEnd driver.token tRide.id $ RideAPI.EndRideReq destination
   pollDesc "ride completed" $ do
     completedRBStatusResult <- callBAP (API.appBookingStatus bBookingId appToken)
     completedRBStatusResult.rideList `shouldSatisfy` not . null
-    completedRBStatusResult.status `shouldBe` AppRB.COMPLETED
+    completedRBStatusResult.status `shouldBe` BRB.COMPLETED
     let [completedRide] = completedRBStatusResult.rideList
     completedRide.status `shouldBe` BRide.COMPLETED
     return $ Just completedRide.id
 
 data SearchConfirmResult = SearchConfirmResult
-  { bapBookingId :: Id AppRB.Booking,
+  { bapBookingId :: Id BRB.Booking,
     bppBooking :: TRB.Booking,
     rideInfo :: DUB.RideInfo
   }

@@ -14,14 +14,13 @@ import Control.Lens ((?~))
 import qualified Domain.Action.UI.Search.OneWay as DSearch
 import EulerHS.Prelude hiding (state)
 import ExternalAPI.Flow
-import qualified Types.API.Search as API
 import Utils.Common
 
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
-  DSearch.DSearchReq ->
+  DSearch.OneWaySearchRes ->
   m (BecknReq Search.SearchIntent)
-buildSearchReq req@DSearch.DSearchReq {..} = do
+buildSearchReq req@DSearch.OneWaySearchRes {..} = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   let messageId = getId searchId
@@ -52,7 +51,7 @@ buildContextMetro action message_id bapId bapUri = do
         ..
       }
 
-mkIntent :: DSearch.DSearchReq -> Search.Intent
+mkIntent :: DSearch.OneWaySearchRes -> Search.Intent
 mkIntent req = do
   let from = stopToLoc req.origin
   let to = stopToLoc req.destination
@@ -71,6 +70,6 @@ mkIntent req = do
                  }
          )
   where
-    stopToLoc API.SearchReqLocation {gps} = do
+    stopToLoc DSearch.SearchReqLocation {gps} = do
       let gps' = Search.Gps gps.lat gps.lon
       Search.emptyLocation & #gps ?~ gps'

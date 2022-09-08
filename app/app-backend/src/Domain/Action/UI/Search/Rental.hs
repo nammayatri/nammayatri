@@ -1,6 +1,12 @@
-module Domain.Action.UI.Search.Rental where
+module Domain.Action.UI.Search.Rental
+  ( RentalSearchReq (..),
+    RentalSearchRes (..),
+    DSearch.SearchReqLocation (..),
+    rentalSearch,
+  )
+where
 
-import App.Types
+import Beckn.Prelude
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
@@ -8,26 +14,39 @@ import Beckn.Types.Id
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
-import EulerHS.Prelude hiding (id, state)
 import Storage.Queries.Geometry
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import Tools.Metrics
 import qualified Tools.Metrics as Metrics
-import qualified Types.API.Search as API
 import Types.Error
 import Utils.Common
 
-data DSearchReq = DSearchReq
-  { origin :: API.SearchReqLocation,
+data RentalSearchReq = RentalSearchReq
+  { origin :: DSearch.SearchReqLocation,
+    startTime :: UTCTime
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data RentalSearchRes = RentalSearchRes
+  { origin :: DSearch.SearchReqLocation,
     searchId :: Id DSearchReq.SearchRequest,
     startTime :: UTCTime,
     --TODO: This supposed to be temporary solution. Check if we still need it
     gatewayUrl :: BaseUrl
   }
 
-search :: Id Person.Person -> API.RentalSearchReq -> Flow (API.SearchRes, DSearchReq)
-search personId req = do
+rentalSearch ::
+  ( EsqDBFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+    HasBAPMetrics m r
+  ) =>
+  Id Person.Person ->
+  RentalSearchReq ->
+  m RentalSearchRes
+rentalSearch personId req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <-
     QMerchant.findById person.merchantId
@@ -41,14 +60,14 @@ search personId req = do
   Metrics.startSearchMetrics txnId
   DB.runTransaction $ do
     QSearchRequest.create searchRequest
-  let dSearchReq =
-        DSearchReq
+  let dSearchRes =
+        RentalSearchRes
           { origin = req.origin,
             searchId = searchRequest.id,
             startTime = req.startTime,
             gatewayUrl = merchant.gatewayUrl
           }
-  return (API.SearchRes $ searchRequest.id, dSearchReq)
+  return dSearchRes
   where
     validateServiceability geoConfig = do
       unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps Nothing) $

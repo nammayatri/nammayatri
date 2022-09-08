@@ -8,6 +8,7 @@ import qualified API.Beckn as Beckn
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Registration as Registration
+import qualified API.UI.Search as Search
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.InternalAPI.Auth.API as Auth
@@ -35,7 +36,6 @@ import qualified Product.Location as Location
 import qualified Product.Quote as Quote
 import qualified Product.Ride as Ride
 import qualified Product.SavedLocations as SavedLocations
-import qualified Product.Search as Search
 import qualified Product.Select as Select
 import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
@@ -51,7 +51,6 @@ import qualified Types.API.Location as Location
 import qualified Types.API.Quote as QuoteAPI
 import qualified Types.API.Ride as RideAPI
 import qualified Types.API.SavedLocations as SavedLocationsAPI
-import qualified Types.API.Search as Search
 import Types.API.Select
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
@@ -62,33 +61,35 @@ type AppAPI =
     :<|> SwaggerAPI
 
 type MainAPI =
-  "v2" :> UIAPI
+  UIAPI
     :<|> Beckn.API
     :<|> MetroBeckn.API
     :<|> Auth.API
     :<|> Dashboard.API
 
 type UIAPI =
-  Get '[JSON] Text
-    :<|> Registration.API
-    :<|> Profile.API
-    :<|> SearchAPI
-    :<|> SelectAPI
-    :<|> QuoteAPI
-    :<|> Confirm.ConfirmAPI
-    :<|> BookingAPI
-    :<|> Cancel.CancelAPI
-    :<|> RideAPI
-    :<|> DeprecatedCallAPIs
-    :<|> CallAPIs
-    :<|> SupportAPI
-    :<|> RouteAPI
-    :<|> ServiceabilityAPI
-    :<|> FeedbackAPI
-    :<|> CustomerSupportAPI
-    :<|> GoogleMapsProxyAPI
-    :<|> CancellationReasonAPI
-    :<|> SavedLocationAPI
+  "v2"
+    :> ( Get '[JSON] Text
+           :<|> Registration.API
+           :<|> Profile.API
+           :<|> Search.API
+           :<|> SelectAPI
+           :<|> QuoteAPI
+           :<|> Confirm.ConfirmAPI
+           :<|> BookingAPI
+           :<|> Cancel.CancelAPI
+           :<|> RideAPI
+           :<|> DeprecatedCallAPIs
+           :<|> CallAPIs
+           :<|> SupportAPI
+           :<|> RouteAPI
+           :<|> ServiceabilityAPI
+           :<|> FeedbackAPI
+           :<|> CustomerSupportAPI
+           :<|> GoogleMapsProxyAPI
+           :<|> CancellationReasonAPI
+           :<|> SavedLocationAPI
+       )
 
 appAPI :: Proxy AppAPI
 appAPI = Proxy
@@ -111,7 +112,7 @@ uiAPI =
   pure "App is UP"
     :<|> Registration.handler
     :<|> Profile.handler
-    :<|> searchFlow
+    :<|> Search.handler
     :<|> selectFlow
     :<|> quoteFlow
     :<|> confirmFlow
@@ -128,18 +129,6 @@ uiAPI =
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
     :<|> savedLocationFlow
-
--------- Search Flow --------
-
-type SearchAPI =
-  "rideSearch"
-    :> TokenAuth
-    :> ReqBody '[JSON] Search.SearchReq
-    :> Post '[JSON] Search.SearchRes
-
-searchFlow :: FlowServer SearchAPI
-searchFlow =
-  Search.search
 
 type QuoteAPI =
   "rideSearch"

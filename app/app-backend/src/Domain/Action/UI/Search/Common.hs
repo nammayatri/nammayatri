@@ -1,12 +1,18 @@
-module Domain.Action.UI.Search.Common where
+module Domain.Action.UI.Search.Common
+  ( SearchReqLocation (..),
+    buildSearchReqLoc,
+    buildSearchRequest,
+  )
+where
 
+import Beckn.Prelude
+import Beckn.Types.MapSearch
+import Domain.Types.LocationAddress
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
-import EulerHS.Prelude hiding (state)
 import Tools.Metrics (CoreMetrics)
-import qualified Types.API.Search as API
 import Utils.Common
 
 buildSearchRequest ::
@@ -44,8 +50,14 @@ buildSearchRequest person pickup mbDrop mbDistance now = do
           validTill = addUTCTime (minimum [fromInteger searchRequestExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
-buildSearchReqLoc :: MonadFlow m => API.SearchReqLocation -> m Location.SearchReqLocation
-buildSearchReqLoc API.SearchReqLocation {..} = do
+data SearchReqLocation = SearchReqLocation
+  { gps :: LatLong,
+    address :: LocationAddress
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+buildSearchReqLoc :: MonadFlow m => SearchReqLocation -> m Location.SearchReqLocation
+buildSearchReqLoc SearchReqLocation {..} = do
   now <- getCurrentTime
   locId <- generateGUID
   return

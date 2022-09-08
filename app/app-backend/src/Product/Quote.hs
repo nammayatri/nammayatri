@@ -11,6 +11,7 @@ import qualified Domain.Types.SearchRequest as SSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.MetroOffer as Metro
+import qualified SharedLogic.PublicTransport as PublicTransport
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Quote as QRentalQuote
@@ -40,7 +41,7 @@ getOffers searchRequest = do
       quoteList <- QQuote.findAllByRequestId searchRequest.id
       let quotes = API.OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByNearestDriverDistance quoteList
       metroOffers <- map API.Metro <$> Metro.getMetroOffers searchRequest.id
-      publicTransportOffers <- map API.PublicTransport <$> getPubTransportOffers searchRequest.id
+      publicTransportOffers <- map API.PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
     Nothing -> do
       quoteList <- QRentalQuote.findAllByRequestId searchRequest.id
@@ -59,12 +60,6 @@ getOffers searchRequest = do
     creationTime (API.OnDemandCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (API.Metro Metro.MetroOffer {createdAt}) = createdAt
     creationTime (API.PublicTransport PublicTransportQuote {createdAt}) = createdAt
-
-getPubTransportOffers :: (HedisFlow m r, MonadFlow m) => Id SSR.SearchRequest -> m [PublicTransportQuote]
-getPubTransportOffers transactionId =
-  Hedis.getList redisKey
-  where
-    redisKey = "publicTransportQuoteList:" <> getId transactionId
 
 getEstimates :: EsqDBFlow m r => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
 getEstimates searchRequestId = do

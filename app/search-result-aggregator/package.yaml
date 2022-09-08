@@ -81,6 +81,8 @@ library:
   source-dirs: src
   ghc-options:
     - -Wincomplete-uni-patterns
+  dependencies:
+    - app-backend
 
 executables:
   search-result-aggregator-exe:

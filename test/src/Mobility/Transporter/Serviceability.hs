@@ -2,6 +2,7 @@
 
 module Mobility.Transporter.Serviceability where
 
+import qualified "app-backend" API.UI.Search as AppBESearch
 import Beckn.Types.MapSearch (LatLong (..))
 import Common
 import EulerHS.Prelude
@@ -12,7 +13,6 @@ import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client
 import Test.Hspec
-import qualified "app-backend" Types.API.Search as AppBESearch
 import Types.API.Serviceability
 import Utils
 
