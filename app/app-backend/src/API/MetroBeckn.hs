@@ -5,7 +5,10 @@ import App.Types
 import Beckn.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 
-type API = SignatureAuth "Authorization" :> OnSearch.API
+type API =
+  "metro" :> "v1"
+    :> SignatureAuth "Authorization"
+    :> OnSearch.API
 
 handler :: FlowServer API
 handler = OnSearch.handler

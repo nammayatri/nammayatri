@@ -6,6 +6,7 @@ module App.Routes where
 import qualified App.Routes.Dashboard as Dashboard
 import qualified API.Beckn as Beckn
 import qualified API.MetroBeckn as MetroBeckn
+import qualified API.UI.Profile as Profile
 import qualified API.UI.Registration as Registration
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
@@ -31,7 +32,6 @@ import qualified Product.Confirm as Confirm
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Location as Location
-import qualified Product.Profile as Profile
 import qualified Product.Quote as Quote
 import qualified Product.Ride as Ride
 import qualified Product.SavedLocations as SavedLocations
@@ -48,7 +48,6 @@ import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Location as Location
-import qualified Types.API.Profile as Profile
 import qualified Types.API.Quote as QuoteAPI
 import qualified Types.API.Ride as RideAPI
 import qualified Types.API.SavedLocations as SavedLocationsAPI
@@ -64,15 +63,15 @@ type AppAPI =
 
 type MainAPI =
   "v2" :> UIAPI
-    :<|> "cab" :> "v1" :> Beckn.API
-    :<|> "metro" :> "v1" :> MetroBeckn.API
+    :<|> Beckn.API
+    :<|> MetroBeckn.API
     :<|> Auth.API
     :<|> Dashboard.API
 
 type UIAPI =
   Get '[JSON] Text
     :<|> Registration.API
-    :<|> ProfileAPI
+    :<|> Profile.API
     :<|> SearchAPI
     :<|> SelectAPI
     :<|> QuoteAPI
@@ -111,7 +110,7 @@ uiAPI :: FlowServer UIAPI
 uiAPI =
   pure "App is UP"
     :<|> Registration.handler
-    :<|> profileFlow
+    :<|> Profile.handler
     :<|> searchFlow
     :<|> selectFlow
     :<|> quoteFlow
@@ -129,20 +128,6 @@ uiAPI =
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
     :<|> savedLocationFlow
-
-type ProfileAPI =
-  "profile"
-    :> ( TokenAuth
-           :> Get '[JSON] Profile.ProfileRes
-           :<|> TokenAuth
-             :> ReqBody '[JSON] Profile.UpdateProfileReq
-             :> Post '[JSON] APISuccess
-       )
-
-profileFlow :: FlowServer ProfileAPI
-profileFlow =
-  Profile.getPersonDetails
-    :<|> Profile.updatePerson
 
 -------- Search Flow --------
 

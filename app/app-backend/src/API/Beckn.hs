@@ -11,7 +11,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 
 type API =
-  SignatureAuth "Authorization"
+  "cab" :> "v1" :> SignatureAuth "Authorization"
     :> ( OnSearch.API
            :<|> OnSelect.API
            :<|> OnInit.API

@@ -1,26 +1,41 @@
-module Product.Profile where
+module Domain.Action.UI.Profile
+  ( ProfileRes,
+    UpdateProfileReq (..),
+    getPersonDetails,
+    updatePerson,
+  )
+where
 
-import App.Types
 import Beckn.External.Encryption
+import qualified Beckn.External.FCM.Types as FCM
+import Beckn.Prelude
 import Beckn.Storage.Esqueleto (runTransaction)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
-import Beckn.Utils.Logging
+import Beckn.Utils.Common
 import qualified Domain.Types.Person as Person
-import EulerHS.Prelude
 import qualified Storage.Queries.Person as QPerson
-import qualified Types.API.Profile as Profile
 import Types.Error
-import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 
-getPersonDetails :: Id Person.Person -> FlowHandler Profile.ProfileRes
-getPersonDetails personId = withFlowHandlerAPI $ do
+type ProfileRes = Person.PersonAPIEntity
+
+data UpdateProfileReq = UpdateProfileReq
+  { firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    email :: Maybe Text,
+    deviceToken :: Maybe FCM.FCMRecipientToken
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+getPersonDetails :: (EsqDBFlow m r, EncFlow m r) => Id Person.Person -> m ProfileRes
+getPersonDetails personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
 
-updatePerson :: Id Person.Person -> Profile.UpdateProfileReq -> FlowHandler APISuccess.APISuccess
-updatePerson personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+updatePerson :: (EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
+updatePerson personId req = do
   mPerson <- join <$> QPerson.findByEmail `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
