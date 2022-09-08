@@ -39,7 +39,7 @@ verifyDLAsync ::
   ApiKey ->
   AccountId ->
   BaseUrl ->
-  (VerifyReq VerifyDLData) ->
+  VerifyReq VerifyDLData ->
   m IdfyRes
 verifyDLAsync apiKey accountId url req = callIdfyAPI url task "verifyDLAsync"
   where
@@ -67,7 +67,7 @@ verifyRCAsync ::
   ApiKey ->
   AccountId ->
   BaseUrl ->
-  (VerifyReq VerifyRCData) ->
+  VerifyReq VerifyRCData ->
   m IdfyRes
 verifyRCAsync apiKey accountId url req = callIdfyAPI url task "verifyRCAsync"
   where

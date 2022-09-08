@@ -43,5 +43,5 @@ idfyWebhookHandler ::
   (RCVerificationResponse -> FlowR a AckResponse) ->
   FlowServerR a IdfyWebhookAPI
 idfyWebhookHandler dlHandler rcHandler =
-  (dlWebhookHandler dlHandler)
-    :<|> (rcWebhookHandler rcHandler)
+  dlWebhookHandler dlHandler
+    :<|> rcWebhookHandler rcHandler

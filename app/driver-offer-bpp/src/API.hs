@@ -26,7 +26,7 @@ mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
     :<|> Beckn.handler
-    :<|> (Idfy.idfyWebhookHandler idfyDL idfyRC)
+    :<|> Idfy.idfyWebhookHandler idfyDL idfyRC
 
 driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =
