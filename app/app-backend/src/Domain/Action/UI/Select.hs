@@ -1,4 +1,12 @@
-module Domain.Action.UI.Select where
+{-# LANGUAGE DerivingStrategies #-}
+
+module Domain.Action.UI.Select
+  ( DSelectRes (..),
+    SelectListRes (..),
+    select,
+    selectList,
+  )
+where
 
 import App.Types
 import Beckn.Prelude
@@ -6,14 +14,17 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
+import Domain.Types.Quote (QuoteAPIEntity (..))
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Types.Error
 import Utils.Common
 
-data DSelectReq = DSelectReq
+data DSelectRes = DSelectRes
   { searchRequest :: DSearchReq.SearchRequest,
     estimateId :: Id DEstimate.Estimate,
     providerId :: Text,
@@ -21,7 +32,13 @@ data DSelectReq = DSelectReq
     variant :: VehicleVariant
   }
 
-select :: Id DPerson.Person -> Id DEstimate.Estimate -> Flow DSelectReq
+newtype SelectListRes = SelectListRes
+  { selectedQuotes :: [QuoteAPIEntity]
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+select :: Id DPerson.Person -> Id DEstimate.Estimate -> Flow DSelectRes
 select personId estimateId = do
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
@@ -30,9 +47,14 @@ select personId estimateId = do
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
   pure
-    DSelectReq
+    DSelectRes
       { providerId = estimate.providerId,
         providerUrl = estimate.providerUrl,
         variant = estimate.vehicleVariant,
         ..
       }
+
+selectList :: EsqDBFlow m r => Id DEstimate.Estimate -> m SelectListRes
+selectList estimateId = do
+  selectedQuotes <- QQuote.findAllByEstimateId estimateId
+  pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes

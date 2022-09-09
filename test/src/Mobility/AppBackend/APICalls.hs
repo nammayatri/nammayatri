@@ -1,6 +1,7 @@
 module Mobility.AppBackend.APICalls where
 
 import qualified "app-backend" API.UI.Registration as Reg
+import qualified "app-backend" API.UI.Select as AppSelect
 import "app-backend" App.Routes as AbeRoutes
 import Beckn.External.FCM.Types
 import Beckn.Types.APISuccess
@@ -21,12 +22,11 @@ import Servant hiding (Context)
 import Servant.Client
 import qualified "app-backend" Types.API.Booking as AppBooking
 import qualified "app-backend" Types.API.Feedback as AppFeedback
-import qualified "app-backend" Types.API.Select as AppSelect
 import qualified "app-backend" Types.API.Serviceability as AppServ
 
 selectQuote :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess
 selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectListRes
-selectQuote :<|> selectList = client (Proxy :: Proxy AbeRoutes.SelectAPI)
+selectQuote :<|> selectList = client (Proxy :: Proxy AppSelect.API)
 
 cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
 cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)

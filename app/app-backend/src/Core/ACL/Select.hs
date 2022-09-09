@@ -13,7 +13,7 @@ import Utils.Common
 
 buildSelectReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
-  DSelect.DSelectReq ->
+  DSelect.DSelectRes ->
   m (BecknReq Select.SelectMessage)
 buildSelectReq dSelectReq = do
   let messageId = dSelectReq.estimateId.getId
@@ -29,7 +29,7 @@ castVariant HATCHBACK = Common.HATCHBACK
 castVariant SEDAN = Common.SEDAN
 castVariant SUV = Common.SUV
 
-mkOrder :: DSelect.DSelectReq -> Select.Order
+mkOrder :: DSelect.DSelectRes -> Select.Order
 mkOrder req = do
   let from = req.searchRequest.fromLocation
       mbTo = req.searchRequest.toLocation
