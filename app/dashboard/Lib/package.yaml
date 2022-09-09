@@ -69,6 +69,7 @@ dependencies:
   - template-haskell
   - wai
   - singletons
+  - euler-hs
 
 ghc-options:
   - -Wall

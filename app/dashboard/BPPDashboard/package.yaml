@@ -65,6 +65,7 @@ dependencies:
   - persistent-postgresql
   - esqueleto
   - template-haskell
+  - euler-hs
 
 ghc-options:
   - -Wall

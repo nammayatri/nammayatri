@@ -108,4 +108,5 @@ in
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg
 , rideCfg = rideConfig
+, dashboardToken = sec.dashboardToken
 }

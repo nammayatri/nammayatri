@@ -65,6 +65,8 @@ dependencies:
   - persistent-postgresql
   - esqueleto
   - template-haskell
+  - euler-hs
+  - containers
 
 ghc-options:
   - -Wall
@@ -83,6 +85,7 @@ library:
     - -Wincomplete-uni-patterns
   dependencies:
     - lib-dashboard
+    - app-backend
 
 executables:
   bap-dashboard-exe:

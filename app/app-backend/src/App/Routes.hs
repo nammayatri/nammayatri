@@ -3,6 +3,7 @@
 
 module App.Routes where
 
+import qualified App.Routes.Dashboard as Dashboard
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.InternalAPI.Auth.API as Auth
@@ -78,6 +79,7 @@ type MainAPI =
     :<|> "cab" :> "v1" :> BecknCabAPI
     :<|> "metro" :> "v1" :> BecknMetroAPI
     :<|> Auth.API
+    :<|> Dashboard.API
 
 type BecknMetroAPI =
   SignatureAuth "Authorization"
@@ -120,6 +122,7 @@ mainServer =
     :<|> becknCabApi
     :<|> becknMetroAPI
     :<|> authAPI
+    :<|> Dashboard.handler
 
 uiAPI :: FlowServer UIAPI
 uiAPI =

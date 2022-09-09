@@ -14,7 +14,9 @@ import Beckn.Types.Flow
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Servant.Server (runServerWithHealthCheck)
+import qualified Data.Map.Strict as Map
 import Environment
+import qualified EulerHS.Runtime as R
 import Servant (Context (..))
 import qualified Tools.Auth as Auth
 
@@ -28,7 +30,8 @@ runService configModifier = do
       >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
     migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-    pure flowRt
+    let flowRt' = flowRt {R._httpClientManagers = Map.singleton "default" (R._defaultHttpClientManager flowRt)}
+    pure flowRt'
   where
     context =
       Auth.verifyTokenAction @(FlowR AppEnv)

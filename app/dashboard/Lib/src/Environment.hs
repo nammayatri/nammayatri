@@ -13,6 +13,7 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.Client
 import Beckn.Utils.Shutdown
+import Tools.DataServer
 import Tools.Metrics
 
 data AppCfg = AppCfg
@@ -27,7 +28,8 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
     registrationTokenExpiry :: Days,
-    encTools :: EncTools
+    encTools :: EncTools,
+    dataServers :: [DataServer]
   }
   deriving (Generic, FromDhall)
 
@@ -44,7 +46,8 @@ data AppEnv = AppEnv
     encTools :: EncTools,
     coreMetrics :: Metrics.CoreMetricsContainer,
     isShuttingDown :: Shutdown,
-    authTokenCacheKeyPrefix :: Text
+    authTokenCacheKeyPrefix :: Text,
+    dataServers :: [DataServer]
   }
   deriving (Generic)
 

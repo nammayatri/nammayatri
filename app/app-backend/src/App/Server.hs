@@ -24,4 +24,5 @@ run = withModifiedEnv $ \modifiedEnv ->
   where
     context =
       verifyPersonAction @(FlowR AppEnv)
+        :. verifyDashboardAction @(FlowR AppEnv)
         :. EmptyContext

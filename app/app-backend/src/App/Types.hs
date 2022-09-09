@@ -71,7 +71,8 @@ data AppCfg = AppCfg
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
     selfUIUrl :: BaseUrl,
-    rideCfg :: RideConfig
+    rideCfg :: RideConfig,
+    dashboardToken :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -107,7 +108,8 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BAPKafkaEnvs,
-    rideCfg :: RideConfig
+    rideCfg :: RideConfig,
+    dashboardToken :: Text
   }
   deriving (Generic)
 
