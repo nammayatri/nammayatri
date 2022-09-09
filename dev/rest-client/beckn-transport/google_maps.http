@@ -17,3 +17,9 @@ GET https://roads.googleapis.com/v1/snapToRoads
   ?interpolate=true
   &path=-35.27801,149.12958|-35.28473,149.12836
   &key={{str-key}}
+###
+# @name testSnapToRoad
+GET https://roads.googleapis.com/v1/snapToRoads
+  ?interpolate=true
+  &path=-35.27801,149.12958|35.27801,149.12958|70.27801,149.12958
+  &key={{str-key}}

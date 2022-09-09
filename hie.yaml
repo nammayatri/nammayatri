@@ -72,10 +72,10 @@ cradle:
     - path: "app/beckn-transport/server/Main.hs"
       component: "beckn-transport:exe:transporter-scheduler-exe"
 
-    - path: "app/beckn-transport/test/app"
+    - path: "app/beckn-transport/BPP/test/app"
       component: "beckn-transport:test:beckn-transport-tests"
 
-    - path: "app/beckn-transport/test/src"
+    - path: "app/beckn-transport/BPP/test/src"
       component: "beckn-transport:test:beckn-transport-tests"
 
     - path: "app/gateway/src"
@@ -122,7 +122,7 @@ cradle:
 
     - path: "app/mock-sms/server/Paths_mock_sms.hs"
       component: "mock-sms:exe:mock-fcm-exe"
-    
+
     - path: "app/mock-idfy/src"
       component: "mock-idfy:lib"
 
@@ -185,9 +185,9 @@ cradle:
 
     - path: "lib/beckn-spec/src"
       component: "beckn-spec:lib"
-    
+
     - path: "lib/beckn-services/src"
-      component: "beckn-services:lib"   
+      component: "beckn-services:lib"
 
     - path: "lib/location-updates/src"
       component: "location-updates:lib"

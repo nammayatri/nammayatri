@@ -94,6 +94,7 @@ dependencies:
   - beckn-transport-allocator
   - beckn-transport-driver-tracking-health-check
   - driver-offer-bpp
+  - location-updates
 
 ghc-options:
   - -fwrite-ide-info
