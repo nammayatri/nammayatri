@@ -21,7 +21,6 @@ import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
-import Lib.LocationUpdates
 
 type MonadHandler m = (MonadFlow m, MonadThrow m, Log m, MonadGuid m, MonadTime m)
 
@@ -31,7 +30,7 @@ data Handler m = Handler
     findDriverLocationById :: Id Person.Person -> m (Maybe DriverLocation),
     upsertDriverLocation :: Id Person.Person -> LatLong -> UTCTime -> m (),
     getInProgressByDriverId :: Id Person.Person -> m (Maybe SRide.Ride),
-    interpolationHandler :: RideInterpolationHandler Person.Person m
+    addIntermediateRoutePoints :: Id Person.Person -> NonEmpty LatLong -> m ()
   }
 
 type UpdateLocationReq = NonEmpty Waypoint
@@ -64,7 +63,7 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
         getInProgressByDriverId driver.id
           >>= maybe
             (logInfo "No ride is assigned to driver, ignoring")
-            (const $ updateIntermediateRideLocation interpolationHandler driver.id $ NE.map (.pt) waypoints)
+            (\_ -> addIntermediateRoutePoints driver.id $ NE.map (.pt) waypoints)
 
     Redis.unlockRedis lockKey
   pure Success

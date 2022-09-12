@@ -83,9 +83,9 @@ handle =
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure (),
       findDriverLocById = \_ -> pure Nothing,
-      addLastWaypointAndRecalcDistanceOnEnd = \_ _ -> pure (),
+      finalDistanceCalculation = \_ _ -> pure (),
       getRentalFarePolicy = undefined, -- not required for current test cases
-      thereWasFailedDistanceRecalculation = \_ -> pure False
+      isDistanceCalculationFailed = \_ -> pure False
     }
 
 endRideDefault ::
@@ -199,7 +199,7 @@ locationUpdatesFailureHandle =
       findRideById = \rideId -> pure $ case rideId of
         Id "ride" -> Just ride
         _ -> Nothing,
-      thereWasFailedDistanceRecalculation = \_ -> pure True,
+      isDistanceCalculationFailed = \_ -> pure True,
       notifyCompleteToBAP = \_ rd _ -> checkRide rd,
       endRideTransaction = \_ rd _ _ -> checkRide rd,
       recalculateFareEnabled = pure True,
@@ -221,7 +221,7 @@ locationUpdatesFailureHandle =
 locationUpdatesSuccessHandle :: Handle.ServiceHandle IO
 locationUpdatesSuccessHandle =
   locationUpdatesFailureHandle
-    { thereWasFailedDistanceRecalculation = \_ -> pure False,
+    { isDistanceCalculationFailed = \_ -> pure False,
       notifyCompleteToBAP = \_ rd _ -> checkRide rd,
       endRideTransaction = \_ rd _ _ -> checkRide rd
     }

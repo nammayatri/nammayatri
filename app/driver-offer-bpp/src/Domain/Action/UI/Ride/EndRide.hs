@@ -43,7 +43,7 @@ data ServiceHandle m = ServiceHandle
       m Fare.FareParameters,
     putDiffMetric :: Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
-    thereWasFailedDistanceRecalculation :: Id Person.Person -> m Bool,
+    isDistanceCalculationFailed :: Id Person.Person -> m Bool,
     addLastWaypointAndRecalcDistanceOnEnd :: Id Person.Person -> LatLong -> m ()
   }
 
@@ -72,7 +72,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
 
   now <- getCurrentTime
 
-  distanceCalculationFailed <- thereWasFailedDistanceRecalculation requestorId
+  distanceCalculationFailed <- isDistanceCalculationFailed requestorId
   when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
   (finalDistance, finalFare) <-
     if not distanceCalculationFailed

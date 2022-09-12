@@ -33,7 +33,7 @@ handle =
       startRideAndUpdateLocation = \_rideId _bookingId _driverId _pt -> pure (),
       notifyBAPRideStarted = \_booking _ride -> pure (),
       rateLimitStartRide = \_driverId _rideId -> pure (),
-      addFirstWaypoint = \_driverId _pt -> pure ()
+      initializeDistanceCalculation = \_driverId _pt -> pure ()
     }
 
 ride :: Ride.Ride

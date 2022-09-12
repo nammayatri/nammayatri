@@ -20,8 +20,8 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment
 import GHC.Records.Extra
+import qualified Lib.LocationUpdates as LocUpd
 import Servant
-import SharedLogic.LocationUpdates
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
@@ -57,7 +57,7 @@ updateLocation personId waypoints = withFlowHandlerAPI $ do
             upsertDriverLocation = \driverId point timestamp ->
               Esq.runTransaction $ DrLoc.upsertGpsCoord driverId point timestamp,
             getInProgressByDriverId = QRide.getInProgressByDriverId,
-            interpolationHandler = defaultRideInterpolationHandler
+            addIntermediateRoutePoints = LocUpd.addIntermediateRoutePoints LocUpd.defaultRideInterpolationHandler
           }
 
 getLocation :: Id SRide.Ride -> FlowHandler GetLocationRes

@@ -29,7 +29,6 @@ import Servant
 import SharedLogic.CallBAP
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.FareCalculator as Fare
-import SharedLogic.LocationUpdates
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as QPerson
@@ -82,7 +81,7 @@ startRide personId rideId req =
           startRideAndUpdateLocation = RideStart.startRideTransaction,
           notifyBAPRideStarted = sendRideStartedUpdateToBAP,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
-          addFirstWaypoint = LocUpd.startRide defaultRideInterpolationHandler
+          addFirstWaypoint = LocUpd.initializeDistanceCalculation LocUpd.defaultRideInterpolationHandler
         }
 
 endRide :: Id SP.Person -> Id Ride.Ride -> RideEnd.EndRideReq -> FlowHandler APISuccess
@@ -100,8 +99,8 @@ endRide personId rideId req =
           calculateFare = Fare.calculateFare,
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
-          thereWasFailedDistanceRecalculation = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
-          addLastWaypointAndRecalcDistanceOnEnd = LocUpd.endRide defaultRideInterpolationHandler
+          isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed LocUpd.defaultRideInterpolationHandler,
+          addLastWaypointAndRecalcDistanceOnEnd = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler
         }
 
 cancelRide :: Id SP.Person -> Id Ride.Ride -> RideCancel.CancelRideReq -> FlowHandler APISuccess

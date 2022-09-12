@@ -1,10 +1,10 @@
 module Lib.LocationUpdates
   ( I.RideInterpolationHandler,
     I.mkHandlerWithDefaultRedisFuncs,
-    startRide,
-    endRide,
-    updateIntermediateRideLocation,
     isDistanceCalculationFailed,
+    initializeDistanceCalculation,
+    finalDistanceCalculation,
+    addIntermediateRoutePoints,
   )
 where
 
@@ -16,16 +16,16 @@ import GHC.Records.Extra
 import qualified Lib.LocationUpdates.Internal as I
 
 -- API
-startRide :: (Monad m) => I.RideInterpolationHandler person m -> Id person -> LatLong -> m ()
-startRide ih driverId pt = do
+initializeDistanceCalculation :: (Monad m) => I.RideInterpolationHandler person m -> Id person -> LatLong -> m ()
+initializeDistanceCalculation ih driverId pt = do
   ih.clearLocationUpdates driverId
   ih.addPoints driverId $ pt :| []
 
-endRide :: (Monad m, Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id person -> LatLong -> m ()
-endRide ih driverId pt = I.processWaypoints ih driverId True $ pt :| []
+finalDistanceCalculation :: (Monad m, Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id person -> LatLong -> m ()
+finalDistanceCalculation ih driverId pt = I.processWaypoints ih driverId True $ pt :| []
 
-updateIntermediateRideLocation :: (Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id person -> NonEmpty LatLong -> m ()
-updateIntermediateRideLocation ih driverId = I.processWaypoints ih driverId False
+addIntermediateRoutePoints :: (Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id person -> NonEmpty LatLong -> m ()
+addIntermediateRoutePoints ih driverId = I.processWaypoints ih driverId False
 
 isDistanceCalculationFailed :: I.RideInterpolationHandler person m -> Id person -> m Bool
 isDistanceCalculationFailed ih = ih.isDistanceCalculationFailed

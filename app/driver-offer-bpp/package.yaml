@@ -48,6 +48,7 @@ default-extensions:
   - TypeSynonymInstances
   - UndecidableInstances
   - StandaloneDeriving
+  - PackageImports
 
 dependencies:
   - aeson

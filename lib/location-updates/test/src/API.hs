@@ -52,10 +52,10 @@ successFlow appEnv eps expectedDistance route = runFlow "" appEnv $ do
   let origin = getFirstPoint route
       destination = getLastPoint route
       ih = testInterpolationHandler
-  startRide ih testDriverId origin
+  initializeDistanceCalculation ih testDriverId origin
   forM_ (NE.toList route) $ \updatesBatch ->
-    updateIntermediateRideLocation ih testDriverId updatesBatch
-  endRide ih testDriverId destination
+    addIntermediateRoutePoints ih testDriverId updatesBatch
+  finalDistanceCalculation ih testDriverId destination
   failed <- API.isDistanceCalculationFailed ih testDriverId
   liftIO $ failed `shouldBe` False
   totalDistance <- checkTraveledDistance testDriverId
@@ -70,14 +70,14 @@ failFlow appEnv route = runFlow "" appEnv $ do
   let origin = getFirstPoint route
       destination = getLastPoint route
       ih = failingInterpolationHandler
-  startRide ih testDriverId origin
+  initializeDistanceCalculation ih testDriverId origin
   failed0 <- API.isDistanceCalculationFailed ih testDriverId
   liftIO $ failed0 `shouldBe` False
 
   forM_ (NE.toList route) $ \updatesBatch -> do
-    updateIntermediateRideLocation ih testDriverId updatesBatch
+    addIntermediateRoutePoints ih testDriverId updatesBatch
     failed1 <- API.isDistanceCalculationFailed ih testDriverId
     liftIO $ failed1 `shouldBe` True
-  endRide ih testDriverId destination
+  finalDistanceCalculation ih testDriverId destination
   failed2 <- API.isDistanceCalculationFailed ih testDriverId
   liftIO $ failed2 `shouldBe` True

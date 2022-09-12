@@ -45,8 +45,8 @@ data ServiceHandle m = ServiceHandle
     recalculateFareEnabled :: m Bool,
     putDiffMetric :: Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
-    addLastWaypointAndRecalcDistanceOnEnd :: Id Person.Person -> LatLong -> m (),
-    thereWasFailedDistanceRecalculation :: Id Person.Person -> m Bool
+    finalDistanceCalculation :: Id Person.Person -> LatLong -> m (),
+    isDistanceCalculationFailed :: Id Person.Person -> m Bool
   }
 
 newtype EndRideReq = EndRideReq
@@ -64,7 +64,7 @@ endRideHandler ::
 endRideHandler ServiceHandle {..} requestorId rideId req = do
   requestor <- findById requestorId >>= fromMaybeM (PersonNotFound requestorId.getId)
 
-  addLastWaypointAndRecalcDistanceOnEnd requestorId req.point
+  finalDistanceCalculation requestorId req.point
   -- here we update the current ride, so below we fetch the updated version
 
   ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -106,7 +106,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           estimatedFare = booking.estimatedFare
           estimatedTotalFare = booking.estimatedTotalFare
       shouldRecalculateFare <- recalculateFareEnabled
-      distanceCalculationFailed <- thereWasFailedDistanceRecalculation requestorId
+      distanceCalculationFailed <- isDistanceCalculationFailed requestorId
 
       if shouldRecalculateFare && not distanceCalculationFailed
         then do
@@ -137,7 +137,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           pure (oldDistance, estimatedFare, booking.estimatedTotalFare, fareBreakups)
 
     calcRentalFare booking ride rentalDetails now = do
-      distanceCalculationFailed <- thereWasFailedDistanceRecalculation requestorId
+      distanceCalculationFailed <- isDistanceCalculationFailed requestorId
       actualDistance <-
         if not distanceCalculationFailed
           then pure $ roundToIntegral ride.traveledDistance.getHighPrecMeters
