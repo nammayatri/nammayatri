@@ -14,6 +14,6 @@ GET {{bpp-dashboard-host}}
 
 # @name driverList
 
-GET {{bpp-dashboard-host}}/bpp/driver/list
+GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/list
 content-type: application/json
 token: {{customer_service}}

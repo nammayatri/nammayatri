@@ -1,6 +1,7 @@
 module API where
 
 import qualified API.Beckn as Beckn
+import qualified API.Dashboard as Dashboard
 import qualified API.UI as UI
 import Data.OpenApi
 import Domain.Action.UI.DriverOnboarding.Idfy
@@ -18,6 +19,7 @@ type MainAPI =
   UI.API
     :<|> Beckn.API
     :<|> Idfy.IdfyWebhookAPI
+    :<|> Dashboard.API
 
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
@@ -27,6 +29,7 @@ mainServer =
   UI.handler
     :<|> Beckn.handler
     :<|> Idfy.idfyWebhookHandler idfyDL idfyRC
+    :<|> Dashboard.handler
 
 driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =

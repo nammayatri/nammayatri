@@ -30,6 +30,20 @@ let encTools =
   , hashSalt = sec.encHashSalt
   }
 
+let ServerName = < APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
+
+let becknTransport =
+  { name = ServerName.BECKN_TRANSPORT
+  , url = "http://localhost:8014/"
+  , token = sec.becknTransportToken
+  }
+
+let driverOfferBpp =
+  { name = ServerName.DRIVER_OFFER_BPP
+  , url = "http://localhost:8016/"
+  , token = sec.driverOfferBppToken
+  }
+
 in
 
 { esqDBCfg = esqDBCfg
@@ -44,4 +58,5 @@ in
 , authTokenCacheExpiry = +600 --seconds
 , registrationTokenExpiry = +365 --days
 , encTools = encTools
+, dataServers = [becknTransport, driverOfferBpp]
 }

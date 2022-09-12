@@ -1,6 +1,7 @@
 module API where
 
 import qualified API.Beckn as Beckn
+import qualified API.Dashboard as Dashboard
 import qualified API.UI as UI
 import Data.OpenApi
 import Environment
@@ -15,6 +16,7 @@ type TransportAPI =
 type MainAPI =
   UI.API
     :<|> Beckn.API
+    :<|> Dashboard.API
 
 transporterAPI :: Proxy TransportAPI
 transporterAPI = Proxy
@@ -23,6 +25,7 @@ mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
     :<|> Beckn.handler
+    :<|> Dashboard.handler
 
 transporterServer :: FlowServer TransportAPI
 transporterServer =

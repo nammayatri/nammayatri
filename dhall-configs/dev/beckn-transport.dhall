@@ -104,4 +104,5 @@ in
 , selfUIUrl = "http://localhost:8014/v2/"
 , schedulingReserveTime = +1800
 , driverEstimatedPickupDuration = +300 -- seconds
+, dashboardToken = sec.dashboardToken
 }

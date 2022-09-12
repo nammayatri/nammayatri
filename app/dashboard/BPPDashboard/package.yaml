@@ -66,6 +66,7 @@ dependencies:
   - esqueleto
   - template-haskell
   - euler-hs
+  - containers
 
 ghc-options:
   - -Wall
@@ -84,6 +85,8 @@ library:
     - -Wincomplete-uni-patterns
   dependencies:
     - lib-dashboard
+    - beckn-transport
+    - driver-offer-bpp
 
 executables:
   bpp-dashboard-exe:

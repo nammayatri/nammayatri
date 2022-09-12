@@ -108,3 +108,33 @@ validateToken sr@SR.RegistrationToken {..} = do
   unless verified $ throwError TokenIsNotVerified
   when expired $ Utils.throwError TokenExpired
   return sr
+
+-- TODO Next logic is the same for app-backend, beckn-transport and driver-offer-bpp. Move it to Lib
+
+type DashboardTokenAuth = HeaderAuth "token" DashboardVerifyToken
+
+data DashboardVerifyToken = DashboardVerifyToken
+
+instance
+  SanitizedUrl (sub :: Type) =>
+  SanitizedUrl (DashboardTokenAuth :> sub)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
+
+data Dashboard = Dashboard
+
+instance VerificationMethod DashboardVerifyToken where
+  type VerificationResult DashboardVerifyToken = Dashboard
+  verificationDescription =
+    "Checks whether dashboard token is registered."
+
+verifyDashboardAction :: HasFlowEnv m r '["dashboardToken" ::: Text] => VerificationAction DashboardVerifyToken m
+verifyDashboardAction = VerificationAction verifyDashboard
+
+-- Do we need some expiry time for dashboard token?
+verifyDashboard :: HasFlowEnv m r '["dashboardToken" ::: Text] => RegToken -> m Dashboard
+verifyDashboard incomingToken = do
+  dashboardToken <- asks (.dashboardToken)
+  if incomingToken == dashboardToken
+    then pure Dashboard
+    else throwError (InvalidToken incomingToken)

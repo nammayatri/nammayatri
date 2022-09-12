@@ -110,4 +110,5 @@ in
 , driverUnlockDelay = +2 -- seconds
 , driverEstimatedPickupDuration = +300 -- seconds
 , idfyCfg = idfyCfg
+, dashboardToken = sec.dashboardToken
 }

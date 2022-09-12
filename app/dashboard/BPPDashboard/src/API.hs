@@ -1,8 +1,8 @@
 module API where
 
 import qualified API.BPP as BPP
-import qualified API.Dashboard as Dashboard
-import Environment
+import qualified "lib-dashboard" API.Dashboard as Dashboard
+import "lib-dashboard" Environment
 import Servant
 
 type API =

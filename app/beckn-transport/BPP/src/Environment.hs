@@ -79,7 +79,8 @@ data AppCfg = AppCfg
     kafkaProducerCfg :: KafkaProducerCfg,
     selfUIUrl :: BaseUrl,
     schedulingReserveTime :: Seconds,
-    driverEstimatedPickupDuration :: Seconds
+    driverEstimatedPickupDuration :: Seconds,
+    dashboardToken :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -126,7 +127,8 @@ data AppEnv = AppEnv
     kafkaEnvs :: BPPKafkaEnvs,
     hedisEnv :: HedisEnv,
     schedulingReserveTime :: Seconds,
-    driverEstimatedPickupDuration :: Seconds
+    driverEstimatedPickupDuration :: Seconds,
+    dashboardToken :: Text
   }
   deriving (Generic)
 

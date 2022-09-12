@@ -23,4 +23,5 @@ run = withModifiedEnv $ \modifiedEnv ->
     context =
       verifyTokenAction @(FlowR AppEnv)
         :. validateAdminAction @(FlowR AppEnv)
+        :. verifyDashboardAction @(FlowR AppEnv)
         :. EmptyContext

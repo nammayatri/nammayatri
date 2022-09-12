@@ -69,7 +69,8 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     driverUnlockDelay :: Seconds,
     driverEstimatedPickupDuration :: Seconds,
-    idfyCfg :: Idfy.IdfyConfig
+    idfyCfg :: Idfy.IdfyConfig,
+    dashboardToken :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -113,7 +114,8 @@ data AppEnv = AppEnv
     driverQuoteExpirationSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
     driverEstimatedPickupDuration :: Seconds,
-    idfyCfg :: Idfy.IdfyConfig
+    idfyCfg :: Idfy.IdfyConfig,
+    dashboardToken :: Text
   }
   deriving (Generic)
 
