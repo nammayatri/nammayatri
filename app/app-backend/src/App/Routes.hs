@@ -7,6 +7,7 @@ import qualified App.Routes.Dashboard as Dashboard
 import qualified API.Beckn as Beckn
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI.Profile as Profile
+import qualified API.UI.Quote as Quote
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
@@ -22,7 +23,6 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.CancellationReason as SCancellationReason
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.SearchRequest as SSR
 import EulerHS.Prelude
 import Product.Auth (authAPI)
 import qualified Product.Booking as Booking
@@ -33,7 +33,6 @@ import qualified Product.Confirm as Confirm
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Location as Location
-import qualified Product.Quote as Quote
 import qualified Product.Ride as Ride
 import qualified Product.SavedLocations as SavedLocations
 import qualified Product.Serviceability as Serviceability
@@ -47,7 +46,6 @@ import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Location as Location
-import qualified Types.API.Quote as QuoteAPI
 import qualified Types.API.Ride as RideAPI
 import qualified Types.API.SavedLocations as SavedLocationsAPI
 import qualified Types.API.Serviceability as Serviceability
@@ -72,7 +70,7 @@ type UIAPI =
            :<|> Profile.API
            :<|> Search.API
            :<|> Select.API
-           :<|> QuoteAPI
+           :<|> Quote.API
            :<|> Confirm.ConfirmAPI
            :<|> BookingAPI
            :<|> Cancel.CancelAPI
@@ -112,7 +110,7 @@ uiAPI =
     :<|> Profile.handler
     :<|> Search.handler
     :<|> Select.handler
-    :<|> quoteFlow
+    :<|> Quote.handler
     :<|> confirmFlow
     :<|> bookingFlow
     :<|> cancelFlow
@@ -127,17 +125,6 @@ uiAPI =
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
     :<|> savedLocationFlow
-
-type QuoteAPI =
-  "rideSearch"
-    :> Capture "searchId" (Id SSR.SearchRequest)
-    :> TokenAuth
-    :> "results"
-    :> Get '[JSON] QuoteAPI.GetQuotesRes
-
-quoteFlow :: FlowServer QuoteAPI
-quoteFlow =
-  Quote.getQuotes
 
 -------- Confirm Flow --------
 

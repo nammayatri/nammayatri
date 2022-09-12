@@ -2,6 +2,7 @@ module Mobility.Transporter.Utils where
 
 import qualified "beckn-transport" API.UI.Booking as BookingAPI
 import "beckn-transport" API.UI.Location as LocationAPI
+import "app-backend" API.UI.Quote
 import qualified "beckn-transport" API.UI.Ride as RideAPI
 import qualified "app-backend" API.UI.Search as AppSearch
 import Beckn.Prelude
@@ -31,7 +32,6 @@ import qualified "beckn-transport" Storage.Queries.Booking as TQRB
 import qualified "beckn-transport" Storage.Queries.DriverInformation as DriverInfo
 import "beckn-transport" Storage.Queries.DriverLocation
 import qualified "beckn-transport" Storage.Queries.Ride as TQRide
-import "app-backend" Types.API.Quote
 import Utils
 
 getFutureTime :: IO UTCTime

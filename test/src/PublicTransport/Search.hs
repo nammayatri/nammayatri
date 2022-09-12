@@ -1,5 +1,6 @@
 module PublicTransport.Search where
 
+import API.UI.Quote (OfferRes (PublicTransport))
 import Beckn.Prelude hiding (Proxy)
 import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
 import Beckn.Types.Flow (FlowR)
@@ -17,7 +18,6 @@ import Mobility.Fixtures.Routes
 import PublicTransport.API
 import PublicTransport.Common
 import qualified "app-backend" Storage.Queries.SearchRequest as AppBE
-import Types.API.Quote (OfferRes (PublicTransport))
 import Utils
 
 {-
