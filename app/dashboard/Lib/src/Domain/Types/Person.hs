@@ -48,8 +48,26 @@ instance EncryptedItem Person where
     email_ <- fst <$> decryptItem email
     return (Person {mobileNumber = mobileNumber_, email = email_, ..}, "")
 
--- do we need it?
--- instance EncryptedItem' Person where
---   type UnencryptedItem Person = DecryptedPerson
---   toUnencrypted a salt = (a, salt)
---   fromUnencrypted a = fst a
+instance EncryptedItem' Person where
+  type UnencryptedItem Person = DecryptedPerson
+  toUnencrypted a salt = (a, salt)
+  fromUnencrypted a = fst a
+
+data PersonAPIEntity = PersonAPIEntity
+  { id :: Id Person,
+    firstName :: Text,
+    lastName :: Text,
+    role :: Role,
+    email :: Text,
+    mobileNumber :: Text,
+    mobileCountryCode :: Text,
+    registeredAt :: UTCTime
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+makePersonAPIEntity :: DecryptedPerson -> PersonAPIEntity
+makePersonAPIEntity Person {..} =
+  PersonAPIEntity
+    { registeredAt = createdAt,
+      ..
+    }
