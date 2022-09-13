@@ -17,15 +17,15 @@ ALTER SCHEMA atlas_bpp_dashboard OWNER TO atlas_bpp_dashboard_user;
 
 CREATE TABLE atlas_bpp_dashboard.person (
 id character(36) NOT NULL,
-first_name character varying(255),
-last_name character varying(255),
+first_name character varying(255) NOT NULL,
+last_name character varying(255) NOT NULL,
 role character varying(255) NOT NULL,
-email_encrypted character varying(255),
-email_hash bytea,
-mobile_number_encrypted character varying(255),
-mobile_number_hash bytea,
-mobile_country_code character varying(255),
-password_hash bytea,
+email_encrypted character varying(255) NOT NULL,
+email_hash bytea NOT NULL,
+mobile_number_encrypted character varying(255) NOT NULL,
+mobile_number_hash bytea NOT NULL,
+mobile_country_code character varying(255) NOT NULL,
+password_hash bytea NOT NULL,
 created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ,CONSTRAINT  idx_16451_primary PRIMARY KEY (id)

@@ -32,9 +32,12 @@ token: {{token}}
 
 ###
 
-#  why do we have access after logout?
 # @name personList
 
 GET {{bpp-dashboard-host}}/dashboard/person/list
+  ?limit=5
+  &offset=0
+  &searchString=customer
+  # &searchString=7777777781
 content-type: application/json
 token: {{token}}

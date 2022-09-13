@@ -24,8 +24,8 @@ findByEmailAndPassword ::
   Text ->
   Text ->
   m (Maybe Person)
-findByEmailAndPassword email_ password = do
-  emailDbHash <- getDbHash email_
+findByEmailAndPassword email password = do
+  emailDbHash <- getDbHash email
   passwordDbHash <- getDbHash password
   findOne $ do
     person <- from $ table @PersonT
@@ -58,8 +58,7 @@ findAllWithLimitOffset mbSearchString mbLimit mbOffset = do
 
     filterBySearchString person (searchStr, searchStrDBHash) = do
       let likeSearchStr = (%) ++. val searchStr ++. (%)
-      ( concat_ @Text [unMaybe $ person ^. PersonFirstName, val " ", unMaybe $ person ^. PersonLastName]
+      ( concat_ @Text [person ^. PersonFirstName, person ^. PersonLastName]
           `ilike` likeSearchStr
         )
-        ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash) --find by email also?
-    unMaybe = maybe_ (val "") identity
+        ||. person ^. PersonMobileNumberHash ==. val searchStrDBHash --find by email also?

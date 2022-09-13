@@ -20,14 +20,14 @@ mkPersist
   [defaultQQ|
     PersonT sql=person
       id Text
-      firstName Text Maybe
-      lastName Text Maybe
+      firstName Text
+      lastName Text
       role Domain.Role
       emailEncrypted Text
       emailHash DbHash
-      mobileNumberEncrypted Text Maybe
-      mobileNumberHash DbHash Maybe
-      mobileCountryCode Text Maybe
+      mobileNumberEncrypted Text
+      mobileNumberHash DbHash
+      mobileCountryCode Text
       passwordHash DbHash
       createdAt UTCTime
       updatedAt UTCTime
@@ -46,7 +46,7 @@ instance TType PersonT Domain.Person where
       Domain.Person
         { id = Id id,
           email = EncryptedHashed (Encrypted emailEncrypted) emailHash,
-          mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
+          mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
           ..
         }
   toTType Domain.Person {..} =
@@ -54,7 +54,7 @@ instance TType PersonT Domain.Person where
       { id = getId id,
         emailEncrypted = email & unEncrypted . (.encrypted),
         emailHash = email.hash,
-        mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
-        mobileNumberHash = mobileNumber <&> (.hash),
+        mobileNumberEncrypted = mobileNumber & unEncrypted . (.encrypted),
+        mobileNumberHash = mobileNumber.hash,
         ..
       }

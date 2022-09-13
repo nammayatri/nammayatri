@@ -13,7 +13,7 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.Client
 import Beckn.Utils.Shutdown
-import Tools.DataServer
+import Tools.Client
 import Tools.Metrics
 
 data AppCfg = AppCfg

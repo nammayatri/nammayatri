@@ -27,12 +27,12 @@ newtype ListPersonRes = ListPersonRes
 
 data PersonEntityRes = PersonEntityRes
   { id :: Id DP.Person,
-    firstName :: Maybe Text,
-    lastName :: Maybe Text,
+    firstName :: Text,
+    lastName :: Text,
     role :: Role,
     email :: Text,
-    mobileNumber :: Maybe Text,
-    mobileCountryCode :: Maybe Text,
+    mobileNumber :: Text,
+    mobileCountryCode :: Text,
     registeredAt :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
@@ -49,7 +49,7 @@ listPerson _ mbSearchString mbLimit mbOffset = withFlowHandlerAPI do
 buildPersonEntityRes :: (EsqDBFlow m r, EncFlow m r) => DP.Person -> m PersonEntityRes
 buildPersonEntityRes person = do
   decEmail <- decrypt person.email
-  decMobNum <- mapM decrypt person.mobileNumber
+  decMobNum <- decrypt person.mobileNumber
   return $
     PersonEntityRes
       { id = person.id,

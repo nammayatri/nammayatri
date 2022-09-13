@@ -19,12 +19,12 @@ data Role
 
 data PersonE e = Person
   { id :: Id Person,
-    firstName :: Maybe Text,
-    lastName :: Maybe Text,
+    firstName :: Text,
+    lastName :: Text,
     role :: Role,
     email :: EncryptedHashedField e Text,
-    mobileNumber :: Maybe (EncryptedHashedField e Text),
-    mobileCountryCode :: Maybe Text,
+    mobileNumber :: EncryptedHashedField e Text,
+    mobileCountryCode :: Text,
     passwordHash :: DbHash,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -40,11 +40,11 @@ deriving instance Show DecryptedPerson
 instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
   encryptItem (Person {..}, salt) = do
-    mobileNumber_ <- encryptItem $ (,salt) <$> mobileNumber
+    mobileNumber_ <- encryptItem (mobileNumber, salt)
     email_ <- encryptItem (email, salt)
     return Person {mobileNumber = mobileNumber_, email = email_, ..}
   decryptItem Person {..} = do
-    mobileNumber_ <- fmap fst <$> decryptItem mobileNumber
+    mobileNumber_ <- fst <$> decryptItem mobileNumber
     email_ <- fst <$> decryptItem email
     return (Person {mobileNumber = mobileNumber_, email = email_, ..}, "")
 
