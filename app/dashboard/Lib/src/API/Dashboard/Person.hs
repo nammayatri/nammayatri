@@ -1,14 +1,12 @@
 module API.Dashboard.Person where
 
-import Beckn.External.Encryption (decrypt)
 import Beckn.Prelude
-import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common (withFlowHandlerAPI)
+import qualified Domain.Action.Dashboard.Person as DPerson
 import Domain.Types.Person as DP
 import Environment
 import Servant hiding (Unauthorized, throwError)
-import qualified Storage.Queries.Person as QP
 import Tools.Auth
 import Tools.Roles.Instances
 
@@ -19,45 +17,11 @@ type API =
     :> QueryParam "searchString" Text
     :> QueryParam "limit" Integer
     :> QueryParam "offset" Integer
-    :> Get '[JSON] ListPersonRes
-
-newtype ListPersonRes = ListPersonRes
-  {list :: [PersonEntityRes]}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
-data PersonEntityRes = PersonEntityRes
-  { id :: Id DP.Person,
-    firstName :: Text,
-    lastName :: Text,
-    role :: Role,
-    email :: Text,
-    mobileNumber :: Text,
-    mobileCountryCode :: Text,
-    registeredAt :: UTCTime
-  }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+    :> Get '[JSON] DPerson.ListPersonRes
 
 handler :: FlowServer API
 handler = listPerson
 
-listPerson :: Id DP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
-listPerson _ mbSearchString mbLimit mbOffset = withFlowHandlerAPI do
-  personList <- QP.findAllWithLimitOffset mbSearchString mbLimit mbOffset
-  respPersonList <- traverse buildPersonEntityRes personList
-  return $ ListPersonRes respPersonList
-
-buildPersonEntityRes :: (EsqDBFlow m r, EncFlow m r) => DP.Person -> m PersonEntityRes
-buildPersonEntityRes person = do
-  decEmail <- decrypt person.email
-  decMobNum <- decrypt person.mobileNumber
-  return $
-    PersonEntityRes
-      { id = person.id,
-        firstName = person.firstName,
-        lastName = person.lastName,
-        role = person.role,
-        email = decEmail,
-        mobileNumber = decMobNum,
-        mobileCountryCode = person.mobileCountryCode,
-        registeredAt = person.createdAt
-      }
+listPerson :: Id DP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DPerson.ListPersonRes
+listPerson personId mbSearchString mbLimit =
+  withFlowHandlerAPI . DPerson.listPerson personId mbSearchString mbLimit

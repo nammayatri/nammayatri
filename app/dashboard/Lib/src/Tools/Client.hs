@@ -54,8 +54,6 @@ data DataServer = DataServer
   }
   deriving (Generic, FromDhall)
 
--- FIXME Can we change types so as not to throw error here?
--- FIXME use Map instead of List
 getDataServer ::
   HasFlowEnv m r '["dataServers" ::: [DataServer]] =>
   ServerName ->
