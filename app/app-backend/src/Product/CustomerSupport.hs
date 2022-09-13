@@ -14,7 +14,6 @@ import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import Product.Booking (buildBookingStatusRes)
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
@@ -106,7 +105,7 @@ buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
         DRB.RentalDetails _ -> Nothing
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.DriverOfferDetails details -> Just details.toLocation
-  rbStatus <- buildBookingStatusRes booking
+  rbStatus <- DRB.buildBookingAPIEntity booking
   decMobNum <- mapM decrypt mobileNumber
   let details =
         T.OrderDetails

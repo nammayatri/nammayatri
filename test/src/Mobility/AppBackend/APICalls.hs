@@ -1,5 +1,6 @@
 module Mobility.AppBackend.APICalls where
 
+import qualified "app-backend" API.UI.Booking as AppBooking
 import qualified "app-backend" API.UI.Registration as Reg
 import qualified "app-backend" API.UI.Select as AppSelect
 import "app-backend" App.Routes as AbeRoutes
@@ -8,6 +9,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Id
 import qualified "app-backend" Domain.Action.UI.Cancel as CancelAPI
+import qualified "app-backend" Domain.Types.Booking as AbeBooking
 import qualified "app-backend" Domain.Types.Booking as BRB
 import qualified "app-backend" Domain.Types.CancellationReason as AbeCRC
 import qualified "app-backend" Domain.Types.Estimate as AbeEstimate
@@ -20,7 +22,6 @@ import qualified "app-backend" Product.Cancel as CancelAPI
 import qualified "app-backend" Product.Confirm as ConfirmAPI
 import Servant hiding (Context)
 import Servant.Client
-import qualified "app-backend" Types.API.Booking as AppBooking
 import qualified "app-backend" Types.API.Feedback as AppFeedback
 import qualified "app-backend" Types.API.Serviceability as AppServ
 
@@ -51,9 +52,9 @@ callAppFeedback ratingValue rideId =
           }
    in appFeedback appRegistrationToken request
 
-appBookingStatus :: Id BRB.Booking -> Text -> ClientM AppBooking.BookingStatusRes
+appBookingStatus :: Id BRB.Booking -> Text -> ClientM AbeBooking.BookingAPIEntity
 appBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM AppBooking.BookingListRes
-appBookingStatus :<|> appBookingList = client (Proxy :: Proxy AbeRoutes.BookingAPI)
+appBookingStatus :<|> appBookingList = client (Proxy :: Proxy AppBooking.API)
 
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 originServiceability regToken = origin

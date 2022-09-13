@@ -2,11 +2,10 @@ module Types.API.CustomerSupport where
 
 import Data.OpenApi (ToSchema)
 import Data.Time
-import Domain.Types.Booking (Booking)
+import Domain.Types.Booking
 import Domain.Types.Booking.BookingLocation
 import qualified Domain.Types.Person as P
 import EulerHS.Prelude hiding (id)
-import Types.API.Booking (BookingStatusRes)
 
 newtype OrderResp = OrderResp {order :: OrderDetails}
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -21,7 +20,7 @@ data OrderDetails = OrderDetails
     toLocation :: Maybe BookingLocationAPIEntity,
     travellerName :: Maybe Text,
     travellerPhone :: Maybe Text,
-    rideBooking :: BookingStatusRes
+    rideBooking :: BookingAPIEntity
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 

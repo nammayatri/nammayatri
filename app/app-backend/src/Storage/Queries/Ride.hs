@@ -4,7 +4,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Domain.Types.Booking (Booking)
+import Domain.Types.Booking.Type (Booking)
 import Domain.Types.Ride
 import Storage.Tabular.Ride
 

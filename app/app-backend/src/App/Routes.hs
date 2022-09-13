@@ -6,6 +6,7 @@ module App.Routes where
 import qualified App.Routes.Dashboard as Dashboard
 import qualified API.Beckn as Beckn
 import qualified API.MetroBeckn as MetroBeckn
+import qualified API.UI.Booking as Booking
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Registration as Registration
@@ -19,13 +20,11 @@ import Beckn.Types.App
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Data.OpenApi (Info (..), OpenApi (..))
-import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.CancellationReason as SCancellationReason
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import Product.Auth (authAPI)
-import qualified Product.Booking as Booking
 import qualified Product.Call as Call
 import qualified Product.Cancel as Cancel
 import qualified Product.CancellationReason as CancellationReason
@@ -40,7 +39,6 @@ import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Support as Support
 import Servant hiding (throwError)
 import Servant.OpenApi
-import qualified Types.API.Booking as BookingAPI
 import qualified Types.API.Call as API
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.CustomerSupport as CustomerSupport
@@ -72,7 +70,7 @@ type UIAPI =
            :<|> Select.API
            :<|> Quote.API
            :<|> Confirm.ConfirmAPI
-           :<|> BookingAPI
+           :<|> Booking.API
            :<|> Cancel.CancelAPI
            :<|> RideAPI
            :<|> DeprecatedCallAPIs
@@ -112,7 +110,7 @@ uiAPI =
     :<|> Select.handler
     :<|> Quote.handler
     :<|> confirmFlow
-    :<|> bookingFlow
+    :<|> Booking.handler
     :<|> cancelFlow
     :<|> rideFlow
     :<|> deprecatedCallFlow
@@ -131,24 +129,6 @@ uiAPI =
 confirmFlow :: FlowServer Confirm.ConfirmAPI
 confirmFlow =
   Confirm.confirm
-
-type BookingAPI =
-  "rideBooking"
-    :> ( Capture "rideBookingId" (Id SRB.Booking)
-           :> TokenAuth
-           :> Post '[JSON] BookingAPI.BookingStatusRes
-           :<|> "list"
-             :> TokenAuth
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
-             :> QueryParam "onlyActive" Bool
-             :> Get '[JSON] BookingAPI.BookingListRes
-       )
-
-bookingFlow :: FlowServer BookingAPI
-bookingFlow =
-  Booking.bookingStatus
-    :<|> Booking.bookingList
 
 -------- Cancel Flow----------
 
