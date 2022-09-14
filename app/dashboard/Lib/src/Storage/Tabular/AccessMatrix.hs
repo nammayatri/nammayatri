@@ -31,19 +31,19 @@ mkPersist
     |]
 
 instance TEntityKey AccessMatrixT where
-  type DomainKey AccessMatrixT = Id Domain.AccessMatrix
+  type DomainKey AccessMatrixT = Id Domain.AccessMatrixItem
   fromKey (AccessMatrixTKey _id) = Id _id
   toKey (Id id) = AccessMatrixTKey id
 
-instance TType AccessMatrixT Domain.AccessMatrix where
+instance TType AccessMatrixT Domain.AccessMatrixItem where
   fromTType AccessMatrixT {..} = do
     return $
-      Domain.AccessMatrix
+      Domain.AccessMatrixItem
         { id = Id id,
           roleId = fromKey roleId,
           ..
         }
-  toTType Domain.AccessMatrix {..} =
+  toTType Domain.AccessMatrixItem {..} =
     AccessMatrixT
       { id = getId id,
         roleId = toKey roleId,

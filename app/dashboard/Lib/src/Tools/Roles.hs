@@ -11,6 +11,7 @@ import qualified Storage.Queries.AccessMatrix as QAccessMatrix
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Role as QRole
 
+-- TODO move to Tools/Auth
 -- TODO make tests for this logic
 verifyAccessLevel :: EsqDBFlow m r => RequiredAccessLevel -> Id DP.Person -> m (Id DP.Person)
 verifyAccessLevel requiredAccessLevel personId = do
