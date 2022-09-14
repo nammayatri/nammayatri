@@ -49,7 +49,7 @@ data PersonAPIEntity = PersonAPIEntity
   { id :: Id Person,
     firstName :: Text,
     lastName :: Text,
-    roleId :: Id DRole.Role, --FIXME role.name
+    role :: DRole.RoleAPIEntity,
     email :: Text,
     mobileNumber :: Text,
     mobileCountryCode :: Text,
@@ -57,9 +57,10 @@ data PersonAPIEntity = PersonAPIEntity
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-makePersonAPIEntity :: DecryptedPerson -> PersonAPIEntity
-makePersonAPIEntity Person {..} =
+makePersonAPIEntity :: DecryptedPerson -> DRole.Role -> PersonAPIEntity
+makePersonAPIEntity Person {..} personRole =
   PersonAPIEntity
     { registeredAt = createdAt,
+      role = DRole.mkRoleAPIEntity personRole,
       ..
     }

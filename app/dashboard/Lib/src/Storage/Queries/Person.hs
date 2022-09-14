@@ -8,7 +8,9 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Control.Applicative (liftA2)
 import Domain.Types.Person as Person
-import Storage.Tabular.Person
+import Domain.Types.Role as Role
+import Storage.Tabular.Person as Person
+import Storage.Tabular.Role as Role
 
 create :: Person -> SqlDB ()
 create = Esq.create
@@ -34,6 +36,7 @@ findByEmailAndPassword email password = do
         &&. person ^. PersonPasswordHash ==. val passwordDbHash
     return person
 
+-- TODO add filtering by role
 findAllWithLimitOffset ::
   ( Transactionable m,
     EncFlow m r
@@ -41,17 +44,23 @@ findAllWithLimitOffset ::
   Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
-  m [Person]
+  m [(Person, Role)]
 findAllWithLimitOffset mbSearchString mbLimit mbOffset = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
   findAll $ do
-    person <- from $ table @PersonT
+    (person :& role) <-
+      from $
+        table @PersonT
+          `innerJoin` table @RoleT
+            `Esq.on` ( \(person :& role) ->
+                         person ^. Person.PersonRoleId ==. role ^. Role.RoleTId
+                     )
     where_ $
       Esq.whenJust_ (liftA2 (,) mbSearchString mbSearchStrDBHash) (filterBySearchString person)
     orderBy [desc $ person ^. PersonCreatedAt]
     limit limitVal
     offset offsetVal
-    return person
+    return (person, role)
   where
     limitVal = maybe 100 fromIntegral mbLimit
     offsetVal = maybe 0 fromIntegral mbOffset

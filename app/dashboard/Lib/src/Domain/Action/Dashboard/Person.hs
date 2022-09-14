@@ -19,7 +19,8 @@ listPerson ::
   Maybe Integer ->
   m ListPersonRes
 listPerson _ mbSearchString mbLimit mbOffset = do
-  personList <- QP.findAllWithLimitOffset mbSearchString mbLimit mbOffset
-  decPersonList <- decrypt `mapM` personList
-  let respPersonList = DP.makePersonAPIEntity <$> decPersonList
-  return $ ListPersonRes respPersonList
+  personAndRoleList <- QP.findAllWithLimitOffset mbSearchString mbLimit mbOffset
+  res <- forM personAndRoleList $ \(encPerson, role) -> do
+    decPerson <- decrypt encPerson
+    pure $ DP.makePersonAPIEntity decPerson role
+  pure $ ListPersonRes res

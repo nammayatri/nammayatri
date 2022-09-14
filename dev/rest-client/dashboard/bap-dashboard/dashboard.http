@@ -36,7 +36,7 @@ token: {{token}}
 GET {{bap-dashboard-host}}/dashboard/person/list
   ?limit=5
   &offset=0
-  &searchString=customer
+  # &searchString=customer
   # &searchString=7777777781
 content-type: application/json
 token: {{token}}
