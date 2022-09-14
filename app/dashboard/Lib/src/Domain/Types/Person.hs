@@ -7,21 +7,13 @@ module Domain.Types.Person where
 import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Types.Id
-
--- TODO move roles to DB
-data Role
-  = CUSTOMER
-  | DRIVER
-  | JUSPAY_OPS
-  | JUSPAY_ADMIN
-  | CUSTOMER_SERVICE
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, Enum, Bounded, ToSchema)
+import qualified Domain.Types.Role as DRole
 
 data PersonE e = Person
   { id :: Id Person,
     firstName :: Text,
     lastName :: Text,
-    role :: Role,
+    roleId :: Id DRole.Role,
     email :: EncryptedHashedField e Text,
     mobileNumber :: EncryptedHashedField e Text,
     mobileCountryCode :: Text,
@@ -57,7 +49,7 @@ data PersonAPIEntity = PersonAPIEntity
   { id :: Id Person,
     firstName :: Text,
     lastName :: Text,
-    role :: Role,
+    roleId :: Id DRole.Role, --FIXME role.name
     email :: Text,
     mobileNumber :: Text,
     mobileCountryCode :: Text,

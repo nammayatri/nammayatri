@@ -11,6 +11,7 @@ import Beckn.Utils.Common
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
+import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
 import Servant hiding (throwError)
@@ -36,7 +37,7 @@ instance VerificationMethod VerifyToken where
     \If you don't have a token, use registration endpoints."
 
 instance VerificationMethodWithPayload VerifyToken where
-  type VerificationPayloadType VerifyToken = Roles.RequiredAccessLevel
+  type VerificationPayloadType VerifyToken = DMatrix.RequiredAccessLevel
 
 verifyTokenAction ::
   ( EsqDBFlow m r,
@@ -51,7 +52,7 @@ verifyPerson ::
     HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
-  Roles.RequiredAccessLevel ->
+  DMatrix.RequiredAccessLevel ->
   RegToken ->
   m (Id DP.Person)
 verifyPerson requiredAccessLevel token = do

@@ -12,8 +12,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.Person as Domain
-
-derivePersistField "Domain.Role"
+import Storage.Tabular.Role (RoleTId)
 
 mkPersist
   defaultSqlSettings
@@ -22,7 +21,7 @@ mkPersist
       id Text
       firstName Text
       lastName Text
-      role Domain.Role
+      roleId RoleTId
       emailEncrypted Text
       emailHash DbHash
       mobileNumberEncrypted Text
@@ -45,6 +44,7 @@ instance TType PersonT Domain.Person where
     return $
       Domain.Person
         { id = Id id,
+          roleId = fromKey roleId,
           email = EncryptedHashed (Encrypted emailEncrypted) emailHash,
           mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
           ..
@@ -52,6 +52,7 @@ instance TType PersonT Domain.Person where
   toTType Domain.Person {..} =
     PersonT
       { id = getId id,
+        roleId = toKey roleId,
         emailEncrypted = email & unEncrypted . (.encrypted),
         emailHash = email.hash,
         mobileNumberEncrypted = mobileNumber & unEncrypted . (.encrypted),

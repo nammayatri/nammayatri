@@ -4,32 +4,34 @@ module Tools.Roles.Instances (module Tools.Roles.Instances, module Reexport) whe
 
 import Beckn.Prelude
 import Data.Singletons.TH
-import Tools.Roles as Reexport (ApiAccessType (..), ApiEntity (..), DashboardAccessType (..))
-import qualified Tools.Roles as Roles
+import Domain.Types.AccessMatrix as Reexport (ApiAccessType (..), ApiEntity (..))
+import qualified Domain.Types.AccessMatrix as DMatrix
+import Domain.Types.Role as Reexport (DashboardAccessType (..))
+import qualified Domain.Types.Role as DRole
 import Tools.Servant.HeaderAuth
 
--- These types are similar to Roles.ApiAccessLevel and Roles.DashboardAccessType, but used only on type level
+-- These types are similar to DMatrix.ApiAccessLevel and DRole.DashboardAccessType, but used only on type level
 
 data ApiAccessLevel at ae
 
 data DashboardAccessLevel at
 
 instance
-  forall (at :: Roles.ApiAccessType) (ae :: Roles.ApiEntity).
+  forall (at :: DMatrix.ApiAccessType) (ae :: DMatrix.ApiEntity).
   (SingI at, SingI ae) =>
-  (VerificationPayload Roles.RequiredAccessLevel) (ApiAccessLevel at ae)
+  (VerificationPayload DMatrix.RequiredAccessLevel) (ApiAccessLevel at ae)
   where
   toPayloadType _ =
-    Roles.RequiredApiAccessLevel $
-      Roles.ApiAccessLevel
+    DMatrix.RequiredApiAccessLevel $
+      DMatrix.ApiAccessLevel
         { apiAccessType = fromSing (sing @at),
           apiEntity = fromSing (sing @ae)
         }
 
 instance
-  forall (at :: Roles.DashboardAccessType).
+  forall (at :: DRole.DashboardAccessType).
   SingI at =>
-  (VerificationPayload Roles.RequiredAccessLevel) (DashboardAccessLevel at)
+  (VerificationPayload DMatrix.RequiredAccessLevel) (DashboardAccessLevel at)
   where
   toPayloadType _ =
-    Roles.RequiredDashboardAccessLevel (fromSing (sing @at))
+    DMatrix.RequiredDashboardAccessLevel (fromSing (sing @at))
