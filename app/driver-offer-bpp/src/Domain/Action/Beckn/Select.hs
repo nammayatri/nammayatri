@@ -121,7 +121,8 @@ buildSearchRequest from to orgId sReq estimatedRideFinishTime = do
         toLocation = to,
         bapId = sReq.bapId,
         bapUri = sReq.bapUri,
-        createdAt = createdAt_
+        createdAt = createdAt_,
+        vehicleVariant = sReq.variant
       }
 
 buildSearchReqLocation :: (MonadGuid m, MonadTime m) => DLoc.SearchReqLocationAPIEntity -> m DLoc.SearchReqLocation

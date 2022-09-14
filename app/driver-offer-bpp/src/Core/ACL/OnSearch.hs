@@ -62,14 +62,14 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
 mkStartInfo :: DSearch.DSearchRes -> OS.StartInfo
 mkStartInfo dReq =
   OS.StartInfo
-    { location = OS.Location $ OS.Gps {lat = dReq.searchRequest.fromLocation.lat, lon = dReq.searchRequest.fromLocation.lon},
+    { location = OS.Location $ OS.Gps {lat = dReq.fromLocation.lat, lon = dReq.fromLocation.lon},
       time = OS.TimeTimestamp dReq.now
     }
 
 mkStopInfo :: DSearch.DSearchRes -> OS.StopInfo
 mkStopInfo res =
   OS.StopInfo
-    { location = OS.Location $ OS.Gps {lat = res.searchRequest.toLocation.lat, lon = res.searchRequest.toLocation.lon}
+    { location = OS.Location $ OS.Gps {lat = res.toLocation.lat, lon = res.toLocation.lon}
     }
 
 data QuoteEntities = QuoteEntities

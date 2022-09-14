@@ -11,8 +11,10 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as Domain
+import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
+import Storage.Tabular.Vehicle ()
 
 mkPersist
   defaultSqlSettings
@@ -30,7 +32,7 @@ mkPersist
       bapId Text
       bapUri Text
       createdAt UTCTime
-
+      vehicleVariant Variant.Variant
       Primary id
       deriving Generic
     |]

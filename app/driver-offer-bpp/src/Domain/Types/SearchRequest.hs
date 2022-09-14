@@ -7,6 +7,7 @@ import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Domain.Types.Vehicle.Variant as Variant
 
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
@@ -20,6 +21,7 @@ data SearchRequest = SearchRequest
     toLocation :: DLoc.SearchReqLocation,
     bapId :: Text,
     bapUri :: BaseUrl,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    vehicleVariant :: Variant.Variant
   }
   deriving (Generic, PrettyShow, Show)

@@ -9,18 +9,13 @@ import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import Data.List
-import Domain.Types.BusinessEvent (WhenPoolWasComputed (ON_SEARCH))
 import qualified Domain.Types.Organization as DOrg
-import Domain.Types.SearchRequest
-import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
 import Environment
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
-import qualified Storage.Queries.BusinessEvent as QBE
 import Storage.Queries.Person (DriverPoolResult)
-import qualified Storage.Queries.SearchRequest as QSReq
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
@@ -34,7 +29,8 @@ data DSearchReq = DSearchReq
 
 data DSearchRes = DSearchRes
   { transporterInfo :: TransporterInfo,
-    searchRequest :: SearchRequest,
+    fromLocation :: DLoc.SearchReqLocation,
+    toLocation :: DLoc.SearchReqLocation,
     now :: UTCTime,
     estimateList :: [EstimateItem]
   }
@@ -68,12 +64,8 @@ handler org sReq = do
       estimatedRideDuration = distRes.duration_in_traffic
       estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` sReq.pickupTime
   estimates <- mapM (mkEstimate org estimatedRideFinishTime distance) listOfProtoQuotes
-  searchReq <- buildSearchRequest fromLocation toLocation org.id sReq estimatedRideFinishTime
-  Esq.runTransaction $ do
-    QSReq.create searchReq
-    traverse_ (QBE.logDriverInPoolEvent ON_SEARCH Nothing) driverPool
   logDebug $ "bap uri: " <> show sReq.bapUri
-  buildSearchRes org searchReq estimates
+  buildSearchRes org fromLocation toLocation estimates
 
 mkEstimate ::
   (MonadFlow m, Esq.Transactionable m) =>
@@ -95,7 +87,7 @@ mkEstimate org estimatedRideFinishTime dist g = do
         baseFare
       }
 
-buildSearchRequest ::
+{-buildSearchRequest ::
   ( MonadTime m,
     MonadGuid m,
     MonadReader r m,
@@ -106,8 +98,9 @@ buildSearchRequest ::
   Id DOrg.Organization ->
   DSearchReq ->
   UTCTime ->
+  Variant ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to orgId sReq estimatedRideFinishTime = do
+buildSearchRequest from to orgId sReq estimatedRideFinishTime variant= do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -125,8 +118,9 @@ buildSearchRequest from to orgId sReq estimatedRideFinishTime = do
         toLocation = to,
         bapId = sReq.bapId,
         bapUri = sReq.bapUri,
-        createdAt = createdAt_
-      }
+        createdAt = createdAt_,
+        vehicle = variant
+      } -}
 
 buildSearchReqLocation :: (MonadGuid m, MonadTime m) => DLoc.SearchReqLocationAPIEntity -> m DLoc.SearchReqLocation
 buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do
@@ -139,10 +133,11 @@ buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do
 buildSearchRes ::
   (MonadTime m) =>
   DOrg.Organization ->
-  DSearchReq.SearchRequest ->
+  DLoc.SearchReqLocation ->
+  DLoc.SearchReqLocation ->
   [EstimateItem] ->
   m DSearchRes
-buildSearchRes org searchRequest estimateList = do
+buildSearchRes org fromLocation toLocation estimateList = do
   now <- getCurrentTime
   let transporterInfo =
         TransporterInfo
@@ -157,6 +152,7 @@ buildSearchRes org searchRequest estimateList = do
     DSearchRes
       { transporterInfo,
         now,
-        searchRequest,
+        fromLocation,
+        toLocation,
         estimateList
       }
