@@ -47,7 +47,7 @@ type UpdateLocationRes = APISuccess
 
 updateLocationHandler :: MonadHandler m => Handler m -> Id Person.Person -> UpdateLocationReq -> m UpdateLocationRes
 updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocationUpdate" $ do
-  logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText sortedWaypoints
+  logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
   driver <-
     findPersonById driverId
       >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -55,24 +55,27 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
   whenM (Redis.tryLockRedis lockKey 60) $ do
     mbOldLoc <- findDriverLocationById driver.id
     now <- getCurrentTime
-    case (isCalledBeforeRefreshPeriod mbOldLoc now, areIncomingPointsOutdated mbOldLoc) of
+    case (isCalledBeforeRefreshPeriod mbOldLoc now, filterNewWaypoints mbOldLoc) of
       (True, _) -> logWarning "Called before refresh period passed, ignoring"
-      (_, True) -> logWarning "Incoming points are older than current one, ignoring"
-      _ -> do
+      (_, []) -> logWarning "Incoming points are older than current one, ignoring"
+      (_, a : ax) -> do
+        let newWaypoints = a :| ax
+            currPoint = NE.last newWaypoints
         upsertDriverLocation driver.id currPoint.pt currPoint.ts
         getInProgressByDriverId driver.id
           >>= maybe
             (logInfo "No ride is assigned to driver, ignoring")
-            (\_ -> addIntermediateRoutePoints driver.id $ NE.map (.pt) sortedWaypoints)
+            (\_ -> addIntermediateRoutePoints driver.id $ NE.map (.pt) newWaypoints)
 
     Redis.unlockRedis lockKey
   pure Success
   where
-    sortedWaypoints = NE.sortBy (compare `on` (.ts)) waypoints
+    filterNewWaypoints mbOldLoc = do
+      let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
+      maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
+
     isCalledBeforeRefreshPeriod mbLoc now =
       maybe False (\loc -> now `diffUTCTime` loc.updatedAt < refreshPeriod) mbLoc
-    currPoint = NE.last sortedWaypoints
-    areIncomingPointsOutdated = maybe False (\loc -> (NE.head sortedWaypoints).ts <= loc.coordinatesCalculatedAt)
     lockKey = makeLockKey driverId
 
 makeLockKey :: Id Person.Person -> Text

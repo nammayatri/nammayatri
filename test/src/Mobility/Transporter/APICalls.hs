@@ -63,10 +63,10 @@ updateLocation :: RegToken -> NonEmpty TbeLocation.Waypoint -> ClientM APISucces
 (_ :<|> updateLocation) = client (Proxy @TbeLocation.API)
 
 buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty TbeLocation.Waypoint)
-buildUpdateLocationRequest pts = do
-  now <- getCurrentTime
-  pure $
-    flip fmap pts $ \ll ->
+buildUpdateLocationRequest pts =
+  forM pts $ \ll -> do
+    now <- getCurrentTime
+    return $
       TbeLocation.Waypoint
         { pt = ll,
           ts = now,

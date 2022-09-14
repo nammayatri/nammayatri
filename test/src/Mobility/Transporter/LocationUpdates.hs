@@ -25,6 +25,8 @@ spec = do
       defaultSuccessFlow 10 680 680 locationUpdatesRoute1 clients
     it "Testing location updates for the route with far isolated point" $
       defaultSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+    it "Testing location updates for the route with reversed points list" $
+      revertedPointsListSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
     it "Testing success flow and location updates with outdated points" $
       outdatedPointsSuccessFlow 800 3768 8350 locationUpdatesIsolatedPoint clients
     it "Testing success flow and location updates called multiple times at the same time " $
@@ -36,6 +38,14 @@ defaultSuccessFlow eps distance chargeableDistance updates clients = withBecknCl
     forM_ (NE.toList updates) $ \upd -> do
       updReq <- liftIO $ buildUpdateLocationRequest upd
       Utils.updateLocation transporterDriver1 updReq
+      liftIO $ threadDelay waitBetweenUpdates
+
+revertedPointsListSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
+revertedPointsListSuccessFlow eps distance chargeableDistance updates clients = withBecknClients clients $ do
+  successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
+    forM_ (NE.toList updates) $ \upd -> do
+      updReq <- liftIO $ buildUpdateLocationRequest upd
+      Utils.updateLocation transporterDriver1 $ NE.reverse updReq
       liftIO $ threadDelay waitBetweenUpdates
 
 -- There was a bug, when it was possible to update location multiple times if

@@ -74,14 +74,14 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
 
   distanceCalculationFailed <- isDistanceCalculationFailed requestorId
   when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
-  (finalDistance, finalFare) <-
+  (chargeableDistance, finalFare) <-
     if not distanceCalculationFailed
       then recalculateFare booking ride
       else pure (booking.estimatedDistance, booking.estimatedFare)
 
   let updRide =
         ride{tripEndTime = Just now,
-             chargeableDistance = Just finalDistance,
+             chargeableDistance = Just chargeableDistance,
              fare = Just finalFare
             }
 
