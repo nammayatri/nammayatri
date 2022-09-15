@@ -14,13 +14,23 @@ import Tools.Roles.Instances
 
 type API =
   "accessMatrix"
-    :> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
-    :> QueryParam "roleId" (Id DRole.Role) -- role.name?
-    :> Get '[JSON] DMatrix.AccessMatrixAPIEntity
+    :> ( TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
+           :> QueryParam "limit" Integer
+           :> QueryParam "offset" Integer
+           :> Get '[JSON] DMatrix.AccessMatrixAPIEntity
+           :<|> "role"
+           :> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
+           :> Capture "roleId" (Id DRole.Role) -- role.name?
+           :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
+       )
 
 handler :: FlowServer API
-handler = getAccessMatrix
+handler = getAccessMatrix :<|> getAccessMatrixByRole
 
-getAccessMatrix :: Id DP.Person -> Maybe (Id DRole.Role) -> FlowHandler AccessMatrixAPIEntity
-getAccessMatrix personId =
-  withFlowHandlerAPI . DAccessMatrix.getAccessMatrix personId
+getAccessMatrix :: Id DP.Person -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
+getAccessMatrix personId mbLimit =
+  withFlowHandlerAPI . DAccessMatrix.getAccessMatrix personId mbLimit
+
+getAccessMatrixByRole :: Id DP.Person -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
+getAccessMatrixByRole personId =
+  withFlowHandlerAPI . DAccessMatrix.getAccessMatrixByRole personId

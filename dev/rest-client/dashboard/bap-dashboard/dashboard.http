@@ -46,6 +46,18 @@ token: {{token}}
 # @name getAccessMatrix
 
 GET {{bap-dashboard-host}}/dashboard/accessMatrix
+  ?limit=10
+  &offset=0
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name getAccessMatrixByRole
+
+@roleId=a708c6a1-78b5-4e5e-9df8-468cd81dc2aa
+
+GET {{bap-dashboard-host}}/dashboard/accessMatrix/role/{{roleId}}
   ?roleId=e5a69a26-d165-455a-a711-33a41e0d47c6
 content-type: application/json
 token: {{token}}

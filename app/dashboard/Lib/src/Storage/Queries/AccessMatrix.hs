@@ -24,8 +24,25 @@ findByRoleAndEntity roleId apiEntity = findOne $ do
       &&. accessMatrix ^. AccessMatrixApiEntity ==. val apiEntity
   return accessMatrix
 
-findAll ::
+findAllByRoles ::
   Transactionable m =>
+  [DRole.Role] ->
   m [DMatrix.AccessMatrixItem]
-findAll = Esq.findAll $ do
-  from $ table @AccessMatrixT
+findAllByRoles roles = do
+  let roleKeys = map (toKey . (.id)) roles
+  Esq.findAll $ do
+    accessMatrix <- from $ table @AccessMatrixT
+    where_ $
+      accessMatrix ^. AccessMatrixRoleId `in_` valList roleKeys
+    return accessMatrix
+
+findAllByRoleId ::
+  Transactionable m =>
+  Id DRole.Role ->
+  m [DMatrix.AccessMatrixItem]
+findAllByRoleId roleId = do
+  Esq.findAll $ do
+    accessMatrix <- from $ table @AccessMatrixT
+    where_ $
+      accessMatrix ^. AccessMatrixRoleId ==. val (toKey roleId)
+    return accessMatrix
