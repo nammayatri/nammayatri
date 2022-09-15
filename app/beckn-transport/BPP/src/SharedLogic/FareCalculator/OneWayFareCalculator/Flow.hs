@@ -20,7 +20,7 @@ import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
   ( OneWayFareParameters (..),
-    TripStartTime,
+    TripEndTime,
     calculateFareParameters,
     fareSum,
     fareSumWithDiscount,
@@ -56,12 +56,12 @@ doCalculateFare ::
   Id Organization ->
   Vehicle.Variant ->
   Meters ->
-  TripStartTime ->
+  TripEndTime ->
   m OneWayFareParameters
-doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
+doCalculateFare ServiceHandle {..} orgId vehicleVariant distance endTime = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   farePolicy <- getFarePolicy orgId vehicleVariant >>= fromMaybeM NoFarePolicy
-  let fareParams = calculateFareParameters farePolicy distance startTime
+  let fareParams = calculateFareParameters farePolicy distance endTime
   logTagInfo
     "FareCalculator"
     $ "Fare parameters calculated: " +|| fareParams ||+ ""

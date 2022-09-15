@@ -99,7 +99,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
       -- maybe compare only distance fare?
       let estimatedFare = Fare.fareSum booking.fareParams
 
-      fareParams <- calculateFare transporterId booking.vehicleVariant actualDistance booking.startTime booking.fareParams.driverSelectedFare
+      fareParams <- calculateFare transporterId booking.vehicleVariant actualDistance booking.estimatedFinishTime booking.fareParams.driverSelectedFare
       let updatedFare = Fare.fareSum fareParams
       let distanceDiff = actualDistance - oldDistance
       let fareDiff = updatedFare - estimatedFare

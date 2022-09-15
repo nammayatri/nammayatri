@@ -2,7 +2,7 @@
 
 module SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
   ( OneWayFareParameters (..),
-    TripStartTime,
+    TripEndTime,
     fareSum,
     fareSumWithDiscount,
     calculateFareParameters,
@@ -23,7 +23,7 @@ import Data.Time
 import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
 import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRate (..))
 
-type TripStartTime = UTCTime
+type TripEndTime = UTCTime
 
 data OneWayFareParameters = OneWayFareParameters
   { baseFare :: Money,
@@ -45,13 +45,13 @@ fareSumWithDiscount fp@OneWayFareParameters {..} = do
 calculateFareParameters ::
   OneWayFarePolicy ->
   Meters ->
-  TripStartTime ->
+  TripEndTime ->
   OneWayFareParameters
-calculateFareParameters farePolicy distance startTime = do
+calculateFareParameters farePolicy distance endTime = do
   let baseFare = calculateBaseFare farePolicy
   let distanceFare = calculateDistanceFare farePolicy distance
-  let nightShiftRate = calculateNightShiftRate farePolicy startTime
-  let discount = calculateDiscount farePolicy startTime
+  let nightShiftRate = calculateNightShiftRate farePolicy endTime
+  let discount = calculateDiscount farePolicy endTime
   OneWayFareParameters baseFare distanceFare nightShiftRate discount
 
 calculateBaseFare ::
@@ -82,7 +82,7 @@ calculateDistanceFare farePolicy distance = do
 
 calculateNightShiftRate ::
   OneWayFarePolicy ->
-  TripStartTime ->
+  TripEndTime ->
   Double
 calculateNightShiftRate farePolicy tripStartTime = do
   let timeOfDay = localTimeOfDay $ utcToLocalTime timeZoneIST tripStartTime
@@ -93,7 +93,7 @@ calculateNightShiftRate farePolicy tripStartTime = do
     then nightShiftRate
     else 1
 
-calculateDiscount :: OneWayFarePolicy -> TripStartTime -> Maybe Money
+calculateDiscount :: OneWayFarePolicy -> TripEndTime -> Maybe Money
 calculateDiscount farePolicy tripStartTime = do
   let discount = calculateDiscount' 0 farePolicy.discountList
   if discount <= 0 then Nothing else Just discount

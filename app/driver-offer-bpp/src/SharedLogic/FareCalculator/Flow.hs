@@ -56,10 +56,10 @@ doCalculateFare ::
   UTCTime ->
   Maybe Money ->
   m FareParameters
-doCalculateFare ServiceHandle {..} orgId variant distance startTime driverSelectedFare = do
+doCalculateFare ServiceHandle {..} orgId variant distance endTime driverSelectedFare = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ ""
   farePolicy <- getFarePolicy orgId variant >>= fromMaybeM NoFarePolicy
-  let fareParams = calculateFareParameters farePolicy distance startTime driverSelectedFare
+  let fareParams = calculateFareParameters farePolicy distance endTime driverSelectedFare
   logTagInfo
     "FareCalculator"
     $ "Fare parameters calculated: " +|| fareParams ||+ ""
