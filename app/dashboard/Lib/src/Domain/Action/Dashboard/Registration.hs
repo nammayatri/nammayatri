@@ -36,7 +36,7 @@ login ::
   LoginReq ->
   m LoginRes
 login LoginReq {..} = do
-  person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonNotFound email)
+  person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
   token <- generateToken person.id
   pure $ LoginRes token "Logged in successfully"
 

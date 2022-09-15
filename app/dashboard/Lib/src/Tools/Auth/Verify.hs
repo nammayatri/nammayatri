@@ -15,6 +15,7 @@ import qualified Domain.Types.Role as DRole
 import qualified Storage.Queries.AccessMatrix as QAccessMatrix
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Role as QRole
+import Tools.Error
 import Tools.Servant.HeaderAuth
 
 -- These types are similar to DMatrix.ApiAccessLevel and DRole.DashboardAccessType, but used only on type level
@@ -46,7 +47,7 @@ instance
 -- TODO make tests for this logic
 verifyAccessLevel :: EsqDBFlow m r => DMatrix.RequiredAccessLevel -> Id DP.Person -> m (Id DP.Person)
 verifyAccessLevel requiredAccessLevel personId = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   case requiredAccessLevel of
     DMatrix.RequiredApiAccessLevel apiAccessLevel -> do
       mbAccessMatrixItem <- QAccessMatrix.findByRoleAndEntity person.roleId apiAccessLevel.apiEntity
@@ -55,7 +56,7 @@ verifyAccessLevel requiredAccessLevel personId = do
         throwError AccessDenied
       pure person.id
     DMatrix.RequiredDashboardAccessLevel DRole.DASHBOARD_ADMIN -> do
-      role <- QRole.findById person.roleId >>= fromMaybeM (PersonDoesNotExist personId.getId) -- FIXME >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
       if role.dashboardAccessType == DRole.DASHBOARD_ADMIN
         then pure person.id
         else throwError AccessDenied

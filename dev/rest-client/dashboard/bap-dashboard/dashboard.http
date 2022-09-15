@@ -19,15 +19,6 @@ content-type: application/json
   "password" : "juspay_admin"
 }
 
-###
-
-# @name logout
-
-@token = {{login.response.body.authToken}}
-
-POST {{bap-dashboard-host}}/dashboard/logout
-content-type: application/json
-token: {{token}}
 
 ###
 
@@ -55,10 +46,9 @@ token: {{token}}
 
 # @name getAccessMatrixByRole
 
-@roleId=a708c6a1-78b5-4e5e-9df8-468cd81dc2aa
+@roleId = {{getAccessMatrix.response.body.accessMatrix[0].role.id}}
 
 GET {{bap-dashboard-host}}/dashboard/accessMatrix/role/{{roleId}}
-  ?roleId=e5a69a26-d165-455a-a711-33a41e0d47c6
 content-type: application/json
 token: {{token}}
 
@@ -79,12 +69,23 @@ token: {{token}}
 # @name assignRole
 
 @personId = {{personList.response.body.list[0].id}}
-@roleId = {{createRole.response.body.id}}
 
-POST {{bap-dashboard-host}}/dashboard/person/{{personId1}}/assignRole/{{roleId1}}
+@developerRoleId = {{createRole.response.body.id}}
+
+POST {{bap-dashboard-host}}/dashboard/person/{{personId}}/assignRole/{{developerRoleId}}
 content-type: application/json
 token: {{token}}
 
 { "name" : "DEVELOPER",
   "description" : "developer"
 }
+
+###
+
+# @name logout
+
+@token = {{login.response.body.authToken}}
+
+POST {{bap-dashboard-host}}/dashboard/logout
+content-type: application/json
+token: {{token}}

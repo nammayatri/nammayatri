@@ -2,7 +2,6 @@ module Domain.Action.Dashboard.AccessMatrix where
 
 import Beckn.Prelude
 import Beckn.Types.Common
-import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common (fromMaybeM)
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -10,6 +9,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Role as QRole
+import Tools.Error
 
 getAccessMatrix ::
   EsqDBFlow m r =>
@@ -28,6 +28,6 @@ getAccessMatrixByRole ::
   Id DRole.Role ->
   m DMatrix.AccessMatrixRowAPIEntity
 getAccessMatrixByRole _ roleId = do
-  role <- QRole.findById roleId >>= fromMaybeM (PersonDoesNotExist roleId.getId) -- FIXME >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   accessMatrixItems <- QMatrix.findAllByRoleId roleId
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role

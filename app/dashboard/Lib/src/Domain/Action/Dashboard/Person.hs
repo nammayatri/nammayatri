@@ -12,6 +12,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Role as QRole
+import Tools.Error
 
 newtype ListPersonRes = ListPersonRes
   {list :: [DP.PersonAPIEntity]}
@@ -32,14 +33,14 @@ listPerson _ mbSearchString mbLimit mbOffset = do
   pure $ ListPersonRes res
 
 assignRole ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  EsqDBFlow m r =>
   Id DP.Person ->
   Id DP.Person ->
   Id DRole.Role ->
   m APISuccess
 assignRole _ personId roleId = do
-  _person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) --E500 check this error codes in code
-  _role <- QRole.findById roleId >>= fromMaybeM (PersonDoesNotExist roleId.getId) --E400-- FIXME >>= fromMaybeM (RoleDoesNotExist person.roleId.getId)
+  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   Esq.runTransaction $
     QP.updatePersonRole personId roleId
   pure Success

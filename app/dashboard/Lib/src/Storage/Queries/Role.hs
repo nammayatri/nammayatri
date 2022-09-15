@@ -17,6 +17,16 @@ findById ::
   m (Maybe Role)
 findById = Esq.findById
 
+findByName ::
+  Transactionable m =>
+  Text ->
+  m (Maybe Role)
+findByName name = findOne $ do
+  role <- from $ table @RoleT
+  where_ $
+    role ^. RoleName ==. val name
+  return role
+
 findAllByLimitOffset ::
   Transactionable m =>
   Maybe Integer ->

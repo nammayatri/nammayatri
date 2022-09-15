@@ -4,9 +4,11 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
 import qualified Storage.Queries.Role as QRole
+import Tools.Error (RoleError (RoleNameExists))
 
 data CreateRoleReq = CreateRoleReq
   { name :: Text,
@@ -20,6 +22,8 @@ createRole ::
   CreateRoleReq ->
   m DRole.RoleAPIEntity
 createRole _ req = do
+  mbExistingRole <- QRole.findByName req.name
+  whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
   role <- buildRole req
   Esq.runTransaction $
     QRole.create role
