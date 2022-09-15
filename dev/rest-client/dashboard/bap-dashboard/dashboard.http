@@ -64,7 +64,24 @@ token: {{token}}
 
 ###
 
+# @name createRole
+
 POST {{bap-dashboard-host}}/dashboard/roles/create
+content-type: application/json
+token: {{token}}
+
+{ "name" : "DEVELOPER",
+  "description" : "developer"
+}
+
+###
+
+# @name assignRole
+
+@personId = {{personList.response.body.list[0].id}}
+@roleId = {{createRole.response.body.id}}
+
+POST {{bap-dashboard-host}}/dashboard/person/{{personId1}}/assignRole/{{roleId1}}
 content-type: application/json
 token: {{token}}
 

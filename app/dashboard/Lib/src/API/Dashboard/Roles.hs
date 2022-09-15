@@ -22,5 +22,5 @@ handler :: FlowServer API
 handler = createRole
 
 createRole :: Id DP.Person -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
-createRole personId =
-  withFlowHandlerAPI . DRoles.createRole personId
+createRole adminId =
+  withFlowHandlerAPI . DRoles.createRole adminId

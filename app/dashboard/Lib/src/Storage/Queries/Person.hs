@@ -6,6 +6,7 @@ import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Control.Applicative (liftA2)
 import Domain.Types.Person as Person
 import Domain.Types.Role as Role
@@ -71,3 +72,14 @@ findAllWithLimitOffset mbSearchString mbLimit mbOffset = do
           `ilike` likeSearchStr
         )
         ||. person ^. PersonMobileNumberHash ==. val searchStrDBHash --find by email also?
+
+updatePersonRole :: Id Person -> Id Role -> SqlDB ()
+updatePersonRole personId roleId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonRoleId =. val (toKey roleId),
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey personId)

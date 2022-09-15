@@ -27,9 +27,9 @@ handler :: FlowServer API
 handler = getAccessMatrix :<|> getAccessMatrixByRole
 
 getAccessMatrix :: Id DP.Person -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
-getAccessMatrix personId mbLimit =
-  withFlowHandlerAPI . DAccessMatrix.getAccessMatrix personId mbLimit
+getAccessMatrix adminId mbLimit =
+  withFlowHandlerAPI . DAccessMatrix.getAccessMatrix adminId mbLimit
 
 getAccessMatrixByRole :: Id DP.Person -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
-getAccessMatrixByRole personId =
-  withFlowHandlerAPI . DAccessMatrix.getAccessMatrixByRole personId
+getAccessMatrixByRole adminId =
+  withFlowHandlerAPI . DAccessMatrix.getAccessMatrixByRole adminId
