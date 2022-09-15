@@ -17,7 +17,6 @@ findById ::
   m (Maybe Role)
 findById = Esq.findById
 
--- TODO limit offset
 findAllByLimitOffset ::
   Transactionable m =>
   Maybe Integer ->

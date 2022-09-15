@@ -61,3 +61,13 @@ GET {{bap-dashboard-host}}/dashboard/accessMatrix/role/{{roleId}}
   ?roleId=e5a69a26-d165-455a-a711-33a41e0d47c6
 content-type: application/json
 token: {{token}}
+
+###
+
+POST {{bap-dashboard-host}}/dashboard/roles/create
+content-type: application/json
+token: {{token}}
+
+{ "name" : "DEVELOPER",
+  "description" : "developer"
+}
