@@ -47,7 +47,7 @@ type UpdateLocationRes = APISuccess
 
 updateLocationHandler :: MonadHandler m => Handler m -> Id Person.Person -> UpdateLocationReq -> m UpdateLocationRes
 updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocationUpdate" $ do
-  logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
+  logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText sortedWaypoints
   driver <-
     findPersonById driverId
       >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -63,15 +63,16 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
         getInProgressByDriverId driver.id
           >>= maybe
             (logInfo "No ride is assigned to driver, ignoring")
-            (\_ -> addIntermediateRoutePoints driver.id $ NE.map (.pt) waypoints)
+            (\_ -> addIntermediateRoutePoints driver.id $ NE.map (.pt) sortedWaypoints)
 
     Redis.unlockRedis lockKey
   pure Success
   where
+    sortedWaypoints = NE.sortBy (compare `on` (.ts)) waypoints
     isCalledBeforeRefreshPeriod mbLoc now =
       maybe False (\loc -> now `diffUTCTime` loc.updatedAt < refreshPeriod) mbLoc
-    currPoint = NE.last waypoints
-    areIncomingPointsOutdated = maybe False (\loc -> currPoint.ts <= loc.coordinatesCalculatedAt)
+    currPoint = NE.last sortedWaypoints
+    areIncomingPointsOutdated = maybe False (\loc -> (NE.head sortedWaypoints).ts <= loc.coordinatesCalculatedAt)
     lockKey = makeLockKey driverId
 
 makeLockKey :: Id Person.Person -> Text
