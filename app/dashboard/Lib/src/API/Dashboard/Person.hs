@@ -8,7 +8,6 @@ import Domain.Types.Person as DP
 import Environment
 import Servant hiding (Unauthorized, throwError)
 import Tools.Auth
-import Tools.Roles.Instances
 
 type API =
   "person"

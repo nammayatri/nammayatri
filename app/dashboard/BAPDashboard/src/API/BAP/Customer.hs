@@ -10,7 +10,6 @@ import qualified EulerHS.Types as T
 import Servant
 import Tools.Auth
 import Tools.Client
-import Tools.Roles.Instances
 
 type API =
   "customer"

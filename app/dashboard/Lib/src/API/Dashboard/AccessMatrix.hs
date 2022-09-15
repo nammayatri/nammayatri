@@ -10,7 +10,6 @@ import Domain.Types.Role as DRole
 import Environment
 import Servant
 import Tools.Auth
-import Tools.Roles.Instances
 
 type API =
   "accessMatrix"

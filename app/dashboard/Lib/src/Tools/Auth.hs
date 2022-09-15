@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module Tools.Auth where
+module Tools.Auth (module Tools.Auth, module Verify) where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Redis.Queries as Redis
@@ -16,7 +16,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
 import Servant hiding (throwError)
 import qualified Storage.Queries.RegistrationToken as QR
-import Tools.Roles as Roles
+import Tools.Auth.Verify as Verify
 import Tools.Servant.HeaderAuth
 
 instance
@@ -66,7 +66,7 @@ verifyPerson requiredAccessLevel token = do
       let personId = sr.personId
       Redis.setExRedis key personId authTokenCacheExpiry
       return personId
-  Roles.verifyAccessLevel requiredAccessLevel personId
+  Verify.verifyAccessLevel requiredAccessLevel personId
 
 authTokenCacheKey ::
   HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text] =>
