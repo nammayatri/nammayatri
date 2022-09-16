@@ -9,7 +9,7 @@ import "lib-dashboard" Environment
 import qualified EulerHS.Types as T
 import Servant
 import "lib-dashboard" Tools.Auth
-import Tools.Client
+import qualified Tools.Client as Client
 
 type API =
   "driver"
@@ -23,7 +23,7 @@ handler =
 
 listDriver :: Id DP.Person -> FlowHandler Text
 listDriver _ = withFlowHandlerAPI $ do
-  callDriverOfferApi client "becknTransportDriverList"
+  Client.callBecknTransportApi client "becknTransportDriverList"
   where
     becknTransportDriverListAPI :: Proxy BecknTransport.DriverListAPI
     becknTransportDriverListAPI = Proxy

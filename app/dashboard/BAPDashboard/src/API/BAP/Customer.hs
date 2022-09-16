@@ -9,7 +9,7 @@ import Environment
 import qualified EulerHS.Types as T
 import Servant
 import Tools.Auth
-import Tools.Client
+import qualified Tools.Client as Client
 
 type API =
   "customer"
@@ -23,7 +23,7 @@ handler =
 
 listCustomer :: Id DP.Person -> FlowHandler Text
 listCustomer _ = withFlowHandlerAPI $ do
-  callAppBackendApi client "bapCustomerList"
+  Client.callAppBackendApi client "bapCustomerList"
   where
     bapCustomerListAPI :: Proxy BAP.CustomerListAPI
     bapCustomerListAPI = Proxy

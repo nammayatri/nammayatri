@@ -1,4 +1,3 @@
-
 @bpp-dashboard-host = http://localhost:8018
 
 # @name healthcheck
@@ -22,22 +21,99 @@ content-type: application/json
 
 ###
 
-# @name logout
+# @name personList
 
 @token = {{login.response.body.authToken}}
 
-POST {{bpp-dashboard-host}}/dashboard/logout
+GET {{bpp-dashboard-host}}/dashboard/admin/person/list
+  ?limit=10
+  &offset=0
+  # &searchString=customer
+  # &searchString=7777777781
 content-type: application/json
 token: {{token}}
 
 ###
 
-# @name personList
+# @name getAccessMatrix
 
-GET {{bpp-dashboard-host}}/dashboard/person/list
-  ?limit=5
+GET {{bpp-dashboard-host}}/dashboard/admin/accessMatrix
+  ?limit=10
   &offset=0
-  &searchString=customer
-  # &searchString=7777777781
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name getAccessMatrixByRole
+
+@roleId = {{getAccessMatrix.response.body.accessMatrix[0].role.id}}
+
+GET {{bpp-dashboard-host}}/dashboard/admin/accessMatrix/role/{{roleId}}
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name createRole
+
+POST {{bpp-dashboard-host}}/dashboard/admin/roles/create
+content-type: application/json
+token: {{token}}
+
+{ "name" : "DEVELOPER",
+  "description" : "developer"
+}
+
+###
+
+# @name assignRole
+
+# assign new "DEVELOPER" role to person with name "customer"
+@personId = {{personList.response.body.list[0].id}}
+
+@developerRoleId = {{createRole.response.body.id}}
+
+POST {{bpp-dashboard-host}}/dashboard/admin/person/{{personId}}/assignRole/{{developerRoleId}}
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name assignAccessLevel
+
+POST {{bpp-dashboard-host}}/dashboard/admin/roles/{{developerRoleId}}/assignAccessLevel
+content-type: application/json
+token: {{token}}
+
+{ "apiEntity" : "DRIVERS",
+  "userAccessType" : "USER_FULL_ACCESS"
+}
+
+###
+
+# @name profile
+
+@customerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
+
+GET {{bpp-dashboard-host}}/dashboard/person/profile
+content-type: application/json
+token: {{customerToken}}
+
+###
+
+# check access level for new role "DEVELOPER"
+
+# @name driverList
+
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/list
+content-type: application/json
+token: {{customerToken}}
+
+###
+
+# @name logout
+
+POST {{bpp-dashboard-host}}/dashboard/logout
 content-type: application/json
 token: {{token}}
