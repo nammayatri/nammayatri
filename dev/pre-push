@@ -16,10 +16,6 @@ for file in $HS_FILES; do
   fi
 done
 
-if ! hlint ${HS_FILES}; then
-   ORMOLU_FAIL="true"
-fi
-
 if [ -n "$ORMOLU_FAIL" ]; then
   ORMOLU_CMD="ormolu -m inplace -o -XTypeApplications -o -fplugin=RecordDotPreprocessor ${BAD_HS_FILES}"
 
