@@ -25,8 +25,8 @@ content-type: application/json
 
 @token = {{login.response.body.authToken}}
 
-GET {{bap-dashboard-host}}/dashboard/person/list
-  ?limit=5
+GET {{bap-dashboard-host}}/dashboard/admin/person/list
+  ?limit=10
   &offset=0
   # &searchString=customer
   # &searchString=7777777781
@@ -37,7 +37,7 @@ token: {{token}}
 
 # @name getAccessMatrix
 
-GET {{bap-dashboard-host}}/dashboard/accessMatrix
+GET {{bap-dashboard-host}}/dashboard/admin/accessMatrix
   ?limit=10
   &offset=0
 content-type: application/json
@@ -49,7 +49,7 @@ token: {{token}}
 
 @roleId = {{getAccessMatrix.response.body.accessMatrix[0].role.id}}
 
-GET {{bap-dashboard-host}}/dashboard/accessMatrix/role/{{roleId}}
+GET {{bap-dashboard-host}}/dashboard/admin/accessMatrix/role/{{roleId}}
 content-type: application/json
 token: {{token}}
 
@@ -57,7 +57,7 @@ token: {{token}}
 
 # @name createRole
 
-POST {{bap-dashboard-host}}/dashboard/roles/create
+POST {{bap-dashboard-host}}/dashboard/admin/roles/create
 content-type: application/json
 token: {{token}}
 
@@ -74,7 +74,7 @@ token: {{token}}
 
 @developerRoleId = {{createRole.response.body.id}}
 
-POST {{bap-dashboard-host}}/dashboard/person/{{personId}}/assignRole/{{developerRoleId}}
+POST {{bap-dashboard-host}}/dashboard/admin/person/{{personId}}/assignRole/{{developerRoleId}}
 content-type: application/json
 token: {{token}}
 
@@ -82,7 +82,7 @@ token: {{token}}
 
 # @name assignAccessLevel
 
-POST {{bap-dashboard-host}}/dashboard/roles/{{developerRoleId}}/assignAccessLevel
+POST {{bap-dashboard-host}}/dashboard/admin/roles/{{developerRoleId}}/assignAccessLevel
 content-type: application/json
 token: {{token}}
 
@@ -92,11 +92,19 @@ token: {{token}}
 
 ###
 
+# @name profile
+
+@customerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
+
+GET {{bap-dashboard-host}}/dashboard/person/profile
+content-type: application/json
+token: {{customerToken}}
+
+###
+
 # check access level for new role "DEVELOPER"
 
 # @name customerList
-
-@customerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
 
 GET {{bap-dashboard-host}}/bap/customer/list
 content-type: application/json

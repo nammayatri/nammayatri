@@ -12,7 +12,8 @@ import Servant hiding (Unauthorized, throwError)
 import Tools.Auth
 
 type API =
-  "person"
+  "admin"
+    :> "person"
     :> ( "list"
            :> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
            :> QueryParam "searchString" Text
@@ -20,16 +21,22 @@ type API =
            :> QueryParam "offset" Integer
            :> Get '[JSON] DPerson.ListPersonRes
            :<|> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
-           :> Capture "personId" (Id DP.Person)
-           :> "assignRole"
-           :> Capture "roleId" (Id DRole.Role)
-           :> Post '[JSON] APISuccess
+             :> Capture "personId" (Id DP.Person)
+             :> "assignRole"
+             :> Capture "roleId" (Id DRole.Role)
+             :> Post '[JSON] APISuccess
        )
+    :<|> "person"
+      :> "profile"
+      :> TokenAuth (DashboardAccessLevel 'DASHBOARD_USER)
+      :> Get '[JSON] DP.PersonAPIEntity
 
 handler :: FlowServer API
 handler =
-  listPerson
-    :<|> assignRole
+  ( listPerson
+      :<|> assignRole
+  )
+    :<|> profile
 
 listPerson :: Id DP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DPerson.ListPersonRes
 listPerson adminId mbSearchString mbLimit =
@@ -38,3 +45,7 @@ listPerson adminId mbSearchString mbLimit =
 assignRole :: Id DP.Person -> Id DP.Person -> Id DRole.Role -> FlowHandler APISuccess
 assignRole adminId personId =
   withFlowHandlerAPI . DPerson.assignRole adminId personId
+
+profile :: Id DP.Person -> FlowHandler DP.PersonAPIEntity
+profile =
+  withFlowHandlerAPI . DPerson.profile

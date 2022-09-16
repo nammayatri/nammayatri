@@ -12,16 +12,17 @@ import Servant
 import Tools.Auth
 
 type API =
-  "roles"
+  "admin"
+    :> "roles"
     :> ( "create"
            :> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
            :> ReqBody '[JSON] DRoles.CreateRoleReq
            :> Post '[JSON] DRole.RoleAPIEntity
            :<|> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
-           :> Capture "roleId" (Id DRole.Role)
-           :> "assignAccessLevel"
-           :> ReqBody '[JSON] DRoles.AssignAccessLevelReq
-           :> Post '[JSON] APISuccess
+             :> Capture "roleId" (Id DRole.Role)
+             :> "assignAccessLevel"
+             :> ReqBody '[JSON] DRoles.AssignAccessLevelReq
+             :> Post '[JSON] APISuccess
        )
 
 handler :: FlowServer API

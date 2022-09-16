@@ -44,3 +44,13 @@ assignRole _ personId roleId = do
   Esq.runTransaction $
     QP.updatePersonRole personId roleId
   pure Success
+
+profile ::
+  (EsqDBFlow m r, EncFlow m r) =>
+  Id DP.Person ->
+  m DP.PersonAPIEntity
+profile personId = do
+  encPerson <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  decPerson <- decrypt encPerson
+  pure $ DP.makePersonAPIEntity decPerson role

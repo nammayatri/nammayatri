@@ -12,15 +12,16 @@ import Servant
 import Tools.Auth
 
 type API =
-  "accessMatrix"
+  "admin"
+    :> "accessMatrix"
     :> ( TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
            :> QueryParam "limit" Integer
            :> QueryParam "offset" Integer
            :> Get '[JSON] DMatrix.AccessMatrixAPIEntity
            :<|> "role"
-           :> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
-           :> Capture "roleId" (Id DRole.Role) -- role.name?
-           :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
+             :> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
+             :> Capture "roleId" (Id DRole.Role) -- role.name?
+             :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
        )
 
 handler :: FlowServer API
