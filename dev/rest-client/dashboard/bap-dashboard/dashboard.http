@@ -19,10 +19,11 @@ content-type: application/json
   "password" : "juspay_admin"
 }
 
-
 ###
 
 # @name personList
+
+@token = {{login.response.body.authToken}}
 
 GET {{bap-dashboard-host}}/dashboard/person/list
   ?limit=5
@@ -68,6 +69,7 @@ token: {{token}}
 
 # @name assignRole
 
+# assign new "DEVELOPER" role to person with name "customer"
 @personId = {{personList.response.body.list[0].id}}
 
 @developerRoleId = {{createRole.response.body.id}}
@@ -76,15 +78,33 @@ POST {{bap-dashboard-host}}/dashboard/person/{{personId}}/assignRole/{{developer
 content-type: application/json
 token: {{token}}
 
-{ "name" : "DEVELOPER",
-  "description" : "developer"
+###
+
+# @name assignAccessLevel
+
+POST {{bap-dashboard-host}}/dashboard/roles/{{developerRoleId}}/assignAccessLevel
+content-type: application/json
+token: {{token}}
+
+{ "apiEntity" : "CUSTOMERS",
+  "userAccessType" : "USER_FULL_ACCESS"
 }
 
 ###
 
-# @name logout
+# check access level for new role "DEVELOPER"
 
-@token = {{login.response.body.authToken}}
+# @name customerList
+
+@customerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
+
+GET {{bap-dashboard-host}}/bap/customer/list
+content-type: application/json
+token: {{customerToken}}
+
+###
+
+# @name logout
 
 POST {{bap-dashboard-host}}/dashboard/logout
 content-type: application/json

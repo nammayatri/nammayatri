@@ -50,7 +50,7 @@ verifyAccessLevel requiredAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   case requiredAccessLevel of
     DMatrix.RequiredApiAccessLevel apiAccessLevel -> do
-      mbAccessMatrixItem <- QAccessMatrix.findByRoleAndEntity person.roleId apiAccessLevel.apiEntity
+      mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntity person.roleId apiAccessLevel.apiEntity
       let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
       unless (checkUserAccess userAccessType apiAccessLevel.apiAccessType) $
         throwError AccessDenied
