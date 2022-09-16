@@ -14,6 +14,8 @@ import Beckn.Types.Id
 import qualified Domain.Types.RegistrationToken as Domain
 import Storage.Tabular.Person (PersonTId)
 
+derivePersistField "Domain.ServerName"
+
 mkPersist
   defaultSqlSettings
   [defaultQQ|
@@ -21,6 +23,7 @@ mkPersist
       id Text
       token RegToken
       personId PersonTId
+      serverName Domain.ServerName
       createdAt UTCTime
       Primary id
       deriving Generic

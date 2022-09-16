@@ -15,7 +15,8 @@ import Tools.Auth (authTokenCacheKey)
 
 data LoginReq = LoginReq
   { email :: Text,
-    password :: Text
+    password :: Text,
+    bppName :: DR.ServerName
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -37,7 +38,7 @@ login ::
   m LoginRes
 login LoginReq {..} = do
   person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
-  token <- generateToken person.id
+  token <- generateToken person.id bppName
   pure $ LoginRes token "Logged in successfully"
 
 generateToken ::
@@ -45,9 +46,10 @@ generateToken ::
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   Id DP.Person ->
+  DR.ServerName ->
   m Text
-generateToken personId = do
-  regToken <- buildRegistrationToken personId
+generateToken personId bppName = do
+  regToken <- buildRegistrationToken personId bppName
   -- Clean old login session
   cleanCachedTokens personId
   DB.runTransaction $ do
@@ -67,8 +69,8 @@ logout personId = do
   DB.runTransaction (QR.deleteAllByPersonId person.id)
   pure $ LogoutRes "Logged out successfully"
 
-buildRegistrationToken :: MonadFlow m => Id DP.Person -> m DR.RegistrationToken
-buildRegistrationToken personId = do
+buildRegistrationToken :: MonadFlow m => Id DP.Person -> DR.ServerName -> m DR.RegistrationToken
+buildRegistrationToken personId serverName = do
   rtid <- generateGUID
   token <- generateGUID
   now <- getCurrentTime
@@ -77,6 +79,7 @@ buildRegistrationToken personId = do
       { id = Id rtid,
         token = token,
         personId = personId,
+        serverName = serverName,
         createdAt = now
       }
 

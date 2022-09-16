@@ -27,7 +27,7 @@ handler =
 
 listCustomer :: Id DP.Person -> FlowHandler Text
 listCustomer _ = withFlowHandlerAPI $ do
-  Client.callAppBackendApi client "bapCustomerList"
+  Client.callAppBackendArduApi client "bapCustomerList"
   where
     bapCustomerListAPI :: Proxy BAP.CustomerListAPI
     bapCustomerListAPI = Proxy

@@ -6,11 +6,13 @@ import Beckn.Prelude
 import Beckn.Types.Error
 import Beckn.Utils.Common hiding (Error, callAPI)
 import Beckn.Utils.Dhall (FromDhall)
+import qualified Domain.Types.RegistrationToken as DReg
 import qualified EulerHS.Types as ET
 import Tools.Error
 import Tools.Metrics
 
-callAppBackendApi,
+callAppBackendYatriApi,
+  callAppBackendArduApi,
   callBecknTransportApi,
   callDriverOfferApi ::
     ( HasCallStack,
@@ -22,9 +24,10 @@ callAppBackendApi,
     (RegToken -> ET.EulerClient res) ->
     Text ->
     m res
-callAppBackendApi = callHelperAPI APP_BACKEND
-callBecknTransportApi = callHelperAPI BECKN_TRANSPORT
-callDriverOfferApi = callHelperAPI DRIVER_OFFER_BPP
+callAppBackendYatriApi = callHelperAPI DReg.APP_BACKEND_YATRI
+callAppBackendArduApi = callHelperAPI DReg.APP_BACKEND_ARDU
+callBecknTransportApi = callHelperAPI DReg.BECKN_TRANSPORT
+callDriverOfferApi = callHelperAPI DReg.DRIVER_OFFER_BPP
 
 callHelperAPI ::
   ( HasCallStack,
@@ -33,7 +36,7 @@ callHelperAPI ::
     ET.JSONEx res,
     ToJSON res
   ) =>
-  ServerName ->
+  DReg.ServerName ->
   (RegToken -> ET.EulerClient res) ->
   Text ->
   m res
@@ -44,11 +47,8 @@ callHelperAPI serverName client desc = do
 callAPI :: CallAPI env res
 callAPI = callApiUnwrappingApiError (identity @Error) Nothing Nothing
 
-data ServerName = APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP
-  deriving (Generic, FromDhall, Eq, Show)
-
 data DataServer = DataServer
-  { name :: ServerName,
+  { name :: DReg.ServerName,
     url :: BaseUrl,
     token :: Text
   }
@@ -56,7 +56,7 @@ data DataServer = DataServer
 
 getDataServer ::
   HasFlowEnv m r '["dataServers" ::: [DataServer]] =>
-  ServerName ->
+  DReg.ServerName ->
   m DataServer
 getDataServer serverName = do
   dataServers <- asks (.dataServers)
