@@ -16,7 +16,8 @@ content-type: application/json
 
 {
   "email" : "juspay_admin@dashboard.com",
-  "password" : "juspay_admin"
+  "password" : "juspay_admin",
+  "serverName" : "APP_BACKEND_YATRI"
 }
 
 ###

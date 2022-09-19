@@ -1,3 +1,5 @@
+{-# LANGUAGE InstanceSigs #-}
+
 module Domain.Action.Dashboard.Registration where
 
 import Beckn.Prelude
@@ -6,17 +8,22 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
+import Beckn.Types.Predicate
 import Beckn.Utils.Common
+import Beckn.Utils.Validation
+import qualified Data.Text as T
 import Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.ServerAccess as QServer
 import Tools.Auth (authTokenCacheKey)
+import qualified Tools.Client as Client
 
 data LoginReq = LoginReq
   { email :: Text,
     password :: Text,
-    bppName :: DR.ServerName
+    serverName :: DR.ServerName
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -29,16 +36,36 @@ data LoginRes = LoginRes
 newtype LogoutRes = LogoutRes {message :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
+-- TODO move in Beckn.Types.Predicate
+newtype InList a = InList [a]
+
+instance Eq a => Predicate a (InList a) where
+  pFun :: InList a -> a -> Bool
+  pFun (InList list) a = a `elem` list
+
+instance Show a => ShowablePredicate (InList a) where
+  pShow (InList list) name = name <> " in list " <> T.intercalate ", " (show <$> list)
+
+validateLoginReq :: [DR.ServerName] -> Validate LoginReq
+validateLoginReq availableServerNames LoginReq {..} =
+  sequenceA_
+    [ validateField "serverName" serverName $ InList availableServerNames
+    ]
+
 login ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
     EncFlow m r
   ) =>
   LoginReq ->
   m LoginRes
-login LoginReq {..} = do
+login req@LoginReq {..} = do
+  availableServers <- asks (.dataServers)
+  runRequestValidation (validateLoginReq $ availableServers <&> (.name)) req
   person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
-  token <- generateToken person.id bppName
+  _serverAccess <- QServer.findByPersonIdAndServerName person.id serverName >>= fromMaybeM AccessDenied --FIXME cleanup tokens for this serverName
+  token <- generateToken person.id serverName
   pure $ LoginRes token "Logged in successfully"
 
 generateToken ::
@@ -83,6 +110,7 @@ buildRegistrationToken personId serverName = do
         createdAt = now
       }
 
+-- FIXME when login cleanup only token for current server, when logout cleanup all tokens
 cleanCachedTokens ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]

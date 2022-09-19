@@ -15,6 +15,7 @@ import Servant
 import "lib-dashboard" Tools.Auth
 import qualified Tools.Client as Client
 
+-- TokenAuth (ApiAccessLevel 'READ_ACCESS 'BECKN_TRANSPORT 'DRIVERS) ?
 type API =
   "driver"
     :> "list"

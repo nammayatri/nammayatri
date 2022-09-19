@@ -30,7 +30,7 @@ let encTools =
   , hashSalt = sec.encHashSalt
   }
 
-let ServerName = < APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
+let ServerName = < APP_BACKEND_YATRI | APP_BACKEND_ARDU | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
 
 let becknTransport =
   { name = ServerName.BECKN_TRANSPORT

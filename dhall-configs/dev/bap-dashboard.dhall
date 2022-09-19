@@ -30,10 +30,16 @@ let encTools =
   , hashSalt = sec.encHashSalt
   }
 
-let ServerName = < APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
+let ServerName = < APP_BACKEND_YATRI | APP_BACKEND_ARDU | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
 
-let appBackend =
-  { name = ServerName.APP_BACKEND
+let appBackendYatri =
+  { name = ServerName.APP_BACKEND_YATRI
+  , url = "http://localhost:8013/"
+  , token = sec.appBackendToken
+  }
+
+let appBackendArdu =
+  { name = ServerName.APP_BACKEND_ARDU
   , url = "http://localhost:8013/"
   , token = sec.appBackendToken
   }
@@ -52,5 +58,5 @@ in
 , authTokenCacheExpiry = +600 --seconds
 , registrationTokenExpiry = +365 --days
 , encTools = encTools
-, dataServers = [appBackend]
+, dataServers = [appBackendYatri, appBackendArdu]
 }
