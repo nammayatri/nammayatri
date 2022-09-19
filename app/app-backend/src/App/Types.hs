@@ -174,7 +174,8 @@ instance Cache Subscriber Flow where
 instance CacheEx Subscriber Flow where
   setKeyEx ttl = Cache.setKeyEx "taxi-bap:registry" ttl . lookupRequestToRedisKey
 
-newtype RideConfig = RideConfig
-  { driverReachedDistance :: Meters
+data RideConfig = RideConfig
+  { driverReachedDistance :: Meters,
+    driverOnTheWayNotifyExpiry :: Seconds
   }
   deriving (Generic, FromDhall)

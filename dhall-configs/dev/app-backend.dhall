@@ -63,6 +63,7 @@ let kafkaProducerCfg =
 let rideConfig =
   {
     driverReachedDistance = +100
+  , driverOnTheWayNotifyExpiry = +3600
   }
 in
 

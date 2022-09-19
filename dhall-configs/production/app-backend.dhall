@@ -57,6 +57,7 @@ let kafkaProducerCfg = { brokers = [] : List Text }
 let rideConfig =
   {
     driverReachedDistance = +100
+  , driverOnTheWayNotifyExpiry = +3600
   }
 in
 

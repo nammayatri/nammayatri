@@ -44,6 +44,7 @@ getDriverLoc rideId personId = do
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let fromLocation = rideBooking.fromLocation
   driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
+  driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
   mbIsOnTheWayNotified <- Redis.getKeyRedis @() (driverOnTheWay rideId)
   mbHasReachedNotified <- Redis.getKeyRedis @() (driverHasReached rideId)
   when (ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)) $ do
@@ -54,10 +55,10 @@ getDriverLoc rideId personId = do
       Just startDistance -> when (startDistance - 100 > distance) $ do
         unless (isJust mbIsOnTheWayNotified) $ do
           Notify.notifyDriverOnTheWay personId
-          Redis.setExRedis (driverOnTheWay rideId) () 900
+          Redis.setExRedis (driverOnTheWay rideId) () driverOnTheWayNotifyExpiry
         when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
           Notify.notifyDriverHasReached personId ride
-          Redis.setExRedis (driverHasReached rideId) () 900
+          Redis.setExRedis (driverHasReached rideId) () 1500
   return res.currPoint
 
 distanceUpdates :: Id SRide.Ride -> Text
