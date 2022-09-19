@@ -3,6 +3,7 @@
 
 module App.Routes where
 
+import qualified API.Auth as Auth
 import qualified API.Beckn as Beckn
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI.Booking as Booking
@@ -18,7 +19,6 @@ import qualified API.UI.Select as Select
 import qualified App.Routes.Dashboard as Dashboard
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
-import Beckn.InternalAPI.Auth.API as Auth
 import Beckn.Types.App
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
@@ -27,7 +27,6 @@ import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.CancellationReason as SCancellationReason
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
-import Product.Auth (authAPI)
 import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
 import qualified Product.CustomerSupport as CS
@@ -95,7 +94,7 @@ mainServer =
   uiAPI
     :<|> Beckn.handler
     :<|> MetroBeckn.handler
-    :<|> authAPI
+    :<|> Auth.handler
     :<|> Dashboard.handler
 
 uiAPI :: FlowServer UIAPI
