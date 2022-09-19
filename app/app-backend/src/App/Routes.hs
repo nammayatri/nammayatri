@@ -11,6 +11,7 @@ import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Registration as Registration
+import qualified API.UI.Route as Route
 import qualified API.UI.SavedReqLocation as SavedReqLocation
 import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
@@ -31,7 +32,6 @@ import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
-import qualified Product.Location as Location
 import qualified Product.Ride as Ride
 import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
@@ -42,7 +42,6 @@ import qualified Types.API.Call as API
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Feedback as Feedback
-import qualified Types.API.Location as Location
 import qualified Types.API.Ride as RideAPI
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
@@ -74,7 +73,7 @@ type UIAPI =
            :<|> DeprecatedCallAPIs
            :<|> CallAPIs
            :<|> SupportAPI
-           :<|> RouteAPI
+           :<|> Route.API
            :<|> ServiceabilityAPI
            :<|> FeedbackAPI
            :<|> CustomerSupportAPI
@@ -114,7 +113,7 @@ uiAPI =
     :<|> deprecatedCallFlow
     :<|> callFlow
     :<|> supportFlow
-    :<|> routeApiFlow
+    :<|> Route.handler
     :<|> serviceabilityFlow
     :<|> feedbackFlow
     :<|> customerSupportFlow
@@ -192,15 +191,6 @@ type SupportAPI =
 
 supportFlow :: FlowServer SupportAPI
 supportFlow = Support.sendIssue
-
-type RouteAPI =
-  "route"
-    :> TokenAuth
-    :> ReqBody '[JSON] Location.Request
-    :> Post '[JSON] Location.Response
-
-routeApiFlow :: FlowServer RouteAPI
-routeApiFlow = Location.getRoute
 
 -------- Serviceability----------
 type ServiceabilityAPI =

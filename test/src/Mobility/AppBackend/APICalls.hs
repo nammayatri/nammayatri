@@ -2,6 +2,7 @@ module Mobility.AppBackend.APICalls where
 
 import qualified "app-backend" API.UI.Booking as AppBooking
 import qualified "app-backend" API.UI.Cancel as CancelAPI
+import qualified "app-backend" API.UI.Confirm as ConfirmAPI
 import qualified "app-backend" API.UI.Registration as Reg
 import qualified "app-backend" API.UI.Select as AppSelect
 import "app-backend" App.Routes as AbeRoutes
@@ -19,7 +20,6 @@ import qualified "app-backend" Domain.Types.RegistrationToken as AppSRT
 import qualified "app-backend" Domain.Types.Ride as BRide
 import EulerHS.Prelude
 import Mobility.AppBackend.Fixtures
-import qualified "app-backend" Product.Confirm as ConfirmAPI
 import Servant hiding (Context)
 import Servant.Client
 import qualified "app-backend" Types.API.Feedback as AppFeedback
@@ -37,7 +37,7 @@ mkAppCancelReq stage =
   CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
 
 appConfirmRide :: Text -> Id AbeQuote.Quote -> ClientM ConfirmAPI.ConfirmRes
-appConfirmRide = client (Proxy :: Proxy ConfirmAPI.ConfirmAPI)
+appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)

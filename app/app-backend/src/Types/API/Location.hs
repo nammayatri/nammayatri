@@ -15,7 +15,3 @@ data GetLocationRes = GetLocationRes
     lastUpdate :: UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
-
-type Request = MapSearch.Request
-
-type Response = MapSearch.Response
