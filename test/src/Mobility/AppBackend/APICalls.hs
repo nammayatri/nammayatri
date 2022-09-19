@@ -1,6 +1,7 @@
 module Mobility.AppBackend.APICalls where
 
 import qualified "app-backend" API.UI.Booking as AppBooking
+import qualified "app-backend" API.UI.Cancel as CancelAPI
 import qualified "app-backend" API.UI.Registration as Reg
 import qualified "app-backend" API.UI.Select as AppSelect
 import "app-backend" App.Routes as AbeRoutes
@@ -18,7 +19,6 @@ import qualified "app-backend" Domain.Types.RegistrationToken as AppSRT
 import qualified "app-backend" Domain.Types.Ride as BRide
 import EulerHS.Prelude
 import Mobility.AppBackend.Fixtures
-import qualified "app-backend" Product.Cancel as CancelAPI
 import qualified "app-backend" Product.Confirm as ConfirmAPI
 import Servant hiding (Context)
 import Servant.Client
@@ -30,7 +30,7 @@ selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectLis
 selectQuote :<|> selectList = client (Proxy :: Proxy AppSelect.API)
 
 cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
-cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
+cancelRide = client (Proxy :: Proxy CancelAPI.API)
 
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =

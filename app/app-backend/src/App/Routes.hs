@@ -6,6 +6,7 @@ module App.Routes where
 import qualified API.Beckn as Beckn
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI.Booking as Booking
+import qualified API.UI.Cancel as Cancel
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
@@ -27,7 +28,6 @@ import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import Product.Auth (authAPI)
 import qualified Product.Call as Call
-import qualified Product.Cancel as Cancel
 import qualified Product.CancellationReason as CancellationReason
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
@@ -69,7 +69,7 @@ type UIAPI =
            :<|> Quote.API
            :<|> Confirm.API
            :<|> Booking.API
-           :<|> Cancel.CancelAPI
+           :<|> Cancel.API
            :<|> RideAPI
            :<|> DeprecatedCallAPIs
            :<|> CallAPIs
@@ -109,7 +109,7 @@ uiAPI =
     :<|> Quote.handler
     :<|> Confirm.handler
     :<|> Booking.handler
-    :<|> cancelFlow
+    :<|> Cancel.handler
     :<|> rideFlow
     :<|> deprecatedCallFlow
     :<|> callFlow
@@ -121,12 +121,6 @@ uiAPI =
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
     :<|> SavedReqLocation.handler
-
--------- Cancel Flow----------
-
-cancelFlow :: FlowServer Cancel.CancelAPI
-cancelFlow =
-  Cancel.cancel
 
 type RideAPI =
   "ride"

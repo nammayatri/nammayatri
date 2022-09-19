@@ -1,6 +1,6 @@
-module Product.Cancel
-  ( CancelAPI,
-    cancel,
+module API.UI.Cancel
+  ( API,
+    handler,
   )
 where
 
@@ -17,13 +17,19 @@ import Servant
 import Utils.Auth
 import Utils.Common
 
-type CancelAPI =
+type API =
   "rideBooking"
     :> Capture "rideBookingId" (Id SRB.Booking)
     :> "cancel"
     :> TokenAuth
     :> ReqBody '[JSON] DCancel.CancelReq
     :> Post '[JSON] APISuccess
+
+-------- Cancel Flow----------
+
+handler :: FlowServer API
+handler =
+  cancel
 
 cancel ::
   Id SRB.Booking ->
