@@ -8,6 +8,7 @@ import qualified API.Beckn as Beckn
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI.Booking as Booking
 import qualified API.UI.Cancel as Cancel
+import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
@@ -24,11 +25,9 @@ import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Data.OpenApi (Info (..), OpenApi (..))
 import qualified Domain.Types.CallStatus as SCS
-import qualified Domain.Types.CancellationReason as SCancellationReason
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import qualified Product.Call as Call
-import qualified Product.CancellationReason as CancellationReason
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Ride as Ride
@@ -38,7 +37,6 @@ import qualified Product.Support as Support
 import Servant hiding (throwError)
 import Servant.OpenApi
 import qualified Types.API.Call as API
-import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Ride as RideAPI
@@ -77,7 +75,7 @@ type UIAPI =
            :<|> FeedbackAPI
            :<|> CustomerSupportAPI
            :<|> GoogleMapsProxyAPI
-           :<|> CancellationReasonAPI
+           :<|> CancellationReason.API
            :<|> SavedReqLocation.API
        )
 
@@ -117,7 +115,7 @@ uiAPI =
     :<|> feedbackFlow
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
-    :<|> cancellationReasonFlow
+    :<|> CancellationReason.handler
     :<|> SavedReqLocation.handler
 
 type RideAPI =
@@ -270,17 +268,6 @@ googleMapsProxyFlow =
   GoogleMapsFlow.autoComplete
     :<|> GoogleMapsFlow.placeDetails
     :<|> GoogleMapsFlow.getPlaceName
-
-type CancellationReasonAPI =
-  "cancellationReason"
-    :> ( "list"
-           :> TokenAuth
-           :> MandatoryQueryParam "cancellationStage" SCancellationReason.CancellationStage
-           :> Get '[JSON] CancellationReasonAPI.ListRes
-       )
-
-cancellationReasonFlow :: FlowServer CancellationReasonAPI
-cancellationReasonFlow = CancellationReason.list
 
 type SwaggerAPI = "swagger" :> Get '[JSON] OpenApi
 
