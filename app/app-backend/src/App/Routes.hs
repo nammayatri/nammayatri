@@ -10,13 +10,13 @@ import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Registration as Registration
+import qualified API.UI.SavedReqLocation as SavedReqLocation
 import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
 import qualified App.Routes.Dashboard as Dashboard
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.InternalAPI.Auth.API as Auth
-import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
@@ -33,7 +33,6 @@ import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Location as Location
 import qualified Product.Ride as Ride
-import qualified Product.SavedLocations as SavedLocations
 import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Support as Support
@@ -45,7 +44,6 @@ import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Location as Location
 import qualified Types.API.Ride as RideAPI
-import qualified Types.API.SavedLocations as SavedLocationsAPI
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
 import Utils.Auth (TokenAuth)
@@ -82,7 +80,7 @@ type UIAPI =
            :<|> CustomerSupportAPI
            :<|> GoogleMapsProxyAPI
            :<|> CancellationReasonAPI
-           :<|> SavedLocationAPI
+           :<|> SavedReqLocation.API
        )
 
 appAPI :: Proxy AppAPI
@@ -122,7 +120,7 @@ uiAPI =
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
-    :<|> savedLocationFlow
+    :<|> SavedReqLocation.handler
 
 -------- Cancel Flow----------
 
@@ -316,22 +314,3 @@ swagger = do
 
 writeSwaggerJSONFlow :: FlowServer SwaggerAPI
 writeSwaggerJSONFlow = return swagger
-
-type SavedLocationAPI =
-  "savedLocation"
-    :> ( TokenAuth
-           :> ReqBody '[JSON] SavedLocationsAPI.SavedReqLocationAPIEntity
-           :> Post '[JSON] APISuccess
-           :<|> TokenAuth
-             :> "list"
-             :> Get '[JSON] SavedLocationsAPI.SavedLocationsListRes
-           :<|> TokenAuth
-             :> Capture "tag" Text
-             :> Delete '[JSON] APISuccess
-       )
-
-savedLocationFlow :: FlowServer SavedLocationAPI
-savedLocationFlow =
-  SavedLocations.createSavedLocationEntity
-    :<|> SavedLocations.getSavedLocations
-    :<|> SavedLocations.deleteSavedLocation
