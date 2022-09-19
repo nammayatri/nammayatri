@@ -3,15 +3,16 @@
 
 module App.Routes where
 
-import qualified App.Routes.Dashboard as Dashboard
 import qualified API.Beckn as Beckn
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI.Booking as Booking
+import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
+import qualified App.Routes.Dashboard as Dashboard
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.InternalAPI.Auth.API as Auth
@@ -28,7 +29,6 @@ import Product.Auth (authAPI)
 import qualified Product.Call as Call
 import qualified Product.Cancel as Cancel
 import qualified Product.CancellationReason as CancellationReason
-import qualified Product.Confirm as Confirm
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Location as Location
@@ -69,7 +69,7 @@ type UIAPI =
            :<|> Search.API
            :<|> Select.API
            :<|> Quote.API
-           :<|> Confirm.ConfirmAPI
+           :<|> Confirm.API
            :<|> Booking.API
            :<|> Cancel.CancelAPI
            :<|> RideAPI
@@ -109,7 +109,7 @@ uiAPI =
     :<|> Search.handler
     :<|> Select.handler
     :<|> Quote.handler
-    :<|> confirmFlow
+    :<|> Confirm.handler
     :<|> Booking.handler
     :<|> cancelFlow
     :<|> rideFlow
@@ -123,12 +123,6 @@ uiAPI =
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
     :<|> savedLocationFlow
-
--------- Confirm Flow --------
-
-confirmFlow :: FlowServer Confirm.ConfirmAPI
-confirmFlow =
-  Confirm.confirm
 
 -------- Cancel Flow----------
 
