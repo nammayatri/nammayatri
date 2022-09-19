@@ -350,9 +350,9 @@ notifyDriverHasReached ::
   ( EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Id Person ->
+  Id Person -> SRide.Ride ->
   m ()
-notifyDriverHasReached personId = do
+notifyDriverHasReached personId ride = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   config <- getFCMConfig person.merchantId
   let notificationData =
@@ -368,6 +368,6 @@ notifyDriverHasReached personId = do
       body =
         FCMNotificationBody $
           unwords
-            [ "<Vehicle no> has reached your location. Use <OTP> to verify the ride"
+            [ "Vehicle No. " <> ride.vehicleNumber <> " has reached your location. Use OTP " <> ride.otp <> " to verify the ride"
             ]
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
