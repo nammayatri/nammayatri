@@ -18,6 +18,8 @@ transporter-scheduler
 scheduler-example-app
 scheduler-example-scheduler
 driver-offer-bpp
+bap-dashboard
+bpp-dashboard
 EOF
 }
 

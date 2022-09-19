@@ -1,10 +1,10 @@
-name: driver-offer-bpp
+name: dashboard-bpp-helper-api
 version: 0.1.0.0
 github: "juspay/beckn"
 license: AllRightsReserved
 author: "Juspay"
 maintainer: "Juspay"
-copyright: "2020 Juspay Technologies Private Limited"
+copyright: "2022 Juspay Technologies Private Limited"
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -33,7 +33,9 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
+  - OverloadedLabels
   - OverloadedStrings
+  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
@@ -47,75 +49,40 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
-  - StandaloneDeriving
-  - PackageImports
 
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - generic-lens
+  - beckn-core
+  - beckn-spec
   - bytestring
-  - cryptonite
-  - containers
-  - euler-hs
-  - exceptions
-  - hspec
-  - http-client
-  - lens
-  - servant
-  - servant-client
-  - servant-client-core
-  - servant-server
-  - text
-  - wai
-  - warp
-  - time
-  - stm
-  - resource-pool
-  - uuid
-  - prometheus-client
-  - record-hasfield
   - record-dot-preprocessor
+  - record-hasfield
+  - text
+  - time
+  - servant-server
+  - servant-client
   - servant-openapi3
-  - openapi3
-  - string-conversions
-  - either
   - persistent
-  - text-conversions
+  - persistent-postgresql
   - esqueleto
-  - beckn-services
-  - unordered-containers
-  - dashboard-bpp-helper-api
+  - template-haskell
+  - wai
+  - singletons
+  - euler-hs
+  - deriving-aeson
 
 ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Werror
+  - -Widentities
+  - -Wunused-imports
+  - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src
   ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
-    - -Werror
-  dependencies:
-    - beckn-core
-    - beckn-spec
-    - location-updates
-
-executables:
-  driver-offer-bpp-exe:
-    main: Main.hs
-    source-dirs: server
-    other-modules: []
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - '"-with-rtsopts=-N -T"'
-    dependencies:
-      - driver-offer-bpp
-      - beckn-core
-      - beckn-spec
-      - beckn-services
+    - -Wincomplete-uni-patterns

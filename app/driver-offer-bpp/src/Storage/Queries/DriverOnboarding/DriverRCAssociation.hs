@@ -7,9 +7,10 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.DriverOnboarding.DriverRCAssociation
-import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegistrationCertificate)
+import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Person (Person)
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
+import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 
 create :: DriverRCAssociation -> SqlDB ()
 create = Esq.create
@@ -32,6 +33,21 @@ getActiveAssociationByDriver driverId = do
       association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
         &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
     return association
+
+getActiveRCByDriver ::
+  Transactionable m =>
+  Id Person ->
+  m (Maybe (DriverRCAssociation, VehicleRegistrationCertificate))
+getActiveRCByDriver driverId = do
+  findOne $ do
+    (association :& regCert) <-
+      from $
+        table @DriverRCAssociationT `Esq.innerJoin` table @VehicleRegistrationCertificateT
+          `Esq.on` (\(a :& cert) -> a ^. DriverRCAssociationRcId ==. cert ^. VehicleRegistrationCertificateTId)
+    where_ $
+      association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+        &&. association ^. DriverRCAssociationAssociatedTill ==. val Nothing
+    return (association, regCert)
 
 getActiveAssociationByRC ::
   (Transactionable m, MonadFlow m) =>

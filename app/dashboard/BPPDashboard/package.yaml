@@ -67,6 +67,7 @@ dependencies:
   - template-haskell
   - euler-hs
   - containers
+  - dashboard-bpp-helper-api
 
 ghc-options:
   - -Wall

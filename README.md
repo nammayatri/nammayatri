@@ -216,5 +216,3 @@ Any of the above keywords can be combined with operators like AND, NOT, OR etc. 
 <hr style="height: 1px; margin-top:-15px;"></hr>
 
 // TODO
-
-hello

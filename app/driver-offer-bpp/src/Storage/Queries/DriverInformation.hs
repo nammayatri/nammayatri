@@ -19,6 +19,15 @@ create = Esq.create
 findById :: Transactionable m => Id Person.Driver -> m (Maybe DriverInformation)
 findById = Esq.findById . cast
 
+fetchAllByIds :: Transactionable m => [Id Driver] -> m [DriverInformation]
+fetchAllByIds driversIds = Esq.findAll $ do
+  driverInformation <- from $ table @DriverInformationT
+  where_ $
+    driverInformation ^. DriverInformationDriverId `in_` valList personsKeys
+  return driverInformation
+  where
+    personsKeys = toKey . cast <$> driversIds
+
 fetchAllAvailableByIds :: Transactionable m => [Id Person.Driver] -> m [DriverInformation]
 fetchAllAvailableByIds driversIds = Esq.findAll $ do
   driverInformation <- from $ table @DriverInformationT
@@ -63,6 +72,24 @@ verifyAndEnableDriver driverId = do
         DriverInformationUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey driverId)
+
+updateEnabledStateReturningIds :: (Transactionable m) => [Id Driver] -> Bool -> m [Id Driver]
+updateEnabledStateReturningIds driverIds isEnabled =
+  Esq.runTransaction $ do
+    present <- fmap (cast . (.driverId)) <$> fetchAllByIds driverIds
+    updateEnabledStateForIds
+    pure present
+  where
+    updateEnabledStateForIds :: SqlDB ()
+    updateEnabledStateForIds = do
+      now <- getCurrentTime
+      Esq.update $ \tbl -> do
+        set
+          tbl
+          [ DriverInformationEnabled =. val isEnabled,
+            DriverInformationUpdatedAt =. val now
+          ]
+        where_ $ tbl ^. DriverInformationDriverId `in_` valList (map (toKey . cast) driverIds)
 
 updateOnRide ::
   Id Person.Driver ->

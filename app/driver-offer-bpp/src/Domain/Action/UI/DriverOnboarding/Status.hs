@@ -2,6 +2,8 @@ module Domain.Action.UI.DriverOnboarding.Status
   ( ResponseStatus (..),
     StatusRes (..),
     statusHandler,
+    mapStatus,
+    verificationStatus,
   )
 where
 
@@ -12,7 +14,6 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id (Id)
 import Beckn.Utils.Error
-import Data.Text as T hiding (length)
 import qualified Domain.Types.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
@@ -32,7 +33,11 @@ import Storage.Queries.Person as Person
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as VQuery
 
-data ResponseStatus = PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | NO_DOC_AVAILABLE
+-- PENDING means "pending verification"
+-- FAILED is used when verification is failed
+-- INVALID is the state
+--   which the doc switches to when, for example, it's expired.
+data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes = StatusRes
@@ -83,17 +88,21 @@ mapStatus = \case
 checkIfInVerification :: Id SP.Person -> Image.ImageType -> Flow ResponseStatus
 checkIfInVerification driverId docType = do
   verificationReq <- IVQuery.findLatestByDriverIdAndDocType driverId docType
+  images <- IQuery.findRecentByPersonIdAndImageType driverId docType
+  onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
+  pure $ verificationStatus onboardingTryLimit (length images) verificationReq
+
+verificationStatus :: Int -> Int -> Maybe IV.IdfyVerification -> ResponseStatus
+verificationStatus onboardingTryLimit imagesNum verificationReq =
   case verificationReq of
     Just req -> do
-      if req.status == T.pack "failed"
-        then return FAILED
-        else return PENDING
+      if req.status == "failed"
+        then FAILED
+        else PENDING
     Nothing -> do
-      images <- IQuery.findRecentByPersonIdAndImageType driverId docType
-      onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
-      if length images > onboardingTryLimit
-        then return LIMIT_EXCEED
-        else return NO_DOC_AVAILABLE
+      if imagesNum > onboardingTryLimit
+        then LIMIT_EXCEED
+        else NO_DOC_AVAILABLE
 
 enableDriver :: Id SP.Person -> Id Org.Organization -> Maybe RC.VehicleRegistrationCertificate -> Maybe DL.DriverLicense -> Flow ()
 enableDriver _ _ Nothing Nothing = return ()

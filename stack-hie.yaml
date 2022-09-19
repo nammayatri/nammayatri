@@ -20,6 +20,8 @@
 resolver: lts-16.31
 system-ghc: true
 
+system-ghc: true
+
 # User packages to be built.
 # Various formats can be used as shown in the example below.
 #
@@ -58,6 +60,7 @@ packages:
   - lib/beckn-spec
   - lib/beckn-services
   - lib/location-updates
+  - lib/dashboard-bpp-helper-api
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as

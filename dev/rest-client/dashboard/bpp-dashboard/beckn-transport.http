@@ -14,8 +14,59 @@ GET {{bpp-dashboard-host}}
 
 # @name driverList
 
-GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/list
-  ?limit=10
-  &offset=0
-content-type: application/json
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/list?verified=true&limit=10&offset=0&phone=66
 token: {{customer_service}}
+
+###
+
+# @name driverActivity
+
+@driverId = 001b93df-4f7c-440f-bada-4d46c396d7d0
+
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/activity
+token: {{customer_service}}
+
+###
+
+# @name enableDrivers
+
+@driverId1e = 001b93df-4f7c-440f-bada-4d46c396d7d0
+@driverId2e = 002b93df-4f7c-440f-bada-4d46c396d7d0
+
+@driverId3e = driver-not-found-0000000000000000000
+
+PUT {{bpp-dashboard-host}}/bpp/beckn-transport/driver/enable
+token: {{juspay_ops}}
+content-type: application/json
+
+
+{
+    "driverIds": ["{{driverId1e}}", "{{driverId2e}}", "{{driverId3e}}"]
+}
+
+###
+# @name disableDrivers
+
+@driverId1d = 001b93df-4f7c-440f-bada-4d46c396d7d0
+@driverId2d = 002b93df-4f7c-440f-bada-4d46c396d7d0
+
+@driverId3d = driver-not-found-0000000000000000000
+
+PUT {{bpp-dashboard-host}}/bpp/beckn-transport/driver/disable
+token: {{juspay_ops}}
+content-type: application/json
+
+{
+    "driverIds": ["{{driverId1d}}", "{{driverId2d}}", "{{driverId3d}}"]
+}
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/location
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "driverIds": ["{{driverId1e}}", "{{driverId2e}}", "{{driverId3e}}"]
+}
+

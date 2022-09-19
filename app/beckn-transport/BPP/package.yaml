@@ -80,6 +80,7 @@ dependencies:
   - string-conversions
   - either
   - text-conversions
+  - dashboard-bpp-helper-api
 
 ghc-options:
   - -fwrite-ide-info

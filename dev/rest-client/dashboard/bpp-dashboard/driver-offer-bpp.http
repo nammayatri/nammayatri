@@ -1,11 +1,11 @@
 @bpp-dashboard-host = http://localhost:8018
 
 # access tokens with different roles
-@customer = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
-@driver = 223ed551-c9f8-4bae-b49a-30a696424b7f
-@juspay_ops = e789b47f-2e39-47a2-b297-33f8fd4b87d0
-@juspay_admin = 0f3378e2-da5b-4eac-a0f6-397ca48358de
-@customer_service = 07ef2a2a-b014-4a86-b1c0-e453e8b0b66e
+@customer = 7a207d9a-0fcd-49f1-86dd-2292ab6af5f2
+@driver = 65913d60-41a8-41f5-a35f-92f9b8af030d
+@juspay_ops = b0ff7e6b-c101-4234-94fa-32985c4dc0e1
+@juspay_admin = 1460d294-8c69-44b9-811a-c370949d056e
+@customer_service = 5425f717-3838-476a-a6ed-58a7a71c6c57
 
 # @name healthcheck
 GET {{bpp-dashboard-host}}
@@ -14,8 +14,63 @@ GET {{bpp-dashboard-host}}
 
 # @name driverList
 
-GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/list
-  ?limit=10
-  &offset=0
-content-type: application/json
+GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/list?pendingdoc=true&limit=10&offset=0&phone=66
 token: {{customer_service}}
+
+###
+
+# @name driverDocs
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/documents/info
+token: {{customer_service}}
+
+###
+
+# @name driverActivity
+
+@driverId = favorit-auto1-0000000000000000000000
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/activity
+token: {{customer_service}}
+
+###
+
+# @name enableDrivers
+
+@driverId1e = favorit-auto1-0000000000000000000000
+@driverId2e = favorit-auto2-0000000000000000000000
+@driverId3e = favorit-suv-000000000000000000000001
+
+PUT {{bpp-dashboard-host}}/bpp/driver-offer/driver/enable
+token: {{juspay_ops}}
+content-type: application/json
+
+{
+    "driverIds": ["{{driverId1e}}", "{{driverId2e}}", "{{driverId3e}}"]
+}
+
+###
+
+# @name disableDrivers
+
+@driverId1d = favorit-auto1-0000000000000000000000
+@driverId2d = favorit-auto2-0000000000000000000000
+@driverId3d = favorit-suv-000000000000000000000000
+
+PUT {{bpp-dashboard-host}}/bpp/driver-offer/driver/disable
+token: {{juspay_ops}}
+content-type: application/json
+
+{
+    "driverIds": ["{{driverId1d}}", "{{driverId2d}}", "{{driverId3d}}"]
+}
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/location
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "driverIds": ["{{driverId1e}}", "{{driverId2e}}", "{{driverId3e}}"]
+}

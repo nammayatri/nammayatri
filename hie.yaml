@@ -216,3 +216,5 @@ cradle:
     - path: "app/utils/route-extractor/app/Paths_route_extractor.hs"
       component: "route-extractor:exe:route-extractor-exe"
 
+    - path: "lib/dashboard-bpp-helper-api/src"
+      component: "dashboard-bpp-helper-api:lib"

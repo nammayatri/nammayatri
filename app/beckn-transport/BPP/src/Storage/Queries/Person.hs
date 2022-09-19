@@ -12,6 +12,8 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Utils.Common
 import qualified Data.Maybe as Mb
+import Domain.Types.DriverInformation
+import Domain.Types.DriverLocation
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import Domain.Types.Organization
 import Domain.Types.Person as Person
@@ -21,6 +23,28 @@ import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
 import Storage.Tabular.Vehicle
 
+baseFullPersonQuery ::
+  From
+    ( Table PersonT
+        :& Table DriverLocationT
+        :& Table DriverInformationT
+        :& Table VehicleT
+    )
+baseFullPersonQuery =
+  table @PersonT
+    `innerJoin` table @DriverLocationT
+    `Esq.on` ( \(person :& location) ->
+                 person ^. PersonTId ==. location ^. DriverLocationDriverId
+             )
+    `innerJoin` table @DriverInformationT
+    `Esq.on` ( \(person :& _ :& driverInfo) ->
+                 person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
+             )
+    `innerJoin` table @VehicleT
+    `Esq.on` ( \(person :& _ :& _ :& vehicle) ->
+                 person ^. PersonTId ==. vehicle ^. VehicleDriverId
+             )
+
 create :: Person -> SqlDB ()
 create = Esq.create
 
@@ -29,6 +53,39 @@ findById ::
   Id Person ->
   m (Maybe Person)
 findById = Esq.findById
+
+data FullDriver = FullDriver
+  { person :: Person,
+    location :: DriverLocation,
+    info :: DriverInformation,
+    vehicle :: Vehicle
+  }
+
+mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriver
+mkFullDriver (p, l, i, v) = FullDriver p l i v
+
+findAllDrivers ::
+  (Transactionable m) =>
+  m [FullDriver]
+findAllDrivers = fmap (map mkFullDriver) $
+  Esq.findAll $ do
+    (person :& location :& driverInfo :& vehicle) <- from baseFullPersonQuery
+    where_
+      (person ^. PersonRole ==. val Person.DRIVER)
+    return (person, location, driverInfo, vehicle)
+
+findAllDriversByIds ::
+  (Transactionable m, Functor m) =>
+  [Id Person] ->
+  m [FullDriver]
+findAllDriversByIds driverIds = fmap (map mkFullDriver) $
+  Esq.findAll $ do
+    (person :& driverLocation :& driverInfo :& vehicle) <-
+      from baseFullPersonQuery
+    where_ $
+      (person ^. PersonRole ==. val Person.DRIVER)
+        &&. person ^. PersonTId `in_` valList (map toKey driverIds)
+    return (person, driverLocation, driverInfo, vehicle)
 
 findByIdAndRoleAndOrgId ::
   Transactionable m =>
@@ -198,21 +255,7 @@ getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType = do
   now <- getCurrentTime
   res <- Esq.findAll $ do
     withTable <- with $ do
-      (person :& location :& driverInfo :& vehicle) <-
-        from $
-          table @PersonT
-            `innerJoin` table @DriverLocationT
-            `Esq.on` ( \(person :& location) ->
-                         person ^. PersonTId ==. location ^. DriverLocationDriverId
-                     )
-            `innerJoin` table @DriverInformationT
-            `Esq.on` ( \(person :& _ :& driverInfo) ->
-                         person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
-                     )
-            `innerJoin` table @VehicleT
-            `Esq.on` ( \(person :& _ :& _ :& vehicle) ->
-                         person ^. PersonTId ==. vehicle ^. VehicleDriverId
-                     )
+      (person :& location :& driverInfo :& vehicle) <- from baseFullPersonQuery
       where_ $
         person ^. PersonRole ==. val Person.DRIVER
           &&. person ^. PersonOrganizationId ==. val (Just $ toKey orgId)

@@ -119,12 +119,15 @@ token: {{customerToken}}
 
 # @name driverOfferCustomerLogin
 
+# name = customer, driver, juspay_ops, juspay_admin, customer_service
+@customerLogin = customer_service
+
 POST {{bpp-dashboard-host}}/dashboard/login
 content-type: application/json
 
 {
-  "email" : "customer@dashboard.com",
-  "password" : "customer",
+  "email" : "{{customerLogin}}@dashboard.com",
+  "password" : "{{customerLogin}}",
   "serverName" : "DRIVER_OFFER_BPP"
 }
 
