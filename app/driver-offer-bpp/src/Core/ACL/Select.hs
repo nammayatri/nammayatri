@@ -1,4 +1,4 @@
-module Core.ACL.Select where
+module Core.ACL.Select (buildSelectReq) where
 
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
@@ -66,7 +66,7 @@ mkLocation ::
   Select.Location ->
   m Location.SearchReqLocationAPIEntity
 mkLocation (Select.Location Select.Gps {..}) = do
-  placeNameResp <- GoogleMaps.getPlaceName (show lat <> "," <> show lon)
+  placeNameResp <- GoogleMaps.getPlaceName (show lat <> "," <> show lon) Nothing
   pure
     Location.SearchReqLocationAPIEntity
       { areaCode = Nothing,

@@ -10,8 +10,12 @@ import Beckn.Utils.Common (MonadFlow)
 import EulerHS.Prelude
 import Tools.Metrics
 
-getPlaceName :: (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) => Text -> m GoogleMaps.GetPlaceNameResp
-getPlaceName latLng = do
+getPlaceName ::
+  (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) =>
+  Text ->
+  Maybe GoogleMaps.Language ->
+  m GoogleMaps.GetPlaceNameResp
+getPlaceName latLng language = do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
-  ClientGoogleMaps.getPlaceName url latLng apiKey
+  ClientGoogleMaps.getPlaceName url latLng apiKey language

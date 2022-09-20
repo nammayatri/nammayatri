@@ -23,8 +23,8 @@ placeDetails personId placeId = withFlowHandlerAPI . withPersonIdLogTag personId
   let fields = "geometry"
   ClientGoogleMaps.placeDetails url apiKey placeId fields
 
-getPlaceName :: Id Person.Person -> Text -> FlowHandler GoogleMaps.GetPlaceNameResp
-getPlaceName personId latLng = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+getPlaceName :: Id Person.Person -> Text -> Maybe Text -> FlowHandler GoogleMaps.GetPlaceNameResp
+getPlaceName personId latLng lang = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
-  ClientGoogleMaps.getPlaceName url latLng apiKey
+  ClientGoogleMaps.getPlaceName url latLng apiKey $ GoogleMaps.toMbLanguage lang

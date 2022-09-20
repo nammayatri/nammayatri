@@ -431,6 +431,7 @@ type GoogleMapsProxyAPI =
            :<|> "getPlaceName"
              :> TokenAuth
              :> MandatoryQueryParam "latlng" Text -- Passing it as <latitude>,<longitude>
+             :> QueryParam "language" Text
              :> Get '[JSON] GoogleMaps.GetPlaceNameResp
        )
 

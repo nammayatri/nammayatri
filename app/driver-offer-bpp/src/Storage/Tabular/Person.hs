@@ -9,6 +9,7 @@ module Storage.Tabular.Person where
 
 import Beckn.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
 import Beckn.External.FCM.Types (FCMRecipientToken)
+import Beckn.External.GoogleMaps.Types (Language)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
@@ -18,6 +19,7 @@ import Storage.Tabular.Organization (OrganizationTId)
 derivePersistField "Domain.Role"
 derivePersistField "Domain.Gender"
 derivePersistField "Domain.IdentifierType"
+derivePersistField "Language"
 
 mkPersist
   defaultSqlSettings
@@ -41,6 +43,7 @@ mkPersist
       registered Bool
       organizationId OrganizationTId Maybe
       deviceToken FCMRecipientToken Maybe
+      language Language Maybe
       description Text Maybe
       createdAt UTCTime
       updatedAt UTCTime

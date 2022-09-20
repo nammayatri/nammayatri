@@ -27,6 +27,7 @@ where
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.External.FCM.Types as FCM
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude (NominalDiffTime)
@@ -89,7 +90,8 @@ data DriverInformationRes = DriverInformationRes
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
-    organization :: Organization.OrganizationAPIEntity
+    organization :: Organization.OrganizationAPIEntity,
+    language :: Maybe GoogleMaps.Language
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -108,7 +110,8 @@ data DriverEntityRes = DriverEntityRes
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
-    registeredAt :: UTCTime
+    registeredAt :: UTCTime,
+    language :: Maybe GoogleMaps.Language
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -174,6 +177,7 @@ data UpdateDriverReq = UpdateDriverReq
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     deviceToken :: Maybe FCMRecipientToken,
+    language :: Maybe GoogleMaps.Language,
     canDowngradeToSedan :: Maybe Bool,
     canDowngradeToHatchback :: Maybe Bool
   }
@@ -307,7 +311,8 @@ buildDriverEntityRes (person, driverInfo) = do
         active = driverInfo.active,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,
-        registeredAt = person.createdAt
+        registeredAt = person.createdAt,
+        language = person.language
       }
 
 changeDriverEnableState ::
@@ -368,7 +373,8 @@ updateDriver personId req = do
         person{firstName = fromMaybe person.firstName req.firstName,
                middleName = req.middleName <|> person.middleName,
                lastName = req.lastName <|> person.lastName,
-               deviceToken = req.deviceToken <|> person.deviceToken
+               deviceToken = req.deviceToken <|> person.deviceToken,
+               language = req.language <|> person.language
               }
 
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
@@ -429,6 +435,7 @@ buildDriver req orgId = do
         SP.registered = False,
         SP.rating = Nothing,
         SP.deviceToken = Nothing,
+        SP.language = Nothing,
         SP.organizationId = Just orgId,
         SP.description = Nothing,
         SP.createdAt = now,
