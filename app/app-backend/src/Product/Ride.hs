@@ -47,7 +47,7 @@ getDriverLoc rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId 
           Notify.notifyDriverOnTheWay personId
           Redis.setExRedis (driverOnTheWay rideId) () 900
         when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
-          Notify.notifyDriverHasReached personId
+          Notify.notifyDriverHasReached personId ride
           Redis.setExRedis (driverHasReached rideId) () 900
   return res.currPoint
 
