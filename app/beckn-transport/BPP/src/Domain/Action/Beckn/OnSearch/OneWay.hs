@@ -80,10 +80,12 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
         transporterId
         distance
         poolResult.distanceToPickup
-        poolResult.variant estimatedRideFinishTime now
+        poolResult.variant
+        estimatedRideFinishTime
+        now
   Esq.runTransaction $
     for_ listOfQuotes QQuote.create
-  pure $ mkQuoteInfo fromLocation toLocation now distance <$> listOfQuotes
+  pure $ mkQuoteInfo fromLocation toLocation now <$> listOfQuotes
 
 buildOneWayQuote ::
   EsqDBFlow m r =>
@@ -112,10 +114,13 @@ buildOneWayQuote productSearchRequest fareParams transporterId distance distance
         ..
       }
 
-mkQuoteInfo :: DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> UTCTime -> Meters -> DQuote.Quote -> QuoteInfo
-mkQuoteInfo fromLoc toLoc startTime distanceToNearestDriver DQuote.Quote {..} = do
+mkQuoteInfo :: DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> UTCTime -> DQuote.Quote -> QuoteInfo
+mkQuoteInfo fromLoc toLoc startTime DQuote.Quote {..} = do
   let fromLocation = getCoordinates fromLoc
       toLocation = getCoordinates toLoc
+      distanceToNearestDriver = case quoteDetails of
+        DQuote.OneWayDetails details -> DQuote.distanceToNearestDriver details
+        _ -> 0
   QuoteInfo
     { quoteId = id,
       ..
