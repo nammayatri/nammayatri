@@ -29,11 +29,11 @@ placeDetails placeId = do
   ClientGoogleMaps.placeDetails url apiKey placeId fields
 
 getPlaceName ::
-  (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) => 
+  (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) =>
   Text ->
-  m GoogleMaps.GetPlaceNameResp 
-getPlaceName latLng = do
+  Maybe Text ->
+  m GoogleMaps.GetPlaceNameResp
+getPlaceName latLng lang = do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
-  ClientGoogleMaps.getPlaceName url latLng apiKey Nothing
-  
+  ClientGoogleMaps.getPlaceName url latLng apiKey $ GoogleMaps.toMbLanguage lang

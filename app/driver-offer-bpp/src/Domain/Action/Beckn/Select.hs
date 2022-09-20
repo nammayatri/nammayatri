@@ -24,7 +24,7 @@ import Storage.Queries.Person
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Metrics (CoreMetrics)
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 data DSelectReq = DSelectReq
   { messageId :: Text,
@@ -49,9 +49,8 @@ handler orgId sReq = do
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
   let distance = distRes.distance
       estimatedRideDuration = distRes.duration_in_traffic
-      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) addUTCTime sReq.pickupTime
-
-fareParams <- calculateFare orgId sReq.variant distance estimatedRideFinishTime Nothing
+      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` sReq.pickupTime
+  fareParams <- calculateFare orgId sReq.variant distance estimatedRideFinishTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation orgId sReq estimatedRideFinishTime
   let baseFare = fareSum fareParams
   logDebug $
@@ -69,8 +68,8 @@ fareParams <- calculateFare orgId sReq.variant distance estimatedRideFinishTime 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) ->
     when (not dPoolRes.origin.onRide) $ do
       let language = fromMaybe GoogleMaps.ENGLISH dPoolRes.origin.language
-      let transletedSearchReq = fromMaybe searchReq  $ M.lookup language languageDictionary
-      let entityData = makeSearchRequestForDriverAPIEntity sReqFD transletedSearchReq
+      let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
+      let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq
       Notify.notifyOnNewSearchRequestAvailable sReqFD.driverId dPoolRes.origin.driverDeviceToken entityData
   where
     buildSearchRequestForDriver ::
@@ -141,32 +140,33 @@ buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do
       updatedAt = now
   pure DLoc.SearchReqLocation {..}
 
-transleteSearchReq ::
+translateSearchReq ::
   ( MonadFlow m,
     GoogleMaps.HasGoogleMaps m r,
     CoreMetrics m
-  )=>
+  ) =>
   DSearchReq.SearchRequest ->
-  GoogleMaps.Language -> 
+  GoogleMaps.Language ->
   m DSearchReq.SearchRequest
-transleteSearchReq defaultSearchReq@DSearchReq.SearchRequest {..} language = do
-  from <- mkLocation defaultSearchReq.fromLocation language
-  to <- mkLocation defaultSearchReq.toLocation language
-  pure DSearchReq.SearchRequest 
-        { fromLocation = from,
-          toLocation = to,
-          ..
-        }
+translateSearchReq defaultSearchReq@DSearchReq.SearchRequest {..} language = do
+  from <- buildLocWithAddr defaultSearchReq.fromLocation language
+  to <- buildLocWithAddr defaultSearchReq.toLocation language
+  pure
+    DSearchReq.SearchRequest
+      { fromLocation = from,
+        toLocation = to,
+        ..
+      }
 
-mkLocation ::
+buildLocWithAddr ::
   ( MonadFlow m,
     GoogleMaps.HasGoogleMaps m r,
     CoreMetrics m
-  ) => 
+  ) =>
   DLoc.SearchReqLocation ->
   GoogleMaps.Language ->
   m DLoc.SearchReqLocation
-mkLocation searchReqLoc@DLoc.SearchReqLocation {..} language = do
+buildLocWithAddr searchReqLoc@DLoc.SearchReqLocation {..} language = do
   placeNameResp <- GoogleMaps.getPlaceName (show searchReqLoc.lat <> "," <> show searchReqLoc.lon) (Just language)
   pure
     DLoc.SearchReqLocation
@@ -186,15 +186,14 @@ addLanguageToDictionary ::
     GoogleMaps.HasGoogleMaps m r,
     CoreMetrics m
   ) =>
-  DSearchReq.SearchRequest -> 
+  DSearchReq.SearchRequest ->
   LanguageDictionary ->
   (GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong) ->
   m LanguageDictionary
 addLanguageToDictionary searchReq dict dPoolRes = do
   let language = fromMaybe GoogleMaps.ENGLISH dPoolRes.origin.language
   if isJust $ M.lookup language dict
-    then 
-      return dict
+    then return dict
     else do
-      transletedSearchReq <- transleteSearchReq searchReq language
-      pure $ M.insert language transletedSearchReq dict
+      translatedSearchReq <- translateSearchReq searchReq language
+      pure $ M.insert language translatedSearchReq dict

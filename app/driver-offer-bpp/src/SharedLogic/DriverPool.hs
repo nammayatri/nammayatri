@@ -41,7 +41,7 @@ calculateDriverPool variant pickupLatLong orgId onlyNotOnRide = do
         radius
         orgId
         onlyNotOnRide
-  logDebug $ "approxDriverPool" <> show approxDriverPool
+  logPretty DEBUG "approxDriverPool" approxDriverPool
   case approxDriverPool of
     [] -> pure []
     (a : pprox) -> filterOutDriversWithDistanceAboveThreshold radius pickupLatLong (a :| pprox)

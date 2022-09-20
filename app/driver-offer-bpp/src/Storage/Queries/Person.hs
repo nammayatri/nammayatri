@@ -181,8 +181,9 @@ data DriverPoolResult = DriverPoolResult
     distanceToDriver :: Double,
     vehicle :: Vehicle,
     lat :: Double,
-    lon :: Double  }
-  deriving (Generic, Show)
+    lon :: Double
+  }
+  deriving (Generic, Show, PrettyShow)
 
 instance GoogleMaps.HasCoordinates DriverPoolResult where
   getCoordinates dpRes = LatLong dpRes.lat dpRes.lon
@@ -243,6 +244,7 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters orgId onlyNotOnRide = do
   where
     makeDriverPoolResult (personId, mbDeviceToken, mblang, onRide, dist, vehicle, dlat, dlon) =
       DriverPoolResult (cast personId) mbDeviceToken mblang onRide dist vehicle dlat dlon
+
 setRegisteredTrue :: Id Person -> SqlDB ()
 setRegisteredTrue personId = do
   now <- getCurrentTime

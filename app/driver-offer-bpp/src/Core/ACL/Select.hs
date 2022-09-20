@@ -1,4 +1,4 @@
-module Core.ACL.Select where
+module Core.ACL.Select (buildSelectReq) where
 
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
@@ -38,8 +38,8 @@ buildSelectReq subscriber req = do
   item <- case order.items of
     [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
-  pickupLocation <- mkLocation pickup.location Nothing
-  dropLocation <- mkLocation dropOff.location Nothing
+  pickupLocation <- mkLocation pickup.location
+  dropLocation <- mkLocation dropOff.location
   pure
     DSelect.DSelectReq
       { messageId = messageId,
@@ -64,10 +64,9 @@ mkLocation ::
     CoreMetrics m
   ) =>
   Select.Location ->
-  Maybe GoogleMaps.Language ->
   m Location.SearchReqLocationAPIEntity
-mkLocation (Select.Location Select.Gps {..}) language = do
-  placeNameResp <- GoogleMaps.getPlaceName (show lat <> "," <> show lon) language
+mkLocation (Select.Location Select.Gps {..}) = do
+  placeNameResp <- GoogleMaps.getPlaceName (show lat <> "," <> show lon) Nothing
   pure
     Location.SearchReqLocationAPIEntity
       { areaCode = Nothing,

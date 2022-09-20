@@ -31,6 +31,7 @@ type API =
            :<|> "getPlaceName"
              :> TokenAuth
              :> MandatoryQueryParam "latlng" Text -- Passing it as <latitude>,<longitude>
+             :> QueryParam "language" Text
              :> Get '[JSON] GoogleMaps.GetPlaceNameResp
        )
 
@@ -46,5 +47,5 @@ autoComplete _ input location radius = withFlowHandlerAPI . DGoogleMaps.autoComp
 placeDetails :: Id SP.Person -> Text -> FlowHandler PlaceDetailsResp
 placeDetails _ = withFlowHandlerAPI . DGoogleMaps.placeDetails
 
-getPlaceName :: Id SP.Person -> Text -> FlowHandler GetPlaceNameResp
-getPlaceName _ = withFlowHandlerAPI . DGoogleMaps.getPlaceName
+getPlaceName :: Id SP.Person -> Text -> Maybe Text -> FlowHandler GetPlaceNameResp
+getPlaceName _ latlng lang = withFlowHandlerAPI $ DGoogleMaps.getPlaceName latlng lang
