@@ -16,7 +16,7 @@ import Beckn.Utils.Common hiding (Error)
 import Beckn.Utils.IOLogging
 import EulerHS.Prelude
 import Idfy.Types.IdfyConfig
-import Idfy.Types.VerificationResult
+import Idfy.Types.Response
 import Idfy.WebhookHandler
 import Servant hiding (throwError)
 

@@ -12,20 +12,19 @@ import Beckn.Types.Common
 import Beckn.Utils.Common hiding (Error)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import Idfy.Auth
 import Idfy.Types.Error
-import Idfy.Types.ExtractImage
 import Idfy.Types.IdfyConfig
-import Idfy.Types.IdfyRes
-import Idfy.Types.ValidateImage
-import Idfy.Types.VerifyReq
+import Idfy.Types.Request
+import Idfy.Types.Response
 import Servant (Header, JSON, Post, ReqBody, (:>))
 
 type VerifyDLAPI =
   "v3" :> "tasks" :> "async" :> "verify_with_source" :> "ind_driving_license"
     :> Header "api-key" ApiKey
     :> Header "account-id" AccountId
-    :> ReqBody '[JSON] (VerifyReq VerifyDLData)
-    :> Post '[JSON] IdfyRes
+    :> ReqBody '[JSON] DLVerificationRequest
+    :> Post '[JSON] IdfySuccess
 
 verifyDLAPI :: Proxy VerifyDLAPI
 verifyDLAPI = Proxy
@@ -37,8 +36,8 @@ verifyDLAsync ::
   ApiKey ->
   AccountId ->
   BaseUrl ->
-  VerifyReq VerifyDLData ->
-  m IdfyRes
+  DLVerificationRequest ->
+  m IdfySuccess
 verifyDLAsync apiKey accountId url req = callIdfyAPI url task "verifyDLAsync"
   where
     task =
@@ -52,8 +51,8 @@ type VerifyRCAPI =
   "v3" :> "tasks" :> "async" :> "verify_with_source" :> "ind_rc_basic"
     :> Header "api-key" ApiKey
     :> Header "account-id" AccountId
-    :> ReqBody '[JSON] (VerifyReq VerifyRCData)
-    :> Post '[JSON] IdfyRes
+    :> ReqBody '[JSON] RCVerificationRequest
+    :> Post '[JSON] IdfySuccess
 
 verifyRCAPI :: Proxy VerifyRCAPI
 verifyRCAPI = Proxy
@@ -65,8 +64,8 @@ verifyRCAsync ::
   ApiKey ->
   AccountId ->
   BaseUrl ->
-  VerifyReq VerifyRCData ->
-  m IdfyRes
+  RCVerificationRequest ->
+  m IdfySuccess
 verifyRCAsync apiKey accountId url req = callIdfyAPI url task "verifyRCAsync"
   where
     task =
@@ -80,8 +79,8 @@ type ValidateImage =
   "v3" :> "tasks" :> "sync" :> "validate" :> "document"
     :> Header "api-key" ApiKey
     :> Header "account-id" AccountId
-    :> ReqBody '[JSON] ValidateImageReq
-    :> Post '[JSON] ValidateImageRes
+    :> ReqBody '[JSON] ImageValidateRequest
+    :> Post '[JSON] ImageValidateResponse
 
 validateImageAPI :: Proxy ValidateImage
 validateImageAPI = Proxy
@@ -93,8 +92,8 @@ validateImage ::
   ApiKey ->
   AccountId ->
   BaseUrl ->
-  ValidateImageReq ->
-  m ValidateImageRes
+  ImageValidateRequest ->
+  m ImageValidateResponse
 validateImage apiKey accountId url req = callIdfyAPI url task "validateImage"
   where
     task =
@@ -108,8 +107,8 @@ type ExtractRCAPI =
   "v3" :> "tasks" :> "sync" :> "extract" :> "ind_rc"
     :> Header "api-key" ApiKey
     :> Header "account-id" AccountId
-    :> ReqBody '[JSON] ExtractImageReq
-    :> Post '[JSON] ExtractedRCDetails
+    :> ReqBody '[JSON] ImageExtractRequest
+    :> Post '[JSON] RCExtractResponse
 
 extractRCAPI :: Proxy ExtractRCAPI
 extractRCAPI = Proxy
@@ -121,8 +120,8 @@ extractRCImage ::
   ApiKey ->
   AccountId ->
   BaseUrl ->
-  ExtractImageReq ->
-  m ExtractedRCDetails
+  ImageExtractRequest ->
+  m RCExtractResponse
 extractRCImage apiKey accountId url req = callIdfyAPI url task "extractRCImage"
   where
     task =
@@ -136,8 +135,8 @@ type ExtractDLImage =
   "v3" :> "tasks" :> "sync" :> "extract" :> "ind_driving_license"
     :> Header "api-key" ApiKey
     :> Header "account-id" AccountId
-    :> ReqBody '[JSON] ExtractImageReq
-    :> Post '[JSON] ExtractedDLDetails
+    :> ReqBody '[JSON] ImageExtractRequest
+    :> Post '[JSON] DLExtractResponse
 
 extractDLAPI :: Proxy ExtractDLImage
 extractDLAPI = Proxy
@@ -149,8 +148,8 @@ extractDLImage ::
   ApiKey ->
   AccountId ->
   BaseUrl ->
-  ExtractImageReq ->
-  m ExtractedDLDetails
+  ImageExtractRequest ->
+  m DLExtractResponse
 extractDLImage apiKey accountId url req = callIdfyAPI url task "extractDLImage"
   where
     task =
@@ -160,19 +159,5 @@ extractDLImage apiKey accountId url req = callIdfyAPI url task "extractDLImage"
         (Just accountId)
         req
 
--- idfyError :: BaseUrl -> ClientError -> ExternalAPICallError
--- idfyError = ExternalAPICallError (Just "IDFY_API_ERROR")
-
--- checkIdfyError :: (MonadThrow m, Log m, HasField "status" a Text) => BaseUrl -> Either ClientError a -> m StatusCheck
--- checkIdfyError url res =
---   fromEitherM (idfyError url) res >>= validateResponseStatus
-
--- validateResponseStatus :: (MonadThrow m, Log m, HasField "status" a Text) => a -> m StatusCheck
--- validateResponseStatus response =
---   case response.status of
---     "completed" -> return VALID
---     "failed" -> return INVALID
---     _ -> throwError IdfyServerError
-
 callIdfyAPI :: CallAPI env res
-callIdfyAPI = callApiUnwrappingApiError (identity @Error) Nothing Nothing
+callIdfyAPI = callApiUnwrappingApiError (identity @Error) (Just idfyHttpManagerKey) (Just "IDFY_ERROR")

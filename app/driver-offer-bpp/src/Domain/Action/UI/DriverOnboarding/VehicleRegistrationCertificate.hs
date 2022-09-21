@@ -67,9 +67,12 @@ verifyRC personId req@DriverRCReq {..} = do
     throwError (InvalidImageType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
 
   image <- S3.get (T.unpack imageMetadata.s3Path)
-  extractOutput <- Idfy.extractRCImage image Nothing
-  unless (extractOutput.registration_number == Just vehicleRegistrationCertNumber) $
-    throwError (InvalidRequest "Id number not matching")
+  resp <- Idfy.extractRCImage image Nothing
+  case resp.result of
+    Just result -> do
+      unless ((removeSpaceAndDash <$> result.extraction_output.registration_number) == (removeSpaceAndDash <$> Just vehicleRegistrationCertNumber)) $
+        throwError (InvalidRequest "Id number not matching")
+    Nothing -> throwError (InvalidRequest "Image extraction failed")
 
   now <- getCurrentTime
   mDriverAssociation <- DAQuery.getActiveAssociationByDriver personId
@@ -194,3 +197,6 @@ convertTextToUTC a = do
 
 isValidCOVRC :: Text -> Bool
 isValidCOVRC = T.isInfixOf "3WT"
+
+removeSpaceAndDash :: Text -> Text
+removeSpaceAndDash = T.replace "-" "" . T.replace " " ""

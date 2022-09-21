@@ -2,9 +2,9 @@ module Idfy.Types
   ( ClassOfVehicle (..),
     DLVerificationResponse,
     RCVerificationResponse,
-    RCResult (..),
-    DLResult (..),
+    RCResult,
+    DLResult,
   )
 where
 
-import Idfy.Types.VerificationResult
+import Idfy.Types.Response

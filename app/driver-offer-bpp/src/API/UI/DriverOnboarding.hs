@@ -27,8 +27,8 @@ type API =
              :> Get '[JSON] DriverOnboarding.StatusRes
            :<|> "validateImage"
              :> TokenAuth
-             :> ReqBody '[JSON] Image.ValidateImageReq
-             :> Post '[JSON] Image.ValidateImageRes
+             :> ReqBody '[JSON] Image.ImageValidateRequest
+             :> Post '[JSON] Image.ImageValidateResponse
        )
 
 handler :: FlowServer API
@@ -47,5 +47,5 @@ verifyRC personId = withFlowHandlerAPI . DriverOnboarding.verifyRC personId
 statusHandler :: Id DP.Person -> FlowHandler DriverOnboarding.StatusRes
 statusHandler = withFlowHandlerAPI . DriverOnboarding.statusHandler
 
-validateImage :: Id DP.Person -> Image.ValidateImageReq -> FlowHandler Image.ValidateImageRes
+validateImage :: Id DP.Person -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage personId = withFlowHandlerAPI . Image.validateImage personId

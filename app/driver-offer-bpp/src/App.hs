@@ -17,6 +17,7 @@ import qualified Data.Text as T
 import Environment
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import Idfy.Auth
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -60,8 +61,9 @@ runDriverOfferBpp' appCfg = do
         flowRt' <-
           addAuthManagersToFlowRt
             flowRt
-            [ prepareAuthManagersWithRegistryUrl flowRt appEnv allShortIds,
-              prepareS3AuthManager flowRt appEnv
+            [ (Nothing, prepareAuthManagersWithRegistryUrl flowRt appEnv allShortIds),
+              (Nothing, prepareS3AuthManager flowRt appEnv),
+              (Just 10000, prepareIdfyHttpManager 10000)
             ]
 
         logInfo "Initializing Redis Connections..."

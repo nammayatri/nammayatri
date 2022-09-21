@@ -48,7 +48,7 @@ CREATE TABLE atlas_driver_offer_bpp.idfy_verification
     request_id character varying(36) NOT NULL,
     doc_type character varying(36) NOT NULL,
     status character varying(20) NOT NULL,
-    idfy_response character (255),
+    idfy_response character (2555),
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     CONSTRAINT unique_request_id UNIQUE (request_id),

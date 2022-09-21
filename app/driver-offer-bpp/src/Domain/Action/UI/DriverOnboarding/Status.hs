@@ -38,9 +38,7 @@ statusHandler personId = do
   rcStatus <- getRCStatus personId
 
   when (dlStatus == VERIFIED && rcStatus == VERIFIED) $ DB.runTransaction $ Person.setRegisteredTrue personId
-  let response = StatusRes dlStatus rcStatus
-
-  return response
+  return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus}
 
 getDLStatus :: Id SP.Person -> Flow ResponseStatus
 getDLStatus driverId = do

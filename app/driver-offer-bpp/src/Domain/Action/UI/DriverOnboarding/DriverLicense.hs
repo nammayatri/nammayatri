@@ -74,9 +74,12 @@ verifyDL personId req@DriverDLReq {..} = do
     throwError (InvalidImageType (show Image.DriverLicense) (show imageMetadata.imageType))
 
   image <- S3.get $ T.unpack imageMetadata.s3Path
-  extractOutput <- Idfy.extractDLImage image Nothing
-  unless (extractOutput.id_number == Just driverLicenseNumber) $
-    throwError (InvalidRequest "Id number not matching")
+  resp <- Idfy.extractDLImage image Nothing
+  case resp.result of
+    Just result -> do
+      unless ((removeSpaceAndDash <$> result.extraction_output.id_number) == (removeSpaceAndDash <$> Just driverLicenseNumber)) $
+        throwError (InvalidRequest "Id number not matching")
+    Nothing -> throwError (InvalidRequest "Image extraction failed")
 
   eDl <- encrypt driverLicenseNumber
   mdriverLicense <- Query.findByDLNumber eDl
@@ -114,7 +117,8 @@ verifyDLFlow personId dlNumber driverDateOfBirth = do
           }
 
 onVerifyDL :: Idfy.DLVerificationResponse -> Flow AckResponse
-onVerifyDL resp = do
+onVerifyDL [] = pure Ack
+onVerifyDL [resp] = do
   verificationReq <- IVQuery.findByRequestId resp.request_id >>= fromMaybeM (InternalError "Verification request not found")
   runTransaction $ IVQuery.updateResponse resp.request_id resp.status (show <$> resp.result)
 
@@ -127,6 +131,7 @@ onVerifyDL resp = do
       runTransaction $ Query.upsert driverLicense
       return Ack
     Nothing -> return Ack
+onVerifyDL _ = pure Ack
 
 mkDriverLicenseEntry :: Id Person.Person -> UTCTime -> Maybe Idfy.DLResult -> Flow (Maybe Domain.DriverLicense)
 mkDriverLicenseEntry _ _ Nothing = return Nothing
@@ -170,3 +175,6 @@ dlValidCOV = [Idfy.LMV, Idfy.W_CAB, Idfy.LMV_NT, Idfy.LMV_T, Idfy.LMV_CAB, Idfy.
 
 isValidCOVDL :: Idfy.ClassOfVehicle -> Bool
 isValidCOVDL cov = foldr' (\x acc -> x == cov || acc) False dlValidCOV
+
+removeSpaceAndDash :: Text -> Text
+removeSpaceAndDash = T.replace "-" "" . T.replace " " ""

@@ -20,13 +20,13 @@ import qualified Storage.Queries.DriverOnboarding.Image as Query
 import qualified Storage.Queries.Person as Person
 import Tools.Error
 
-data ValidateImageReq = ValidateImageReq
+data ImageValidateRequest = ImageValidateRequest
   { image :: Text,
     imageType :: Domain.ImageType
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
-newtype ValidateImageRes = ValidateImageRes
+newtype ImageValidateResponse = ImageValidateResponse
   {imageId :: Id Domain.Image}
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -61,9 +61,9 @@ getImageType _ = Domain.VehicleRegistrationCertificate
 
 validateImage ::
   Id Person.Person ->
-  ValidateImageReq ->
-  Flow ValidateImageRes
-validateImage personId ValidateImageReq {..} = do
+  ImageValidateRequest ->
+  Flow ImageValidateResponse
+validateImage personId ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
 
@@ -79,7 +79,7 @@ validateImage personId ValidateImageReq {..} = do
   checkErrors imageType validationOutput.result
   runTransaction $ Query.updateToValid imageEntity.id
 
-  return $ ValidateImageRes {imageId = imageEntity.id}
+  return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     mkImage personId_ organizationId s3Path imageType_ isValid = do
       id <- generateGUID

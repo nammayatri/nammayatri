@@ -9,12 +9,9 @@ import Data.Time.Format
 import EulerHS.Prelude
 import Idfy.Auth
 import qualified Idfy.External.Flow as EF
-import Idfy.Types.ExtractImage
 import Idfy.Types.IdfyConfig
-import Idfy.Types.IdfyRes
-import Idfy.Types.ValidateImage
-import Idfy.Types.VerificationResult
-import Idfy.Types.VerifyReq
+import Idfy.Types.Request
+import Idfy.Types.Response
 
 dlWebhookHandler ::
   ( HasField "isShuttingDown" a (TMVar ()),
@@ -55,16 +52,16 @@ verifyDL ::
   ) =>
   Text ->
   UTCTime ->
-  FlowR a IdfyRes
+  FlowR a IdfySuccess
 verifyDL dlId dob = do
   idfyConfig <- asks (.idfyCfg)
   let dobDay = T.pack $ formatTime defaultTimeLocale "%F" dob
   task_id <- generateGUID
   group_id <- generateGUID
   let req =
-        VerifyReq
+        IdfyRequest
           { _data =
-              VerifyDLData
+              DLVerificationData
                 { id_number = dlId,
                   date_of_birth = dobDay
                 },
@@ -80,14 +77,14 @@ verifyRC ::
     HasField "idfyCfg" a IdfyConfig
   ) =>
   Text ->
-  FlowR a IdfyRes
+  FlowR a IdfySuccess
 verifyRC rcId = do
   idfyConfig <- asks (.idfyCfg)
   task_id <- generateGUID
   group_id <- generateGUID
   let req =
-        VerifyReq
-          { _data = VerifyRCData rcId,
+        IdfyRequest
+          { _data = RCVerificationData rcId Nothing,
             ..
           }
   EF.verifyRCAsync idfyConfig.api_key idfyConfig.account_id idfyConfig.url req
@@ -101,15 +98,15 @@ validateImage ::
   ) =>
   Text ->
   Text ->
-  FlowR a ValidateImageRes
+  FlowR a ImageValidateResponse
 validateImage doc1 doctype = do
   idfyConfig <- asks (.idfyCfg)
   task_id <- generateGUID
   group_id <- generateGUID
   let req =
-        ValidateImageReq
+        IdfyRequest
           { _data =
-              ValidateDoc
+              ValidateRequest
                 { document1 = doc1,
                   doc_type = doctype
                 },
@@ -126,15 +123,15 @@ extractRCImage ::
   ) =>
   Text ->
   Maybe Text ->
-  FlowR a ExtractedRCDetails
+  FlowR a RCExtractResponse
 extractRCImage doc1 mbdoc2 = do
   idfyConfig <- asks (.idfyCfg)
   task_id <- generateGUID
   group_id <- generateGUID
   let req =
-        ExtractImageReq
+        IdfyRequest
           { _data =
-              VerifyDocData
+              ExtractRequest
                 { document1 = doc1,
                   document2 = mbdoc2
                 },
@@ -151,15 +148,15 @@ extractDLImage ::
   ) =>
   Text ->
   Maybe Text ->
-  FlowR a ExtractedDLDetails
+  FlowR a DLExtractResponse
 extractDLImage doc1 mbdoc2 = do
   idfyConfig <- asks (.idfyCfg)
   task_id <- generateGUID
   group_id <- generateGUID
   let req =
-        ExtractImageReq
+        IdfyRequest
           { _data =
-              VerifyDocData
+              ExtractRequest
                 { document1 = doc1,
                   document2 = mbdoc2
                 },
