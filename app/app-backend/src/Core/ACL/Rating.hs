@@ -11,9 +11,9 @@ import Utils.Common
 
 buildRatingReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
-  DFeedback.DRatingReq ->
+  DFeedback.FeedbackRes ->
   m (BecknReq Rating.RatingMessage)
-buildRatingReq DFeedback.DRatingReq {..} = do
+buildRatingReq DFeedback.FeedbackRes {..} = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   msgId <- generateGUID

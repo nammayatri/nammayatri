@@ -3,6 +3,7 @@ module Mobility.AppBackend.APICalls where
 import qualified "app-backend" API.UI.Booking as AppBooking
 import qualified "app-backend" API.UI.Cancel as CancelAPI
 import qualified "app-backend" API.UI.Confirm as ConfirmAPI
+import qualified "app-backend" API.UI.Feedback as AppFeedback
 import qualified "app-backend" API.UI.Registration as Reg
 import qualified "app-backend" API.UI.Select as AppSelect
 import "app-backend" App.Routes as AbeRoutes
@@ -22,7 +23,6 @@ import EulerHS.Prelude
 import Mobility.AppBackend.Fixtures
 import Servant hiding (Context)
 import Servant.Client
-import qualified "app-backend" Types.API.Feedback as AppFeedback
 import qualified "app-backend" Types.API.Serviceability as AppServ
 
 selectQuote :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess
@@ -40,7 +40,7 @@ appConfirmRide :: Text -> Id AbeQuote.Quote -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
-appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
+appFeedback = client (Proxy :: Proxy AppFeedback.API)
 
 callAppFeedback :: Int -> Id BRide.Ride -> ClientM APISuccess
 callAppFeedback ratingValue rideId =

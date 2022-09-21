@@ -1,4 +1,9 @@
-module Domain.Action.UI.Feedback where
+module Domain.Action.UI.Feedback
+  ( FeedbackReq (..),
+    FeedbackRes (..),
+    feedback,
+  )
+where
 
 import qualified App.Types as App
 import Beckn.Prelude
@@ -8,11 +13,17 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Ride as DRide
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
-import qualified Types.API.Feedback as API
 import Types.Error
 import Utils.Common
 
-data DRatingReq = DRatingReq
+data FeedbackReq = FeedbackReq
+  { rideId :: Id DRide.Ride,
+    rating :: Int,
+    feedbackDetails :: Maybe Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data FeedbackRes = FeedbackRes
   { bppBookingId :: Id DBooking.BPPBooking,
     ratingValue :: Int,
     feedbackDetails :: Maybe Text,
@@ -20,7 +31,7 @@ data DRatingReq = DRatingReq
     providerUrl :: BaseUrl
   }
 
-feedback :: API.FeedbackReq -> App.Flow DRatingReq
+feedback :: FeedbackReq -> App.Flow FeedbackRes
 feedback request = do
   let ratingValue = request.rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
@@ -33,7 +44,7 @@ feedback request = do
   DB.runTransaction $ do
     QRide.updateRideRating rideId ratingValue
   pure
-    DRatingReq
+    FeedbackRes
       { providerId = booking.providerId,
         providerUrl = booking.providerUrl,
         ..

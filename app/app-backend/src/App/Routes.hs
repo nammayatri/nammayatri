@@ -10,6 +10,7 @@ import qualified API.UI.Booking as Booking
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
+import qualified API.UI.Feedback as Feedback
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Registration as Registration
@@ -29,7 +30,6 @@ import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.CustomerSupport as CS
-import qualified Product.Feedback as Feedback
 import qualified Product.Ride as Ride
 import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
@@ -38,7 +38,6 @@ import Servant hiding (throwError)
 import Servant.OpenApi
 import qualified Types.API.Call as API
 import qualified Types.API.CustomerSupport as CustomerSupport
-import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Ride as RideAPI
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
@@ -72,7 +71,7 @@ type UIAPI =
            :<|> SupportAPI
            :<|> Route.API
            :<|> ServiceabilityAPI
-           :<|> FeedbackAPI
+           :<|> Feedback.API
            :<|> CustomerSupportAPI
            :<|> GoogleMapsProxyAPI
            :<|> CancellationReason.API
@@ -112,7 +111,7 @@ uiAPI =
     :<|> supportFlow
     :<|> Route.handler
     :<|> serviceabilityFlow
-    :<|> feedbackFlow
+    :<|> Feedback.handler
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
     :<|> CancellationReason.handler
@@ -205,18 +204,6 @@ serviceabilityFlow :: FlowServer ServiceabilityAPI
 serviceabilityFlow regToken =
   Serviceability.checkServiceability origin regToken
     :<|> Serviceability.checkServiceability destination regToken
-
--------- Feedback Flow ----------
-type FeedbackAPI =
-  "feedback"
-    :> ( "rateRide"
-           :> TokenAuth
-           :> ReqBody '[JSON] Feedback.FeedbackReq
-           :> Post '[JSON] Feedback.FeedbackRes
-       )
-
-feedbackFlow :: FlowServer FeedbackAPI
-feedbackFlow = Feedback.feedback
 
 -- Customer Support Flow --
 
