@@ -12,6 +12,7 @@ import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Feedback as Feedback
+import qualified API.UI.GoogleMaps as GoogleMapsProxy
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Registration as Registration
@@ -23,7 +24,6 @@ import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Support as Support
 import qualified App.Routes.Dashboard as Dashboard
 import App.Types
-import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.App
 import Beckn.Types.Id
 import Data.OpenApi (Info (..), OpenApi (..))
@@ -32,7 +32,6 @@ import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.Ride as Ride
-import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import Servant hiding (throwError)
 import Servant.OpenApi
 import qualified Types.API.Call as API
@@ -69,7 +68,7 @@ type UIAPI =
            :<|> Serviceability.API
            :<|> Feedback.API
            :<|> CustomerSupport.API
-           :<|> GoogleMapsProxyAPI
+           :<|> GoogleMapsProxy.API
            :<|> CancellationReason.API
            :<|> SavedReqLocation.API
        )
@@ -109,7 +108,7 @@ uiAPI =
     :<|> Serviceability.handler
     :<|> Feedback.handler
     :<|> CustomerSupport.handler
-    :<|> googleMapsProxyFlow
+    :<|> GoogleMapsProxy.handler
     :<|> CancellationReason.handler
     :<|> SavedReqLocation.handler
 
@@ -171,32 +170,6 @@ callFlow :: FlowServer CallAPIs
 callFlow =
   Call.getDriverMobileNumber
     :<|> Call.directCallStatusCallback
-
-type GoogleMapsProxyAPI =
-  "googleMaps"
-    :> ( "autoComplete"
-           :> TokenAuth
-           :> MandatoryQueryParam "input" Text
-           :> MandatoryQueryParam "location" Text -- Passing it as <latitude>,<longitude>
-           :> MandatoryQueryParam "radius" Integer
-           :> MandatoryQueryParam "language" Text
-           :> Get '[JSON] GoogleMaps.SearchLocationResp
-           :<|> "placeDetails"
-             :> TokenAuth
-             :> MandatoryQueryParam "place_id" Text
-             :> Get '[JSON] GoogleMaps.PlaceDetailsResp
-           :<|> "getPlaceName"
-             :> TokenAuth
-             :> MandatoryQueryParam "latlng" Text -- Passing it as <latitude>,<longitude>
-             :> QueryParam "language" Text
-             :> Get '[JSON] GoogleMaps.GetPlaceNameResp
-       )
-
-googleMapsProxyFlow :: FlowServer GoogleMapsProxyAPI
-googleMapsProxyFlow =
-  GoogleMapsFlow.autoComplete
-    :<|> GoogleMapsFlow.placeDetails
-    :<|> GoogleMapsFlow.getPlaceName
 
 type SwaggerAPI = "swagger" :> Get '[JSON] OpenApi
 
