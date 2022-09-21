@@ -30,3 +30,6 @@ deleteAllByPersonId personId =
   Esq.delete $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
+
+deleteById :: Id RegistrationToken -> SqlDB ()
+deleteById = Esq.deleteByKey @RegistrationTokenT

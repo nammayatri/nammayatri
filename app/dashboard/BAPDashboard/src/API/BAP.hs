@@ -11,8 +11,9 @@ import Servant
 
 type API =
   "bap"
-    :> ARDU.API
-      :<|> Yatri.API
+    :> ( ARDU.API
+           :<|> Yatri.API
+       )
 
 handler :: FlowServer API
 handler =

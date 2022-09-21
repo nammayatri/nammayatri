@@ -14,6 +14,6 @@ GET {{bap-dashboard-host}}
 
 # @name customerList
 
-GET {{bap-dashboard-host}}/bap/customer/list
+GET {{bap-dashboard-host}}/bap/yatri/customer/list
 content-type: application/json
 token: {{customer_service}}

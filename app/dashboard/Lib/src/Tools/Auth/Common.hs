@@ -1,6 +1,9 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module Tools.Auth.Common (verifyPerson, cleanCachedTokens, AuthFlow) where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
 import Beckn.Types.Error
@@ -10,6 +13,7 @@ import qualified Beckn.Utils.Common as Utils
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.ServerAccess as QServer
 
 type AuthFlow m r =
   ( EsqDBFlow m r,
@@ -61,14 +65,24 @@ verifyToken regToken = do
     >>= validateToken
 
 validateToken ::
-  HasFlowEnv m r '["registrationTokenExpiry" ::: Days] =>
+  ( EsqDBFlow m r,
+    HasFlowEnv m r '["registrationTokenExpiry" ::: Days]
+  ) =>
   DR.RegistrationToken ->
   m DR.RegistrationToken
-validateToken sr@DR.RegistrationToken {..} = do
+validateToken sr = do
   registrationTokenExpiry <- asks (.registrationTokenExpiry)
   let nominal = realToFrac . daysToSeconds $ registrationTokenExpiry
-  expired <- Utils.isExpired nominal createdAt
-  when expired $ Utils.throwError TokenExpired
+  expired <- Utils.isExpired nominal sr.createdAt
+  when expired $ do
+    Esq.runTransaction $
+      QR.deleteById sr.id
+    Utils.throwError TokenExpired
+  mbServerAccess <- QServer.findByPersonIdAndServerName sr.personId sr.serverName
+  when (isNothing mbServerAccess) $ do
+    Esq.runTransaction $
+      QR.deleteById sr.id
+    Utils.throwError AccessDenied
   return sr
 
 -- TODO two endpoints for logout: 1. from one server 2. from all servers
