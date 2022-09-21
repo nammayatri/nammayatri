@@ -6,7 +6,7 @@ import qualified "app-backend" API.UI.Confirm as ConfirmAPI
 import qualified "app-backend" API.UI.Feedback as AppFeedback
 import qualified "app-backend" API.UI.Registration as Reg
 import qualified "app-backend" API.UI.Select as AppSelect
-import "app-backend" App.Routes as AbeRoutes
+import qualified "app-backend" API.UI.Serviceability as AppServ
 import Beckn.External.FCM.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.App
@@ -23,7 +23,6 @@ import EulerHS.Prelude
 import Mobility.AppBackend.Fixtures
 import Servant hiding (Context)
 import Servant.Client
-import qualified "app-backend" Types.API.Serviceability as AppServ
 
 selectQuote :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess
 selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectListRes
@@ -59,12 +58,12 @@ appBookingStatus :<|> appBookingList = client (Proxy :: Proxy AppBooking.API)
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 originServiceability regToken = origin
   where
-    origin :<|> _ = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
+    origin :<|> _ = client (Proxy :: Proxy AppServ.API) regToken
 
 destinationServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 destinationServiceability regToken = destination
   where
-    _ :<|> destination = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
+    _ :<|> destination = client (Proxy :: Proxy AppServ.API) regToken
 
 appAuth :: Reg.AuthReq -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes

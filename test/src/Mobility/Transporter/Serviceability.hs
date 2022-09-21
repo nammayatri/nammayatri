@@ -3,6 +3,7 @@
 module Mobility.Transporter.Serviceability where
 
 import qualified "app-backend" API.UI.Search as AppBESearch
+import "app-backend" API.UI.Serviceability
 import Beckn.Types.MapSearch (LatLong (..))
 import Common
 import EulerHS.Prelude
@@ -13,7 +14,6 @@ import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client
 import Test.Hspec
-import Types.API.Serviceability
 import Utils
 
 ernakulamLocation :: LatLong

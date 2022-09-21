@@ -18,12 +18,12 @@ import qualified API.UI.Route as Route
 import qualified API.UI.SavedReqLocation as SavedReqLocation
 import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
+import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Support as Support
 import qualified App.Routes.Dashboard as Dashboard
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.App
-import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Data.OpenApi (Info (..), OpenApi (..))
 import qualified Domain.Types.CallStatus as SCS
@@ -32,14 +32,12 @@ import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.CustomerSupport as CS
 import qualified Product.Ride as Ride
-import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import Servant hiding (throwError)
 import Servant.OpenApi
 import qualified Types.API.Call as API
 import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Ride as RideAPI
-import qualified Types.API.Serviceability as Serviceability
 import Utils.Auth (TokenAuth)
 
 type AppAPI =
@@ -69,7 +67,7 @@ type UIAPI =
            :<|> CallAPIs
            :<|> Support.API
            :<|> Route.API
-           :<|> ServiceabilityAPI
+           :<|> Serviceability.API
            :<|> Feedback.API
            :<|> CustomerSupportAPI
            :<|> GoogleMapsProxyAPI
@@ -109,7 +107,7 @@ uiAPI =
     :<|> callFlow
     :<|> Support.handler
     :<|> Route.handler
-    :<|> serviceabilityFlow
+    :<|> Serviceability.handler
     :<|> Feedback.handler
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
@@ -174,23 +172,6 @@ callFlow :: FlowServer CallAPIs
 callFlow =
   Call.getDriverMobileNumber
     :<|> Call.directCallStatusCallback
-
--------- Serviceability----------
-type ServiceabilityAPI =
-  "serviceability"
-    :> TokenAuth
-    :> ( "origin"
-           :> ReqBody '[JSON] Serviceability.ServiceabilityReq
-           :> Post '[JSON] Serviceability.ServiceabilityRes
-           :<|> "destination"
-             :> ReqBody '[JSON] Serviceability.ServiceabilityReq
-             :> Post '[JSON] Serviceability.ServiceabilityRes
-       )
-
-serviceabilityFlow :: FlowServer ServiceabilityAPI
-serviceabilityFlow regToken =
-  Serviceability.checkServiceability origin regToken
-    :<|> Serviceability.checkServiceability destination regToken
 
 -- Customer Support Flow --
 
