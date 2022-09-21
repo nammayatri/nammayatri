@@ -4,7 +4,6 @@ module Domain.Action.Dashboard.Registration where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
-import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -17,7 +16,7 @@ import qualified Domain.Types.RegistrationToken as DR
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.ServerAccess as QServer
-import Tools.Auth (authTokenCacheKey)
+import Tools.Auth (cleanCachedTokens)
 import qualified Tools.Client as Client
 
 data LoginReq = LoginReq
@@ -109,16 +108,3 @@ buildRegistrationToken personId serverName = do
         serverName = serverName,
         createdAt = now
       }
-
--- FIXME when login cleanup only token for current server, when logout cleanup all tokens
-cleanCachedTokens ::
-  ( EsqDBFlow m r,
-    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
-  ) =>
-  Id DP.Person ->
-  m ()
-cleanCachedTokens personId = do
-  regTokens <- QR.findAllByPersonId personId
-  for_ regTokens $ \regToken -> do
-    key <- authTokenCacheKey regToken.token
-    void $ Redis.deleteKeyRedis key
