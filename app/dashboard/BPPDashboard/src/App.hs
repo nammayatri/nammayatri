@@ -35,6 +35,7 @@ runService configModifier = do
   where
     context =
       Auth.verifyTokenAction @(FlowR AppEnv)
+        :. Auth.verifyServerAction @(FlowR AppEnv)
         :. EmptyContext
 
     authTokenCacheKeyPrefix :: Text

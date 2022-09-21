@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module Tools.Auth (module Tools.Auth, module Verify) where
+module Tools.Auth (module Tools.Auth, module Verify, module Server) where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Redis.Queries as Redis
@@ -16,6 +16,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
 import Servant hiding (throwError)
 import qualified Storage.Queries.RegistrationToken as QR
+import Tools.Auth.Server as Server
 import Tools.Auth.Verify as Verify
 import Tools.Servant.HeaderAuth
 
@@ -25,19 +26,39 @@ instance
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
--- | Performs token verification with checking person role.
-type TokenAuth pr = HeaderAuthWithPayload "token" VerifyToken pr
+instance
+  SanitizedUrl (sub :: Type) =>
+  SanitizedUrl (ServerAuth r :> sub)
+  where
+  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
+
+-- | Performs token verification with checking api access level.
+type TokenAuth al = HeaderAuthWithPayload "token" VerifyToken al
+
+-- | Performs token verification with checking server access.
+type ServerAuth sn = HeaderAuthWithPayload "token" VerifyServer sn
 
 data VerifyToken
+
+data VerifyServer
 
 instance VerificationMethod VerifyToken where
   type VerificationResult VerifyToken = Id DP.Person
   verificationDescription =
-    "Checks whether token is registered and checks person access.\
+    "Checks whether token is registered and checks person api access.\
+    \If you don't have a token, use registration endpoints."
+
+instance VerificationMethod VerifyServer where
+  type VerificationResult VerifyServer = DR.ServerName
+  verificationDescription =
+    "Checks whether token is registered and checks person server access.\
     \If you don't have a token, use registration endpoints."
 
 instance VerificationMethodWithPayload VerifyToken where
   type VerificationPayloadType VerifyToken = DMatrix.RequiredAccessLevel
+
+instance VerificationMethodWithPayload VerifyServer where
+  type VerificationPayloadType VerifyServer = DR.ServerName
 
 verifyTokenAction ::
   ( EsqDBFlow m r,
@@ -47,6 +68,15 @@ verifyTokenAction ::
   VerificationActionWithPayload VerifyToken m
 verifyTokenAction = VerificationActionWithPayload verifyPerson
 
+verifyServerAction ::
+  ( EsqDBFlow m r,
+    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  VerificationActionWithPayload VerifyServer m
+verifyServerAction = VerificationActionWithPayload verifyServer
+
+-- TODO We can use Handle pattern or class to avoid code duplication
 verifyPerson ::
   ( EsqDBFlow m r,
     HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
@@ -58,15 +88,45 @@ verifyPerson ::
 verifyPerson requiredAccessLevel token = do
   key <- authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
-  mbPersonId <- Redis.getKeyRedis key
-  personId <- case mbPersonId of
-    Just personId -> return personId
+  mbTuple <- getKeyRedis key
+  personId <- case mbTuple of
+    Just (personId, _serverName) -> return personId
     Nothing -> do
       sr <- verifyToken token
       let personId = sr.personId
-      Redis.setExRedis key personId authTokenCacheExpiry
+      let serverName = sr.serverName
+      setExRedis key (personId, serverName) authTokenCacheExpiry
       return personId
   Verify.verifyAccessLevel requiredAccessLevel personId
+
+verifyServer ::
+  ( EsqDBFlow m r,
+    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  DR.ServerName ->
+  RegToken ->
+  m DR.ServerName
+verifyServer requiredServerAccess token = do
+  key <- authTokenCacheKey token
+  authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
+  mbTuple <- getKeyRedis key
+  serverName <- case mbTuple of
+    Just (_personId, serverName) -> return serverName
+    Nothing -> do
+      sr <- verifyToken token
+      let personId = sr.personId
+      let serverName = sr.serverName
+      setExRedis key (personId, serverName) authTokenCacheExpiry
+      return serverName
+  unless (requiredServerAccess == serverName) $ throwError AccessDenied
+  return serverName
+
+getKeyRedis :: (MonadFlow m, MonadThrow m, Log m) => Text -> m (Maybe (Id DP.Person, DR.ServerName))
+getKeyRedis = Redis.getKeyRedis
+
+setExRedis :: (MonadFlow m, MonadThrow m, Log m) => Text -> (Id DP.Person, DR.ServerName) -> Int -> m ()
+setExRedis = Redis.setExRedis
 
 authTokenCacheKey ::
   HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text] =>
