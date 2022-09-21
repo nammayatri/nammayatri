@@ -68,7 +68,7 @@ validateImage personId ValidateImageReq {..} = do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
 
   images <- Query.findByPersonId personId
-  when (length images < 3) $ throwError (ImageValidationExceedLimit personId.getId)
+  when (length images > 100) $ throwError (ImageValidationExceedLimit personId.getId)
 
   imagePath <- createPath personId.getId orgId.getId imageType
   _ <- S3.put (T.unpack imagePath) image

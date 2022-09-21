@@ -63,13 +63,6 @@ let apiRateLimitOptions =
   , limitResetTimeInSec = +600
   }
 
-let idfyCfg =
-  { account_id = "xxxxxxx",
-    api_key = "xxxxxxx",
-    secret = "xxxxxxx",
-    url = "http://localhost:6235"
-  }
-
 in
 
 { esqDBCfg = esqDBCfg
@@ -111,5 +104,5 @@ in
 , defaultRadiusOfSearch = +5000 -- meters
 , driverUnlockDelay = +2 -- seconds
 , driverEstimatedPickupDuration = +300 -- seconds
-, idfyCfg = idfyCfg
+, idfyCfg = common.idfyCfg
 }

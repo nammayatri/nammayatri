@@ -12,6 +12,7 @@ in { smsSessionConfig = globalCommon.smsSessionConfig
    , ExotelCfg = globalCommon.ExotelCfg
    , exotelCfg = sec.exotelCfg
    , s3Config = sec.s3Config
+   , idfyCfg = sec.idfyCfg
    , signatureExpiry = globalCommon.signatureExpiry
    , httpClientOptions = globalCommon.httpClientOptions
 

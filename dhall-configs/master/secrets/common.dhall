@@ -15,11 +15,19 @@ let s3Config =
   , pathPrefix = "xxxxxxx"
   }
 
+let idfyCfg =
+  { account_id = "xxxxxxx",
+    api_key = "xxxxxxx",
+    secret = "xxxxxxx",
+    url = "http://localhost:6235"
+  }
+
 in
 
 { smsUserName = "xxxxxxx"
 , smsPassword = "yyyyyyy"
 , exotelCfg = exotelCfg
 , s3Config = s3Config
+, idfyCfg = idfyCfg
 , googleMapsKey = "xxxxxxx"
 }

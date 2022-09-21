@@ -59,10 +59,4 @@ data ResultBody = ResultBody
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-newtype ReadabilityBody = ReadabilityBody {confidence :: Maybe Int} deriving (Show, Generic)
-
-deriving newtype instance ToJSON ReadabilityBody
-
-deriving newtype instance FromJSON ReadabilityBody
-
-deriving newtype instance ToSchema ReadabilityBody
+data ReadabilityBody = ReadabilityBody {confidence :: Maybe Int, dummField :: Maybe Text} deriving (Show, Generic, ToJSON, FromJSON, ToSchema)

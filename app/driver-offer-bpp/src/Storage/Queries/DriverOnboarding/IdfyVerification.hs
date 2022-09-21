@@ -7,6 +7,7 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.DriverOnboarding.IdfyVerification
+import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person (Person)
 import Storage.Tabular.DriverOnboarding.IdfyVerification
 
@@ -28,6 +29,24 @@ findAllByDriverId driverId = do
     verifications <- from $ table @IdfyVerificationT
     where_ $ verifications ^. IdfyVerificationDriverId ==. val (toKey driverId)
     return verifications
+
+findLatestByDriverIdAndDocType ::
+  Transactionable m =>
+  Id Person ->
+  ImageType ->
+  m (Maybe IdfyVerification)
+findLatestByDriverIdAndDocType driverId imgType = do
+  verifications_ <- findAll $ do
+    verifications <- from $ table @IdfyVerificationT
+    where_ $
+      verifications ^. IdfyVerificationDriverId ==. val (toKey driverId)
+        &&. verifications ^. IdfyVerificationDocType ==. val imgType
+    orderBy [desc $ verifications ^. IdfyVerificationCreatedAt]
+    return verifications
+  pure $ headMaybe verifications_
+  where
+    headMaybe [] = Nothing
+    headMaybe (x : _) = Just x
 
 findByRequestId ::
   Transactionable m =>
