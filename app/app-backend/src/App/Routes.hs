@@ -10,6 +10,7 @@ import qualified API.UI.Booking as Booking
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
+import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Feedback as Feedback
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
@@ -30,13 +31,11 @@ import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import qualified Product.Call as Call
-import qualified Product.CustomerSupport as CS
 import qualified Product.Ride as Ride
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import Servant hiding (throwError)
 import Servant.OpenApi
 import qualified Types.API.Call as API
-import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Ride as RideAPI
 import Utils.Auth (TokenAuth)
 
@@ -69,7 +68,7 @@ type UIAPI =
            :<|> Route.API
            :<|> Serviceability.API
            :<|> Feedback.API
-           :<|> CustomerSupportAPI
+           :<|> CustomerSupport.API
            :<|> GoogleMapsProxyAPI
            :<|> CancellationReason.API
            :<|> SavedReqLocation.API
@@ -109,7 +108,7 @@ uiAPI =
     :<|> Route.handler
     :<|> Serviceability.handler
     :<|> Feedback.handler
-    :<|> customerSupportFlow
+    :<|> CustomerSupport.handler
     :<|> googleMapsProxyFlow
     :<|> CancellationReason.handler
     :<|> SavedReqLocation.handler
@@ -172,31 +171,6 @@ callFlow :: FlowServer CallAPIs
 callFlow =
   Call.getDriverMobileNumber
     :<|> Call.directCallStatusCallback
-
--- Customer Support Flow --
-
-type CustomerSupportAPI =
-  "customerSupport"
-    :> ( "login"
-           :> ReqBody '[JSON] CustomerSupport.LoginReq
-           :> Post '[JSON] CustomerSupport.LoginRes
-           :<|> "logout"
-             :> TokenAuth
-             :> Post '[JSON] CustomerSupport.LogoutRes
-           :<|> "orders"
-             :> TokenAuth
-             :> QueryParam "id" Text
-             :> QueryParam "phone" Text
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
-             :> Get '[JSON] [CustomerSupport.OrderResp]
-       )
-
-customerSupportFlow :: FlowServer CustomerSupportAPI
-customerSupportFlow =
-  CS.login
-    :<|> CS.logout
-    :<|> CS.listOrder
 
 type GoogleMapsProxyAPI =
   "googleMaps"

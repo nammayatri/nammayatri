@@ -1,10 +1,18 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+module Domain.Action.UI.CustomerSupport
+  ( OrderResp (..),
+    OrderDetails (..),
+    OrderInfo (..),
+    LoginReq (..),
+    LoginRes (..),
+    LogoutRes (..),
+    login,
+    logout,
+    listOrder,
+  )
+where
 
-module Product.CustomerSupport where
-
-import App.Types
 import Beckn.External.Encryption (decrypt)
+import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -13,20 +21,56 @@ import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import Types.API.CustomerSupport as T
 import Types.Error
 import Utils.Common
 
-login :: T.LoginReq -> FlowHandler T.LoginRes
-login T.LoginReq {..} = withFlowHandlerAPI $ do
+newtype OrderResp = OrderResp {order :: OrderDetails}
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data OrderDetails = OrderDetails
+  { id :: Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime,
+    startTime :: UTCTime,
+    endTime :: Maybe UTCTime,
+    fromLocation :: DBLoc.BookingLocationAPIEntity,
+    toLocation :: Maybe DBLoc.BookingLocationAPIEntity,
+    travellerName :: Maybe Text,
+    travellerPhone :: Maybe Text,
+    rideBooking :: DRB.BookingAPIEntity
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data OrderInfo = OrderInfo
+  { person :: SP.Person,
+    bookings :: [DRB.Booking]
+  }
+  deriving (Generic)
+
+data LoginReq = LoginReq
+  { email :: Text,
+    password :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data LoginRes = LoginRes
+  { auth_token :: Text,
+    message :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+newtype LogoutRes = LogoutRes {message :: Text}
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+login :: (EsqDBFlow m r, EncFlow m r) => LoginReq -> m LoginRes
+login LoginReq {..} = do
   person <- Person.findByEmailAndPassword email password >>= fromMaybeM (PersonNotFound email)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
   token <- generateToken person
-  pure $ T.LoginRes token "Logged in successfully"
+  pure $ LoginRes token "Logged in successfully"
 
 generateToken :: EsqDBFlow m r => SP.Person -> m Text
 generateToken SP.Person {..} = do
@@ -39,13 +83,13 @@ generateToken SP.Person {..} = do
     RegistrationToken.create regToken
   pure $ regToken.token
 
-logout :: Id SP.Person -> FlowHandler T.LogoutRes
-logout personId = withFlowHandlerAPI $ do
+logout :: (EsqDBFlow m r) => Id SP.Person -> m LogoutRes
+logout personId = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
   -- FIXME We should also cleanup old token from Redis
   DB.runTransaction (RegistrationToken.deleteByPersonId person.id)
-  pure $ T.LogoutRes "Logged out successfully"
+  pure $ LogoutRes "Logged out successfully"
 
 createSupportRegToken :: MonadFlow m => Text -> m SR.RegistrationToken
 createSupportRegToken entityId = do
@@ -70,12 +114,12 @@ createSupportRegToken entityId = do
         info = Nothing
       }
 
-listOrder :: Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
-listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
+listOrder :: (EsqDBFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
+listOrder personId mRequestId mMobile mlimit moffset = do
   supportP <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (supportP.role == SP.CUSTOMER_SUPPORT) $
     throwError AccessDenied
-  T.OrderInfo {person, bookings} <- case (mRequestId, mMobile) of
+  OrderInfo {person, bookings} <- case (mRequestId, mMobile) of
     (Just bookingId, _) -> getByRequestId bookingId supportP.merchantId
     (_, Just mobileNumber) -> getByMobileNumber mobileNumber supportP.merchantId
     (_, _) -> throwError $ InvalidRequest "You should pass SearchRequestId or mobile number."
@@ -88,7 +132,7 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
           >>= fromMaybeM (PersonDoesNotExist number)
       bookings <-
         QRB.findAllByPersonIdLimitOffset (person.id) (Just limit) moffset
-      return $ T.OrderInfo person bookings
+      return $ OrderInfo person bookings
     getByRequestId bookingId merchantId = do
       (booking :: DRB.Booking) <-
         QRB.findByIdAndMerchantId (Id bookingId) merchantId
@@ -97,9 +141,9 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
       person <-
         Person.findById requestorId
           >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
-      return $ T.OrderInfo person [booking]
+      return $ OrderInfo person [booking]
 
-buildBookingToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m T.OrderResp
+buildBookingToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m OrderResp
 buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing
@@ -108,7 +152,7 @@ buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
   rbStatus <- DRB.buildBookingAPIEntity booking
   decMobNum <- mapM decrypt mobileNumber
   let details =
-        T.OrderDetails
+        OrderDetails
           { id = getId booking.id,
             createdAt = booking.createdAt,
             updatedAt = booking.updatedAt,
@@ -120,4 +164,4 @@ buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
             travellerPhone = decMobNum,
             rideBooking = rbStatus
           }
-  pure $ T.OrderResp {order = details}
+  pure $ OrderResp {order = details}
