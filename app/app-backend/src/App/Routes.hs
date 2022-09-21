@@ -18,6 +18,7 @@ import qualified API.UI.Route as Route
 import qualified API.UI.SavedReqLocation as SavedReqLocation
 import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
+import qualified API.UI.Support as Support
 import qualified App.Routes.Dashboard as Dashboard
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
@@ -33,14 +34,12 @@ import qualified Product.CustomerSupport as CS
 import qualified Product.Ride as Ride
 import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
-import qualified Product.Support as Support
 import Servant hiding (throwError)
 import Servant.OpenApi
 import qualified Types.API.Call as API
 import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Ride as RideAPI
 import qualified Types.API.Serviceability as Serviceability
-import qualified Types.API.Support as Support
 import Utils.Auth (TokenAuth)
 
 type AppAPI =
@@ -68,7 +67,7 @@ type UIAPI =
            :<|> RideAPI
            :<|> DeprecatedCallAPIs
            :<|> CallAPIs
-           :<|> SupportAPI
+           :<|> Support.API
            :<|> Route.API
            :<|> ServiceabilityAPI
            :<|> Feedback.API
@@ -108,7 +107,7 @@ uiAPI =
     :<|> rideFlow
     :<|> deprecatedCallFlow
     :<|> callFlow
-    :<|> supportFlow
+    :<|> Support.handler
     :<|> Route.handler
     :<|> serviceabilityFlow
     :<|> Feedback.handler
@@ -175,18 +174,6 @@ callFlow :: FlowServer CallAPIs
 callFlow =
   Call.getDriverMobileNumber
     :<|> Call.directCallStatusCallback
-
--------- Support Flow----------
-type SupportAPI =
-  "support"
-    :> ( "sendIssue"
-           :> TokenAuth
-           :> ReqBody '[JSON] Support.SendIssueReq
-           :> Post '[JSON] Support.SendIssueRes
-       )
-
-supportFlow :: FlowServer SupportAPI
-supportFlow = Support.sendIssue
 
 -------- Serviceability----------
 type ServiceabilityAPI =
