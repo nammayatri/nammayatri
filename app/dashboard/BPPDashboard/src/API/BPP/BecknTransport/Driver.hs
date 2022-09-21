@@ -9,7 +9,6 @@ import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.Common (withFlowHandlerAPI)
 import qualified "lib-dashboard" Domain.Types.Person as DP
-import qualified "lib-dashboard" Domain.Types.RegistrationToken as DReg
 import "lib-dashboard" Environment
 import qualified EulerHS.Types as T
 import Servant
@@ -19,7 +18,6 @@ import qualified Tools.Client as Client
 type API =
   "driver"
     :> "list"
-    :> ServerAuth (ServerAccess 'BECKN_TRANSPORT)
     :> TokenAuth (ApiAccessLevel 'READ_ACCESS 'DRIVERS)
     :> Get '[JSON] Text
 
@@ -27,8 +25,8 @@ handler :: FlowServer API
 handler =
   listDriver
 
-listDriver :: DReg.ServerName -> Id DP.Person -> FlowHandler Text
-listDriver _ _ = withFlowHandlerAPI $ do
+listDriver :: Id DP.Person -> FlowHandler Text
+listDriver _ = withFlowHandlerAPI $ do
   Client.callBecknTransportApi client "becknTransportDriverList"
   where
     becknTransportDriverListAPI :: Proxy BecknTransport.DriverListAPI

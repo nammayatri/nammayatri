@@ -9,6 +9,8 @@ import Utils.Auth (Dashboard, DashboardTokenAuth)
 type API =
   CustomerListAPI
 
+-- TODO use different tokens (or different routes) for different merchants
+
 type CustomerListAPI =
   "dashboard"
     :> "customer"

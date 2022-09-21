@@ -1,4 +1,4 @@
-module API.BAP.Customer
+module API.BAP.ARDU.Customer
   ( API,
     handler,
   )
