@@ -5,6 +5,8 @@ module App.Types
     Flow,
     AppCfg (),
     AppEnv (..),
+    BAPs (..),
+    HasBapInfo,
     buildAppEnv,
     releaseAppEnv,
   )
@@ -33,7 +35,6 @@ import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import ExternalAPI.Flow
 import Storage.Queries.Organization (findOrgByShortId)
 import Tools.Metrics
 import Tools.Streaming.Kafka
@@ -139,6 +140,18 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 type Flow = FlowR AppEnv
+
+data BAPs a = BAPs
+  { metro :: a,
+    cabs :: a
+  }
+  deriving (Generic, FromDhall)
+
+type HasBapInfo r m =
+  ( HasField "bapSelfIds" r (BAPs Text),
+    HasField "bapSelfURIs" r (BAPs BaseUrl),
+    MonadReader r m
+  )
 
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.signingKey)

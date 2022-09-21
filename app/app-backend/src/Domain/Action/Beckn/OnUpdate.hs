@@ -1,5 +1,6 @@
 module Domain.Action.Beckn.OnUpdate (onUpdate, OnUpdateReq (..), OnUpdateFareBreakup (..)) where
 
+import App.Types
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis.Config (HedisFlow)
 import Beckn.Types.Id
@@ -8,8 +9,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (state)
-import ExternalAPI.Flow (BAPs, HasBapInfo)
-import qualified Product.Track as Track
+import qualified ExternalAPI.Flow as CallBPP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareBreakup as QFareBreakup
@@ -84,7 +84,7 @@ onUpdate registryUrl RideAssignedReq {..} = do
     QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
     QRide.create ride
   Notify.notifyOnRideAssigned booking ride
-  Track.track ride.id
+  CallBPP.callTrack booking ride
   where
     buildRide :: MonadFlow m => SRB.Booking -> m SRide.Ride
     buildRide booking = do

@@ -1,5 +1,6 @@
 module Core.ACL.Init (buildInitReq) where
 
+import App.Types
 import Beckn.Prelude
 import Beckn.Types.App
 import qualified Beckn.Types.Core.Context as Context
@@ -10,10 +11,9 @@ import Beckn.Types.MapSearch (LatLong)
 import Beckn.Utils.Context (buildTaxiContext)
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.VehicleVariant as VehVar
-import qualified ExternalAPI.Flow as ExternalAPI
 
 buildInitReq ::
-  (ExternalAPI.HasBapInfo r m, MonadFlow m) =>
+  (HasBapInfo r m, MonadFlow m) =>
   DConfirm.ConfirmRes ->
   m (BecknReq Init.InitMessage)
 buildInitReq res = do

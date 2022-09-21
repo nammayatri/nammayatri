@@ -1,7 +1,7 @@
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-
 module ExternalAPI.Flow where
 
+import App.Types
+import Beckn.Storage.Hedis (HedisFlow)
 import qualified Beckn.Types.Core.Metro.API.Search as MigAPI
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Core.Taxi.API.Cancel as API
@@ -11,20 +11,16 @@ import Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Track as API
-import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth
+import qualified Core.ACL.Track as TrackACL
+import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude
 import GHC.Records.Extra
 import Servant.Client
 import Tools.Metrics (CoreMetrics)
 import Utils.Common
-
-data BAPs a = BAPs
-  { metro :: a,
-    cabs :: a
-  }
-  deriving (Generic, FromDhall)
 
 search ::
   ( HasField "gatewayUrl" r BaseUrl,
@@ -90,15 +86,23 @@ cancel ::
   m CancelRes
 cancel = callBecknAPIWithSignature "cancel" API.cancelAPI
 
-track ::
+callTrack ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasBapInfo r m
+    HasBapInfo r m,
+    HedisFlow m r
   ) =>
-  BaseUrl ->
-  TrackReq ->
-  m CancelRes
-track = callBecknAPIWithSignature "track" API.trackAPI
+  DB.Booking ->
+  DRide.Ride ->
+  m ()
+callTrack booking ride = do
+  let trackBUildReq =
+        TrackACL.TrackBuildReq
+          { bppRideId = ride.bppRideId,
+            bppId = booking.providerId,
+            bppUrl = booking.providerUrl
+          }
+  void . callBecknAPIWithSignature "track" API.trackAPI booking.providerUrl =<< TrackACL.buildTrackReq trackBUildReq
 
 feedback ::
   ( MonadFlow m,
@@ -109,12 +113,6 @@ feedback ::
   RatingReq ->
   m RatingRes
 feedback = callBecknAPIWithSignature "feedback" API.ratingAPI
-
-type HasBapInfo r m =
-  ( HasField "bapSelfIds" r (BAPs Text),
-    HasField "bapSelfURIs" r (BAPs BaseUrl),
-    MonadReader r m
-  )
 
 callBecknAPIWithSignature,
   callBecknAPIWithSignatureMetro ::

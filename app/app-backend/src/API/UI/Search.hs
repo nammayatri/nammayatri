@@ -91,7 +91,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
 
 oneWaySearch ::
   ( EsqDBFlow m r,
-    HasFlowEnv m r '["bapSelfIds" ::: ExternalAPI.BAPs Text, "bapSelfURIs" ::: ExternalAPI.BAPs BaseUrl],
+    HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "gatewayUrl" ::: BaseUrl],
@@ -115,7 +115,7 @@ oneWaySearch personId req = do
 
 rentalSearch ::
   ( EsqDBFlow m r,
-    HasFlowEnv m r '["bapSelfIds" ::: ExternalAPI.BAPs Text, "bapSelfURIs" ::: ExternalAPI.BAPs BaseUrl],
+    HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "gatewayUrl" ::: BaseUrl],
