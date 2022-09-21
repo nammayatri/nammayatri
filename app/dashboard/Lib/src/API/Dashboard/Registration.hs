@@ -14,7 +14,7 @@ type API =
     :> ReqBody '[JSON] DReg.LoginReq
     :> Post '[JSON] DReg.LoginRes
     :<|> "logout"
-      :> TokenAuth (DashboardAccessLevel 'DASHBOARD_USER)
+      :> DashboardAuth 'DASHBOARD_USER
       :> Post '[JSON] DReg.LogoutRes
 
 handler :: FlowServer API

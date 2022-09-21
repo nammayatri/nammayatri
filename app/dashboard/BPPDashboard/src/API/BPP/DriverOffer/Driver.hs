@@ -18,7 +18,7 @@ import qualified Tools.Client as Client
 type API =
   "driver"
     :> "list"
-    :> TokenAuth (ApiAccessLevel 'READ_ACCESS 'DRIVERS)
+    :> ApiAuth 'READ_ACCESS 'DRIVERS
     :> Get '[JSON] Text
 
 handler :: FlowServer API

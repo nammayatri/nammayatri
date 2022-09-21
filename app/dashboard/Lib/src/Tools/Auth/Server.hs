@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Tools.Auth.Server (ServerAuth, ServerAccess, verifyServerAction, module Reexport) where
+module Tools.Auth.Server (ServerAuth, verifyServerAction, module Reexport) where
 
 import Beckn.Prelude
 import Beckn.Types.App
@@ -12,7 +12,6 @@ import Data.Singletons.TH
 import Domain.Types.RegistrationToken as Reexport (ServerName (..))
 import qualified Domain.Types.RegistrationToken as DR
 import qualified Domain.Types.RegistrationToken as DReg
-import Domain.Types.Role as Reexport (DashboardAccessType (..))
 import Servant hiding (throwError)
 import qualified Tools.Auth.Common as Common
 import Tools.Servant.HeaderAuth
@@ -24,9 +23,11 @@ instance
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 -- | Performs token verification with checking server access.
-type ServerAuth sn = HeaderAuthWithPayload "token" VerifyServer sn
+type ServerAuth sn = HeaderAuthWithPayload "token" VerifyServer (ServerPayload sn)
 
 data VerifyServer
+
+data ServerPayload (sn :: DReg.ServerName)
 
 instance VerificationMethod VerifyServer where
   type VerificationResult VerifyServer = DR.ServerName
@@ -38,18 +39,12 @@ instance VerificationMethodWithPayload VerifyServer where
   type VerificationPayloadType VerifyServer = DR.ServerName
 
 verifyServerAction ::
-  ( EsqDBFlow m r,
-    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
-    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
-  ) =>
+  Common.AuthFlow m r =>
   VerificationActionWithPayload VerifyServer m
 verifyServerAction = VerificationActionWithPayload verifyServer
 
 verifyServer ::
-  ( EsqDBFlow m r,
-    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
-    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
-  ) =>
+  Common.AuthFlow m r =>
   DR.ServerName ->
   RegToken ->
   m DR.ServerName
@@ -58,13 +53,9 @@ verifyServer requiredServerAccess token = do
   unless (requiredServerAccess == serverName) $ throwError AccessDenied
   return serverName
 
--- This type is similar to DReg.ServerName, but used only on type level
-
-data ServerAccess sn
-
 instance
   forall (sn :: DReg.ServerName).
   SingI sn =>
-  (VerificationPayload DReg.ServerName) (ServerAccess sn)
+  (VerificationPayload DReg.ServerName) (ServerPayload sn)
   where
   toPayloadType _ = fromSing (sing @sn)

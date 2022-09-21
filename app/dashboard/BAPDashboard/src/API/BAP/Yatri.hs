@@ -7,7 +7,7 @@ import "lib-dashboard" Tools.Auth
 
 type API =
   "yatri"
-    :> ServerAuth (ServerAccess 'APP_BACKEND_YATRI)
+    :> ServerAuth 'APP_BACKEND_YATRI
     :> Customer.API
 
 handler :: FlowServer API

@@ -15,12 +15,12 @@ type API =
   "admin"
     :> "person"
     :> ( "list"
-           :> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
+           :> DashboardAuth 'DASHBOARD_ADMIN
            :> QueryParam "searchString" Text
            :> QueryParam "limit" Integer
            :> QueryParam "offset" Integer
            :> Get '[JSON] DPerson.ListPersonRes
-           :<|> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
+           :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
              :> "assignRole"
              :> Capture "roleId" (Id DRole.Role)
@@ -28,7 +28,7 @@ type API =
        )
     :<|> "person"
       :> "profile"
-      :> TokenAuth (DashboardAccessLevel 'DASHBOARD_USER)
+      :> DashboardAuth 'DASHBOARD_USER
       :> Get '[JSON] DP.PersonAPIEntity
 
 handler :: FlowServer API

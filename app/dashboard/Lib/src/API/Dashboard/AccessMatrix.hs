@@ -14,12 +14,12 @@ import Tools.Auth
 type API =
   "admin"
     :> "accessMatrix"
-    :> ( TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
+    :> ( DashboardAuth 'DASHBOARD_ADMIN
            :> QueryParam "limit" Integer
            :> QueryParam "offset" Integer
            :> Get '[JSON] DMatrix.AccessMatrixAPIEntity
            :<|> "role"
-             :> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
+             :> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "roleId" (Id DRole.Role) -- role.name?
              :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
        )

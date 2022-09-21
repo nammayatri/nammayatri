@@ -18,7 +18,7 @@ import qualified Tools.Client as Client
 type API =
   "customer"
     :> "list"
-    :> TokenAuth (ApiAccessLevel 'READ_ACCESS 'CUSTOMERS)
+    :> ApiAuth 'READ_ACCESS 'CUSTOMERS
     :> Get '[JSON] Text
 
 handler :: FlowServer API

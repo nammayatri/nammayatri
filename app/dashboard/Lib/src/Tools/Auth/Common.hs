@@ -1,4 +1,4 @@
-module Tools.Auth.Common (verifyPerson, cleanCachedTokens) where
+module Tools.Auth.Common (verifyPerson, cleanCachedTokens, AuthFlow) where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Redis.Queries as Redis
@@ -11,11 +11,14 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
 import qualified Storage.Queries.RegistrationToken as QR
 
-verifyPerson ::
+type AuthFlow m r =
   ( EsqDBFlow m r,
     HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
-  ) =>
+  )
+
+verifyPerson ::
+  AuthFlow m r =>
   RegToken ->
   m (Id DP.Person, DR.ServerName)
 verifyPerson token = do

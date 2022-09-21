@@ -15,10 +15,10 @@ type API =
   "admin"
     :> "roles"
     :> ( "create"
-           :> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
+           :> DashboardAuth 'DASHBOARD_ADMIN
            :> ReqBody '[JSON] DRoles.CreateRoleReq
            :> Post '[JSON] DRole.RoleAPIEntity
-           :<|> TokenAuth (DashboardAccessLevel 'DASHBOARD_ADMIN)
+           :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "roleId" (Id DRole.Role)
              :> "assignAccessLevel"
              :> ReqBody '[JSON] DRoles.AssignAccessLevelReq

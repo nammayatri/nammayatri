@@ -12,100 +12,67 @@ import Data.Singletons.TH
 import Domain.Types.AccessMatrix as Reexport (ApiAccessType (..), ApiEntity (..))
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Person as DP
-import Domain.Types.Role as Reexport (DashboardAccessType (..))
-import qualified Domain.Types.Role as DRole
 import Servant hiding (throwError)
 import qualified Storage.Queries.AccessMatrix as QAccessMatrix
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Role as QRole
 import qualified Tools.Auth.Common as Common
-import Tools.Error
 import Tools.Servant.HeaderAuth
 
 instance
   SanitizedUrl (sub :: Type) =>
-  SanitizedUrl (TokenAuth r :> sub)
+  SanitizedUrl (ApiAuth at ae :> sub)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 -- | Performs token verification with checking api access level.
-type TokenAuth al = HeaderAuthWithPayload "token" VerifyToken al
+type ApiAuth at ae = HeaderAuthWithPayload "token" VerifyApi (ApiPayload at ae)
 
-data VerifyToken
+data VerifyApi
 
-instance VerificationMethod VerifyToken where
-  type VerificationResult VerifyToken = Id DP.Person
+data ApiPayload (at :: DMatrix.ApiAccessType) (ae :: DMatrix.ApiEntity)
+
+instance VerificationMethod VerifyApi where
+  type VerificationResult VerifyApi = Id DP.Person
   verificationDescription =
     "Checks whether token is registered and checks person api access.\
     \If you don't have a token, use registration endpoints."
 
-instance VerificationMethodWithPayload VerifyToken where
-  type VerificationPayloadType VerifyToken = DMatrix.RequiredAccessLevel
+instance VerificationMethodWithPayload VerifyApi where
+  type VerificationPayloadType VerifyApi = DMatrix.ApiAccessLevel
 
-verifyTokenAction ::
-  ( EsqDBFlow m r,
-    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
-    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
-  ) =>
-  VerificationActionWithPayload VerifyToken m
-verifyTokenAction = VerificationActionWithPayload verifyApi
+verifyApiAction ::
+  Common.AuthFlow m r =>
+  VerificationActionWithPayload VerifyApi m
+verifyApiAction = VerificationActionWithPayload verifyApi
 
 verifyApi ::
-  ( EsqDBFlow m r,
-    HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
-    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
-  ) =>
-  DMatrix.RequiredAccessLevel ->
+  Common.AuthFlow m r =>
+  DMatrix.ApiAccessLevel ->
   RegToken ->
   m (Id DP.Person)
 verifyApi requiredAccessLevel token = do
   (personId, _serverName) <- Common.verifyPerson token
   verifyAccessLevel requiredAccessLevel personId
 
--- These types are similar to DMatrix.ApiAccessLevel and DRole.DashboardAccessType, but used only on type level
-
-data ApiAccessLevel at ae
-
-data DashboardAccessLevel at
-
 instance
   forall (at :: DMatrix.ApiAccessType) (ae :: DMatrix.ApiEntity).
   (SingI at, SingI ae) =>
-  (VerificationPayload DMatrix.RequiredAccessLevel) (ApiAccessLevel at ae)
+  (VerificationPayload DMatrix.ApiAccessLevel) (ApiPayload at ae)
   where
   toPayloadType _ =
-    DMatrix.RequiredApiAccessLevel $
-      DMatrix.ApiAccessLevel
-        { apiAccessType = fromSing (sing @at),
-          apiEntity = fromSing (sing @ae)
-        }
+    DMatrix.ApiAccessLevel
+      { apiAccessType = fromSing (sing @at),
+        apiEntity = fromSing (sing @ae)
+      }
 
-instance
-  forall (at :: DRole.DashboardAccessType).
-  SingI at =>
-  (VerificationPayload DMatrix.RequiredAccessLevel) (DashboardAccessLevel at)
-  where
-  toPayloadType _ =
-    DMatrix.RequiredDashboardAccessLevel (fromSing (sing @at))
-
--- TODO make tests for this logic
-verifyAccessLevel :: EsqDBFlow m r => DMatrix.RequiredAccessLevel -> Id DP.Person -> m (Id DP.Person)
-verifyAccessLevel requiredAccessLevel personId = do
+verifyAccessLevel :: EsqDBFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
+verifyAccessLevel requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  case requiredAccessLevel of
-    DMatrix.RequiredApiAccessLevel apiAccessLevel -> do
-      mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntity person.roleId apiAccessLevel.apiEntity
-      let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
-      unless (checkUserAccess userAccessType apiAccessLevel.apiAccessType) $
-        throwError AccessDenied
-      pure person.id
-    DMatrix.RequiredDashboardAccessLevel DRole.DASHBOARD_ADMIN -> do
-      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
-      if role.dashboardAccessType == DRole.DASHBOARD_ADMIN
-        then pure person.id
-        else throwError AccessDenied
-    DMatrix.RequiredDashboardAccessLevel DRole.DASHBOARD_USER ->
-      pure person.id
+  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntity person.roleId requiredApiAccessLevel.apiEntity
+  let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
+  unless (checkUserAccess userAccessType requiredApiAccessLevel.apiAccessType) $
+    throwError AccessDenied
+  pure person.id
 
 checkUserAccess :: DMatrix.UserAccessType -> ApiAccessType -> Bool
 checkUserAccess DMatrix.USER_FULL_ACCESS _ = True

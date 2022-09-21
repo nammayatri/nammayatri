@@ -32,12 +32,6 @@ data ApiAccessLevel = ApiAccessLevel
     apiEntity :: ApiEntity
   }
 
--------- Required access levels for any api --------
-
-data RequiredAccessLevel
-  = RequiredApiAccessLevel ApiAccessLevel
-  | RequiredDashboardAccessLevel DRole.DashboardAccessType
-
 -------- Access Matrix item --------
 
 -- roleId & apiEntity should be unique

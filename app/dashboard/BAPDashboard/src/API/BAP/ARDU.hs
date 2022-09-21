@@ -7,7 +7,7 @@ import "lib-dashboard" Tools.Auth
 
 type API =
   "ardu"
-    :> ServerAuth (ServerAccess 'APP_BACKEND_ARDU)
+    :> ServerAuth 'APP_BACKEND_ARDU
     :> Customer.API
 
 handler :: FlowServer API

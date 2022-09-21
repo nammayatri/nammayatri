@@ -34,7 +34,8 @@ runService configModifier = do
     pure flowRt'
   where
     context =
-      Auth.verifyTokenAction @(FlowR AppEnv)
+      Auth.verifyApiAction @(FlowR AppEnv)
+        :. Auth.verifyDashboardAction @(FlowR AppEnv)
         :. Auth.verifyServerAction @(FlowR AppEnv)
         :. EmptyContext
 

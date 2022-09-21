@@ -11,7 +11,7 @@ import "lib-dashboard" Tools.Auth
 
 type API =
   "driver-offer"
-    :> ServerAuth (ServerAccess 'DRIVER_OFFER_BPP)
+    :> ServerAuth 'DRIVER_OFFER_BPP
     :> Driver.API
 
 handler :: FlowServer API

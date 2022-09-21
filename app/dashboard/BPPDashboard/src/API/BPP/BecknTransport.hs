@@ -11,7 +11,7 @@ import "lib-dashboard" Tools.Auth
 
 type API =
   "beckn-transport"
-    :> ServerAuth (ServerAccess 'BECKN_TRANSPORT)
+    :> ServerAuth 'BECKN_TRANSPORT
     :> Driver.API
 
 handler :: FlowServer API
