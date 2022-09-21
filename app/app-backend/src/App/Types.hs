@@ -7,6 +7,7 @@ module App.Types
     AppEnv (..),
     BAPs (..),
     HasBapInfo,
+    RideConfig (..),
     buildAppEnv,
     releaseAppEnv,
   )

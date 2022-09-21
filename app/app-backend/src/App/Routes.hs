@@ -17,6 +17,7 @@ import qualified API.UI.GoogleMaps as GoogleMapsProxy
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Registration as Registration
+import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
 import qualified API.UI.SavedReqLocation as SavedReqLocation
 import qualified API.UI.Search as Search
@@ -25,15 +26,10 @@ import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Support as Support
 import qualified App.Routes.Dashboard as Dashboard
 import App.Types
-import Beckn.Types.Id
 import Data.OpenApi (Info (..), OpenApi (..))
-import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
-import qualified Product.Ride as Ride
 import Servant hiding (throwError)
 import Servant.OpenApi
-import qualified Types.API.Ride as RideAPI
-import Utils.Auth (TokenAuth)
 
 type AppAPI =
   MainAPI
@@ -57,7 +53,7 @@ type UIAPI =
            :<|> Confirm.API
            :<|> Booking.API
            :<|> Cancel.API
-           :<|> RideAPI
+           :<|> Ride.API
            :<|> Call.API
            :<|> Support.API
            :<|> Route.API
@@ -96,7 +92,7 @@ uiAPI =
     :<|> Confirm.handler
     :<|> Booking.handler
     :<|> Cancel.handler
-    :<|> rideFlow
+    :<|> Ride.handler
     :<|> Call.handler
     :<|> Support.handler
     :<|> Route.handler
@@ -106,18 +102,6 @@ uiAPI =
     :<|> GoogleMapsProxy.handler
     :<|> CancellationReason.handler
     :<|> SavedReqLocation.handler
-
-type RideAPI =
-  "ride"
-    :> Capture "rideId" (Id SRide.Ride)
-    :> "driver"
-    :> "location"
-    :> TokenAuth
-    :> Post '[JSON] RideAPI.GetDriverLocRes
-
-rideFlow :: FlowServer RideAPI
-rideFlow =
-  Ride.getDriverLoc
 
 type SwaggerAPI = "swagger" :> Get '[JSON] OpenApi
 
