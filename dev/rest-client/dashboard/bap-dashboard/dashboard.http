@@ -150,6 +150,18 @@ token: {{arduCustomerToken}}
 
 ###
 
+# @name resetServerAccess
+
+POST {{bap-dashboard-host}}/dashboard/admin/person/{{personId}}/resetServerAccess
+content-type: application/json
+token: {{token}}
+
+{
+  "serverName" : "APP_BACKEND_ARDU"
+}
+
+###
+
 # @name logout
 
 POST {{bap-dashboard-host}}/dashboard/logout

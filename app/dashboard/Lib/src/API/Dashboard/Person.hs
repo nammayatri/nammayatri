@@ -27,7 +27,12 @@ type API =
              :> Post '[JSON] APISuccess
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
-             :> "assignServerAccess" --TODO resetServerAccess
+             :> "assignServerAccess"
+             :> ReqBody '[JSON] DPerson.ServerAccessReq
+             :> Post '[JSON] APISuccess
+           :<|> DashboardAuth 'DASHBOARD_ADMIN
+             :> Capture "personId" (Id DP.Person)
+             :> "resetServerAccess"
              :> ReqBody '[JSON] DPerson.ServerAccessReq
              :> Post '[JSON] APISuccess
        )
@@ -45,6 +50,7 @@ handler =
   ( listPerson
       :<|> assignRole
       :<|> assignServerAccess
+      :<|> resetServerAccess
   )
     :<|> ( profile
              :<|> getCurrentServer
@@ -61,6 +67,10 @@ assignRole tokenInfo personId =
 assignServerAccess :: TokenInfo -> Id DP.Person -> DPerson.ServerAccessReq -> FlowHandler APISuccess
 assignServerAccess tokenInfo personId =
   withFlowHandlerAPI . DPerson.assignServerAccess tokenInfo personId
+
+resetServerAccess :: TokenInfo -> Id DP.Person -> DPerson.ServerAccessReq -> FlowHandler APISuccess
+resetServerAccess tokenInfo personId =
+  withFlowHandlerAPI . DPerson.resetServerAccess tokenInfo personId
 
 profile :: TokenInfo -> FlowHandler DP.PersonAPIEntity
 profile =

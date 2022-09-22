@@ -14,9 +14,11 @@ import qualified Domain.Types.RegistrationToken as DReg
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerAccess as DServer
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.ServerAccess as QServer
 import Tools.Auth
+import qualified Tools.Auth.Common as Auth
 import qualified Tools.Client as Client
 import Tools.Error
 import Tools.Validation
@@ -83,6 +85,29 @@ assignServerAccess _ personId req = do
   Esq.runTransaction $
     QServer.create serverAccess
   pure Success
+
+resetServerAccess ::
+  ( EsqDBFlow m r,
+    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  TokenInfo ->
+  Id DP.Person ->
+  ServerAccessReq ->
+  m APISuccess
+resetServerAccess _ personId req = do
+  availableServers <- asks (.dataServers)
+  runRequestValidation (validateAssignServerAccessReq $ availableServers <&> (.name)) req
+  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbServerAccess <- QServer.findByPersonIdAndServerName personId req.serverName
+  case mbServerAccess of
+    Nothing -> throwError $ InvalidRequest "Server access already denied."
+    Just serverAccess -> do
+      Esq.runTransaction $ do
+        QServer.deleteById serverAccess.id
+        QReg.deleteAllByPersonIdAndServerName personId req.serverName
+      Auth.cleanCachedTokensByServerName personId req.serverName
+      pure Success
 
 buildServerAccess :: MonadFlow m => Id DP.Person -> DReg.ServerName -> m DServer.ServerAccess
 buildServerAccess personId serverName = do

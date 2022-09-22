@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module Tools.Auth.Common (verifyPerson, cleanCachedTokens, AuthFlow) where
+module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByServerName, AuthFlow) where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
@@ -85,7 +85,6 @@ validateToken sr = do
     Utils.throwError AccessDenied
   return sr
 
--- TODO two endpoints for logout: 1. from one server 2. from all servers
 cleanCachedTokens ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
@@ -94,6 +93,19 @@ cleanCachedTokens ::
   m ()
 cleanCachedTokens personId = do
   regTokens <- QR.findAllByPersonId personId
+  for_ regTokens $ \regToken -> do
+    key <- authTokenCacheKey regToken.token
+    void $ Redis.deleteKeyRedis key
+
+cleanCachedTokensByServerName ::
+  ( EsqDBFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  Id DP.Person ->
+  DR.ServerName ->
+  m ()
+cleanCachedTokensByServerName personId serverName = do
+  regTokens <- QR.findAllByPersonIdAndServerName personId serverName
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.deleteKeyRedis key

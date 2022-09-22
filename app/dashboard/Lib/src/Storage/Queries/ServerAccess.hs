@@ -34,3 +34,6 @@ findAllByPersonId personId = findAll $ do
   where_ $
     serverAccess ^. ServerAccessPersonId ==. val (toKey personId)
   return serverAccess
+
+deleteById :: Id DServer.ServerAccess -> SqlDB ()
+deleteById = Esq.deleteByKey @ServerAccessT

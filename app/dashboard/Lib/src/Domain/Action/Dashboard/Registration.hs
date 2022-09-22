@@ -70,6 +70,7 @@ generateToken personId bppName = do
     QR.create regToken
   pure $ regToken.token
 
+-- TODO two endpoints for logout: 1. from one server 2. from all servers
 logout ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
