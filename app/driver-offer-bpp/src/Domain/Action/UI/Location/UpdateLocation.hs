@@ -38,7 +38,7 @@ data UpdateLocationHandler m = UpdateLocationHandler
     findDriverLocationById :: Id Person.Person -> m (Maybe DriverLocation),
     upsertDriverLocation :: Id Person.Person -> LatLong -> UTCTime -> m (),
     getInProgressByDriverId :: Id Person.Person -> m (Maybe SRide.Ride),
-    addIntermediateRoutePoints :: Id Person.Person -> NonEmpty LatLong -> m ()
+    addIntermediateRoutePoints :: Id SRide.Ride -> Id Person.Person -> NonEmpty LatLong -> m ()
   }
 
 updateLocation :: (Log m, MonadFlow m, MonadThrow m, MonadTime m) => UpdateLocationHandler m -> Id Person.Person -> UpdateLocationReq -> m APISuccess
@@ -61,7 +61,7 @@ updateLocation UpdateLocationHandler {..} driverId waypoints = withLogTag "drive
         getInProgressByDriverId driver.id
           >>= maybe
             (logInfo "No ride is assigned to driver, ignoring")
-            (\_ -> addIntermediateRoutePoints driver.id $ NE.map (.pt) newWaypoints)
+            (\ride -> addIntermediateRoutePoints ride.id driver.id $ NE.map (.pt) newWaypoints)
     Redis.unlockRedis lockKey
   pure Success
   where

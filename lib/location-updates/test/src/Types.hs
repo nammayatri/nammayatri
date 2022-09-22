@@ -10,7 +10,9 @@ import Beckn.Utils.Common
 import Beckn.Utils.Dhall (FromDhall, readDhallConfig)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.SignatureAuth
+import qualified Data.Map as Map
 import qualified EulerHS.Runtime as R
+import Network.HTTP.Client
 
 data Person
 
@@ -25,7 +27,6 @@ data AppEnv = AppEnv
     httpClientOptions :: HttpClientOptions
   }
 
---type TestM = MockM AppEnv
 type TestM = FlowR AppEnv
 
 runFlow :: Text -> AppEnv -> FlowR AppEnv a -> IO a
@@ -34,7 +35,8 @@ runFlow tag appEnv flow = do
     R.withFlowRuntime Nothing $ \flowRt -> do
       flowRt' <-
         runFlowR flowRt appEnv $
-          addAuthManagersToFlowRt flowRt []
+          addAuthManagersToFlowRt flowRt [(Just defaultHttpClientOptions.timeoutMs, Map.singleton "default" defaultManagerSettings)]
+      -- FIXME: this is a termporary solution, better fix core code relating to these managers
       runFlowR flowRt' appEnv $ withLogTag tag flow
 
 defaultHttpClientOptions :: HttpClientOptions

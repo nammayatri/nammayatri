@@ -81,7 +81,7 @@ startRide personId rideId req =
           startRideAndUpdateLocation = RideStart.startRideTransaction,
           notifyBAPRideStarted = sendRideStartedUpdateToBAP,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
-          addFirstWaypoint = LocUpd.initializeDistanceCalculation LocUpd.defaultRideInterpolationHandler
+          initializeDistanceCalculation = LocUpd.initializeDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId
         }
 
 endRide :: Id SP.Person -> Id Ride.Ride -> RideEnd.EndRideReq -> FlowHandler APISuccess
@@ -100,7 +100,7 @@ endRide personId rideId req =
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
           isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed LocUpd.defaultRideInterpolationHandler,
-          addLastWaypointAndRecalcDistanceOnEnd = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler
+          finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId
         }
 
 cancelRide :: Id SP.Person -> Id Ride.Ride -> RideCancel.CancelRideReq -> FlowHandler APISuccess

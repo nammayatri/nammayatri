@@ -21,13 +21,13 @@ apiSpec appEnv =
   afterAll_ (resetRedis appEnv testDriverId) $
     describe "Testing location-updates lib API" $ do
       it "should calculate correct distance for the short curvy route" $
-        successFlow appEnv 10 680 shortCurvyRoute
+        successFlow appEnv 10 680 "shortCurvyRoute" shortCurvyRoute
       it "should calculate correct distance for the route with far isolated point" $
-        successFlow appEnv 50 9050 farIsolatedPoint
+        successFlow appEnv 50 9050 "farIsolatedPoint" farIsolatedPoint
       -- what is the precise distance for this route?
       -- It seemed to be different (about 8350) before (Yuri)
       it "should handle errors while calculating distance correctly" $
-        failFlow appEnv shortCurvyRoute
+        failFlow appEnv "fail-shortCurvyRoute" shortCurvyRoute
 
 testInterpolationHandler :: RideInterpolationHandler Person TestM
 testInterpolationHandler =
@@ -47,15 +47,15 @@ testInterpolationHandler =
 testDriverId :: Id Person
 testDriverId = "agent007"
 
-successFlow :: AppEnv -> Double -> Double -> LocationUpdates -> IO ()
-successFlow appEnv eps expectedDistance route = runFlow "" appEnv $ do
+successFlow :: AppEnv -> Double -> Double -> Id a -> LocationUpdates -> IO ()
+successFlow appEnv eps expectedDistance rideId route = runFlow "" appEnv $ do
   let origin = getFirstPoint route
       destination = getLastPoint route
       ih = testInterpolationHandler
-  initializeDistanceCalculation ih testDriverId origin
+  initializeDistanceCalculation ih rideId testDriverId origin
   forM_ (NE.toList route) $ \updatesBatch ->
-    addIntermediateRoutePoints ih testDriverId updatesBatch
-  finalDistanceCalculation ih testDriverId destination
+    addIntermediateRoutePoints ih rideId testDriverId updatesBatch
+  finalDistanceCalculation ih rideId testDriverId destination
   failed <- API.isDistanceCalculationFailed ih testDriverId
   liftIO $ failed `shouldBe` False
   totalDistance <- checkTraveledDistance testDriverId
@@ -65,19 +65,19 @@ failingInterpolationHandler :: RideInterpolationHandler Person TestM
 failingInterpolationHandler =
   testInterpolationHandler {getWaypointsNumber = \_ -> throwError (InternalError "test")}
 
-failFlow :: AppEnv -> LocationUpdates -> IO ()
-failFlow appEnv route = runFlow "" appEnv $ do
+failFlow :: AppEnv -> Id a -> LocationUpdates -> IO ()
+failFlow appEnv rideId route = runFlow "" appEnv $ do
   let origin = getFirstPoint route
       destination = getLastPoint route
       ih = failingInterpolationHandler
-  initializeDistanceCalculation ih testDriverId origin
+  initializeDistanceCalculation ih rideId testDriverId origin
   failed0 <- API.isDistanceCalculationFailed ih testDriverId
   liftIO $ failed0 `shouldBe` False
 
   forM_ (NE.toList route) $ \updatesBatch -> do
-    addIntermediateRoutePoints ih testDriverId updatesBatch
+    addIntermediateRoutePoints ih rideId testDriverId updatesBatch
     failed1 <- API.isDistanceCalculationFailed ih testDriverId
     liftIO $ failed1 `shouldBe` True
-  finalDistanceCalculation ih testDriverId destination
+  finalDistanceCalculation ih rideId testDriverId destination
   failed2 <- API.isDistanceCalculationFailed ih testDriverId
   liftIO $ failed2 `shouldBe` True

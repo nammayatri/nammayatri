@@ -106,6 +106,7 @@ recalcDistanceBatchStep ::
 recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
   interpolatedWps <- interpolatePoints batchWaypoints
+  logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
   let distance = getRouteLinearLength interpolatedWps
   logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
   deleteFirstNwaypoints driverId batchSize

@@ -206,3 +206,13 @@ cradle:
 
     - path: "lib/location-updates/src"
       component: "location-updates:lib"
+
+    - path: "app/utils/route-extractor/src"
+      component: "route-extractor:lib"
+
+    - path: "app/utils/route-extractor/app/Main.hs"
+      component: "route-extractor:exe:route-extractor-exe"
+
+    - path: "app/utils/route-extractor/app/Paths_route_extractor.hs"
+      component: "route-extractor:exe:route-extractor-exe"
+

@@ -86,7 +86,7 @@ startRide personId rideId req = withFlowHandlerAPI $ do
           startRideAndUpdateLocation = SInternal.startRideTransaction,
           notifyBAPRideStarted = sendRideStartedUpdateToBAP,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
-          initializeDistanceCalculation = LocUpd.initializeDistanceCalculation LocUpd.defaultRideInterpolationHandler
+          initializeDistanceCalculation = LocUpd.initializeDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId
         }
 
 endRide :: Id SP.Person -> Id SRide.Ride -> EHandler.EndRideReq -> FlowHandler APISuccess.APISuccess
@@ -108,7 +108,7 @@ endRide personId rideId req = withFlowHandlerAPI $ do
           recalculateFareEnabled = asks (.recalculateFareEnabled),
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
-          finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler,
+          finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId,
           isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed LocUpd.defaultRideInterpolationHandler
         }
 

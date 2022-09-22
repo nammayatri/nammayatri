@@ -44,7 +44,7 @@ data ServiceHandle m = ServiceHandle
     putDiffMetric :: Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     isDistanceCalculationFailed :: Id Person.Person -> m Bool,
-    addLastWaypointAndRecalcDistanceOnEnd :: Id Person.Person -> LatLong -> m ()
+    finalDistanceCalculation :: Id Person.Person -> LatLong -> m ()
   }
 
 endRideHandler ::
@@ -57,7 +57,7 @@ endRideHandler ::
 endRideHandler ServiceHandle {..} requestorId rideId req = do
   requestor <- findById requestorId >>= fromMaybeM (PersonNotFound requestorId.getId)
 
-  addLastWaypointAndRecalcDistanceOnEnd requestorId req.point
+  finalDistanceCalculation requestorId req.point
   -- here we update the current ride, so below we fetch the updated version
 
   ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)

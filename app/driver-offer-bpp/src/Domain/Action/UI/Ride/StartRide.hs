@@ -30,7 +30,7 @@ data ServiceHandle m = ServiceHandle
     startRideAndUpdateLocation :: Id SRide.Ride -> Id SRB.Booking -> Id Person.Person -> LatLong -> m (),
     notifyBAPRideStarted :: SRB.Booking -> SRide.Ride -> m (),
     rateLimitStartRide :: Id Person.Person -> Id SRide.Ride -> m (),
-    addFirstWaypoint :: Id Person.Person -> LatLong -> m ()
+    initializeDistanceCalculation :: Id Person.Person -> LatLong -> m ()
   }
 
 startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Id Person.Person -> Id SRide.Ride -> StartRideReq -> m APISuccess.APISuccess
@@ -50,7 +50,7 @@ startRideHandler ServiceHandle {..} requestorId rideId req = do
   when (req.rideOtp /= inAppOtp) $ throwError IncorrectOTP
   logTagInfo "startRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
   startRideAndUpdateLocation ride.id booking.id requestorId req.point
-  addFirstWaypoint driverId req.point
+  initializeDistanceCalculation driverId req.point
   notifyBAPRideStarted booking ride
   pure APISuccess.Success
   where

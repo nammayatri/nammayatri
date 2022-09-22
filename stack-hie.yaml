@@ -18,6 +18,7 @@
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
 resolver: lts-16.31
+system-ghc: true
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -53,6 +54,7 @@ packages:
   - app/public-transport-search-consumer
   - app/mock-public-transport-bpp
   - app/scheduler-example
+  - app/utils/route-extractor
   - lib/beckn-spec
   - lib/beckn-services
   - lib/location-updates

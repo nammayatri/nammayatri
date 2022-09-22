@@ -1,10 +1,10 @@
-name:                location-updates
-version:             0.1.0.0
-github:              "juspay/beckn"
-license:             AllRightsReserved
-author:              "Juspay"
-maintainer:          "Juspay"
-copyright:           "2020 Juspay Technologies Private Limited"
+name: route-extractor
+version: 0.1.0.0
+github: "juspay/beckn"
+license: AllRightsReserved
+author: "Juspay"
+maintainer: "Juspay"
+copyright: "2020 Juspay Technologies Private Limited"
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -13,7 +13,7 @@ copyright:           "2020 Juspay Technologies Private Limited"
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub
+description: Please see the README on GitHub at <https://bitbucket.org/juspay/beckn#readme>
 
 default-extensions:
   - ConstraintKinds
@@ -47,40 +47,51 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - StandaloneDeriving
+  - PackageImports
 
 dependencies:
-- base >= 4.7 && < 5
-- record-dot-preprocessor
-- record-hasfield
-- uri-encode
-- base16-bytestring
-- bytestring
-- cryptohash
-- text
-- time
-- aeson
-- servant-client
-- servant
-- servant-server
-- euler-hs
-- http-types
-- exceptions
-- http-client
-- containers
+  - aeson
+  - base >= 4.7 && < 5
+  - generic-lens
+  - bytestring
+  - cryptonite
+  - containers
+  - euler-hs
+  - exceptions
+  - hspec
+  - http-client
+  - lens
+  - servant
+  - servant-client
+  - servant-client-core
+  - servant-server
+  - text
+  - wai
+  - warp
+  - time
+  - stm
+  - resource-pool
+  - uuid
+  - prometheus-client
+  - record-hasfield
+  - record-dot-preprocessor
+  - servant-openapi3
+  - openapi3
+  - string-conversions
+  - either
+  - persistent
+  - text-conversions
+  - beckn-services
+  - xml-conduit
 
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -Wall
-  - -Wcompat
-  - -Widentities
-  - -fhide-source-paths
-  - -Werror
   - -fplugin=RecordDotPreprocessor
 
 library:
-  source-dirs:
-    - src
+  source-dirs: src
   ghc-options:
     - -Wall
     - -Wcompat
@@ -90,21 +101,15 @@ library:
   dependencies:
     - beckn-core
 
-tests:
-  location-updates-tests:
+executables:
+  route-extractor-exe:
     main: Main.hs
-    source-dirs:
-      - test/app
-      - test/src
-    dependencies:
-      - location-updates
-      - beckn-core
-      - beckn-spec
-      - tasty
-      - tasty-hunit
-      - tasty-hspec
-      - QuickCheck
-      - tasty-quickcheck
+    source-dirs: app
+    other-modules: []
     ghc-options:
-      - -Wall
-      - -Werror
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+    dependencies:
+      - route-extractor
+      - beckn-core
