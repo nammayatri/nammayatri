@@ -14,14 +14,21 @@ type API =
     :<|> "logout"
       :> DashboardAuth 'DASHBOARD_USER
       :> Post '[JSON] DReg.LogoutRes
+    :<|> "logoutAllServers"
+      :> DashboardAuth 'DASHBOARD_USER
+      :> Post '[JSON] DReg.LogoutRes
 
 handler :: FlowServer API
 handler =
   login
     :<|> logout
+    :<|> logoutAllServers
 
 login :: DReg.LoginReq -> FlowHandler DReg.LoginRes
 login = withFlowHandlerAPI . DReg.login
 
 logout :: TokenInfo -> FlowHandler DReg.LogoutRes
 logout = withFlowHandlerAPI . DReg.logout
+
+logoutAllServers :: TokenInfo -> FlowHandler DReg.LogoutRes
+logoutAllServers = withFlowHandlerAPI . DReg.logoutAllServers

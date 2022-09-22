@@ -164,6 +164,20 @@ token: {{token}}
 
 # @name logout
 
+# this endpoint should remove only one token for APP_BACKEND_YATRI server
+
+@yatriCustomerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
+
 POST {{bap-dashboard-host}}/dashboard/logout
 content-type: application/json
-token: {{token}}
+token: {{yatriCustomerToken}}
+
+###
+
+# @name logoutAllServers
+
+# this endpoint should remove all tokens for customer
+
+POST {{bap-dashboard-host}}/dashboard/logoutAllServers
+content-type: application/json
+token: {{arduCustomerToken}}

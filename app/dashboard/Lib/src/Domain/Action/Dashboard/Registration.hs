@@ -13,6 +13,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.ServerAccess as QServer
 import Tools.Auth
+import qualified Tools.Auth.Common as Auth
 import qualified Tools.Client as Client
 import Tools.Validation
 
@@ -61,16 +62,15 @@ generateToken ::
   Id DP.Person ->
   DR.ServerName ->
   m Text
-generateToken personId bppName = do
-  regToken <- buildRegistrationToken personId bppName
+generateToken personId serverName = do
+  regToken <- buildRegistrationToken personId serverName
   -- Clean old login session
-  cleanCachedTokens personId
+  Auth.cleanCachedTokensByServerName personId serverName
   DB.runTransaction $ do
-    QR.deleteAllByPersonId personId
+    QR.deleteAllByPersonIdAndServerName personId serverName
     QR.create regToken
   pure $ regToken.token
 
--- TODO two endpoints for logout: 1. from one server 2. from all servers
 logout ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
@@ -80,9 +80,22 @@ logout ::
 logout tokenInfo = do
   let personId = tokenInfo.personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  cleanCachedTokens personId
-  DB.runTransaction (QR.deleteAllByPersonId person.id)
+  Auth.cleanCachedTokensByServerName personId tokenInfo.serverName
+  DB.runTransaction (QR.deleteAllByPersonIdAndServerName person.id tokenInfo.serverName)
   pure $ LogoutRes "Logged out successfully"
+
+logoutAllServers ::
+  ( EsqDBFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  TokenInfo ->
+  m LogoutRes
+logoutAllServers tokenInfo = do
+  let personId = tokenInfo.personId
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  Auth.cleanCachedTokens personId
+  DB.runTransaction (QR.deleteAllByPersonId person.id)
+  pure $ LogoutRes "Logged out successfully from all servers"
 
 buildRegistrationToken :: MonadFlow m => Id DP.Person -> DR.ServerName -> m DR.RegistrationToken
 buildRegistrationToken personId serverName = do
