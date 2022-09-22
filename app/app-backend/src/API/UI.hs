@@ -1,11 +1,9 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
+module API.UI
+  ( API,
+    handler,
+  )
+where
 
-module App.Routes where
-
-import qualified API.Auth as Auth
-import qualified API.Beckn as Beckn
-import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI.Booking as Booking
 import qualified API.UI.Call as Call
 import qualified API.UI.Cancel as Cancel
@@ -24,25 +22,11 @@ import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Support as Support
-import qualified App.Routes.Dashboard as Dashboard
 import App.Types
-import Data.OpenApi (Info (..), OpenApi (..))
 import EulerHS.Prelude
-import Servant hiding (throwError)
-import Servant.OpenApi
+import Servant
 
-type AppAPI =
-  MainAPI
-    :<|> SwaggerAPI
-
-type MainAPI =
-  UIAPI
-    :<|> Beckn.API
-    :<|> MetroBeckn.API
-    :<|> Auth.API
-    :<|> Dashboard.API
-
-type UIAPI =
+type API =
   "v2"
     :> ( Get '[JSON] Text
            :<|> Registration.API
@@ -65,24 +49,8 @@ type UIAPI =
            :<|> SavedReqLocation.API
        )
 
-appAPI :: Proxy AppAPI
-appAPI = Proxy
-
-appServer :: FlowServer AppAPI
-appServer =
-  mainServer
-    :<|> writeSwaggerJSONFlow
-
-mainServer :: FlowServer MainAPI
-mainServer =
-  uiAPI
-    :<|> Beckn.handler
-    :<|> MetroBeckn.handler
-    :<|> Auth.handler
-    :<|> Dashboard.handler
-
-uiAPI :: FlowServer UIAPI
-uiAPI =
+handler :: FlowServer API
+handler =
   pure "App is UP"
     :<|> Registration.handler
     :<|> Profile.handler
@@ -102,19 +70,3 @@ uiAPI =
     :<|> GoogleMapsProxy.handler
     :<|> CancellationReason.handler
     :<|> SavedReqLocation.handler
-
-type SwaggerAPI = "swagger" :> Get '[JSON] OpenApi
-
-swagger :: OpenApi
-swagger = do
-  let openApi = toOpenApi (Proxy :: Proxy MainAPI)
-  openApi
-    { _openApiInfo =
-        (_openApiInfo openApi)
-          { _infoTitle = "Yatri",
-            _infoVersion = "1.0"
-          }
-    }
-
-writeSwaggerJSONFlow :: FlowServer SwaggerAPI
-writeSwaggerJSONFlow = return swagger

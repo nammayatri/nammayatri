@@ -1,4 +1,4 @@
-module App.Routes.Dashboard where
+module API.Dashboard where
 
 import App.Types
 import Beckn.Prelude
