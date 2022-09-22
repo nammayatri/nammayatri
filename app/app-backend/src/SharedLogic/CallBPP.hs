@@ -1,6 +1,7 @@
 module SharedLogic.CallBPP where
 
 import App.Types
+import Beckn.Prelude
 import Beckn.Storage.Hedis (HedisFlow)
 import qualified Beckn.Types.Core.Metro.API.Search as MigAPI
 import Beckn.Types.Core.ReqTypes
@@ -11,14 +12,16 @@ import Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Track as API
+import Beckn.Types.Error
+import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Track as TrackACL
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DRide
-import EulerHS.Prelude
+import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
-import Servant.Client
+import Servant
 import Tools.Metrics (CoreMetrics)
 import Utils.Common
 
@@ -103,6 +106,29 @@ callTrack booking ride = do
             bppUrl = booking.providerUrl
           }
   void . callBecknAPIWithSignature "track" API.trackAPI booking.providerUrl =<< TrackACL.buildTrackReq trackBUildReq
+
+data Status = PreRide | ActualRide
+  deriving (Generic, ToJSON, Show, FromJSON, ToSchema)
+
+data GetLocationRes = GetLocationRes
+  { currPoint :: MapSearch.LatLong,
+    totalDistance :: Double,
+    status :: Status,
+    lastUpdate :: UTCTime
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+callGetDriverLocation ::
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
+  DRide.Ride ->
+  m GetLocationRes
+callGetDriverLocation ride = do
+  trackingUrl <- ride.trackingUrl & fromMaybeM (RideFieldNotPresent "trackingUrl")
+  let eulerClient = Euler.client (Proxy @(Get '[JSON] GetLocationRes))
+  callAPI trackingUrl eulerClient "BPP.driverTrackUrl"
+    >>= fromEitherM (\err -> InternalError $ "Failed to call driverTrackUrl: " <> show err)
 
 feedback ::
   ( MonadFlow m,

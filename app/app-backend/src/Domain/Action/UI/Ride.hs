@@ -15,12 +15,10 @@ import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as Euler
-import Servant hiding (throwError)
+import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics
-import Types.API.Location
 import Types.Error
 import Utils.Common
 import qualified Utils.Notifications as Notify
@@ -42,11 +40,7 @@ getDriverLoc rideId personId = do
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
     $ throwError $ RideInvalidStatus "Cannot track this ride"
-  trackingUrl <- ride.trackingUrl & fromMaybeM (RideFieldNotPresent "trackingUrl")
-  let eulerClient = Euler.client (Proxy @(Get '[JSON] GetLocationRes))
-  res <-
-    callAPI trackingUrl eulerClient "BPP.driverTrackUrl"
-      >>= fromEitherM (\err -> InternalError $ "Failed to call driverTrackUrl: " <> show err)
+  res <- CallBPP.callGetDriverLocation ride
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let fromLocation = rideBooking.fromLocation
   driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
