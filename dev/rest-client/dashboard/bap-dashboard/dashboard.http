@@ -93,6 +93,18 @@ token: {{token}}
 
 ###
 
+# @name assignServerAccess
+
+POST {{bap-dashboard-host}}/dashboard/admin/person/{{personId}}/assignServerAccess
+content-type: application/json
+token: {{token}}
+
+{
+  "serverName" : "APP_BACKEND_ARDU"
+}
+
+###
+
 # @name profile
 
 @customerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
@@ -103,13 +115,30 @@ token: {{customerToken}}
 
 ###
 
+# separate login for another server
+
+# @name arduCustomerLogin
+
+POST {{bap-dashboard-host}}/dashboard/login
+content-type: application/json
+
+{
+  "email" : "customer@dashboard.com",
+  "password" : "customer",
+  "serverName" : "APP_BACKEND_ARDU"
+}
+
+###
+
 # check access level for new role "DEVELOPER"
+
+@arduCustomerToken = {{arduCustomerLogin.response.body.authToken}}
 
 # @name customerList
 
-GET {{bap-dashboard-host}}/bap/customer/list
+GET {{bap-dashboard-host}}/bap/ardu/customer/list
 content-type: application/json
-token: {{customerToken}}
+token: {{arduCustomerToken}}
 
 ###
 

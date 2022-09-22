@@ -1,5 +1,3 @@
-{-# LANGUAGE InstanceSigs #-}
-
 module Domain.Action.Dashboard.Registration where
 
 import Beckn.Prelude
@@ -7,17 +5,16 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Types.Predicate
 import Beckn.Utils.Common
 import Beckn.Utils.Validation
-import qualified Data.Text as T
 import Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.ServerAccess as QServer
-import Tools.Auth (cleanCachedTokens)
+import Tools.Auth
 import qualified Tools.Client as Client
+import Tools.Validation
 
 data LoginReq = LoginReq
   { email :: Text,
@@ -34,16 +31,6 @@ data LoginRes = LoginRes
 
 newtype LogoutRes = LogoutRes {message :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
-
--- TODO move in Beckn.Types.Predicate
-newtype InList a = InList [a]
-
-instance Eq a => Predicate a (InList a) where
-  pFun :: InList a -> a -> Bool
-  pFun (InList list) a = a `elem` list
-
-instance Show a => ShowablePredicate (InList a) where
-  pShow (InList list) name = name <> " in list " <> T.intercalate ", " (show <$> list)
 
 validateLoginReq :: [DR.ServerName] -> Validate LoginReq
 validateLoginReq availableServerNames LoginReq {..} =
@@ -87,9 +74,10 @@ logout ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
-  Id DP.Person ->
+  TokenInfo ->
   m LogoutRes
-logout personId = do
+logout tokenInfo = do
+  let personId = tokenInfo.personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   cleanCachedTokens personId
   DB.runTransaction (QR.deleteAllByPersonId person.id)

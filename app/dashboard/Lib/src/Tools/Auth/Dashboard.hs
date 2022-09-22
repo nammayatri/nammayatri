@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Tools.Auth.Dashboard (DashboardAuth, verifyDashboardAction, module Reexport) where
+module Tools.Auth.Dashboard (DashboardAuth, verifyDashboardAction, TokenInfo (..), module Reexport) where
 
 import Beckn.Prelude
 import Beckn.Types.Error
@@ -10,6 +10,7 @@ import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Singletons.TH
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.RegistrationToken as DReg
 import Domain.Types.Role as Reexport (DashboardAccessType (..))
 import qualified Domain.Types.Role as DRole
 import Servant hiding (throwError)
@@ -32,8 +33,13 @@ data VerifyDashboard
 
 data DashboardPayload (at :: DRole.DashboardAccessType)
 
+data TokenInfo = TokenInfo
+  { personId :: Id DP.Person,
+    serverName :: DReg.ServerName
+  }
+
 instance VerificationMethod VerifyDashboard where
-  type VerificationResult VerifyDashboard = Id DP.Person
+  type VerificationResult VerifyDashboard = TokenInfo
   verificationDescription =
     "Checks whether token is registered and checks person dashboard access.\
     \If you don't have a token, use registration endpoints."
@@ -50,10 +56,11 @@ verifyDashboard ::
   Common.AuthFlow m r =>
   DRole.DashboardAccessType ->
   RegToken ->
-  m (Id DP.Person)
+  m TokenInfo
 verifyDashboard requiredAccessType token = do
-  (personId, _serverName) <- Common.verifyPerson token
-  verifyDashboardAccess requiredAccessType personId
+  (personId, serverName) <- Common.verifyPerson token
+  void $ verifyDashboardAccess requiredAccessType personId
+  pure TokenInfo {personId, serverName}
 
 instance
   forall (at :: DRole.DashboardAccessType).

@@ -5,7 +5,6 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Action.Dashboard.AccessMatrix as DAccessMatrix
 import Domain.Types.AccessMatrix as DMatrix
-import Domain.Types.Person as DP
 import Domain.Types.Role as DRole
 import Environment
 import Servant
@@ -27,10 +26,10 @@ type API =
 handler :: FlowServer API
 handler = getAccessMatrix :<|> getAccessMatrixByRole
 
-getAccessMatrix :: Id DP.Person -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
-getAccessMatrix adminId mbLimit =
-  withFlowHandlerAPI . DAccessMatrix.getAccessMatrix adminId mbLimit
+getAccessMatrix :: TokenInfo -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
+getAccessMatrix tokenInfo mbLimit =
+  withFlowHandlerAPI . DAccessMatrix.getAccessMatrix tokenInfo mbLimit
 
-getAccessMatrixByRole :: Id DP.Person -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
-getAccessMatrixByRole adminId =
-  withFlowHandlerAPI . DAccessMatrix.getAccessMatrixByRole adminId
+getAccessMatrixByRole :: TokenInfo -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
+getAccessMatrixByRole tokenInfo =
+  withFlowHandlerAPI . DAccessMatrix.getAccessMatrixByRole tokenInfo

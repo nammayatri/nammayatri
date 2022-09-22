@@ -7,10 +7,10 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.AccessMatrix as DMatrix
-import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Role as QRole
+import Tools.Auth
 import Tools.Error (RoleError (..))
 
 data CreateRoleReq = CreateRoleReq
@@ -27,7 +27,7 @@ data AssignAccessLevelReq = AssignAccessLevelReq
 
 createRole ::
   EsqDBFlow m r =>
-  Id DP.Person ->
+  TokenInfo ->
   CreateRoleReq ->
   m DRole.RoleAPIEntity
 createRole _ req = do
@@ -57,7 +57,7 @@ buildRole req = do
 
 assignAccessLevel ::
   EsqDBFlow m r =>
-  Id DP.Person ->
+  TokenInfo ->
   Id DRole.Role ->
   AssignAccessLevelReq ->
   m APISuccess

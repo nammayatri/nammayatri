@@ -24,3 +24,13 @@ findByPersonIdAndServerName personId serverName = findOne $ do
     serverAccess ^. ServerAccessPersonId ==. val (toKey personId)
       &&. serverAccess ^. ServerAccessServerName ==. val serverName
   return serverAccess
+
+findAllByPersonId ::
+  (Transactionable m) =>
+  Id DP.Person ->
+  m [DServer.ServerAccess]
+findAllByPersonId personId = findAll $ do
+  serverAccess <- from $ table @ServerAccessT
+  where_ $
+    serverAccess ^. ServerAccessPersonId ==. val (toKey personId)
+  return serverAccess

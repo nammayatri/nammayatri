@@ -5,7 +5,6 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Action.Dashboard.Roles as DRoles
-import Domain.Types.Person as DP
 import Domain.Types.Role as DRole
 import Environment
 import Servant
@@ -30,10 +29,10 @@ handler =
   createRole
     :<|> assignAccessLevel
 
-createRole :: Id DP.Person -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
-createRole adminId =
-  withFlowHandlerAPI . DRoles.createRole adminId
+createRole :: TokenInfo -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
+createRole tokenInfo =
+  withFlowHandlerAPI . DRoles.createRole tokenInfo
 
-assignAccessLevel :: Id DP.Person -> Id DRole.Role -> DRoles.AssignAccessLevelReq -> FlowHandler APISuccess
-assignAccessLevel adminId roleId =
-  withFlowHandlerAPI . DRoles.assignAccessLevel adminId roleId
+assignAccessLevel :: TokenInfo -> Id DRole.Role -> DRoles.AssignAccessLevelReq -> FlowHandler APISuccess
+assignAccessLevel tokenInfo roleId =
+  withFlowHandlerAPI . DRoles.assignAccessLevel tokenInfo roleId

@@ -1,10 +1,8 @@
 module API.Dashboard.Registration where
 
 import Beckn.Prelude
-import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Action.Dashboard.Registration as DReg
-import Domain.Types.Person as DP
 import Environment
 import Servant
 import Tools.Auth
@@ -25,5 +23,5 @@ handler =
 login :: DReg.LoginReq -> FlowHandler DReg.LoginRes
 login = withFlowHandlerAPI . DReg.login
 
-logout :: Id DP.Person -> FlowHandler DReg.LogoutRes
+logout :: TokenInfo -> FlowHandler DReg.LogoutRes
 logout = withFlowHandlerAPI . DReg.logout
