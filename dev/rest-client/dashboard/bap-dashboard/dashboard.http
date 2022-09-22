@@ -130,9 +130,17 @@ content-type: application/json
 
 ###
 
-# check access level for new role "DEVELOPER"
+# @name getCurrentServer
 
 @arduCustomerToken = {{arduCustomerLogin.response.body.authToken}}
+
+GET {{bap-dashboard-host}}/dashboard/person/getCurrentServer
+content-type: application/json
+token: {{arduCustomerToken}}
+
+###
+
+# check access level for new role "DEVELOPER"
 
 # @name customerList
 

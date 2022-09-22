@@ -25,12 +25,14 @@ newtype ListPersonRes = ListPersonRes
   {list :: [DP.PersonAPIEntity]}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-newtype AssignServerAccessReq = AssignServerAccessReq
+newtype ServerAccessReq = ServerAccessReq
   {serverName :: DReg.ServerName}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-validateAssignServerAccessReq :: [DReg.ServerName] -> Validate AssignServerAccessReq
-validateAssignServerAccessReq availableServerNames AssignServerAccessReq {..} =
+type ServerAccessRes = ServerAccessReq
+
+validateAssignServerAccessReq :: [DReg.ServerName] -> Validate ServerAccessReq
+validateAssignServerAccessReq availableServerNames ServerAccessReq {..} =
   sequenceA_
     [ validateField "serverName" serverName $ InList availableServerNames
     ]
@@ -68,7 +70,7 @@ assignServerAccess ::
   ) =>
   TokenInfo ->
   Id DP.Person ->
-  AssignServerAccessReq ->
+  ServerAccessReq ->
   m APISuccess
 assignServerAccess _ personId req = do
   availableServers <- asks (.dataServers)
@@ -104,3 +106,9 @@ profile tokenInfo = do
   serverAccessList <- QServer.findAllByPersonId tokenInfo.personId
   decPerson <- decrypt encPerson
   pure $ DP.makePersonAPIEntity decPerson role (serverAccessList <&> (.serverName))
+
+getCurrentServer ::
+  TokenInfo ->
+  ServerAccessRes
+getCurrentServer tokenInfo = do
+  ServerAccessReq tokenInfo.serverName

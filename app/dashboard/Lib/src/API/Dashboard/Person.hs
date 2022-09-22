@@ -28,13 +28,17 @@ type API =
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
              :> "assignServerAccess" --TODO resetServerAccess
-             :> ReqBody '[JSON] DPerson.AssignServerAccessReq
+             :> ReqBody '[JSON] DPerson.ServerAccessReq
              :> Post '[JSON] APISuccess
        )
     :<|> "person"
-      :> "profile"
-      :> DashboardAuth 'DASHBOARD_USER
-      :> Get '[JSON] DP.PersonAPIEntity
+      :> ( "profile"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> Get '[JSON] DP.PersonAPIEntity
+             :<|> "getCurrentServer"
+               :> DashboardAuth 'DASHBOARD_USER
+               :> Get '[JSON] DPerson.ServerAccessRes
+         )
 
 handler :: FlowServer API
 handler =
@@ -42,7 +46,9 @@ handler =
       :<|> assignRole
       :<|> assignServerAccess
   )
-    :<|> profile
+    :<|> ( profile
+             :<|> getCurrentServer
+         )
 
 listPerson :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DPerson.ListPersonRes
 listPerson tokenInfo mbSearchString mbLimit =
@@ -52,10 +58,14 @@ assignRole :: TokenInfo -> Id DP.Person -> Id DRole.Role -> FlowHandler APISucce
 assignRole tokenInfo personId =
   withFlowHandlerAPI . DPerson.assignRole tokenInfo personId
 
-assignServerAccess :: TokenInfo -> Id DP.Person -> DPerson.AssignServerAccessReq -> FlowHandler APISuccess
+assignServerAccess :: TokenInfo -> Id DP.Person -> DPerson.ServerAccessReq -> FlowHandler APISuccess
 assignServerAccess tokenInfo personId =
   withFlowHandlerAPI . DPerson.assignServerAccess tokenInfo personId
 
 profile :: TokenInfo -> FlowHandler DP.PersonAPIEntity
 profile =
   withFlowHandlerAPI . DPerson.profile
+
+getCurrentServer :: TokenInfo -> FlowHandler DPerson.ServerAccessRes
+getCurrentServer =
+  withFlowHandlerAPI . pure . DPerson.getCurrentServer
