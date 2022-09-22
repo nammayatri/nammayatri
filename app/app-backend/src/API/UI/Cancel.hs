@@ -12,8 +12,8 @@ import qualified Core.ACL.Cancel as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
-import qualified ExternalAPI.Flow as ExternalAPI
 import Servant
+import qualified SharedLogic.CallBPP as CallBPP
 import Utils.Auth
 import Utils.Common
 
@@ -39,5 +39,5 @@ cancel ::
 cancel bookingId personId req =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dCancelRes <- DCancel.cancel bookingId personId req
-    void . ExternalAPI.cancel dCancelRes.bppUrl =<< ACL.buildCancelReq dCancelRes
+    void . CallBPP.cancel dCancelRes.bppUrl =<< ACL.buildCancelReq dCancelRes
     return Success

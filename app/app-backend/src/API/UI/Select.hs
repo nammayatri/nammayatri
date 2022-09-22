@@ -15,8 +15,8 @@ import qualified Core.ACL.Select as ACL
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
-import qualified ExternalAPI.Flow as ExternalAPI
 import Servant
+import qualified SharedLogic.CallBPP as CallBPP
 import Utils.Auth
 import Utils.Common
 
@@ -42,7 +42,7 @@ select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dSelectReq <- DSelect.select personId estimateId
   becknReq <- ACL.buildSelectReq dSelectReq
-  void $ ExternalAPI.select dSelectReq.providerUrl becknReq
+  void $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
 selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes

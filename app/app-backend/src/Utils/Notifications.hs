@@ -350,7 +350,8 @@ notifyDriverHasReached ::
   ( EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Id Person -> SRide.Ride ->
+  Id Person ->
+  SRide.Ride ->
   m ()
 notifyDriverHasReached personId ride = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)

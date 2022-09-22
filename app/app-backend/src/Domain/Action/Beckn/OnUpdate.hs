@@ -9,7 +9,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (state)
-import qualified ExternalAPI.Flow as CallBPP
+import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareBreakup as QFareBreakup

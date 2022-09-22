@@ -26,8 +26,8 @@ import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
-import qualified ExternalAPI.Flow as ExternalAPI
 import Servant
+import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
 import qualified Tools.JSON as J
 import Tools.Metrics
@@ -106,10 +106,10 @@ oneWaySearch personId req = do
   dSearchRes <- DOneWaySearch.oneWaySearch personId req
   fork "search cabs" . withRetry $ do
     becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
-    void $ ExternalAPI.search dSearchRes.gatewayUrl becknTaxiReq
+    void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
   fork "search metro" . withRetry $ do
     becknMetroReq <- MetroACL.buildSearchReq dSearchRes
-    ExternalAPI.searchMetro becknMetroReq
+    CallBPP.searchMetro becknMetroReq
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
   return dSearchRes.searchId
 
@@ -129,5 +129,5 @@ rentalSearch personId req = do
   fork "search rental" . withRetry $ do
     -- do we need fork here?
     becknReq <- TaxiACL.buildRentalSearchReq dSearchRes
-    void $ ExternalAPI.search dSearchRes.gatewayUrl becknReq
+    void $ CallBPP.search dSearchRes.gatewayUrl becknReq
   pure $ dSearchRes.searchId

@@ -13,8 +13,8 @@ import qualified Core.ACL.Rating as ACL
 import qualified Domain.Action.UI.Feedback as DFeedback
 import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (product)
-import qualified ExternalAPI.Flow as ExternalAPI
 import Servant
+import qualified SharedLogic.CallBPP as CallBPP
 import Utils.Auth
 import Utils.Common
 
@@ -34,5 +34,5 @@ feedback :: Id Person.Person -> DFeedback.FeedbackReq -> App.FlowHandler APISucc
 feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dFeedbackRes <- DFeedback.feedback request
   becknReq <- ACL.buildRatingReq dFeedbackRes
-  void $ ExternalAPI.feedback dFeedbackRes.providerUrl becknReq
+  void $ CallBPP.feedback dFeedbackRes.providerUrl becknReq
   pure Success

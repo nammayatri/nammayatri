@@ -8,7 +8,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Confirm as ACL
 import qualified Core.ACL.OnInit as TaxiACL
 import qualified Domain.Action.Beckn.OnInit as DOnInit
-import qualified ExternalAPI.Flow as ExternalAPI
+import qualified SharedLogic.CallBPP as CallBPP
 
 type API = OnInit.OnInitAPI
 
@@ -23,5 +23,5 @@ onInit (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . wit
   mbDOnInitReq <- TaxiACL.buildOnInitReq req
   whenJust mbDOnInitReq $ \onInitReq -> do
     onInitRes <- DOnInit.onInit registryUrl onInitReq
-    void . ExternalAPI.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
+    void . CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
   pure Ack

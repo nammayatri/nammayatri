@@ -15,8 +15,8 @@ import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as Quote
-import qualified ExternalAPI.Flow as ExternalAPI
 import Servant
+import qualified SharedLogic.CallBPP as CallBPP
 import Utils.Auth
 import Utils.Common
 
@@ -49,7 +49,7 @@ confirm personId quoteId =
     dConfirmRes <- DConfirm.confirm personId quoteId
     becknInitReq <- ACL.buildInitReq dConfirmRes
     handle (\(_ :: BecknAPICallError) -> DConfirm.cancelBooking dConfirmRes.booking) $
-      void $ ExternalAPI.init dConfirmRes.providerUrl becknInitReq
+      void $ CallBPP.init dConfirmRes.providerUrl becknInitReq
     return $
       ConfirmRes
         { bookingId = dConfirmRes.booking.id
