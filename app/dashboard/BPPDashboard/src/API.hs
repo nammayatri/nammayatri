@@ -1,4 +1,8 @@
-module API where
+module API
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.BPP as BPP
 import qualified "lib-dashboard" API.Dashboard as Dashboard

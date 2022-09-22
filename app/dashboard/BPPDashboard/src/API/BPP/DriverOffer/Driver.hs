@@ -1,4 +1,8 @@
-module API.BPP.DriverOffer.Driver where
+module API.BPP.DriverOffer.Driver
+  ( API,
+    handler,
+  )
+where
 
 import qualified "driver-offer-bpp" API.Dashboard.Driver as DriverOfferBpp
 import Beckn.Prelude

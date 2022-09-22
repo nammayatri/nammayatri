@@ -1,4 +1,8 @@
-module API.BPP.BecknTransport where
+module API.BPP.BecknTransport
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.BPP.BecknTransport.Driver as Driver
 import "lib-dashboard" Environment

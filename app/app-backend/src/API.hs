@@ -3,7 +3,6 @@
 
 module API
   ( API,
-    appAPI,
     handler,
   )
 where
@@ -29,9 +28,6 @@ type MainAPI =
     :<|> MetroBeckn.API
     :<|> Auth.API
     :<|> Dashboard.API
-
-appAPI :: Proxy API
-appAPI = Proxy
 
 handler :: FlowServer API
 handler =

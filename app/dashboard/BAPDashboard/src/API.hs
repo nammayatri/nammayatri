@@ -1,7 +1,11 @@
-module API where
+module API
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.BAP as BAP
-import qualified API.Dashboard as Dashboard
+import qualified "lib-dashboard" API.Dashboard as Dashboard
 import Environment
 import Servant
 

@@ -1,6 +1,10 @@
-module API.BAP.Customer where
+module API.BAP.Customer
+  ( API,
+    handler,
+  )
+where
 
-import qualified "app-backend" App.Routes.Dashboard as BAP
+import qualified "app-backend" API.Dashboard as BAP
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.Common (withFlowHandlerAPI)

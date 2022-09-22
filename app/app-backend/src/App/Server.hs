@@ -22,6 +22,7 @@ run = withModifiedEnv $ \modifiedEnv ->
     & hashBodyForSignature
     & supportProxyAuthorization
   where
+    appAPI = Proxy @API.API
     context =
       verifyPersonAction @(FlowR AppEnv)
         :. verifyDashboardAction @(FlowR AppEnv)

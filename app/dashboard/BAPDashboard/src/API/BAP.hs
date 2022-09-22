@@ -1,4 +1,8 @@
-module API.BAP where
+module API.BAP
+  ( API,
+    handler,
+  )
+where
 
 import qualified API.BAP.Customer as Customer
 import "lib-dashboard" Environment
