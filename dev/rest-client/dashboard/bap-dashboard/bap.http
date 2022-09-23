@@ -15,5 +15,7 @@ GET {{bap-dashboard-host}}
 # @name customerList
 
 GET {{bap-dashboard-host}}/bap/yatri/customer/list
+  ?limit=10
+  &offset=0
 content-type: application/json
 token: {{customer_service}}

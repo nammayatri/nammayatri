@@ -144,7 +144,14 @@ token: {{arduCustomerToken}}
 
 # @name customerList
 
+# we don't have ARDU merchant in local-testing-data, so for testing this api you should add it:
+
+# INSERT INTO atlas_app.merchant (id, short_id, exo_phone, exo_phone_country_code, fcm_url, fcm_json_path, fcm_redis_token_key_prefix, origin_restriction, destination_restriction, registry_url, gateway_url) VALUES
+# ('da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'ARDU', '8047108594', '+91', 'http://localhost:4545/', 'dummy-fcm.json', 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', '{Ernakulam}', '{Ernakulam,Kerala}', 'http://localhost:8020', 'http://localhost:8015/v1');
+
 GET {{bap-dashboard-host}}/bap/ardu/customer/list
+  ?limit=10
+  &offset=0
 content-type: application/json
 token: {{arduCustomerToken}}
 

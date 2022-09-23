@@ -15,5 +15,7 @@ GET {{bpp-dashboard-host}}
 # @name driverList
 
 GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/list
+  ?limit=10
+  &offset=0
 content-type: application/json
 token: {{customer_service}}

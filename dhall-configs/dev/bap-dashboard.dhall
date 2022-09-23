@@ -34,13 +34,13 @@ let ServerName = < APP_BACKEND_YATRI | APP_BACKEND_ARDU | BECKN_TRANSPORT | DRIV
 
 let appBackendYatri =
   { name = ServerName.APP_BACKEND_YATRI
-  , url = "http://localhost:8013/"
+  , url = "http://localhost:8013/dashboard/YATRI/"
   , token = sec.appBackendToken
   }
 
 let appBackendArdu =
   { name = ServerName.APP_BACKEND_ARDU
-  , url = "http://localhost:8013/"
+  , url = "http://localhost:8013/dashboard/ARDU/"
   , token = sec.appBackendToken
   }
 

@@ -64,7 +64,7 @@ generateToken ::
   m Text
 generateToken personId serverName = do
   regToken <- buildRegistrationToken personId serverName
-  -- Clean old login session
+  -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokensByServerName personId serverName
   DB.runTransaction $ do
     QR.deleteAllByPersonIdAndServerName personId serverName
@@ -80,6 +80,7 @@ logout ::
 logout tokenInfo = do
   let personId = tokenInfo.personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokensByServerName personId tokenInfo.serverName
   DB.runTransaction (QR.deleteAllByPersonIdAndServerName person.id tokenInfo.serverName)
   pure $ LogoutRes "Logged out successfully"
@@ -93,6 +94,7 @@ logoutAllServers ::
 logoutAllServers tokenInfo = do
   let personId = tokenInfo.personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokens personId
   DB.runTransaction (QR.deleteAllByPersonId person.id)
   pure $ LogoutRes "Logged out successfully from all servers"

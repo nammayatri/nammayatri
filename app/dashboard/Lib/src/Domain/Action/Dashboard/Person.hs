@@ -103,10 +103,11 @@ resetServerAccess _ personId req = do
   case mbServerAccess of
     Nothing -> throwError $ InvalidRequest "Server access already denied."
     Just serverAccess -> do
+      -- this function uses tokens from db, so should be called before transaction
+      Auth.cleanCachedTokensByServerName personId req.serverName
       Esq.runTransaction $ do
         QServer.deleteById serverAccess.id
         QReg.deleteAllByPersonIdAndServerName personId req.serverName
-      Auth.cleanCachedTokensByServerName personId req.serverName
       pure Success
 
 buildServerAccess :: MonadFlow m => Id DP.Person -> DReg.ServerName -> m DServer.ServerAccess

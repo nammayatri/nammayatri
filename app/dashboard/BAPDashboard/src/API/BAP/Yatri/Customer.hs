@@ -10,27 +10,31 @@ import Beckn.Types.Id
 import Beckn.Utils.Common (withFlowHandlerAPI)
 import "lib-dashboard" Domain.Types.Person as DP
 import Environment
-import qualified EulerHS.Types as T
 import Servant
 import Tools.Auth
 import qualified Tools.Client as Client
 
 type API =
-  "customer"
-    :> "list"
-    :> ApiAuth 'READ_ACCESS 'CUSTOMERS
-    :> Get '[JSON] Text
+  ApiAuth 'READ_ACCESS 'CUSTOMERS
+    :> BAP.CustomerListAPI
 
 handler :: FlowServer API
 handler =
   listCustomer
 
-listCustomer :: Id DP.Person -> FlowHandler Text
-listCustomer _ = withFlowHandlerAPI $ do
+listCustomer ::
+  Id DP.Person ->
+  Maybe Integer ->
+  Maybe Integer ->
+  FlowHandler Text
+listCustomer _ mbLimit mbOffset = withFlowHandlerAPI $ do
   Client.callAppBackendYatriApi client "bapCustomerList"
   where
     bapCustomerListAPI :: Proxy BAP.CustomerListAPI
     bapCustomerListAPI = Proxy
-    client =
-      T.client
+    client token =
+      Client.client
         bapCustomerListAPI
+        token
+        mbLimit
+        mbOffset

@@ -8,8 +8,11 @@ import Beckn.Utils.Common hiding (Error, callAPI)
 import Beckn.Utils.Dhall (FromDhall)
 import qualified Domain.Types.RegistrationToken as DReg
 import qualified EulerHS.Types as ET
+import Servant hiding (throwError)
+import Servant.Client
 import Tools.Error
 import Tools.Metrics
+import "app-backend" Utils.Auth (DashboardTokenAuth)
 
 callAppBackendYatriApi,
   callAppBackendArduApi,
@@ -40,12 +43,19 @@ callHelperAPI ::
   (RegToken -> ET.EulerClient res) ->
   Text ->
   m res
-callHelperAPI serverName client desc = do
+callHelperAPI serverName cl desc = do
   dataServer <- getDataServer serverName
-  callAPI dataServer.url (client dataServer.token) desc
+  callAPI dataServer.url (cl dataServer.token) desc
 
 callAPI :: CallAPI env res
 callAPI = callApiUnwrappingApiError (identity @Error) Nothing Nothing
+
+client ::
+  forall api.
+  HasClient ET.EulerClient api =>
+  Proxy api ->
+  Client ET.EulerClient (DashboardTokenAuth :> api)
+client _ = ET.client (Proxy @(DashboardTokenAuth :> api))
 
 data DataServer = DataServer
   { name :: DReg.ServerName,

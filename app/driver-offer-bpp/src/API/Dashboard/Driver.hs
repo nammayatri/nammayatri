@@ -7,19 +7,25 @@ import Servant hiding (throwError)
 import Tools.Auth (Dashboard, DashboardTokenAuth)
 
 type API =
-  DriverListAPI
+  "dashboard"
+    :> DashboardTokenAuth
+    :> DriverListAPI
 
 type DriverListAPI =
-  "dashboard"
-    :> "driver"
+  "driver"
     :> "list"
-    :> DashboardTokenAuth
+    :> QueryParam "limit" Integer
+    :> QueryParam "offset" Integer
     :> Get '[JSON] Text
 
 handler :: FlowServer API
 handler =
   listDriver
 
-listDriver :: Dashboard -> FlowHandler Text
-listDriver _ = withFlowHandlerAPI $ do
+listDriver ::
+  Dashboard ->
+  Maybe Integer ->
+  Maybe Integer ->
+  FlowHandler Text
+listDriver _ _ _ = withFlowHandlerAPI $ do
   pure "To be done"

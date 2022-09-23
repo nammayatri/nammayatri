@@ -16,7 +16,8 @@ content-type: application/json
 
 {
   "email" : "juspay_admin@dashboard.com",
-  "password" : "juspay_admin"
+  "password" : "juspay_admin",
+  "serverName" : "BECKN_TRANSPORT"
 }
 
 ###
@@ -92,6 +93,18 @@ token: {{token}}
 
 ###
 
+# @name assignServerAccess
+
+POST {{bpp-dashboard-host}}/dashboard/admin/person/{{personId}}/assignServerAccess
+content-type: application/json
+token: {{token}}
+
+{
+  "serverName" : "DRIVER_OFFER_BPP"
+}
+
+###
+
 # @name profile
 
 @customerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
@@ -102,18 +115,71 @@ token: {{customerToken}}
 
 ###
 
+# separate login for another server
+
+# @name driverOfferCustomerLogin
+
+POST {{bpp-dashboard-host}}/dashboard/login
+content-type: application/json
+
+{
+  "email" : "customer@dashboard.com",
+  "password" : "customer",
+  "serverName" : "DRIVER_OFFER_BPP"
+}
+
+###
+
+# @name getCurrentServer
+
+@driverOfferCustomerToken = {{driverOfferCustomerLogin.response.body.authToken}}
+
+GET {{bpp-dashboard-host}}/dashboard/person/getCurrentServer
+content-type: application/json
+token: {{driverOfferCustomerToken}}
+
+###
+
 # check access level for new role "DEVELOPER"
 
 # @name driverList
 
-GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/list
+GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/list
+  ?limit=10
+  &offset=0
 content-type: application/json
-token: {{customerToken}}
+token: {{driverOfferCustomerToken}}
+
+###
+
+# @name resetServerAccess
+
+POST {{bpp-dashboard-host}}/dashboard/admin/person/{{personId}}/resetServerAccess
+content-type: application/json
+token: {{token}}
+
+{
+  "serverName" : "DRIVER_OFFER_BPP"
+}
 
 ###
 
 # @name logout
 
+# this endpoint should remove only one token for APP_BACKEND_YATRI server
+
+@becknTransportCustomerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
+
 POST {{bpp-dashboard-host}}/dashboard/logout
 content-type: application/json
-token: {{token}}
+token: {{becknTransportCustomerToken}}
+
+###
+
+# @name logoutAllServers
+
+# this endpoint should remove all tokens for customer
+
+POST {{bpp-dashboard-host}}/dashboard/logoutAllServers
+content-type: application/json
+token: {{driverOfferCustomerToken}}
