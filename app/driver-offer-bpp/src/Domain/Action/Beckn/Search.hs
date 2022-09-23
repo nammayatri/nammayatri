@@ -63,6 +63,7 @@ handler org sReq = do
   let distance = distRes.distance
       estimatedRideDuration = distRes.duration_in_traffic
       estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` sReq.pickupTime
+  logDebug $ "distance: " <> show distance
   estimates <- mapM (mkEstimate org estimatedRideFinishTime distance) listOfProtoQuotes
   logDebug $ "bap uri: " <> show sReq.bapUri
   buildSearchRes org fromLocation toLocation estimates
@@ -79,7 +80,7 @@ mkEstimate org estimatedRideFinishTime dist g = do
   fareParams <- calculateFare org.id variant dist estimatedRideFinishTime Nothing
   let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare
-  logDebug $ "distance: " <> show g.distance
+  logDebug $ "distanceToPickup: " <> show g.distance
   pure
     EstimateItem
       { vehicleVariant = g.origin.vehicle.variant,

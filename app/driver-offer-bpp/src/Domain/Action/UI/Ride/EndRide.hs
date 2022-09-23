@@ -109,4 +109,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric fareDiff distanceDiff
-      return (max actualDistance oldDistance, max updatedFare estimatedFare)
+      return $
+        if actualDistance > oldDistance
+          then (actualDistance, updatedFare)
+          else (oldDistance, estimatedFare)

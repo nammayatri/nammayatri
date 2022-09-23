@@ -96,6 +96,9 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
           }
 buildOnUpdateMessage req@RideCompletedBuildReq {} = do
   fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
+  chargeableDistance <-
+    realToFrac <$> req.ride.chargeableDistance
+      & fromMaybeM (InternalError "Ride chargeable distance is not present.")
   let currency = "INR"
       ride = req.ride
       price =
@@ -119,7 +122,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             fulfillment =
               RideCompletedOU.FulfillmentInfo
                 { id = ride.id.getId,
-                  chargeable_distance = DecimalValue $ toRational ride.traveledDistance.getHighPrecMeters
+                  chargeable_distance = chargeableDistance
                 }
           }
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do

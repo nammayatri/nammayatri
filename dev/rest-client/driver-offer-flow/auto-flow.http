@@ -12,8 +12,6 @@ GET {{app-host}}
 
 ###
 
-@currentTime = 2022-03-03T23:37
-
 # @name updateInitial
 POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{token1}}
@@ -25,7 +23,7 @@ content-type: application/json
             "lon": 76.31742659311804,
             "lat": 10.041437092019764
         },
-        "ts": "{{currentTime}}:01.114244Z"
+        "ts": "{{$localDatetime iso8601}}"
     }
 ]
 
@@ -207,8 +205,6 @@ content-type: application/json
 # 76.308364, 10.025263
 ###
 
-@currentTime = 2022-03-03T23:37
-
 # @name update1
 POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{token1}}
@@ -220,14 +216,14 @@ content-type: application/json
             "lon": 76.308364,
             "lat": 10.025263
         },
-        "ts": "{{currentTime}}:01.114244Z"
+        "ts": "{{$localDatetime iso8601}}"
     },
     {
         "pt": {
             "lat": 10.036754844278509,
             "lon": 76.31406568451686
         },
-        "ts": "{{currentTime}}:10.114244Z",
+        "ts": "{{$localDatetime iso8601}}",
         "aux": "Pathadippalam metro"
     },
     {
@@ -235,7 +231,7 @@ content-type: application/json
             "lat": 10.047446731143813,
             "lon": 76.3182331061409
         },
-        "ts": "{{currentTime}}:19.114244Z",
+        "ts": "{{$localDatetime iso8601}}",
         "aux": "Cochi university metro"
     },
     {
@@ -243,7 +239,7 @@ content-type: application/json
             "lat": 10.059363529228063,
             "lon": 76.32187725922056
         },
-        "ts": "{{currentTime}}:28.114244Z",
+        "ts": "{{$localDatetime iso8601}}",
         "aux": "Kalamassery metro"
     }
 ]
@@ -261,7 +257,7 @@ content-type: application/json
             "lat": 10.072808633266954,
             "lon": 76.33348375279246
         },
-        "ts": "{{currentTime}}:38.114244Z",
+        "ts": "{{$localDatetime iso8601}}",
         "aux": "Muttom metro"
     },
     {
@@ -269,7 +265,7 @@ content-type: application/json
             "lat": 10.080241882783683,
             "lon": 76.33893232031218
         },
-        "ts": "{{currentTime}}:49.114244Z",
+        "ts": "{{$localDatetime iso8601}}",
         "aux": "Ambattukavu metro"
     }
 ]

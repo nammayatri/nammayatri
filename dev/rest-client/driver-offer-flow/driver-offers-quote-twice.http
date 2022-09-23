@@ -8,8 +8,6 @@ GET {{driver-offer-bpp-host}}/ui
 
 ###
 
-@currentTime = 2022-03-03T23:37
-
 # @name updateInitial
 POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{token1}}
@@ -21,7 +19,7 @@ content-type: application/json
             "lon": 76.31742659311804,
             "lat": 10.041437092019764
         },
-        "ts": "{{currentTime}}:01.114244Z"
+        "ts": "{{$localDatetime iso8601}}"
     }
 ]
 

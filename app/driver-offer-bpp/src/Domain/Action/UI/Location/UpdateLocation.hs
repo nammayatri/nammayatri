@@ -71,7 +71,7 @@ updateLocation UpdateLocationHandler {..} driverId waypoints = withLogTag "drive
 
     isCalledBeforeRefreshPeriod mbLoc now =
       maybe False (\loc -> now `diffUTCTime` loc.updatedAt < refreshPeriod) mbLoc
-    -- sortedWaypoints = NE.sortWith (.ts) waypoints
+
     lockKey = makeLockKey driverId
 
 makeLockKey :: Id Person.Person -> Text

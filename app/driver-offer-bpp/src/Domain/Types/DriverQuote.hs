@@ -12,7 +12,7 @@ import Domain.Types.SearchRequest
 import qualified Domain.Types.Vehicle.Variant as Variant
 
 data DriverQuoteStatus = Active | Inactive
-  deriving (Show, Read)
+  deriving (Show, Read, Eq)
   deriving (PrettyShow) via Showable DriverQuoteStatus
 
 data DriverQuote = DriverQuote

@@ -15,6 +15,7 @@ import qualified Data.Text as T
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
@@ -75,7 +76,7 @@ handler subscriber transporterId req = do
       >>= fromMaybeM (OrgNotFound transporterId'.getId)
   unless (transporterId' == transporterId) $ throwError AccessDenied
   now <- getCurrentTime
-  when (driverQuote.validTill < now) $ do
+  unless (driverQuote.validTill > now || driverQuote.status == DDQ.Active) $ do
     cancelBooking booking driver transporter
     throwError $ QuoteExpired driverQuote.id.getId
   let bapOrgId = booking.bapId

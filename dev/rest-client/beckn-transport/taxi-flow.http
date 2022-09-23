@@ -7,7 +7,6 @@ content-type: application/json
 token: {{driver-token}}
 
 ###
-@currentTime = 2022-03-03T23:37
 
 # @name updateInitial
 POST {{transporter-host}}/driver/location
@@ -20,14 +19,12 @@ content-type: application/json
             "lon": 76.30833070042235,
             "lat": 10.025196668204602
         },
-        "ts": "{{currentTime}}:01.114244Z"
+        "ts": "{{$localDatetime iso8601}}"
     }
 ]
 
 ###
 
-@currentTime = 2022-03-03T23:37
-
 # @name updateInitial
 POST {{transporter-host}}/driver/location
 token: {{driver-token}}
@@ -39,7 +36,7 @@ content-type: application/json
             "lon": 76.30833070042235,
             "lat": 10.025196668204602
         },
-        "ts": "{{currentTime}}:01.114244Z"
+        "ts": "{{$localDatetime iso8601}}"
     }
 ]
 
