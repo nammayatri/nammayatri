@@ -189,7 +189,7 @@ addLanguageToDictionary ::
   ) =>
   DSearchReq.SearchRequest ->
   LanguageDictionary ->
-  (GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong) ->
+  GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong ->
   m LanguageDictionary
 addLanguageToDictionary searchReq dict dPoolRes = do
   let language = fromMaybe GoogleMaps.ENGLISH dPoolRes.origin.language
