@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [13.0.0] - 14-08-2022 (partial), 13-09-2022
+
+Task list for these changes are large. Listing notable changes here
+
+- Customer saved Locations
+
+- Modified Beckn ACL layer to comply with updated mobility implementation guide
+
+- Added Rental fare product for static offer BPP
+
+- Added driver offer one way fare product BPP
+
+- Added AUTO_RICKSHAW vehicle class for driver offer BPP
+
+- Various bug fixes
+
 ## [12.1.1] - 22-04-2022
 
 ### Fixed
@@ -742,18 +758,19 @@ policy
 
 - Go-live production release
 
-[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v12.1.1
-[12.1.1]: https://bitbucket.org/juspay/beckn/commits/tag/v12.1.1
-[12.1.0]: https://bitbucket.org/juspay/beckn/commits/tag/v12.1.0
-[12.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v12.0.0
-[11.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v11.0.0
-[10.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v10.0.0
-[9.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v9.0.0
-[8.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v8.0.0
-[7.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v7.0.0
-[6.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v6.0.0
-[5.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v5.0.0
-[4.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v4.0.0
-[3.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v3.0.0
-[2.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v2.0.0
-[1.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v1.0.0
+[Unreleased]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/compare/commits?targetBranch=refs%2Ftags%2Fv13.0.0&sourceBranch=refs%2Fheads%2Fmaster&targetRepoId=762
+[13.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv13.0.0&merges=include
+[12.1.1]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv12.1.1&merges=include
+[12.1.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv12.1.0&merges=include
+[12.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv12.0.0&merges=include
+[11.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv11.0.0&merges=include
+[10.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv10.0.0&merges=include
+[9.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv9.0.0&merges=include
+[8.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv8.0.0&merges=include
+[7.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv7.0.0&merges=include
+[6.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv6.0.0&merges=include
+[5.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv5.0.0&merges=include
+[4.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv4.0.0&merges=include
+[3.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv3.0.0&merges=include
+[2.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv2.0.0&merges=include
+[1.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv1.0.0&merges=include
