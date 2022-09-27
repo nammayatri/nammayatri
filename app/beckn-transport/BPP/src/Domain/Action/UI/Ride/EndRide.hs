@@ -5,6 +5,7 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Utils.CalculateDistance (distanceBetweenInMeters)
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
@@ -87,7 +88,9 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
         ride{chargeableDistance = Just chargeableDistance,
              fare = Just fare,
              totalFare = Just totalFare,
-             tripEndTime = Just now
+             tripEndTime = Just now,
+             tripEndLat = Just req.point.lat,
+             tripEndLon = Just req.point.lon
             }
 
   endRideTransaction booking.id updRide (cast driverId) fareBreakups
@@ -108,7 +111,21 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
       shouldRecalculateFare <- recalculateFareEnabled
       distanceCalculationFailed <- isDistanceCalculationFailed requestorId
 
-      if shouldRecalculateFare && not distanceCalculationFailed
+      -- TODO make it configurable per BPP
+      let pickupLocThreshold = metersToHighPrecMeters (500 :: Meters)
+      let dropLocThreshold = metersToHighPrecMeters (500 :: Meters)
+      tripStartLat <- ride.tripStartLat & fromMaybeM (RideFieldNotPresent "tripStartLat")
+      tripStartLon <- ride.tripStartLon & fromMaybeM (RideFieldNotPresent "tripStartLon")
+      let tripStartLoc =
+            LatLong
+              { lat = tripStartLat,
+                lon = tripStartLon
+              }
+      let pickupDifference = distanceBetweenInMeters (mkLatLong booking.fromLocation) tripStartLoc
+      let dropDifference = distanceBetweenInMeters (mkLatLong oneWayDetails.toLocation) req.point
+      let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
+
+      if shouldRecalculateFare && not distanceCalculationFailed && pickupDropOutsideOfThreshold
         then do
           fareParams <- calculateFare transporterId vehicleVariant actualDistance oneWayDetails.estimatedFinishTime
           let updatedFare = Fare.fareSum fareParams
@@ -120,6 +137,10 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
               <> show fareDiff
               <> ", Distance difference: "
               <> show distanceDiff
+              <> ", Pickup point difference: "
+              <> show pickupDifference
+              <> ", Drop point difference: "
+              <> show dropDifference
           putDiffMetric fareDiff distanceDiff
           fareBreakups <- buildOneWayFareBreakups fareParams booking.id
           return $
@@ -162,3 +183,15 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
       -- putDiffMetric fareDiff distanceDiff
       fareBreakups <- buildRentalFareBreakups fareParams booking.id
       pure (actualDistance, fare, totalFare, fareBreakups)
+
+mkLatLong ::
+  ( HasField "lat" r Double,
+    HasField "lon" r Double
+  ) =>
+  r ->
+  LatLong
+mkLatLong r =
+  LatLong
+    { lat = r.lat,
+      lon = r.lon
+    }

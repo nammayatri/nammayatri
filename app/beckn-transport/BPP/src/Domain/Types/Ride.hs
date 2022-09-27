@@ -47,6 +47,10 @@ data Ride = Ride
     chargeableDistance :: Maybe Meters,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
+    tripStartLat :: Maybe Double, -- tripStart :: Maybe LatLong
+    tripStartLon :: Maybe Double,
+    tripEndLat :: Maybe Double, -- tripEnd :: Maybe LatLong
+    tripEndLon :: Maybe Double,
     rideRating :: Maybe RideRating,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

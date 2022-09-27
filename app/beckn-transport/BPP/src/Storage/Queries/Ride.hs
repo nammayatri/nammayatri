@@ -5,6 +5,7 @@ module Storage.Queries.Ride where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong)
 import Beckn.Utils.Common
 import Domain.Types.Booking.Type as Booking
 import Domain.Types.Organization
@@ -154,15 +155,18 @@ updateStatus rideId status = do
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 
-updateStartTime ::
+updateStartTimeAndLoc ::
   Id Ride ->
+  LatLong ->
   SqlDB ()
-updateStartTime rideId = do
+updateStartTimeAndLoc rideId point = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
       [ RideTripStartTime =. val (Just now),
+        RideTripStartLat =. val (Just point.lat),
+        RideTripStartLon =. val (Just point.lon),
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
@@ -210,6 +214,8 @@ updateAll rideId ride = do
         RideTotalFare =. val (fromIntegral <$> ride.totalFare),
         RideChargeableDistance =. val (fromIntegral <$> ride.chargeableDistance),
         RideTripEndTime =. val ride.tripEndTime,
+        RideTripEndLat =. val ride.tripEndLat,
+        RideTripEndLon =. val ride.tripEndLon,
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
