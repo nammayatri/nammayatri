@@ -85,7 +85,7 @@ data DriverInformationRes = DriverInformationRes
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     mobileNumber :: Maybe Text,
-    linkedVehicle :: VehicleAPIEntity,
+    linkedVehicle :: Maybe VehicleAPIEntity,
     rating :: Maybe Int,
     active :: Bool,
     onRide :: Bool,
@@ -105,7 +105,7 @@ data DriverEntityRes = DriverEntityRes
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     mobileNumber :: Maybe Text,
-    linkedVehicle :: VehicleAPIEntity,
+    linkedVehicle :: Maybe VehicleAPIEntity,
     rating :: Maybe Int,
     active :: Bool,
     onRide :: Bool,
@@ -297,7 +297,7 @@ listDriver admin mbSearchString mbLimit mbOffset = do
 
 buildDriverEntityRes :: (Esq.Transactionable m, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
-  vehicle <- QVehicle.findById person.id >>= fromMaybeM (VehicleNotFound person.id.getId)
+  vehicleMB <- QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
   return $
     DriverEntityRes
@@ -307,7 +307,7 @@ buildDriverEntityRes (person, driverInfo) = do
         lastName = person.lastName,
         mobileNumber = decMobNum,
         rating = round <$> person.rating,
-        linkedVehicle = SV.makeVehicleAPIEntity vehicle,
+        linkedVehicle = SV.makeVehicleAPIEntity <$> vehicleMB,
         active = driverInfo.active,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,
