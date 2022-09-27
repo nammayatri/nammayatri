@@ -4,6 +4,7 @@
 module Domain.Action.UI.DriverOnboarding.Image where
 
 import AWS.S3 as S3
+import Beckn.External.Encryption (decrypt)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (isNothing)
 import Beckn.Types.Common
@@ -16,7 +17,9 @@ import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Person as Person
 import Environment
 import Idfy.Flow as Idfy
+import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.Image as Query
+import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as Person
 import Tools.Error
 
@@ -41,7 +44,7 @@ createPath driverId orgId imageType = do
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
   return $
     T.pack
-      ( "/" <> T.unpack pathPrefix <> "/driver-onboarding/" <> "org-" <> T.unpack orgId <> "/"
+      ( T.unpack pathPrefix <> "/driver-onboarding/" <> "org-" <> T.unpack orgId <> "/"
           <> T.unpack driverId
           <> "/"
           <> show imageType
@@ -66,17 +69,24 @@ validateImage ::
 validateImage personId ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
+  org <- Organization.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
 
-  images <- Query.findByPersonId personId
-  when (length images > 100) $ throwError (ImageValidationExceedLimit personId.getId)
+  images <- Query.findRecentByPersonIdAndImageType personId imageType
+  onboardingTryLimit <- asks (.onboardingTryLimit)
+  when (length images > onboardingTryLimit) $ do
+    driverPhone <- mapM decrypt person.mobileNumber
+    notifyErrorToSupport driverPhone org.name
+    throwError (ImageValidationExceedLimit personId.getId)
 
   imagePath <- createPath personId.getId orgId.getId imageType
   _ <- S3.put (T.unpack imagePath) image
   imageEntity <- mkImage personId orgId imagePath imageType False
   runTransaction $ Query.create imageEntity
 
-  validationOutput <- Idfy.validateImage image (getDocType imageType)
-  checkErrors imageType validationOutput.result
+  -- skipping validation for rc as validation not available in idfy
+  unless (imageType == Domain.VehicleRegistrationCertificate) $ do
+    validationOutput <- Idfy.validateImage image (getDocType imageType)
+    checkErrors imageType validationOutput.result
   runTransaction $ Query.updateToValid imageEntity.id
 
   return $ ImageValidateResponse {imageId = imageEntity.id}
@@ -100,7 +110,7 @@ validateImage personId ImageValidateRequest {..} = do
       let outputImageType = getImageType result.detected_doc_type
       unless (outputImageType == imgType) $ throwError (InvalidImageType (show imgType) (show outputImageType))
 
-      unless (fromMaybe False result.is_readable) $ throwError $ InvalidRequest "Image not readable"
+      unless (fromMaybe False result.is_readable) $ throwError $ InvalidRequest "Image is not readable"
 
       unless (maybe False (60 <) result.readability.confidence) $
         throwError $ InvalidRequest "Image quality is not good"

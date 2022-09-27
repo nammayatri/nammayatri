@@ -30,4 +30,5 @@ in
 , s3Config = s3Config
 , idfyCfg = idfyCfg
 , googleMapsKey = "xxxxxxx"
+, slackToken = "xxxxxxx"
 }

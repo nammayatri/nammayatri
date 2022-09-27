@@ -41,7 +41,8 @@ data DriverDLReq = DriverDLReq
   { driverLicenseNumber :: Text,
     operatingCity :: Text,
     driverDateOfBirth :: UTCTime,
-    imageId :: Id Image.Image
+    imageId1 :: Id Image.Image,
+    imageId2 :: Id Image.Image
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -51,12 +52,12 @@ validateDriverDLReq :: UTCTime -> Validate DriverDLReq
 validateDriverDLReq now DriverDLReq {..} =
   sequenceA_
     [ validateField "driverLicenseNumber" driverLicenseNumber licenseNum,
-      validateField "driverDateOfBirth" driverDateOfBirth $ InRange @UTCTime t100YearsAgo t16YearsAgo
+      validateField "driverDateOfBirth" driverDateOfBirth $ InRange @UTCTime t60YearsAgo t18YearsAgo
     ]
   where
     licenseNum = MinLength 5 `And` star (latinUC \/ digit)
-    t16YearsAgo = yearsAgo 16
-    t100YearsAgo = yearsAgo 100
+    t18YearsAgo = yearsAgo 18
+    t60YearsAgo = yearsAgo 60
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
 
 verifyDL ::
@@ -68,13 +69,10 @@ verifyDL personId req@DriverDLReq {..} = do
   runRequestValidation (validateDriverDLReq now) req
   _ <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
-  imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
-  unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
-  unless (imageMetadata.imageType == Image.DriverLicense) $
-    throwError (InvalidImageType (show Image.DriverLicense) (show imageMetadata.imageType))
+  image1 <- getImage imageId1
+  image2 <- getImage imageId2
 
-  image <- S3.get $ T.unpack imageMetadata.s3Path
-  resp <- Idfy.extractDLImage image Nothing
+  resp <- Idfy.extractDLImage image1 (Just image2)
   case resp.result of
     Just result -> do
       unless ((removeSpaceAndDash <$> result.extraction_output.id_number) == (removeSpaceAndDash <$> Just driverLicenseNumber)) $
@@ -94,6 +92,13 @@ verifyDL personId req@DriverDLReq {..} = do
       when (isJust mDriverDL) $ throwError DriverAlreadyLinked
       verifyDLFlow personId driverLicenseNumber driverDateOfBirth
   return Success
+  where
+    getImage imageId = do
+      imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
+      unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
+      unless (imageMetadata.imageType == Image.DriverLicense) $
+        throwError (InvalidImageType (show Image.DriverLicense) (show imageMetadata.imageType))
+      S3.get $ T.unpack imageMetadata.s3Path
 
 verifyDLFlow :: Id Person.Person -> Text -> UTCTime -> Flow ()
 verifyDLFlow personId dlNumber driverDateOfBirth = do

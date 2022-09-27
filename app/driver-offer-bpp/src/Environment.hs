@@ -4,6 +4,7 @@ module Environment where
 
 import AWS.S3 (S3AuthenticatingEntity (..), S3Config)
 import Beckn.External.Encryption (EncTools)
+import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config
 import Beckn.Storage.Esqueleto.Config
@@ -55,6 +56,9 @@ data AppCfg = AppCfg
     otpSmsTemplate :: Text,
     smsCfg :: SmsConfig,
     inviteSmsTemplate :: Text,
+    onboardSupportSmsTemplate :: Text,
+    slackCfg :: SlackConfig,
+    onboardingTryLimit :: Int,
     apiRateLimitOptions :: APIRateLimitOptions,
     driverPositionInfoExpiry :: Maybe Seconds,
     fcmJsonPath :: Maybe Text,
@@ -101,6 +105,9 @@ data AppEnv = AppEnv
     otpSmsTemplate :: Text,
     smsCfg :: SmsConfig,
     inviteSmsTemplate :: Text,
+    onboardSupportSmsTemplate :: Text,
+    slackCfg :: SlackConfig,
+    onboardingTryLimit :: Int,
     apiRateLimitOptions :: APIRateLimitOptions,
     driverPositionInfoExpiry :: Maybe Seconds,
     fcmJsonPath :: Maybe Text,

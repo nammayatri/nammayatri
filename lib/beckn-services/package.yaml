@@ -72,6 +72,9 @@ dependencies:
 - http-media
 - servant-openapi3
 - openapi3
+- process
+- directory
+- unix
 
 ghc-options:
   - -fwrite-ide-info

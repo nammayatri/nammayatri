@@ -4,7 +4,9 @@ module Storage.Queries.DriverOnboarding.Image where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Common
 import Beckn.Types.Id
+import qualified Data.Time as DT
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Organization
 import Domain.Types.Person (Person)
@@ -19,15 +21,22 @@ findById ::
   m (Maybe Image)
 findById = Esq.findById
 
-findByPersonId ::
-  Transactionable m =>
+findRecentByPersonIdAndImageType ::
+  (Transactionable m, MonadFlow m) =>
   Id Person ->
+  ImageType ->
   m [Image]
-findByPersonId personId = do
+findRecentByPersonIdAndImageType personId imgtype = do
+  now <- getCurrentTime
   findAll $ do
     images <- from $ table @ImageT
-    where_ $ images ^. ImagePersonId ==. val (toKey personId)
+    where_ $
+      images ^. ImagePersonId ==. val (toKey personId)
+        &&. images ^. ImageImageType ==. val imgtype
+        &&. images ^. ImageCreatedAt >. val (daysAgo 7 now)
     return images
+  where
+    daysAgo i now = negate (DT.nominalDay * i) `DT.addUTCTime` now
 
 updateToValid :: Id Image -> SqlDB ()
 updateToValid id = do

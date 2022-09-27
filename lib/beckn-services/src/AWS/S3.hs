@@ -22,9 +22,7 @@ get ::
   m Text
 get path = do
   S3Config {..} <- asks (.s3Config)
-  case accessKeyId of
-    "mock-key" -> pure "Dummy Response"
-    _ -> S3Flow.get' bucketName path
+  S3Flow.get'' bucketName path
 
 put ::
   ( CoreMetrics m,
@@ -32,10 +30,7 @@ put ::
   ) =>
   String ->
   Text ->
-  m Text
+  m ()
 put path img = do
-  withLogTag "S3" $ do
-    S3Config {..} <- asks (.s3Config)
-    case accessKeyId of
-      "mock-key" -> pure "dummy-resp"
-      _ -> S3Flow.put' bucketName path img
+  S3Config {..} <- asks (.s3Config)
+  S3Flow.put'' bucketName path img

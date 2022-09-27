@@ -13,7 +13,7 @@ let s3Config =
   , accessKeyId = "xxxxxxx"
   , bucketName = "xxxxxxx"
   , region = "xxxxxxx"
-  , pathPrefix = "xxxxxxx"
+  , pathPrefix = "dev"
   }
 
 let idfyCfg =
@@ -31,4 +31,5 @@ in
 , s3Config = s3Config
 , idfyCfg = idfyCfg
 , googleMapsKey = topSecret.googleMapsKey
+, slackToken = "xxxxxxx"
 }

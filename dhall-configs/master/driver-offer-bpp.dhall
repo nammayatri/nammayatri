@@ -53,6 +53,11 @@ let apiRateLimitOptions =
   , limitResetTimeInSec = +600
   }
 
+let slackCfg =
+  { channelName = "alert_test_channel"
+  , slackToken = common.slackToken
+  }
+
 let encTools =
   { service = common.passetto
   , hashSalt = sec.encHashSalt
@@ -96,6 +101,9 @@ in
 , fcmTokenKeyPrefix = "FIXME"
 , apiRateLimitOptions = apiRateLimitOptions
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
+, onboardSupportSmsTemplate = "Driver Onboarding Alert!! Driver is facing issue while onboarding to ({#org#}). Please contact him {#driver-phone#}"
+, slackCfg = slackCfg
+, onboardingTryLimit = +3
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , smsCfg = smsConfig
 , driverPositionInfoExpiry = None Integer

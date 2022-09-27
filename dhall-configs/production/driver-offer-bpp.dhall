@@ -20,6 +20,11 @@ let esqDBCfg =
   , connectSchemaName = "atlas_driver_offer_bpp"
   }
 
+let slackCfg =
+  { channelName = "beckn-dashboard-new"
+  , slackToken = common.slackToken
+  }
+
 let rcfg =
   { connectHost = "cache.primary.beckn.juspay.net"
   , connectPort = 6379
@@ -84,6 +89,9 @@ in
 , fcmTokenKeyPrefix = "driver-offer-bpp"
 , apiRateLimitOptions = apiRateLimitOptions
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
+, onboardSupportSmsTemplate = "Driver Onboarding Alert!! Driver is facing issue while onboarding to ({#org#}). Please contact him {#driver-phone#}"
+, slackCfg = slackCfg
+, onboardingTryLimit = +3
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , smsCfg = smsConfig
 , driverPositionInfoExpiry = None Integer
