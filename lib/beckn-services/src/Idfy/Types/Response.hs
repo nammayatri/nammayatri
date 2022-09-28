@@ -246,7 +246,7 @@ data RCExtractionOutput = RCExtractionOutput
     rto_district :: Maybe Text,
     state :: Maybe Text,
     wheel_base :: Maybe Text,
-    status :: Text
+    status :: Maybe Text
   }
   deriving (Show, Generic)
 
