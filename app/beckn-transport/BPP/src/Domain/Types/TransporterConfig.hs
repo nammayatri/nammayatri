@@ -1,3 +1,6 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Domain.Types.TransporterConfig where
 
 import Beckn.Types.Id
@@ -20,4 +23,5 @@ data TransporterParameter
 newtype ConfigKey = ConfigKey
   { getConfigKey :: Text
   }
-  deriving (Generic, Show, Read)
+  deriving stock (Generic)
+  deriving newtype (Show, Read)

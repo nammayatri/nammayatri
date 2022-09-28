@@ -105,4 +105,6 @@ in
 , schedulingReserveTime = +1800
 , driverEstimatedPickupDuration = +300 -- seconds
 , dashboardToken = sec.dashboardToken
+, defaultPickupLocThreshold = +500
+, defaultDropLocThreshold = +500
 }

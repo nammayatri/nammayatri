@@ -97,4 +97,6 @@ in
 , selfUIUrl = "https://api.beckn.juspay.in/bpp/cab/v2/"
 , schedulingReserveTime = +1800
 , driverEstimatedPickupDuration = +300 -- seconds
+, defaultPickupLocThreshold = +500
+, defaultDropLocThreshold = +500
 }

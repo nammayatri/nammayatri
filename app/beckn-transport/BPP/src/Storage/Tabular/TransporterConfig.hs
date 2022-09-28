@@ -13,15 +13,13 @@ import Beckn.Types.Id
 import qualified Domain.Types.TransporterConfig as Domain
 import Storage.Tabular.Organization (OrganizationTId)
 
-derivePersistField "Domain.ConfigKey"
-
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     TransporterConfigT sql=transporter_config
       id Text
       transporterId OrganizationTId
-      configKey Domain.ConfigKey sql=key
+      configKey Text sql=key
       value Text
       createdAt UTCTime
       updatedAt UTCTime
@@ -40,13 +38,13 @@ instance TType TransporterConfigT Domain.TransporterConfig where
       Domain.TransporterConfig
         { id = Id id,
           transporterId = fromKey transporterId,
-          key = configKey,
+          key = Domain.ConfigKey configKey,
           ..
         }
   toTType Domain.TransporterConfig {..} =
     TransporterConfigT
       { id = getId id,
         transporterId = toKey transporterId,
-        configKey = key,
+        configKey = Domain.getConfigKey key,
         ..
       }

@@ -117,18 +117,24 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
       shouldRecalculateFare <- recalculateFareEnabled
       distanceCalculationFailed <- isDistanceCalculationFailed requestorId
 
-      pickupLocThreshold <- metersToHighPrecMeters <$> getLocThreshold handle transporterId PICKUP
-      dropLocThreshold <- metersToHighPrecMeters <$> getLocThreshold handle transporterId DROP
-      tripStartLat <- ride.tripStartLat & fromMaybeM (RideFieldNotPresent "tripStartLat")
-      tripStartLon <- ride.tripStartLon & fromMaybeM (RideFieldNotPresent "tripStartLon")
-      let tripStartLoc =
-            LatLong
-              { lat = tripStartLat,
-                lon = tripStartLon
-              }
-      let pickupDifference = distanceBetweenInMeters (mkLatLong booking.fromLocation) tripStartLoc
-      let dropDifference = distanceBetweenInMeters (mkLatLong oneWayDetails.toLocation) req.point
-      let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
+      let mbTripStartLoc = LatLong <$> ride.tripStartLat <*> ride.tripStartLon
+      -- for old trips with mbTripStartLoc = Nothing we always recalculate fare
+      pickupDropOutsideOfThreshold <- case mbTripStartLoc of
+        Nothing -> pure True
+        Just tripStartLoc -> do
+          pickupLocThreshold <- metersToHighPrecMeters <$> getLocThreshold handle transporterId PICKUP
+          dropLocThreshold <- metersToHighPrecMeters <$> getLocThreshold handle transporterId DROP
+          let pickupDifference = distanceBetweenInMeters (mkLatLong booking.fromLocation) tripStartLoc
+          let dropDifference = distanceBetweenInMeters (mkLatLong oneWayDetails.toLocation) req.point
+          let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
+          logTagInfo "Locations differences" $
+            "Pickup difference: "
+              <> show pickupDifference
+              <> ", Drop difference: "
+              <> show dropDifference
+              <> ", Locations outside of thresholds: "
+              <> show pickupDropOutsideOfThreshold
+          pure pickupDropOutsideOfThreshold
 
       if shouldRecalculateFare && not distanceCalculationFailed && pickupDropOutsideOfThreshold
         then do
@@ -142,10 +148,6 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
               <> show fareDiff
               <> ", Distance difference: "
               <> show distanceDiff
-              <> ", Pickup point difference: "
-              <> show pickupDifference
-              <> ", Drop point difference: "
-              <> show dropDifference
           putDiffMetric fareDiff distanceDiff
           fareBreakups <- buildOneWayFareBreakups fareParams booking.id
           return $
@@ -211,8 +213,8 @@ getLocThreshold ::
   m Meters
 getLocThreshold ServiceHandle {..} orgId stop = do
   (paramName, defaultThreshold) <- case stop of
-    PICKUP -> (DTConf.ConfigKey "pickupLocThreshold",) <$> getDefaultPickupLocThreshold
-    DROP -> (DTConf.ConfigKey "dropLocThreshold",) <$> getDefaultDropLocThreshold
+    PICKUP -> (DTConf.ConfigKey "pickup_loc_threshold",) <$> getDefaultPickupLocThreshold
+    DROP -> (DTConf.ConfigKey "drop_loc_threshold",) <$> getDefaultDropLocThreshold
   mbThresholdConfig <- findConfigByOrgIdAndKey orgId paramName
   mbThreshold <- thresholdFromConfig paramName `mapM` mbThresholdConfig
   pure $ fromMaybe defaultThreshold mbThreshold

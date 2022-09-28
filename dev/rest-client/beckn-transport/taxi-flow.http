@@ -25,23 +25,6 @@ content-type: application/json
 
 ###
 
-# @name updateInitial
-POST {{transporter-host}}/driver/location
-token: {{driver-token}}
-content-type: application/json
-
-[
-    {
-        "pt": {
-            "lon": 76.30833070042235,
-            "lat": 10.025196668204602
-        },
-        "ts": "{{$localDatetime iso8601}}"
-    }
-]
-
-###
-
 # @name searchRoute1
 POST {{app-host}}/rideSearch
 content-type: application/json

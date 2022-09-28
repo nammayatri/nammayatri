@@ -91,3 +91,8 @@ INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size
 	('0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb96', NULL, NULL, NULL, 'Model1', NULL, 'SUV', 'Black', NULL, '4813', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00'),
 	('0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb97', NULL, NULL, NULL, 'Model1', NULL, 'SUV', 'Black', NULL, '4814', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00'),
 	('0c1cd0bc-b3a4-4c3c-811f-900ccf4dfb94', NULL, NULL, NULL, 'Model1', NULL, 'SUV', 'Black', NULL, '4811', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00');
+INSERT INTO atlas_transporter.transporter_config (id, transporter_id, key, value, created_at, updated_at) VALUES
+	('caa807d0-7e9e-440d-9dda-1f7bbeb23900', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'pickup_loc_threshold', '500', '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00'),
+	('caa807d0-7e9e-440d-9dda-1f7bbeb23901', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'drop_loc_threshold', '500', '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00'),
+	('caa807d0-7e9e-440d-9dda-1f7bbeb23902', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 'pickup_loc_threshold', '500', '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00'),
+	('caa807d0-7e9e-440d-9dda-1f7bbeb23903', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 'drop_loc_threshold', '500', '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00');
