@@ -4,6 +4,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import qualified Domain.Action.UI.DriverOnboarding.Referral as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Status as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import qualified Domain.Types.Person as DP
@@ -30,13 +31,19 @@ type API =
              :> ReqBody '[JSON] Image.ImageValidateRequest
              :> Post '[JSON] Image.ImageValidateResponse
        )
+    :<|> "driver" :> "referral"
+      :> TokenAuth
+      :> ReqBody '[JSON] DriverOnboarding.ReferralReq
+      :> Post '[JSON] DriverOnboarding.ReferralRes
 
 handler :: FlowServer API
 handler =
-  verifyDL
-    :<|> verifyRC
-    :<|> statusHandler
-    :<|> validateImage
+  ( verifyDL
+      :<|> verifyRC
+      :<|> statusHandler
+      :<|> validateImage
+  )
+    :<|> addReferral
 
 verifyDL :: Id DP.Person -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
 verifyDL personId = withFlowHandlerAPI . DriverOnboarding.verifyDL personId
@@ -49,3 +56,6 @@ statusHandler = withFlowHandlerAPI . DriverOnboarding.statusHandler
 
 validateImage :: Id DP.Person -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage personId = withFlowHandlerAPI . Image.validateImage personId
+
+addReferral :: Id DP.Person -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
+addReferral personId = withFlowHandlerAPI . DriverOnboarding.addReferral personId
