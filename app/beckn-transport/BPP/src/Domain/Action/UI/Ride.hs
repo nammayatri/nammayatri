@@ -41,7 +41,8 @@ data DriverRideRes = DriverRideRes
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     tripStartTime :: Maybe UTCTime,
-    tripEndTime :: Maybe UTCTime
+    tripEndTime :: Maybe UTCTime,
+    chargeableDistance :: Maybe Meters
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -96,5 +97,6 @@ mkDriverRideRes vehicle driver driverNumber (ride, booking) = do
       createdAt = ride.createdAt,
       updatedAt = ride.updatedAt,
       tripStartTime = ride.tripStartTime,
-      tripEndTime = ride.tripEndTime
+      tripEndTime = ride.tripEndTime,
+      chargeableDistance = ride.chargeableDistance
     }
