@@ -257,6 +257,7 @@ createDriverDetails personId = do
             onRide = False,
             enabled = True,
             verified = False,
+            referralCode = Nothing,
             createdAt = now,
             updatedAt = now
           }
@@ -436,7 +437,6 @@ buildDriver req orgId = do
         SP.rating = Nothing,
         SP.deviceToken = Nothing,
         SP.language = Nothing,
-        SP.referralCode = Nothing,
         SP.organizationId = Just orgId,
         SP.description = Nothing,
         SP.createdAt = now,

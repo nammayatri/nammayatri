@@ -13,7 +13,6 @@ import Beckn.External.GoogleMaps.Types (Language)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Data.ByteString as BS
 import qualified Domain.Types.Person as Domain
 import Storage.Tabular.Organization (OrganizationTId)
 
@@ -44,7 +43,6 @@ mkPersist
       registered Bool
       organizationId OrganizationTId Maybe
       deviceToken FCMRecipientToken Maybe
-      referralCode Text Maybe
       language Language Maybe
       description Text Maybe
       createdAt UTCTime
@@ -65,7 +63,6 @@ instance TType PersonT Domain.Person where
         { id = Id id,
           mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
           organizationId = fromKey <$> organizationId,
-          referralCode = EncryptedHashed <$> (Encrypted <$> referralCode) <*> Just (DbHash BS.empty),
           ..
         }
   toTType Domain.Person {..} =
@@ -74,6 +71,5 @@ instance TType PersonT Domain.Person where
         mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber <&> (.hash),
         organizationId = toKey <$> organizationId,
-        referralCode = referralCode <&> unEncrypted . (.encrypted),
         ..
       }

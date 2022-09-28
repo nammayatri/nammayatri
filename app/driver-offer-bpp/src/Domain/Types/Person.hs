@@ -74,7 +74,6 @@ data PersonE e = Person
     rating :: Maybe Double,
     isNew :: Bool,
     registered :: Bool,
-    referralCode :: Maybe (EncryptedHashedField e Text),
     organizationId :: Maybe (Id DOrg.Organization),
     deviceToken :: Maybe FCM.FCMRecipientToken,
     language :: Maybe GoogleMaps.Language,
@@ -92,12 +91,10 @@ instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
   encryptItem (Person {..}, salt) = do
     mobileNumber_ <- encryptItem $ (,salt) <$> mobileNumber
-    referralCode_ <- encryptItem $ (,salt) <$> referralCode
-    return Person {mobileNumber = mobileNumber_, referralCode = referralCode_, ..}
+    return Person {mobileNumber = mobileNumber_, ..}
   decryptItem Person {..} = do
     mobileNumber_ <- fmap fst <$> decryptItem mobileNumber
-    referralCode_ <- fmap fst <$> decryptItem referralCode
-    return (Person {mobileNumber = mobileNumber_, referralCode = referralCode_, ..}, "")
+    return (Person {mobileNumber = mobileNumber_, ..}, "")
 
 instance EncryptedItem' Person where
   type UnencryptedItem Person = DecryptedPerson

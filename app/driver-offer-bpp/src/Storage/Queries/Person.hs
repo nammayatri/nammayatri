@@ -116,15 +116,6 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-addReferralCode :: Id Person -> EncryptedHashedField 'AsEncrypted Text -> SqlDB ()
-addReferralCode personId code = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonReferralCode =. val (Just (code & unEncrypted . (.encrypted)))
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
-
 updatePersonRec :: Id Person -> Person -> SqlDB ()
 updatePersonRec personId person = do
   now <- getCurrentTime

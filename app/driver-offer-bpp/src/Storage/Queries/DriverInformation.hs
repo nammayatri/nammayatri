@@ -126,3 +126,12 @@ getDriversWithOutdatedLocationsToMakeInactive before = do
     where_ $ driverInformation ^. DriverInformationActive
     orderBy [asc $ driverInformation ^. DriverInformationUpdatedAt]
     pure person
+
+addReferralCode :: Id Person -> EncryptedHashedField 'AsEncrypted Text -> SqlDB ()
+addReferralCode personId code = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationReferralCode =. val (Just (code & unEncrypted . (.encrypted)))
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey personId)

@@ -8,9 +8,12 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (isNothing)
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
+import Beckn.Types.Validation (Validate)
+import qualified Beckn.Utils.Predicates as P
+import Beckn.Utils.Validation (runRequestValidation, validateField)
 import qualified Domain.Types.Person as Person
 import Environment
-import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.DriverInformation as DriverInformation
 
 newtype ReferralReq = ReferralReq
   {value :: Text}
@@ -18,11 +21,18 @@ newtype ReferralReq = ReferralReq
 
 type ReferralRes = APISuccess
 
+validateReferralReq :: Validate ReferralReq
+validateReferralReq ReferralReq {..} =
+  sequenceA_
+    [ validateField "value" value P.mobileNumber
+    ]
+
 addReferral ::
   Id Person.Person ->
   ReferralReq ->
   Flow ReferralRes
 addReferral personId req = do
-  value <- encrypt req.value -- no requset validation required as referral code could be anything
-  runTransaction $ Person.addReferralCode personId value
+  runRequestValidation validateReferralReq req
+  value <- encrypt req.value
+  runTransaction $ DriverInformation.addReferralCode personId value
   return Success
