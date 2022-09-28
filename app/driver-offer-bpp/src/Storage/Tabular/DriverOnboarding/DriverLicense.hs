@@ -27,6 +27,7 @@ mkPersist
       id Text
       driverId PersonTId
       driverDob UTCTime Maybe
+      driverName Text Maybe
       licenseNumber Text
       licenseExpiry UTCTime
       classOfVehicles (PostgresList Idfy.ClassOfVehicle)

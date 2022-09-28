@@ -121,7 +121,7 @@ verifyDLFlow personId dlNumber driverDateOfBirth = do
             updatedAt = now
           }
 
-onVerifyDL :: Idfy.DLVerificationResponse -> Flow AckResponse
+onVerifyDL :: Idfy.VerificationResponse -> Flow AckResponse
 onVerifyDL [] = pure Ack
 onVerifyDL [resp] = do
   verificationReq <- IVQuery.findByRequestId resp.request_id >>= fromMaybeM (InternalError "Verification request not found")
@@ -138,22 +138,26 @@ onVerifyDL [resp] = do
     Nothing -> return Ack
 onVerifyDL _ = pure Ack
 
-mkDriverLicenseEntry :: Id Person.Person -> UTCTime -> Maybe Idfy.DLResult -> Flow (Maybe Domain.DriverLicense)
+mkDriverLicenseEntry :: Id Person.Person -> UTCTime -> Maybe Idfy.IdfyResult -> Flow (Maybe Domain.DriverLicense)
 mkDriverLicenseEntry _ _ Nothing = return Nothing
-mkDriverLicenseEntry driverId now (Just result) = do
-  mEncryptedDL <- encrypt `mapM` result.source_output.id_number
-  id <- generateGUID
-  let mLicenseExpiry = convertTextToUTC result.source_output.nt_validity_to
-  return $ createDL driverId result id now <$> mEncryptedDL <*> mLicenseExpiry
+mkDriverLicenseEntry driverId now (Just result) =
+  case result.source_output of
+    Just output -> do
+      mEncryptedDL <- encrypt `mapM` output.id_number
+      id <- generateGUID
+      let mLicenseExpiry = convertTextToUTC output.nt_validity_to
+      return $ createDL driverId output id now <$> mEncryptedDL <*> mLicenseExpiry
+    Nothing -> return Nothing
 
-createDL :: Id Person.Person -> Idfy.DLResult -> Id Domain.DriverLicense -> UTCTime -> EncryptedHashedField 'AsEncrypted Text -> UTCTime -> Domain.DriverLicense
-createDL driverId result id now edl expiry = do
-  let classOfVehicles = map (.cov) result.source_output.cov_details
+createDL :: Id Person.Person -> Idfy.DLVerificationOutput -> Id Domain.DriverLicense -> UTCTime -> EncryptedHashedField 'AsEncrypted Text -> UTCTime -> Domain.DriverLicense
+createDL driverId output id now edl expiry = do
+  let classOfVehicles = map (.cov) output.cov_details
   let verificationStatus = validateDLStatus expiry classOfVehicles now
   Domain.DriverLicense
     { id,
       driverId,
-      driverDob = convertTextToUTC result.source_output.dob,
+      driverDob = convertTextToUTC output.dob,
+      driverName = output.name,
       licenseNumber = edl,
       licenseExpiry = expiry,
       classOfVehicles,

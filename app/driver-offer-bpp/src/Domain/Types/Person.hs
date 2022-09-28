@@ -73,7 +73,6 @@ data PersonE e = Person
     identifier :: Maybe Text,
     rating :: Maybe Double,
     isNew :: Bool,
-    registered :: Bool,
     organizationId :: Maybe (Id DOrg.Organization),
     deviceToken :: Maybe FCM.FCMRecipientToken,
     language :: Maybe GoogleMaps.Language,

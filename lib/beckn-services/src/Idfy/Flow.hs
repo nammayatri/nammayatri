@@ -21,16 +21,10 @@ import Idfy.WebhookHandler
 import Servant hiding (throwError)
 
 type IdfyWebhookAPI =
-  "service" :> "idfy"
-    :> ( "drivingLicense"
-           :> Header "Authorization" Text
-           :> ReqBody '[JSON] DLVerificationResponse
-           :> Post '[JSON] AckResponse
-           :<|> "registrationCert"
-             :> Header "Authorization" Text
-             :> ReqBody '[JSON] RCVerificationResponse
-             :> Post '[JSON] AckResponse
-       )
+  "service" :> "idfy" :> "verification"
+    :> Header "Authorization" Text
+    :> ReqBody '[JSON] VerificationResponse
+    :> Post '[JSON] AckResponse
 
 idfyWebhookHandler ::
   ( HasField "isShuttingDown" a (TMVar ()),
@@ -38,9 +32,7 @@ idfyWebhookHandler ::
     HasField "loggerEnv" a LoggerEnv,
     HasField "idfyCfg" a IdfyConfig
   ) =>
-  (DLVerificationResponse -> FlowR a AckResponse) ->
-  (RCVerificationResponse -> FlowR a AckResponse) ->
+  (VerificationResponse -> FlowR a AckResponse) ->
+  (VerificationResponse -> FlowR a AckResponse) ->
   FlowServerR a IdfyWebhookAPI
-idfyWebhookHandler dlHandler rcHandler =
-  dlWebhookHandler dlHandler
-    :<|> rcWebhookHandler rcHandler
+idfyWebhookHandler = webhookHandler

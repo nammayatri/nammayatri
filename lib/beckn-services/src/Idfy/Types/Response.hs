@@ -14,13 +14,9 @@ type RCExtractResponse = IdfyResponse (ExtractionOutput RCExtractionOutput)
 
 type DLExtractResponse = IdfyResponse (ExtractionOutput DLExtractionOutput)
 
-type DLVerificationResponse = [IdfyResponse DLResult]
+type VerificationResponse = [IdfyResponse IdfyResult]
 
-type RCVerificationResponse = [IdfyResponse RCResult]
-
-type DLResult = SourceOutput DLVerificationOutput
-
-type RCResult = ExtractionOutput RCVerificationOutput
+type IdfyResult = Output DLVerificationOutput RCVerificationOutput
 
 data IdfyResponse a = IdfyResponse
   { action :: Text,
@@ -86,6 +82,9 @@ instance (ToSchema a) => ToSchema (SourceOutput a)
 instance (ToJSON a) => ToJSON (SourceOutput a)
 
 instance (FromJSON a) => FromJSON (SourceOutput a)
+
+data Output a b = Output {source_output :: Maybe a, extraction_output :: Maybe b}
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- RC verification response
 data RCVerificationOutput = RCVerificationOutput

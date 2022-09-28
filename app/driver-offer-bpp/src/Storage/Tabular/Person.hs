@@ -40,7 +40,6 @@ mkPersist
       identifier Text Maybe
       rating Double Maybe
       isNew Bool
-      registered Bool
       organizationId OrganizationTId Maybe
       deviceToken FCMRecipientToken Maybe
       language Language Maybe

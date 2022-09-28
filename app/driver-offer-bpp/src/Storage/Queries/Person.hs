@@ -116,6 +116,17 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
+updateName :: Id Person -> Text -> SqlDB ()
+updateName personId name = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonFirstName =. val name,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
 updatePersonRec :: Id Person -> Person -> SqlDB ()
 updatePersonRec personId person = do
   now <- getCurrentTime
@@ -245,14 +256,3 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters orgId onlyNotOnRide = do
   where
     makeDriverPoolResult (personId, mbDeviceToken, mblang, onRide, dist, vehicle, dlat, dlon) =
       DriverPoolResult (cast personId) mbDeviceToken mblang onRide dist vehicle dlat dlon
-
-setRegisteredTrue :: Id Person -> SqlDB ()
-setRegisteredTrue personId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonRegistered =. val True,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)

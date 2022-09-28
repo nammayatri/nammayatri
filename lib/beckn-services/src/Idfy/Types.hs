@@ -1,9 +1,9 @@
 module Idfy.Types
   ( ClassOfVehicle (..),
-    DLVerificationResponse,
-    RCVerificationResponse,
-    RCResult,
-    DLResult,
+    VerificationResponse,
+    RCVerificationOutput,
+    DLVerificationOutput,
+    IdfyResult,
   )
 where
 

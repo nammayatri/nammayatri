@@ -13,34 +13,21 @@ import Idfy.Types.IdfyConfig
 import Idfy.Types.Request
 import Idfy.Types.Response
 
-dlWebhookHandler ::
+webhookHandler ::
   ( HasField "isShuttingDown" a (TMVar ()),
     HasField "coreMetrics" a CoreMetricsContainer,
     HasField "loggerEnv" a LoggerEnv,
     HasField "idfyCfg" a IdfyConfig
   ) =>
-  (DLVerificationResponse -> FlowR a AckResponse) ->
+  (VerificationResponse -> FlowR a AckResponse) ->
+  (VerificationResponse -> FlowR a AckResponse) ->
   Maybe Text ->
-  DLVerificationResponse ->
+  VerificationResponse ->
   FlowHandlerR a AckResponse
-dlWebhookHandler handler secret result = withFlowHandlerAPI $ do
+webhookHandler verifyDL_ verifyRC_ secret result = withFlowHandlerAPI $ do
   void $ verifyAuth secret
-  void $ handler result
-  pure Ack
-
-rcWebhookHandler ::
-  ( HasField "isShuttingDown" a (TMVar ()),
-    HasField "coreMetrics" a CoreMetricsContainer,
-    HasField "loggerEnv" a LoggerEnv,
-    HasField "idfyCfg" a IdfyConfig
-  ) =>
-  (RCVerificationResponse -> FlowR a AckResponse) ->
-  Maybe Text ->
-  RCVerificationResponse ->
-  FlowHandlerR a AckResponse
-rcWebhookHandler handler secret result = withFlowHandlerAPI $ do
-  void $ verifyAuth secret
-  void $ handler result
+  void $ verifyDL_ result
+  void $ verifyRC_ result
   pure Ack
 
 verifyDL ::

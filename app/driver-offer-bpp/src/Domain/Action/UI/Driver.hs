@@ -433,7 +433,6 @@ buildDriver req orgId = do
         SP.mobileNumber = mobileNumber,
         SP.mobileCountryCode = Just req.mobileCountryCode,
         SP.isNew = True,
-        SP.registered = False,
         SP.rating = Nothing,
         SP.deviceToken = Nothing,
         SP.language = Nothing,

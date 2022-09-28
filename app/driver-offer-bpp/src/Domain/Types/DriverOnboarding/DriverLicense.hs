@@ -13,6 +13,7 @@ data DriverLicenseE e = DriverLicense
   { id :: Id DriverLicense,
     driverId :: Id Person,
     driverDob :: Maybe UTCTime,
+    driverName :: Maybe Text,
     licenseNumber :: EncryptedHashedField e Text,
     licenseExpiry :: UTCTime,
     classOfVehicles :: [Idfy.ClassOfVehicle],

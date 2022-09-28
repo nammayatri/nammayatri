@@ -52,6 +52,18 @@ updateEnabledState driverId isEnabled = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+verifyAndEnableDriver :: Id Person -> SqlDB ()
+verifyAndEnableDriver driverId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationEnabled =. val True,
+        DriverInformationVerified =. val True,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey driverId)
+
 updateOnRide ::
   Id Person.Driver ->
   Bool ->

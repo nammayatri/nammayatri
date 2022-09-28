@@ -19,6 +19,7 @@ upsert a@DriverLicense {..} =
   Esq.upsert
     a
     [ DriverLicenseDriverDob =. val driverDob,
+      DriverLicenseDriverName =. val driverName,
       DriverLicenseLicenseExpiry =. val licenseExpiry,
       DriverLicenseClassOfVehicles =. val (PostgresList classOfVehicles),
       DriverLicenseVerificationStatus =. val verificationStatus,

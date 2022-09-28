@@ -118,7 +118,7 @@ verifyRCFlow personId rcNumber = do
             updatedAt = now
           }
 
-onVerifyRC :: Idfy.RCVerificationResponse -> Flow AckResponse
+onVerifyRC :: Idfy.VerificationResponse -> Flow AckResponse
 onVerifyRC [] = pure Ack
 onVerifyRC [resp] = do
   verificationReq <- IVQuery.findByRequestId resp.request_id >>= fromMaybeM (InternalError "Verification request not found")
@@ -156,27 +156,30 @@ onVerifyRC [resp] = do
           }
 onVerifyRC _ = pure Ack
 
-mkVehicleRCEntry :: UTCTime -> Maybe Idfy.RCResult -> Flow (Maybe Domain.VehicleRegistrationCertificate)
+mkVehicleRCEntry :: UTCTime -> Maybe Idfy.IdfyResult -> Flow (Maybe Domain.VehicleRegistrationCertificate)
 mkVehicleRCEntry _ Nothing = return Nothing
-mkVehicleRCEntry now (Just result) = do
-  mEncryptedRC <- encrypt `mapM` result.extraction_output.registration_number
-  id <- generateGUID
-  let mbFitnessEpiry = convertTextToUTC result.extraction_output.fitness_upto
-  return $ createRC result id now <$> mEncryptedRC <*> mbFitnessEpiry
+mkVehicleRCEntry now (Just result) =
+  case result.extraction_output of
+    Just output -> do
+      mEncryptedRC <- encrypt `mapM` output.registration_number
+      id <- generateGUID
+      let mbFitnessEpiry = convertTextToUTC output.fitness_upto
+      return $ createRC output id now <$> mEncryptedRC <*> mbFitnessEpiry
+    Nothing -> return Nothing
 
-createRC :: Idfy.RCResult -> Id Domain.VehicleRegistrationCertificate -> UTCTime -> EncryptedHashedField 'AsEncrypted Text -> UTCTime -> Domain.VehicleRegistrationCertificate
-createRC result id now edl expiry = do
-  let insuranceValidity = convertTextToUTC result.extraction_output.insurance_validity
-  let vehicleClass = result.extraction_output.vehicle_class
+createRC :: Idfy.RCVerificationOutput -> Id Domain.VehicleRegistrationCertificate -> UTCTime -> EncryptedHashedField 'AsEncrypted Text -> UTCTime -> Domain.VehicleRegistrationCertificate
+createRC output id now edl expiry = do
+  let insuranceValidity = convertTextToUTC output.insurance_validity
+  let vehicleClass = output.vehicle_class
   let verificationStatus = validateRCStatus expiry insuranceValidity vehicleClass now
   Domain.VehicleRegistrationCertificate
     { id,
       certificateNumber = edl,
       fitnessExpiry = expiry,
-      permitExpiry = convertTextToUTC result.extraction_output.permit_validity,
-      pucExpiry = convertTextToUTC result.extraction_output.puc_number_upto,
+      permitExpiry = convertTextToUTC output.permit_validity,
+      pucExpiry = convertTextToUTC output.puc_number_upto,
       vehicleClass,
-      vehicleManufacturer = result.extraction_output.manufacturer,
+      vehicleManufacturer = output.manufacturer,
       insuranceValidity,
       verificationStatus,
       failedRules = [],

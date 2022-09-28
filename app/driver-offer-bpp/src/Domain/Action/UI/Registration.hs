@@ -159,7 +159,6 @@ makePerson req = do
         rating = Nothing,
         organizationId = orgId,
         isNew = True,
-        registered = False,
         deviceToken = Nothing,
         language = Nothing,
         description = Nothing,
