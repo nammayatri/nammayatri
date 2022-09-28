@@ -12,8 +12,10 @@ import qualified Domain.Types.DriverLocation as DrLoc
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import Domain.Types.Organization (Organization)
+import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (pi)
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
@@ -47,7 +49,10 @@ data ServiceHandle m = ServiceHandle
     putDiffMetric :: Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     finalDistanceCalculation :: Id Person.Person -> LatLong -> m (),
-    isDistanceCalculationFailed :: Id Person.Person -> m Bool
+    isDistanceCalculationFailed :: Id Person.Person -> m Bool,
+    getDefaultPickupLocThreshold :: m Meters,
+    getDefaultDropLocThreshold :: m Meters,
+    findConfigByOrgIdAndKey :: Id Organization -> DTConf.ConfigKey -> m (Maybe DTConf.TransporterConfig)
   }
 
 newtype EndRideReq = EndRideReq
@@ -62,7 +67,7 @@ endRideHandler ::
   Id Ride.Ride ->
   EndRideReq ->
   m APISuccess.APISuccess
-endRideHandler ServiceHandle {..} requestorId rideId req = do
+endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
   requestor <- findById requestorId >>= fromMaybeM (PersonNotFound requestorId.getId)
 
   finalDistanceCalculation requestorId req.point
@@ -79,6 +84,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   now <- getCurrentTime
+
   (chargeableDistance, fare, totalFare, fareBreakups) <- do
     case booking.bookingDetails of
       SRB.OneWayDetails oneWayDetails -> recalculateFare booking ride oneWayDetails
@@ -111,9 +117,8 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
       shouldRecalculateFare <- recalculateFareEnabled
       distanceCalculationFailed <- isDistanceCalculationFailed requestorId
 
-      -- TODO make it configurable per BPP
-      let pickupLocThreshold = metersToHighPrecMeters (500 :: Meters)
-      let dropLocThreshold = metersToHighPrecMeters (500 :: Meters)
+      pickupLocThreshold <- metersToHighPrecMeters <$> getLocThreshold handle transporterId PICKUP
+      dropLocThreshold <- metersToHighPrecMeters <$> getLocThreshold handle transporterId DROP
       tripStartLat <- ride.tripStartLat & fromMaybeM (RideFieldNotPresent "tripStartLat")
       tripStartLon <- ride.tripStartLon & fromMaybeM (RideFieldNotPresent "tripStartLon")
       let tripStartLoc =
@@ -195,3 +200,27 @@ mkLatLong r =
     { lat = r.lat,
       lon = r.lon
     }
+
+data Stop = PICKUP | DROP
+
+getLocThreshold ::
+  (MonadThrow m, Log m) =>
+  ServiceHandle m ->
+  Id DOrg.Organization ->
+  Stop ->
+  m Meters
+getLocThreshold ServiceHandle {..} orgId stop = do
+  (paramName, defaultThreshold) <- case stop of
+    PICKUP -> (DTConf.ConfigKey "pickupLocThreshold",) <$> getDefaultPickupLocThreshold
+    DROP -> (DTConf.ConfigKey "dropLocThreshold",) <$> getDefaultDropLocThreshold
+  mbThresholdConfig <- findConfigByOrgIdAndKey orgId paramName
+  mbThreshold <- thresholdFromConfig paramName `mapM` mbThresholdConfig
+  pure $ fromMaybe defaultThreshold mbThreshold
+  where
+    -- TODO derive instance Read Meters
+    thresholdFromConfig paramName conf =
+      fromMaybeM (InternalError $ show paramName <> " is not a number.")
+        . (Meters <$>)
+        . (readMaybe @Int)
+        . toString
+        $ conf.value

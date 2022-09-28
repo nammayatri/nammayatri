@@ -38,6 +38,7 @@ import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.TransporterConfig as QTConf
 import Tools.Auth
 import Tools.Error (RentalFarePolicyError (NoRentalFarePolicy))
 import Tools.Metrics (putFareAndDistanceDeviations)
@@ -109,7 +110,10 @@ endRide personId rideId req = withFlowHandlerAPI $ do
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
           finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId,
-          isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed LocUpd.defaultRideInterpolationHandler
+          isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed LocUpd.defaultRideInterpolationHandler,
+          getDefaultPickupLocThreshold = asks (.defaultPickupLocThreshold),
+          getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
+          findConfigByOrgIdAndKey = QTConf.findValueByOrgIdAndKey
         }
 
 cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess

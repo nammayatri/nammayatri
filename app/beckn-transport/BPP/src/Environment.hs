@@ -80,7 +80,9 @@ data AppCfg = AppCfg
     selfUIUrl :: BaseUrl,
     schedulingReserveTime :: Seconds,
     driverEstimatedPickupDuration :: Seconds,
-    dashboardToken :: Text
+    dashboardToken :: Text,
+    defaultPickupLocThreshold :: Meters,
+    defaultDropLocThreshold :: Meters
   }
   deriving (Generic, FromDhall)
 
@@ -128,7 +130,9 @@ data AppEnv = AppEnv
     hedisEnv :: HedisEnv,
     schedulingReserveTime :: Seconds,
     driverEstimatedPickupDuration :: Seconds,
-    dashboardToken :: Text
+    dashboardToken :: Text,
+    defaultPickupLocThreshold :: Meters,
+    defaultDropLocThreshold :: Meters
   }
   deriving (Generic)
 
