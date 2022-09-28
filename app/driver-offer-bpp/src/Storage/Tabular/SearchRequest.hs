@@ -24,7 +24,6 @@ mkPersist
       transactionId Text
       messageId Text
       startTime UTCTime
-      estimatedFinishTime UTCTime
       validTill UTCTime
       providerId OrganizationTId
       fromLocationId SearchReqLocationTId

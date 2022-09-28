@@ -110,7 +110,6 @@ in
 , driverQuoteExpirationSeconds = +60
 , defaultRadiusOfSearch = +5000 -- meters
 , driverUnlockDelay = +2 -- seconds
-, driverEstimatedPickupDuration = +300 -- seconds
 , idfyCfg = common.idfyCfg
 , dashboardToken = sec.dashboardToken
 }

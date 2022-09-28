@@ -19,8 +19,6 @@ import Data.Time
 import Domain.Types.FareParams
 import Domain.Types.FarePolicy
 
-type TripEndTime = UTCTime
-
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
   -- TODO: what should be here?
@@ -71,16 +69,16 @@ calculateDayPartRate fareParams = do
 calculateFareParameters ::
   FarePolicy ->
   Meters ->
-  TripEndTime ->
+  UTCTime ->
   Maybe Money ->
   FareParameters
-calculateFareParameters fp distance endTime mbExtraFare = do
+calculateFareParameters fp distance time mbExtraFare = do
   let baseDistanceFare = roundToIntegral $ fp.baseDistanceFare
       mbExtraDistance =
         distance - fp.baseDistanceMeters
           & (\dist -> if dist > 0 then Just dist else Nothing)
       mbExtraKmFare = mbExtraDistance <&> \ex -> roundToIntegral $ realToFrac (distanceToKm ex) * fp.perExtraKmFare
-      nightCoefIncluded = defineWhetherNightCoefIncluded fp endTime
+      nightCoefIncluded = defineWhetherNightCoefIncluded fp time
 
   FareParameters
     { baseFare = fp.deadKmFare + baseDistanceFare,
@@ -95,10 +93,10 @@ distanceToKm x = realToFrac x / 1000
 
 defineWhetherNightCoefIncluded ::
   FarePolicy ->
-  TripEndTime ->
+  UTCTime ->
   Bool
-defineWhetherNightCoefIncluded farePolicy tripStartTime = do
-  let timeOfDay = localTimeOfDay $ utcToLocalTime timeZoneIST tripStartTime
+defineWhetherNightCoefIncluded farePolicy time = do
+  let timeOfDay = localTimeOfDay $ utcToLocalTime timeZoneIST time
   let nightShiftStart = fromMaybe midnight $ farePolicy.nightShiftStart
   let nightShiftEnd = fromMaybe midnight $ farePolicy.nightShiftEnd
   isTimeWithinBounds nightShiftStart nightShiftEnd timeOfDay

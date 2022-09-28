@@ -14,7 +14,6 @@ data SearchRequest = SearchRequest
     transactionId :: Text,
     messageId :: Text,
     startTime :: UTCTime,
-    estimatedFinishTime :: UTCTime,
     validTill :: UTCTime,
     providerId :: Id DOrg.Organization,
     fromLocation :: DLoc.SearchReqLocation,

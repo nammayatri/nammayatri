@@ -49,12 +49,9 @@ handler orgId sReq = do
   driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId False
 
   distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
-  driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
   let distance = distRes.distance
-      estimatedRideDuration = distRes.duration_in_traffic
-      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` sReq.pickupTime
-  fareParams <- calculateFare orgId sReq.variant distance estimatedRideFinishTime Nothing
-  searchReq <- buildSearchRequest fromLocation toLocation orgId sReq estimatedRideFinishTime
+  fareParams <- calculateFare orgId sReq.variant distance sReq.pickupTime Nothing
+  searchReq <- buildSearchRequest fromLocation toLocation orgId sReq
   let baseFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
@@ -112,9 +109,8 @@ buildSearchRequest ::
   DLoc.SearchReqLocation ->
   Id DOrg.Organization ->
   DSelectReq ->
-  UTCTime ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to orgId sReq estimatedRideFinishTime = do
+buildSearchRequest from to orgId sReq = do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -125,7 +121,6 @@ buildSearchRequest from to orgId sReq estimatedRideFinishTime = do
         transactionId = fromMaybe "" sReq.transactionId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,
-        estimatedFinishTime = estimatedRideFinishTime,
         validTill = validTill_,
         providerId = orgId,
         fromLocation = from,

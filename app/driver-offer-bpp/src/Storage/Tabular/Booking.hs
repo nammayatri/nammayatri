@@ -33,7 +33,6 @@ mkPersist
       bapId Text
       bapUri Text
       startTime UTCTime
-      estimatedFinishTime UTCTime
       riderId RiderDetailsTId Maybe
       fromLocationId BookingLocationTId
       toLocationId BookingLocationTId

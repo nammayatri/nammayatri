@@ -59,12 +59,9 @@ handler org sReq = do
       listOfProtoQuotes = nubBy ((==) `on` getVariant) driverPool
 
   distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
-  driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
   let distance = distRes.distance
-      estimatedRideDuration = distRes.duration_in_traffic
-      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` sReq.pickupTime
   logDebug $ "distance: " <> show distance
-  estimates <- mapM (mkEstimate org estimatedRideFinishTime distance) listOfProtoQuotes
+  estimates <- mapM (mkEstimate org sReq.pickupTime distance) listOfProtoQuotes
   logDebug $ "bap uri: " <> show sReq.bapUri
   buildSearchRes org fromLocation toLocation estimates
 
@@ -75,9 +72,9 @@ mkEstimate ::
   Meters ->
   GoogleMaps.GetDistanceResult DriverPoolResult a ->
   m EstimateItem
-mkEstimate org estimatedRideFinishTime dist g = do
+mkEstimate org startTime dist g = do
   let variant = g.origin.vehicle.variant
-  fareParams <- calculateFare org.id variant dist estimatedRideFinishTime Nothing
+  fareParams <- calculateFare org.id variant dist startTime Nothing
   let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare
   logDebug $ "distanceToPickup: " <> show g.distance
@@ -87,41 +84,6 @@ mkEstimate org estimatedRideFinishTime dist g = do
         distanceToPickup = g.distance,
         baseFare
       }
-
-{-buildSearchRequest ::
-  ( MonadTime m,
-    MonadGuid m,
-    MonadReader r m,
-    HasField "searchRequestExpirationSeconds" r NominalDiffTime
-  ) =>
-  DLoc.SearchReqLocation ->
-  DLoc.SearchReqLocation ->
-  Id DOrg.Organization ->
-  DSearchReq ->
-  UTCTime ->
-  Variant ->
-  m DSearchReq.SearchRequest
-buildSearchRequest from to orgId sReq estimatedRideFinishTime variant= do
-  id_ <- Id <$> generateGUID
-  createdAt_ <- getCurrentTime
-  searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-  let validTill_ = searchRequestExpirationSeconds `addUTCTime` createdAt_
-  pure
-    DSearchReq.SearchRequest
-      { id = id_,
-        transactionId = fromMaybe "" sReq.transactionId,
-        messageId = sReq.messageId,
-        startTime = sReq.pickupTime,
-        estimatedFinishTime = estimatedRideFinishTime,
-        validTill = validTill_,
-        providerId = orgId,
-        fromLocation = from,
-        toLocation = to,
-        bapId = sReq.bapId,
-        bapUri = sReq.bapUri,
-        createdAt = createdAt_,
-        vehicle = variant
-      } -}
 
 buildSearchReqLocation :: (MonadGuid m, MonadTime m) => DLoc.SearchReqLocationAPIEntity -> m DLoc.SearchReqLocation
 buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do

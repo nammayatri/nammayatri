@@ -72,7 +72,6 @@ data AppCfg = AppCfg
     driverQuoteExpirationSeconds :: Int,
     httpClientOptions :: HttpClientOptions,
     driverUnlockDelay :: Seconds,
-    driverEstimatedPickupDuration :: Seconds,
     idfyCfg :: Idfy.IdfyConfig,
     dashboardToken :: Text
   }
@@ -120,7 +119,6 @@ data AppEnv = AppEnv
     searchRequestExpirationSeconds :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
-    driverEstimatedPickupDuration :: Seconds,
     idfyCfg :: Idfy.IdfyConfig,
     dashboardToken :: Text
   }
