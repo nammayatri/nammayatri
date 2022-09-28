@@ -130,6 +130,7 @@ updatePersonRec personId person = do
         PersonEmail =. val (person.email),
         PersonIdentifier =. val (person.identifier),
         PersonRating =. val (person.rating),
+        PersonLanguage =. val (person.language),
         PersonDeviceToken =. val (person.deviceToken),
         PersonOrganizationId =. val (toKey <$> person.organizationId),
         PersonDescription =. val (person.description),
