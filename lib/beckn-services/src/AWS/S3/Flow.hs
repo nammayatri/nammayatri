@@ -86,7 +86,7 @@ get'' ::
   m Text
 get'' bucketName path = withLogTag "S3" $ do
   let tmpPath = getTmpPath path
-  let cmd = "aws s3api get-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " " <> tmpPath <> " --profile personal-mfa"
+  let cmd = "aws s3api get-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " " <> tmpPath
   liftIO $ callCommand cmd
   result <- liftIO $ readFile tmpPath
   liftIO $ removeFile tmpPath
@@ -103,7 +103,7 @@ put'' ::
 put'' bucketName path img = withLogTag "S3" $ do
   let tmpPath = getTmpPath path
   liftIO $ writeFile_ tmpPath img
-  let cmd = "aws s3api put-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " --body " <> tmpPath <> " --profile personal-mfa"
+  let cmd = "aws s3api put-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " --body " <> tmpPath
   liftIO $ callCommand cmd
   liftIO $ removeFile tmpPath
   where
