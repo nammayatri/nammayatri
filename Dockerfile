@@ -8,7 +8,7 @@ WORKDIR /opt/build
 
 COPY ./.ssh/id_rsa /root/.ssh/id_rsa
 RUN chmod 400 /root/.ssh/id_rsa
-RUN ssh-keyscan -H "bitbucket.juspay.net" >> ~/.ssh/known_hosts
+RUN ssh-keyscan -H "ssh.bitbucket.juspay.net" >> ~/.ssh/known_hosts
 
 # Make sure we haven't added any hlint warnings
 RUN hlint_count=$(hlint -g -j --json | jq '.|length') && \
