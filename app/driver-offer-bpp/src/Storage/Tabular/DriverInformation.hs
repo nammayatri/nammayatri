@@ -21,6 +21,7 @@ mkPersist
   [defaultQQ|
     DriverInformationT sql=driver_information
       driverId PersonTId
+      adminId PersonTId Maybe
       active Bool
       onRide Bool
       enabled Bool
@@ -42,12 +43,14 @@ instance TType DriverInformationT Domain.DriverInformation where
     return $
       Domain.DriverInformation
         { driverId = fromKey driverId,
+          adminId = fromKey <$> adminId,
           referralCode = EncryptedHashed <$> (Encrypted <$> referralCode) <*> Just (DbHash BS.empty),
           ..
         }
   toTType Domain.DriverInformation {..} =
     DriverInformationT
       { driverId = toKey driverId,
+        adminId = toKey <$> adminId,
         referralCode = referralCode <&> unEncrypted . (.encrypted),
         ..
       }

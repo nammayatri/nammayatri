@@ -56,6 +56,7 @@ import qualified Tools.Notifications as Notify
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id SP.Person,
+    adminId :: Maybe (Id SP.Person),
     firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
@@ -78,6 +79,7 @@ newtype ListDriverRes = ListDriverRes
 
 data DriverEntityRes = DriverEntityRes
   { id :: Id SP.Person,
+    adminId :: Maybe (Id SP.Person),
     firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
@@ -196,7 +198,7 @@ createDriver admin req = do
   vehicle <- buildVehicle req.vehicle person.id orgId
   Esq.runTransaction $ do
     QPerson.create person
-    createDriverDetails (person.id)
+    createDriverDetails person.id admin.id
     QVehicle.create vehicle
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
@@ -214,12 +216,13 @@ createDriver admin req = do
   where
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
 
-createDriverDetails :: Id SP.Person -> Esq.SqlDB ()
-createDriverDetails personId = do
+createDriverDetails :: Id SP.Person -> Id SP.Person ->  Esq.SqlDB ()
+createDriverDetails personId adminId = do
   now <- getCurrentTime
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
+            adminId = Just adminId,
             active = False,
             onRide = False,
             enabled = True,
@@ -305,6 +308,7 @@ buildDriverEntityRes (person, driverInfo) = do
   return $
     DriverEntityRes
       { id = person.id,
+        adminId = driverInfo.adminId,
         firstName = person.firstName,
         middleName = person.middleName,
         lastName = person.lastName,

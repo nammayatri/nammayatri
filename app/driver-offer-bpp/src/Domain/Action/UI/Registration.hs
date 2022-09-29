@@ -124,6 +124,7 @@ createDriverDetails personId = do
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
+            adminId = Nothing,
             active = False,
             onRide = False,
             enabled = False,

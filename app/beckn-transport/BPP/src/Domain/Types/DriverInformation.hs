@@ -7,6 +7,7 @@ import EulerHS.Prelude
 
 data DriverInformation = DriverInformation
   { driverId :: Id Person,
+    adminId :: Maybe (Id Person),
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
