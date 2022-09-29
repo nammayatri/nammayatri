@@ -89,6 +89,7 @@ data DriverInformationRes = DriverInformationRes
     rating :: Maybe Int,
     active :: Bool,
     onRide :: Bool,
+    verified :: Bool,
     enabled :: Bool,
     organization :: Organization.OrganizationAPIEntity,
     language :: Maybe GoogleMaps.Language
@@ -110,6 +111,7 @@ data DriverEntityRes = DriverEntityRes
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
+    verified :: Bool,
     registeredAt :: UTCTime,
     language :: Maybe GoogleMaps.Language
   }
@@ -312,6 +314,7 @@ buildDriverEntityRes (person, driverInfo) = do
         active = driverInfo.active,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,
+        verified = driverInfo.verified,
         registeredAt = person.createdAt,
         language = person.language
       }
