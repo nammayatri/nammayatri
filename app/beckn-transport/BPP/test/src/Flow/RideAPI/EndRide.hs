@@ -85,7 +85,10 @@ handle =
       findDriverLocById = \_ -> pure Nothing,
       finalDistanceCalculation = \_ _ -> pure (),
       getRentalFarePolicy = undefined, -- not required for current test cases
-      isDistanceCalculationFailed = \_ -> pure False
+      isDistanceCalculationFailed = \_ -> pure False,
+      getDefaultPickupLocThreshold = pure 500,
+      getDefaultDropLocThreshold = pure 500,
+      findConfigByOrgIdAndKey = \_ _ -> pure Nothing
     }
 
 endRideDefault ::
@@ -240,7 +243,7 @@ locationUpdatesFailure =
 
 locationUpdatesSuccess :: TestTree
 locationUpdatesSuccess =
-  testCase "Return estimated fare when failed to calculate actual distance" $
+  testCase "Return actual fare when succeeded to calculate actual distance" $
     void $ endRide locationUpdatesSuccessHandle "1" rideId testEndRideReq
   where
     rideId = "ride"
