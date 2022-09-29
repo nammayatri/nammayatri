@@ -1,7 +1,6 @@
 module Domain.Types.Booking.API where
 
 import Beckn.External.Encryption
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -20,20 +19,21 @@ import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.FarePolicy.FareBreakup as QFareBreakup
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
-import Types.Error
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,
     status :: BookingStatus,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     fromLocation :: DLoc.BookingLocationAPIEntity,
     rideList :: [DRide.RideAPIEntity],
     tripTerms :: [Text],
     fareBreakup :: [FareBreakupAPIEntity],
+    riderName :: Maybe Text,
     bookingDetails :: BookingDetailsAPIEntity,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -82,6 +82,7 @@ buildBookingAPIEntity booking = do
         fromLocation = DLoc.makeBookingLocationAPIEntity booking.fromLocation,
         rideList = rideAPIEntityList,
         fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
+        riderName = booking.riderName,
         bookingDetails,
         tripTerms,
         createdAt = booking.createdAt,

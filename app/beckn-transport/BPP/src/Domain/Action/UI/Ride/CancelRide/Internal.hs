@@ -5,6 +5,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BusinessEvent as SB
@@ -12,7 +13,7 @@ import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
-import qualified Product.BecknProvider.BP as BP
+import qualified SharedLogic.CallBAP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -23,10 +24,9 @@ import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideRequest as RideRequest
+import Tools.Error
 import Tools.Metrics (CoreMetrics)
-import Types.Error
-import Utils.Common
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 cancelRide ::
   ( EsqDBFlow m r,
@@ -89,13 +89,7 @@ reallocateRideTransaction ::
   SBCR.BookingCancellationReason ->
   m ()
 reallocateRideTransaction orgShortId bookingId ride bookingCReason = do
-  now <- getCurrentTime
-  rideRequest <-
-    BP.buildRideReq
-      bookingId
-      orgShortId
-      SRideRequest.ALLOCATION
-      now
+  rideRequest <- buildRideReq orgShortId
   Esq.runTransaction $ do
     QRB.updateStatus bookingId SRB.AWAITING_REASSIGNMENT
     QRB.increaseReallocationsCounter bookingId
@@ -108,3 +102,15 @@ reallocateRideTransaction orgShortId bookingId ride bookingCReason = do
       let driverId = cast ride.driverId
       DriverInformation.updateOnRide driverId False
       QDriverStats.updateIdleTime driverId
+    buildRideReq shortOrgId = do
+      guid <- generateGUID
+      now <- getCurrentTime
+      pure
+        SRideRequest.RideRequest
+          { id = Id guid,
+            bookingId = bookingId,
+            shortOrgId = shortOrgId,
+            createdAt = now,
+            _type = SRideRequest.ALLOCATION,
+            info = Nothing
+          }

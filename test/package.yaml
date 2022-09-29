@@ -61,7 +61,6 @@ dependencies:
   - aeson
   - base >= 4.7 && < 5
   - generic-lens
-  - lens
   - async
   - data-default-class
   - euler-hs
@@ -84,7 +83,6 @@ dependencies:
   - tasty-hspec
   - record-hasfield
   - record-dot-preprocessor
-  - unordered-containers
   - hspec-expectations-lifted
   - HUnit
   - unix
@@ -96,6 +94,7 @@ dependencies:
   - beckn-transport-allocator
   - beckn-transport-driver-tracking-health-check
   - driver-offer-bpp
+  - location-updates
 
 ghc-options:
   - -fwrite-ide-info

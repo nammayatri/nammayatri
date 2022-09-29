@@ -1,5 +1,3 @@
-{-# LANGUAGE UndecidableInstances #-}
-
 module Domain.Types.Rating where
 
 import Beckn.Types.Id
@@ -13,7 +11,7 @@ data Rating = Rating
     rideId :: Id Ride,
     driverId :: Id Person,
     ratingValue :: Int,
-    feedbackDetails :: Text,
+    feedbackDetails :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

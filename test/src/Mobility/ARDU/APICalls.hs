@@ -1,6 +1,8 @@
 module Mobility.ARDU.APICalls where
 
-import "driver-offer-bpp" App.Routes as DrOfRoutes
+import qualified "driver-offer-bpp" API.UI.Driver as DriverAPI
+import "driver-offer-bpp" API.UI.Location as LocationAPI
+import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Id
@@ -10,14 +12,11 @@ import qualified "driver-offer-bpp" Domain.Types.Ride as TRide
 import EulerHS.Prelude
 import Servant hiding (Context)
 import Servant.Client
-import qualified "driver-offer-bpp" Types.API.Driver as DriverAPI
-import "driver-offer-bpp" Types.API.Location
-import qualified "driver-offer-bpp" Types.API.Ride as RideAPI
 
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TRide.Ride -> RideAPI.EndRideReq -> ClientM APISuccess
 rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM APISuccess
-_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy DrOfRoutes.RideAPI)
+_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy RideAPI.API)
 
 getDriverInfo :: Text -> ClientM DriverAPI.DriverInformationRes
 getNearbySearchRequests :: RegToken -> ClientM DriverAPI.GetNearbySearchRequestsRes
@@ -34,7 +33,7 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
            :<|> ( getDriverInfo
                     :<|> _
                   )
-         ) = client (Proxy :: Proxy DrOfRoutes.DriverAPI)
+         ) = client (Proxy :: Proxy DriverAPI.API)
 
 buildStartRideReq :: Text -> LatLong -> RideAPI.StartRideReq
 buildStartRideReq otp initialPoint =
@@ -43,15 +42,15 @@ buildStartRideReq otp initialPoint =
       point = initialPoint
     }
 
-updateLocation :: RegToken -> NonEmpty Waypoint -> ClientM APISuccess
-(_ :<|> updateLocation) = client (Proxy @LocationAPI)
+updateLocation :: RegToken -> NonEmpty LocationAPI.Waypoint -> ClientM APISuccess
+(_ :<|> updateLocation) = client (Proxy @LocationAPI.API)
 
-buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty Waypoint)
-buildUpdateLocationRequest pts = do
-  now <- getCurrentTime
-  pure $
-    flip fmap pts $ \ll ->
-      Waypoint
+buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty LocationAPI.Waypoint)
+buildUpdateLocationRequest pts =
+  forM pts $ \ll -> do
+    now <- getCurrentTime
+    return $
+      LocationAPI.Waypoint
         { pt = ll,
           ts = now,
           acc = Nothing

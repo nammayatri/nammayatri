@@ -60,8 +60,8 @@ mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
       price =
         OnSearch.ItemPrice
           { currency = "INR",
-            value = realToFrac estimatedFare,
-            offered_value = realToFrac estimatedTotalFare
+            value = fromIntegral estimatedFare,
+            offered_value = fromIntegral estimatedTotalFare
           }
       tags =
         OnSearch.ItemTags
@@ -130,8 +130,8 @@ mkRentalItem DRentalSearch.QuoteInfo {..} offer_id fulfillment_id = do
       price =
         OnSearch.ItemPrice
           { currency = "INR",
-            value = realToFrac estimatedFare,
-            offered_value = realToFrac estimatedTotalFare
+            value = fromIntegral estimatedFare,
+            offered_value = fromIntegral estimatedTotalFare
           }
   OnSearch.Item
     { category_id = OnSearch.RENTAL_TRIP,
@@ -151,7 +151,7 @@ mkVehicleRideDescription = \case
   OnSearch.SUV -> "SUV ride."
   OnSearch.HATCHBACK -> "Hatchback ride."
   OnSearch.SEDAN -> "Sedan ride."
-  OnSearch.AUTO -> "Auto ride."
+  OnSearch.AUTO_RICKSHAW -> "Auto-rickshaw ride."
 
 mkCategory :: DFP.FareProductType -> OnSearch.Category
 mkCategory DFP.ONE_WAY = do

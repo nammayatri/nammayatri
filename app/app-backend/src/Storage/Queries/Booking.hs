@@ -4,7 +4,6 @@ module Storage.Queries.Booking where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Types.Booking as DRB
@@ -145,16 +144,16 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive = Esq.buildDType 
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   catMaybes <$> mapM buildFullBooking fullBookingsT
 
-updatePaymentInfo :: Id Booking -> Amount -> Maybe Amount -> Amount -> SqlDB ()
+updatePaymentInfo :: Id Booking -> Money -> Maybe Money -> Money -> SqlDB ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
       [ RB.BookingUpdatedAt =. val now,
-        RB.BookingEstimatedFare =. val estimatedFare,
-        RB.BookingDiscount =. val discount,
-        RB.BookingEstimatedTotalFare =. val estimatedTotalFare
+        RB.BookingEstimatedFare =. val (realToFrac estimatedFare),
+        RB.BookingDiscount =. val (realToFrac <$> discount),
+        RB.BookingEstimatedTotalFare =. val (realToFrac estimatedTotalFare)
       ]
     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 

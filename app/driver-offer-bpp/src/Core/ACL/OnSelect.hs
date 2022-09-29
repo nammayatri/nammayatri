@@ -9,8 +9,6 @@ import Core.ACL.Common
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Organization as DOrg
 import Domain.Types.SearchRequest
-import Product.FareCalculator.Calculator (fareSum)
-import Utils.Common
 
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,
@@ -28,8 +26,8 @@ data TransporterInfo = TransporterInfo
     ridesConfirmed :: Int
   }
 
-oneWayCategory :: OS.Category
-oneWayCategory =
+driverOfferCategory :: OS.Category
+driverOfferCategory =
   OS.Category
     { id = OS.DRIVER_OFFER,
       descriptor =
@@ -86,7 +84,7 @@ data QuoteEntities = QuoteEntities
 mkQuoteEntities :: DOnSelectReq -> DQuote.DriverQuote -> QuoteEntities
 mkQuoteEntities dReq quote = do
   let fulfillment = mkFulfillment dReq quote
-      category = oneWayCategory
+      category = driverOfferCategory
       offer = Nothing
       item = mkItem category.id fulfillment.id quote
   QuoteEntities {..}
@@ -149,7 +147,7 @@ mkItem categoryId fulfillmentId q =
     }
   where
     price_ = do
-      let value_ = amountToDecimalValue $ fareSum q.fareParams
+      let value_ = fromIntegral q.estimatedFare
       OS.ItemPrice
         { currency = "INR",
           value = value_,

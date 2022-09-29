@@ -1,7 +1,7 @@
 module API.UI.Vehicle (module Reexport, API, handler) where
 
-import App.Types
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Action.UI.Vehicle as Reexport
   ( Driver (..),
     GetVehicleRes (..),
@@ -13,10 +13,10 @@ import Domain.Action.UI.Vehicle as Reexport
 import qualified Domain.Action.UI.Vehicle as DVeh
 import Domain.Types.Person as SP
 import Domain.Types.Vehicle as SV
+import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
-import Utils.Auth (AdminTokenAuth, TokenAuth)
-import Utils.Common
+import Tools.Auth (AdminTokenAuth, TokenAuth)
 
 type API =
   "org" :> "vehicle"

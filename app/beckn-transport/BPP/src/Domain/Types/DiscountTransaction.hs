@@ -2,7 +2,7 @@
 
 module Domain.Types.DiscountTransaction where
 
-import Beckn.Types.Amount (Amount)
+import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Data.Time (UTCTime)
 import qualified Domain.Types.Booking as DRB
@@ -12,7 +12,7 @@ import EulerHS.Prelude hiding (id)
 data DiscountTransaction = DiscountTransaction
   { bookingId :: Id DRB.Booking,
     organizationId :: Id DOrg.Organization,
-    discount :: Amount,
+    discount :: Money,
     createdAt :: UTCTime
   }
   deriving (Generic)

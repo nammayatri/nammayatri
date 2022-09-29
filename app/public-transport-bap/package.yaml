@@ -68,7 +68,6 @@ dependencies:
   - persistent-postgresql
   - esqueleto
   - openapi3
-  - lens
   - template-haskell
   - prometheus-client
   - servant-openapi3

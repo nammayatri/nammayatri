@@ -3,16 +3,14 @@
 module Core.Spec.Confirm (module Core.Spec.Confirm, module Reexport) where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.Common.Billing
-import Core.Spec.Common.DecimalValue
 import Core.Spec.Common.Payment
 import Core.Spec.Common.ProviderId
 import Core.Spec.Common.Quotation
 import Core.Spec.Confirm.Item as Reexport
-import Data.Aeson
 import Data.OpenApi hiding (items)
 
 newtype ConfirmMessage = ConfirmMessage
@@ -35,28 +33,14 @@ instance ToSchema Order where
 
 data Params = Params
   { currency :: Text,
-    amount :: Amount
+    amount :: HighPrecMoney
   }
-  deriving (Generic, Eq, Show, PrettyShow)
+  deriving (Generic, Eq, Show, PrettyShow, FromJSON, ToJSON)
 
 deriving anyclass instance PrettyShow (Payment Params)
 
 instance ToSchema Params where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-rupeeParams :: Amount -> Params
+rupeeParams :: HighPrecMoney -> Params
 rupeeParams = Params "INR"
-
-instance FromJSON Params where
-  parseJSON = withObject "params" $ \obj -> do
-    currency <- obj .: "currency"
-    decimalValue <- obj .: "amount"
-    amount <- maybe (fail "invalid params value") pure $ convertDecimalValueToAmount decimalValue
-    pure Params {..}
-
-instance ToJSON Params where
-  toJSON p =
-    object
-      [ "currency" .= p.currency,
-        "amount" .= convertAmountToDecimalValue (p.amount)
-      ]

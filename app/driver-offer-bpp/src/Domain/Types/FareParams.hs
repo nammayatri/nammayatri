@@ -1,14 +1,14 @@
 module Domain.Types.FareParams where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
+import Beckn.Types.Common (Money)
 import Beckn.Utils.GenericPretty (PrettyShow)
 
 data FareParameters = FareParameters
-  { baseFare :: Amount,
-    extraKmFare :: Maybe Amount,
-    driverSelectedFare :: Maybe Amount,
-    nightShiftRate :: Maybe Amount,
+  { baseFare :: Money,
+    extraKmFare :: Maybe Money,
+    driverSelectedFare :: Maybe Money,
+    nightShiftRate :: Maybe Double,
     nightCoefIncluded :: Bool
   }
   deriving (Generic, Show, Eq, PrettyShow)

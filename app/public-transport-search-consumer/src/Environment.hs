@@ -22,7 +22,6 @@ data AppCfg = AppCfg
     gatewayUrl :: BaseUrl,
     httpClientOptions :: HttpClientOptions,
     authEntity :: AuthenticatingEntity',
-    authServiceUrl :: BaseUrl,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     kafkaConsumerCfgs :: KafkaConsumerCfgs
@@ -36,7 +35,6 @@ data AppEnv = AppEnv
     gatewayUrl :: BaseUrl,
     httpClientOptions :: HttpClientOptions,
     authEntity :: AuthenticatingEntity',
-    authServiceUrl :: BaseUrl,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     esqDBEnv :: EsqDBEnv,

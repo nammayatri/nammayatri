@@ -4,37 +4,33 @@ module Domain.Action.UI.Location.UpdateLocation
     Waypoint (..),
     UpdateLocationRes,
     updateLocationHandler,
-    processWaypoints,
   )
 where
 
-import App.Types
-import Beckn.Prelude
+import Beckn.Prelude hiding (Handler)
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Utils.Common hiding (id)
 import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Logging
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
-import SharedLogic.LocationUpdates
-import Utils.Common hiding (id)
 
-type MonadHandler m = (MonadThrow m, Log m, MonadGuid m, MonadTime m)
+type MonadHandler m = (MonadFlow m, MonadThrow m, Log m, MonadGuid m, MonadTime m)
 
 data Handler m = Handler
   { refreshPeriod :: NominalDiffTime,
-    allowedDelay :: NominalDiffTime,
     findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findDriverLocationById :: Id Person.Person -> m (Maybe DriverLocation),
     upsertDriverLocation :: Id Person.Person -> LatLong -> UTCTime -> m (),
     getInProgressByDriverId :: Id Person.Person -> m (Maybe SRide.Ride),
-    interpolationHandler :: RideInterpolationHandler m
+    addIntermediateRoutePoints :: Id Person.Person -> NonEmpty LatLong -> m ()
   }
 
 type UpdateLocationReq = NonEmpty Waypoint
@@ -56,28 +52,31 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
     findPersonById driverId
       >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
-  mbOldLoc <- findDriverLocationById driver.id
-  let currPoint = NE.last waypoints
-  upsertDriverLocation driver.id currPoint.pt currPoint.ts
-  now <- getCurrentTime
-  let calledBeforeRefreshPeriod =
-        mbOldLoc <&> (\loc -> now `diffUTCTime` loc.updatedAt < refreshPeriod)
-  if calledBeforeRefreshPeriod == Just True
-    then logWarning "Called before refresh period passed, ignoring"
-    else
-      getInProgressByDriverId driver.id
-        >>= maybe
-          (logInfo "No ride is assigned to driver, ignoring")
-          (const $ processWaypoints interpolationHandler driver.id $ NE.map (.pt) waypoints)
-  pure Success
+  whenM (Redis.tryLockRedis lockKey 60) $ do
+    mbOldLoc <- findDriverLocationById driver.id
+    now <- getCurrentTime
+    case (isCalledBeforeRefreshPeriod mbOldLoc now, filterNewWaypoints mbOldLoc) of
+      (True, _) -> logWarning "Called before refresh period passed, ignoring"
+      (_, []) -> logWarning "Incoming points are older than current one, ignoring"
+      (_, a : ax) -> do
+        let newWaypoints = a :| ax
+            currPoint = NE.last newWaypoints
+        upsertDriverLocation driver.id currPoint.pt currPoint.ts
+        getInProgressByDriverId driver.id
+          >>= maybe
+            (logInfo "No ride is assigned to driver, ignoring")
+            (\_ -> addIntermediateRoutePoints driver.id $ NE.map (.pt) newWaypoints)
 
-processWaypoints ::
-  (Monad m, Log m) =>
-  RideInterpolationHandler m ->
-  Id Person.Person ->
-  NonEmpty LatLong ->
-  m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId waypoints = do
-  addPoints driverId waypoints
-  let ending = False
-  recalcDistanceBatches ih ending driverId
+    Redis.unlockRedis lockKey
+  pure Success
+  where
+    filterNewWaypoints mbOldLoc = do
+      let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
+      maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
+
+    isCalledBeforeRefreshPeriod mbLoc now =
+      maybe False (\loc -> now `diffUTCTime` loc.updatedAt < refreshPeriod) mbLoc
+    lockKey = makeLockKey driverId
+
+makeLockKey :: Id Person.Person -> Text
+makeLockKey (Id driverId) = "beckn-transport:driverLocationUpdate:" <> driverId

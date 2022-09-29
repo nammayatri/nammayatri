@@ -11,6 +11,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
+import Beckn.Utils.Common
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import Data.Time (TimeOfDay (..))
@@ -22,10 +23,9 @@ import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Common
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 newtype ListOneWayFarePolicyRes = ListOneWayFarePolicyRes
   { oneWayFarePolicies :: [OneWayFarePolicyAPIEntity]
@@ -33,7 +33,7 @@ newtype ListOneWayFarePolicyRes = ListOneWayFarePolicyRes
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data UpdateOneWayFarePolicyReq = UpdateOneWayFarePolicyReq
-  { baseFare :: Maybe Double,
+  { baseFare :: Maybe Money,
     perExtraKmRateList :: NonEmpty PerExtraKmRateAPIEntity,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
@@ -46,7 +46,7 @@ type UpdateOneWayFarePolicyRes = APISuccess
 validateUpdateFarePolicyRequest :: Validate UpdateOneWayFarePolicyReq
 validateUpdateFarePolicyRequest UpdateOneWayFarePolicyReq {..} =
   sequenceA_
-    [ validateField "baseFare" baseFare . InMaybe $ InRange @Double 0 500,
+    [ validateField "baseFare" baseFare . InMaybe $ InRange @Money 0 500,
       validateList "perExtraKmRateList" perExtraKmRateList validatePerExtraKmRateAPIEntity,
       validateField "perExtraKmRateList" perExtraKmRateList $ UniqueField @"distanceRangeStart",
       validateField "nightShiftRate" nightShiftRate . InMaybe $ InRange @Double 1 2,
@@ -70,11 +70,11 @@ updateOneWayFarePolicy admin fpId req = do
   unless (admin.organizationId == Just farePolicy.organizationId) $ throwError AccessDenied
   let perExtraKmRateList = map DPerExtraKmRate.fromPerExtraKmRateAPIEntity req.perExtraKmRateList
   let updatedFarePolicy =
-        farePolicy{baseFare = toRational <$> req.baseFare,
+        farePolicy{baseFare = req.baseFare,
                    perExtraKmRateList = perExtraKmRateList,
                    nightShiftStart = req.nightShiftStart,
                    nightShiftEnd = req.nightShiftEnd,
-                   nightShiftRate = toRational <$> req.nightShiftRate
+                   nightShiftRate = req.nightShiftRate
                   }
   let Just orgId = admin.organizationId
   coordinators <- QP.findAdminsByOrgId orgId

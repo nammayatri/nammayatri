@@ -12,7 +12,7 @@ import Domain.Types.SearchRequest
 import qualified Domain.Types.Vehicle.Variant as Variant
 
 data DriverQuoteStatus = Active | Inactive
-  deriving (Show, Read)
+  deriving (Show, Read, Eq)
   deriving (PrettyShow) via Showable DriverQuoteStatus
 
 data DriverQuote = DriverQuote
@@ -23,12 +23,13 @@ data DriverQuote = DriverQuote
     driverName :: Text,
     driverRating :: Maybe Double,
     vehicleVariant :: Variant.Variant,
-    distance :: Double,
+    distance :: Meters,
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     validTill :: UTCTime,
+    estimatedFare :: Money,
     fareParams :: Params.FareParameters
   }
   deriving (Generic, Show, PrettyShow)

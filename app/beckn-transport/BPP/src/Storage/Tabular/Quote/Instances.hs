@@ -5,7 +5,6 @@ module Storage.Tabular.Quote.Instances where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import qualified Domain.Types.Quote as Domain
@@ -31,14 +30,16 @@ instance TType FullQuoteT Domain.Quote where
           Domain.OneWayQuoteDetails
             { distance = oneWayQuoteEntity.distance,
               distanceToNearestDriver = oneWayQuoteEntity.distance,
-              ..
+              estimatedFinishTime = oneWayQuoteEntity.estimatedFinishTime
             }
     pure
       Domain.Quote
         { id = Id id,
           requestId = fromKey requestId,
-          productId = fromKey productId,
           providerId = fromKey providerId,
+          estimatedFare = roundToIntegral estimatedFare,
+          discount = roundToIntegral <$> discount,
+          estimatedTotalFare = roundToIntegral estimatedTotalFare,
           ..
         }
 
@@ -54,8 +55,10 @@ instance TType FullQuoteT Domain.Quote where
             { id = getId id,
               fareProductType = Domain.getFareProductType quoteDetails,
               requestId = toKey requestId,
-              productId = toKey productId,
               providerId = toKey providerId,
+              estimatedFare = fromIntegral estimatedFare,
+              discount = fromIntegral <$> discount,
+              estimatedTotalFare = fromIntegral estimatedTotalFare,
               ..
             }
     (quoteT, details)
@@ -63,8 +66,8 @@ instance TType FullQuoteT Domain.Quote where
 oneWayQuoteFromTType :: OneWayQuoteT -> Domain.OneWayQuoteDetails
 oneWayQuoteFromTType OneWayQuoteT {..} = do
   Domain.OneWayQuoteDetails
-    { distance = HighPrecMeters distance,
-      distanceToNearestDriver = HighPrecMeters distanceToNearestDriver,
+    { distance = roundToIntegral distance,
+      distanceToNearestDriver = roundToIntegral distanceToNearestDriver,
       ..
     }
 
@@ -72,8 +75,8 @@ oneWayQuoteToTType :: Id Domain.Quote -> Domain.OneWayQuoteDetails -> OneWayQuot
 oneWayQuoteToTType quoteId Domain.OneWayQuoteDetails {..} =
   OneWayQuoteT
     { quoteId = toKey quoteId,
-      distance = getHighPrecMeters distance,
-      distanceToNearestDriver = getHighPrecMeters distanceToNearestDriver,
+      distance = fromIntegral distance,
+      distanceToNearestDriver = fromIntegral distanceToNearestDriver,
       ..
     }
 

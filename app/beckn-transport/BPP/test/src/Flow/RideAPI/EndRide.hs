@@ -1,21 +1,23 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Flow.RideAPI.EndRide (endRideTests) where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Utils.Common
 import Domain.Action.UI.Ride.EndRide as Handle
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures
-import SharedLogic.FareCalculator.OneWayFareCalculator.Flow
-import SharedLogic.FareCalculator.RentalFareCalculator.Flow
+import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
+import SharedLogic.FareCalculator.RentalFareCalculator.Calculator
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
-import Types.Error
-import Utils.Common (throwError)
+import Tools.Error
 import Utils.SilentLogger ()
 
 endRideTests :: TestTree
@@ -25,7 +27,9 @@ endRideTests =
     [ testGroup
         "Successful"
         [ successfulEndByDriver,
-          successfulEndRental
+          successfulEndRental,
+          locationUpdatesFailure,
+          locationUpdatesSuccess
         ],
       testGroup
         "Failing"
@@ -79,15 +83,25 @@ handle =
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure (),
       findDriverLocById = \_ -> pure Nothing,
-      addLastWaypointAndRecalcDistanceOnEnd = \_ _ -> pure ()
+      finalDistanceCalculation = \_ _ -> pure (),
+      getRentalFarePolicy = undefined, -- not required for current test cases
+      isDistanceCalculationFailed = \_ -> pure False
     }
 
-endRide ::
+endRideDefault ::
   Id Person.Person ->
   Id Ride.Ride ->
   EndRideReq ->
   IO APISuccess.APISuccess
-endRide = Handle.endRideHandler handle
+endRideDefault = Handle.endRideHandler handle
+
+endRide ::
+  Handle.ServiceHandle IO ->
+  Id Person.Person ->
+  Id Ride.Ride ->
+  EndRideReq ->
+  IO APISuccess.APISuccess
+endRide = Handle.endRideHandler
 
 testEndRideReq :: EndRideReq
 testEndRideReq =
@@ -131,36 +145,102 @@ rentalBooking = do
 successfulEndByDriver :: TestTree
 successfulEndByDriver =
   testCase "Requested by correct driver" $
-    endRide "1" "ride" testEndRideReq `shouldReturn` APISuccess.Success
+    endRideDefault "1" "ride" testEndRideReq `shouldReturn` APISuccess.Success
 
 successfulEndRental :: TestTree
 successfulEndRental =
   testCase "Requested for rentals by correct driver" $
-    endRide "1" "rentalRide" testEndRideReq `shouldReturn` APISuccess.Success
+    endRideDefault "1" "rentalRide" testEndRideReq `shouldReturn` APISuccess.Success
 
 failedEndRequestedByWrongDriver :: TestTree
 failedEndRequestedByWrongDriver =
   testCase "Requested by wrong driver" $
-    endRide "2" "ride" testEndRideReq `shouldThrow` (== NotAnExecutor)
+    endRideDefault "2" "ride" testEndRideReq `shouldThrow` (== NotAnExecutor)
 
 failedEndRequestedNotByDriver :: TestTree
 failedEndRequestedNotByDriver =
   testCase "Requested not by driver" $
-    endRide "admin" "ride" testEndRideReq `shouldThrow` (== AccessDenied)
+    endRideDefault "admin" "ride" testEndRideReq `shouldThrow` (== AccessDenied)
 
 failedEndWhenRideStatusIsWrong :: TestTree
 failedEndWhenRideStatusIsWrong =
   testCase "A ride has wrong status" $
-    endRide "1" "completed_ride" testEndRideReq `shouldThrow` (\(RideInvalidStatus _) -> True)
+    endRideDefault "1" "completed_ride" testEndRideReq `shouldThrow` (\(RideInvalidStatus _) -> True)
 
 failedEndNonexistentRide :: TestTree
 failedEndNonexistentRide =
   testCase "A ride does not even exist" $
-    endRide "1" rideId testEndRideReq `shouldThrow` (== RideDoesNotExist rideId.getId)
+    endRideDefault "1" rideId testEndRideReq `shouldThrow` (== RideDoesNotExist rideId.getId)
   where
     rideId = "nonexistent_ride"
 
 failedEndNonexistentDriver :: TestTree
 failedEndNonexistentDriver =
   testCase "A driver does not even exist" $
-    endRide "nonexistent_driver" "ride" testEndRideReq `shouldThrow` (== PersonDoesNotExist "nonexistent_driver")
+    endRideDefault "nonexistent_driver" "ride" testEndRideReq `shouldThrow` (== PersonDoesNotExist "nonexistent_driver")
+
+-----
+
+lufEstFare, lufEstTotalFare, lufActFare, lufActTotalFare :: Money
+lufEstFare = 389
+lufEstTotalFare = 276
+lufActFare = 600
+lufActTotalFare = 500
+
+lufBooking :: SRB.Booking
+lufBooking = booking {SRB.estimatedFare = lufEstFare, SRB.estimatedTotalFare = lufEstTotalFare}
+
+locationUpdatesFailureHandle :: Handle.ServiceHandle IO
+locationUpdatesFailureHandle =
+  handle
+    { findBookingById = \rbId -> pure $ case rbId of
+        Id "booking" -> Just lufBooking
+        _ -> Nothing,
+      findRideById = \rideId -> pure $ case rideId of
+        Id "ride" -> Just ride
+        _ -> Nothing,
+      isDistanceCalculationFailed = \_ -> pure True,
+      notifyCompleteToBAP = \_ rd _ -> checkRide rd,
+      endRideTransaction = \_ rd _ _ -> checkRide rd,
+      recalculateFareEnabled = pure True,
+      calculateFare = \_ _ _ _ -> do
+        return $
+          OneWayFareParameters
+            { baseFare = lufActFare,
+              distanceFare = 0,
+              nightShiftRate = 1,
+              discount = Just $ lufActFare - lufActTotalFare
+            }
+    }
+  where
+    checkRide :: Ride.Ride -> IO ()
+    checkRide rd =
+      when (rd.fare /= Just lufEstFare || rd.totalFare /= Just lufEstTotalFare) $
+        throwError $ InternalError "expected estimated fares as final fares"
+
+locationUpdatesSuccessHandle :: Handle.ServiceHandle IO
+locationUpdatesSuccessHandle =
+  locationUpdatesFailureHandle
+    { isDistanceCalculationFailed = \_ -> pure False,
+      notifyCompleteToBAP = \_ rd _ -> checkRide rd,
+      endRideTransaction = \_ rd _ _ -> checkRide rd
+    }
+  where
+    checkRide :: Ride.Ride -> IO ()
+    checkRide rd =
+      when (rd.fare /= Just lufActFare || rd.totalFare /= Just lufActTotalFare) $
+        throwError $ InternalError $ "expected actual fares as final fares; fare = " <> show rd.fare <> ", totalFare = " <> show rd.totalFare
+
+locationUpdatesFailure :: TestTree
+locationUpdatesFailure =
+  testCase "Return estimated fare when failed to calculate actual distance" $
+    void $ endRide locationUpdatesFailureHandle "1" rideId testEndRideReq
+  where
+    rideId = "ride"
+
+locationUpdatesSuccess :: TestTree
+locationUpdatesSuccess =
+  testCase "Return estimated fare when failed to calculate actual distance" $
+    void $ endRide locationUpdatesSuccessHandle "1" rideId testEndRideReq
+  where
+    rideId = "ride"

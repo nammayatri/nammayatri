@@ -1,7 +1,7 @@
 module Core.Spec.OnSearch.LocationDetails where
 
 import Beckn.Prelude
-import Beckn.Types.Core.Migration.Gps
+import Beckn.Types.Core.Gps
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.OnSearch.Descriptor
 import Data.OpenApi hiding (name)

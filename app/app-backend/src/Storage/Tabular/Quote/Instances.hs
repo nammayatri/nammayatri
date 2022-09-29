@@ -4,7 +4,6 @@ module Storage.Tabular.Quote.Instances where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Error
 import qualified Domain.Types.Quote as Domain
@@ -30,7 +29,7 @@ instance TType FullQuoteT Domain.Quote where
         distanceToNearestDriver' <- distanceToNearestDriver & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
         pure . Domain.OneWayDetails $
           Domain.OneWayQuoteDetails
-            { distanceToNearestDriver = HighPrecMeters distanceToNearestDriver'
+            { distanceToNearestDriver = distanceToNearestDriver'
             }
       RentalDetailsT rentalSlabT ->
         Domain.RentalDetails <$> fromTType rentalSlabT
@@ -41,13 +40,16 @@ instance TType FullQuoteT Domain.Quote where
         { id = Id id,
           requestId = fromKey requestId,
           providerUrl = pUrl,
+          estimatedFare = roundToIntegral estimatedFare,
+          discount = roundToIntegral <$> discount,
+          estimatedTotalFare = roundToIntegral estimatedTotalFare,
           ..
         }
   toTType Domain.Quote {..} = do
     let (fareProductType, quoteDetailsT, distanceToNearestDriver, rentalSlabId, driverOfferId) =
           case quoteDetails of
             Domain.OneWayDetails details ->
-              (Domain.ONE_WAY, OneWayDetailsT, Just $ getHighPrecMeters details.distanceToNearestDriver, Nothing, Nothing)
+              (Domain.ONE_WAY, OneWayDetailsT, Just $ details.distanceToNearestDriver, Nothing, Nothing)
             Domain.RentalDetails rentalSlab -> do
               let rentalSlabT = toTType rentalSlab
               (Domain.RENTAL, RentalDetailsT rentalSlabT, Nothing, Just $ toKey rentalSlab.id, Nothing)
@@ -60,6 +62,9 @@ instance TType FullQuoteT Domain.Quote where
               requestId = toKey requestId,
               providerUrl = showBaseUrl providerUrl,
               tripTermsId = toKey <$> (tripTerms <&> (.id)),
+              estimatedFare = realToFrac estimatedFare,
+              discount = realToFrac <$> discount,
+              estimatedTotalFare = realToFrac estimatedTotalFare,
               ..
             }
     let mbTripTermsT = toTType <$> tripTerms

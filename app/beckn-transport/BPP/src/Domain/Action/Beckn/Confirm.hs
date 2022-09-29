@@ -6,15 +6,13 @@ module Domain.Action.Beckn.Confirm
   )
 where
 
-import App.Scheduler
 import Beckn.External.Encryption (encrypt)
 import Beckn.External.GoogleMaps.Types
 import Beckn.Prelude
-import Beckn.Scheduler
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
 import Beckn.Types.Registry (Subscriber (..))
+import Beckn.Utils.Common
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.BookingLocation as SBL
@@ -23,9 +21,10 @@ import Domain.Types.DiscountTransaction
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.RideRequest as RideRequest
+import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.RiderDetails as SRD
-import qualified Product.BecknProvider.BP as BP
 import qualified SharedLogic.DriverPool as DrPool
+import SharedLogic.Schedule
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -34,16 +33,16 @@ import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Common
 
 data DConfirmReq = DConfirmReq
   { bookingId :: Id SRB.Booking,
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: SBL.LocationAddress,
-    toAddress :: Maybe SBL.LocationAddress
+    toAddress :: Maybe SBL.LocationAddress,
+    mbRiderName :: Maybe Text
   }
 
 data DConfirmRes = DConfirmRes
@@ -86,16 +85,16 @@ confirm transporterId subscriber req = do
   now <- getCurrentTime
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
   rideRequest <-
-    BP.buildRideReq
+    buildRideReq
       (booking.id)
       (transporter.shortId)
-      RideRequest.ALLOCATION
       now
 
   let finalTransaction addons = Esq.runTransaction $ do
         when isNewRider $ QRD.create riderDetails
         QRB.updateStatus booking.id SRB.CONFIRMED
         QRB.updateRiderId booking.id riderDetails.id
+        whenJust req.mbRiderName $ QRB.updateRiderName booking.id
         QBL.updateAddress booking.fromLocation.id req.fromAddress
         whenJust booking.discount $ \disc ->
           QDiscTransaction.create $ mkDiscountTransaction booking disc now
@@ -145,14 +144,17 @@ confirm transporterId subscriber req = do
   Esq.runTransaction $ QBE.logRideConfirmedEvent booking.id
   return res
   where
-    createScheduleRentalRideRequestJob scheduledAt jobData =
-      void $
-        createJobByTime scheduledAt $
-          JobEntry
-            { jobType = AllocateRental,
-              jobData = jobData,
-              maxErrors = 5
-            }
+    buildRideReq bookingId shortOrgId now = do
+      guid <- generateGUID
+      pure
+        SRideRequest.RideRequest
+          { id = Id guid,
+            bookingId = bookingId,
+            shortOrgId = shortOrgId,
+            createdAt = now,
+            _type = RideRequest.ALLOCATION,
+            info = Nothing
+          }
 
 getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
 getRiderDetails customerMobileCountryCode customerPhoneNumber now =
@@ -171,7 +173,7 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
             updatedAt = now
           }
 
-mkDiscountTransaction :: SRB.Booking -> Amount -> UTCTime -> DiscountTransaction
+mkDiscountTransaction :: SRB.Booking -> Money -> UTCTime -> DiscountTransaction
 mkDiscountTransaction booking discount currTime =
   DiscountTransaction
     { bookingId = booking.id,

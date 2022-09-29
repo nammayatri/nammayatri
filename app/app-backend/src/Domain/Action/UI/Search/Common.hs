@@ -1,30 +1,32 @@
-module Domain.Action.UI.Search.Common where
+module Domain.Action.UI.Search.Common
+  ( SearchReqLocation (..),
+    buildSearchReqLoc,
+    buildSearchRequest,
+  )
+where
 
-import Beckn.Types.Id
+import Beckn.Prelude
+import Beckn.Types.MapSearch
+import Domain.Types.LocationAddress
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
-import EulerHS.Prelude hiding (state)
-import qualified Storage.Queries.Person as QPerson
 import Tools.Metrics (CoreMetrics)
-import qualified Types.API.Search as API
-import Types.Error
 import Utils.Common
 
 buildSearchRequest ::
-  ( (HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "graphhopperUrl" ::: BaseUrl]),
+  ( (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]),
     EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Id DPerson.Person ->
+  DPerson.Person ->
   Location.SearchReqLocation ->
   Maybe Location.SearchReqLocation ->
   Maybe HighPrecMeters ->
   UTCTime ->
   m SearchRequest.SearchRequest
-buildSearchRequest personId pickup mbDrop mbDistance now = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+buildSearchRequest person pickup mbDrop mbDistance now = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -32,7 +34,7 @@ buildSearchRequest personId pickup mbDrop mbDistance now = do
       { id = searchRequestId,
         startTime = now,
         validTill = validTill,
-        riderId = personId,
+        riderId = person.id,
         fromLocation = pickup,
         toLocation = mbDrop,
         distance = mbDistance,
@@ -48,8 +50,14 @@ buildSearchRequest personId pickup mbDrop mbDistance now = do
           validTill = addUTCTime (minimum [fromInteger searchRequestExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
-buildSearchReqLoc :: MonadFlow m => API.SearchReqLocation -> m Location.SearchReqLocation
-buildSearchReqLoc API.SearchReqLocation {..} = do
+data SearchReqLocation = SearchReqLocation
+  { gps :: LatLong,
+    address :: LocationAddress
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+buildSearchReqLoc :: MonadFlow m => SearchReqLocation -> m Location.SearchReqLocation
+buildSearchReqLoc SearchReqLocation {..} = do
   now <- getCurrentTime
   locId <- generateGUID
   return
@@ -57,6 +65,7 @@ buildSearchReqLoc API.SearchReqLocation {..} = do
       { id = locId,
         lat = gps.lat,
         lon = gps.lon,
+        address = address,
         createdAt = now,
         updatedAt = now
       }

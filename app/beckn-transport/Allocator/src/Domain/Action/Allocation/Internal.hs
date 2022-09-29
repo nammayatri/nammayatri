@@ -4,6 +4,7 @@ import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Data.Text as T
 import Domain.Action.Allocation as Alloc
 import Domain.Types.AllocationEvent (AllocationEventType)
@@ -14,12 +15,13 @@ import qualified Domain.Types.DriverInformation as SDriverInfo
 import Domain.Types.DriverPool
 import qualified Domain.Types.NotificationStatus as SNS
 import Domain.Types.Organization
+import Domain.Types.Person (Driver)
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRequest as SRR
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
-import qualified Product.BecknProvider.BP as BP
 import Servant.Client (BaseUrl (..))
+import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DrPool
 import Storage.Queries.AllocationEvent (logAllocationEvent)
 import qualified Storage.Queries.Booking as QRB
@@ -33,12 +35,10 @@ import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideRequest as QRR
+import Tools.Error
 import Tools.Metrics (CoreMetrics)
-import Types.App
-import Types.Error
-import Utils.Common
-import Utils.Notifications
-import qualified Utils.Notifications as Notify
+import Tools.Notifications
+import qualified Tools.Notifications as Notify
 
 getDriverSortMode :: Flow SortMode
 getDriverSortMode = asks (.defaultSortMode)
@@ -115,6 +115,7 @@ assignDriver bookingId driverId = do
             chargeableDistance = Nothing,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
+            rideRating = Nothing,
             createdAt = now,
             updatedAt = now
           }

@@ -9,7 +9,7 @@ module Storage.Tabular.Ride where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
+import Beckn.Types.Common (HighPrecMeters, HighPrecMoney)
 import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
@@ -36,11 +36,12 @@ mkPersist
       vehicleVariant VehVar.VehicleVariant
       otp Text
       trackingUrl Text Maybe
-      fare Amount Maybe
-      totalFare Amount Maybe
-      chargeableDistance Double Maybe
+      fare HighPrecMoney Maybe
+      totalFare HighPrecMoney Maybe
+      chargeableDistance HighPrecMeters Maybe
       rideStartTime UTCTime Maybe
       rideEndTime UTCTime Maybe
+      rideRating Int Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -63,6 +64,8 @@ instance TType RideT Domain.Ride where
           bookingId = fromKey bookingId,
           shortId = ShortId shortId,
           trackingUrl = tUrl,
+          fare = roundToIntegral <$> fare,
+          totalFare = roundToIntegral <$> totalFare,
           ..
         }
   toTType Domain.Ride {..} =
@@ -72,5 +75,7 @@ instance TType RideT Domain.Ride where
         bookingId = toKey bookingId,
         shortId = getShortId shortId,
         trackingUrl = showBaseUrl <$> trackingUrl,
+        fare = realToFrac <$> fare,
+        totalFare = realToFrac <$> totalFare,
         ..
       }

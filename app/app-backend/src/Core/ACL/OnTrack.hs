@@ -11,7 +11,7 @@ import Types.Error
 import Utils.Common
 
 buildOnTrackReq ::
-  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],
+  ( HasFlowEnv m r '["coreVersion" ::: Text],
     HedisFlow m r
   ) =>
   OnTrack.OnTrackReq ->

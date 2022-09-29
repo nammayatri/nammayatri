@@ -11,11 +11,11 @@ where
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
+import Beckn.Utils.Common
 import Domain.Types.FarePolicy.FareProduct
 import qualified Domain.Types.Person as SP
 import qualified Storage.Queries.FarePolicy.FareProduct as SFareProduct
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 newtype ListFareProductsRes = ListFareProductsRes
   { list :: [FareProductAPIEntity]

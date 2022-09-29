@@ -32,6 +32,7 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Predicate
+import Beckn.Utils.Common (fromMaybeM, logTagInfo, throwError, (:::))
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Control.Applicative ((<|>))
@@ -44,15 +45,13 @@ import GHC.Records.Extra
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as QOrganization
-import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
+import Tools.Auth (authTokenCacheKey)
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Auth (authTokenCacheKey)
-import Utils.Common (fromMaybeM, logTagInfo, throwError, (:::))
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id SP.Person,
@@ -239,7 +238,7 @@ getInformation ::
   Id SP.Person ->
   m DriverInformationRes
 getInformation personId = do
-  _ <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
@@ -357,6 +356,8 @@ deleteDriver admin driverId = do
   unless (driver.organizationId == Just orgId || driver.role == SP.DRIVER) $ throwError Unauthorized
   clearDriverSession driverId
   Esq.runTransaction $ do
+    QDriverInformation.deleteById (cast driverId)
+    QDriverStats.deleteById (cast driverId)
     QR.deleteByPersonId driverId
     QVehicle.deleteById driverId
     QPerson.deleteById driverId

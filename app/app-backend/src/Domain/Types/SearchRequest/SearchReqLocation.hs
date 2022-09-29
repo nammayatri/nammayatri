@@ -3,11 +3,13 @@ module Domain.Types.SearchRequest.SearchReqLocation where
 import Beckn.Prelude
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates)
 import Beckn.Types.Id
+import Domain.Types.LocationAddress
 
 data SearchReqLocation = SearchReqLocation
   { id :: Id SearchReqLocation,
     lat :: Double,
     lon :: Double,
+    address :: LocationAddress,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

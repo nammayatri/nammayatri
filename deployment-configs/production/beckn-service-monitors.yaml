@@ -104,3 +104,29 @@ spec:
   selector:
     matchLabels:
       app: beckn-transport-allocation-service-production
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: beckn-driver-offer-bpp-production
+  name: beckn-driver-offer-bpp-production
+  namespace: monitoring
+spec:
+  endpoints:
+    - bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      honorLabels: true
+      interval: 15s
+      path: /metrics
+      port: http-prom
+      scheme: http
+      scrapeTimeout: 15s
+      tlsConfig:
+        insecureSkipVerify: true
+  jobLabel: atlas
+  namespaceSelector:
+    matchNames:
+      - atlas
+  selector:
+    matchLabels:
+      app: beckn-driver-offer-bpp-production

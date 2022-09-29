@@ -4,7 +4,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Domain.Types.Booking (Booking)
+import Domain.Types.Booking.Type (Booking)
 import Domain.Types.Ride
 import Storage.Tabular.Ride
 
@@ -39,6 +39,20 @@ updateTrackingUrl rideId url = do
       ]
     where_ $ tbl ^. RideId ==. val (getId rideId)
 
+updateRideRating ::
+  Id Ride ->
+  Int ->
+  SqlDB ()
+updateRideRating rideId rideRating = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RideUpdatedAt =. val now,
+        RideRideRating =. val (Just rideRating)
+      ]
+    where_ $ tbl ^. RideId ==. val (getId rideId)
+
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 findById = Esq.findById
 
@@ -57,8 +71,8 @@ updateMultiple rideId ride = do
       tbl
       [ RideUpdatedAt =. val now,
         RideStatus =. val ride.status,
-        RideFare =. val ride.fare,
-        RideTotalFare =. val ride.totalFare,
+        RideFare =. val (realToFrac <$> ride.fare),
+        RideTotalFare =. val (realToFrac <$> ride.totalFare),
         RideChargeableDistance =. val ride.chargeableDistance,
         RideRideStartTime =. val ride.rideStartTime,
         RideRideEndTime =. val ride.rideEndTime

@@ -11,29 +11,29 @@ data SearchReqLocation = SearchReqLocation
     lat :: Double,
     lon :: Double,
     street :: Maybe Text,
-    door :: Maybe Text,
     city :: Maybe Text,
     state :: Maybe Text,
     country :: Maybe Text,
     building :: Maybe Text,
     areaCode :: Maybe Text,
     area :: Maybe Text,
+    full_address :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, PrettyShow, Show)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
 data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
   { lat :: Double,
     lon :: Double,
     street :: Maybe Text,
-    door :: Maybe Text,
     city :: Maybe Text,
     state :: Maybe Text,
     country :: Maybe Text,
     building :: Maybe Text,
     areaCode :: Maybe Text,
-    area :: Maybe Text
+    area :: Maybe Text,
+    full_address :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

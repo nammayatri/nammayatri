@@ -12,7 +12,6 @@ import Domain.Types.Person as Person
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
-import Types.App (Driver)
 
 create :: DriverInformation -> SqlDB ()
 create = Esq.create

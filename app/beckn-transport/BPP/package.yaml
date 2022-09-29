@@ -48,6 +48,7 @@ default-extensions:
   - TypeSynonymInstances
   - UndecidableInstances
   - StandaloneDeriving
+  - PackageImports
 
 dependencies:
   - aeson
@@ -59,23 +60,16 @@ dependencies:
   - euler-hs
   - exceptions
   - hspec
-  - http-api-data
-  - http-client
-  - http-types
   - lens
-  - mtl
   - servant
   - servant-client
   - servant-client-core
   - servant-server
   - text
   - wai
-  - wai-extra
   - warp
   - time
   - stm
-  - random-strings
-  - postgresql-simple
   - resource-pool
   - uuid
   - prometheus-client
@@ -104,23 +98,12 @@ library:
   dependencies:
     - beckn-core
     - beckn-spec
+    - location-updates
 
 executables:
   beckn-transport-exe:
     main: Main.hs
     source-dirs: server/BPP
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - '"-with-rtsopts=-N -T"'
-    dependencies:
-      - beckn-transport
-      - beckn-core
-      - beckn-spec
-
-  transporter-scheduler-exe:
-    main: Main.hs
-    source-dirs: server/Scheduler
     ghc-options:
       - -threaded
       - -rtsopts

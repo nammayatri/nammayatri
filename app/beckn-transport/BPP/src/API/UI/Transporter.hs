@@ -1,7 +1,7 @@
 module API.UI.Transporter (module Reexport, API, handler) where
 
-import App.Types
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Action.UI.Transporter as Reexport
   ( TransporterRec (..),
     UpdateTransporterReq (..),
@@ -11,10 +11,10 @@ import qualified Domain.Action.UI.Transporter as DTransp
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Organization as SO
 import qualified Domain.Types.Person as SP
+import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
-import Utils.Auth (AdminTokenAuth, TokenAuth)
-import Utils.Common
+import Tools.Auth (AdminTokenAuth, TokenAuth)
 
 type API =
   "transporter"

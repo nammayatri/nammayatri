@@ -9,8 +9,7 @@ module Storage.Tabular.FarePolicy.RentalFarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
-import Beckn.Types.Common (Hours (..), Kilometers (..))
+import Beckn.Types.Common (HighPrecMoney, Hours (..), Kilometers (..))
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import qualified Domain.Types.Vehicle as Vehicle
@@ -24,12 +23,12 @@ mkPersist
       id Text
       organizationId OrganizationTId
       vehicleVariant Vehicle.Variant
-      baseFare Amount
+      baseFare HighPrecMoney
       baseDistance Int
       baseDuration Int
-      extraKmFare Amount
-      extraMinuteFare Amount
-      driverAllowanceForDay Amount Maybe
+      extraKmFare HighPrecMoney
+      extraMinuteFare HighPrecMoney
+      driverAllowanceForDay HighPrecMoney Maybe
       deleted Bool
       Primary id
       deriving Generic
@@ -42,13 +41,15 @@ instance TEntityKey RentalFarePolicyT where
 
 instance TType RentalFarePolicyT Domain.RentalFarePolicy where
   fromTType RentalFarePolicyT {..} = do
-    let descriptions = Domain.mkDescriptions extraKmFare extraMinuteFare driverAllowanceForDay
+    let descriptions = Domain.mkDescriptions extraKmFare extraMinuteFare (roundToIntegral <$> driverAllowanceForDay)
     return $
       Domain.RentalFarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
           baseDistance = Kilometers baseDistance,
           baseDuration = Hours baseDuration,
+          baseFare = roundToIntegral baseFare,
+          driverAllowanceForDay = roundToIntegral <$> driverAllowanceForDay,
           ..
         }
   toTType Domain.RentalFarePolicy {..} =
@@ -58,5 +59,7 @@ instance TType RentalFarePolicyT Domain.RentalFarePolicy where
         deleted = False,
         baseDistance = getKilometers baseDistance,
         baseDuration = getHours baseDuration,
+        baseFare = fromIntegral baseFare,
+        driverAllowanceForDay = fromIntegral <$> driverAllowanceForDay,
         ..
       }

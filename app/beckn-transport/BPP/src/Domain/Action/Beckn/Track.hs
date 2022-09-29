@@ -7,14 +7,14 @@ where
 
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Ride as QRide
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 newtype DTrackReq = TrackReq
   { rideId :: Id DRide.Ride

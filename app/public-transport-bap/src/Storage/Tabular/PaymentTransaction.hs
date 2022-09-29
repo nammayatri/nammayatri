@@ -9,7 +9,7 @@ module Storage.Tabular.PaymentTransaction where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
+import Beckn.Types.Common (HighPrecMoney)
 import Beckn.Types.Id
 import qualified Domain.Types.PaymentTransaction as Domain
 import Storage.Tabular.Booking (BookingTId)
@@ -25,7 +25,7 @@ mkPersist
       bknTxnId Text
       paymentGatewayTxnId Text
       paymentGatewayTxnStatus Text
-      fare Amount
+      fare HighPrecMoney
       status Domain.PaymentStatus
       paymentUrl Text
       updatedAt UTCTime
@@ -47,6 +47,7 @@ instance TType PaymentTransactionT Domain.PaymentTransaction where
         { id = Id id,
           bookingId = fromKey bookingId,
           paymentUrl = paymentUrl_,
+          fare = roundToIntegral fare,
           ..
         }
   toTType Domain.PaymentTransaction {..} = do
@@ -54,5 +55,6 @@ instance TType PaymentTransactionT Domain.PaymentTransaction where
       { id = id.getId,
         bookingId = toKey bookingId,
         paymentUrl = showBaseUrl paymentUrl,
+        fare = realToFrac fare,
         ..
       }

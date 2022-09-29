@@ -1,12 +1,18 @@
 module Mobility.AppBackend.APICalls where
 
-import "app-backend" App.Routes as AbeRoutes
+import qualified "app-backend" API.UI.Booking as AppBooking
+import qualified "app-backend" API.UI.Cancel as CancelAPI
+import qualified "app-backend" API.UI.Confirm as ConfirmAPI
+import qualified "app-backend" API.UI.Feedback as AppFeedback
+import qualified "app-backend" API.UI.Registration as Reg
+import qualified "app-backend" API.UI.Select as AppSelect
+import qualified "app-backend" API.UI.Serviceability as AppServ
 import Beckn.External.FCM.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Id
 import qualified "app-backend" Domain.Action.UI.Cancel as CancelAPI
-import qualified "app-backend" Domain.Action.UI.Confirm as DConfirm
+import qualified "app-backend" Domain.Types.Booking as AbeBooking
 import qualified "app-backend" Domain.Types.Booking as BRB
 import qualified "app-backend" Domain.Types.CancellationReason as AbeCRC
 import qualified "app-backend" Domain.Types.Estimate as AbeEstimate
@@ -15,52 +21,25 @@ import qualified "app-backend" Domain.Types.RegistrationToken as AppSRT
 import qualified "app-backend" Domain.Types.Ride as BRide
 import EulerHS.Prelude
 import Mobility.AppBackend.Fixtures
-import qualified "app-backend" Product.Cancel as CancelAPI
-import qualified "app-backend" Product.Confirm as ConfirmAPI
 import Servant hiding (Context)
 import Servant.Client
-import qualified "app-backend" Types.API.Booking as AppBooking
-import qualified "app-backend" Types.API.Feedback as AppFeedback
-import qualified "app-backend" Types.API.Registration as Reg
-import qualified "app-backend" Types.API.Select as AppSelect
-import qualified "app-backend" Types.API.Serviceability as AppServ
 
 selectQuote :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess
 selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectListRes
-selectQuote :<|> selectList = client (Proxy :: Proxy AbeRoutes.SelectAPI)
+selectQuote :<|> selectList = client (Proxy :: Proxy AppSelect.API)
 
 cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
-cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
+cancelRide = client (Proxy :: Proxy CancelAPI.API)
 
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
   CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
 
-appConfirmRide :: Text -> Id AbeQuote.Quote -> DConfirm.ConfirmAPIReq -> ClientM ConfirmAPI.ConfirmRes
-appConfirmRide = client (Proxy :: Proxy ConfirmAPI.ConfirmAPI)
-
-confirmAddress :: DConfirm.ConfirmLocationAPIEntity
-confirmAddress =
-  DConfirm.ConfirmLocationAPIEntity
-    { door = Just "#817",
-      building = Just "Juspay Apartments",
-      street = Just "27th Main",
-      area = Just "8th Block Koramangala",
-      city = Just "Bangalore",
-      country = Just "India",
-      areaCode = Just "560047",
-      state = Just "Karnataka"
-    }
-
-mkAppConfirmReq :: DConfirm.ConfirmAPIReq
-mkAppConfirmReq =
-  DConfirm.ConfirmAPIReq
-    { fromLocation = confirmAddress,
-      toLocation = Just confirmAddress
-    }
+appConfirmRide :: Text -> Id AbeQuote.Quote -> ClientM ConfirmAPI.ConfirmRes
+appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
-appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
+appFeedback = client (Proxy :: Proxy AppFeedback.API)
 
 callAppFeedback :: Int -> Id BRide.Ride -> ClientM APISuccess
 callAppFeedback ratingValue rideId =
@@ -68,23 +47,23 @@ callAppFeedback ratingValue rideId =
         AppFeedback.FeedbackReq
           { rideId = rideId,
             rating = ratingValue,
-            feedbackDetails = "driver is so qt!"
+            feedbackDetails = Just "driver is so qt!"
           }
    in appFeedback appRegistrationToken request
 
-appBookingStatus :: Id BRB.Booking -> Text -> ClientM AppBooking.BookingStatusRes
+appBookingStatus :: Id BRB.Booking -> Text -> ClientM AbeBooking.BookingAPIEntity
 appBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM AppBooking.BookingListRes
-appBookingStatus :<|> appBookingList = client (Proxy :: Proxy AbeRoutes.BookingAPI)
+appBookingStatus :<|> appBookingList = client (Proxy :: Proxy AppBooking.API)
 
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 originServiceability regToken = origin
   where
-    origin :<|> _ = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
+    origin :<|> _ = client (Proxy :: Proxy AppServ.API) regToken
 
 destinationServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 destinationServiceability regToken = destination
   where
-    _ :<|> destination = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
+    _ :<|> destination = client (Proxy :: Proxy AppServ.API) regToken
 
 appAuth :: Reg.AuthReq -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
@@ -94,7 +73,7 @@ appAuth
   :<|> appVerify
   :<|> appReInitiateLogin
   :<|> logout =
-    client (Proxy :: Proxy AbeRoutes.RegistrationAPI)
+    client (Proxy :: Proxy Reg.API)
 
 mkAuthReq :: Reg.AuthReq
 mkAuthReq =

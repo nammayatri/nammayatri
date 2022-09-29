@@ -1,34 +1,34 @@
 module Core.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
 
+import App.Types
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import Beckn.Types.Id
+import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.SearchRequest as DSearchReq
 import EulerHS.Prelude hiding (state)
-import ExternalAPI.Flow
-import qualified Types.API.Search as API
 import Utils.Common
 
 buildOneWaySearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
-  DOneWaySearch.DSearchReq ->
+  DOneWaySearch.OneWaySearchRes ->
   m (BecknReq Search.SearchMessage)
-buildOneWaySearchReq DOneWaySearch.DSearchReq {..} = buildSearchReq origin (Just destination) searchId now
+buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} = buildSearchReq origin (Just destination) searchId now
 
 buildRentalSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
-  DRentalSearch.DSearchReq ->
+  DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
-buildRentalSearchReq DRentalSearch.DSearchReq {..} = buildSearchReq origin Nothing searchId startTime
+buildRentalSearchReq DRentalSearch.RentalSearchRes {..} = buildSearchReq origin Nothing searchId startTime
 
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
-  API.SearchReqLocation ->
-  Maybe API.SearchReqLocation ->
+  DSearchCommon.SearchReqLocation ->
+  Maybe DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
   UTCTime ->
   m (BecknReq Search.SearchMessage)
@@ -41,8 +41,8 @@ buildSearchReq origin mbDestination searchId startTime = do
   pure $ BecknReq context $ Search.SearchMessage intent
 
 mkIntent ::
-  API.SearchReqLocation ->
-  Maybe API.SearchReqLocation ->
+  DSearchCommon.SearchReqLocation ->
+  Maybe DSearchCommon.SearchReqLocation ->
   UTCTime ->
   Search.Intent
 mkIntent origin mbDestination startTime = do

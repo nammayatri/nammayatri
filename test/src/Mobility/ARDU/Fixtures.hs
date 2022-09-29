@@ -1,6 +1,7 @@
 module Mobility.ARDU.Fixtures where
 
 import Beckn.Prelude
+import Beckn.Types.Common (Money)
 import Beckn.Types.Id
 import Beckn.Types.Time
 import Utils
@@ -25,5 +26,5 @@ arduDriver2 =
       token = "favorit-auto2-0000000000000000-token"
     }
 
-defaultAllowedDriverFee :: Double
+defaultAllowedDriverFee :: Money
 defaultAllowedDriverFee = 30

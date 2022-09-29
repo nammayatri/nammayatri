@@ -1,13 +1,11 @@
 module Domain.Types.Quote where
 
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time
 import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Organization as DOrg
-import Domain.Types.Products (Products)
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
@@ -16,10 +14,9 @@ import GHC.Records.Extra
 data Quote = Quote
   { id :: Id Quote,
     requestId :: Id DSR.SearchRequest,
-    productId :: Id Products, -- do we need this field?
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     providerId :: Id DOrg.Organization,
     vehicleVariant :: DVeh.Variant,
     createdAt :: UTCTime,
@@ -29,8 +26,9 @@ data Quote = Quote
 data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails DRentalFP.RentalFarePolicy
 
 data OneWayQuoteDetails = OneWayQuoteDetails
-  { distance :: HighPrecMeters,
-    distanceToNearestDriver :: HighPrecMeters
+  { distance :: Meters,
+    distanceToNearestDriver :: Meters,
+    estimatedFinishTime :: UTCTime
   }
 
 getFareProductType :: QuoteDetails -> DFareProduct.FareProductType

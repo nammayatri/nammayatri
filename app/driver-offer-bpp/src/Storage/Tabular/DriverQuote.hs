@@ -9,7 +9,8 @@ module Storage.Tabular.DriverQuote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Meters (..), Seconds (..))
+import Beckn.Types.Common (Meters (..))
+import qualified Beckn.Types.Common as Common
 import Beckn.Types.Id
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -31,13 +32,14 @@ mkPersist
       driverName Text
       driverRating Double Maybe
       vehicleVariant Variant.Variant
-      distance Double
-      distanceToPickup Int
+      distance Meters
+      distanceToPickup Meters
       durationToPickup Double
       validTill UTCTime
+      estimatedFare Common.Money
+      fareParametersId Fare.FareParametersTId
       createdAt UTCTime
       updatedAt UTCTime
-      fareParametersId Fare.FareParametersTId
 
       Primary id
       deriving Generic
@@ -55,8 +57,7 @@ instance TType (DriverQuoteT, Fare.FareParametersT) Domain.DriverQuote where
         { id = Id id,
           searchRequestId = fromKey searchRequestId,
           driverId = fromKey driverId,
-          distanceToPickup = Meters distanceToPickup,
-          durationToPickup = Seconds $ floor durationToPickup,
+          durationToPickup = roundToIntegral durationToPickup,
           fareParams = Fare.mkDomainFromTabularFareParams fareParams,
           ..
         }
@@ -66,8 +67,7 @@ instance TType (DriverQuoteT, Fare.FareParametersT) Domain.DriverQuote where
             { id = getId id,
               searchRequestId = toKey searchRequestId,
               driverId = toKey driverId,
-              distanceToPickup = getMeters distanceToPickup,
-              durationToPickup = fromIntegral $ getSeconds durationToPickup,
+              durationToPickup = realToFrac durationToPickup,
               fareParametersId = toKey fareParamsId,
               ..
             },

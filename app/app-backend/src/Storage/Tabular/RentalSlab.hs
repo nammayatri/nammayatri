@@ -18,8 +18,8 @@ mkPersist
   [defaultQQ|
     RentalSlabT sql=rental_slab
       id Text
-      baseDistance Int
-      baseDuration Int
+      baseDistance Kilometers
+      baseDuration Hours
       Primary id
       deriving Generic
     |]
@@ -34,12 +34,10 @@ instance TType RentalSlabT Domain.RentalSlab where
     return $
       Domain.RentalSlab
         { id = Id id,
-          baseDistance = Kilometers baseDistance,
-          baseDuration = Hours baseDuration
+          ..
         }
   toTType Domain.RentalSlab {..} =
     RentalSlabT
       { id = getId id,
-        baseDistance = getKilometers baseDistance,
-        baseDuration = getHours baseDuration
+        ..
       }

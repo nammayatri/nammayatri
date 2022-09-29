@@ -14,6 +14,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
+import Beckn.Utils.Common
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.FarePolicy.Discount as DFPDiscount
@@ -24,17 +25,15 @@ import qualified Domain.Types.Vehicle as Veh
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.FarePolicy.Discount as QDisc
 import qualified Storage.Queries.Person as QP
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Common
-import qualified Utils.Notifications as Notify
-import qualified Utils.Validation as TV
+import qualified Tools.Notifications as Notify
 
 data CreateFarePolicyDiscountReq = CreateFarePolicyDiscountReq
   { vehicleVariant :: Veh.Variant,
     fromDate :: UTCTime,
     toDate :: UTCTime,
-    discount :: Double,
+    discount :: Money,
     enabled :: Bool
   }
   deriving (Generic, Show, FromJSON, ToSchema)
@@ -44,14 +43,14 @@ type CreateFarePolicyDiscountRes = APISuccess
 validateCreateFarePolicyDiscountReq :: Validate CreateFarePolicyDiscountReq
 validateCreateFarePolicyDiscountReq CreateFarePolicyDiscountReq {..} =
   sequenceA_
-    [ validateField "discount" discount $ Min @Double 0.01,
-      TV.validateDiscountDate "toDate" toDate fromDate
+    [ validateField "discount" discount $ Min @Money 1,
+      validateField "fromDate" fromDate $ Max @UTCTime toDate
     ]
 
 data UpdateFarePolicyDiscountReq = UpdateFarePolicyDiscountReq
   { fromDate :: UTCTime,
     toDate :: UTCTime,
-    discount :: Double,
+    discount :: Money,
     enabled :: Bool
   }
   deriving (Generic, Show, FromJSON, ToSchema)
@@ -61,8 +60,8 @@ type UpdateFarePolicyDiscountRes = APISuccess
 validateUpdateFarePolicyDiscountReq :: Validate UpdateFarePolicyDiscountReq
 validateUpdateFarePolicyDiscountReq UpdateFarePolicyDiscountReq {..} =
   sequenceA_
-    [ validateField "discount" discount $ Min @Double 0.01,
-      TV.validateDiscountDate "toDate" toDate fromDate
+    [ validateField "discount" discount $ Min @Money 1,
+      validateField "fromDate" fromDate $ Max @UTCTime toDate
     ]
 
 type DeleteFarePolicyDiscountRes = APISuccess
@@ -94,7 +93,7 @@ createFarePolicyDiscount admin req = do
             fareProductType = DFProduct.ONE_WAY,
             fromDate = req.fromDate,
             toDate = req.toDate,
-            discount = toRational req.discount,
+            discount = req.discount,
             enabled = req.enabled,
             createdAt = currTime,
             updatedAt = currTime
@@ -111,7 +110,7 @@ updateFarePolicyDiscount admin discId req = do
   let updatedFarePolicy =
         discount{fromDate = req.fromDate,
                  toDate = req.toDate,
-                 discount = toRational req.discount,
+                 discount = req.discount,
                  enabled = req.enabled
                 }
   cooridinators <- QP.findAdminsByOrgId orgId

@@ -7,13 +7,13 @@ import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import Beckn.Types.MapSearch
 import qualified Beckn.Types.Registry as Subscriber
+import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Vehicle as Veh
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 buildInitReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Subscriber.Subscriber ->
   Init.InitReq ->
   m DInit.InitReq
@@ -46,7 +46,7 @@ buildInitReq subscriber req = do
       Init.SUV -> Right Veh.SUV
       Init.HATCHBACK -> Right Veh.HATCHBACK
       Init.SEDAN -> Right Veh.SEDAN
-      Init.AUTO -> Left "Auto vehicles are not supported by this BPP"
+      Init.AUTO_RICKSHAW -> Left "Auto-rickshaw vehicles are not supported by this BPP"
     buildInitTypeReq item = do
       let itemCode = item.descriptor.code
       case itemCode.fareProductType of

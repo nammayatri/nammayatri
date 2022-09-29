@@ -1,6 +1,7 @@
 module Domain.Types.FarePolicy.OneWayFarePolicy where
 
 import Beckn.Prelude
+import Beckn.Types.Common (Money)
 import Beckn.Types.Id (Id)
 import Domain.Types.FarePolicy.Discount
 import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate
@@ -11,12 +12,12 @@ data OneWayFarePolicy = OneWayFarePolicy
   { id :: Id OneWayFarePolicy,
     vehicleVariant :: Vehicle.Variant,
     organizationId :: Id Organization.Organization,
-    baseFare :: Maybe Rational,
+    baseFare :: Maybe Money,
     perExtraKmRateList :: NonEmpty PerExtraKmRate,
     discountList :: [Discount],
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
-    nightShiftRate :: Maybe Rational,
+    nightShiftRate :: Maybe Double,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -25,7 +26,7 @@ data OneWayFarePolicy = OneWayFarePolicy
 data OneWayFarePolicyAPIEntity = OneWayFarePolicyAPIEntity
   { id :: Id OneWayFarePolicy,
     vehicleVariant :: Vehicle.Variant,
-    baseFare :: Maybe Double,
+    baseFare :: Maybe Money,
     perExtraKmRateList :: NonEmpty PerExtraKmRateAPIEntity,
     discountList :: [DiscountAPIEntity],
     nightShiftStart :: Maybe TimeOfDay,
@@ -38,11 +39,9 @@ makeOneWayFarePolicyAPIEntity :: OneWayFarePolicy -> OneWayFarePolicyAPIEntity
 makeOneWayFarePolicyAPIEntity OneWayFarePolicy {..} =
   OneWayFarePolicyAPIEntity
     { id = id,
-      baseFare = fromRational <$> baseFare,
       perExtraKmRateList = makePerExtraKmRateAPIEntity <$> perExtraKmRateList,
       discountList = makeDiscountAPIEntity <$> discountList,
       nightShiftStart = nightShiftStart,
       nightShiftEnd = nightShiftEnd,
-      nightShiftRate = fromRational <$> nightShiftRate,
       ..
     }

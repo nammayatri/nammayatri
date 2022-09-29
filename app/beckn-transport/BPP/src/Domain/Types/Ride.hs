@@ -2,8 +2,9 @@
 
 module Domain.Types.Ride where
 
-import Beckn.Types.Amount
+import Beckn.Prelude (roundToIntegral)
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -14,7 +15,6 @@ import qualified Domain.Types.Person as DPers
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import Utils.Common
 
 data RideStatus
   = NEW
@@ -41,12 +41,22 @@ data Ride = Ride
     driverId :: Id DPers.Person,
     otp :: Text,
     trackingUrl :: BaseUrl,
-    fare :: Maybe Amount,
-    totalFare :: Maybe Amount,
+    fare :: Maybe Money,
+    totalFare :: Maybe Money,
     traveledDistance :: HighPrecMeters,
-    chargeableDistance :: Maybe HighPrecMeters,
+    chargeableDistance :: Maybe Meters,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
+    rideRating :: Maybe RideRating,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, Show, Eq)
+
+data RideRating = RideRating
+  { id :: Id RideRating,
+    ratingValue :: Int,
+    feedbackDetails :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -62,9 +72,10 @@ data RideAPIEntity = RideAPIEntity
     vehicleModel :: Text,
     vehicleColor :: Text,
     vehicleNumber :: Text,
-    computedFare :: Maybe Amount,
-    computedTotalFare :: Maybe Amount,
-    actualRideDistance :: HighPrecMeters,
+    computedFare :: Maybe Money,
+    computedTotalFare :: Maybe Money,
+    actualRideDistance :: Meters,
+    rideRating :: Maybe Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -84,7 +95,8 @@ makeRideAPIEntity ride driver vehicle =
       vehicleModel = vehicle.model,
       computedFare = ride.fare,
       computedTotalFare = ride.totalFare,
-      actualRideDistance = ride.traveledDistance,
+      actualRideDistance = roundToIntegral ride.traveledDistance,
+      rideRating = ride.rideRating <&> (.ratingValue),
       createdAt = ride.createdAt,
       updatedAt = ride.updatedAt
     }

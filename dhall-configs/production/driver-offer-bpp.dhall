@@ -1,10 +1,10 @@
 let common = ./common.dhall
 let sec = ./secrets/driver-offer-bpp.dhall
 
-let GeoRestriction = < Unrestricted | Regions : List Text>
+let GeoRestriction = < Unrestricted | Regions : List Text >
 
 let postgresConfig =
-  { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+  { connectHost = "adb.primary.beckn.juspay.net"
   , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
@@ -20,8 +20,13 @@ let esqDBCfg =
   , connectSchemaName = "atlas_driver_offer_bpp"
   }
 
+let slackCfg =
+  { channelName = "beckn-dashboard-new"
+  , slackToken = common.slackToken
+  }
+
 let rcfg =
-  { connectHost = "beckn-redis-001-001.zkt6uh.0001.aps1.cache.amazonaws.com"
+  { connectHost = "cache.primary.beckn.juspay.net"
   , connectPort = 6379
   , connectAuth = None Text
   , connectDatabase = +1
@@ -32,8 +37,8 @@ let rcfg =
 
 let smsConfig =
   { sessionConfig = common.smsSessionConfig
-  , credConfig = {
-      username = common.smsUserName
+  , credConfig =
+    { username = common.smsUserName
     , password = common.smsPassword
     , otpHash = sec.smsOtpHash
     }
@@ -43,56 +48,57 @@ let smsConfig =
   }
 
 let geofencingConfig =
-{ origin = GeoRestriction.Regions ["Ernakulam"]
-, destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
+{ origin = GeoRestriction.Unrestricted
+, destination = GeoRestriction.Unrestricted
 }
 
-let apiRateLimitOptions =
-  { limit = +4
-  , limitResetTimeInSec = +600
-  }
+let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
-let encTools =
-  { service = common.passetto
-  , hashSalt = sec.encHashSalt
-  }
-
-let apiRateLimitOptions =
-  { limit = +4
-  , limitResetTimeInSec = +600
-  }
+let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 in
 
 { esqDBCfg = esqDBCfg
 , redisCfg = rcfg
+, hedisCfg = rcfg
 , port = +8016
 , metricsPort = +9997
-, hostName =  "juspay.in"
-, nwAddress = "https://api.sandbox.beckn.juspay.in/dobpp/cab/v1"
+, hostName = "juspay.in"
+, nwAddress = "https://api.beckn.juspay.in/dobpp/beckn"
+, selfUIUrl = "https://api.beckn.juspay.in/dobpp/ui"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
+, s3Config = common.s3Config
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"
-, domainVersion = "0.9.3"
-, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log"}
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False}
+, updateLocationRefreshPeriod = +1
+, updateLocationAllowedDelay = +60
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
 , graceTerminationPeriod = +90
 , registryUrl = common.registryUrl
 , encTools = encTools
 , authTokenCacheExpiry = +600
+, minimumDriverRatesCount = +5
 , disableSignatureAuth = False
 , httpClientOptions = common.httpClientOptions
 , fcmUrl = common.fcmUrl
 , fcmJsonPath = common.fcmJsonPath
+, fcmTokenKeyPrefix = "driver-offer-bpp"
 , apiRateLimitOptions = apiRateLimitOptions
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
+, onboardSupportSmsTemplate = "Driver Onboarding Alert!! Driver is facing issue while onboarding to ({#org#}). Please contact him {#driver-phone#}"
+, slackCfg = slackCfg
+, onboardingTryLimit = +3
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , smsCfg = smsConfig
 , driverPositionInfoExpiry = None Integer
-, searchRequestExpirationSeconds = +3600
+, searchRequestExpirationSeconds = +120
 , driverQuoteExpirationSeconds = +15
 , defaultRadiusOfSearch = +5000 -- meters
+, driverUnlockDelay = +2 -- seconds
+, driverEstimatedPickupDuration = +300 -- seconds
+, idfyCfg = common.idfyCfg
 }

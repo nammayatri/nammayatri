@@ -10,6 +10,7 @@ driver-tracking-healthcheck
 mock-fcm
 mock-registry
 mock-sms
+mock-idfy
 public-transport-bap
 public-transport-search-consumer
 search-result-aggregator

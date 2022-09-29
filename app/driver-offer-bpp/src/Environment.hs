@@ -2,7 +2,9 @@
 
 module Environment where
 
+import AWS.S3 (S3AuthenticatingEntity (..), S3Config)
 import Beckn.External.Encryption (EncTools)
+import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config
 import Beckn.Storage.Esqueleto.Config
@@ -24,8 +26,9 @@ import Beckn.Utils.Servant.Client
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
+import qualified Idfy.Types.IdfyConfig as Idfy
 import System.Environment (lookupEnv)
-import Tools.Metrics.TransporterBPPMetrics.Types
+import Tools.Metrics.ARDUBPPMetrics.Types
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -37,10 +40,10 @@ data AppCfg = AppCfg
     selfUIUrl :: BaseUrl,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
+    s3Config :: S3Config,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     coreVersion :: Text,
-    domainVersion :: Text,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     registryUrl :: BaseUrl,
@@ -53,17 +56,25 @@ data AppCfg = AppCfg
     otpSmsTemplate :: Text,
     smsCfg :: SmsConfig,
     inviteSmsTemplate :: Text,
+    onboardSupportSmsTemplate :: Text,
+    slackCfg :: SlackConfig,
+    onboardingTryLimit :: Int,
     apiRateLimitOptions :: APIRateLimitOptions,
     driverPositionInfoExpiry :: Maybe Seconds,
     fcmJsonPath :: Maybe Text,
     fcmUrl :: BaseUrl,
+    fcmTokenKeyPrefix :: Text,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     defaultRadiusOfSearch :: Meters,
     redisCfg :: T.RedisConfig,
     searchRequestExpirationSeconds :: Int,
     driverQuoteExpirationSeconds :: Int,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    driverUnlockDelay :: Seconds,
+    driverEstimatedPickupDuration :: Seconds,
+    idfyCfg :: Idfy.IdfyConfig,
+    dashboardToken :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -74,8 +85,8 @@ data AppEnv = AppEnv
     selfUIUrl :: BaseUrl,
     signatureExpiry :: Seconds,
     coreVersion :: Text,
-    domainVersion :: Text,
     loggerConfig :: LoggerConfig,
+    s3Config :: S3Config,
     graceTerminationPeriod :: Seconds,
     registryUrl :: BaseUrl,
     updateLocationRefreshPeriod :: Seconds,
@@ -94,16 +105,24 @@ data AppEnv = AppEnv
     otpSmsTemplate :: Text,
     smsCfg :: SmsConfig,
     inviteSmsTemplate :: Text,
+    onboardSupportSmsTemplate :: Text,
+    slackCfg :: SlackConfig,
+    onboardingTryLimit :: Int,
     apiRateLimitOptions :: APIRateLimitOptions,
     driverPositionInfoExpiry :: Maybe Seconds,
     fcmJsonPath :: Maybe Text,
     fcmUrl :: BaseUrl,
+    fcmTokenKeyPrefix :: Text,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     defaultRadiusOfSearch :: Meters,
     transporterMetrics :: TransporterMetricsContainer,
     searchRequestExpirationSeconds :: NominalDiffTime,
-    driverQuoteExpirationSeconds :: NominalDiffTime
+    driverQuoteExpirationSeconds :: NominalDiffTime,
+    driverUnlockDelay :: Seconds,
+    driverEstimatedPickupDuration :: Seconds,
+    idfyCfg :: Idfy.IdfyConfig,
+    dashboardToken :: Text
   }
   deriving (Generic)
 
@@ -138,8 +157,14 @@ type FlowServer api = FlowServerR AppEnv api
 
 type Flow = FlowR AppEnv
 
+instance S3AuthenticatingEntity AppEnv where
+  getSecretAccessKey = (.s3Config.secretAccessKey)
+  getAccessKeyId = (.s3Config.accessKeyId)
+  getBucketName = (.s3Config.bucketName)
+  getRegion = (.s3Config.region)
+
 instance Registry Flow where
-  registryLookup = Registry.withSubscriberCache Registry.registryLookup
+  registryLookup registryUrl = Registry.withSubscriberCache $ Registry.registryLookup registryUrl
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "driver-offer-bpp:registry"

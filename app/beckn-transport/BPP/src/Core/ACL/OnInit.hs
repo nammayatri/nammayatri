@@ -1,7 +1,7 @@
 module Core.ACL.OnInit (mkOnInitMessage) where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
+import Beckn.Types.Core.Taxi.Common.DecimalValue (DecimalValue)
 import qualified Beckn.Types.Core.Taxi.OnInit as OnInit
 import qualified Domain.Action.Beckn.Init as DInit
 
@@ -14,24 +14,24 @@ mkOnInitMessage res =
             state = OnInit.NEW,
             quote =
               OnInit.Quote
-                { price = mkPrice booking.estimatedFare booking.estimatedTotalFare,
-                  breakup = mkBreakup booking.estimatedFare booking.discount
+                { price = mkPrice (fromIntegral booking.estimatedFare) (fromIntegral booking.estimatedTotalFare),
+                  breakup = mkBreakup (fromIntegral booking.estimatedFare) (fromIntegral <$> booking.discount)
                 },
-            payment = mkPayment booking.estimatedTotalFare
+            payment = mkPayment $ fromIntegral booking.estimatedTotalFare
           }
     }
   where
     booking = res.booking
 
-mkPrice :: Amount -> Amount -> OnInit.QuotePrice
+mkPrice :: DecimalValue -> DecimalValue -> OnInit.QuotePrice
 mkPrice estimatedFare estimatedTotalFare =
   OnInit.QuotePrice
     { currency = "INR",
-      value = realToFrac estimatedFare,
-      offered_value = realToFrac estimatedTotalFare
+      value = estimatedFare,
+      offered_value = estimatedTotalFare
     }
 
-mkBreakup :: Amount -> Maybe Amount -> [OnInit.BreakupItem]
+mkBreakup :: DecimalValue -> Maybe DecimalValue -> [OnInit.BreakupItem]
 mkBreakup estimatedFare mbDiscount = [estimatedFareBreakupItem] <> maybeToList mbDiscountBreakupItem
   where
     estimatedFareBreakupItem =
@@ -40,7 +40,7 @@ mkBreakup estimatedFare mbDiscount = [estimatedFareBreakupItem] <> maybeToList m
           price =
             OnInit.BreakupItemPrice
               { currency = "INR",
-                value = realToFrac estimatedFare
+                value = estimatedFare
               }
         }
 
@@ -51,17 +51,17 @@ mkBreakup estimatedFare mbDiscount = [estimatedFareBreakupItem] <> maybeToList m
             price =
               OnInit.BreakupItemPrice
                 { currency = "INR",
-                  value = realToFrac discount
+                  value = discount
                 }
           }
 
-mkPayment :: Amount -> OnInit.Payment
+mkPayment :: DecimalValue -> OnInit.Payment
 mkPayment estimatedTotalFare =
   OnInit.Payment
     { collected_by = "BAP",
       params =
         OnInit.PaymentParams
-          { amount = realToFrac estimatedTotalFare,
+          { amount = estimatedTotalFare,
             currency = "INR"
           },
       time = OnInit.TimeDuration "P2D",

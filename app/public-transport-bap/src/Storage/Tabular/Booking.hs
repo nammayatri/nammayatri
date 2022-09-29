@@ -9,7 +9,7 @@ module Storage.Tabular.Booking where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
+import Beckn.Types.Common (HighPrecMoney)
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as Domain
 import Storage.Tabular.Quote (QuoteTId)
@@ -32,7 +32,7 @@ mkPersist
       bppUrl Text
       publicTransportSupportNumber Text
       description Text
-      fare Amount
+      fare HighPrecMoney
       departureTime UTCTime
       arrivalTime UTCTime
       departureStationId TransportStationTId
@@ -63,6 +63,7 @@ instance TType BookingT Domain.Booking where
           bppUrl = bppUrl_,
           departureStationId = fromKey departureStationId,
           arrivalStationId = fromKey arrivalStationId,
+          fare = roundToIntegral fare,
           ..
         }
   toTType Domain.Booking {..} = do
@@ -74,5 +75,6 @@ instance TType BookingT Domain.Booking where
         bppUrl = showBaseUrl bppUrl,
         departureStationId = toKey departureStationId,
         arrivalStationId = toKey arrivalStationId,
+        fare = realToFrac fare,
         ..
       }

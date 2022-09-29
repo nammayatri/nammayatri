@@ -6,17 +6,15 @@ module API.UI.Route
   )
 where
 
-import App.Types
-import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
-import Beckn.Utils.Logging
+import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.Person as Person
+import Environment
 import Servant
-import Utils.Auth
-import Utils.Common hiding (id)
+import Tools.Auth
 
 type API =
   "route"
@@ -29,7 +27,7 @@ handler = getRoute
 
 type RouteRequest = MapSearch.Request
 
-type RouteResponse = GoogleMaps.DirectionsResp
+type RouteResponse = MapSearch.Response
 
 getRoute :: Id Person.Person -> RouteRequest -> FlowHandler RouteResponse
 getRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleMaps.getRoutes

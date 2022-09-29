@@ -13,7 +13,8 @@ defaultBooking = do
   let details =
         SRB.OneWayBookingDetails
           { toLocation = defaultBookingLocation,
-            estimatedDistance = 0
+            estimatedDistance = 0,
+            estimatedFinishTime = Fixtures.defaultTime
           }
   SRB.Booking
     { id = Id "1",
@@ -30,6 +31,7 @@ defaultBooking = do
       estimatedTotalFare = 0,
       reallocationsCount = 0,
       bookingDetails = SRB.OneWayDetails details,
+      riderName = Just "John",
       createdAt = Fixtures.defaultTime,
       updatedAt = Fixtures.defaultTime
     }
@@ -49,7 +51,6 @@ defaultLocationAddress :: Loc.LocationAddress
 defaultLocationAddress =
   Loc.LocationAddress
     { street = Nothing,
-      door = Nothing,
       city = Nothing,
       state = Nothing,
       country = Nothing,

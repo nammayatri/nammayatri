@@ -9,8 +9,7 @@ module Storage.Tabular.FarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
-import Beckn.Types.Common (HighPrecMeters (HighPrecMeters))
+import Beckn.Types.Common (HighPrecMoney, Meters, Money)
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -25,15 +24,16 @@ mkPersist
       organizationId OrganizationTId
       vehicleVariant Variant.Variant
 
-      baseDistancePerKmFare Amount
-      baseDistance Double
-      extraKmFare Amount
-      deadKmFare Amount
-      driverExtraFeeList (PostgresList Double)
+      baseDistanceFare HighPrecMoney
+      baseDistanceMeters Meters
+      perExtraKmFare HighPrecMoney
+      deadKmFare Money
+      driverMinExtraFee Money
+      driverMaxExtraFee Money
 
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
-      nightShiftRate Amount Maybe
+      nightShiftRate Double Maybe
       createdAt UTCTime
       updatedAt UTCTime
       UniqueFarePolicyId id
@@ -48,13 +48,15 @@ instance TEntityKey FarePolicyT where
 
 instance TType FarePolicyT Domain.FarePolicy where
   fromTType FarePolicyT {..} = do
+    let driverExtraFee =
+          Domain.ExtraFee
+            { minFee = driverMinExtraFee,
+              maxFee = driverMaxExtraFee
+            }
     return $
       Domain.FarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
-          baseDistance = HighPrecMeters baseDistance,
-          nightShiftRate = Amount . toRational <$> nightShiftRate,
-          driverExtraFeeList = map realToFrac $ unPostgresList driverExtraFeeList,
           ..
         }
 
@@ -62,7 +64,7 @@ instance TType FarePolicyT Domain.FarePolicy where
     FarePolicyT
       { id = getId id,
         organizationId = toKey organizationId,
-        baseDistance = baseDistance.getHighPrecMeters,
-        driverExtraFeeList = PostgresList $ map amountToDouble driverExtraFeeList,
+        driverMinExtraFee = driverExtraFee.minFee,
+        driverMaxExtraFee = driverExtraFee.maxFee,
         ..
       }

@@ -33,7 +33,7 @@ mkTestTree = do
               srvSpec,
               drrSpec,
               crSpec,
-              dcrSpec
-            ],
-        testGroup "LocationUpdates" [locationUpdatesSpec]
+              dcrSpec,
+              locationUpdatesSpec
+            ]
       ]

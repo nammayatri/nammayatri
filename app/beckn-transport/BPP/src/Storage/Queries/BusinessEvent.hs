@@ -3,14 +3,14 @@ module Storage.Queries.BusinessEvent where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Booking
 import Domain.Types.BusinessEvent
+import Domain.Types.Person (Driver)
 import Domain.Types.Ride
 import Domain.Types.Vehicle (Variant)
 import SharedLogic.DriverPool (DriverPoolResult)
 import Storage.Tabular.BusinessEvent ()
-import Types.App (Driver)
-import Utils.Common
 
 logBusinessEvent ::
   Maybe (Id Driver) ->

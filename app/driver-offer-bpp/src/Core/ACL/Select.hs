@@ -1,20 +1,26 @@
-module Core.ACL.Select where
+module Core.ACL.Select (buildSelectReq) where
 
-import Beckn.Prelude
+import qualified Beckn.External.GoogleMaps.Client as ClientGoogleMaps
+import Beckn.External.GoogleMaps.Types as GoogleMaps hiding (Address)
+import Beckn.Prelude hiding (error, setField)
 import Beckn.Product.Validation.Context
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified Beckn.Types.Core.Taxi.Common.ItemCode as OS
-import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
+import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Select as DSelect
-import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
+import Domain.Types.SearchRequest.SearchReqLocation (SearchReqLocationAPIEntity (..))
 import Domain.Types.Vehicle.Variant
-import Types.Error
-import Utils.Common
+import SharedLogic.GoogleMaps (Address (..), mkLocation)
+import Tools.Error
+import Tools.Metrics (CoreMetrics)
 
 buildSelectReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  ( HasFlowEnv m r '["coreVersion" ::: Text],
+    GoogleMaps.HasGoogleMaps m r,
+    CoreMetrics m
+  ) =>
   Subscriber.Subscriber ->
   Select.SelectReq ->
   m DSelect.DSelectReq
@@ -32,34 +38,31 @@ buildSelectReq subscriber req = do
   item <- case order.items of
     [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
+  url <- asks (.googleMapsUrl)
+  apiKey <- asks (.googleMapsKey)
+  pickupRes <- ClientGoogleMaps.getPlaceName url (show (pickup.location.gps.lat) <> "," <> show (pickup.location.gps.lon)) apiKey Nothing
+  pickUpAddress <- mkLocation pickupRes
+  pickupLocation <- buildSearchReqLocationAPIEntity pickUpAddress (pickup.location.gps.lat) (pickup.location.gps.lon)
+  dropOffRes <- ClientGoogleMaps.getPlaceName url (show (dropOff.location.gps.lat) <> "," <> show (dropOff.location.gps.lon)) apiKey Nothing
+  dropOffAddress <- mkLocation dropOffRes
+  dropLocation <- buildSearchReqLocationAPIEntity dropOffAddress (dropOff.location.gps.lat) (dropOff.location.gps.lon)
   pure
     DSelect.DSelectReq
       { messageId = messageId,
         transactionId = context.transaction_id,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
-        pickupLocation = mkLocation pickup.location,
+        pickupLocation,
         pickupTime = pickup.time.timestamp,
-        dropLocation = mkLocation dropOff.location,
+        dropLocation,
         variant = castVariant item.descriptor.code.vehicleVariant
       }
 
+buildSearchReqLocationAPIEntity :: (MonadFlow m, CoreMetrics m) => Address -> Double -> Double -> m SearchReqLocationAPIEntity
+buildSearchReqLocationAPIEntity Address {..} lat lon = pure SearchReqLocationAPIEntity {..}
+
 castVariant :: OS.VehicleVariant -> Variant
-castVariant OS.AUTO = AUTO_VARIANT
+castVariant OS.AUTO_RICKSHAW = AUTO_RICKSHAW
 castVariant OS.SEDAN = SEDAN
 castVariant OS.HATCHBACK = HATCHBACK
 castVariant OS.SUV = SUV
-
-mkLocation :: Select.Location -> Location.SearchReqLocationAPIEntity
-mkLocation (Select.Location Select.Gps {..}) =
-  Location.SearchReqLocationAPIEntity
-    { areaCode = Nothing,
-      street = Nothing,
-      door = Nothing,
-      city = Nothing,
-      state = Nothing,
-      country = Nothing,
-      building = Nothing,
-      area = Nothing,
-      ..
-    }

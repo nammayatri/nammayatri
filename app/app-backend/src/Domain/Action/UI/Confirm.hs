@@ -1,7 +1,6 @@
 module Domain.Action.UI.Confirm
   ( confirm,
-    ConfirmAPIReq (..),
-    ConfirmLocationAPIEntity (..),
+    cancelBooking,
     ConfirmRes (..),
     ConfirmQuoteDetails (..),
   )
@@ -14,6 +13,7 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RentalSlab
@@ -21,30 +21,13 @@ import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Domain.Types.VehicleVariant (VehicleVariant)
 import qualified Storage.Queries.Booking as QRideB
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
+import Tools.Metrics (CoreMetrics)
 import Types.Error
 import Utils.Common
-
--- API types
-
-data ConfirmAPIReq = ConfirmAPIReq
-  { fromLocation :: ConfirmLocationAPIEntity,
-    toLocation :: Maybe ConfirmLocationAPIEntity
-  }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
-
-data ConfirmLocationAPIEntity = ConfirmLocationAPIEntity
-  { street :: Maybe Text,
-    door :: Maybe Text,
-    city :: Maybe Text,
-    state :: Maybe Text,
-    country :: Maybe Text,
-    building :: Maybe Text,
-    areaCode :: Maybe Text,
-    area :: Maybe Text
-  }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+import qualified Utils.Notifications as Notify
 
 -- domain types
 
@@ -56,7 +39,7 @@ data ConfirmRes = ConfirmRes
     vehicleVariant :: VehicleVariant,
     quoteDetails :: ConfirmQuoteDetails,
     startTime :: UTCTime,
-    bookingId :: Id DRB.Booking
+    booking :: DRB.Booking
   }
   deriving (Show, Generic)
 
@@ -66,8 +49,8 @@ data ConfirmQuoteDetails
   | ConfirmAutoDetails (Id DQuote.BPPQuote)
   deriving (Show, Generic)
 
-confirm :: EsqDBFlow m r => Id DP.Person -> Id DQuote.Quote -> ConfirmAPIReq -> m ConfirmRes
-confirm personId quoteId req = do
+confirm :: EsqDBFlow m r => Id DP.Person -> Id DQuote.Quote -> m ConfirmRes
+confirm personId quoteId = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
@@ -82,15 +65,15 @@ confirm personId quoteId req = do
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
-  bFromLocation <- buildBookingLocation now (fromLocation, req.fromLocation)
-  mbBToLocation <- buildBookingLocation now `mapM` ((,) <$> mbToLocation <*> req.toLocation)
+  bFromLocation <- buildBookingLocation now fromLocation
+  mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
   booking <- buildBooking searchRequest quote bFromLocation mbBToLocation now
   let details = mkConfirmQuoteDetails quote.quoteDetails
   DB.runTransaction $ do
     QRideB.create booking
   return $
     ConfirmRes
-      { bookingId = booking.id,
+      { booking,
         providerId = quote.providerId,
         providerUrl = quote.providerUrl,
         fromLoc = LatLong {lat = fromLocation.lat, lon = fromLocation.lon},
@@ -106,15 +89,14 @@ confirm personId quoteId req = do
       DQuote.RentalDetails RentalSlab {..} -> ConfirmRentalDetails $ RentalSlabAPIEntity {..}
       DQuote.DriverOfferDetails driverOffer -> ConfirmAutoDetails driverOffer.bppQuoteId
 
-buildBookingLocation :: MonadGuid m => UTCTime -> (DSRLoc.SearchReqLocation, ConfirmLocationAPIEntity) -> m DBL.BookingLocation
-buildBookingLocation now (searchReqLocation, ConfirmLocationAPIEntity {..}) = do
+buildBookingLocation :: MonadGuid m => UTCTime -> DSRLoc.SearchReqLocation -> m DBL.BookingLocation
+buildBookingLocation now DSRLoc.SearchReqLocation {..} = do
   locId <- generateGUID
-  let address = DBL.LocationAddress {..}
   return
     DBL.BookingLocation
       { id = locId,
-        lat = searchReqLocation.lat,
-        lon = searchReqLocation.lon,
+        lat,
+        lon,
         address,
         createdAt = now,
         updatedAt = now
@@ -163,3 +145,30 @@ buildBooking searchRequest quote fromLoc mbToLoc now = do
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWayBookingDetails {..}
+
+-- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
+cancelBooking :: (EsqDBFlow m r, CoreMetrics m) => DRB.Booking -> m ()
+cancelBooking booking = do
+  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
+  bookingCancellationReason <- buildBookingCancellationReason booking.id
+  DB.runTransaction $ do
+    QRideB.updateStatus booking.id DRB.CANCELLED
+    QBCR.create bookingCancellationReason
+  Notify.notifyOnBookingCancelled booking DBCR.ByApplication
+
+buildBookingCancellationReason ::
+  MonadFlow m =>
+  Id DRB.Booking ->
+  m DBCR.BookingCancellationReason
+buildBookingCancellationReason bookingId = do
+  guid <- generateGUID
+  return
+    DBCR.BookingCancellationReason
+      { id = guid,
+        bookingId = bookingId,
+        rideId = Nothing,
+        source = DBCR.ByApplication,
+        reasonCode = Nothing,
+        reasonStage = Nothing,
+        additionalInfo = Nothing
+      }

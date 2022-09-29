@@ -37,18 +37,25 @@ packages:
   - app/beckn-transport/BPP
   - app/beckn-transport/Allocator
   - app/beckn-transport/DriverTrackingHealthCheck
+  - app/beckn-transport/Scheduler
   - app/driver-offer-bpp
   - app/app-backend
   - app/search-result-aggregator
   - app/mock-sms
   - app/mock-fcm
+  - app/dashboard/BAPDashboard
+  - app/dashboard/BPPDashboard
+  - app/dashboard/Lib
   - app/example-service
   - app/mock-bap
+  - app/mock-idfy
   - app/public-transport-bap
   - app/public-transport-search-consumer
   - app/mock-public-transport-bpp
   - app/scheduler-example
   - lib/beckn-spec
+  - lib/beckn-services
+  - lib/location-updates
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
@@ -64,14 +71,14 @@ packages:
 extra-deps:
   # - ../beckn-gateway/app/gateway
   # - ../beckn-gateway/app/mock-registry
-  - git: git@bitbucket.org:juspay/beckn-gateway.git
-    commit: 5e0920eb8d5008698246faff6c55f1bd178654de
+  - git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-gateway.git
+    commit: f377b3a097922f625500fe81e48a95749e507e4c
     subdirs:
       - app/gateway
       - app/mock-registry
   # - ../beckn-shared-kernel/lib/beckn-core
-  - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
-    commit: 5b55a599c4a659b1b05d11425a8d445b3d66d6a8
+  - git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-shared-kernel.git
+    commit: fe1ac46ed5d3e1ddc9afc8ee1ba1d540ef1c56ac
     subdirs:
       - lib/beckn-core
   - git: ssh://git@bitbucket.org/juspay/passetto-hs
@@ -151,8 +158,6 @@ extra-deps:
   # Needed for gcc11 support in Kafka
   - c2hs-0.28.8@sha256:980c1a91c93e492d5412e904f2500b2ace34a421e8509529b6d98d89c51f9a2e,9208
   - language-c-0.9.0.1@sha256:7a1c57e8f9c29e94bcd5c748d99e4479a73bd8560cc0affd838f3b2d1bbc0384,4893
-
-
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

@@ -1,7 +1,11 @@
 module Mobility.ARDU.Utils (module Mobility.ARDU.Utils) where
 
+import qualified "driver-offer-bpp" API.UI.Driver as TDriver
+import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
+import qualified "app-backend" API.UI.Search as AppSearch
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess)
+import Beckn.Types.Common (Money)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common
@@ -34,9 +38,6 @@ import qualified "driver-offer-bpp" Storage.Queries.DriverInformation as QTDrInf
 import "driver-offer-bpp" Storage.Queries.DriverLocation
 import qualified "driver-offer-bpp" Storage.Queries.Ride as TQRide
 import qualified "driver-offer-bpp" Storage.Queries.SearchRequest as QSReq
-import qualified "driver-offer-bpp" Types.API.Driver as TDriver
-import qualified "driver-offer-bpp" Types.API.Ride as RideAPI
-import qualified "app-backend" Types.API.Search as AppSearch
 import Utils
 
 -- database calls
@@ -141,11 +142,11 @@ getNearbySearchRequestForDriver driver estimateId =
     )
     ((.searchRequestsForDriver) <$> callBPP (API.getNearbySearchRequests driver.token))
 
-offerQuote :: DriverTestData -> Double -> Id ArduSReq.SearchRequest -> ClientsM ()
+offerQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM ()
 offerQuote driver fare bppSearchRequestId =
   void $ callBPP $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
-offerQuoteEither :: DriverTestData -> Double -> Id ArduSReq.SearchRequest -> ClientsM (Either ClientError APISuccess)
+offerQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM (Either ClientError APISuccess)
 offerQuoteEither driver fare bppSearchRequestId =
   callBppEither $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
@@ -158,7 +159,7 @@ getQuotesByEstimateId appToken estimateId =
 
 confirmWithCheck :: Text -> DriverTestData -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking, TRB.Booking, TRide.Ride)
 confirmWithCheck appToken _driver quoteId = do
-  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId BapAPI.mkAppConfirmReq
+  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId
 
   void . pollDesc "booking exists" $ do
     initRB <- getBAPBooking bBookingId

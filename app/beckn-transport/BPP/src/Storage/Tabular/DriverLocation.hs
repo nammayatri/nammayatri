@@ -22,6 +22,7 @@ mkPersist
       lat Double
       lon Double
       point Point
+      coordinatesCalculatedAt UTCTime
       createdAt UTCTime
       updatedAt UTCTime
       Primary driverId

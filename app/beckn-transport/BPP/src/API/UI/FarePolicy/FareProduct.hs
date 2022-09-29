@@ -1,17 +1,17 @@
 module API.UI.FarePolicy.FareProduct (module Reexport, API, handler) where
 
-import App.Types
 import Beckn.Types.APISuccess
+import Beckn.Utils.Common
 import Domain.Action.UI.FarePolicy.FareProduct as Reexport
   ( ListFareProductsRes (..),
     UpdateFareProductReq (..),
   )
 import qualified Domain.Action.UI.FarePolicy.FareProduct as DFareProduct
 import qualified Domain.Types.Person as SP
+import Environment
 import EulerHS.Prelude
 import Servant
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 type API =
   "fareProduct"

@@ -8,34 +8,25 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.Booking.Type as Domain
 import Storage.Tabular.Booking.BookingLocation
+import Storage.Tabular.Booking.OneWayBooking
 import Storage.Tabular.Booking.RentalBooking
 import Storage.Tabular.Booking.Table
 import Storage.Tabular.FarePolicy.FareProduct ()
 import Storage.Tabular.Vehicle ()
-import Types.Error
-import Utils.Common hiding (id)
 
-data BookingDetailsT = OneWayDetailsT BookingLocationT | RentalDetailsT RentalBookingT
+data BookingDetailsT = OneWayDetailsT (BookingLocationT, OneWayBookingT) | RentalDetailsT RentalBookingT
 
 type FullBookingT = (BookingT, BookingLocationT, BookingDetailsT)
 
 instance TType FullBookingT Domain.Booking where
   fromTType (BookingT {..}, fromLocT, bookingDetailsT) = do
     pUrl <- parseBaseUrl bapUri
-    fromLocation <- fromTType fromLocT
+    let fromLocation = mkDomainBookingLocation fromLocT
     bookingDetails <- case bookingDetailsT of
-      OneWayDetailsT toLocT -> do
-        toLocation <- fromTType toLocT
-        estimatedDistance' <-
-          estimatedDistance & fromMaybeM (BookingFieldNotPresent "estimatedDistance")
-        pure $
-          Domain.OneWayDetails
-            Domain.OneWayBookingDetails
-              { estimatedDistance = HighPrecMeters estimatedDistance',
-                toLocation
-              }
+      OneWayDetailsT detailsT -> do
+        return . Domain.OneWayDetails $ fromOneWayDetailsT detailsT
       RentalDetailsT rentalBookingT -> do
-        return . Domain.RentalDetails $ fromRentalBookingTType rentalBookingT
+        return . Domain.RentalDetails $ fromRentalDetailsT rentalBookingT
 
     return $
       Domain.Booking
@@ -43,37 +34,58 @@ instance TType FullBookingT Domain.Booking where
           riderId = fromKey <$> riderId,
           providerId = fromKey providerId,
           bapUri = pUrl,
+          estimatedFare = roundToIntegral estimatedFare,
+          estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          discount = roundToIntegral <$> discount,
           ..
         }
   toTType Domain.Booking {..} = do
-    let (detailsT, toLocationId, estimatedDistance) = case bookingDetails of
-          Domain.OneWayDetails details -> do
-            let toLocT = toTType details.toLocation
-            (OneWayDetailsT toLocT, Just . toKey $ details.toLocation.id, Just details.estimatedDistance)
-          Domain.RentalDetails details -> do
-            let rentalBookingT = toRentalBookingTType id details
-            (RentalDetailsT rentalBookingT, Nothing, Nothing)
+    let detailsT = case bookingDetails of
+          Domain.OneWayDetails details -> OneWayDetailsT $ toOneWayDetailsT id details
+          Domain.RentalDetails details -> RentalDetailsT $ toRentalDetailsT id details
     let bookingT =
           BookingT
             { id = getId id,
+              fareProductType = Domain.getFareProductType bookingDetails,
               riderId = toKey <$> riderId,
               fromLocationId = toKey fromLocation.id,
-              estimatedDistance = getHighPrecMeters <$> estimatedDistance,
               providerId = toKey providerId,
               bapUri = showBaseUrl bapUri,
+              estimatedFare = fromIntegral estimatedFare,
+              estimatedTotalFare = fromIntegral estimatedTotalFare,
+              discount = fromIntegral <$> discount,
               ..
             }
-    let fromLocT = toTType fromLocation
+    let fromLocT = mkTabularBookingLocation fromLocation
     (bookingT, fromLocT, detailsT)
 
-fromRentalBookingTType :: RentalBookingT -> Domain.RentalBookingDetails
-fromRentalBookingTType RentalBookingT {..} = do
+fromOneWayDetailsT :: (BookingLocationT, OneWayBookingT) -> Domain.OneWayBookingDetails
+fromOneWayDetailsT (toLocT, OneWayBookingT {..}) =
+  Domain.OneWayBookingDetails
+    { estimatedDistance = roundToIntegral estimatedDistance,
+      estimatedFinishTime = estimatedFinishTime,
+      toLocation = mkDomainBookingLocation toLocT
+    }
+
+toOneWayDetailsT :: Id Domain.Booking -> Domain.OneWayBookingDetails -> (BookingLocationT, OneWayBookingT)
+toOneWayDetailsT bookingId Domain.OneWayBookingDetails {..} =
+  ( mkTabularBookingLocation toLocation,
+    OneWayBookingT
+      { bookingId = toKey bookingId,
+        toLocationId = toKey toLocation.id,
+        estimatedDistance = realToFrac estimatedDistance,
+        ..
+      }
+  )
+
+fromRentalDetailsT :: RentalBookingT -> Domain.RentalBookingDetails
+fromRentalDetailsT RentalBookingT {..} = do
   Domain.RentalBookingDetails
     { rentalFarePolicyId = fromKey rentalFarePolicyId
     }
 
-toRentalBookingTType :: Id Domain.Booking -> Domain.RentalBookingDetails -> RentalBookingT
-toRentalBookingTType bookingId Domain.RentalBookingDetails {..} =
+toRentalDetailsT :: Id Domain.Booking -> Domain.RentalBookingDetails -> RentalBookingT
+toRentalDetailsT bookingId Domain.RentalBookingDetails {..} =
   RentalBookingT
     { bookingId = toKey bookingId,
       rentalFarePolicyId = toKey rentalFarePolicyId

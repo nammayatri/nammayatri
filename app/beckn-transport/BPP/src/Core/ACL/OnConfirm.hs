@@ -1,7 +1,7 @@
 module Core.ACL.OnConfirm (mkOnConfirmMessage) where
 
 import Beckn.Prelude
-import Beckn.Types.Amount (Amount)
+import Beckn.Types.Core.Taxi.Common.DecimalValue (DecimalValue)
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import qualified Domain.Action.Beckn.Confirm as DConfirm
@@ -20,10 +20,10 @@ mkOnConfirmMessage res = do
             fulfillment = mkFulfillmentInfo res.fromLocation res.toLocation booking.startTime,
             quote =
               OnConfirm.Quote
-                { price = mkPrice booking.estimatedFare booking.estimatedTotalFare,
-                  breakup = mkBreakup booking.estimatedFare booking.discount
+                { price = mkPrice (fromIntegral booking.estimatedFare) (fromIntegral booking.estimatedTotalFare),
+                  breakup = mkBreakup (fromIntegral booking.estimatedFare) (fromIntegral <$> booking.discount)
                 },
-            payment = mkPayment booking.estimatedTotalFare
+            payment = mkPayment $ fromIntegral booking.estimatedTotalFare
           }
     }
   where
@@ -81,15 +81,15 @@ mkFulfillmentInfo fromLoc mbToLoc startTime =
   where
     castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, ..}
 
-mkPrice :: Amount -> Amount -> OnConfirm.QuotePrice
+mkPrice :: DecimalValue -> DecimalValue -> OnConfirm.QuotePrice
 mkPrice estimatedFare estimatedTotalFare =
   OnConfirm.QuotePrice
     { currency = "INR",
-      value = realToFrac estimatedFare,
-      offered_value = realToFrac estimatedTotalFare
+      value = estimatedFare,
+      offered_value = estimatedTotalFare
     }
 
-mkBreakup :: Amount -> Maybe Amount -> [OnConfirm.BreakupItem]
+mkBreakup :: DecimalValue -> Maybe DecimalValue -> [OnConfirm.BreakupItem]
 mkBreakup estimatedFare mbDiscount = [estimatedFareBreakupItem] <> maybeToList mbDiscountBreakupItem
   where
     estimatedFareBreakupItem =
@@ -98,7 +98,7 @@ mkBreakup estimatedFare mbDiscount = [estimatedFareBreakupItem] <> maybeToList m
           price =
             OnConfirm.BreakupItemPrice
               { currency = "INR",
-                value = realToFrac estimatedFare
+                value = estimatedFare
               }
         }
 
@@ -109,17 +109,17 @@ mkBreakup estimatedFare mbDiscount = [estimatedFareBreakupItem] <> maybeToList m
             price =
               OnConfirm.BreakupItemPrice
                 { currency = "INR",
-                  value = realToFrac discount
+                  value = discount
                 }
           }
 
-mkPayment :: Amount -> OnConfirm.Payment
+mkPayment :: DecimalValue -> OnConfirm.Payment
 mkPayment estimatedTotalFare =
   OnConfirm.Payment
     { collected_by = "BAP",
       params =
         OnConfirm.PaymentParams
-          { amount = realToFrac estimatedTotalFare,
+          { amount = estimatedTotalFare,
             currency = "INR"
           },
       time = OnConfirm.TimeDuration "P2D",

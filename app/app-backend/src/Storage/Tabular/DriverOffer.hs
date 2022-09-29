@@ -22,7 +22,7 @@ mkPersist
       estimateId TEstimate.EstimateTId
       driverName Text
       durationToPickup Int
-      distanceToPickup Double
+      distanceToPickup HighPrecMeters
       validTill UTCTime
       bppQuoteId Text
       rating Double Maybe
@@ -42,7 +42,6 @@ instance TType DriverOfferT Domain.DriverOffer where
         { id = Id id,
           bppQuoteId = Id bppQuoteId,
           estimateId = fromKey estimateId,
-          distanceToPickup = HighPrecMeters distanceToPickup,
           ..
         }
   toTType Domain.DriverOffer {..} = do
@@ -50,6 +49,5 @@ instance TType DriverOfferT Domain.DriverOffer where
       { id = getId id,
         bppQuoteId = bppQuoteId.getId,
         estimateId = toKey estimateId,
-        distanceToPickup = getHighPrecMeters distanceToPickup,
         ..
       }

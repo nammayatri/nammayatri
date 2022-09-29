@@ -9,6 +9,7 @@ module Storage.Tabular.FarePolicy.OneWayFarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Common (HighPrecMoney)
 import Beckn.Types.Id
 import Beckn.Utils.Error (throwError)
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy as Domain
@@ -17,7 +18,7 @@ import Storage.Tabular.FarePolicy.Discount (DiscountT)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateT, getDomainPart)
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Vehicle ()
-import Types.Error
+import Tools.Error
 
 mkPersist
   defaultSqlSettings
@@ -26,7 +27,7 @@ mkPersist
       id Text
       vehicleVariant Vehicle.Variant
       organizationId OrganizationTId
-      baseFare Double Maybe
+      baseFare HighPrecMoney Maybe
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
       nightShiftRate Double Maybe
@@ -56,8 +57,7 @@ instance TType FullOneWayFarePolicyT Domain.OneWayFarePolicy where
       Domain.OneWayFarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
-          baseFare = toRational <$> baseFare,
-          nightShiftRate = toRational <$> nightShiftRate,
+          baseFare = roundToIntegral <$> baseFare,
           ..
         }
   toTType Domain.OneWayFarePolicy {..} = do
@@ -67,8 +67,7 @@ instance TType FullOneWayFarePolicyT Domain.OneWayFarePolicy where
     ( OneWayFarePolicyT
         { id = getId id,
           organizationId = toKey organizationId,
-          baseFare = fromRational <$> baseFare,
-          nightShiftRate = fromRational <$> nightShiftRate,
+          baseFare = fromIntegral <$> baseFare,
           ..
         },
       perExtraKmRateTTypeList,

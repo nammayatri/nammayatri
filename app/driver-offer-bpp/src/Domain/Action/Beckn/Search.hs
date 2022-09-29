@@ -4,24 +4,18 @@ import Beckn.Prelude
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import Data.List
-import Domain.Types.BusinessEvent (WhenPoolWasComputed (ON_SEARCH))
 import qualified Domain.Types.Organization as DOrg
-import Domain.Types.SearchRequest
-import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
 import Environment
-import Product.FareCalculator.Flow
 import SharedLogic.DriverPool
-import qualified Storage.Queries.BusinessEvent as QBE
+import SharedLogic.FareCalculator
 import Storage.Queries.Person (DriverPoolResult)
-import qualified Storage.Queries.SearchRequest as QSReq
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
@@ -35,7 +29,8 @@ data DSearchReq = DSearchReq
 
 data DSearchRes = DSearchRes
   { transporterInfo :: TransporterInfo,
-    searchRequest :: SearchRequest,
+    fromLocation :: DLoc.SearchReqLocation,
+    toLocation :: DLoc.SearchReqLocation,
     now :: UTCTime,
     estimateList :: [EstimateItem]
   }
@@ -43,7 +38,7 @@ data DSearchRes = DSearchRes
 data EstimateItem = EstimateItem
   { vehicleVariant :: Variant.Variant,
     distanceToPickup :: Meters,
-    baseFare :: Amount
+    baseFare :: Money
   }
 
 data TransporterInfo = TransporterInfo
@@ -63,31 +58,29 @@ handler org sReq = do
   let getVariant x = x.origin.vehicle.variant
       listOfProtoQuotes = nubBy ((==) `on` getVariant) driverPool
 
-  distance <-
-    metersToHighPrecMeters . (.distance)
-      <$> GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
-
-  estimates <- mapM (mkEstimate org sReq distance) listOfProtoQuotes
-  searchReq <- buildSearchRequest fromLocation toLocation org.id sReq
-  Esq.runTransaction $ do
-    QSReq.create searchReq
-    traverse_ (QBE.logDriverInPoolEvent ON_SEARCH Nothing) driverPool
+  distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
+  driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
+  let distance = distRes.distance
+      estimatedRideDuration = distRes.duration_in_traffic
+      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` sReq.pickupTime
+  logDebug $ "distance: " <> show distance
+  estimates <- mapM (mkEstimate org estimatedRideFinishTime distance) listOfProtoQuotes
   logDebug $ "bap uri: " <> show sReq.bapUri
-  buildSearchRes org searchReq estimates
+  buildSearchRes org fromLocation toLocation estimates
 
 mkEstimate ::
   (MonadFlow m, Esq.Transactionable m) =>
   DOrg.Organization ->
-  DSearchReq ->
-  HighPrecMeters ->
+  UTCTime ->
+  Meters ->
   GoogleMaps.GetDistanceResult DriverPoolResult a ->
   m EstimateItem
-mkEstimate org dSReq dist g = do
+mkEstimate org estimatedRideFinishTime dist g = do
   let variant = g.origin.vehicle.variant
-  fareParams <- calculateFare org.id variant dist dSReq.pickupTime Nothing
+  fareParams <- calculateFare org.id variant dist estimatedRideFinishTime Nothing
   let baseFare = fareSum fareParams
-  logDebug $ "baseFare: " <> show (amountToString baseFare)
-  logDebug $ "distance: " <> show g.distance
+  logDebug $ "baseFare: " <> show baseFare
+  logDebug $ "distanceToPickup: " <> show g.distance
   pure
     EstimateItem
       { vehicleVariant = g.origin.vehicle.variant,
@@ -95,7 +88,7 @@ mkEstimate org dSReq dist g = do
         baseFare
       }
 
-buildSearchRequest ::
+{-buildSearchRequest ::
   ( MonadTime m,
     MonadGuid m,
     MonadReader r m,
@@ -105,8 +98,10 @@ buildSearchRequest ::
   DLoc.SearchReqLocation ->
   Id DOrg.Organization ->
   DSearchReq ->
+  UTCTime ->
+  Variant ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to orgId sReq = do
+buildSearchRequest from to orgId sReq estimatedRideFinishTime variant= do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -117,14 +112,16 @@ buildSearchRequest from to orgId sReq = do
         transactionId = fromMaybe "" sReq.transactionId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,
+        estimatedFinishTime = estimatedRideFinishTime,
         validTill = validTill_,
         providerId = orgId,
         fromLocation = from,
         toLocation = to,
         bapId = sReq.bapId,
         bapUri = sReq.bapUri,
-        createdAt = createdAt_
-      }
+        createdAt = createdAt_,
+        vehicle = variant
+      } -}
 
 buildSearchReqLocation :: (MonadGuid m, MonadTime m) => DLoc.SearchReqLocationAPIEntity -> m DLoc.SearchReqLocation
 buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do
@@ -137,10 +134,11 @@ buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do
 buildSearchRes ::
   (MonadTime m) =>
   DOrg.Organization ->
-  DSearchReq.SearchRequest ->
+  DLoc.SearchReqLocation ->
+  DLoc.SearchReqLocation ->
   [EstimateItem] ->
   m DSearchRes
-buildSearchRes org searchRequest estimateList = do
+buildSearchRes org fromLocation toLocation estimateList = do
   now <- getCurrentTime
   let transporterInfo =
         TransporterInfo
@@ -155,6 +153,7 @@ buildSearchRes org searchRequest estimateList = do
     DSearchRes
       { transporterInfo,
         now,
-        searchRequest,
+        fromLocation,
+        toLocation,
         estimateList
       }

@@ -39,8 +39,8 @@ instance TType PerExtraKmRateT FullPerExtraKmRate where
       ( fromKey organizationId,
         vehicleVariant,
         Domain.PerExtraKmRate
-          { distanceRangeStart = toRational distanceRangeStart,
-            fare = toRational fare,
+          { distanceRangeStart = roundToIntegral distanceRangeStart,
+            fare = realToFrac fare,
             ..
           }
       )
@@ -48,7 +48,7 @@ instance TType PerExtraKmRateT FullPerExtraKmRate where
     PerExtraKmRateT
       { organizationId = toKey orgId,
         vehicleVariant = vehVar,
-        distanceRangeStart = fromRational distanceRangeStart,
-        fare = fromRational fare,
+        distanceRangeStart = fromIntegral distanceRangeStart,
+        fare = realToFrac fare,
         ..
       }

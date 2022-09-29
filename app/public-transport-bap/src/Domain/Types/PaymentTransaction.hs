@@ -3,7 +3,7 @@
 module Domain.Types.PaymentTransaction where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
 import Domain.Types.Booking.Type
@@ -20,7 +20,7 @@ data PaymentTransaction = PaymentTransaction
     bknTxnId :: Text,
     paymentGatewayTxnId :: Text,
     paymentGatewayTxnStatus :: Text,
-    fare :: Amount,
+    fare :: Money,
     status :: PaymentStatus,
     paymentUrl :: BaseUrl,
     updatedAt :: UTCTime,
@@ -31,7 +31,7 @@ data PaymentTransaction = PaymentTransaction
 data PaymentTransactionAPIEntity = PaymentTransactionAPIEntity
   { id :: Id PaymentTransaction,
     paymentGatewayTxnId :: Text,
-    fare :: Amount,
+    fare :: Money,
     status :: PaymentStatus,
     paymentUrl :: BaseUrl,
     updatedAt :: UTCTime,

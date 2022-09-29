@@ -1,17 +1,31 @@
 module Mobility.Fixtures.Routes where
 
+import "app-backend" API.UI.Search
 import Beckn.Prelude
 import Beckn.Types.MapSearch
 import Data.List.NonEmpty as NE
-import "app-backend" Types.API.Search
+import "app-backend" Domain.Types.LocationAddress
 
 defaultSearchReq :: SearchReq
 defaultSearchReq =
   OneWaySearch $
     OneWaySearchReq
-      { origin = SearchReqLocation $ LatLong 10.0739 76.2733,
-        destination = SearchReqLocation $ LatLong 10.5449 76.4356
+      { origin = SearchReqLocation (LatLong 10.0739 76.2733) defaultSearchReqAddress,
+        destination = SearchReqLocation (LatLong 10.5449 76.4356) defaultSearchReqAddress
       }
+
+defaultSearchReqAddress :: LocationAddress
+defaultSearchReqAddress =
+  LocationAddress
+    { street = Nothing,
+      door = Nothing,
+      city = Nothing,
+      state = Nothing,
+      country = Nothing,
+      building = Nothing,
+      areaCode = Nothing,
+      area = Nothing
+    }
 
 type LocationUpdates = NonEmpty (NonEmpty LatLong)
 
@@ -34,8 +48,8 @@ searchReqFromUpdatesList updList =
       req =
         OneWaySearch $
           OneWaySearchReq
-            { origin = SearchReqLocation $ NE.head $ NE.head updList,
-              destination = SearchReqLocation $ NE.last $ NE.last updList
+            { origin = SearchReqLocation (NE.head $ NE.head updList) defaultSearchReqAddress,
+              destination = SearchReqLocation (NE.last $ NE.last updList) defaultSearchReqAddress
             }
    in (origin, destination, req)
 

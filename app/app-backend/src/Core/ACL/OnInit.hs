@@ -11,7 +11,7 @@ import qualified Domain.Action.Beckn.OnInit as DOnInit
 import Utils.Common
 
 buildOnInitReq ::
-  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]
+  ( HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
   OnInit.OnInitReq ->
   m (Maybe DOnInit.OnInitReq)
@@ -27,9 +27,9 @@ buildOnInitReq req = do
     let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
     return $
       DOnInit.OnInitReq
-        { estimatedFare = realToFrac estimatedFare,
-          estimatedTotalFare = realToFrac estimatedTotalFare,
-          discount = realToFrac <$> discount,
+        { estimatedFare = roundToIntegral estimatedFare,
+          estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          discount = roundToIntegral <$> discount,
           ..
         }
 

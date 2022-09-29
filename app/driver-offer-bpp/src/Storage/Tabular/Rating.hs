@@ -12,7 +12,7 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.Rating as Domain
 import Storage.Tabular.Person (PersonTId)
-import Storage.Tabular.Ride (RideTId)
+import Storage.Tabular.Ride.Table (RideTId)
 
 mkPersist
   defaultSqlSettings
@@ -22,7 +22,7 @@ mkPersist
       rideId RideTId
       driverId PersonTId
       ratingValue Int
-      feedbackDetails Text
+      feedbackDetails Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

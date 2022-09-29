@@ -9,7 +9,7 @@ module Storage.Tabular.Estimate where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
@@ -22,9 +22,9 @@ mkPersist
     EstimateT sql=estimate
       id Text
       requestId SSearchRequest.SearchRequestTId
-      estimatedFare Amount
-      discount Amount Maybe
-      estimatedTotalFare Amount
+      estimatedFare HighPrecMoney
+      discount HighPrecMoney Maybe
+      estimatedTotalFare HighPrecMoney
       providerId Text
       providerUrl Text
       providerName Text
@@ -53,6 +53,9 @@ instance TType FullEstimateT Domain.Estimate where
         { id = Id id,
           requestId = fromKey requestId,
           providerUrl = pUrl,
+          estimatedFare = roundToIntegral estimatedFare,
+          discount = roundToIntegral <$> discount,
+          estimatedTotalFare = roundToIntegral estimatedTotalFare,
           ..
         }
   toTType Domain.Estimate {..} = do
@@ -62,6 +65,9 @@ instance TType FullEstimateT Domain.Estimate where
               requestId = toKey requestId,
               providerUrl = showBaseUrl providerUrl,
               tripTermsId = toKey <$> (tripTerms <&> (.id)),
+              estimatedFare = realToFrac estimatedFare,
+              discount = realToFrac <$> discount,
+              estimatedTotalFare = realToFrac estimatedTotalFare,
               ..
             }
     let mbTripTermsT = toTType <$> tripTerms

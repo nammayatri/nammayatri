@@ -1,5 +1,6 @@
 module Core.ACL.OnSearch where
 
+import Beckn.Prelude
 import Beckn.Product.Validation.Context (validateContext)
 import Beckn.Storage.Esqueleto (runTransaction)
 import Beckn.Types.Common hiding (id)
@@ -19,7 +20,7 @@ import Types.Error
 import Utils.Common
 
 buildOnSearchReq ::
-  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],
+  ( HasFlowEnv m r '["coreVersion" ::: Text],
     EsqDBFlow m r
   ) =>
   BecknCallbackReq OnSearch.OnSearchMessage ->
@@ -69,7 +70,8 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   let errorCode = (.code) <$> mbErr
   let errorMessage = (.message) =<< mbErr
   runTransaction $
-    OnSearchEvent.create $ OnSearchEvent {..}
+    OnSearchEvent.create $
+      OnSearchEvent {..}
 
 buildEstimateOrQuoteInfo ::
   (MonadThrow m, Log m) =>
@@ -78,8 +80,8 @@ buildEstimateOrQuoteInfo ::
 buildEstimateOrQuoteInfo item = do
   let itemCode = item.descriptor.code
       vehicleVariant = castVehicleVariant itemCode.vehicleVariant
-      estimatedFare = realToFrac item.price.value
-      estimatedTotalFare = realToFrac item.price.offered_value
+      estimatedFare = roundToIntegral item.price.value
+      estimatedTotalFare = roundToIntegral item.price.offered_value
       descriptions = item.quote_terms
   validatePrices estimatedFare estimatedTotalFare
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
@@ -98,7 +100,7 @@ buildEstimateOrQuoteInfo item = do
       OnSearch.SEDAN -> VehVar.SEDAN
       OnSearch.SUV -> VehVar.SUV
       OnSearch.HATCHBACK -> VehVar.HATCHBACK
-      OnSearch.AUTO -> VehVar.AUTO
+      OnSearch.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
 
 buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>

@@ -3,13 +3,13 @@ module Storage.Queries.FarePolicy.OneWayFarePolicy where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.FarePolicy.OneWayFarePolicy
 import Domain.Types.Organization
 import Domain.Types.Vehicle as Vehicle
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate as QExtraKmRate
 import Storage.Queries.FullEntityBuilders (buildFullOneWayFarePolicy)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy
-import Utils.Common
 
 findOneWayFarePolicyByOrgAndVehicleVariant ::
   Transactionable m =>
@@ -45,13 +45,13 @@ findById fpId =
 updateOneWayFarePolicy :: OneWayFarePolicy -> SqlDB ()
 updateOneWayFarePolicy farePolicy = do
   now <- getCurrentTime
-  withFullEntity farePolicy $ \(farePolicyT, _, perExtraKmRateList) -> do
+  withFullEntity farePolicy $ \(farePolicyT, perExtraKmRateList, _) -> do
     upsert'
       farePolicyT
-      [ OneWayFarePolicyBaseFare =. val (fromRational <$> farePolicy.baseFare),
+      [ OneWayFarePolicyBaseFare =. val (fromIntegral <$> farePolicy.baseFare),
         OneWayFarePolicyNightShiftStart =. val (farePolicy.nightShiftStart),
         OneWayFarePolicyNightShiftEnd =. val (farePolicy.nightShiftEnd),
-        OneWayFarePolicyNightShiftRate =. val (fromRational <$> farePolicy.nightShiftRate),
+        OneWayFarePolicyNightShiftRate =. val farePolicy.nightShiftRate,
         OneWayFarePolicyUpdatedAt =. val now
       ]
 

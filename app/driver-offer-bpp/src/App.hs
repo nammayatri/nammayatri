@@ -1,5 +1,6 @@
 module App where
 
+import AWS.S3 (prepareS3AuthManager)
 import qualified App.Server as App
 import Beckn.Exit
 import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
@@ -8,13 +9,15 @@ import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
 import Beckn.Utils.App
+import Beckn.Utils.Common
 import Beckn.Utils.Dhall
 import qualified Beckn.Utils.FlowLogging as L
-import Beckn.Utils.Servant.SignatureAuth
+import Beckn.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt)
 import qualified Data.Text as T
 import Environment
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import Idfy.Auth
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -24,7 +27,7 @@ import Network.Wai.Handler.Warp
   )
 import qualified Storage.Queries.Organization as Storage
 import System.Environment (lookupEnv)
-import Utils.Common
+import Tools.SignatureAuth
 
 runDriverOfferBpp :: (AppCfg -> AppCfg) -> IO ()
 runDriverOfferBpp configModifier = do
@@ -55,7 +58,13 @@ runDriverOfferBpp' appCfg = do
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allShortIds = map ((.shortId.getShortId) &&& (.uniqueKeyId)) allProviders
-        flowRt' <- modFlowRtWithAuthManagers flowRt appEnv allShortIds
+        flowRt' <-
+          addAuthManagersToFlowRt
+            flowRt
+            [ (Nothing, prepareAuthManagersWithRegistryUrl flowRt appEnv allShortIds),
+              (Nothing, prepareS3AuthManager flowRt appEnv),
+              (Just 10000, prepareIdfyHttpManager 10000)
+            ]
 
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections $ appCfg.redisCfg)

@@ -2,7 +2,7 @@
 
 module App.Server where
 
-import App.Routes (appAPI, appServer)
+import API
 import App.Types
 import Beckn.Tools.Metrics.Init
 import Beckn.Types.Flow
@@ -15,13 +15,15 @@ import Utils.Auth
 
 run :: Env -> Application
 run = withModifiedEnv $ \modifiedEnv ->
-  BU.run appAPI appServer context modifiedEnv
+  BU.run appAPI API.handler context modifiedEnv
     & logRequestAndResponse modifiedEnv
     & logBecknRequest modifiedEnv.appEnv
     & addServantInfo appAPI
     & hashBodyForSignature
     & supportProxyAuthorization
   where
+    appAPI = Proxy @API.API
     context =
       verifyPersonAction @(FlowR AppEnv)
+        :. verifyDashboardAction @(FlowR AppEnv)
         :. EmptyContext

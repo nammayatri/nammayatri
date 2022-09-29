@@ -1,6 +1,8 @@
 module Mobility.Transporter.LocationUpdates where
 
-import Beckn.Types.MapSearch
+import Beckn.Prelude (roundToIntegral)
+import Beckn.Types.Common (HighPrecMeters, Meters)
+import Beckn.Utils.Time
 import Common (getAppBaseUrl)
 import qualified Data.List.NonEmpty as NE
 import qualified "beckn-transport" Domain.Types.Booking as TRB
@@ -20,12 +22,57 @@ spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing location updates (these tests pass only when the real google maps api key is supplied)" $ do
     it "Testing location updates flow for short curvy route" $
-      successFlowWithLocationUpdates 10 680 locationUpdatesRoute1 clients
+      defaultSuccessFlow 10 680 680 locationUpdatesRoute1 clients
     it "Testing location updates for the route with far isolated point" $
-      successFlowWithLocationUpdates 50 8350 locationUpdatesIsolatedPoint clients
+      defaultSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+    it "Testing location updates for the route with reversed points list" $
+      revertedPointsListSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+    it "Testing success flow and location updates with outdated points" $
+      outdatedPointsSuccessFlow 800 3768 8350 locationUpdatesIsolatedPoint clients
+    it "Testing success flow and location updates called multiple times at the same time " $
+      raceConditionSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
 
-successFlowWithLocationUpdates :: Double -> Double -> NonEmpty (NonEmpty LatLong) -> ClientEnvs -> IO ()
-successFlowWithLocationUpdates eps distance updates clients = withBecknClients clients $ do
+defaultSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
+defaultSuccessFlow eps distance chargeableDistance updates clients = withBecknClients clients $ do
+  successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
+    forM_ (NE.toList updates) $ \upd -> do
+      updReq <- liftIO $ buildUpdateLocationRequest upd
+      Utils.updateLocation transporterDriver1 updReq
+      liftIO $ threadDelay waitBetweenUpdates
+
+revertedPointsListSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
+revertedPointsListSuccessFlow eps distance chargeableDistance updates clients = withBecknClients clients $ do
+  successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
+    forM_ (NE.toList updates) $ \upd -> do
+      updReq <- liftIO $ buildUpdateLocationRequest upd
+      Utils.updateLocation transporterDriver1 $ NE.reverse updReq
+      liftIO $ threadDelay waitBetweenUpdates
+
+-- There was a bug, when it was possible to update location multiple times if
+-- call updateLocation with outdated points
+outdatedPointsSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
+outdatedPointsSuccessFlow eps distance chargeableDistance updates clients = withBecknClients clients $ do
+  successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
+    forM_ (NE.toList updates) $ \upd -> do
+      updReq <- liftIO $ makePointsOutdated <$> buildUpdateLocationRequest upd
+      Utils.updateLocation transporterDriver1 updReq
+      liftIO $ threadDelay waitBetweenUpdates
+  where
+    makePointsOutdated points = fmap (\point -> point{ts = addUTCTime (negate 600) point.ts}) points
+
+raceConditionSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
+raceConditionSuccessFlow eps distance chargeableDistance updates clients = withBecknClients clients $ do
+  successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
+    forM_ (NE.toList updates) $ \upd -> do
+      void . forkMultipleThreads 5 $ do
+        updReq <- liftIO $ buildUpdateLocationRequest upd
+        Utils.updateLocation transporterDriver1 updReq
+      liftIO $ threadDelay waitBetweenUpdates
+  where
+    forkMultipleThreads a f = replicateM a . liftIO $ forkIO $ withBecknClients clients f
+
+successFlowWithLocationUpdatesHandler :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientsM () -> ClientsM ()
+successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates locationUpdatesFunc = do
   let (origin, destination, searchReq_) = searchReqFromUpdatesList updates
 
   Utils.setupDriver transporterDriver1 origin
@@ -41,21 +88,21 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
   let bppRideId = tRide.id
 
   -- we need to update location just before we start ride
-  Utils.updateLocation transporterDriver1 $ origin :| []
+  updReq <- liftIO $ buildUpdateLocationRequest $ origin :| []
+  Utils.updateLocation transporterDriver1 updReq
 
   --
   Utils.startRide appRegistrationToken transporterDriver1 origin tRide bBookingId
 
   liftIO $ threadDelay waitBetweenUpdates
-  forM_ (NE.toList updates) $ \upd -> do
-    Utils.updateLocation transporterDriver1 upd
-    liftIO $ threadDelay waitBetweenUpdates
+  locationUpdatesFunc
 
   ----
   completedRideId <- Utils.endRide appRegistrationToken transporterDriver1 destination tRide bBookingId
 
   tRide' <- Utils.getBPPRideById bppRideId
-  tRide'.traveledDistance.getHighPrecMeters `shouldSatisfy` equalsEps eps distance
+  tRide'.traveledDistance `shouldSatisfy` equalsEps (realToFrac eps) distance
+  tRide'.chargeableDistance `shouldSatisfy` (equalsEps (roundToIntegral eps) chargeableDistance . fromJust)
 
   -- Leave feedback
   void . callBAP $ callAppFeedback 5 completedRideId

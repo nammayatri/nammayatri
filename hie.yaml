@@ -51,6 +51,12 @@ cradle:
     - path: "app/beckn-transport/Allocator/server/Main.hs"
       component: "beckn-transport-allocator:exe:beckn-transport-btm-exe"
 
+    - path: "app/beckn-transport/Scheduler/src"
+      component: "beckn-transport-scheduler:lib"
+
+    - path: "app/beckn-transport/Scheduler/server/Main.hs"
+      component: "beckn-transport-scheduler:exe:transporter-scheduler-exe"
+
     - path: "app/beckn-transport/DriverTrackingHealthCheck/src"
       component: "beckn-transport-driver-tracking-health-check:lib"
 
@@ -66,10 +72,10 @@ cradle:
     - path: "app/beckn-transport/server/Main.hs"
       component: "beckn-transport:exe:transporter-scheduler-exe"
 
-    - path: "app/beckn-transport/test/app"
+    - path: "app/beckn-transport/BPP/test/app"
       component: "beckn-transport:test:beckn-transport-tests"
 
-    - path: "app/beckn-transport/test/src"
+    - path: "app/beckn-transport/BPP/test/src"
       component: "beckn-transport:test:beckn-transport-tests"
 
     - path: "app/gateway/src"
@@ -80,6 +86,21 @@ cradle:
 
     - path: "app/gateway/server/Paths_beckn_gateway.hs"
       component: "beckn-gateway:exe:beckn-gateway-exe"
+
+    - path: "app/dashboard/BAPDashboard/src"
+      component: "bap-dashboard:lib"
+
+    - path: "app/dashboard/BAPDashboard/server/Main.hs"
+      component: "bap-dashboard:exe:bap-dashboard-exe"
+
+    - path: "app/dashboard/BPPDashboard/src"
+      component: "bpp-dashboard:lib"
+
+    - path: "app/dashboard/BPPDashboard/server/Main.hs"
+      component: "bpp-dashboard:exe:bpp-dashboard-exe"
+
+    - path: "app/dashboard/Lib/src"
+      component: "lib-dashboard:lib"
 
     - path: "app/example-service/src"
       component: "example-service:lib"
@@ -116,6 +137,15 @@ cradle:
 
     - path: "app/mock-sms/server/Paths_mock_sms.hs"
       component: "mock-sms:exe:mock-fcm-exe"
+
+    - path: "app/mock-idfy/src"
+      component: "mock-idfy:lib"
+
+    - path: "app/mock-idfy/server/Main.hs"
+      component: "mock-idfy:exe:mock-fcm-exe"
+
+    - path: "app/mock-idfy/server/Paths_mock_idfy.hs"
+      component: "mock-idfy:exe:mock-fcm-exe"
 
     - path: "app/mock-fcm/src"
       component: "mock-fcm:lib"
@@ -170,3 +200,9 @@ cradle:
 
     - path: "lib/beckn-spec/src"
       component: "beckn-spec:lib"
+
+    - path: "lib/beckn-services/src"
+      component: "beckn-services:lib"
+
+    - path: "lib/location-updates/src"
+      component: "location-updates:lib"

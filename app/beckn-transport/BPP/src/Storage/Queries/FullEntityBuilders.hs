@@ -15,6 +15,7 @@ import qualified Storage.Queries.Quote.OneWayQuote as QOneWayQuote
 import qualified Storage.Queries.Quote.RentalQuote as QRentalQuote
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Booking.BookingLocation (BookingLocationT)
+import Storage.Tabular.Booking.OneWayBooking (OneWayBookingT)
 import Storage.Tabular.Booking.RentalBooking (RentalBookingT)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy
 import Storage.Tabular.Quote as Quote
@@ -43,10 +44,10 @@ buildFullQuote quoteT@QuoteT {..} = runMaybeT $ do
 
 buildFullBooking ::
   Transactionable m =>
-  (BookingT, BookingLocationT, Maybe BookingLocationT, Maybe RentalBookingT) ->
+  (BookingT, BookingLocationT, Maybe OneWayBookingT, Maybe BookingLocationT, Maybe RentalBookingT) ->
   DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbRentalBookingT) = runMaybeT $ do
-  bookingDetailsT <- case toLocationId of
-    Nothing -> MaybeT $ pure (Booking.RentalDetailsT <$> mbRentalBookingT)
-    Just _ -> MaybeT $ pure (Booking.OneWayDetailsT <$> mbToLocT)
+buildFullBooking (bookingT@BookingT {..}, fromLocT, mbOneWayBookingT, mbToLocT, mbRentalBookingT) = runMaybeT $ do
+  bookingDetailsT <- case fareProductType of
+    Domain.RENTAL -> MaybeT $ pure (Booking.RentalDetailsT <$> mbRentalBookingT)
+    Domain.ONE_WAY -> MaybeT $ pure (Booking.OneWayDetailsT <$> ((,) <$> mbToLocT <*> mbOneWayBookingT))
   return $ extractSolidType @Booking (bookingT, fromLocT, bookingDetailsT)

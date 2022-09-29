@@ -1,4 +1,7 @@
-module Beckn.Types.Core.Metro.Search.Time where
+module Beckn.Types.Core.Metro.Search.Time
+  ( Time (..),
+  )
+where
 
 import Beckn.Types.Core.Metro.Search.Duration (Duration)
 import Data.OpenApi (ToSchema)
@@ -13,16 +16,6 @@ data Time = Time
     days :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
-
-emptyTime :: Time
-emptyTime =
-  Time
-    { label = Nothing,
-      timestamp = Nothing,
-      duration = Nothing,
-      range = Nothing,
-      days = Nothing
-    }
 
 data TimeRange = TimeRange
   { start :: UTCTime,

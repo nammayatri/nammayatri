@@ -14,6 +14,7 @@ where
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Types.Predicate
+import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
@@ -23,9 +24,7 @@ import Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
-import Types.Error
-import Utils.Common
-import qualified Utils.Defaults as Default
+import Tools.Error
 
 data UpdateVehicleReq = UpdateVehicleReq
   { variant :: Maybe Variant,
@@ -85,8 +84,8 @@ listVehicles admin variantM mbRegNum limitM offsetM = do
   respList <- buildVehicleRes personList `traverse` vehicleList
   return $ ListVehicleRes respList
   where
-    limit = toInteger $ fromMaybe Default.limit limitM
-    offset = toInteger $ fromMaybe Default.offset offsetM
+    limit = toInteger $ fromMaybe 50 limitM
+    offset = toInteger $ fromMaybe 0 offsetM
 
 updateVehicle :: (EsqDBFlow m r) => SP.Person -> Id SP.Person -> UpdateVehicleReq -> m UpdateVehicleRes
 updateVehicle admin driverId req = do

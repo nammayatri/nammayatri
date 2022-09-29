@@ -9,9 +9,10 @@ module Storage.Tabular.Booking.Table where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
+import Beckn.Types.Common (HighPrecMoney)
 import Beckn.Types.Id
 import qualified Domain.Types.Booking.Type as Domain
+import qualified Domain.Types.FarePolicy.FareProduct as Domain
 import qualified Domain.Types.Vehicle as Veh
 import Storage.Tabular.Booking.BookingLocation (BookingLocationTId)
 import Storage.Tabular.FarePolicy.FareProduct ()
@@ -26,6 +27,7 @@ mkPersist
   [defaultQQ|
     BookingT sql=booking
       id Text
+      fareProductType Domain.FareProductType
       status Domain.BookingStatus
       providerId OrganizationTId
       bapId Text
@@ -33,13 +35,12 @@ mkPersist
       startTime UTCTime
       riderId RiderDetailsTId Maybe
       fromLocationId BookingLocationTId
-      toLocationId BookingLocationTId Maybe
       vehicleVariant Veh.Variant
-      estimatedFare Amount
-      discount Amount Maybe
-      estimatedTotalFare Amount
-      estimatedDistance Double Maybe
+      estimatedFare HighPrecMoney
+      discount HighPrecMoney Maybe
+      estimatedTotalFare HighPrecMoney
       reallocationsCount Int
+      riderName Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

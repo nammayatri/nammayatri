@@ -3,10 +3,10 @@ module Mobility.ARDU.Queries where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import "driver-offer-bpp" Domain.Types.Person
 import "driver-offer-bpp" Domain.Types.Ride as Ride
 import "driver-offer-bpp" Storage.Tabular.Ride as Ride
-import "driver-offer-bpp" Utils.Common
 
 cancelAllByDriverId ::
   Id Person ->

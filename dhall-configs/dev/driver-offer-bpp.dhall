@@ -57,6 +57,11 @@ let encTools =
   , hashSalt = sec.encHashSalt
   }
 
+let slackCfg =
+  { channelName = "alert_test_channel"
+  , slackToken = common.slackToken
+  }
+
 let apiRateLimitOptions =
   { limit = +4
   , limitResetTimeInSec = +600
@@ -74,10 +79,10 @@ in
 , selfUIUrl = "http://localhost:8016/ui/"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
+, s3Config = common.s3Config
 , migrationPath = Some (env:DRIVER_OFFER_BPP_MIGRATION_PATH as Text ? "dev/migrations/driver-offer-bpp")
 , autoMigrate = True
 , coreVersion = "0.9.3"
-, domainVersion = "0.9.3"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False}
 , updateLocationRefreshPeriod = +1
 , updateLocationAllowedDelay = +60
@@ -92,12 +97,20 @@ in
 , httpClientOptions = common.httpClientOptions
 , fcmUrl = common.fcmUrl
 , fcmJsonPath = common.fcmJsonPath
+, fcmTokenKeyPrefix = "ardu-bpp"
 , apiRateLimitOptions = apiRateLimitOptions
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
+, onboardSupportSmsTemplate = "Driver Onboarding Alert!! Driver is facing issue while onboarding to ({#org#}). Please contact him {#driver-phone#}"
+, slackCfg = slackCfg
+, onboardingTryLimit = +3
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , smsCfg = smsConfig
 , driverPositionInfoExpiry = None Integer
 , searchRequestExpirationSeconds = +3600
 , driverQuoteExpirationSeconds = +60
 , defaultRadiusOfSearch = +5000 -- meters
+, driverUnlockDelay = +2 -- seconds
+, driverEstimatedPickupDuration = +300 -- seconds
+, idfyCfg = common.idfyCfg
+, dashboardToken = sec.dashboardToken
 }

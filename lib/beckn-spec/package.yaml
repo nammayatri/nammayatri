@@ -66,15 +66,9 @@ dependencies:
   - euler-hs
   - hex-text
   - hspec
-  - http-api-data
-  - http-client
-  - http-client-tls
-  - http-types
   - http-media
   - kleene
   - lattices
-  - postgresql-simple
-  - postgresql-migration
   - prometheus-client
   - prometheus-proc
   - wai-middleware-prometheus
@@ -86,7 +80,6 @@ dependencies:
   - parsec
   - passetto-client
   - pureMD5
-  - random-strings
   - regex-applicative
   - safe-exceptions
   - servant
@@ -97,7 +90,6 @@ dependencies:
   - servant-openapi3
   - text
   - wai
-  - wai-extra
   - warp
   - time
   - time-units
@@ -112,7 +104,6 @@ dependencies:
   - tasty
   - tasty-hunit
   - either
-  - mtl
   - uuid
   - stm
   - unix
@@ -125,7 +116,6 @@ dependencies:
   - esqueleto
   - monad-logger
   - resourcet
-  - unliftio-core
   - resource-pool
   - universum
   - scientific
@@ -138,7 +128,6 @@ dependencies:
   - extra
   - random
   - hw-kafka-client
-  - fmt
 
 ghc-options:
   - -fwrite-ide-info

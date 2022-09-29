@@ -70,25 +70,23 @@ in
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
 , port = +8014
-, bgtmPort = +8114
 , metricsPort = +9997
 , hostName = "localhost"
 , nwAddress = "http://localhost:8014/v1/"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
 , caseExpiry = Some +7200
-, fcmJsonPath = common.fcmJsonPath
 , exotelCfg = Some common.exotelCfg
 , migrationPath = Some (env:BECKN_TRANSPORT_MIGRATION_PATH as Text ? "dev/migrations/beckn-transport")
 , autoMigrate = True
 , coreVersion = "0.9.3"
-, domainVersion = "0.9.3"
 , geofencingConfig = geofencingConfig
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
-, graphhopperUrl = common.graphhopperUrl
+, fcmJsonPath = common.fcmJsonPath
+, fcmTokenKeyPrefix = "transporter-bpp"
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
 , driverPositionInfoExpiry = None Integer
@@ -98,13 +96,13 @@ in
 , minimumDriverRatesCount = +5
 , recalculateFareEnabled = True
 , updateLocationRefreshPeriod = +5
-, updateLocationAllowedDelay = +60
 , metricsSearchDurationTimeout = +45
 , registryUrl = common.registryUrl
-, registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg
 , selfUIUrl = "http://localhost:8014/v2/"
 , schedulingReserveTime = +1800
+, driverEstimatedPickupDuration = +300 -- seconds
+, dashboardToken = sec.dashboardToken
 }

@@ -8,6 +8,40 @@ token: {{driver-token}}
 
 ###
 
+# @name updateInitial
+POST {{transporter-host}}/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.30833070042235,
+            "lat": 10.025196668204602
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+
+###
+
+# @name updateInitial
+POST {{transporter-host}}/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.30833070042235,
+            "lat": 10.025196668204602
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+
+###
+
 # @name searchRoute1
 POST {{app-host}}/rideSearch
 content-type: application/json
@@ -179,12 +213,12 @@ token: {{token}}
 
 ###
 
-# @bookingId = {{confirm.response.body.bookingId}}
 @bookingId = {{confirm.response.body.bookingId}}
 POST {{app-host}}/rideBooking/{{bookingId}}
 token: {{token}}
 
 ###
+# confirmed booking shouldn't be in this list, because it hasn't ride yet
 
 GET {{app-host}}/rideBooking/list
   ?offset=0
@@ -195,9 +229,11 @@ token: {{token}}
 
 ###
 
-@bppBookingId = 7b8eee2b-f13a-4f77-bffb-bbc623527ced
+@bppBookingId = 714164a4-03f4-4909-ad77-6ab0d96116b2
 # this should be taken from the transporter BPP database
 # select id from booking where status = 'CONFIRMED';
+# driverNotificationExpiry time is equal to 25 seconds,
+# you can increase this time for testing in /dhall-configs/dev/allocation-service.dhall
 
 # @name notif-info
 GET {{transporter-host}}/driver/rideBooking/{{bppBookingId}}/notification
@@ -258,4 +294,19 @@ content-type: application/json
     "lat": 10.080241882783683,
     "lon": 76.33893232031218
   }
+}
+
+###
+
+@bapRideId = {{list2.response.body.list[0].rideList[0].id}}
+
+# @name feedback
+POST {{app-host}}/feedback/rateRide
+token: {{app-token}}
+content-type: application/json
+
+{
+  "rideId": "{{bapRideId}}",
+  "rating" : 5,
+  "feedbackDetails": "The driver is so cute"
 }

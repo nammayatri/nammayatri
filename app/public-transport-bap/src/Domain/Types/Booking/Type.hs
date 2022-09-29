@@ -3,7 +3,7 @@
 module Domain.Types.Booking.Type where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
 import Domain.Types.Quote (Quote)
@@ -28,7 +28,7 @@ data Booking = Booking
     bppUrl :: BaseUrl,
     publicTransportSupportNumber :: Text,
     description :: Text,
-    fare :: Amount,
+    fare :: Money,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
     departureStationId :: Id TransportStation,

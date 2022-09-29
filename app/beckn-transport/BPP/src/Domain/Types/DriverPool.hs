@@ -1,11 +1,11 @@
 module Domain.Types.DriverPool (SortedDriverPool (getSortedDriverPool), mkSortedDriverPool, DriverPoolItem (..), filterDriverPool, getDriverIds, addItemToPool) where
 
 import Beckn.Prelude
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Generics.Labels ()
 import Data.List
-import Types.App
-import Utils.Common
+import Domain.Types.Person (Driver)
 
 -- SortedDriverPool constructor shouldn't be exported,
 -- so we can construct OrderedPool only using mkOrderedPool function, sorting results by distanceToPickup

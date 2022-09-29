@@ -12,11 +12,13 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Utils.Common
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.DriverPool
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.Organization as SOrg
+import Domain.Types.Person (Driver)
 import qualified Domain.Types.TransporterConfig as STConf
 import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Vehicle
@@ -25,10 +27,8 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TransporterConfig as QTConf
+import Tools.Error
 import Tools.Metrics
-import Types.App (Driver)
-import Types.Error
-import Utils.Common
 
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
@@ -154,8 +154,7 @@ buildDriverPoolResults pickup ndResults = do
 
 filterOutDriversWithDistanceAboveThreshold ::
   ( EsqDBFlow m r,
-    CoreMetrics m,
-    HasGoogleMaps m r
+    CoreMetrics m
   ) =>
   Integer ->
   NonEmpty DriverPoolResult ->

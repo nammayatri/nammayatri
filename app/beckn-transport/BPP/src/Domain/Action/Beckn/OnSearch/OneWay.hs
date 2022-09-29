@@ -4,10 +4,10 @@ import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Utils.Common
 import qualified Data.Text as T
 import Data.Traversable
 import qualified Domain.Types.BusinessEvent as SB
@@ -22,19 +22,16 @@ import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.FareCalculator.OneWayFareCalculator
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Flow as Fare
 import qualified Storage.Queries.BusinessEvent as QBE
-import qualified Storage.Queries.Products as QProduct
 import qualified Storage.Queries.Quote as QQuote
 import Tools.Metrics (CoreMetrics, HasBPPMetrics)
-import Types.Error
-import Utils.Common
 
 data QuoteInfo = QuoteInfo
   { quoteId :: Id DQuote.Quote,
     vehicleVariant :: DVeh.Variant,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
-    distanceToNearestDriver :: HighPrecMeters,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
+    distanceToNearestDriver :: Meters,
     fromLocation :: MapSearch.LatLong,
     toLocation :: MapSearch.LatLong,
     startTime :: UTCTime
@@ -43,7 +40,7 @@ data QuoteInfo = QuoteInfo
 onSearchCallback ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
+    HasFlowEnv m r '["driverEstimatedPickupDuration" ::: Seconds],
     HasGoogleMaps m r,
     HasBPPMetrics m r,
     CoreMetrics m
@@ -69,54 +66,61 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   -- drivers sorted from nearest to furthest, so with `find`
   -- we take nearest one and calculate fare and make PI for him
 
-  distance <-
-    metersToHighPrecMeters . (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) fromLocation toLocation
+  driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
+  distRes <- MapSearch.getDistance (Just MapSearch.CAR) fromLocation toLocation
+  let distance = distRes.distance
+      estimatedRideDuration = distRes.duration_in_traffic
+      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` searchRequest.startTime
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
-      fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
+      fareParams <- calculateFare transporterId poolResult.variant distance estimatedRideFinishTime
       buildOneWayQuote
         searchRequest
         fareParams
         transporterId
         distance
-        (metersToHighPrecMeters poolResult.distanceToPickup)
-        poolResult.variant now
+        poolResult.distanceToPickup
+        poolResult.variant
+        estimatedRideFinishTime
+        now
   Esq.runTransaction $
     for_ listOfQuotes QQuote.create
-  pure $ mkQuoteInfo fromLocation toLocation now distance <$> listOfQuotes
+  pure $ mkQuoteInfo fromLocation toLocation now <$> listOfQuotes
 
 buildOneWayQuote ::
   EsqDBFlow m r =>
   DSearchRequest.SearchRequest ->
   Fare.OneWayFareParameters ->
   Id DOrg.Organization ->
-  HighPrecMeters ->
-  HighPrecMeters ->
+  Meters ->
+  Meters ->
   DVeh.Variant ->
   UTCTime ->
+  UTCTime ->
   m DQuote.Quote
-buildOneWayQuote productSearchRequest fareParams transporterId distance distanceToNearestDriver vehicleVariant now = do
+buildOneWayQuote productSearchRequest fareParams transporterId distance distanceToNearestDriver vehicleVariant estimatedFinishTime now = do
   quoteId <- Id <$> generateGUID
   let estimatedFare = fareSum fareParams
       discount = fareParams.discount
       estimatedTotalFare = fareSumWithDiscount fareParams
-  products <- QProduct.findByName (show vehicleVariant) >>= fromMaybeM ProductsNotFound
   let oneWayQuoteDetails = DQuote.OneWayQuoteDetails {..}
   pure
     DQuote.Quote
       { id = quoteId,
         requestId = productSearchRequest.id,
-        productId = products.id,
         providerId = transporterId,
         createdAt = now,
         quoteDetails = DQuote.OneWayDetails oneWayQuoteDetails,
         ..
       }
 
-mkQuoteInfo :: DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> UTCTime -> HighPrecMeters -> DQuote.Quote -> QuoteInfo
-mkQuoteInfo fromLoc toLoc startTime distanceToNearestDriver DQuote.Quote {..} = do
+mkQuoteInfo :: DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> UTCTime -> DQuote.Quote -> QuoteInfo
+mkQuoteInfo fromLoc toLoc startTime DQuote.Quote {..} = do
   let fromLocation = getCoordinates fromLoc
       toLocation = getCoordinates toLoc
+      distanceToNearestDriver = case quoteDetails of
+        DQuote.OneWayDetails details -> DQuote.distanceToNearestDriver details
+        _ -> 0
   QuoteInfo
     { quoteId = id,
       ..

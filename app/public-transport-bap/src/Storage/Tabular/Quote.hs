@@ -9,7 +9,7 @@ module Storage.Tabular.Quote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
+import Beckn.Types.Common (HighPrecMeters)
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as Domain
 import Storage.Tabular.Search (SearchTId)
@@ -24,7 +24,7 @@ mkPersist
       bppId Text
       bppUrl Text
       description Text
-      fare Amount
+      fare HighPrecMeters
       departureTime UTCTime
       arrivalTime UTCTime
       departureStationId TransportStationTId
@@ -50,6 +50,7 @@ instance TType QuoteT Domain.Quote where
           bppUrl = bppUrl_,
           departureStationId = fromKey departureStationId,
           arrivalStationId = fromKey arrivalStationId,
+          fare = roundToIntegral fare,
           ..
         }
   toTType Domain.Quote {..} = do
@@ -59,5 +60,6 @@ instance TType QuoteT Domain.Quote where
         bppUrl = showBaseUrl bppUrl,
         departureStationId = toKey departureStationId,
         arrivalStationId = toKey arrivalStationId,
+        fare = realToFrac fare,
         ..
       }

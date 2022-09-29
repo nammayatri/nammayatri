@@ -7,6 +7,7 @@ import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
 import Beckn.Utils.App
+import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.FlowLogging as L
 import qualified Beckn.Utils.Servant.Server as Server
@@ -20,7 +21,6 @@ import Network.Wai.Handler.Warp
 import Servant
 import qualified Service.Runner as Allocator
 import qualified Storage.Queries.Organization as Storage
-import Utils.Common
 
 runAllocator :: (AppCfg -> AppCfg) -> IO ()
 runAllocator configModifier = do

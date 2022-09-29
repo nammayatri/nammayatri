@@ -7,17 +7,18 @@ import Beckn.Utils.Error
 import Beckn.Utils.Logging
 import Beckn.Utils.Text
 import Control.Concurrent.MVar (modifyMVar, modifyMVar_)
+import Data.Aeson
 import qualified Data.Map as Map
 import EulerHS.Prelude
 import Types.API.Fcm
 
 sendFcm ::
   Maybe FCMAuthToken ->
-  FCMRequest ->
+  FCMRequest Value ->
   FlowHandler FCMResponse
 sendFcm _authToken (FCMRequest ntf) = withFlowHandler $ do
   to <- ntf.fcmToken & fromMaybeM (InvalidRequest "No token")
-  log INFO $ "Message for " <> encodeToText to <> ": " <> encodeToText ntf
+  logPretty INFO ("Message for " <> encodeToText to) ntf
   asks notificationsMap >>= liftIO . (`modifyMVar_` (pure . set to))
   return $ FCMResponse Nothing Nothing
   where

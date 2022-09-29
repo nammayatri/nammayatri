@@ -11,13 +11,13 @@ import Beckn.Storage.Esqueleto (Transactionable)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import qualified Beckn.Types.MapSearch as GoogleMaps
+import Beckn.Utils.Common
 import Data.List.NonEmpty as NE
 import qualified Domain.Types.Organization as SOrg
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import Tools.Metrics
-import Utils.Common
 
 calculateDriverPool ::
   ( Transactionable m,
@@ -59,9 +59,9 @@ filterOutDriversWithDistanceAboveThreshold ::
   m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
 filterOutDriversWithDistanceAboveThreshold threshold pickupLatLong driverPoolResults = do
   getDistanceResults <- GoogleMaps.getDistances (Just GoogleMaps.CAR) driverPoolResults (pickupLatLong :| []) Nothing
-  logPretty DEBUG "get distance results" getDistanceResults
+  logDebug $ "get distance results" <> show getDistanceResults
   let result = NE.filter filterFunc getDistanceResults
-  logPretty DEBUG "secondly filtered driver pool" result
+  logDebug $ "secondly filtered driver pool" <> show result
   pure result
   where
     filterFunc estDist = getMeters estDist.distance <= fromIntegral threshold

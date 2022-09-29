@@ -1,6 +1,5 @@
 module MockData.OnConfirm where
 
-import Beckn.Types.Core.Migration.DecimalValue
 import "public-transport-bap" Core.Spec.Common
 import qualified "public-transport-bap" Core.Spec.Confirm as Confirm
 import "public-transport-bap" Core.Spec.OnConfirm
@@ -30,7 +29,7 @@ makeOnConfirmOrder orderId confOrd = do
               Params
                 { transaction_id = "payment_transaction_id",
                   transaction_status = PAYMENT_LINK_CREATED,
-                  amount = convertAmountToDecimalValue $ confOrd.payment.params.amount,
+                  amount = realToFrac $ confOrd.payment.params.amount,
                   currency = confOrd.payment.params.currency
                 }
           }

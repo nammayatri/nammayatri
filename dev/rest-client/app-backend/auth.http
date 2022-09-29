@@ -1,11 +1,12 @@
 # @name login
-@app-host = https://api.sandbox.beckn.juspay.in/app/v2
+# @app-host = https://api.sandbox.beckn.juspay.in/app/v2
 POST {{app-host}}/auth
 content-type: application/json
 
 {
   "mobileCountryCode": "+91",
-  "mobileNumber": "7777777777"
+  "mobileNumber" : "7777777777",
+  "merchantId" : "YATRI"
 }
 
 ###

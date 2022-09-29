@@ -6,7 +6,7 @@ import qualified API.Beckn.Init as Init
 import qualified API.Beckn.Rating as Rating
 import qualified API.Beckn.Search as Search
 import qualified API.Beckn.Track as Track
-import App.Types
+import Environment
 import Servant
 
 type API =

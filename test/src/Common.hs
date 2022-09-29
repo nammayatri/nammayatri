@@ -1,6 +1,7 @@
 module Common where
 
-import "app-backend" App.Routes as AbeRoutes
+import qualified API.UI.Quote as AbeQuoteAPI
+import qualified "app-backend" API.UI.Search as AppBESearch
 import Beckn.Types.Base64
 import Beckn.Types.Id
 import qualified Beckn.Utils.SignatureAuth as HttpSig
@@ -14,8 +15,6 @@ import EulerHS.Prelude
 import Network.HTTP.Types.Status
 import Servant.Client
 import Test.Hspec hiding (context)
-import qualified Types.API.Quote as QuoteAPI
-import qualified "app-backend" Types.API.Search as AppBESearch
 import Utils (defaultManager, runClient')
 
 getAppBaseUrl :: BaseUrl
@@ -37,10 +36,10 @@ searchServices ::
   Text ->
   AppBESearch.SearchReq ->
   ClientM AppBESearch.SearchRes
-searchServices = client (Proxy :: Proxy AbeRoutes.SearchAPI)
+searchServices = client (Proxy :: Proxy AppBESearch.API)
 
-getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM QuoteAPI.GetQuotesRes
-getQuotes = client (Proxy :: Proxy AbeRoutes.QuoteAPI)
+getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM AbeQuoteAPI.GetQuotesRes
+getQuotes = client (Proxy :: Proxy AbeQuoteAPI.API)
 
 gatewayBaseUrl :: BaseUrl
 gatewayBaseUrl =

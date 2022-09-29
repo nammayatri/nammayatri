@@ -12,15 +12,14 @@ import Domain.Types.Person as Person
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
-import Types.App (Driver)
 
 create :: DriverInformation -> SqlDB ()
 create = Esq.create
 
-findById :: Transactionable m => Id Driver -> m (Maybe DriverInformation)
+findById :: Transactionable m => Id Person.Driver -> m (Maybe DriverInformation)
 findById = Esq.findById . cast
 
-fetchAllAvailableByIds :: Transactionable m => [Id Driver] -> m [DriverInformation]
+fetchAllAvailableByIds :: Transactionable m => [Id Person.Driver] -> m [DriverInformation]
 fetchAllAvailableByIds driversIds = Esq.findAll $ do
   driverInformation <- from $ table @DriverInformationT
   where_ $
@@ -31,7 +30,7 @@ fetchAllAvailableByIds driversIds = Esq.findAll $ do
   where
     personsKeys = toKey . cast <$> driversIds
 
-updateActivity :: Id Driver -> Bool -> SqlDB ()
+updateActivity :: Id Person.Driver -> Bool -> SqlDB ()
 updateActivity driverId isActive = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -42,7 +41,7 @@ updateActivity driverId isActive = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-updateEnabledState :: Id Driver -> Bool -> SqlDB ()
+updateEnabledState :: Id Person.Driver -> Bool -> SqlDB ()
 updateEnabledState driverId isEnabled = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -53,8 +52,20 @@ updateEnabledState driverId isEnabled = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+verifyAndEnableDriver :: Id Person -> SqlDB ()
+verifyAndEnableDriver driverId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationEnabled =. val True,
+        DriverInformationVerified =. val True,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey driverId)
+
 updateOnRide ::
-  Id Driver ->
+  Id Person.Driver ->
   Bool ->
   SqlDB ()
 updateOnRide driverId onRide = do
@@ -67,7 +78,7 @@ updateOnRide driverId onRide = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-deleteById :: Id Driver -> SqlDB ()
+deleteById :: Id Person.Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverInformationT . cast
 
 findAllWithLimitOffsetByOrgId ::
@@ -127,3 +138,12 @@ getDriversWithOutdatedLocationsToMakeInactive before = do
     where_ $ driverInformation ^. DriverInformationActive
     orderBy [asc $ driverInformation ^. DriverInformationUpdatedAt]
     pure person
+
+addReferralCode :: Id Person -> EncryptedHashedField 'AsEncrypted Text -> SqlDB ()
+addReferralCode personId code = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationReferralCode =. val (Just (code & unEncrypted . (.encrypted)))
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey personId)

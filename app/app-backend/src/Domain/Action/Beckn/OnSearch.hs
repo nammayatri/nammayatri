@@ -1,8 +1,17 @@
-module Domain.Action.Beckn.OnSearch where
+module Domain.Action.Beckn.OnSearch
+  ( DOnSearchReq (..),
+    ProviderInfo (..),
+    EstimateInfo (..),
+    QuoteInfo (..),
+    QuoteDetails (..),
+    OneWayQuoteDetails (..),
+    RentalQuoteDetails (..),
+    onSearch,
+  )
+where
 
 import App.Types
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.Estimate as DEstimate
@@ -13,6 +22,7 @@ import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Merchant as QMerch
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import qualified Tools.Metrics as Metrics
@@ -36,17 +46,17 @@ data ProviderInfo = ProviderInfo
 
 data EstimateInfo = EstimateInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     descriptions :: [Text]
   }
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     quoteDetails :: QuoteDetails,
     descriptions :: [Text]
   }
@@ -64,19 +74,26 @@ data RentalQuoteDetails = RentalQuoteDetails
     baseDuration :: Hours
   }
 
-searchCb ::
+onSearch ::
+  BaseUrl ->
   Text ->
   Maybe DOnSearchReq ->
   Flow ()
-searchCb transactionId mbReq = do
+onSearch registryUrl transactionId mbReq = do
   Metrics.finishSearchMetrics transactionId -- move it to api handler or acl?
-  whenJust mbReq searchCbService
+  whenJust mbReq (onSearchService registryUrl)
 
-searchCbService ::
+onSearchService ::
+  BaseUrl ->
   DOnSearchReq ->
   Flow ()
-searchCbService DOnSearchReq {..} = do
+onSearchService registryUrl DOnSearchReq {..} = do
   _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+
+  -- TODO: this supposed to be temporary solution. Check if we still need it
+  merchant <- QMerch.findByRegistryUrl registryUrl
+  unless (elem _searchRequest.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
+
   now <- getCurrentTime
   estimates <- traverse (buildEstimate requestId providerInfo now) estimatesInfo
   quotes <- traverse (buildQuote requestId providerInfo now) quotesInfo

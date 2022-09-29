@@ -6,8 +6,7 @@ import Beckn.Types.Id
 import qualified Core.ACL.Common as Common
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
-import Product.FareCalculator.Calculator
-import Utils.Common (amountToDecimalValue)
+import SharedLogic.FareCalculator
 
 mkOnConfirmMessage :: UTCTime -> DConfirm.DConfirmRes -> OnConfirm.OnConfirmMessage
 mkOnConfirmMessage now res = do
@@ -15,8 +14,7 @@ mkOnConfirmMessage now res = do
   let vehicleVariant = Common.castVariant res.booking.vehicleVariant
   let itemCode = OnConfirm.ItemCode OnConfirm.ONE_WAY_TRIP vehicleVariant Nothing Nothing
       fareParams = booking.fareParams
-      totalFare = fareSum fareParams
-      totalFareDecimal = amountToDecimalValue totalFare
+      totalFareDecimal = fromIntegral booking.estimatedFare
       currency = "INR"
   OnConfirm.OnConfirmMessage
     { order =
@@ -35,7 +33,7 @@ mkOnConfirmMessage now res = do
                       },
                   breakup =
                     mkBreakupList
-                      (OnConfirm.BreakupItemPrice currency . amountToDecimalValue)
+                      (OnConfirm.BreakupItemPrice currency . fromIntegral)
                       OnConfirm.BreakupItem
                       fareParams
                 },

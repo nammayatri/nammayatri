@@ -1,5 +1,6 @@
 module Core.ACL.OnUpdate (buildOnUpdateReq) where
 
+import Beckn.Prelude (roundToIntegral)
 import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
@@ -12,7 +13,7 @@ import EulerHS.Prelude hiding (state)
 import Utils.Common
 
 buildOnUpdateReq ::
-  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],
+  ( HasFlowEnv m r '["coreVersion" ::: Text],
     EsqDBFlow m r
   ) =>
   BecknCallbackReq OnUpdate.OnUpdateMessage ->
@@ -61,8 +62,8 @@ parseEvent (OnUpdate.RideCompleted rcEvent) = do
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id rcEvent.id,
         bppRideId = Id rcEvent.fulfillment.id,
-        fare = realToFrac rcEvent.quote.price.value,
-        totalFare = realToFrac rcEvent.quote.price.computed_value,
+        fare = roundToIntegral rcEvent.quote.price.value,
+        totalFare = roundToIntegral rcEvent.quote.price.computed_value,
         chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup
       }
@@ -91,3 +92,4 @@ castCancellationSource = \case
   OnUpdate.ByDriver -> SBCR.ByDriver
   OnUpdate.ByOrganization -> SBCR.ByOrganization
   OnUpdate.ByAllocator -> SBCR.ByAllocator
+  OnUpdate.ByApplication -> SBCR.ByApplication

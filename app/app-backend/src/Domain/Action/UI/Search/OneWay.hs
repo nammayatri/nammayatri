@@ -1,70 +1,79 @@
-module Domain.Action.UI.Search.OneWay where
+module Domain.Action.UI.Search.OneWay
+  ( OneWaySearchReq (..),
+    OneWaySearchRes (..),
+    DSearch.SearchReqLocation (..),
+    oneWaySearch,
+  )
+where
 
-import App.Types
+import Beckn.Prelude
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
-import Beckn.Streaming.MonadProducer
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
-import EulerHS.Prelude hiding (id, state)
 import Storage.Queries.Geometry
+import qualified Storage.Queries.Merchant as QMerchant
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import Tools.Metrics
 import qualified Tools.Metrics as Metrics
-import qualified Types.API.Search as API
 import Types.Error
 import Utils.Common
 
-data DSearchReq = DSearchReq
-  { origin :: API.SearchReqLocation,
-    destination :: API.SearchReqLocation,
+data OneWaySearchReq = OneWaySearchReq
+  { origin :: DSearch.SearchReqLocation,
+    destination :: DSearch.SearchReqLocation
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data OneWaySearchRes = OneWaySearchRes
+  { origin :: DSearch.SearchReqLocation,
+    destination :: DSearch.SearchReqLocation,
     searchId :: Id DSearchReq.SearchRequest,
-    now :: UTCTime
+    now :: UTCTime,
+    --TODO: This supposed to be temporary solution. Check if we still need it
+    gatewayUrl :: BaseUrl
   }
 
-search :: Id Person.Person -> API.OneWaySearchReq -> Flow (API.SearchRes, DSearchReq)
-search personId req = do
-  validateServiceability
+oneWaySearch ::
+  ( HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+    HasFlowEnv m r '["googleMapsUrl" ::: BaseUrl, "googleMapsKey" ::: Text],
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasBAPMetrics m r
+  ) =>
+  Id Person.Person ->
+  OneWaySearchReq ->
+  m OneWaySearchRes
+oneWaySearch personId req = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  validateServiceability merchant.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   toLocation <- DSearch.buildSearchReqLoc req.destination
   now <- getCurrentTime
   distance <- (\res -> metersToHighPrecMeters res.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.origin.gps req.destination.gps
-  searchRequest <- DSearch.buildSearchRequest personId fromLocation (Just toLocation) (Just distance) now
+  searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (Just distance) now
   Metrics.incrementSearchRequestCount
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId
   DB.runTransaction $ do
     QSearchRequest.create searchRequest
-  let dSearchReq =
-        DSearchReq
+  let dSearchRes =
+        OneWaySearchRes
           { origin = req.origin,
             destination = req.destination,
             searchId = searchRequest.id,
-            now = now
+            now = now,
+            gatewayUrl = merchant.gatewayUrl
           }
-  return (API.SearchRes $ searchRequest.id, dSearchReq)
+  return dSearchRes
   where
-    validateServiceability = do
-      unlessM (rideServiceable someGeometriesContain req.origin.gps (Just req.destination.gps)) $
+    validateServiceability geoConfig =
+      unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps (Just req.destination.gps)) $
         throwError RideNotServiceable
-
-sendPublicTransportSearchRequest ::
-  MonadProducer PublicTransportSearch m =>
-  Id Person.Person ->
-  DSearchReq ->
-  m ()
-sendPublicTransportSearchRequest personId DSearchReq {..} = do
-  producePublicTransportSearchMessage publicTransportSearch
-  where
-    publicTransportSearch =
-      PublicTransportSearch
-        { id = getId searchId,
-          gps = origin.gps,
-          requestorId = getId personId,
-          createdAt = now
-        }

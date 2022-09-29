@@ -14,16 +14,16 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
-import qualified Product.BecknProvider.BP as BP
+import qualified SharedLogic.CallBAP as BP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 newtype CancelReq = CancelReq
   { bookingId :: Id SRB.Booking

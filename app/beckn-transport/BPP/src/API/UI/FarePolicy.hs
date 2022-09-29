@@ -4,7 +4,7 @@ import qualified API.UI.FarePolicy.Discount as Discount
 import qualified API.UI.FarePolicy.FareProduct as FareProduct
 import qualified API.UI.FarePolicy.OneWayFarePolicy as OneWay
 import qualified API.UI.FarePolicy.RentalFarePolicy as Rentals
-import App.Types
+import Environment
 import Servant
 
 type API =

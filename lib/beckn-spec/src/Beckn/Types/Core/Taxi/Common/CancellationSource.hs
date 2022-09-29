@@ -12,6 +12,7 @@ data CancellationSource
   | ByDriver
   | ByOrganization
   | ByAllocator
+  | ByApplication
   deriving (Show, Eq, Ord, Read, Generic)
 
 derivePersistField "CancellationSource"
@@ -30,6 +31,7 @@ cancellationSourceJSONOptions =
         "ByDriver" -> "CANCELLED_BY_DRIVER"
         "ByOrganization" -> "CANCELLED_BY_ORGANIZATION"
         "ByAllocator" -> "CANCELLED_BY_ALLOCATOR"
+        "ByApplication" -> "CANCELLED_BY_APPLICATION"
         _ -> error "CancellationReason parsing error"
     }
 

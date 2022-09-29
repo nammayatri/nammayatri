@@ -4,8 +4,7 @@ import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (state)
 
 data Address = Address
-  { door :: Maybe Text,
-    name :: Maybe Text,
+  { name :: Maybe Text,
     building :: Maybe Text,
     street :: Maybe Text,
     locality :: Maybe Text,

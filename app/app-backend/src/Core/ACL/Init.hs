@@ -1,5 +1,6 @@
 module Core.ACL.Init (buildInitReq) where
 
+import App.Types
 import Beckn.Prelude
 import Beckn.Types.App
 import qualified Beckn.Types.Core.Context as Context
@@ -10,16 +11,15 @@ import Beckn.Types.MapSearch (LatLong)
 import Beckn.Utils.Context (buildTaxiContext)
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.VehicleVariant as VehVar
-import qualified ExternalAPI.Flow as ExternalAPI
 
 buildInitReq ::
-  (ExternalAPI.HasBapInfo r m, MonadFlow m) =>
+  (HasBapInfo r m, MonadFlow m) =>
   DConfirm.ConfirmRes ->
   m (BecknReq Init.InitMessage)
 buildInitReq res = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.INIT res.bookingId.getId Nothing bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl)
+  context <- buildTaxiContext Context.INIT res.booking.id.getId Nothing bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl)
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 
@@ -51,7 +51,7 @@ buildInitMessage res = do
       VehVar.SEDAN -> Init.SEDAN
       VehVar.SUV -> Init.SUV
       VehVar.HATCHBACK -> Init.HATCHBACK
-      VehVar.AUTO -> Init.AUTO
+      VehVar.AUTO_RICKSHAW -> Init.AUTO_RICKSHAW
 
 mkOrderItem :: Maybe Text -> Init.ItemCode -> Init.OrderItem
 mkOrderItem mbBppItemId code =

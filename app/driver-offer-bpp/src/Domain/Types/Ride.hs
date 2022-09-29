@@ -2,8 +2,8 @@
 
 module Domain.Types.Ride where
 
-import Beckn.Types.Amount
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -11,10 +11,8 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as DPers
-import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import Utils.Common
 
 data RideStatus
   = NEW
@@ -41,48 +39,22 @@ data Ride = Ride
     driverId :: Id DPers.Person,
     otp :: Text,
     trackingUrl :: BaseUrl,
-    fare :: Maybe Amount,
+    fare :: Maybe Money,
     traveledDistance :: HighPrecMeters,
+    chargeableDistance :: Maybe Meters,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
+    rideRating :: Maybe RideRating,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq)
 
-data RideAPIEntity = RideAPIEntity
-  { id :: Id Ride,
-    bookingId :: Id DRB.Booking,
-    shortRideId :: ShortId Ride,
-    status :: RideStatus,
-    driverName :: Text,
-    driverNumber :: Maybe Text,
-    vehicleVariant :: DVeh.Variant,
-    vehicleModel :: Text,
-    vehicleColor :: Text,
-    vehicleNumber :: Text,
-    computedFare :: Maybe Amount,
-    actualRideDistance :: HighPrecMeters,
+data RideRating = RideRating
+  { id :: Id RideRating,
+    ratingValue :: Int,
+    feedbackDetails :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
-
-makeRideAPIEntity :: Ride -> DPers.DecryptedPerson -> DVeh.Vehicle -> RideAPIEntity
-makeRideAPIEntity ride driver vehicle =
-  RideAPIEntity
-    { id = ride.id,
-      bookingId = ride.bookingId,
-      shortRideId = ride.shortId,
-      status = ride.status,
-      driverName = driver.firstName,
-      driverNumber = driver.mobileCountryCode <> driver.mobileNumber,
-      vehicleNumber = vehicle.registrationNo,
-      vehicleColor = vehicle.color,
-      vehicleVariant = vehicle.variant,
-      vehicleModel = vehicle.model,
-      computedFare = ride.fare,
-      actualRideDistance = ride.traveledDistance,
-      createdAt = ride.createdAt,
-      updatedAt = ride.updatedAt
-    }
+  deriving (Generic, Show, Eq)

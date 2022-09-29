@@ -20,7 +20,6 @@ mkPersist
       lat Double
       lon Double
       street Text Maybe
-      door Text Maybe
       city Text Maybe
       state Text Maybe
       country Text Maybe
@@ -38,17 +37,18 @@ instance TEntityKey BookingLocationT where
   fromKey (BookingLocationTKey _id) = Id _id
   toKey (Id id) = BookingLocationTKey id
 
-instance TType BookingLocationT Domain.BookingLocation where
-  fromTType BookingLocationT {..} = do
-    let address = Domain.LocationAddress {..}
-    return $
-      Domain.BookingLocation
-        { id = Id id,
-          ..
-        }
-  toTType Domain.BookingLocation {..} = do
-    let Domain.LocationAddress {..} = address
-    BookingLocationT
-      { id = getId id,
-        ..
-      }
+mkDomainBookingLocation :: BookingLocationT -> Domain.BookingLocation
+mkDomainBookingLocation BookingLocationT {..} = do
+  let address = Domain.LocationAddress {..}
+  Domain.BookingLocation
+    { id = Id id,
+      ..
+    }
+
+mkTabularBookingLocation :: Domain.BookingLocation -> BookingLocationT
+mkTabularBookingLocation Domain.BookingLocation {..} = do
+  let Domain.LocationAddress {..} = address
+  BookingLocationT
+    { id = getId id,
+      ..
+    }

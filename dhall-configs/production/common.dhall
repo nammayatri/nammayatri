@@ -4,13 +4,15 @@ let globalCommon = ../generic/common.dhall
 -- To be substituted during deployment
 let branchName = "$DEPLOY_VARIANT"
 
-in { defaultPoolConfig = globalCommon.defaultPoolConfig
-   , smsSessionConfig = globalCommon.smsSessionConfig
+in { smsSessionConfig = globalCommon.smsSessionConfig
    , autoMigrate = globalCommon.autoMigrate
    , loggerConfig = globalCommon.loggerConfig
    , LogLevel = globalCommon.LogLevel
    , ExotelCfg = globalCommon.ExotelCfg
    , exotelCfg = sec.exotelCfg
+   , s3Config = sec.s3Config
+   , idfyCfg = sec.idfyCfg
+   , slackToken = sec.slackToken
    , signatureExpiry = globalCommon.signatureExpiry
    , httpClientOptions = globalCommon.httpClientOptions
    , smsUserName = sec.smsUserName
@@ -21,7 +23,6 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "https://fcm.googleapis.com/v1/projects/beckn-d4a42/messages:send/"
-   , graphhopperUrl = "http://graphhopper.atlas.svc.cluster.local:8989/"
    , registryUrl = "https://gateway-1.beckn.nsdl.co.in"
    , authServiceUrl = "http://beckn-app-backend-production.atlas:8013"
    }

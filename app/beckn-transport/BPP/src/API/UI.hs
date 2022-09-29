@@ -13,7 +13,7 @@ import qualified API.UI.Route as Route
 import qualified API.UI.TranspAdmin as TranspAdmin
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
-import App.Types
+import Environment
 import EulerHS.Prelude
 import Servant
 

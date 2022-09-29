@@ -6,7 +6,7 @@ import EulerHS.Prelude hiding (id)
 
 data FeedbackForm = FeedbackForm
   { question :: Text,
-    answer :: Text
+    answer :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

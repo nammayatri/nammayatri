@@ -1,8 +1,7 @@
 module Domain.Types.FarePolicy where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
-import Beckn.Types.Common (HighPrecMeters)
+import Beckn.Types.Common (HighPrecMoney, Meters, Money)
 import Beckn.Types.Id (Id)
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -11,18 +10,24 @@ data FarePolicy = FarePolicy
   { id :: Id FarePolicy,
     organizationId :: Id Organization.Organization,
     vehicleVariant :: Variant.Variant,
-    baseDistancePerKmFare :: Amount,
-    baseDistance :: HighPrecMeters,
-    extraKmFare :: Amount,
-    deadKmFare :: Amount,
-    driverExtraFeeList :: [Amount],
-    nightShiftRate :: Maybe Amount,
+    baseDistanceFare :: HighPrecMoney,
+    baseDistanceMeters :: Meters,
+    perExtraKmFare :: HighPrecMoney,
+    deadKmFare :: Money,
+    driverExtraFee :: ExtraFee,
+    nightShiftRate :: Maybe Double,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq)
+
+data ExtraFee = ExtraFee
+  { minFee :: Money,
+    maxFee :: Money
+  }
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 -- the formula is
 -- fare = (base fare * base distance) + deadKmFare + (extraKm * extraKmFare) + driver selected extra fee
@@ -31,11 +36,11 @@ data FarePolicy = FarePolicy
 data FarePolicyAPIEntity = FarePolicyAPIEntity
   { id :: Id FarePolicy,
     vehicleVariant :: Variant.Variant,
-    baseDistancePerKmFare :: Double,
-    baseDistance :: HighPrecMeters,
-    extraKmFare :: Double,
-    deadKmFare :: Double,
-    driverExtraFeeList :: [Double],
+    baseDistanceFare :: HighPrecMoney,
+    baseDistanceMeters :: Meters,
+    perExtraKmFare :: HighPrecMoney,
+    deadKmFare :: Money,
+    driverExtraFee :: ExtraFee,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double
@@ -45,10 +50,5 @@ data FarePolicyAPIEntity = FarePolicyAPIEntity
 makeFarePolicyAPIEntity :: FarePolicy -> FarePolicyAPIEntity
 makeFarePolicyAPIEntity FarePolicy {..} =
   FarePolicyAPIEntity
-    { baseDistancePerKmFare = amountToDouble baseDistancePerKmFare,
-      extraKmFare = amountToDouble extraKmFare,
-      deadKmFare = amountToDouble deadKmFare,
-      driverExtraFeeList = map amountToDouble driverExtraFeeList,
-      nightShiftRate = amountToDouble <$> nightShiftRate,
-      ..
+    { ..
     }

@@ -4,11 +4,14 @@ module Storage.Queries.Person where
 
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
+import qualified Beckn.External.FCM.Types as FCM
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
+import Beckn.Utils.Common
 import Beckn.Utils.GenericPretty
 import qualified Data.Maybe as Mb
 import Domain.Types.Organization
@@ -18,8 +21,6 @@ import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
 import Storage.Tabular.Vehicle as Vehicle
-import Types.App (Driver)
-import Utils.Common
 
 create :: Person -> SqlDB ()
 create = Esq.create
@@ -115,6 +116,17 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
+updateName :: Id Person -> Text -> SqlDB ()
+updateName personId name = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonFirstName =. val name,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
 updatePersonRec :: Id Person -> Person -> SqlDB ()
 updatePersonRec personId person = do
   now <- getCurrentTime
@@ -129,6 +141,7 @@ updatePersonRec personId person = do
         PersonEmail =. val (person.email),
         PersonIdentifier =. val (person.identifier),
         PersonRating =. val (person.rating),
+        PersonLanguage =. val (person.language),
         PersonDeviceToken =. val (person.deviceToken),
         PersonOrganizationId =. val (toKey <$> person.organizationId),
         PersonDescription =. val (person.description),
@@ -174,12 +187,15 @@ updateAverageRating personId newAverageRating = do
 
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
+    driverDeviceToken :: Maybe FCM.FCMRecipientToken,
+    language :: Maybe GoogleMaps.Language,
+    onRide :: Bool,
     distanceToDriver :: Double,
     vehicle :: Vehicle,
     lat :: Double,
     lon :: Double
   }
-  deriving (Generic, PrettyShow, Show)
+  deriving (Generic, Show, PrettyShow)
 
 instance GoogleMaps.HasCoordinates DriverPoolResult where
   getCoordinates dpRes = LatLong dpRes.lat dpRes.lon
@@ -224,27 +240,19 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters orgId onlyNotOnRide = do
           &&. whenJust_ mbVariant (\var -> vehicle ^. VehicleVariant ==. val var)
       return
         ( person ^. PersonTId,
+          person ^. PersonDeviceToken,
+          person ^. PersonLanguage,
+          driverInfo ^. DriverInformationOnRide,
           location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
           location ^. DriverLocationLat,
           location ^. DriverLocationLon,
           vehicle
         )
-    (personId, dist, dlat, dlon, vehicleVariant) <- from withTable
+    (personId, mbDeviceToken, language, onRide, dist, dlat, dlon, vehicle) <- from withTable
     where_ $ dist <. val (fromIntegral radiusMeters)
     orderBy [asc dist]
-    return (personId, dist, vehicleVariant, dlat, dlon)
+    return (personId, mbDeviceToken, language, onRide, dist, vehicle, dlat, dlon)
   return $ makeDriverPoolResult <$> res
   where
-    makeDriverPoolResult (personId, dist, vehicleVariant, dlat, dlon) =
-      DriverPoolResult (cast personId) dist vehicleVariant dlat dlon
-
-setRegisteredTrue :: Id Person -> SqlDB ()
-setRegisteredTrue personId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonRegistered =. val True,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+    makeDriverPoolResult (personId, mbDeviceToken, mblang, onRide, dist, vehicle, dlat, dlon) =
+      DriverPoolResult (cast personId) mbDeviceToken mblang onRide dist vehicle dlat dlon

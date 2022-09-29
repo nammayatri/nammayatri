@@ -1,8 +1,15 @@
 {-# LANGUAGE DerivingStrategies #-}
 
-module SharedLogic.FareCalculator.OneWayFareCalculator.Calculator where
+module SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
+  ( OneWayFareParameters (..),
+    TripEndTime,
+    fareSum,
+    fareSumWithDiscount,
+    calculateFareParameters,
+  )
+where
 
-import Beckn.Types.Amount (Amount (..))
+import Beckn.Prelude
 import Beckn.Types.Common
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Time
@@ -15,86 +22,81 @@ import Data.Time
   )
 import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
 import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRate (..))
-import EulerHS.Prelude
-import Utils.Common
 
-type TripStartTime = UTCTime
+type TripEndTime = UTCTime
 
 data OneWayFareParameters = OneWayFareParameters
-  { baseFare :: Amount,
-    distanceFare :: Amount,
-    nightShiftRate :: Amount,
-    discount :: Maybe Amount
+  { baseFare :: Money,
+    distanceFare :: Money,
+    nightShiftRate :: Double,
+    discount :: Maybe Money
   }
   deriving stock (Show, Eq)
 
-fareSum :: OneWayFareParameters -> Amount
+fareSum :: OneWayFareParameters -> Money
 fareSum OneWayFareParameters {..} =
-  nightShiftRate * (baseFare + distanceFare)
+  roundToIntegral $ nightShiftRate * fromIntegral (baseFare + distanceFare)
 
-fareSumWithDiscount :: OneWayFareParameters -> Amount
+fareSumWithDiscount :: OneWayFareParameters -> Money
 fareSumWithDiscount fp@OneWayFareParameters {..} = do
   let fareSumm = fareSum fp
   max 0 $ maybe fareSumm (fareSumm -) discount
 
 calculateFareParameters ::
   OneWayFarePolicy ->
-  HighPrecMeters ->
-  TripStartTime ->
+  Meters ->
+  TripEndTime ->
   OneWayFareParameters
-calculateFareParameters farePolicy distance startTime = do
+calculateFareParameters farePolicy distance endTime = do
   let baseFare = calculateBaseFare farePolicy
   let distanceFare = calculateDistanceFare farePolicy distance
-  let nightShiftRate = calculateNightShiftRate farePolicy startTime
-  let discount = calculateDiscount farePolicy startTime
+  let nightShiftRate = calculateNightShiftRate farePolicy endTime
+  let discount = calculateDiscount farePolicy endTime
   OneWayFareParameters baseFare distanceFare nightShiftRate discount
 
 calculateBaseFare ::
   OneWayFarePolicy ->
-  Amount
-calculateBaseFare farePolicy = do
-  let baseFare = fromMaybe 0 $ farePolicy.baseFare
-  Amount baseFare
+  Money
+calculateBaseFare farePolicy = fromMaybe 0 $ farePolicy.baseFare
 
 calculateDistanceFare ::
   OneWayFarePolicy ->
-  HighPrecMeters ->
-  Amount
+  Meters ->
+  Money
 calculateDistanceFare farePolicy distance = do
   let sortedPerExtraKmRateList = NonEmpty.sortBy (compare `on` (.distanceRangeStart)) farePolicy.perExtraKmRateList -- sort it again just in case
   let baseDistance = (.distanceRangeStart) $ NonEmpty.head sortedPerExtraKmRateList
-      extraDistance = toRational (getHighPrecMeters distance) - baseDistance
+      extraDistance = distance - baseDistance
   if extraDistance <= 0
     then 0
     else do
-      Amount $ calculateExtraDistFare 0 extraDistance sortedPerExtraKmRateList
+      roundToIntegral $ calculateExtraDistFare 0 extraDistance sortedPerExtraKmRateList
   where
     calculateExtraDistFare summ extraDist (PerExtraKmRate lowerBorder perKmRate :| sndPerExtraKmRate@(PerExtraKmRate upperBorder _) : perExtraKmRateList) = do
       let boundSize = upperBorder - lowerBorder
       let distWithinBounds = min extraDist boundSize
-          fareWithinBounds = distWithinBounds / 1000 * perKmRate
+          fareWithinBounds = fromIntegral distWithinBounds / 1000 * perKmRate
       calculateExtraDistFare (summ + fareWithinBounds) (extraDist - distWithinBounds) (sndPerExtraKmRate :| perExtraKmRateList)
     calculateExtraDistFare summ 0 _ = summ
-    calculateExtraDistFare summ extraDist (PerExtraKmRate _ perKmRate :| []) = summ + (extraDist / 1000 * perKmRate)
+    calculateExtraDistFare summ extraDist (PerExtraKmRate _ perKmRate :| []) = summ + (fromIntegral extraDist / 1000 * perKmRate)
 
 calculateNightShiftRate ::
   OneWayFarePolicy ->
-  TripStartTime ->
-  Amount
+  TripEndTime ->
+  Double
 calculateNightShiftRate farePolicy tripStartTime = do
   let timeOfDay = localTimeOfDay $ utcToLocalTime timeZoneIST tripStartTime
   let nightShiftRate = fromMaybe 1 $ farePolicy.nightShiftRate
   let nightShiftStart = fromMaybe midnight $ farePolicy.nightShiftStart
   let nightShiftEnd = fromMaybe midnight $ farePolicy.nightShiftEnd
-  Amount $
-    if isTimeWithinBounds nightShiftStart nightShiftEnd timeOfDay
-      then nightShiftRate
-      else 1
+  if isTimeWithinBounds nightShiftStart nightShiftEnd timeOfDay
+    then nightShiftRate
+    else 1
 
-calculateDiscount :: OneWayFarePolicy -> TripStartTime -> Maybe Amount
+calculateDiscount :: OneWayFarePolicy -> TripEndTime -> Maybe Money
 calculateDiscount farePolicy tripStartTime = do
   let discount = calculateDiscount' 0 farePolicy.discountList
-  if discount <= 0 then Nothing else Just $ Amount discount
+  if discount <= 0 then Nothing else Just discount
   where
     calculateDiscount' summ (discount : discountList) = do
       if discount.enabled && (discount.fromDate <= tripStartTime && tripStartTime <= discount.toDate)

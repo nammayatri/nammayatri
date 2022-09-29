@@ -9,8 +9,8 @@ import Data.OpenApi hiding (info)
 import Data.Time (UTCTime)
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Organization
+import Domain.Types.Person (Driver)
 import EulerHS.Prelude hiding (id)
-import Types.App (Driver)
 
 data RideRequestType = ALLOCATION | CANCELLATION | DRIVER_RESPONSE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)

@@ -5,6 +5,9 @@ module App.Types
     Flow,
     AppCfg (),
     AppEnv (..),
+    BAPs (..),
+    HasBapInfo,
+    RideConfig (..),
     buildAppEnv,
     releaseAppEnv,
   )
@@ -12,7 +15,6 @@ where
 
 import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
-import Beckn.SesConfig (SesConfig)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis.AppPrefixes (appBackendPrefix)
@@ -22,7 +24,6 @@ import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Credentials (PrivateKey)
 import Beckn.Types.Flow
-import Beckn.Types.Geofencing
 import Beckn.Types.Id (ShortId (..))
 import Beckn.Types.Registry
 import Beckn.Types.SlidingWindowLimiter
@@ -35,7 +36,6 @@ import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import ExternalAPI.Flow
 import Storage.Queries.Organization (findOrgByShortId)
 import Tools.Metrics
 import Tools.Streaming.Kafka
@@ -46,71 +46,56 @@ data AppCfg = AppCfg
     hedisCfg :: HedisCfg,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
-    sesCfg :: SesConfig,
     port :: Int,
     metricsPort :: Int,
-    xProviderUri :: BaseUrl,
     hostName :: Text,
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,
     bapSelfUniqueKeyIds :: BAPs Text,
-    searchConfirmExpiry :: Maybe Seconds,
     searchRequestExpiry :: Maybe Seconds,
-    fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     coreVersion :: Text,
-    domainVersion :: Text,
     loggerConfig :: LoggerConfig,
-    geofencingConfig :: GeofencingConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
-    fcmUrl :: BaseUrl,
-    graphhopperUrl :: BaseUrl,
     metricsSearchDurationTimeout :: Seconds,
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
     registryUrl :: BaseUrl,
-    registrySecrets :: RegistrySecrets,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     disableSignatureAuth :: Bool,
     gatewayUrl :: BaseUrl,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
-    selfUIUrl :: BaseUrl
+    selfUIUrl :: BaseUrl,
+    rideCfg :: RideConfig,
+    dashboardToken :: Text
   }
   deriving (Generic, FromDhall)
 
+-- TODO coreVersion should be hardcoded in spec, because we can't change coreVersion without changing code
 data AppEnv = AppEnv
   { smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
-    sesCfg :: SesConfig,
-    xProviderUri :: BaseUrl,
     hostName :: Text,
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,
-    searchConfirmExpiry :: Maybe Seconds,
     searchRequestExpiry :: Maybe Seconds,
-    fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
-    domainVersion :: Text,
     loggerConfig :: LoggerConfig,
-    geofencingConfig :: GeofencingConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
-    fcmUrl :: BaseUrl,
-    graphhopperUrl :: BaseUrl,
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
     registryUrl :: BaseUrl,
-    registrySecrets :: RegistrySecrets,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     disableSignatureAuth :: Bool,
@@ -124,7 +109,9 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
-    kafkaEnvs :: BAPKafkaEnvs
+    kafkaEnvs :: BAPKafkaEnvs,
+    rideCfg :: RideConfig,
+    dashboardToken :: Text
   }
   deriving (Generic)
 
@@ -155,14 +142,26 @@ type FlowServer api = FlowServerR AppEnv api
 
 type Flow = FlowR AppEnv
 
+data BAPs a = BAPs
+  { metro :: a,
+    cabs :: a
+  }
+  deriving (Generic, FromDhall)
+
+type HasBapInfo r m =
+  ( HasField "bapSelfIds" r (BAPs Text),
+    HasField "bapSelfURIs" r (BAPs BaseUrl),
+    MonadReader r m
+  )
+
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.signingKey)
   getSignatureExpiry = (.signatureExpiry)
 
 instance Registry Flow where
-  registryLookup =
+  registryLookup registryUrl =
     Registry.withSubscriberCache $
-      Registry.whitelisting isWhiteListed <=< Registry.registryLookup
+      Registry.whitelisting isWhiteListed <=< Registry.registryLookup registryUrl
     where
       isWhiteListed subscriberId = findOrgByShortId (ShortId subscriberId) <&> isJust
 
@@ -174,3 +173,9 @@ instance Cache Subscriber Flow where
 
 instance CacheEx Subscriber Flow where
   setKeyEx ttl = Cache.setKeyEx "taxi-bap:registry" ttl . lookupRequestToRedisKey
+
+data RideConfig = RideConfig
+  { driverReachedDistance :: Meters,
+    driverOnTheWayNotifyExpiry :: Seconds
+  }
+  deriving (Generic, FromDhall)

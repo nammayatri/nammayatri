@@ -1,8 +1,8 @@
 module API.UI.GoogleMaps (module Reexport, API, handler) where
 
-import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Action.UI.GoogleMaps as Reexport
   ( GetPlaceNameResp (..),
     PlaceDetailsResp (..),
@@ -10,10 +10,10 @@ import Domain.Action.UI.GoogleMaps as Reexport
   )
 import qualified Domain.Action.UI.GoogleMaps as DGoogleMaps
 import qualified Domain.Types.Person as SP
+import Environment
 import EulerHS.Prelude
 import Servant
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 type API =
   "googleMaps"
@@ -31,6 +31,7 @@ type API =
            :<|> "getPlaceName"
              :> TokenAuth
              :> MandatoryQueryParam "latlng" Text -- Passing it as <latitude>,<longitude>
+             :> QueryParam "language" Text
              :> Get '[JSON] GoogleMaps.GetPlaceNameResp
        )
 
@@ -46,5 +47,5 @@ autoComplete _ input location radius = withFlowHandlerAPI . DGoogleMaps.autoComp
 placeDetails :: Id SP.Person -> Text -> FlowHandler PlaceDetailsResp
 placeDetails _ = withFlowHandlerAPI . DGoogleMaps.placeDetails
 
-getPlaceName :: Id SP.Person -> Text -> FlowHandler GetPlaceNameResp
-getPlaceName _ = withFlowHandlerAPI . DGoogleMaps.getPlaceName
+getPlaceName :: Id SP.Person -> Text -> Maybe Text -> FlowHandler GetPlaceNameResp
+getPlaceName _ latlng lang = withFlowHandlerAPI $ DGoogleMaps.getPlaceName latlng lang

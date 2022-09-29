@@ -5,8 +5,8 @@ module Domain.Types.AllocationEvent where
 import Beckn.Types.Id (Id)
 import Data.Time (UTCTime)
 import qualified Domain.Types.Booking as DRB
+import Domain.Types.Person (Driver)
 import EulerHS.Prelude hiding (id)
-import Types.App (Driver)
 
 data AllocationEvent = AllocationEvent
   { id :: Id AllocationEvent,

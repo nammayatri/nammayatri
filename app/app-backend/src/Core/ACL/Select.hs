@@ -1,5 +1,6 @@
 module Core.ACL.Select (buildSelectReq) where
 
+import App.Types
 import Beckn.Prelude
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Context as Context
@@ -8,12 +9,11 @@ import qualified Beckn.Types.Core.Taxi.Common.ItemCode as Common
 import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types.VehicleVariant
-import ExternalAPI.Flow
 import Utils.Common
 
 buildSelectReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
-  DSelect.DSelectReq ->
+  DSelect.DSelectRes ->
   m (BecknReq Select.SelectMessage)
 buildSelectReq dSelectReq = do
   let messageId = dSelectReq.estimateId.getId
@@ -24,12 +24,12 @@ buildSelectReq dSelectReq = do
   pure $ BecknReq context $ Select.SelectMessage order
 
 castVariant :: VehicleVariant -> Common.VehicleVariant
-castVariant AUTO = Common.AUTO
+castVariant AUTO_RICKSHAW = Common.AUTO_RICKSHAW
 castVariant HATCHBACK = Common.HATCHBACK
 castVariant SEDAN = Common.SEDAN
 castVariant SUV = Common.SUV
 
-mkOrder :: DSelect.DSelectReq -> Select.Order
+mkOrder :: DSelect.DSelectRes -> Select.Order
 mkOrder req = do
   let from = req.searchRequest.fromLocation
       mbTo = req.searchRequest.toLocation

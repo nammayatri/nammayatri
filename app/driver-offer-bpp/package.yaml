@@ -48,6 +48,7 @@ default-extensions:
   - TypeSynonymInstances
   - UndecidableInstances
   - StandaloneDeriving
+  - PackageImports
 
 dependencies:
   - aeson
@@ -59,23 +60,17 @@ dependencies:
   - euler-hs
   - exceptions
   - hspec
-  - http-api-data
   - http-client
-  - http-types
   - lens
-  - mtl
   - servant
   - servant-client
   - servant-client-core
   - servant-server
   - text
   - wai
-  - wai-extra
   - warp
   - time
   - stm
-  - random-strings
-  - postgresql-simple
   - resource-pool
   - uuid
   - prometheus-client
@@ -86,6 +81,9 @@ dependencies:
   - string-conversions
   - either
   - persistent
+  - text-conversions
+  - beckn-services
+  - unordered-containers
 
 ghc-options:
   - -fwrite-ide-info
@@ -103,6 +101,7 @@ library:
   dependencies:
     - beckn-core
     - beckn-spec
+    - location-updates
 
 executables:
   driver-offer-bpp-exe:
@@ -117,3 +116,4 @@ executables:
       - driver-offer-bpp
       - beckn-core
       - beckn-spec
+      - beckn-services

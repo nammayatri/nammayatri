@@ -3,17 +3,17 @@
 module Allocation.Internal where
 
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Data.Map as Map
 import qualified Data.Time as Time
 import Domain.Action.Allocation as Alloc
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.DriverPool
 import Domain.Types.Organization
+import Domain.Types.Person (Driver)
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude hiding (id)
 import Test.Tasty.HUnit
-import Types.App
-import Utils.Common
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 

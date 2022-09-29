@@ -1,8 +1,8 @@
 module Core.Spec.OnSearch.Descriptor where
 
 import Beckn.Prelude
-import Beckn.Types.Core.Migration.Image (Image (..))
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Core.Spec.OnSearch.Image (Image (..))
 import Data.OpenApi hiding (name)
 
 data Descriptor = Descriptor

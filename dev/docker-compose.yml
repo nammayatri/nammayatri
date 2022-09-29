@@ -22,6 +22,10 @@ services:
       - ./sql-seed/scheduler-example-seed.sql:/docker-entrypoint-initdb.d/1-scheduler-example-seed.sql:Z
       - ./sql-seed/driver-offer-bpp-seed.sql:/docker-entrypoint-initdb.d/1-driver-offer-bpp-seed.sql:Z
       - ./local-testing-data/driver-offer-bpp-testing-data.sql:/docker-entrypoint-initdb.d/2-driver-offer-bpp-testing-data.sql:Z
+      - ./sql-seed/bap-dashboard-seed.sql:/docker-entrypoint-initdb.d/1-bap-dashboard-seed.sql:Z
+      - ./local-testing-data/bap-dashboard.sql:/docker-entrypoint-initdb.d/2-bap-dashboard-testing-data.sql:Z
+      - ./sql-seed/bpp-dashboard-seed.sql:/docker-entrypoint-initdb.d/1-bpp-dashboard-seed.sql:Z
+      - ./local-testing-data/bpp-dashboard.sql:/docker-entrypoint-initdb.d/2-bpp-dashboard-testing-data.sql:Z
 
     environment:
       - POSTGRES_DB=atlas_dev

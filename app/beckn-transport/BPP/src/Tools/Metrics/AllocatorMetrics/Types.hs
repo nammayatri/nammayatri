@@ -7,9 +7,9 @@ module Tools.Metrics.AllocatorMetrics.Types
 where
 
 import Beckn.Tools.Metrics.CoreMetrics as CoreMetrics
+import Beckn.Utils.Common
 import EulerHS.Prelude
 import Prometheus as P
-import Utils.Common
 
 type HasAllocatorMetrics m r = (HasFlowEnv m r '["btmMetrics" ::: AllocatorMetricsContainer])
 

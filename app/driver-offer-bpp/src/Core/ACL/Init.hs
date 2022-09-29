@@ -14,7 +14,7 @@ import qualified Domain.Action.Beckn.Init as DInit
 
 buildInitReq ::
   ( MonadThrow m,
-    HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]
+    HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
   Subscriber.Subscriber ->
   Init.InitReq ->

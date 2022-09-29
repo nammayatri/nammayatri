@@ -34,6 +34,18 @@ findByEmailAndPassword email_ password = do
         &&. person ^. PersonPasswordHash ==. val (Just passwordDbHash)
     return person
 
+findByEmail ::
+  (Transactionable m, EncFlow m r) =>
+  Text ->
+  m (Maybe Person)
+findByEmail email_ = do
+  emailDbHash <- getDbHash email_
+  findOne $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonEmailHash ==. val (Just emailDbHash)
+    return person
+
 findByRoleAndMobileNumberAndMerchantId ::
   (Transactionable m, EncFlow m r) =>
   Role ->

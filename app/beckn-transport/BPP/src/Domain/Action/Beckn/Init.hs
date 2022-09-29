@@ -3,14 +3,14 @@ module Domain.Action.Beckn.Init where
 import Beckn.External.GoogleMaps.Types
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch as MapSearch
-import Beckn.Serviceability (rideServiceable)
+import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Tools.Metrics.CoreMetrics
-import Beckn.Types.Amount (Amount)
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Organization as DOrg
@@ -20,8 +20,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Organization as QOrg
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 data InitReq = InitReq
   { vehicleVariant :: Veh.Variant,
@@ -51,6 +50,7 @@ data InitRes = InitRes
 init ::
   ( EsqDBFlow m r,
     HasField "geofencingConfig" r GeofencingConfig,
+    HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m,
     HasGoogleMaps m r
   ) =>
@@ -75,6 +75,7 @@ init transporterId req = do
 initOneWayTrip ::
   ( EsqDBFlow m r,
     HasField "geofencingConfig" r GeofencingConfig,
+    HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m,
     HasGoogleMaps m r
   ) =>
@@ -84,11 +85,14 @@ initOneWayTrip ::
   UTCTime ->
   m DRB.Booking
 initOneWayTrip req oneWayReq transporterId now = do
-  unlessM (rideServiceable QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
+  unlessM (rideServiceableDefault QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
     throwError RideNotServiceable
-  distance <-
-    metersToHighPrecMeters . (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.fromLocation oneWayReq.toLocation
-  fareParams <- calculateFare transporterId req.vehicleVariant distance req.startTime
+  driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
+  distRes <- MapSearch.getDistance (Just MapSearch.CAR) req.fromLocation oneWayReq.toLocation
+  let distance = distRes.distance
+      estimatedRideDuration = distRes.duration_in_traffic
+      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` req.startTime
+  fareParams <- calculateFare transporterId req.vehicleVariant distance estimatedRideFinishTime
   toLoc <- buildRBLoc oneWayReq.toLocation now
   let estimatedFare = fareSum fareParams
       discount = fareParams.discount
@@ -97,7 +101,8 @@ initOneWayTrip req oneWayReq transporterId now = do
         DRB.OneWayDetails $
           DRB.OneWayBookingDetails
             { DRB.toLocation = toLoc,
-              DRB.estimatedDistance = distance
+              DRB.estimatedDistance = distance,
+              DRB.estimatedFinishTime = estimatedRideFinishTime
             }
   fromLoc <- buildRBLoc req.fromLocation now
   booking <- buildBooking req transporterId estimatedFare discount estimatedTotalFare owDetails fromLoc now
@@ -117,7 +122,7 @@ initRentalTrip ::
   UTCTime ->
   m DRB.Booking
 initRentalTrip req rentalReq transporterId now = do
-  unlessM (rideServiceable QGeometry.someGeometriesContain req.fromLocation Nothing) $
+  unlessM (rideServiceableDefault QGeometry.someGeometriesContain req.fromLocation Nothing) $
     throwError RideNotServiceable
   let estimatedFare = 0
       discount = Nothing
@@ -145,7 +150,6 @@ buildRBLoc latLon now = do
         address =
           DLoc.LocationAddress
             { street = Nothing,
-              door = Nothing,
               city = Nothing,
               state = Nothing,
               country = Nothing,
@@ -161,9 +165,9 @@ buildBooking ::
   MonadFlow m =>
   InitReq ->
   Id DOrg.Organization ->
-  Amount ->
-  Maybe Amount ->
-  Amount ->
+  Money ->
+  Maybe Money ->
+  Money ->
   DRB.BookingDetails ->
   DLoc.BookingLocation ->
   UTCTime ->
@@ -186,6 +190,7 @@ buildBooking req orgId estimatedFare discount estimatedTotalFare bookingDetails 
         vehicleVariant = req.vehicleVariant,
         reallocationsCount = 0,
         bookingDetails = bookingDetails,
+        riderName = Nothing,
         createdAt = now,
         updatedAt = now
       }

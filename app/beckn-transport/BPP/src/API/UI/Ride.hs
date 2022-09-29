@@ -5,11 +5,11 @@ module API.UI.Ride
   )
 where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Domain.Action.UI.Ride as Reexport
   ( DriverRideListRes (..),
@@ -27,18 +27,20 @@ import qualified Domain.Action.UI.Ride.StartRide as SHandler
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
-import Product.BecknProvider.BP
+import Environment
+import qualified Lib.LocationUpdates as LocUpd
 import Servant
+import SharedLogic.CallBAP
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
 import qualified SharedLogic.FareCalculator.RentalFareCalculator as RentalFare
-import SharedLogic.LocationUpdates
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as DrLoc
+import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import Tools.Auth
+import Tools.Error (RentalFarePolicyError (NoRentalFarePolicy))
 import Tools.Metrics (putFareAndDistanceDeviations)
-import Utils.Auth
-import Utils.Common
 
 type API =
   "driver" :> "ride"
@@ -74,9 +76,9 @@ handler =
 
 startRide :: Id SP.Person -> Id SRide.Ride -> SHandler.StartRideReq -> FlowHandler APISuccess.APISuccess
 startRide personId rideId req = withFlowHandlerAPI $ do
-  SHandler.startRideHandler handle personId (cast rideId) req
+  SHandler.startRideHandler shandle personId (cast rideId) req
   where
-    handle =
+    shandle =
       SHandler.ServiceHandle
         { findById = QPerson.findById,
           findBookingById = QRB.findById,
@@ -84,16 +86,14 @@ startRide personId rideId req = withFlowHandlerAPI $ do
           startRideAndUpdateLocation = SInternal.startRideTransaction,
           notifyBAPRideStarted = sendRideStartedUpdateToBAP,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
-          addFirstWaypoint = \driverId pt -> do
-            clearPointsList defaultRideInterpolationHandler driverId
-            addPoints defaultRideInterpolationHandler driverId $ pt :| []
+          initializeDistanceCalculation = LocUpd.initializeDistanceCalculation LocUpd.defaultRideInterpolationHandler
         }
 
 endRide :: Id SP.Person -> Id SRide.Ride -> EHandler.EndRideReq -> FlowHandler APISuccess.APISuccess
 endRide personId rideId req = withFlowHandlerAPI $ do
-  EHandler.endRideHandler handle personId rideId req
+  EHandler.endRideHandler shandle personId rideId req
   where
-    handle =
+    shandle =
       EHandler.ServiceHandle
         { findById = QPerson.findById,
           findBookingById = QRB.findById,
@@ -102,21 +102,21 @@ endRide personId rideId req = withFlowHandlerAPI $ do
           endRideTransaction = EInternal.endRideTransaction,
           calculateFare = Fare.calculateFare,
           calculateRentalFare = RentalFare.calculateRentalFare,
+          getRentalFarePolicy = QRentalFP.findById >=> fromMaybeM NoRentalFarePolicy,
           buildRentalFareBreakups = RentalFare.buildRentalFareBreakups,
           buildOneWayFareBreakups = Fare.buildOneWayFareBreakups,
           recalculateFareEnabled = asks (.recalculateFareEnabled),
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
-          addLastWaypointAndRecalcDistanceOnEnd = \driverId pt -> do
-            addPoints defaultRideInterpolationHandler driverId $ pt :| []
-            recalcDistanceBatches defaultRideInterpolationHandler True driverId
+          finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler,
+          isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed LocUpd.defaultRideInterpolationHandler
         }
 
 cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess
 cancelRide personId rideId req = withFlowHandlerAPI $ do
-  CHandler.cancelRideHandler handle personId rideId req
+  CHandler.cancelRideHandler shandle personId rideId req
   where
-    handle =
+    shandle =
       CHandler.ServiceHandle
         { findRideById = QRide.findById,
           findById = QPerson.findById,

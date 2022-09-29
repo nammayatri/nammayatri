@@ -39,7 +39,6 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
             _type = OS.ON_FULFILLMENT,
             time = OS.TimeDuration "P2A" -- FIXME: what is this?
           }
-
   let provider =
         OS.Provider
           { id = transporterInfo.shortId.getShortId,
@@ -63,14 +62,14 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
 mkStartInfo :: DSearch.DSearchRes -> OS.StartInfo
 mkStartInfo dReq =
   OS.StartInfo
-    { location = OS.Location $ OS.Gps {lat = dReq.searchRequest.fromLocation.lat, lon = dReq.searchRequest.fromLocation.lon},
+    { location = OS.Location $ OS.Gps {lat = dReq.fromLocation.lat, lon = dReq.fromLocation.lon},
       time = OS.TimeTimestamp dReq.now
     }
 
 mkStopInfo :: DSearch.DSearchRes -> OS.StopInfo
 mkStopInfo res =
   OS.StopInfo
-    { location = OS.Location $ OS.Gps {lat = res.searchRequest.toLocation.lat, lon = res.searchRequest.toLocation.lon}
+    { location = OS.Location $ OS.Gps {lat = res.toLocation.lat, lon = res.toLocation.lon}
     }
 
 data QuoteEntities = QuoteEntities
@@ -122,4 +121,4 @@ castVariant :: Variant.Variant -> Common.VehicleVariant
 castVariant Variant.SEDAN = Common.SEDAN
 castVariant Variant.HATCHBACK = Common.HATCHBACK
 castVariant Variant.SUV = Common.SUV
-castVariant Variant.AUTO_VARIANT = Common.AUTO
+castVariant Variant.AUTO_RICKSHAW = Common.AUTO_RICKSHAW

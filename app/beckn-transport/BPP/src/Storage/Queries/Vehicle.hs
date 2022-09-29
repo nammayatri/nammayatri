@@ -3,11 +3,11 @@ module Storage.Queries.Vehicle where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Organization
 import Domain.Types.Person
 import Domain.Types.Vehicle
 import Storage.Tabular.Vehicle
-import Utils.Common
 
 create :: Vehicle -> SqlDB ()
 create = Esq.create

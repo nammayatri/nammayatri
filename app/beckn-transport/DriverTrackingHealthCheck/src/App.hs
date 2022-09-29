@@ -7,6 +7,7 @@ import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
 import Beckn.Utils.App
+import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.FlowLogging as L
 import qualified Beckn.Utils.Servant.Server as Server
@@ -18,7 +19,6 @@ import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
 import Servant
 import qualified Service.Runner as Service
-import Utils.Common
 
 runDriverHealthcheck :: (AppCfg -> AppCfg) -> IO ()
 runDriverHealthcheck configModifier = do

@@ -42,12 +42,15 @@ data Booking = Booking
     bapId :: Text,
     bapUri :: BaseUrl,
     startTime :: UTCTime,
+    estimatedFinishTime :: UTCTime,
     riderId :: Maybe (Id DRD.RiderDetails),
     fromLocation :: DLoc.BookingLocation,
     toLocation :: DLoc.BookingLocation,
     vehicleVariant :: DVeh.Variant,
-    estimatedDistance :: HighPrecMeters,
+    estimatedDistance :: Meters,
+    estimatedFare :: Money,
     fareParams :: FareParameters,
+    riderName :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

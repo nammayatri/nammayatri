@@ -18,7 +18,6 @@ in
 , bapURI = main.selfURI
 , gatewayUrl = juspayGatewayUrl
 , httpClientOptions = main.httpClientOptions
-, authServiceUrl = main.authServiceUrl
 , authEntity = main.authEntity
 , kafkaConsumerCfgs = kafkaConsumerCfgs
 }

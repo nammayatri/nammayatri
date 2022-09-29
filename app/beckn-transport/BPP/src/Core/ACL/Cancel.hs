@@ -5,12 +5,12 @@ import Beckn.Types.Common
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import EulerHS.Prelude
-import Utils.Common
 
 buildCancelReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Cancel.CancelReq ->
   m DCancel.CancelReq
 buildCancelReq req = do

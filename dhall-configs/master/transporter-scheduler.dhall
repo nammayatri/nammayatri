@@ -1,27 +1,11 @@
 let common = ../generic/common.dhall
 let sec = ./secrets/beckn-transport.dhall
+let transporter = ./beckn-transport.dhall
 
 let JobType = < AllocateRental | FakeType >
 
-let postgresConfig =
-  { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
-  , connectPort = 5432
-  , connectUser = sec.dbUserId
-  , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_transporter_v2"
-  }
-
-let esqDBCfg =
-  { connectHost = postgresConfig.connectHost
-  , connectPort = postgresConfig.connectPort
-  , connectUser = postgresConfig.connectUser
-  , connectPassword = postgresConfig.connectPassword
-  , connectDatabase = postgresConfig.connectDatabase
-  , connectSchemaName = "atlas_transporter"
-  }
-
 let rcfg =
-  { connectHost = "beckn-redis-001-001.zkt6uh.0001.aps1.cache.amazonaws.com"
+  { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
   , connectPort = 6379
   , connectAuth = None Text
   , connectDatabase = +1
@@ -32,7 +16,7 @@ let rcfg =
 
 in
 { loggerConfig = common.loggerConfig // { logRawSql = False, logFilePath = "/tmp/transporter-scheduler.log" }
-, esqDBCfg = esqDBCfg
+, esqDBCfg = transporter.esqDBCfg
 , metricsPort = +8054
 , hedisCfg = rcfg
 , hedisPrefix = "transporter-scheduler"

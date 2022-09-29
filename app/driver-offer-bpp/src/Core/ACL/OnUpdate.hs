@@ -12,15 +12,15 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent 
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareParams as Fare
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
-import Product.FareCalculator.Calculator (fareSum, mkBreakupList)
-import Types.Error
-import Utils.Common
+import SharedLogic.FareCalculator
+import Tools.Error
 
 data OnUpdateBuildReq
   = RideAssignedBuildReq
@@ -33,6 +33,7 @@ data OnUpdateBuildReq
       }
   | RideCompletedBuildReq
       { ride :: DRide.Ride,
+        finalFare :: Money,
         fareParams :: Fare.FareParameters
       }
   | BookingCancelledBuildReq
@@ -94,16 +95,19 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
             fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId
           }
 buildOnUpdateMessage req@RideCompletedBuildReq {} = do
+  fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
+  chargeableDistance <-
+    realToFrac <$> req.ride.chargeableDistance
+      & fromMaybeM (InternalError "Ride chargeable distance is not present.")
   let currency = "INR"
-      totalFare = amountToDecimalValue $ fareSum req.fareParams
       ride = req.ride
       price =
         RideCompletedOU.QuotePrice
           { currency,
-            value = totalFare,
-            computed_value = totalFare
+            value = fare,
+            computed_value = fare
           }
-      breakup = mkBreakupList (OnUpdate.BreakupPrice currency . amountToDecimalValue) OnUpdate.BreakupItem req.fareParams
+      breakup = mkBreakupList (OnUpdate.BreakupPrice currency . fromIntegral) OnUpdate.BreakupItem req.fareParams
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideCompleted
@@ -118,7 +122,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             fulfillment =
               RideCompletedOU.FulfillmentInfo
                 { id = ride.id.getId,
-                  chargeable_distance = DecimalValue $ toRational ride.traveledDistance.getHighPrecMeters
+                  chargeable_distance = chargeableDistance
                 }
           }
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
@@ -138,3 +142,4 @@ castCancellationSource = \case
   SBCR.ByDriver -> BookingCancelledOU.ByDriver
   SBCR.ByOrganization -> BookingCancelledOU.ByOrganization
   SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
+  SBCR.ByApplication -> BookingCancelledOU.ByApplication

@@ -4,7 +4,6 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList as Kafka
 import Beckn.Streaming.MonadProducer
-import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Quote as DQuote
@@ -26,7 +25,7 @@ data OnSearchQuoteReq = OnSearchQuoteReq
     bppId :: Text,
     bppUrl :: BaseUrl,
     description :: Text,
-    fare :: Amount,
+    fare :: Money,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
     bppDepartureLocId :: Text,

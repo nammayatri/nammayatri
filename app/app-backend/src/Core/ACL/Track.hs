@@ -1,19 +1,31 @@
-module Core.ACL.Track (buildTrackReq) where
+module Core.ACL.Track
+  ( TrackBuildReq (..),
+    buildTrackReq,
+  )
+where
 
+import App.Types
 import Beckn.Prelude
 import Beckn.Storage.Hedis as Redis
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Track as Track
-import qualified Domain.Action.UI.Track as DTrack
-import ExternalAPI.Flow
+import Beckn.Types.Id
+import qualified Domain.Types.Ride as DRide
 import Utils.Common
 
+data TrackBuildReq = TrackBuildReq
+  { bppRideId :: Id DRide.BPPRide,
+    bppId :: Text,
+    bppUrl :: BaseUrl
+  }
+
 buildTrackReq ::
-  ( HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
+  ( MonadFlow m,
+    HasBapInfo r m,
     HedisFlow m r
   ) =>
-  DTrack.DTrackRes ->
+  TrackBuildReq ->
   m (BecknReq Track.TrackMessage)
 buildTrackReq res = do
   bapURIs <- asks (.bapSelfURIs)
@@ -25,5 +37,5 @@ buildTrackReq res = do
   where
     key messageId = "Track:bppRideId:" <> messageId
 
-mkTrackMessage :: DTrack.DTrackRes -> Track.TrackMessage
+mkTrackMessage :: TrackBuildReq -> Track.TrackMessage
 mkTrackMessage res = Track.TrackMessage $ Track.Order res.bppRideId.getId

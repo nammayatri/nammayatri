@@ -2,6 +2,8 @@ module Domain.Action.Allocation where
 
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Utils.Common
+import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.NonEmpty
 import Data.Generics.Labels ()
 import qualified Data.Text as T
@@ -11,10 +13,9 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import Domain.Types.DriverPool
 import Domain.Types.Organization
+import Domain.Types.Person (Driver)
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude
-import Types.App
-import Utils.Common
 
 newtype OrderTime = OrderTime
   { utcTime :: UTCTime
@@ -96,6 +97,11 @@ data AllocatorMetricsHandle m = AllocatorMetricsHandle
     putTaskDuration :: Milliseconds -> m (),
     incrementErrorCounter :: SomeException -> m ()
   }
+
+data SortMode
+  = ETA
+  | IdleTime
+  deriving (Eq, Generic, FromDhall)
 
 data ServiceHandle m = ServiceHandle
   { getDriverSortMode :: m SortMode,

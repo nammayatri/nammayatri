@@ -41,7 +41,6 @@ in
   , signatureExpiry = common.signatureExpiry
   }
 , disableSignatureAuth = False
-, metricsSearchDurationTimeout = +45
 , hostName = "localhost"
 , httpClientOptions = common.httpClientOptions
 , registryUrl = common.registryUrl

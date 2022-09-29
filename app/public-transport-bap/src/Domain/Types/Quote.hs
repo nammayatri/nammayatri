@@ -3,7 +3,7 @@
 module Domain.Types.Quote where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Domain.Types.Search
@@ -15,7 +15,7 @@ data Quote = Quote
     bppId :: Text,
     bppUrl :: BaseUrl,
     description :: Text,
-    fare :: Amount,
+    fare :: Money,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
     departureStationId :: Id TransportStation,
@@ -28,7 +28,7 @@ data Quote = Quote
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
     description :: Text,
-    fare :: Amount,
+    fare :: Money,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
     departureStation :: TransportStationAPIEntity,

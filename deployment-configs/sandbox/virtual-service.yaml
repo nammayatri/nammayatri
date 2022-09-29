@@ -30,32 +30,6 @@ spec:
         port:
           number: 8080
     timeout: 40s
-  - match:
-    - uri:
-        prefix: /map/grphr/
-    rewrite:
-      uri: /
-    route:
-    - destination:
-        host: graphhopper
-        port:
-          number: 8989
-    timeout: 1200s
-  - match:
-    - uri:
-        prefix: /maps/
-    - uri:
-        prefix: /info
-    - uri:
-        prefix: /i18n/
-    - uri:
-        prefix: /route
-    route:
-    - destination:
-        host: graphhopper
-        port:
-          number: 8989
-    timeout: 40s
 
   # - Sandbox version routes
   - match:

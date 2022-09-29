@@ -6,7 +6,6 @@ where
 import App.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -16,9 +15,13 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Merchant as QMerch
+import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.SearchRequest as QSR
 import Types.Error
 import Utils.Common
+import qualified Utils.Notifications as Notify
 
 data DOnSelectReq = DOnSelectReq
   { estimateId :: Id DEstimate.Estimate,
@@ -36,9 +39,9 @@ data ProviderInfo = ProviderInfo
 
 data QuoteInfo = QuoteInfo
   { vehicleVariant :: VehicleVariant,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
     quoteDetails :: DriverOfferQuoteDetails,
     descriptions :: [Text]
   }
@@ -54,16 +57,28 @@ data DriverOfferQuoteDetails = DriverOfferQuoteDetails
   deriving (Generic, Show)
 
 onSelect ::
+  BaseUrl ->
   DOnSelectReq ->
   Flow ()
-onSelect DOnSelectReq {..} = do
+onSelect registryUrl DOnSelectReq {..} = do
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  searchRequest <-
+    QSR.findById estimate.requestId
+      >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
+
+  -- TODO: this supposed to be temporary solution. Check if we still need it
+  merchant <- QMerch.findByRegistryUrl registryUrl
+  unless (elem searchRequest.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
+
+  let personId = searchRequest.riderId
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
   quotes <- traverse (buildSelectedQuote estimate providerInfo now) quotesInfo
   logPretty DEBUG "quotes" quotes
   whenM (duplicateCheckCond (quotesInfo <&> (.quoteDetails.bppDriverQuoteId)) providerInfo.providerId) $
     throwError $ InvalidRequest "Duplicate OnSelect quote"
   DB.runTransaction $ QQuote.createMany quotes
+  Notify.notifyOnDriverOfferIncoming estimateId quotes person
   where
     duplicateCheckCond :: EsqDBFlow m r => [Id DQuote.BPPQuote] -> Text -> m Bool
     duplicateCheckCond [] _ = return False

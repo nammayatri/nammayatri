@@ -7,9 +7,11 @@
 
 module Storage.Tabular.DriverInformation where
 
+import Beckn.External.Encryption (DbHash (..), Encrypted (..), EncryptedHashed (..))
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
+import qualified Data.ByteString as BS
 import qualified Domain.Types.DriverInformation as Domain
 import Domain.Types.Person (Person)
 import Storage.Tabular.Person (PersonTId)
@@ -22,8 +24,10 @@ mkPersist
       active Bool
       onRide Bool
       enabled Bool
+      verified Bool
       createdAt UTCTime
       updatedAt UTCTime
+      referralCode Text Maybe
       Primary driverId
       deriving Generic
     |]
@@ -38,10 +42,12 @@ instance TType DriverInformationT Domain.DriverInformation where
     return $
       Domain.DriverInformation
         { driverId = fromKey driverId,
+          referralCode = EncryptedHashed <$> (Encrypted <$> referralCode) <*> Just (DbHash BS.empty),
           ..
         }
   toTType Domain.DriverInformation {..} =
     DriverInformationT
       { driverId = toKey driverId,
+        referralCode = referralCode <&> unEncrypted . (.encrypted),
         ..
       }

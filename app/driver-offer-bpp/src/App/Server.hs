@@ -1,6 +1,6 @@
 module App.Server where
 
-import App.Routes
+import API
 import Beckn.Tools.Metrics.Init
 import Beckn.Types.Flow
 import Beckn.Utils.App
@@ -9,7 +9,7 @@ import Core.Beckn (logBecknRequest)
 import Environment
 import EulerHS.Prelude
 import Servant
-import Utils.Auth
+import Tools.Auth
 
 run :: Env -> Application
 run = withModifiedEnv $ \modifiedEnv ->
@@ -23,4 +23,5 @@ run = withModifiedEnv $ \modifiedEnv ->
     context =
       verifyTokenAction @(FlowR AppEnv)
         :. validateAdminAction @(FlowR AppEnv)
+        :. verifyDashboardAction @(FlowR AppEnv)
         :. EmptyContext

@@ -5,6 +5,7 @@ module Domain.Types.Person where
 
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.Id
 import Beckn.Utils.Common (EsqDBFlow, maskText)
 import Data.Aeson
@@ -16,6 +17,8 @@ import Data.Time
 import qualified Domain.Types.Organization as DOrg
 import EulerHS.Prelude hiding (id)
 import Servant.API
+
+data Driver -- = Person
 
 data Role
   = DRIVER
@@ -70,9 +73,9 @@ data PersonE e = Person
     identifier :: Maybe Text,
     rating :: Maybe Double,
     isNew :: Bool,
-    registered :: Bool,
     organizationId :: Maybe (Id DOrg.Organization),
     deviceToken :: Maybe FCM.FCMRecipientToken,
+    language :: Maybe GoogleMaps.Language,
     description :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

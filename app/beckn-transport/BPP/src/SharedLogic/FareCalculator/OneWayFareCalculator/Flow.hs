@@ -1,5 +1,5 @@
 module SharedLogic.FareCalculator.OneWayFareCalculator.Flow
-  ( OneWayFareParameters (..),
+  ( OneWayFareParameters,
     ServiceHandle (..),
     calculateFare,
     doCalculateFare,
@@ -9,9 +9,10 @@ module SharedLogic.FareCalculator.OneWayFareCalculator.Flow
   )
 where
 
-import Beckn.Types.Amount
+import Beckn.Prelude
 import Beckn.Types.Id
-import Domain.Types.Booking.Type
+import Beckn.Utils.Common
+import Domain.Types.Booking
 import Domain.Types.FarePolicy.FareBreakup
 import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
 import Domain.Types.Organization (Organization)
@@ -19,14 +20,13 @@ import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
   ( OneWayFareParameters (..),
-    TripStartTime,
+    TripEndTime,
     calculateFareParameters,
     fareSum,
     fareSumWithDiscount,
   )
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy as FarePolicyS
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 type MonadHandler m = (MonadThrow m, Log m)
 
@@ -45,7 +45,7 @@ calculateFare ::
   EsqDBFlow m r =>
   Id Organization ->
   Vehicle.Variant ->
-  HighPrecMeters ->
+  Meters ->
   UTCTime ->
   m OneWayFareParameters
 calculateFare = doCalculateFare serviceHandle
@@ -55,13 +55,13 @@ doCalculateFare ::
   ServiceHandle m ->
   Id Organization ->
   Vehicle.Variant ->
-  HighPrecMeters ->
-  TripStartTime ->
+  Meters ->
+  TripEndTime ->
   m OneWayFareParameters
-doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
+doCalculateFare ServiceHandle {..} orgId vehicleVariant distance endTime = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   farePolicy <- getFarePolicy orgId vehicleVariant >>= fromMaybeM NoFarePolicy
-  let fareParams = calculateFareParameters farePolicy distance startTime
+  let fareParams = calculateFareParameters farePolicy distance endTime
   logTagInfo
     "FareCalculator"
     $ "Fare parameters calculated: " +|| fareParams ||+ ""
@@ -77,21 +77,21 @@ buildOneWayFareBreakups fareParams bookingId = do
 buildBaseFareBreakup :: MonadGuid m => OneWayFareParameters -> Id Booking -> m FareBreakup
 buildBaseFareBreakup OneWayFareParameters {..} bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = nightShiftRate * baseFare
-      description = "Base fare is " <> amountToString amount <> " rupees"
+  let amount = nightShiftRate * fromIntegral baseFare
+      description = "Base fare is " <> show amount <> " rupees"
   pure FareBreakup {..}
 
 buildDistanceFareBreakup :: MonadGuid m => OneWayFareParameters -> Id Booking -> m FareBreakup
 buildDistanceFareBreakup OneWayFareParameters {..} bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = nightShiftRate * distanceFare
-      description = "Distance fare is " <> amountToString amount <> " rupees"
+  let amount = nightShiftRate * fromIntegral distanceFare
+      description = "Distance fare is " <> show amount <> " rupees"
   pure FareBreakup {..}
 
-buildDiscountFareBreakup :: MonadGuid m => Maybe Amount -> Id Booking -> m (Maybe FareBreakup)
+buildDiscountFareBreakup :: MonadGuid m => Maybe Money -> Id Booking -> m (Maybe FareBreakup)
 buildDiscountFareBreakup mbDiscount bookingId = do
   forM mbDiscount $ \discount -> do
     id <- Id <$> generateGUIDText
-    let amount = negate discount -- this amount should be always below zero
-        description = "Discount is " <> amountToString discount <> " rupees"
+    let amount = fromIntegral $ negate discount -- this amount should be always below zero
+        description = "Discount is " <> show discount <> " rupees"
     pure FareBreakup {..}

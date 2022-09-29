@@ -1,5 +1,5 @@
 module SharedLogic.FareCalculator.RentalFareCalculator.Flow
-  ( RentalFareParameters (..),
+  ( RentalFareParameters,
     ServiceHandle (..),
     calculateRentalFare,
     doCalculateRentalFare,
@@ -9,21 +9,21 @@ module SharedLogic.FareCalculator.RentalFareCalculator.Flow
   )
 where
 
-import Beckn.Types.Amount
+import Beckn.Prelude
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Booking (Booking)
 import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import EulerHS.Prelude hiding (id)
 import SharedLogic.FareCalculator.RentalFareCalculator.Calculator
-  ( RentalFareParameters (..),
+  ( RentalFareParameters,
     calculateRentalFareParameters,
     rentalFareSum,
     rentalFareSumWithDiscount,
   )
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
 
@@ -41,7 +41,7 @@ serviceHandle =
 calculateRentalFare ::
   EsqDBFlow m r =>
   Id DRentalFP.RentalFarePolicy ->
-  HighPrecMeters ->
+  Meters ->
   UTCTime ->
   UTCTime ->
   m RentalFareParameters
@@ -51,7 +51,7 @@ doCalculateRentalFare ::
   MonadHandler m =>
   ServiceHandle m ->
   Id DRentalFP.RentalFarePolicy ->
-  HighPrecMeters ->
+  Meters ->
   UTCTime ->
   UTCTime ->
   m RentalFareParameters
@@ -81,7 +81,7 @@ buildRentalFareBreakups fareParams bookingId = do
 buildBaseFareBreakup :: MonadGuid m => RentalFareParameters -> Id Booking -> m FareBreakup
 buildBaseFareBreakup fareParams bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = fareParams.baseFare
+  let amount = fromIntegral fareParams.baseFare
       description =
         "Base fare for "
           <> show fareParams.farePolicy.baseDistance
@@ -95,10 +95,10 @@ buildBaseFareBreakup fareParams bookingId = do
 buildExtraDistanceFareBreakup :: MonadGuid m => RentalFareParameters -> Id Booking -> m FareBreakup
 buildExtraDistanceFareBreakup fareParams bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = fareParams.extraDistanceFare
+  let amount = fromIntegral fareParams.extraDistanceFare
       description =
         "Extra distance fare with fare policy "
-          <> show fareParams.farePolicy.extraKmFare
+          <> showRounded fareParams.farePolicy.extraKmFare
           <> " rupees per km is "
           <> show amount
           <> " rupees"
@@ -107,10 +107,10 @@ buildExtraDistanceFareBreakup fareParams bookingId = do
 buildExtraTimeFareBreakup :: MonadGuid m => RentalFareParameters -> Id Booking -> m FareBreakup
 buildExtraTimeFareBreakup fareParams bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = fareParams.extraTimeFare
+  let amount = fromIntegral fareParams.extraTimeFare
       description =
         "Extra time fare with fare policy "
-          <> show fareParams.farePolicy.extraMinuteFare
+          <> showRounded fareParams.farePolicy.extraMinuteFare
           <> " rupees per minute is "
           <> show amount
           <> " rupees"
@@ -118,21 +118,21 @@ buildExtraTimeFareBreakup fareParams bookingId = do
 
 buildNextDaysFareBreakup :: MonadGuid m => RentalFareParameters -> Id Booking -> m (Maybe FareBreakup)
 buildNextDaysFareBreakup fareParams bookingId = do
-  let mbAmount = fareParams.nextDaysFare
+  let mbAmount = fromIntegral <$> fareParams.nextDaysFare
   forM mbAmount $ \amount -> do
     id <- Id <$> generateGUIDText
     let description =
           "Next days fare with fare policy "
-            <> show fareParams.farePolicy.driverAllowanceForDay
+            <> show (fromMaybe 0 fareParams.farePolicy.driverAllowanceForDay)
             <> " rupees per next day is "
             <> show amount
             <> " rupees"
     pure FareBreakup {..}
 
-buildDiscountFareBreakup :: MonadGuid m => Maybe Amount -> Id Booking -> m (Maybe FareBreakup)
+buildDiscountFareBreakup :: MonadGuid m => Maybe Money -> Id Booking -> m (Maybe FareBreakup)
 buildDiscountFareBreakup mbDiscount bookingId = do
   forM mbDiscount $ \discount -> do
     id <- Id <$> generateGUIDText
-    let amount = negate discount -- this amount should be always below zero
+    let amount = fromIntegral $ negate discount -- this amount should be always below zero
         description = "Discount is " <> show discount <> " rupees"
     pure FareBreakup {..}
