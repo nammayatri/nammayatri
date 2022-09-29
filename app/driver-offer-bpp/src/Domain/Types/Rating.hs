@@ -1,5 +1,3 @@
-{-# LANGUAGE UndecidableInstances #-}
-
 module Domain.Types.Rating where
 
 import Beckn.Types.Id

@@ -33,6 +33,10 @@ mkPersist
       chargeableDistance Meters Maybe
       tripStartTime UTCTime Maybe
       tripEndTime UTCTime Maybe
+      tripStartLat Double Maybe
+      tripStartLon Double Maybe
+      tripEndLat Double Maybe
+      tripEndLon Double Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
