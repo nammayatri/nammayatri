@@ -10,6 +10,7 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Utils.CalculateDistance (distanceBetweenInMeters)
 import Beckn.Utils.Common
 import Data.OpenApi
 import qualified Domain.Types.Booking as SRB
@@ -18,6 +19,7 @@ import Domain.Types.FareParams as Fare
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (pi)
 import qualified SharedLogic.FareCalculator as Fare
@@ -44,7 +46,10 @@ data ServiceHandle m = ServiceHandle
     putDiffMetric :: Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     isDistanceCalculationFailed :: Id Person.Person -> m Bool,
-    finalDistanceCalculation :: Id Person.Person -> LatLong -> m ()
+    finalDistanceCalculation :: Id Person.Person -> LatLong -> m (),
+    getDefaultPickupLocThreshold :: m Meters,
+    getDefaultDropLocThreshold :: m Meters,
+    findConfigByOrgId :: Id Organization -> m (Maybe DTConf.TransporterConfig)
   }
 
 endRideHandler ::
@@ -74,15 +79,40 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
 
   distanceCalculationFailed <- isDistanceCalculationFailed requestorId
   when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
+
+  let mbTripStartLoc = LatLong <$> ride.tripStartLat <*> ride.tripStartLon
+  -- for old trips with mbTripStartLoc = Nothing we always recalculate fare
+  pickupDropOutsideOfThreshold <- case mbTripStartLoc of
+    Nothing -> pure True
+    Just tripStartLoc -> do
+      mbThresholdConfig <- findConfigByOrgId booking.providerId
+      defaultPickupLocThreshold <- getDefaultPickupLocThreshold
+      defaultDropLocThreshold <- getDefaultDropLocThreshold
+      let pickupLocThreshold = metersToHighPrecMeters . fromMaybe defaultPickupLocThreshold . join $ mbThresholdConfig <&> (.pickupLocThreshold)
+      let dropLocThreshold = metersToHighPrecMeters . fromMaybe defaultDropLocThreshold . join $ mbThresholdConfig <&> (.dropLocThreshold)
+      let pickupDifference = distanceBetweenInMeters (mkLatLong booking.fromLocation) tripStartLoc
+      let dropDifference = distanceBetweenInMeters (mkLatLong booking.toLocation) req.point
+      let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
+      logTagInfo "Locations differences" $
+        "Pickup difference: "
+          <> show pickupDifference
+          <> ", Drop difference: "
+          <> show dropDifference
+          <> ", Locations outside of thresholds: "
+          <> show pickupDropOutsideOfThreshold
+      pure pickupDropOutsideOfThreshold
+
   (chargeableDistance, finalFare) <-
-    if not distanceCalculationFailed
+    if not distanceCalculationFailed && pickupDropOutsideOfThreshold
       then recalculateFare booking ride
       else pure (booking.estimatedDistance, booking.estimatedFare)
 
   let updRide =
         ride{tripEndTime = Just now,
              chargeableDistance = Just chargeableDistance,
-             fare = Just finalFare
+             fare = Just finalFare,
+             tripEndLat = Just req.point.lat,
+             tripEndLon = Just req.point.lon
             }
 
   endRide booking.id updRide (cast driverId)
@@ -112,3 +142,16 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
         if actualDistance > oldDistance
           then (actualDistance, updatedFare)
           else (oldDistance, estimatedFare)
+
+-- TODO move to lib
+mkLatLong ::
+  ( HasField "lat" r Double,
+    HasField "lon" r Double
+  ) =>
+  r ->
+  LatLong
+mkLatLong r =
+  LatLong
+    { lat = r.lat,
+      lon = r.lon
+    }

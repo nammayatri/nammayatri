@@ -272,6 +272,11 @@ content-type: application/json
 
 ###
 
+# for testing thresholds specific for bpp, run
+# INSERT INTO atlas_driver_offer_bpp.transporter_config (organization_id, pickup_loc_threshold, drop_loc_threshold, created_at, updated_at) VALUES
+# 	('favorit0-0000-0000-0000-00000favorit', 500, 500, '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00'),
+# 	('nearest-drivers-testing-organization', 500, 500, '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00');
+
 # @name rideEnd
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
 token: {{token1}}
@@ -279,8 +284,8 @@ content-type: application/json
 
 {
   "point": {
-    "lat": 15.080241882783683,
-    "lon": 76.33893232031218
+    "lat": 10.0812806,
+    "lon": 76.3388894
   }
 }
 

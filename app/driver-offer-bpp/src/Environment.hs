@@ -73,7 +73,9 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     driverUnlockDelay :: Seconds,
     idfyCfg :: Idfy.IdfyConfig,
-    dashboardToken :: Text
+    dashboardToken :: Text,
+    defaultPickupLocThreshold :: Meters,
+    defaultDropLocThreshold :: Meters
   }
   deriving (Generic, FromDhall)
 
@@ -120,7 +122,9 @@ data AppEnv = AppEnv
     driverQuoteExpirationSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
     idfyCfg :: Idfy.IdfyConfig,
-    dashboardToken :: Text
+    dashboardToken :: Text,
+    defaultPickupLocThreshold :: Meters,
+    defaultDropLocThreshold :: Meters
   }
   deriving (Generic)
 

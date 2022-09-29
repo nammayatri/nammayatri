@@ -33,6 +33,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.TransporterConfig as QTConf
 import Tools.Auth
 import Tools.Metrics
 
@@ -100,7 +101,10 @@ endRide personId rideId req =
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
           isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed LocUpd.defaultRideInterpolationHandler,
-          finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId
+          finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId,
+          getDefaultPickupLocThreshold = asks (.defaultPickupLocThreshold),
+          getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
+          findConfigByOrgId = QTConf.findValueByOrgId
         }
 
 cancelRide :: Id SP.Person -> Id Ride.Ride -> RideCancel.CancelRideReq -> FlowHandler APISuccess

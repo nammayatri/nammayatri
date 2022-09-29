@@ -112,4 +112,6 @@ in
 , defaultRadiusOfSearch = +5000 -- meters
 , driverUnlockDelay = +2 -- seconds
 , idfyCfg = common.idfyCfg
+, defaultPickupLocThreshold = +500
+, defaultDropLocThreshold = +500
 }

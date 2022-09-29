@@ -6,6 +6,7 @@ import Data.Time (UTCTime)
 import Domain.Types.Organization (Organization)
 import EulerHS.Prelude hiding (id)
 
+-- ProviderConfig?
 data TransporterConfig = TransporterConfig
   { organizationId :: Id Organization,
     pickupLocThreshold :: Maybe Meters,

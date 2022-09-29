@@ -112,4 +112,6 @@ in
 , driverUnlockDelay = +2 -- seconds
 , idfyCfg = common.idfyCfg
 , dashboardToken = sec.dashboardToken
+, defaultPickupLocThreshold = +500
+, defaultDropLocThreshold = +500
 }
