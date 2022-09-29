@@ -47,7 +47,8 @@ RUN apt-get update && apt-get install -y \
   libpq-dev \
   binutils \
   libmysqlclient-dev \
-  librdkafka-dev
+  librdkafka-dev \
+  awscli
 
 COPY --from=build /opt/build/bin .
 CMD ["/opt/app/app-backend-exe"]
