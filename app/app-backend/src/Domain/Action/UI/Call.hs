@@ -117,7 +117,7 @@ getDriverMobileNumber callSid callFrom_ callTo_ callStatus_ = do
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId USER "+91" callFrom merchant.id
       >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
-  bookings <- QRB.findByRiderIdAndStatus person.id DRB.TRIP_ASSIGNED
+  bookings <- QRB.findByRiderIdAndStatus person.id [DRB.TRIP_ASSIGNED]
   booking <- fromMaybeM (BookingForRiderNotFound $ getId person.id) (listToMaybe bookings)
   ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
   callId <- generateGUID

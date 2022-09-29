@@ -15,6 +15,9 @@ import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Servant.API
 
+activeBookingStatus :: [BookingStatus]
+activeBookingStatus = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
+
 data BookingStatus
   = NEW
   | CONFIRMED

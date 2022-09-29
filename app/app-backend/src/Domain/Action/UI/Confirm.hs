@@ -54,6 +54,8 @@ confirm personId quoteId = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
+  activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus
+  unless (null activeBooking) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   case quote.quoteDetails of
     DQuote.OneWayDetails _ -> pure ()
     DQuote.RentalDetails _ -> pure ()

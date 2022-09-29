@@ -117,13 +117,13 @@ findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   catMaybes <$> mapM buildFullBooking fullBookingsT
 
-findByRiderIdAndStatus :: Transactionable m => Id Person -> BookingStatus -> m [Booking]
-findByRiderIdAndStatus personId status = Esq.buildDType $ do
+findByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m [Booking]
+findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
   fullBookingsT <- Esq.findAll' $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
-        &&. booking ^. RB.BookingStatus ==. val status
+        &&. booking ^. RB.BookingStatus `in_` valList statusList
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   catMaybes <$> mapM buildFullBooking fullBookingsT
 
