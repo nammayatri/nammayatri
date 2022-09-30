@@ -113,7 +113,6 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
           oldDistance = oneWayDetails.estimatedDistance
 
           estimatedFare = booking.estimatedFare
-          estimatedTotalFare = booking.estimatedTotalFare
       shouldRecalculateFare <- recalculateFareEnabled
       distanceCalculationFailed <- isDistanceCalculationFailed requestorId
 
@@ -150,10 +149,7 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
               <> show distanceDiff
           putDiffMetric fareDiff distanceDiff
           fareBreakups <- buildOneWayFareBreakups fareParams booking.id
-          return $
-            if actualDistance > oldDistance
-              then (actualDistance, updatedFare, totalFare, fareBreakups)
-              else (oldDistance, estimatedFare, estimatedTotalFare, fareBreakups)
+          return (actualDistance, updatedFare, totalFare, fareBreakups)
         else do
           when distanceCalculationFailed $
             logWarning "Failed to calculate actual distance for this ride, using estimated distance"

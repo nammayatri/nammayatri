@@ -138,10 +138,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric fareDiff distanceDiff
-      return $
-        if actualDistance > oldDistance
-          then (actualDistance, updatedFare)
-          else (oldDistance, estimatedFare)
+      return (actualDistance, updatedFare)
 
 -- TODO move to lib
 mkLatLong ::
