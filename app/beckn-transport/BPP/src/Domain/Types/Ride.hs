@@ -77,7 +77,7 @@ data RideAPIEntity = RideAPIEntity
     actualRideDistance :: Meters,
     rideRating :: Maybe Int,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime, 
+    updatedAt :: UTCTime,
     chargeableDistance :: Maybe Meters
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
@@ -99,6 +99,6 @@ makeRideAPIEntity ride driver vehicle =
       actualRideDistance = roundToIntegral ride.traveledDistance,
       rideRating = ride.rideRating <&> (.ratingValue),
       createdAt = ride.createdAt,
-      updatedAt = ride.updatedAt, 
+      updatedAt = ride.updatedAt,
       chargeableDistance = ride.chargeableDistance
     }
