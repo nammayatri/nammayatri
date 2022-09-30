@@ -57,10 +57,10 @@ constructorForCOVToJson :: Options
 constructorForCOVToJson =
   defaultOptions
     { constructorTagModifier = \case
-        "W_NT" -> "3W_NT"
-        "W_T" -> "3W_T"
-        "W_CAB" -> "3W_CAB"
-        val -> val
+        "W_NT" -> "3W-NT"
+        "W_T" -> "3W-T"
+        "W_CAB" -> "3W-CAB"
+        val -> replaceUnderscoresString val
     }
 
 -- RC Result
