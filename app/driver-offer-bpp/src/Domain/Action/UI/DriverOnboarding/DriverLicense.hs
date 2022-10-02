@@ -25,17 +25,18 @@ import qualified Data.Text as T
 import Data.Time (nominalDay)
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverOnboarding.DriverLicense as Domain
+import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.Person as Person
 import Environment
 import qualified Idfy.Flow as Idfy
 import qualified Idfy.Types as Idfy
+import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
-import Tools.Error
 
 data DriverDLReq = DriverDLReq
   { driverLicenseNumber :: Text,
@@ -76,20 +77,20 @@ verifyDL personId req@DriverDLReq {..} = do
   case resp.result of
     Just result -> do
       unless ((removeSpaceAndDash <$> result.extraction_output.id_number) == (removeSpaceAndDash <$> Just driverLicenseNumber)) $
-        throwError (InvalidRequest "Id number not matching")
-    Nothing -> throwError (InvalidRequest "Image extraction failed")
+        throwImageError imageId1 ImageDocumentNumberMismatch
+    Nothing -> throwImageError imageId1 ImageExtractionFailed
 
   eDl <- encrypt driverLicenseNumber
   mdriverLicense <- Query.findByDLNumber eDl
 
   case mdriverLicense of
     Just driverLicense -> do
-      unless (driverLicense.driverId == personId) $ throwError DLAlreadyLinked
-      unless (driverLicense.licenseExpiry > now) $ throwError DLAlreadyUpdated
+      unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
+      unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
       verifyDLFlow personId driverLicenseNumber driverDateOfBirth
     Nothing -> do
       mDriverDL <- Query.findByDriverId personId
-      when (isJust mDriverDL) $ throwError DriverAlreadyLinked
+      when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
       verifyDLFlow personId driverLicenseNumber driverDateOfBirth
   return Success
   where
@@ -97,7 +98,7 @@ verifyDL personId req@DriverDLReq {..} = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
       unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == Image.DriverLicense) $
-        throwError (InvalidImageType (show Image.DriverLicense) (show imageMetadata.imageType))
+        throwError (ImageInvalidType (show Image.DriverLicense) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
 verifyDLFlow :: Id Person.Person -> Text -> UTCTime -> Flow ()

@@ -13,6 +13,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
+import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Person as Person
 import Environment
@@ -21,7 +22,6 @@ import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.Image as Query
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as Person
-import Tools.Error
 
 data ImageValidateRequest = ImageValidateRequest
   { image :: Text,
@@ -75,7 +75,7 @@ validateImage personId ImageValidateRequest {..} = do
   onboardingTryLimit <- asks (.onboardingTryLimit)
   when (length images > onboardingTryLimit) $ do
     driverPhone <- mapM decrypt person.mobileNumber
-    notifyErrorToSupport driverPhone org.name
+    notifyErrorToSupport driverPhone org.name ((.failureReason) <$> images)
     throwError (ImageValidationExceedLimit personId.getId)
 
   imagePath <- createPath personId.getId orgId.getId imageType
@@ -86,7 +86,7 @@ validateImage personId ImageValidateRequest {..} = do
   -- skipping validation for rc as validation not available in idfy
   unless (imageType == Domain.VehicleRegistrationCertificate) $ do
     validationOutput <- Idfy.validateImage image (getDocType imageType)
-    checkErrors imageType validationOutput.result
+    checkErrors imageEntity.id imageType validationOutput.result
   runTransaction $ Query.updateToValid imageEntity.id
 
   return $ ImageValidateResponse {imageId = imageEntity.id}
@@ -102,15 +102,16 @@ validateImage personId ImageValidateRequest {..} = do
             s3Path,
             imageType = imageType_,
             isValid,
+            failureReason = Nothing,
             createdAt = now
           }
 
-    checkErrors _ Nothing = throwError InvalidImage
-    checkErrors imgType (Just result) = do
+    checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed
+    checkErrors id_ imgType (Just result) = do
       let outputImageType = getImageType result.detected_doc_type
-      unless (outputImageType == imgType) $ throwError (InvalidImageType (show imgType) (show outputImageType))
+      unless (outputImageType == imgType) $ throwImageError id_ (ImageInvalidType (show imgType) (show outputImageType))
 
-      unless (fromMaybe False result.is_readable) $ throwError $ InvalidRequest "Image is not readable"
+      unless (fromMaybe False result.is_readable) $ throwImageError id_ ImageNotReadable
 
       unless (maybe False (60 <) result.readability.confidence) $
-        throwError $ InvalidRequest "Image quality is not good"
+        throwImageError id_ ImageLowQuality

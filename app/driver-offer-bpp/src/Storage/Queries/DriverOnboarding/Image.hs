@@ -7,6 +7,7 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Data.Time as DT
+import Domain.Types.DriverOnboarding.Error
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Organization
 import Domain.Types.Person (Person)
@@ -55,3 +56,11 @@ findByorgId orgId = do
     images <- from $ table @ImageT
     where_ $ images ^. ImageOrganizationId ==. val (toKey orgId)
     return images
+
+addFailureReason :: Id Image -> DriverOnboardingError -> SqlDB ()
+addFailureReason id reason = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ImageFailureReason =. val (Just reason)]
+    where_ $ tbl ^. ImageTId ==. val (toKey id)

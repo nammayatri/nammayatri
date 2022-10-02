@@ -23,6 +23,7 @@ import Beckn.Utils.Validation
 import Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverOnboarding.DriverRCAssociation as Domain
+import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
@@ -30,12 +31,12 @@ import qualified Domain.Types.Person as Person
 import Environment
 import qualified Idfy.Flow as Idfy
 import qualified Idfy.Types as Idfy
+import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.Person as Person
-import Tools.Error
 
 data DriverRCReq = DriverRCReq
   { vehicleRegistrationCertNumber :: Text,
@@ -64,15 +65,15 @@ verifyRC personId req@DriverRCReq {..} = do
   imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
   unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
   unless (imageMetadata.imageType == Image.VehicleRegistrationCertificate) $
-    throwError (InvalidImageType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
+    throwError (ImageInvalidType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
 
   image <- S3.get (T.unpack imageMetadata.s3Path)
   resp <- Idfy.extractRCImage image Nothing
   case resp.result of
     Just result -> do
       unless ((removeSpaceAndDash <$> result.extraction_output.registration_number) == (removeSpaceAndDash <$> Just vehicleRegistrationCertNumber)) $
-        throwError (InvalidRequest "Id number not matching")
-    Nothing -> throwError (InvalidRequest "Image extraction failed")
+        throwImageError imageId ImageDocumentNumberMismatch
+    Nothing -> throwImageError imageId ImageExtractionFailed
 
   now <- getCurrentTime
   mDriverAssociation <- DAQuery.getActiveAssociationByDriver personId
@@ -81,8 +82,8 @@ verifyRC personId req@DriverRCReq {..} = do
     Just driverAssociaion -> do
       driverRC <- RCQuery.findById driverAssociaion.rcId >>= fromMaybeM (InvalidRequest "Missing RC entry")
       rcNumber <- decrypt driverRC.certificateNumber
-      unless (rcNumber == vehicleRegistrationCertNumber) $ throwError DriverAlreadyLinked
-      unless (driverRC.fitnessExpiry < now) $ throwError RCAlreadyUpdated -- RC not expired
+      unless (rcNumber == vehicleRegistrationCertNumber) $ throwImageError imageId DriverAlreadyLinked
+      unless (driverRC.fitnessExpiry < now) $ throwImageError imageId RCAlreadyUpdated -- RC not expired
       verifyRCFlow personId vehicleRegistrationCertNumber
     Nothing -> do
       eRC <- encrypt vehicleRegistrationCertNumber
@@ -90,7 +91,7 @@ verifyRC personId req@DriverRCReq {..} = do
       case mVehicleRC of
         Just vehicleRC -> do
           mRCAssociation <- DAQuery.getActiveAssociationByRC vehicleRC.id
-          when (isJust mRCAssociation) $ throwError RCAlreadyLinked
+          when (isJust mRCAssociation) $ throwImageError imageId RCAlreadyLinked
           verifyRCFlow personId vehicleRegistrationCertNumber
         Nothing -> do
           verifyRCFlow personId vehicleRegistrationCertNumber

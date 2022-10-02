@@ -10,11 +10,13 @@ module Storage.Tabular.DriverOnboarding.Image where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
+import qualified Domain.Types.DriverOnboarding.Error as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.ImageType"
+derivePersistField "Domain.DriverOnboardingError"
 
 mkPersist
   defaultSqlSettings
@@ -26,6 +28,7 @@ mkPersist
       s3Path Text
       imageType Domain.ImageType
       isValid Bool
+      failureReason Domain.DriverOnboardingError Maybe
       createdAt UTCTime
       Primary id
       deriving Generic

@@ -12,8 +12,9 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id (Id)
 import Beckn.Utils.Error
+import Data.Text as T
 import qualified Domain.Types.DriverOnboarding.DriverLicense as DL
-import Domain.Types.DriverOnboarding.IdfyVerification
+import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.Organization as Org
@@ -30,7 +31,7 @@ import Storage.Queries.Person as Person
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as VQuery
 
-data ResponseStatus = VERIFICATION_PENDING | VERIFIED | VERIFICATION_FAILED | NO_DOC_AVAILABLE
+data ResponseStatus = PENDING | VALID | FAILED | INVALID | NO_DOC_AVAILABLE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes = StatusRes
@@ -47,7 +48,7 @@ statusHandler personId = do
   (dlStatus, mDL) <- getDLAndStatus personId
   (rcStatus, mRC) <- getRCAndStatus personId
 
-  when (dlStatus == VERIFIED && rcStatus == VERIFIED) $
+  when (dlStatus == VALID && rcStatus == VALID) $
     enableDriver personId orgId mRC mDL
   return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus}
 
@@ -72,16 +73,21 @@ getRCAndStatus driverId = do
       status <- checkIfInVerification driverId Image.VehicleRegistrationCertificate
       return (status, Nothing)
 
-mapStatus :: VerificationStatus -> ResponseStatus
+mapStatus :: IV.VerificationStatus -> ResponseStatus
 mapStatus = \case
-  PENDING -> VERIFICATION_PENDING
-  VALID -> VERIFIED
-  INVALID -> VERIFICATION_FAILED
+  IV.PENDING -> PENDING
+  IV.VALID -> VALID
+  IV.INVALID -> INVALID
 
 checkIfInVerification :: Id SP.Person -> Image.ImageType -> Flow ResponseStatus
 checkIfInVerification driverId docType = do
   verificationReq <- IVQuery.findLatestByDriverIdAndDocType driverId docType
-  return $ maybe NO_DOC_AVAILABLE (const VERIFICATION_PENDING) verificationReq
+  case verificationReq of
+    Just req -> do
+      if req.status == T.pack "failed"
+        then return FAILED
+        else return PENDING
+    Nothing -> return NO_DOC_AVAILABLE
 
 enableDriver :: Id SP.Person -> Id Org.Organization -> Maybe RC.VehicleRegistrationCertificate -> Maybe DL.DriverLicense -> Flow ()
 enableDriver _ _ Nothing Nothing = return ()
