@@ -9,7 +9,7 @@ module SharedLogic.MetroOffer
 where
 
 import Beckn.Prelude
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
@@ -45,22 +45,22 @@ data MetroStation = MetroStation
   deriving (Show, Generic, ToSchema, FromJSON, ToJSON)
 
 cacheMetroOffers ::
-  (MonadThrow m, Log m, MonadTime m) =>
+  (Redis.HedisFlow m r, MonadTime m) =>
   MonadFlow m =>
   Id SearchRequest ->
   [MetroOffer] ->
   m ()
 cacheMetroOffers searchReqId offers =
-  Redis.setExRedis (metroOfferKey searchReqId) offers (60 * 60 * 24)
+  Redis.setExp (metroOfferKey searchReqId) offers (60 * 60 * 24)
 
 getMetroOffers ::
-  ( MonadFlow m,
+  ( Redis.HedisFlow m r,
     FromJSON a
   ) =>
   Id SearchRequest ->
   m [a]
 getMetroOffers searchReqId =
-  fromMaybe [] <$> Redis.getKeyRedis (metroOfferKey searchReqId)
+  fromMaybe [] <$> Redis.get (metroOfferKey searchReqId)
 
 metroOfferKey :: Id SearchRequest -> Text
 metroOfferKey (Id id') = "BAP:Metro:" <> id'

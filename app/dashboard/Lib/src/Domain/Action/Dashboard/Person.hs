@@ -3,6 +3,7 @@ module Domain.Action.Dashboard.Person where
 import Beckn.External.Encryption (decrypt)
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
@@ -88,6 +89,7 @@ assignServerAccess _ personId req = do
 
 resetServerAccess ::
   ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>

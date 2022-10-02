@@ -9,7 +9,7 @@ import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Redis.Queries (lpush, rpop)
+import Beckn.Storage.Hedis (lPush, rPop)
 import Beckn.Types.Common
 import Beckn.Types.Error (PersonError (PersonFieldNotPresent))
 import Beckn.Types.Id (Id, cast)
@@ -46,7 +46,7 @@ driverLastLocationUpdateCheckService = startService "driverLastLocationUpdateChe
         unless (null noTokenIds) $ logPretty ERROR "Active drivers with no token" noTokenIds
         case nonEmpty driversToPing of
           Just driversWithToken -> do
-            lpush redisKey driversWithToken
+            lPush redisKey driversWithToken
             logPretty INFO ("Drivers to ping: " <> show (length driversWithToken)) driversWithToken
           Nothing -> log INFO "No drivers to ping"
   threadDelay (secondsToMcs delay).getMicroseconds
@@ -60,7 +60,7 @@ redisKey = "beckn:driver-tracking-healthcheck:drivers-to-ping"
 driverDevicePingService :: Flow ()
 driverDevicePingService = startService "driverDevicePingService" do
   HC.iAmAlive
-  rpop redisKey >>= flip whenJust \(driverId, token) ->
+  rPop redisKey >>= flip whenJust \(driverId, token) ->
     withLogTag driverId.getId do
       log INFO "Ping driver"
       notifyDevice TRIGGER_SERVICE "You were inactive" "Please check the app" driverId (Just token)

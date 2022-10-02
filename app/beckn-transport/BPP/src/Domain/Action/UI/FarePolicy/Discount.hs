@@ -11,7 +11,7 @@ module Domain.Action.UI.FarePolicy.Discount
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
@@ -68,7 +68,16 @@ validateUpdateFarePolicyDiscountReq UpdateFarePolicyDiscountReq {..} =
 
 type DeleteFarePolicyDiscountRes = APISuccess
 
-createFarePolicyDiscount :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> CreateFarePolicyDiscountReq -> m CreateFarePolicyDiscountRes
+createFarePolicyDiscount ::
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    HedisFlow m r,
+    FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  SP.Person ->
+  CreateFarePolicyDiscountReq ->
+  m CreateFarePolicyDiscountRes
 createFarePolicyDiscount admin req = do
   orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   runRequestValidation validateCreateFarePolicyDiscountReq req
@@ -102,7 +111,17 @@ createFarePolicyDiscount admin req = do
             updatedAt = currTime
           }
 
-updateFarePolicyDiscount :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> Id DFPDiscount.Discount -> UpdateFarePolicyDiscountReq -> m UpdateFarePolicyDiscountRes
+updateFarePolicyDiscount ::
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    HedisFlow m r,
+    FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  SP.Person ->
+  Id DFPDiscount.Discount ->
+  UpdateFarePolicyDiscountReq ->
+  m UpdateFarePolicyDiscountRes
 updateFarePolicyDiscount admin discId req = do
   orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   runRequestValidation validateUpdateFarePolicyDiscountReq req
@@ -125,7 +144,16 @@ updateFarePolicyDiscount admin discId req = do
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateFarePolicyDiscount : ") (show updatedFarePolicy)
   pure Success
 
-deleteFarePolicyDiscount :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> Id DFPDiscount.Discount -> m UpdateFarePolicyDiscountRes
+deleteFarePolicyDiscount ::
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    HedisFlow m r,
+    FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  SP.Person ->
+  Id DFPDiscount.Discount ->
+  m UpdateFarePolicyDiscountRes
 deleteFarePolicyDiscount admin discId = do
   orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist

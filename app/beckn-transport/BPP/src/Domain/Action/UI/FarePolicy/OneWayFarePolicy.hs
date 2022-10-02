@@ -8,7 +8,7 @@ module Domain.Action.UI.FarePolicy.OneWayFarePolicy
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
@@ -65,7 +65,17 @@ listOneWayFarePolicies person = do
       { oneWayFarePolicies = map makeOneWayFarePolicyAPIEntity oneWayFarePolicies
       }
 
-updateOneWayFarePolicy :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> Id DFarePolicy.OneWayFarePolicy -> UpdateOneWayFarePolicyReq -> m UpdateOneWayFarePolicyRes
+updateOneWayFarePolicy ::
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    HedisFlow m r,
+    FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  SP.Person ->
+  Id DFarePolicy.OneWayFarePolicy ->
+  UpdateOneWayFarePolicyReq ->
+  m UpdateOneWayFarePolicyRes
 updateOneWayFarePolicy admin fpId req = do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy

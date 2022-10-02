@@ -3,6 +3,7 @@
 module Tools.Auth.Dashboard (DashboardAuth, verifyDashboardAction, TokenInfo (..), module Reexport) where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -48,12 +49,12 @@ instance VerificationMethodWithPayload VerifyDashboard where
   type VerificationPayloadType VerifyDashboard = DRole.DashboardAccessType
 
 verifyDashboardAction ::
-  Common.AuthFlow m r =>
+  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
   VerificationActionWithPayload VerifyDashboard m
 verifyDashboardAction = VerificationActionWithPayload verifyDashboard
 
 verifyDashboard ::
-  Common.AuthFlow m r =>
+  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
   DRole.DashboardAccessType ->
   RegToken ->
   m TokenInfo

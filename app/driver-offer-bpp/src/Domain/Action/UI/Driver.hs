@@ -33,8 +33,7 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
@@ -214,7 +213,7 @@ createDriver ::
     HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
-    HedisFlow m r,
+    Redis.HedisFlow m r,
     CoreMetrics m
   ) =>
   SP.Person ->
@@ -271,7 +270,14 @@ createDriverDetails personId = do
   where
     driverId = cast personId
 
-getInformation :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SP.Person -> m DriverInformationRes
+getInformation ::
+  ( HasCacheConfig r,
+    Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  Id SP.Person ->
+  m DriverInformationRes
 getInformation personId = do
   let driverId = cast personId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -324,6 +330,7 @@ buildDriverEntityRes (person, driverInfo) = do
 
 changeDriverEnableState ::
   ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
     FCMFlow m r,
     CoreMetrics m
   ) =>
@@ -349,7 +356,7 @@ changeDriverEnableState admin personId isEnabled = do
     notificationTitle = "Account is disabled."
     notificationMessage = "Your account has been disabled. Contact support for more info."
 
-deleteDriver :: (EsqDBFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (EsqDBFlow m r, Redis.HedisFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   let Just orgId = admin.organizationId
   driver <-
@@ -370,9 +377,17 @@ deleteDriver admin driverId = do
     clearDriverSession personId = do
       regTokens <- QR.findAllByPersonId personId
       for_ regTokens $ \regToken ->
-        void $ Redis.deleteKeyRedis $ authTokenCacheKey regToken.token
+        void $ Redis.del $ authTokenCacheKey regToken.token
 
-updateDriver :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SP.Person -> UpdateDriverReq -> m UpdateDriverRes
+updateDriver ::
+  ( HasCacheConfig r,
+    Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  Id SP.Person ->
+  UpdateDriverReq ->
+  m UpdateDriverRes
 updateDriver personId req = do
   runRequestValidation validateUpdateDriverReq req
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -495,7 +510,7 @@ isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFe
 offerQuote ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    Redis.HedisFlow m r,
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,

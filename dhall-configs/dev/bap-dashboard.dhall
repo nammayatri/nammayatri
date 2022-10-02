@@ -47,7 +47,7 @@ let appBackendArdu =
 in
 
 { esqDBCfg = esqDBCfg
-, redisCfg = rcfg
+, hedisCfg = rcfg
 , port = +8017
 , migrationPath = Some (env:BAP_DASHBOARD_MIGRATION_PATH as Text ? "dev/migrations/bap-dashboard")
 , autoMigrate = True

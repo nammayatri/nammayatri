@@ -8,8 +8,7 @@ import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config
 import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis
-import qualified Beckn.Storage.Redis.Config as T
+import Beckn.Storage.Hedis as Redis
 import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.App
 import Beckn.Types.Cache
@@ -18,7 +17,6 @@ import Beckn.Types.Credentials (PrivateKey)
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Registry
 import Beckn.Types.SlidingWindowLimiter
-import Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import qualified Beckn.Utils.Registry as Registry
@@ -67,7 +65,6 @@ data AppCfg = AppCfg
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     defaultRadiusOfSearch :: Meters,
-    redisCfg :: T.RedisConfig,
     searchRequestExpirationSeconds :: Int,
     driverQuoteExpirationSeconds :: Int,
     httpClientOptions :: HttpClientOptions,
@@ -162,6 +159,7 @@ releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   -- FIXME: disconnect database?
   releaseLoggerEnv loggerEnv
+  disconnectHedis hedisEnv
 
 type Env = EnvR AppEnv
 
@@ -181,13 +179,13 @@ instance Registry Flow where
   registryLookup registryUrl = Registry.withSubscriberCache $ Registry.registryLookup registryUrl
 
 cacheRegistryKey :: Text
-cacheRegistryKey = "driver-offer-bpp:registry"
+cacheRegistryKey = "driver-offer-bpp:registry:"
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
-  getKey = Cache.getKey cacheRegistryKey . lookupRequestToRedisKey
-  setKey = Cache.setKey cacheRegistryKey . lookupRequestToRedisKey
-  delKey = Cache.delKey cacheRegistryKey . lookupRequestToRedisKey
+  getKey = Redis.get . (cacheRegistryKey <>) . lookupRequestToRedisKey
+  setKey = Redis.set . (cacheRegistryKey <>) . lookupRequestToRedisKey
+  delKey = Redis.del . (cacheRegistryKey <>) . lookupRequestToRedisKey
 
 instance CacheEx Subscriber Flow where
-  setKeyEx ttl = Cache.setKeyEx cacheRegistryKey ttl . lookupRequestToRedisKey
+  setKeyEx ttl = (\k v -> Redis.setExp k v ttl.getSeconds) . (cacheRegistryKey <>) . lookupRequestToRedisKey

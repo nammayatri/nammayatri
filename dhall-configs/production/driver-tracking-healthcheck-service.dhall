@@ -9,7 +9,7 @@ in  { driverAllowedDelay = +300
     , loggerConfig = appCfg.loggerConfig //  { logFilePath = "/tmp/driver-tracking-healthcheck.log" }
     , httpClientOptions = appCfg.httpClientOptions
     , graceTerminationPeriod = appCfg.graceTerminationPeriod
-    , redisCfg = appCfg.redisCfg
+    , hedisCfg = appCfg.hedisCfg
     , esqDBCfg = appCfg.esqDBCfg
     , fcmUrl = appCfg.fcmUrl
     , fcmJsonPath = appCfg.fcmJsonPath

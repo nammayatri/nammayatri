@@ -3,6 +3,7 @@
 module Tools.Auth.Server (ServerAuth, verifyServerAction, module Reexport) where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Utils.Common
@@ -39,12 +40,12 @@ instance VerificationMethodWithPayload VerifyServer where
   type VerificationPayloadType VerifyServer = DR.ServerName
 
 verifyServerAction ::
-  Common.AuthFlow m r =>
+  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
   VerificationActionWithPayload VerifyServer m
 verifyServerAction = VerificationActionWithPayload verifyServer
 
 verifyServer ::
-  Common.AuthFlow m r =>
+  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
   DR.ServerName ->
   RegToken ->
   m DR.ServerName

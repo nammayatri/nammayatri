@@ -2,7 +2,7 @@ module Domain.Action.Allocation.Internal where
 
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common

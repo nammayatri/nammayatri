@@ -7,7 +7,7 @@ module Domain.Action.UI.Location.UpdateLocation
 where
 
 import Beckn.Prelude
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
@@ -41,7 +41,7 @@ data UpdateLocationHandler m = UpdateLocationHandler
     addIntermediateRoutePoints :: Id SRide.Ride -> Id Person.Person -> NonEmpty LatLong -> m ()
   }
 
-updateLocation :: (Log m, MonadFlow m, MonadThrow m, MonadTime m) => UpdateLocationHandler m -> Id Person.Person -> UpdateLocationReq -> m APISuccess
+updateLocation :: (Redis.HedisFlow m env, MonadTime m) => UpdateLocationHandler m -> Id Person.Person -> UpdateLocationReq -> m APISuccess
 updateLocation UpdateLocationHandler {..} driverId waypoints = withLogTag "driverLocationUpdate" $ do
   logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
   driver <-

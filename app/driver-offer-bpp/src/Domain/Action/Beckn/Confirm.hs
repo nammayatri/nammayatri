@@ -4,7 +4,7 @@ import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Types.Common
 import Beckn.Types.Error
@@ -60,6 +60,7 @@ handler ::
     FCMFlow m r,
     HedisFlow m r,
     EsqDBFlow m r,
+    HedisFlow m r,
     HasPrettyLogger m r,
     EncFlow m r,
     CoreMetrics m,
@@ -178,6 +179,7 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
 cancelBooking ::
   ( FCMFlow m r,
     EsqDBFlow m r,
+    HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m

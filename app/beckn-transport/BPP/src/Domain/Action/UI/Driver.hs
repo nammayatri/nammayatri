@@ -26,8 +26,7 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude
 import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
@@ -176,7 +175,7 @@ createDriver ::
   ( HasCacheConfig r,
     HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
-    HedisFlow m r,
+    Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>
@@ -238,7 +237,7 @@ createDriverDetails personId = do
 getInformation ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    Redis.HedisFlow m r,
     EncFlow m r
   ) =>
   Id SP.Person ->
@@ -323,6 +322,7 @@ buildDriverEntityRes (person, driverInfo) = do
 
 changeDriverEnableState ::
   ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
     FCMFlow m r,
     CoreMetrics m
   ) =>
@@ -349,7 +349,8 @@ changeDriverEnableState admin personId isEnabled = do
     notificationMessage = "Your account has been disabled. Contact support for more info."
 
 deleteDriver ::
-  ( EsqDBFlow m r
+  ( EsqDBFlow m r,
+    Redis.HedisFlow m r
   ) =>
   SP.Person ->
   Id SP.Person ->
@@ -373,12 +374,12 @@ deleteDriver admin driverId = do
     clearDriverSession personId = do
       regTokens <- QR.findAllByPersonId personId
       for_ regTokens $ \regToken -> do
-        void $ Redis.deleteKeyRedis $ authTokenCacheKey regToken.token
+        void $ Redis.del $ authTokenCacheKey regToken.token
 
 updateDriver ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    Redis.HedisFlow m r,
     EncFlow m r
   ) =>
   Id SP.Person ->

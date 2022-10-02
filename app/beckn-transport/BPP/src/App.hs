@@ -3,7 +3,6 @@ module App where
 import qualified App.Server as App
 import Beckn.Exit
 import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
-import Beckn.Storage.Redis.Config
 import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
@@ -56,10 +55,6 @@ runTransporterBackendApp' appCfg = do
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allShortIds = map ((.shortId.getShortId) &&& (.uniqueKeyId)) allProviders
         flowRt' <- modFlowRtWithAuthManagers flowRt appEnv allShortIds
-
-        logInfo "Initializing Redis Connections..."
-        try (prepareRedisConnections $ appCfg.redisCfg)
-          >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'

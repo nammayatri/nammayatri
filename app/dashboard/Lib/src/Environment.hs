@@ -3,7 +3,7 @@ module Environment where
 import Beckn.External.Encryption (EncTools)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
-import qualified Beckn.Storage.Redis.Config as Redis
+import Beckn.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, disconnectHedis)
 import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.Common
 import Beckn.Types.Flow
@@ -18,7 +18,7 @@ import Tools.Metrics
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
-    redisCfg :: Redis.RedisConfig,
+    hedisCfg :: HedisCfg,
     port :: Int,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
@@ -35,6 +35,7 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { esqDBEnv :: EsqDBEnv,
+    hedisEnv :: HedisEnv,
     port :: Int,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
@@ -57,12 +58,15 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
+  let modifierFunc = ("dashboard:" <>)
+  hedisEnv <- connectHedis hedisCfg modifierFunc
   isShuttingDown <- mkShutdown
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
-releaseAppEnv AppEnv {..} =
+releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
+  disconnectHedis hedisEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 

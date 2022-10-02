@@ -15,7 +15,7 @@ import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis as Redis
 import Beckn.Storage.Hedis.AppPrefixes
 import Beckn.Types.App
 import Beckn.Types.Cache
@@ -25,7 +25,6 @@ import Beckn.Types.Flow
 import Beckn.Types.Geofencing
 import Beckn.Types.Registry
 import Beckn.Types.SlidingWindowLimiter
-import Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import qualified Beckn.Utils.Registry as Registry
@@ -33,7 +32,6 @@ import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
-import qualified EulerHS.Types as T
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
 import Tools.Metrics
@@ -41,7 +39,6 @@ import Tools.Streaming.Kafka
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
-    redisCfg :: T.RedisConfig,
     hedisCfg :: HedisCfg,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
@@ -176,9 +173,9 @@ instance Registry Flow where
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
-  getKey = Cache.getKey "taxi-bpp:registry" . lookupRequestToRedisKey
-  setKey = Cache.setKey "taxi-bpp:registry" . lookupRequestToRedisKey
-  delKey = Cache.delKey "taxi-bpp:registry" . lookupRequestToRedisKey
+  getKey = Redis.get . ("taxi-bpp:registry:" <>) . lookupRequestToRedisKey
+  setKey = Redis.set . ("taxi-bpp:registry:" <>) . lookupRequestToRedisKey
+  delKey = Redis.del . ("taxi-bpp:registry:" <>) . lookupRequestToRedisKey
 
 instance CacheEx Subscriber Flow where
-  setKeyEx ttl = Cache.setKeyEx "taxi-bpp:registry" ttl . lookupRequestToRedisKey
+  setKeyEx ttl = (\k v -> Redis.setExp k v ttl.getSeconds) . ("taxi-bpp:registry:" <>) . lookupRequestToRedisKey

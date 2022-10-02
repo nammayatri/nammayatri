@@ -8,7 +8,7 @@ module Domain.Action.UI.Location.UpdateLocation
 where
 
 import Beckn.Prelude hiding (Handler)
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
@@ -21,8 +21,6 @@ import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
-
-type MonadHandler m = (MonadFlow m, MonadThrow m, Log m, MonadGuid m, MonadTime m)
 
 data Handler m = Handler
   { refreshPeriod :: NominalDiffTime,
@@ -45,7 +43,7 @@ data Waypoint = Waypoint
 
 type UpdateLocationRes = APISuccess
 
-updateLocationHandler :: MonadHandler m => Handler m -> Id Person.Person -> UpdateLocationReq -> m UpdateLocationRes
+updateLocationHandler :: (Redis.HedisFlow m r, MonadTime m) => Handler m -> Id Person.Person -> UpdateLocationReq -> m UpdateLocationRes
 updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocationUpdate" $ do
   logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
   driver <-

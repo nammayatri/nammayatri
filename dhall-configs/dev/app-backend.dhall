@@ -73,7 +73,6 @@ let cacheConfig =
 in
 
 { esqDBCfg = esqDBCfg
-, redisCfg = rcfg
 , hedisCfg = hcfg
 , smsCfg = smsConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"

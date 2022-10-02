@@ -4,8 +4,8 @@ module Environment where
 
 import Beckn.External.Encryption (EncTools)
 import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis
-import Beckn.Storage.Hedis.AppPrefixes
+import qualified Beckn.Storage.Hedis as Redis
+import qualified Beckn.Storage.Hedis.AppPrefixes as Redis
 import Beckn.Types.Common
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Id (ShortId)
@@ -19,7 +19,6 @@ import Domain.Action.Allocation (SortMode)
 import Domain.Types.Organization (Organization)
 import qualified "beckn-transport" Environment as App
 import EulerHS.Prelude
-import EulerHS.Types (RedisConfig)
 import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
 import Tools.Streaming.Kafka
@@ -31,8 +30,7 @@ type Shards = Map Int (ShortId Organization)
 data AppCfg = AppCfg
   { appCfg :: App.AppCfg,
     esqDBCfg :: EsqDBConfig,
-    redisCfg :: RedisConfig,
-    hedisCfg :: HedisCfg,
+    hedisCfg :: Redis.HedisCfg,
     metricsPort :: Int,
     healthcheckPort :: Int,
     httpClientOptions :: HttpClientOptions,
@@ -84,12 +82,12 @@ data AppEnv = AppEnv
     graceTerminationPeriod :: Seconds,
     encTools :: EncTools,
     esqDBEnv :: EsqDBEnv,
+    hedisEnv :: Redis.HedisEnv,
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
     btmMetrics :: AllocatorMetricsContainer,
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
-    hedisEnv :: HedisEnv,
     selfUIUrl :: BaseUrl,
     cacheConfig :: CacheConfig
   }
@@ -103,15 +101,15 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
-  hedisEnv <- connectHedis hedisCfg becknTransportPrefix
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  hedisEnv <- Redis.connectHedis hedisCfg Redis.becknTransportPrefix
   pure AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   releaseKafkaProducerTools kafkaProducerTools
-  disconnectHedis hedisEnv
   releaseLoggerEnv loggerEnv
+  Redis.disconnectHedis hedisEnv
 
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.appCfg.signingKey)

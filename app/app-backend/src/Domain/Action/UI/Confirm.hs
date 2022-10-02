@@ -9,7 +9,7 @@ where
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Utils.Common

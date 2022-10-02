@@ -3,7 +3,7 @@ module Tools.Notifications where
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
 import Beckn.Storage.Esqueleto
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common

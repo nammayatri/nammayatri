@@ -3,7 +3,7 @@ module Environment where
 import Beckn.External.Encryption (EncTools)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Redis.Config (RedisConfig)
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common
 import Beckn.Types.Flow (FlowR)
 import Beckn.Utils.App (getPodName)
@@ -22,7 +22,7 @@ data AppCfg = AppCfg
     healthcheckPort :: Int,
     httpClientOptions :: HttpClientOptions,
     graceTerminationPeriod :: Seconds,
-    redisCfg :: RedisConfig,
+    hedisCfg :: Redis.HedisCfg,
     esqDBCfg :: EsqDBConfig,
     fcmUrl :: BaseUrl,
     fcmJsonPath :: Maybe Text,
@@ -50,6 +50,7 @@ data AppEnv = AppEnv
     smsCfg :: SmsConfig,
     driverInactiveSmsTemplate :: Text,
     esqDBEnv :: EsqDBEnv,
+    hedisEnv :: Redis.HedisEnv,
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
     loggerEnv :: LoggerEnv
@@ -63,8 +64,11 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  let modifierFunc = ("beckn-transport:" <>)
+  hedisEnv <- Redis.connectHedis hedisCfg modifierFunc
   pure AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
+  Redis.disconnectHedis hedisEnv

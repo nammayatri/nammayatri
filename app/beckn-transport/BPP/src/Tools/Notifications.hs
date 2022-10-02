@@ -2,6 +2,7 @@ module Tools.Notifications where
 
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -16,6 +17,7 @@ import EulerHS.Prelude
 -- | Send FCM "cancel" notification to driver
 notifyOnCancel ::
   ( FCMFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   Booking ->
@@ -65,6 +67,7 @@ notifyOnCancel booking personId mbDeviceToken cancellationSource = do
 
 notifyOnRegistration ::
   ( FCMFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   RegistrationToken ->
@@ -94,6 +97,7 @@ notifyOnRegistration regToken personId =
 
 notifyDriver ::
   ( FCMFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   FCM.FCMNotificationType ->
@@ -108,6 +112,7 @@ notifyDriver = sendNotificationToDriver FCM.SHOW Nothing
 -- but contains payload used by the app
 notifyDevice ::
   ( FCMFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   FCM.FCMNotificationType ->
@@ -120,6 +125,7 @@ notifyDevice = sendNotificationToDriver FCM.DO_NOT_SHOW (Just FCM.HIGH)
 
 sendNotificationToDriver ::
   ( FCMFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   FCM.FCMShowNotification ->
@@ -148,6 +154,7 @@ sendNotificationToDriver displayOption priority notificationType notificationTit
 
 notifyDriverNewAllocation ::
   ( FCMFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   Id bookingId ->
@@ -176,6 +183,7 @@ notifyDriverNewAllocation bookingId personId =
 
 notifyRideNotAssigned ::
   ( FCMFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   Id Booking ->
@@ -204,6 +212,7 @@ notifyRideNotAssigned bookingId personId =
 
 notifyFarePolicyChange ::
   ( FCMFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   Id coordinatorId ->
@@ -230,6 +239,7 @@ notifyFarePolicyChange coordinatorId =
 
 notifyDiscountChange ::
   ( FCMFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   Id coordinatorId ->

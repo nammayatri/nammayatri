@@ -71,6 +71,7 @@ dependencies:
   - template-haskell
   - prometheus-client
   - servant-openapi3
+  - hedis
   - euler-hs
   - relude
   - wai

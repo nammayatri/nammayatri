@@ -4,7 +4,6 @@ import AWS.S3 (prepareS3AuthManager)
 import qualified App.Server as App
 import Beckn.Exit
 import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
-import Beckn.Storage.Redis.Config
 import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
@@ -65,10 +64,6 @@ runDriverOfferBpp' appCfg = do
               (Nothing, prepareS3AuthManager flowRt appEnv),
               (Just 20000, prepareIdfyHttpManager 20000)
             ]
-
-        logInfo "Initializing Redis Connections..."
-        try (prepareRedisConnections $ appCfg.redisCfg)
-          >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'

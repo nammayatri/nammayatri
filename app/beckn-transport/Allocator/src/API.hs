@@ -1,6 +1,6 @@
 module API (healthCheckAPI, healthCheck, iAmAlive) where
 
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common
 import Beckn.Utils.Common
 import Beckn.Utils.IOLogging (LoggerEnv)
@@ -17,11 +17,12 @@ healthCheckAPI = Proxy
 healthCheck ::
   ( HasField "coreMetrics" r CoreMetricsContainer,
     HasField "isShuttingDown" r Shutdown,
-    HasField "loggerEnv" r LoggerEnv
+    HasField "loggerEnv" r LoggerEnv,
+    HasField "hedisEnv" r Redis.HedisEnv
   ) =>
   FlowHandlerR r Text
 healthCheck = withFlowHandlerAPI do
-  mbTime <- Redis.getKeyRedis key
+  mbTime <- Redis.get key
   maybe markAsDead checkLastUpdateTime mbTime
   where
     markAsDead = throwError ServiceUnavailable
@@ -36,5 +37,5 @@ key :: Text
 key = "beckn:allocation:service"
 
 --TODO: Make ServiceHealthChecker util in shared-kernel
-iAmAlive :: MonadFlow m => m ()
-iAmAlive = getCurrentTime >>= Redis.setKeyRedis key
+iAmAlive :: (MonadTime m, Redis.HedisFlow m r) => m ()
+iAmAlive = getCurrentTime >>= Redis.set key

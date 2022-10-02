@@ -2,6 +2,7 @@ module Domain.Action.Dashboard.Registration where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -41,6 +42,7 @@ validateLoginReq availableServerNames LoginReq {..} =
 
 login ::
   ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
     EncFlow m r
@@ -57,6 +59,7 @@ login req@LoginReq {..} = do
 
 generateToken ::
   ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   Id DP.Person ->
@@ -73,6 +76,7 @@ generateToken personId serverName = do
 
 logout ::
   ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   TokenInfo ->
@@ -87,6 +91,7 @@ logout tokenInfo = do
 
 logoutAllServers ::
   ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   TokenInfo ->

@@ -28,7 +28,7 @@ in
 { esqDBCfg = esqDBCfg
 , migrationPath = Some (env:PUBLIC_TRANSPORT_BAP_MIGRATION_PATH as Text ? "dev/migrations/public-transport-bap")
 , autoMigrate = True
-, redisCfg = rcfg
+, hedisCfg = rcfg
 , port = +8023
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/public-transport-bap.log"}
 , graceTerminationPeriod = +90

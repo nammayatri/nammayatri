@@ -28,7 +28,7 @@ let kafkaProducerCfg =
 in  { esqDBCfg
     , migrationPath = None Text
     , autoMigrate = common.autoMigrate
-    , redisCfg = rcfg
+    , hedisCfg = rcfg
     , port = +8023
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/public-transport-bap.log" }

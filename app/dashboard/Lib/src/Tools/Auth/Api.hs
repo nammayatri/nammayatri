@@ -3,6 +3,7 @@
 module Tools.Auth.Api (module Tools.Auth.Api, module Reexport) where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -41,12 +42,12 @@ instance VerificationMethodWithPayload VerifyApi where
   type VerificationPayloadType VerifyApi = DMatrix.ApiAccessLevel
 
 verifyApiAction ::
-  Common.AuthFlow m r =>
+  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
   VerificationActionWithPayload VerifyApi m
 verifyApiAction = VerificationActionWithPayload verifyApi
 
 verifyApi ::
-  Common.AuthFlow m r =>
+  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
   DMatrix.ApiAccessLevel ->
   RegToken ->
   m (Id DP.Person)

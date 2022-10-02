@@ -1,7 +1,7 @@
 module Service.Runner where
 
 import API (iAmAlive)
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -60,7 +60,7 @@ getOrganizationLock :: Flow (ShortId Organization)
 getOrganizationLock = do
   shardMap <- asks (.shards)
   let numShards = Map.size shardMap
-  shardCounter <- Redis.incrementKeyRedis "beckn:allocation:shardCounter"
+  shardCounter <- Redis.incr "beckn:allocation:shardCounter"
   let shardId = fromIntegral $ abs $ shardCounter `rem` fromIntegral numShards
   case Map.lookup shardId shardMap of
     Just shortOrgId -> do

@@ -16,8 +16,7 @@ import Beckn.External.FCM.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Hedis
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Common as BC
@@ -94,8 +93,8 @@ auth ::
   ( HasCacheConfig r,
     HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
-    HedisFlow m r,
     EsqDBFlow m r,
+    Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>
@@ -193,7 +192,7 @@ verify ::
   ( HasCacheConfig r,
     HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
-    HedisFlow m r,
+    Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>
@@ -265,15 +264,16 @@ resend tokenId = do
   DB.runTransaction $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-cleanCachedTokens :: EsqDBFlow m r => Id SP.Person -> m ()
+cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
   regTokens <- RegistrationToken.findAllByPersonId personId
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
-    void $ Redis.deleteKeyRedis key
+    void $ Redis.del key
 
 logout ::
-  ( EsqDBFlow m r
+  ( EsqDBFlow m r,
+    Redis.HedisFlow m r
   ) =>
   Id SP.Person ->
   m APISuccess

@@ -145,9 +145,8 @@ makeWaypointsRedisKey driverId = mconcat ["waypoints", ":", driverId.getId]
 addPointsImplementation :: (HedisFlow m env) => Id person -> NonEmpty LatLong -> m ()
 addPointsImplementation driverId waypoints = do
   let key = makeWaypointsRedisKey driverId
-      pointsList = toList waypoints :: [LatLong]
-      numPoints = length pointsList
-  rPush key pointsList
+      numPoints = length waypoints
+  rPush key waypoints
   logInfo $ mconcat ["added ", show numPoints, " points for driverId = ", driverId.getId]
 
 clearLocationUpdatesImplementation :: (HedisFlow m env) => Id person -> m ()

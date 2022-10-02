@@ -1,6 +1,6 @@
 module Tools.Auth where
 
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -32,25 +32,36 @@ instance VerificationMethod VerifyToken where
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyPerson :: (EsqDBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person)
+verifyPerson ::
+  ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    HasField "authTokenCacheExpiry" r Seconds
+  ) =>
+  RegToken ->
+  m (Id Person.Person)
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
-  mbPersonId <- Redis.getKeyRedis key
+  mbPersonId <- Redis.get key
   case mbPersonId of
     Just personId -> return personId
     Nothing -> do
       sr <- verifyToken token
       let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
       let personId = Id sr.entityId
-      Redis.setExRedis key personId expiryTime
+      Redis.setExp key personId expiryTime
       return personId
 
 authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =
   "BAP:authTokenCacheKey:" <> regToken
 
-verifyPersonAction :: (EsqDBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => VerificationAction VerifyToken m
+verifyPersonAction ::
+  ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    HasField "authTokenCacheExpiry" r Seconds
+  ) =>
+  VerificationAction VerifyToken m
 verifyPersonAction = VerificationAction verifyPerson
 
 verifyToken :: EsqDBFlow m r => RegToken -> m SR.RegistrationToken

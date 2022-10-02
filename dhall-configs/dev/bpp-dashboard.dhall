@@ -47,7 +47,7 @@ let driverOfferBpp =
 in
 
 { esqDBCfg = esqDBCfg
-, redisCfg = rcfg
+, hedisCfg = rcfg
 , port = +8018
 , migrationPath = Some (env:BPP_DASHBOARD_MIGRATION_PATH as Text ? "dev/migrations/bpp-dashboard")
 , autoMigrate = True

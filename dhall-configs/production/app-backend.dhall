@@ -10,7 +10,7 @@ let esqDBCfg =
   , connectSchemaName = "atlas_app"
   }
 
-let rcfg =
+let hcfg =
   { connectHost = "cache.primary.beckn.juspay.net"
   , connectPort = 6379
   , connectAuth = None Text
@@ -18,16 +18,6 @@ let rcfg =
   , connectMaxConnections = +50
   , connectMaxIdleTime = +30
   , connectTimeout = Some +100
-  }
-
-let hcfg =
-  { connectHost = rcfg.connectHost
-  , connectPort = rcfg.connectPort
-  , connectAuth = rcfg.connectAuth
-  , connectDatabase = rcfg.connectDatabase
-  , connectMaxConnections = rcfg.connectMaxConnections
-  , connectMaxIdleTime = rcfg.connectMaxIdleTime
-  , connectTimeout = rcfg.connectTimeout
   }
 
 let smsConfig =
@@ -67,7 +57,6 @@ let cacheConfig =
 in
 
 { esqDBCfg = esqDBCfg
-, redisCfg = rcfg
 , hedisCfg = hcfg
 , smsCfg = smsConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"

@@ -2,7 +2,6 @@ module App where
 
 import API
 import Beckn.Exit
-import Beckn.Storage.Redis.Config
 import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
@@ -32,9 +31,6 @@ runAllocator configModifier = do
 
   R.withFlowRuntime (Just loggerRt) \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv do
-      _ <-
-        try (prepareRedisConnections config.redisCfg)
-          >>= handleLeft @SomeException exitConnCheckFailure "Connections check failed. Exception thrown: "
       logInfo "Setting up for signature auth..."
       allProviders <-
         try Storage.loadAllProviders

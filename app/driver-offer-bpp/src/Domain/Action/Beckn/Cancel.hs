@@ -5,7 +5,7 @@ module Domain.Action.Beckn.Cancel
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -36,6 +36,7 @@ cancel ::
     FCMFlow m r,
     HedisFlow m r,
     EsqDBFlow m r,
+    HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m

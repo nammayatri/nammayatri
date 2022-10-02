@@ -10,7 +10,7 @@ module API.UI.Search
 where
 
 import Beckn.Prelude
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
 import Beckn.Streaming.MonadProducer
 import Beckn.Types.Common hiding (id)

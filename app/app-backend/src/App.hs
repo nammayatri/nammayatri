@@ -3,7 +3,6 @@ module App where
 import qualified App.Server as App
 import Beckn.Exit
 import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
-import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
@@ -46,9 +45,6 @@ runAppBackend' appCfg = do
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
-        logInfo "Initializing Redis Connections..."
-        try (prepareRedisConnections $ appCfg.redisCfg)
-          >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo "Setting up for signature auth..."

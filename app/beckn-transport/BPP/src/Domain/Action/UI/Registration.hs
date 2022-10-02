@@ -17,7 +17,7 @@ import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.APISuccess
 import Beckn.Types.Common as BC
@@ -86,6 +86,7 @@ auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
+    Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>
@@ -149,6 +150,7 @@ verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
+    Redis.HedisFlow m r,
     EncFlow m r,
     FCMFlow m r,
     CoreMetrics m
@@ -215,15 +217,16 @@ resend tokenId = do
   Esq.runTransaction $ QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-cleanCachedTokens :: EsqDBFlow m r => Id SP.Person -> m ()
+cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
   regTokens <- QR.findAllByPersonId personId
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
-    void $ Redis.deleteKeyRedis key
+    void $ Redis.del key
 
 logout ::
-  ( EsqDBFlow m r
+  ( EsqDBFlow m r,
+    Redis.HedisFlow m r
   ) =>
   Id SP.Person ->
   m APISuccess

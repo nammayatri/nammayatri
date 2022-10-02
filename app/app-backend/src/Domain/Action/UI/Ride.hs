@@ -7,8 +7,7 @@ where
 import Beckn.External.GoogleMaps.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
-import Beckn.Storage.Hedis
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
@@ -30,7 +29,7 @@ type GetDriverLocRes = MapSearch.LatLong
 getDriverLoc ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    Redis.HedisFlow m r,
     CoreMetrics m,
     HasGoogleMaps m r,
     HasField "rideCfg" r RideConfig
@@ -48,20 +47,20 @@ getDriverLoc rideId personId = do
   let fromLocation = rideBooking.fromLocation
   driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
   driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
-  mbIsOnTheWayNotified <- Redis.getKeyRedis @() (driverOnTheWay rideId)
-  mbHasReachedNotified <- Redis.getKeyRedis @() (driverHasReached rideId)
+  mbIsOnTheWayNotified <- Redis.get @() (driverOnTheWay rideId)
+  mbHasReachedNotified <- Redis.get @() (driverHasReached rideId)
   when (ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)) $ do
     distance <- (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) (GoogleMaps.getCoordinates fromLocation) res.currPoint
-    mbStartDistance <- Redis.getKeyRedis @Meters (distanceUpdates rideId)
+    mbStartDistance <- Redis.get @Meters (distanceUpdates rideId)
     case mbStartDistance of
-      Nothing -> Redis.setExRedis (distanceUpdates rideId) distance 3600
+      Nothing -> Redis.setExp (distanceUpdates rideId) distance 3600
       Just startDistance -> when (startDistance - 100 > distance) $ do
         unless (isJust mbIsOnTheWayNotified) $ do
           Notify.notifyDriverOnTheWay personId
-          Redis.setExRedis (driverOnTheWay rideId) () driverOnTheWayNotifyExpiry
+          Redis.setExp (driverOnTheWay rideId) () driverOnTheWayNotifyExpiry
         when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
           Notify.notifyDriverHasReached personId ride
-          Redis.setExRedis (driverHasReached rideId) () 1500
+          Redis.setExp (driverHasReached rideId) () 1500
   return res.currPoint
 
 distanceUpdates :: Id SRide.Ride -> Text

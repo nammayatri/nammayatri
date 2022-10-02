@@ -10,7 +10,7 @@ import Beckn.Prelude
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -48,6 +48,7 @@ oneWaySearch ::
     HasFlowEnv m r '["googleMapsUrl" ::: BaseUrl, "googleMapsKey" ::: Text],
     HedisFlow m r,
     EsqDBFlow m r,
+    HedisFlow m r,
     CoreMetrics m,
     HasBAPMetrics m r
   ) =>

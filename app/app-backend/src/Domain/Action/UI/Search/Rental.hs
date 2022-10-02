@@ -9,7 +9,7 @@ where
 import Beckn.Prelude
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Hedis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -42,7 +42,7 @@ data RentalSearchRes = RentalSearchRes
 rentalSearch ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    Redis.HedisFlow m r,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasBAPMetrics m r

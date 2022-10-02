@@ -2,13 +2,13 @@ module Environment where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Redis.Config
+import Beckn.Storage.Hedis as Redis
+import Beckn.Storage.Hedis.AppPrefixes (publicTransportBapPrefix)
 import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Flow
 import Beckn.Types.Registry
 import Beckn.Utils.App (getPodName)
-import qualified Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import qualified Beckn.Utils.Registry as Registry
@@ -22,7 +22,7 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
-    redisCfg :: RedisConfig,
+    hedisCfg :: HedisCfg,
     port :: Int,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
@@ -53,6 +53,7 @@ data AppEnv = AppEnv
     disableSignatureAuth :: Bool,
     hostName :: Text,
     esqDBEnv :: EsqDBEnv,
+    hedisEnv :: HedisEnv,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
@@ -70,12 +71,14 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
+  hedisEnv <- connectHedis hedisCfg publicTransportBapPrefix
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   releaseKafkaProducerTools kafkaProducerTools
   releaseLoggerEnv loggerEnv
+  disconnectHedis hedisEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 
@@ -92,9 +95,9 @@ instance Registry Flow where
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
-  getKey = Cache.getKey "registry" . lookupRequestToRedisKey
-  setKey = Cache.setKey "registry" . lookupRequestToRedisKey
-  delKey = Cache.delKey "registry" . lookupRequestToRedisKey
+  getKey = Redis.get . ("public-transport-bap:registry:" <>) . lookupRequestToRedisKey
+  setKey = Redis.set . ("public-transport-bap:registry:" <>) . lookupRequestToRedisKey
+  delKey = Redis.del . ("public-transport-bap:registry:" <>) . lookupRequestToRedisKey
 
 instance CacheEx Subscriber Flow where
-  setKeyEx ttl = Cache.setKeyEx "registry" ttl . lookupRequestToRedisKey
+  setKeyEx ttl = (\k v -> Redis.setExp k v ttl.getSeconds) . ("public-transport-bap:registry:" <>) . lookupRequestToRedisKey

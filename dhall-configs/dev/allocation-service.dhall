@@ -24,8 +24,7 @@ in  { appCfg = appCfg
     , esqDBCfg = appCfg.esqDBCfg
     , googleMapsUrl = appCfg.googleMapsUrl
     , googleMapsKey = appCfg.googleMapsKey
-    , redisCfg = appCfg.redisCfg
-    , hedisCfg = appCfg.redisCfg
+    , hedisCfg = appCfg.hedisCfg
     , loggerConfig = appCfg.loggerConfig
               //  { logFilePath = "/tmp/allocation-service.log", logRawSql = False }
     , kafkaProducerCfg = appCfg.kafkaProducerCfg

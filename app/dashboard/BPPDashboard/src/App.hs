@@ -9,7 +9,6 @@ import API
 import Beckn.Exit
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
-import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import Beckn.Types.Flow
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
@@ -26,8 +25,6 @@ runService configModifier = do
   appEnv <- buildAppEnv authTokenCacheKeyPrefix appCfg
   -- Metrics.serve (appCfg.metricsPort) --  do we need it?
   runServerWithHealthCheck appEnv (Proxy @API) handler identity identity context releaseAppEnv \flowRt -> do
-    try (prepareRedisConnections $ appCfg.redisCfg)
-      >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
     migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
     let flowRt' = flowRt {R._httpClientManagers = Map.singleton "default" (R._defaultHttpClientManager flowRt)}

@@ -4,7 +4,7 @@ module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensBySe
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -22,7 +22,7 @@ type AuthFlow m r =
   )
 
 verifyPerson ::
-  AuthFlow m r =>
+  (AuthFlow m r, Redis.HedisFlow m r) =>
   RegToken ->
   m (Id DP.Person, DR.ServerName)
 verifyPerson token = do
@@ -39,11 +39,11 @@ verifyPerson token = do
       return (personId, serverName)
   return (personId, serverName)
 
-getKeyRedis :: (MonadFlow m, MonadThrow m, Log m) => Text -> m (Maybe (Id DP.Person, DR.ServerName))
-getKeyRedis = Redis.getKeyRedis
+getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe (Id DP.Person, DR.ServerName))
+getKeyRedis = Redis.get
 
-setExRedis :: (MonadFlow m, MonadThrow m, Log m) => Text -> (Id DP.Person, DR.ServerName) -> Int -> m ()
-setExRedis = Redis.setExRedis
+setExRedis :: Redis.HedisFlow m r => Text -> (Id DP.Person, DR.ServerName) -> Int -> m ()
+setExRedis = Redis.setExp
 
 authTokenCacheKey ::
   HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text] =>
@@ -87,6 +87,7 @@ validateToken sr = do
 
 cleanCachedTokens ::
   ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   Id DP.Person ->
@@ -95,10 +96,11 @@ cleanCachedTokens personId = do
   regTokens <- QR.findAllByPersonId personId
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
-    void $ Redis.deleteKeyRedis key
+    void $ Redis.del key
 
 cleanCachedTokensByServerName ::
   ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   Id DP.Person ->
@@ -108,4 +110,4 @@ cleanCachedTokensByServerName personId serverName = do
   regTokens <- QR.findAllByPersonIdAndServerName personId serverName
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
-    void $ Redis.deleteKeyRedis key
+    void $ Redis.del key

@@ -2,7 +2,7 @@ module Domain.Action.UI.Ride.CancelRide.Internal (cancelRide) where
 
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id

@@ -8,8 +8,7 @@ where
 
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch.GoogleMaps as MapSearch
-import Beckn.Storage.Hedis
-import qualified Beckn.Storage.Redis.Queries as Redis
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -48,17 +47,17 @@ mkDriverPoolItem DriverPoolResult {..} = DriverPoolItem {..}
 driverPoolKey :: Id SRB.Booking -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId
 
-getKeyRedis :: (MonadFlow m, MonadThrow m, Log m) => Text -> m (Maybe [DriverPoolItem])
-getKeyRedis = Redis.getKeyRedis
+getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe [DriverPoolItem])
+getKeyRedis = Redis.get
 
-setExRedis :: (MonadFlow m, MonadThrow m, Log m) => Text -> [DriverPoolItem] -> Int -> m ()
-setExRedis = Redis.setExRedis
+setExRedis :: Redis.HedisFlow m r => Text -> [DriverPoolItem] -> Int -> m ()
+setExRedis = Redis.setExp
 
 getDriverPool ::
   ( HasCacheConfig r,
     CoreMetrics m,
-    HedisFlow m r,
     EsqDBFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasGoogleMaps m r
   ) =>
@@ -80,7 +79,7 @@ getDriverPool bookingId =
 recalculateDriverPool ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
     HasGoogleMaps m r
@@ -102,9 +101,8 @@ recalculateDriverPool booking = do
 
 calculateDriverPool ::
   ( HasCacheConfig r,
-    HasCacheConfig r,
     EsqDBFlow m r,
-    HedisFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
     HasGoogleMaps m r

@@ -10,7 +10,7 @@ import Beckn.External.Encryption (encrypt)
 import Beckn.External.GoogleMaps.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Id
 import Beckn.Types.Registry (Subscriber (..))
 import Beckn.Utils.Common
