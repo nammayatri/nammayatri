@@ -16,7 +16,7 @@ spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl API.getDriverOfferBppBaseUrl
   describe "Driver offering quote twice immediately" $
-    afterAll_ (mapM_ Utils.resetDriver [arduDriver1, arduDriver2]) $ do
+    after_ (mapM_ Utils.resetDriver [arduDriver1, arduDriver2]) $ do
       it "Should throw an error: found active quotes" $
         driverOffersTwice clients
       it "Should throw an error: driver on ride" $
@@ -43,7 +43,7 @@ driverOffersTwice clients = withBecknClients clients $ do
 
 driverOffersOnRide :: ClientEnvs -> IO ()
 driverOffersOnRide clients = withBecknClients clients $ do
-  let (origin, _, searchReq) = route1SearchRequest
+  let (origin, destination, searchReq) = route1SearchRequest
 
   Utils.setupDriver arduDriver1 origin
   scRes <- Utils.search'Confirm appRegistrationToken arduDriver1 searchReq
@@ -61,3 +61,5 @@ driverOffersOnRide clients = withBecknClients clients $ do
   shouldReturnErrorCode "error: driver is on ride" "DRIVER_ON_RIDE" eithRes
 
   liftIO $ runARDUFlow "" $ Esq.runTransaction $ QDrQuote.setInactiveByRequestId searchReqForDriver1.searchRequestId
+
+  Utils.endRide arduDriver1 destination tRide bBookingId

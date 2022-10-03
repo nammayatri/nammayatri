@@ -13,10 +13,10 @@ import Utils
 spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl API.getDriverOfferBppBaseUrl
-  describe "Driver offering on an irrelevant search request" $
-    after_ (mapM_ Utils.resetDriver [arduDriver1, arduDriver2]) $ do
-      it "Should throw an irrelevant search request error" $
-        driverOffersOnAnIrrelevantSearchRequest clients
+  describe "Driver offering on an irrelevant search request"
+    . after_ (mapM_ Utils.resetDriver [arduDriver1, arduDriver2])
+    $ it "Should throw an irrelevant search request error" $
+      driverOffersOnAnIrrelevantSearchRequest clients
 
 driverOffersOnAnIrrelevantSearchRequest :: ClientEnvs -> IO ()
 driverOffersOnAnIrrelevantSearchRequest clients = withBecknClients clients $ do
@@ -44,7 +44,9 @@ driverOffersOnAnIrrelevantSearchRequest clients = withBecknClients clients $ do
   -- second driver gets nearby requests
   (searchReqForSecondDriver :| _) <- Utils.getNearbySearchRequestForDriver arduDriver2 quoteId
 
-  void $ Utils.confirmWithCheck appRegistrationToken arduDriver2 selectedQuoteId
+  (bapBookingId, _, bppRide) <- Utils.confirmWithCheck appRegistrationToken selectedQuoteId
   --
   eithRes <- Utils.offerQuoteEither arduDriver2 defaultAllowedDriverFee searchReqForSecondDriver.searchRequestId
   shouldReturnErrorCode "error on nonrelevant search request" "NO_SEARCH_REQUEST_FOR_DRIVER" eithRes
+
+  Utils.cancelRideByDriver arduDriver1 bapBookingId bppRide

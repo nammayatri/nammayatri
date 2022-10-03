@@ -3,6 +3,7 @@ module Mobility.ARDU.Utils (module Mobility.ARDU.Utils) where
 import qualified "driver-offer-bpp" API.UI.Driver as TDriver
 import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
 import qualified "app-backend" API.UI.Search as AppSearch
+import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Common (Money)
@@ -23,11 +24,9 @@ import qualified "driver-offer-bpp" Domain.Types.Ride as TRide
 import qualified "app-backend" Domain.Types.SearchRequest as AppSearchReq
 import qualified "driver-offer-bpp" Domain.Types.SearchRequest as ArduSReq
 import "driver-offer-bpp" Domain.Types.SearchRequestForDriver
-import EulerHS.Prelude
 import HSpec
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures
-import Mobility.ARDU.Queries (cancelAllByDriverId)
 import Mobility.AppBackend.APICalls as BapAPI
 import Mobility.AppBackend.Fixtures
 import Servant.Client
@@ -107,11 +106,14 @@ setupDriver driver initialPoint = do
     API.updateLocation driver.token preUpdate
 
 resetDriver :: DriverTestData -> IO ()
-resetDriver driver = runARDUFlow "" $
+resetDriver driver = runARDUFlow "" $ do
+  rides <- TQRide.findAllByDriverId (cast driver.driverId) Nothing Nothing (Just True)
   Esq.runTransaction $ do
+    void . forM rides $ \(ride, booking) -> do
+      TQRide.updateStatus ride.id TRide.CANCELLED
+      TQRB.updateStatus booking.id TRB.CANCELLED
     DriverInfo.updateActivity (cast driver.driverId) False
     DriverInfo.updateOnRide (cast driver.driverId) False
-    cancelAllByDriverId (cast driver.driverId)
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)
@@ -157,8 +159,8 @@ getQuotesByEstimateId appToken estimateId =
     (\p -> p.agencyName == bapTransporterName)
     ((.selectedQuotes) <$> callBAP (selectList appToken estimateId))
 
-confirmWithCheck :: Text -> DriverTestData -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking, TRB.Booking, TRide.Ride)
-confirmWithCheck appToken _driver quoteId = do
+confirmWithCheck :: Text -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking, TRB.Booking, TRide.Ride)
+confirmWithCheck appToken quoteId = do
   bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId
 
   void . pollDesc "booking exists" $ do
@@ -274,7 +276,7 @@ search'Confirm appToken driver searchReq' = do
   (quoteAPIEntity :| _) <- getQuotesByEstimateId appToken estimateId
   let quoteId = quoteAPIEntity.id
 
-  (bapBookingId, bppBooking, ride) <- confirmWithCheck appToken driver quoteId
+  (bapBookingId, bppBooking, ride) <- confirmWithCheck appToken quoteId
   pure $
     SearchConfirmResult
       { bapBookingId,

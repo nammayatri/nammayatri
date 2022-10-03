@@ -2,7 +2,7 @@ module Mobility.ARDU.SuccessFlow where
 
 import Beckn.Prelude (roundToIntegral)
 import Beckn.Types.Common (HighPrecMeters, Meters)
-import Beckn.Utils.Common (addUTCTime, threadDelaySec)
+import Beckn.Utils.Common (addUTCTime)
 import Common
 import qualified Data.List.NonEmpty as NE
 import EulerHS.Prelude
@@ -18,18 +18,17 @@ spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl API.getDriverOfferBppBaseUrl
   describe "Successful flow, location updates" $
-    afterAll_ (threadDelaySec 5) $
-      after_ (Utils.resetDriver arduDriver1) $ do
-        it "Testing success flow and location updates for short curvy route" $
-          defaultSuccessFlow 10 680 680 locationUpdatesRoute1 clients
-        it "Testing success flow and location updates for the route with far isolated point" $
-          defaultSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
-        it "Testing success flow and location updates with reversed points list" $
-          reversedPointsListSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
-        it "Testing success flow and location updates with outdated points" $
-          outdatedPointsSuccessFlow 800 3768 8350 locationUpdatesIsolatedPoint clients
-        it "Testing success flow and location updates called multiple times at the same time " $
-          raceConditionSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+    after_ (Utils.resetDriver arduDriver1) $ do
+      it "Testing success flow and location updates for short curvy route" $
+        defaultSuccessFlow 10 680 680 locationUpdatesRoute1 clients
+      it "Testing success flow and location updates for the route with far isolated point" $
+        defaultSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+      it "Testing success flow and location updates with reversed points list" $
+        reversedPointsListSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+      it "Testing success flow and location updates with outdated points" $
+        outdatedPointsSuccessFlow 800 3768 8350 locationUpdatesIsolatedPoint clients
+      it "Testing success flow and location updates called multiple times at the same time " $
+        raceConditionSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
 
 waitBetweenUpdates :: Int
 waitBetweenUpdates = 1e5 + 1e6 * fromIntegral timeBetweenLocationUpdates
@@ -94,8 +93,6 @@ successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates lo
   tRide'.traveledDistance `shouldSatisfy` equalsEps (realToFrac eps) distance
   tRide'.chargeableDistance `shouldSatisfy` (equalsEps (roundToIntegral eps) chargeableDistance . fromJust)
 
-  -- Leave feedback
-  -- not yet implemented
-  --  void . callBAP $ callAppFeedback 5 completedRideId
-
-  void . callBPP $ API.setDriverOnline arduDriver1.token False
+-- Leave feedback
+-- not yet implemented
+--  void . callBAP $ callAppFeedback 5 completedRideId

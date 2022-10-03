@@ -20,14 +20,13 @@ import qualified "app-backend" App.Types as AppBackend
 import Beckn.Exit (exitDBMigrationFailure)
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Esqueleto.Migration as Esq
-import Beckn.Types.Logging (LoggerConfig)
 import Beckn.Utils.App (handleLeft)
+import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Data.Text as T (replace, toUpper, unpack)
 import qualified "beckn-transport" Environment as TransporterBackend
 import qualified "driver-offer-bpp" Environment as DriverOfferBpp
 import EulerHS.Prelude
-import GHC.Records.Extra (HasField)
 import qualified Mobility.ARDU.Fixtures as ARDU
 import qualified Mobility.ARDU.Spec as Mobility.ARDU
 import Mobility.AppBackend.Queries
@@ -132,9 +131,10 @@ specs' trees = do
     startServers servers = do
       migrateDB
       prepareTestResources
+      threadDelaySec 1
       traverse_ forkIO servers
       -- Wait for servers to start up and migrations to run
-      threadDelay 5e6
+      threadDelaySec 1
 
     cleanupServers _ = do
       releaseTestResources
