@@ -12,7 +12,7 @@ data DriverOnboardingError
   | ImageNotReadable
   | ImageLowQuality
   | ImageInvalidType Text Text
-  | ImageDocumentNumberMismatch
+  | ImageDocumentNumberMismatch Text Text
   | ImageExtractionFailed
   | ImageNotFound Text
   | ImageNotValid Text
@@ -32,7 +32,7 @@ instance IsBaseError DriverOnboardingError where
     ImageNotReadable -> Just "Image is not readable."
     ImageLowQuality -> Just "Image quality is not good"
     ImageInvalidType provided actual -> Just $ "Provided image type \"" <> show provided <> "\" doesn't match actual type \"" <> show actual <> "\"."
-    ImageDocumentNumberMismatch -> Just "Document number in image is not matching"
+    ImageDocumentNumberMismatch a b -> Just $ "Document number " <> show a <> " in image is not matching with input " <> show b <> " ."
     ImageExtractionFailed -> Just "Image extraction failed"
     ImageNotFound id_ -> Just $ "Image with imageId \"" <> show id_ <> "\" not found."
     ImageNotValid id_ -> Just $ "Image with imageId \"" <> show id_ <> "\" is not valid."
@@ -49,7 +49,7 @@ instance IsHTTPError DriverOnboardingError where
     ImageNotReadable -> "IMAGE_NOT_READABLE"
     ImageLowQuality -> "IMAGE_LOW_QUALITY"
     ImageInvalidType _ _ -> "IMAGE_INVALID_TYPE"
-    ImageDocumentNumberMismatch -> "IMAGE_DOCUMENT_NUMBER_MISMATCH"
+    ImageDocumentNumberMismatch _ _ -> "IMAGE_DOCUMENT_NUMBER_MISMATCH"
     ImageExtractionFailed -> "IMAGE_EXTRACTION_FAILED"
     ImageNotFound _ -> "IMAGE_NOT_FOUND"
     ImageNotValid _ -> "IMAGE_NOT_VALID"
@@ -65,7 +65,7 @@ instance IsHTTPError DriverOnboardingError where
     ImageNotReadable -> E400
     ImageLowQuality -> E400
     ImageInvalidType _ _ -> E400
-    ImageDocumentNumberMismatch -> E400
+    ImageDocumentNumberMismatch _ _ -> E400
     ImageExtractionFailed -> E400
     ImageNotFound _ -> E500
     ImageNotValid _ -> E500

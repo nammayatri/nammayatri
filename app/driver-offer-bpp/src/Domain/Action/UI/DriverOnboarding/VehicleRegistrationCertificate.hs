@@ -71,8 +71,10 @@ verifyRC personId req@DriverRCReq {..} = do
   resp <- Idfy.extractRCImage image Nothing
   case resp.result of
     Just result -> do
-      unless ((removeSpaceAndDash <$> result.extraction_output.registration_number) == (removeSpaceAndDash <$> Just vehicleRegistrationCertNumber)) $
-        throwImageError imageId ImageDocumentNumberMismatch
+      let extractRCNumber = removeSpaceAndDash <$> result.extraction_output.registration_number
+      let rcNumber = removeSpaceAndDash <$> Just vehicleRegistrationCertNumber
+      unless (extractRCNumber == rcNumber) $
+        throwImageError imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
     Nothing -> throwImageError imageId ImageExtractionFailed
 
   now <- getCurrentTime

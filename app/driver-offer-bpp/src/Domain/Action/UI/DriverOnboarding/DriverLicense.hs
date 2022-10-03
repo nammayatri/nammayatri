@@ -76,8 +76,10 @@ verifyDL personId req@DriverDLReq {..} = do
   resp <- Idfy.extractDLImage image1 (Just image2)
   case resp.result of
     Just result -> do
-      unless ((removeSpaceAndDash <$> result.extraction_output.id_number) == (removeSpaceAndDash <$> Just driverLicenseNumber)) $
-        throwImageError imageId1 ImageDocumentNumberMismatch
+      let extractDLNumber = removeSpaceAndDash <$> result.extraction_output.id_number
+      let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
+      unless (extractDLNumber == dlNumber) $
+        throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
     Nothing -> throwImageError imageId1 ImageExtractionFailed
 
   eDl <- encrypt driverLicenseNumber
