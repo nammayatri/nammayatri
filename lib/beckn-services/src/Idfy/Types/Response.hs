@@ -6,6 +6,7 @@ import Beckn.Utils.JSON
 import Beckn.Utils.Time
 import Data.Aeson hiding (Error)
 import Data.OpenApi hiding (name)
+import qualified Data.Text as T
 import EulerHS.Prelude hiding (state)
 
 type ImageValidateResponse = IdfyResponse ValidateResponse
@@ -44,7 +45,7 @@ data IdfySuccess = IdfySuccess {request_id :: Text, _a :: Maybe Text}
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- class of vehicle
-data ClassOfVehicle = W_NT | W_T | W_CAB | HGV_T | HMV_HGV | HMV | HTV | LMV | LMV_NT | LMV_T | LMV_CAB | LMV_HMV | LTV | MCWG | MCWOG | HPMV | MGV | MMV | LDRXCV | PSV_BUS | TRANS | TRCTOR | Others
+data ClassOfVehicle = W_NT | W_T | W_CAB | HGV_T | HMV_HGV | HMV | HTV | LMV | LMV_NT | LMV_T | LMV_CAB | LMV_HMV | LTV | MCWG | MCWOG | HPMV | MGV | MMV | LDRXCV | PSV_BUS | TRANS | TRCTOR | OTHERS
   deriving (Show, Generic, ToSchema, Eq, Read)
 
 instance FromJSON ClassOfVehicle where
@@ -60,7 +61,7 @@ constructorForCOVToJson =
         "W_NT" -> "3W-NT"
         "W_T" -> "3W-T"
         "W_CAB" -> "3W-CAB"
-        val -> replaceUnderscoresString val
+        val -> T.unpack $ T.toLower $ replaceUnderscores $ T.pack val
     }
 
 -- RC Result
