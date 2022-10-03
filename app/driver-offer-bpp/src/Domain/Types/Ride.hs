@@ -2,6 +2,7 @@
 
 module Domain.Types.Ride where
 
+import Beckn.Product.MapSearch.PolyLinePoints (LatLong)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Aeson
@@ -44,10 +45,8 @@ data Ride = Ride
     chargeableDistance :: Maybe Meters,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
-    tripStartLat :: Maybe Double,
-    tripStartLon :: Maybe Double,
-    tripEndLat :: Maybe Double,
-    tripEndLon :: Maybe Double,
+    tripStartPos :: Maybe LatLong,
+    tripEndPos :: Maybe LatLong,
     rideRating :: Maybe RideRating,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

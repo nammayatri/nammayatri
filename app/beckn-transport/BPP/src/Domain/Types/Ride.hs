@@ -4,6 +4,7 @@ module Domain.Types.Ride where
 
 import Beckn.Prelude (roundToIntegral)
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong)
 import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -47,10 +48,8 @@ data Ride = Ride
     chargeableDistance :: Maybe Meters,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
-    tripStartLat :: Maybe Double, -- tripStart :: Maybe LatLong
-    tripStartLon :: Maybe Double,
-    tripEndLat :: Maybe Double, -- tripEnd :: Maybe LatLong
-    tripEndLon :: Maybe Double,
+    tripStartPos :: Maybe LatLong,
+    tripEndPos :: Maybe LatLong,
     rideRating :: Maybe RideRating,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

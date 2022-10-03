@@ -8,10 +8,10 @@ import Domain.Types.TransporterConfig
 import Storage.Tabular.TransporterConfig
 
 findValueByOrgIdAndKey :: Transactionable m => Id Organization -> ConfigKey -> m (Maybe TransporterConfig)
-findValueByOrgIdAndKey orgId (ConfigKey key_) =
+findValueByOrgIdAndKey orgId key =
   Esq.findOne $ do
     config <- from $ table @TransporterConfigT
     where_ $
       config ^. TransporterConfigTransporterId ==. val (toKey orgId)
-        &&. config ^. TransporterConfigConfigKey ==. val key_
+        &&. config ^. TransporterConfigConfigKey ==. val key
     return config

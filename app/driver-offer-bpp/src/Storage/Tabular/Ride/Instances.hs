@@ -6,6 +6,7 @@ module Storage.Tabular.Ride.Instances (FullRideT) where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong (..))
 import qualified Domain.Types.Person as Domain
 import qualified Domain.Types.Ride as Domain
 import Storage.Tabular.Rating
@@ -17,6 +18,8 @@ instance TType FullRideT Domain.Ride where
   fromTType (RideT {..}, mbRatingT) = do
     tUrl <- parseBaseUrl trackingUrl
     let rideRating = mkRideRating <$> mbRatingT
+    let mbTripStartLoc = LatLong <$> tripStartLat <*> tripStartLon
+    let mbTripEndLoc = LatLong <$> tripEndLat <*> tripEndLon
     return $
       Domain.Ride
         { id = Id id,
@@ -24,6 +27,8 @@ instance TType FullRideT Domain.Ride where
           shortId = ShortId shortId,
           driverId = fromKey driverId,
           trackingUrl = tUrl,
+          tripStartPos = mbTripStartLoc,
+          tripEndPos = mbTripEndLoc,
           ..
         }
   toTType Domain.Ride {..} = do
@@ -34,6 +39,10 @@ instance TType FullRideT Domain.Ride where
               shortId = getShortId shortId,
               driverId = toKey driverId,
               trackingUrl = showBaseUrl trackingUrl,
+              tripStartLat = tripStartPos <&> (.lat),
+              tripStartLon = tripStartPos <&> (.lon),
+              tripEndLat = tripEndPos <&> (.lat),
+              tripEndLon = tripEndPos <&> (.lon),
               ..
             }
     let mbRatingT = mkRatingT driverId id <$> rideRating

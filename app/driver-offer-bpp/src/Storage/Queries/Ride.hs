@@ -176,8 +176,8 @@ updateAll rideId ride = do
       [ RideChargeableDistance =. val ride.chargeableDistance,
         RideFare =. val ride.fare,
         RideTripEndTime =. val ride.tripEndTime,
-        RideTripEndLat =. val ride.tripEndLat,
-        RideTripEndLon =. val ride.tripEndLon,
+        RideTripEndLat =. val (ride.tripEndPos <&> (.lat)),
+        RideTripEndLon =. val (ride.tripEndPos <&> (.lon)),
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)

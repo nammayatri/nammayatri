@@ -1,6 +1,7 @@
 module Fixtures.Ride where
 
 import Beckn.Types.Id
+import Beckn.Types.MapSearch
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
@@ -22,10 +23,8 @@ defaultRide =
       chargeableDistance = Nothing,
       tripStartTime = Nothing,
       tripEndTime = Nothing,
-      tripStartLat = Just 9.95,
-      tripStartLon = Just 9.95,
-      tripEndLat = Nothing,
-      tripEndLon = Nothing,
+      tripStartPos = Just $ LatLong 9.95 9.95,
+      tripEndPos = Nothing,
       rideRating = Nothing,
       createdAt = Fixtures.defaultTime,
       updatedAt = Fixtures.defaultTime

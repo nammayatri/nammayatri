@@ -140,10 +140,8 @@ handler subscriber transporterId req = do
             tripStartTime = Nothing,
             tripEndTime = Nothing,
             rideRating = Nothing,
-            tripStartLat = Nothing,
-            tripStartLon = Nothing,
-            tripEndLat = Nothing,
-            tripEndLon = Nothing,
+            tripStartPos = Nothing,
+            tripEndPos = Nothing,
             createdAt = now,
             updatedAt = now
           }

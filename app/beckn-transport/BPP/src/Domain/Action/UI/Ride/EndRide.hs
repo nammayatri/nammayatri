@@ -1,6 +1,7 @@
 module Domain.Action.UI.Ride.EndRide where
 
 import Beckn.Prelude (ToSchema, roundToIntegral)
+import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -95,8 +96,7 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
              fare = Just fare,
              totalFare = Just totalFare,
              tripEndTime = Just now,
-             tripEndLat = Just req.point.lat,
-             tripEndLon = Just req.point.lon
+             tripEndPos = Just req.point
             }
 
   endRideTransaction booking.id updRide (cast driverId) fareBreakups
@@ -116,15 +116,15 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
       shouldRecalculateFare <- recalculateFareEnabled
       distanceCalculationFailed <- isDistanceCalculationFailed requestorId
 
-      let mbTripStartLoc = LatLong <$> ride.tripStartLat <*> ride.tripStartLon
+      let mbTripStartLoc = ride.tripStartPos
       -- for old trips with mbTripStartLoc = Nothing we always recalculate fare
       pickupDropOutsideOfThreshold <- case mbTripStartLoc of
         Nothing -> pure True
         Just tripStartLoc -> do
           pickupLocThreshold <- metersToHighPrecMeters <$> getLocThreshold handle transporterId PICKUP
           dropLocThreshold <- metersToHighPrecMeters <$> getLocThreshold handle transporterId DROP
-          let pickupDifference = distanceBetweenInMeters (mkLatLong booking.fromLocation) tripStartLoc
-          let dropDifference = distanceBetweenInMeters (mkLatLong oneWayDetails.toLocation) req.point
+          let pickupDifference = distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
+          let dropDifference = distanceBetweenInMeters (getCoordinates oneWayDetails.toLocation) req.point
           let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
           logTagInfo "Locations differences" $
             "Pickup difference: "
@@ -186,18 +186,6 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
       -- putDiffMetric fareDiff distanceDiff
       fareBreakups <- buildRentalFareBreakups fareParams booking.id
       pure (actualDistance, fare, totalFare, fareBreakups)
-
-mkLatLong ::
-  ( HasField "lat" r Double,
-    HasField "lon" r Double
-  ) =>
-  r ->
-  LatLong
-mkLatLong r =
-  LatLong
-    { lat = r.lat,
-      lon = r.lon
-    }
 
 data Stop = PICKUP | DROP
 
