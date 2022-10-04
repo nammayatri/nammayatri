@@ -160,4 +160,4 @@ extractDLImage apiKey accountId url req = callIdfyAPI url task "extractDLImage"
         req
 
 callIdfyAPI :: CallAPI env res
-callIdfyAPI = callApiUnwrappingApiError (identity @Error) (Just idfyHttpManagerKey) (Just "IDFY_ERROR")
+callIdfyAPI = callApiUnwrappingApiError (identity @IdfyError) (Just idfyHttpManagerKey) (Just "IDFY_ERROR")
