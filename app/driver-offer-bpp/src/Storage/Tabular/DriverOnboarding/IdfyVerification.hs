@@ -12,9 +12,8 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
+import qualified Storage.Tabular.DriverOnboarding.Image as ImageT
 import Storage.Tabular.Person (PersonTId)
-
-derivePersistField "Image.ImageType"
 
 mkPersist
   defaultSqlSettings
@@ -22,6 +21,8 @@ mkPersist
     IdfyVerificationT sql=idfy_verification
       id Text
       driverId PersonTId
+      documentImageId1 ImageT.ImageTId
+      documentImageId2 ImageT.ImageTId Maybe
       requestId Text
       docType Image.ImageType
       status Text
@@ -44,6 +45,8 @@ instance TType IdfyVerificationT Domain.IdfyVerification where
       Domain.IdfyVerification
         { id = Id id,
           driverId = fromKey driverId,
+          documentImageId1 = fromKey documentImageId1,
+          documentImageId2 = fromKey <$> documentImageId2,
           ..
         }
 
@@ -51,5 +54,7 @@ instance TType IdfyVerificationT Domain.IdfyVerification where
     IdfyVerificationT
       { id = getId id,
         driverId = toKey driverId,
+        documentImageId1 = toKey documentImageId1,
+        documentImageId2 = toKey <$> documentImageId2,
         ..
       }

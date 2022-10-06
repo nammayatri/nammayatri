@@ -14,6 +14,7 @@ import Beckn.Types.Id
 import qualified Data.ByteString as BS
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
+import Storage.Tabular.DriverOnboarding.Image (ImageTId)
 
 derivePersistField "Domain.VerificationStatus"
 
@@ -22,6 +23,7 @@ mkPersist
   [defaultQQ|
     VehicleRegistrationCertificateT sql=vehicle_registration_certificate
       id Text
+      documentImageId ImageTId
       certificateNumber Text
       fitnessExpiry UTCTime
       permitExpiry UTCTime Maybe
@@ -48,6 +50,7 @@ instance TType VehicleRegistrationCertificateT Domain.VehicleRegistrationCertifi
     return $
       Domain.VehicleRegistrationCertificate
         { id = Id id,
+          documentImageId = fromKey documentImageId,
           certificateNumber = EncryptedHashed (Encrypted certificateNumber) (DbHash BS.empty),
           failedRules = unPostgresList failedRules,
           ..
@@ -55,6 +58,7 @@ instance TType VehicleRegistrationCertificateT Domain.VehicleRegistrationCertifi
   toTType Domain.VehicleRegistrationCertificate {..} =
     VehicleRegistrationCertificateT
       { id = getId id,
+        documentImageId = toKey documentImageId,
         certificateNumber = certificateNumber & unEncrypted . (.encrypted),
         failedRules = PostgresList failedRules,
         ..

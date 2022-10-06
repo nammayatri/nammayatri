@@ -8,9 +8,11 @@ import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.IdfyVerification
+import qualified Domain.Types.DriverOnboarding.Image as Image
 
 data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   { id :: Id VehicleRegistrationCertificate,
+    documentImageId :: Id Image.Image,
     certificateNumber :: EncryptedHashedField e Text,
     fitnessExpiry :: UTCTime,
     permitExpiry :: Maybe UTCTime,

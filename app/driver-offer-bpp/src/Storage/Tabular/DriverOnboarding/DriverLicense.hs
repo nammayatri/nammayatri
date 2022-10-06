@@ -15,6 +15,7 @@ import qualified Data.ByteString as BS
 import qualified Domain.Types.DriverOnboarding.DriverLicense as Domain
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Idfy.Types as Idfy
+import Storage.Tabular.DriverOnboarding.Image (ImageTId)
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.VerificationStatus"
@@ -26,6 +27,8 @@ mkPersist
     DriverLicenseT sql=driver_license
       id Text
       driverId PersonTId
+      documentImageId1 ImageTId
+      documentImageId2 ImageTId Maybe
       driverDob UTCTime Maybe
       driverName Text Maybe
       licenseNumber Text
@@ -53,6 +56,8 @@ instance TType DriverLicenseT Domain.DriverLicense where
       Domain.DriverLicense
         { id = Id id,
           driverId = fromKey driverId,
+          documentImageId1 = fromKey documentImageId1,
+          documentImageId2 = fromKey <$> documentImageId2,
           licenseNumber = EncryptedHashed (Encrypted licenseNumber) (DbHash BS.empty),
           classOfVehicles = unPostgresList classOfVehicles,
           failedRules = unPostgresList failedRules,
@@ -62,6 +67,8 @@ instance TType DriverLicenseT Domain.DriverLicense where
     DriverLicenseT
       { id = getId id,
         driverId = toKey driverId,
+        documentImageId1 = toKey documentImageId1,
+        documentImageId2 = toKey <$> documentImageId2,
         licenseNumber = licenseNumber & unEncrypted . (.encrypted),
         classOfVehicles = PostgresList classOfVehicles,
         failedRules = PostgresList failedRules,

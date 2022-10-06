@@ -10,6 +10,8 @@ data VerificationStatus = PENDING | VALID | INVALID
 
 data IdfyVerification = IdfyVerification
   { id :: Id IdfyVerification,
+    documentImageId1 :: Id Image,
+    documentImageId2 :: Maybe (Id Image),
     driverId :: Id Person,
     requestId :: Text,
     docType :: ImageType,

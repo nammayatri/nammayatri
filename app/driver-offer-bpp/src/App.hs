@@ -63,7 +63,7 @@ runDriverOfferBpp' appCfg = do
             flowRt
             [ (Nothing, prepareAuthManagersWithRegistryUrl flowRt appEnv allShortIds),
               (Nothing, prepareS3AuthManager flowRt appEnv),
-              (Just 10000, prepareIdfyHttpManager 10000)
+              (Just 20000, prepareIdfyHttpManager 20000)
             ]
 
         logInfo "Initializing Redis Connections..."

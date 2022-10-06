@@ -89,11 +89,11 @@ verifyDL personId req@DriverDLReq {..} = do
     Just driverLicense -> do
       unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
       unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-      verifyDLFlow personId driverLicenseNumber driverDateOfBirth
+      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2
     Nothing -> do
       mDriverDL <- Query.findByDriverId personId
       when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
-      verifyDLFlow personId driverLicenseNumber driverDateOfBirth
+      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -104,8 +104,8 @@ verifyDL personId req@DriverDLReq {..} = do
         throwError (ImageInvalidType (show Image.DriverLicense) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-verifyDLFlow :: Id Person.Person -> Text -> UTCTime -> Flow ()
-verifyDLFlow personId dlNumber driverDateOfBirth = do
+verifyDLFlow :: Id Person.Person -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Flow ()
+verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 = do
   now <- getCurrentTime
   idfyRes <- Idfy.verifyDL dlNumber driverDateOfBirth
   idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now
@@ -117,6 +117,8 @@ verifyDLFlow personId dlNumber driverDateOfBirth = do
         Domain.IdfyVerification
           { id,
             driverId = personId,
+            documentImageId1 = imageId1,
+            documentImageId2 = imageId2,
             requestId,
             docType = Image.DriverLicense,
             status = "pending",
@@ -134,7 +136,7 @@ onVerifyDL [resp] = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   now <- getCurrentTime
 
-  mDriverLicense <- mkDriverLicenseEntry person.id now resp.result
+  mDriverLicense <- mkDriverLicenseEntry person.id now verificationReq.documentImageId1 verificationReq.documentImageId2 resp.result
   case mDriverLicense of
     Just driverLicense -> do
       runTransaction $ Query.upsert driverLicense
@@ -142,24 +144,41 @@ onVerifyDL [resp] = do
     Nothing -> return Ack
 onVerifyDL _ = pure Ack
 
-mkDriverLicenseEntry :: Id Person.Person -> UTCTime -> Maybe Idfy.IdfyResult -> Flow (Maybe Domain.DriverLicense)
-mkDriverLicenseEntry _ _ Nothing = return Nothing
-mkDriverLicenseEntry driverId now (Just result) =
+mkDriverLicenseEntry ::
+  Id Person.Person ->
+  UTCTime ->
+  Id Image.Image ->
+  Maybe (Id Image.Image) ->
+  Maybe Idfy.IdfyResult ->
+  Flow (Maybe Domain.DriverLicense)
+mkDriverLicenseEntry _ _ _ _ Nothing = return Nothing
+mkDriverLicenseEntry driverId now imageId1 imageId2 (Just result) =
   case result.source_output of
     Just output -> do
       mEncryptedDL <- encrypt `mapM` output.id_number
       id <- generateGUID
       let mLicenseExpiry = convertTextToUTC output.nt_validity_to
-      return $ createDL driverId output id now <$> mEncryptedDL <*> mLicenseExpiry
+      return $ createDL driverId output id imageId1 imageId2 now <$> mEncryptedDL <*> mLicenseExpiry
     Nothing -> return Nothing
 
-createDL :: Id Person.Person -> Idfy.DLVerificationOutput -> Id Domain.DriverLicense -> UTCTime -> EncryptedHashedField 'AsEncrypted Text -> UTCTime -> Domain.DriverLicense
-createDL driverId output id now edl expiry = do
+createDL ::
+  Id Person.Person ->
+  Idfy.DLVerificationOutput ->
+  Id Domain.DriverLicense ->
+  Id Image.Image ->
+  Maybe (Id Image.Image) ->
+  UTCTime ->
+  EncryptedHashedField 'AsEncrypted Text ->
+  UTCTime ->
+  Domain.DriverLicense
+createDL driverId output id imageId1 imageId2 now edl expiry = do
   let classOfVehicles = map (.cov) output.cov_details
   let verificationStatus = validateDLStatus expiry classOfVehicles now
   Domain.DriverLicense
     { id,
       driverId,
+      documentImageId1 = imageId1,
+      documentImageId2 = imageId2,
       driverDob = convertTextToUTC output.dob,
       driverName = output.name,
       licenseNumber = edl,

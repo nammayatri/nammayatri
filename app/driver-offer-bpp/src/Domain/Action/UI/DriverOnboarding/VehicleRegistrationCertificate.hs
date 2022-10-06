@@ -86,7 +86,7 @@ verifyRC personId req@DriverRCReq {..} = do
       rcNumber <- decrypt driverRC.certificateNumber
       unless (rcNumber == vehicleRegistrationCertNumber) $ throwImageError imageId DriverAlreadyLinked
       unless (driverRC.fitnessExpiry < now) $ throwImageError imageId RCAlreadyUpdated -- RC not expired
-      verifyRCFlow personId vehicleRegistrationCertNumber
+      verifyRCFlow personId vehicleRegistrationCertNumber imageId
     Nothing -> do
       eRC <- encrypt vehicleRegistrationCertNumber
       mVehicleRC <- RCQuery.findLastVehicleRC eRC
@@ -94,14 +94,14 @@ verifyRC personId req@DriverRCReq {..} = do
         Just vehicleRC -> do
           mRCAssociation <- DAQuery.getActiveAssociationByRC vehicleRC.id
           when (isJust mRCAssociation) $ throwImageError imageId RCAlreadyLinked
-          verifyRCFlow personId vehicleRegistrationCertNumber
+          verifyRCFlow personId vehicleRegistrationCertNumber imageId
         Nothing -> do
-          verifyRCFlow personId vehicleRegistrationCertNumber
+          verifyRCFlow personId vehicleRegistrationCertNumber imageId
 
   return Success
 
-verifyRCFlow :: Id Person.Person -> Text -> Flow ()
-verifyRCFlow personId rcNumber = do
+verifyRCFlow :: Id Person.Person -> Text -> Id Image.Image -> Flow ()
+verifyRCFlow personId rcNumber imageId = do
   now <- getCurrentTime
   idfyRes <- Idfy.verifyRC rcNumber
   idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now
@@ -113,6 +113,8 @@ verifyRCFlow personId rcNumber = do
         Domain.IdfyVerification
           { id,
             driverId = personId,
+            documentImageId1 = imageId,
+            documentImageId2 = Nothing,
             requestId,
             docType = Image.VehicleRegistrationCertificate,
             status = "PENDING",
@@ -130,7 +132,7 @@ onVerifyRC [resp] = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   now <- getCurrentTime
 
-  mVehicleRC <- mkVehicleRCEntry now resp.result
+  mVehicleRC <- mkVehicleRCEntry now verificationReq.documentImageId1 resp.result
   case mVehicleRC of
     Just vehicleRC -> do
       runTransaction $ RCQuery.upsert vehicleRC
@@ -159,24 +161,36 @@ onVerifyRC [resp] = do
           }
 onVerifyRC _ = pure Ack
 
-mkVehicleRCEntry :: UTCTime -> Maybe Idfy.IdfyResult -> Flow (Maybe Domain.VehicleRegistrationCertificate)
-mkVehicleRCEntry _ Nothing = return Nothing
-mkVehicleRCEntry now (Just result) =
+mkVehicleRCEntry ::
+  UTCTime ->
+  Id Image.Image ->
+  Maybe Idfy.IdfyResult ->
+  Flow (Maybe Domain.VehicleRegistrationCertificate)
+mkVehicleRCEntry _ _ Nothing = return Nothing
+mkVehicleRCEntry now imageId (Just result) =
   case result.extraction_output of
     Just output -> do
       mEncryptedRC <- encrypt `mapM` output.registration_number
       id <- generateGUID
       let mbFitnessEpiry = convertTextToUTC output.fitness_upto
-      return $ createRC output id now <$> mEncryptedRC <*> mbFitnessEpiry
+      return $ createRC output id imageId now <$> mEncryptedRC <*> mbFitnessEpiry
     Nothing -> return Nothing
 
-createRC :: Idfy.RCVerificationOutput -> Id Domain.VehicleRegistrationCertificate -> UTCTime -> EncryptedHashedField 'AsEncrypted Text -> UTCTime -> Domain.VehicleRegistrationCertificate
-createRC output id now edl expiry = do
+createRC ::
+  Idfy.RCVerificationOutput ->
+  Id Domain.VehicleRegistrationCertificate ->
+  Id Image.Image ->
+  UTCTime ->
+  EncryptedHashedField 'AsEncrypted Text ->
+  UTCTime ->
+  Domain.VehicleRegistrationCertificate
+createRC output id imageId now edl expiry = do
   let insuranceValidity = convertTextToUTC output.insurance_validity
   let vehicleClass = output.vehicle_class
   let verificationStatus = validateRCStatus expiry insuranceValidity vehicleClass now
   Domain.VehicleRegistrationCertificate
     { id,
+      documentImageId = imageId,
       certificateNumber = edl,
       fitnessExpiry = expiry,
       permitExpiry = convertTextToUTC output.permit_validity,

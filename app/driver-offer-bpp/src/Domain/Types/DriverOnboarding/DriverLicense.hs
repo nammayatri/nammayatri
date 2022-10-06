@@ -6,12 +6,15 @@ import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.IdfyVerification
+import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.Person (Person)
 import Idfy.Types as Idfy
 
 data DriverLicenseE e = DriverLicense
   { id :: Id DriverLicense,
     driverId :: Id Person,
+    documentImageId1 :: Id Image.Image,
+    documentImageId2 :: Maybe (Id Image.Image),
     driverDob :: Maybe UTCTime,
     driverName :: Maybe Text,
     licenseNumber :: EncryptedHashedField e Text,

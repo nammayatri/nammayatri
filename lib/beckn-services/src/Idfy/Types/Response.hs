@@ -45,45 +45,37 @@ data IdfySuccess = IdfySuccess {request_id :: Text, _a :: Maybe Text}
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- class of vehicle
-data ClassOfVehicle = W_NT | W_T | W_CAB | HGV_T | HMV_HGV | HMV | HTV | LMV | LMV_NT | LMV_T | LMV_CAB | LMV_HMV | LTV | MCWG | MCWOG | HPMV | MGV | MMV | LDRXCV | PSV_BUS | TRANS | TRCTOR | OTHERS | NotDefined
-  deriving (Show, Generic, ToSchema, Eq, Read)
+data ClassOfVehicle = W_NT | W_T | W_CAB | HGV_T | HMV_HGV | HMV | HTV | LMV | LMV_NT | LMV_T | LMV_CAB | LMV_HMV | LTV | MCWG | MCWOG | HPMV | MGV | MMV | LDRXCV | PSV_BUS | TRANS | TRCTOR | OTHERS | NotDefined Text
+  deriving (Show, Generic, ToSchema, Eq, Read, ToJSON)
 
 instance FromJSON ClassOfVehicle where
-  parseJSON = genericParseJSON constructorForCOVFromJson
-
-instance ToJSON ClassOfVehicle where
-  toJSON = genericToJSON constructorForCOVToJson
-
-constructorForCOVFromJson :: Options
-constructorForCOVFromJson =
-  defaultOptions
-    { constructorTagModifier = \val ->
-        case T.unpack $ T.toUpper $ T.pack val of
-          "3W-NT" -> "W_NT"
-          "3W-T" -> "W_T"
-          "3W-CAB" -> "W_CAB"
-          "HGV-T" -> "HGV_T"
-          "HMV-HGV" -> "HMV_HGV"
-          "HMV" -> "HMV"
-          "HTV" -> "HTV"
-          "LMV" -> "LMV"
-          "LMV-NT" -> "LMV_NT"
-          "LMV-T" -> "LMV_T"
-          "LMV-CAB" -> "LMV_CAB"
-          "LMV-HMV" -> "LMV_HMV"
-          "LTV" -> "LTV"
-          "MCWG" -> "MCWG"
-          "MCWOG" -> "MCWOG"
-          "HPMV" -> "HPMV"
-          "MGV" -> "MGV"
-          "MMV" -> "MMV"
-          "LDRXCV" -> "LDRXCV"
-          "PSV-BUS" -> "PSV_BUS"
-          "TRANS" -> "TRANS"
-          "TRCTOR" -> "TRCTOR"
-          "OTHERS" -> "OTHERS"
-          _ -> "NotDefined"
-    }
+  parseJSON (String val) =
+    case T.toUpper val of
+      "3W-NT" -> return W_NT
+      "3W-T" -> return W_T
+      "3W-CAB" -> return W_CAB
+      "HGV-T" -> return HGV_T
+      "HMV-HGV" -> return HMV_HGV
+      "HMV" -> return HMV
+      "HTV" -> return HTV
+      "LMV" -> return LMV
+      "LMV-NT" -> return LMV_NT
+      "LMV-T" -> return LMV_T
+      "LMV-CAB" -> return LMV_CAB
+      "LMV-HMV" -> return LMV_HMV
+      "LTV" -> return LTV
+      "MCWG" -> return MCWG
+      "MCWOG" -> return MCWOG
+      "HPMV" -> return HPMV
+      "MGV" -> return MGV
+      "MMV" -> return MMV
+      "LDRXCV" -> return LDRXCV
+      "PSV-BUS" -> return PSV_BUS
+      "TRANS" -> return TRANS
+      "TRCTOR" -> return TRCTOR
+      "OTHERS" -> return OTHERS
+      v -> return $ NotDefined v
+  parseJSON _ = fail ""
 
 constructorForCOVToJson :: Options
 constructorForCOVToJson =
