@@ -15,6 +15,7 @@ import Beckn.Types.MapSearch (LatLong (..))
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RentalSlab
@@ -48,7 +49,7 @@ data ConfirmRes = ConfirmRes
 data ConfirmQuoteDetails
   = ConfirmOneWayDetails
   | ConfirmRentalDetails RentalSlabAPIEntity
-  | ConfirmAutoDetails (Id DQuote.BPPQuote)
+  | ConfirmAutoDetails (Id DDriverOffer.BPPQuote)
   deriving (Show, Generic)
 
 confirm :: EsqDBFlow m r => Id DP.Person -> Id DQuote.Quote -> m ConfirmRes

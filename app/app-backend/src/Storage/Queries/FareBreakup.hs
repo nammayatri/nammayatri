@@ -7,8 +7,8 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Types.Booking.Type
-import Domain.Types.FareBreakup
-import Storage.Tabular.FareBreakup
+import Domain.Types.FarePolicy.FareBreakup
+import Storage.Tabular.FarePolicy.FareBreakup
 
 createMany :: [FareBreakup] -> SqlDB ()
 createMany = Esq.createMany

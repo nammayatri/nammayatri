@@ -1,10 +1,12 @@
 module Domain.Types.DriverOffer where
 
 import Beckn.Prelude
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
 import qualified Domain.Types.Estimate as DEstimate
-import Types.Common
+
+data BPPQuote
 
 data DriverOffer = DriverOffer
   { id :: Id DriverOffer,

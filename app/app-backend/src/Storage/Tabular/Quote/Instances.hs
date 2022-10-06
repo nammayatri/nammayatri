@@ -6,6 +6,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Beckn.Utils.Error
+import qualified Domain.Types.FarePolicy.FareProductType as Domain
 import qualified Domain.Types.Quote as Domain
 import qualified Storage.Tabular.DriverOffer as SDriverOffer
 import Storage.Tabular.Quote

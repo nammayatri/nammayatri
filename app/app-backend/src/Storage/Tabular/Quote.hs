@@ -11,6 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common (HighPrecMeters, HighPrecMoney)
 import Beckn.Types.Id
+import qualified Domain.Types.FarePolicy.FareProductType as Domain
 import qualified Domain.Types.Quote as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
 import qualified Storage.Tabular.DriverOffer as SDriverOffer

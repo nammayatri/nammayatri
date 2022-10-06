@@ -5,6 +5,7 @@ module Storage.Queries.FullEntityBuilders where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Domain.Types.Booking as Booking
+import Domain.Types.FarePolicy.FareProductType
 import Domain.Types.Quote as Quote
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Booking.BookingLocation

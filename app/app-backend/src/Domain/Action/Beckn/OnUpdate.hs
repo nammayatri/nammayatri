@@ -5,7 +5,7 @@ import Beckn.Storage.Hedis.Config (HedisFlow)
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude hiding (state)

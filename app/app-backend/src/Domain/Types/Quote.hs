@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Domain.Types.Quote (module Domain.Types.Quote, module Types.Common) where
+module Domain.Types.Quote where
 
 import Beckn.Prelude
 import Beckn.Types.Common
@@ -15,7 +15,6 @@ import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
-import Types.Common
 
 data Quote = Quote
   { id :: Id Quote,

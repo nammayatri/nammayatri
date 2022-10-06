@@ -52,7 +52,7 @@ data DriverOfferQuoteDetails = DriverOfferQuoteDetails
     distanceToPickup :: HighPrecMeters,
     validTill :: UTCTime,
     rating :: Maybe Double,
-    bppDriverQuoteId :: Id DQuote.BPPQuote
+    bppDriverQuoteId :: Id DDriverOffer.BPPQuote
   }
   deriving (Generic, Show)
 
@@ -80,10 +80,10 @@ onSelect registryUrl DOnSelectReq {..} = do
   DB.runTransaction $ QQuote.createMany quotes
   Notify.notifyOnDriverOfferIncoming estimateId quotes person
   where
-    duplicateCheckCond :: EsqDBFlow m r => [Id DQuote.BPPQuote] -> Text -> m Bool
+    duplicateCheckCond :: EsqDBFlow m r => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
-      isJust <$> QQuote.findByBppIdAndQuoteId bppId_ bppQuoteId_
+      isJust <$> QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_
 
 buildSelectedQuote ::
   MonadFlow m =>

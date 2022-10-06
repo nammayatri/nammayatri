@@ -6,6 +6,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Data.Tuple.Extra
+import Domain.Types.DriverOffer
 import Domain.Types.Estimate
 import Domain.Types.Quote
 import Domain.Types.SearchRequest
@@ -72,13 +73,13 @@ findById quoteId = Esq.buildDType $ do
     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer)
   join <$> mapM buildFullQuote mbFullQuoteT
 
-findByBppIdAndQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe Quote)
-findByBppIdAndQuoteId bppId quoteId = buildDType $ do
+findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe Quote)
+findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
   mbFullQuoteT <- Esq.findOne' $ do
     (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer) <- from fullQuoteTable
     where_ $
       quote ^. QuoteProviderId ==. val bppId
-        &&. mbDriverOffer ?. DriverOfferBppQuoteId ==. just (val quoteId.getId)
+        &&. mbDriverOffer ?. DriverOfferBppQuoteId ==. just (val bppQuoteId.getId)
     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer)
   join <$> mapM buildFullQuote mbFullQuoteT
 

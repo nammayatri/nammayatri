@@ -5,8 +5,8 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
 import qualified Domain.Types.Booking.BookingLocation as SLoc
 import Domain.Types.Booking.Type
-import Domain.Types.FareBreakup
-import qualified Domain.Types.FareBreakup as DFareBreakup
+import Domain.Types.FarePolicy.FareBreakup
+import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (RideAPIEntity)
 import qualified Domain.Types.Ride as DRide

@@ -13,7 +13,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Error
 import qualified Domain.Types.Booking.Type as Domain
-import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
 import qualified Storage.Tabular.Booking.BookingLocation as SLoc
 import qualified Storage.Tabular.Merchant as SMerchant
