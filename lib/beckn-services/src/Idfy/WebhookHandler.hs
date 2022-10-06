@@ -4,7 +4,10 @@ import Beckn.Tools.Metrics.CoreMetrics.Types
 import Beckn.Types.Flow
 import Beckn.Utils.Common
 import Beckn.Utils.IOLogging
+import qualified Data.Aeson as DA
+import qualified Data.ByteString.Lazy as DB
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as DTE
 import Data.Time.Format
 import EulerHS.Prelude
 import Idfy.Auth
@@ -21,15 +24,18 @@ webhookHandler ::
   ) =>
   (VerificationResponse -> FlowR a AckResponse) ->
   Maybe Text ->
-  VerificationResponse ->
+  Text ->
   FlowHandlerR a AckResponse
-webhookHandler verifyHandler secret resp = withFlowHandlerAPI $ do
-  -- withLogTag "webhookIdfy" $ do
-  -- logInfo $ show val
-  -- resp <- parseJSON val
-  void $ verifyAuth secret
-  void $ verifyHandler resp
-  pure Ack
+webhookHandler verifyHandler secret val = withFlowHandlerAPI $ do
+  withLogTag "webhookIdfy" $ do
+    logInfo $ show val
+    let mResp = DA.decode $ DB.fromStrict $ DTE.encodeUtf8 val
+    case mResp of
+      Just resp -> do
+        void $ verifyAuth secret
+        void $ verifyHandler resp
+        pure Ack
+      Nothing -> pure Ack
 
 verifyDL ::
   ( HasField "isShuttingDown" a (TMVar ()),
