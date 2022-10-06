@@ -43,7 +43,7 @@ data DriverDLReq = DriverDLReq
     operatingCity :: Text,
     driverDateOfBirth :: UTCTime,
     imageId1 :: Id Image.Image,
-    imageId2 :: Id Image.Image
+    imageId2 :: Maybe (Id Image.Image)
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -71,9 +71,9 @@ verifyDL personId req@DriverDLReq {..} = do
   _ <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
   image1 <- getImage imageId1
-  image2 <- getImage imageId2
+  image2 <- getImage `mapM` imageId2
 
-  resp <- Idfy.extractDLImage image1 (Just image2)
+  resp <- Idfy.extractDLImage image1 image2
   case resp.result of
     Just result -> do
       let extractDLNumber = removeSpaceAndDash <$> result.extraction_output.id_number
@@ -96,6 +96,7 @@ verifyDL personId req@DriverDLReq {..} = do
       verifyDLFlow personId driverLicenseNumber driverDateOfBirth
   return Success
   where
+    getImage :: Id Image.Image -> Flow Text
     getImage imageId = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
       unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)

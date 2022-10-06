@@ -12,7 +12,7 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id (Id)
 import Beckn.Utils.Error
-import Data.Text as T
+import Data.Text as T hiding (length)
 import qualified Domain.Types.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
@@ -26,12 +26,13 @@ import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
+import qualified Storage.Queries.DriverOnboarding.Image as IQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as VQuery
 
-data ResponseStatus = PENDING | VALID | FAILED | INVALID | NO_DOC_AVAILABLE
+data ResponseStatus = PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | NO_DOC_AVAILABLE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes = StatusRes
@@ -87,7 +88,12 @@ checkIfInVerification driverId docType = do
       if req.status == T.pack "failed"
         then return FAILED
         else return PENDING
-    Nothing -> return NO_DOC_AVAILABLE
+    Nothing -> do
+      images <- IQuery.findRecentByPersonIdAndImageType driverId docType
+      onboardingTryLimit <- asks (.onboardingTryLimit)
+      if length images > onboardingTryLimit
+        then return LIMIT_EXCEED
+        else return NO_DOC_AVAILABLE
 
 enableDriver :: Id SP.Person -> Id Org.Organization -> Maybe RC.VehicleRegistrationCertificate -> Maybe DL.DriverLicense -> Flow ()
 enableDriver _ _ Nothing Nothing = return ()
