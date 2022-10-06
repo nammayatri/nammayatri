@@ -6,13 +6,13 @@ module Domain.Action.UI.Booking
 where
 
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.OpenApi (ToSchema (..))
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Booking as QRB
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 newtype BookingListRes = BookingListRes
   { list :: [SRB.BookingAPIEntity]

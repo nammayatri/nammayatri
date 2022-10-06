@@ -9,15 +9,14 @@ import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import Beckn.Types.Id
-import Beckn.Utils.Logging
+import Beckn.Utils.Common
 import Core.ACL.Common (validatePrices)
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, unpack)
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 buildOnSearchReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],

@@ -8,6 +8,7 @@ where
 import Beckn.Storage.Hedis as Hedis
 import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.JSON (objectWithSingleFieldParsing)
 import qualified Beckn.Utils.Schema as S
 import Data.Char (toLower)
@@ -27,8 +28,7 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Quote as QRentalQuote
 import qualified Storage.Queries.SearchRequest as QSR
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 data GetQuotesRes = GetQuotesRes
   { fromLocation :: SearchReqLocationAPIEntity,

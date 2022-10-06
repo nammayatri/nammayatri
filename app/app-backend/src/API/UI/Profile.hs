@@ -14,7 +14,7 @@ import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude
 import Servant
-import Utils.Auth
+import Tools.Auth
 
 type API =
   "profile"

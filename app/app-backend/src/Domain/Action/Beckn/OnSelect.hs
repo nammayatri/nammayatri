@@ -8,20 +8,20 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
-import qualified Storage.CachedQueries.Merchant as QMerch
 import Environment
+import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
-import Types.Error
-import Utils.Common
-import qualified Utils.Notifications as Notify
+import Tools.Error
+import qualified Tools.Notifications as Notify
 
 data DOnSelectReq = DOnSelectReq
   { estimateId :: Id DEstimate.Estimate,

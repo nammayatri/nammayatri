@@ -6,8 +6,8 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
-import Utils.Common
 
 buildOnConfirmReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text]

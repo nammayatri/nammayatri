@@ -15,7 +15,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Person as Person
 import qualified Storage.Queries.Person as QPerson
-import Types.Error
+import Tools.Error
 
 type ProfileRes = Person.PersonAPIEntity
 

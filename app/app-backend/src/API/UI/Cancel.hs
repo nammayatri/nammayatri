@@ -7,6 +7,7 @@ where
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Core.ACL.Cancel as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
@@ -14,8 +15,7 @@ import qualified Domain.Types.Person as Person
 import Environment
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 type API =
   "rideBooking"

@@ -5,9 +5,9 @@ import Beckn.Types.Common
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Rating as Rating
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.Feedback as DFeedback
 import Environment
-import Utils.Common
 
 buildRatingReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>

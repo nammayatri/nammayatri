@@ -1,4 +1,4 @@
-module Utils.Notifications where
+module Tools.Notifications where
 
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
@@ -6,6 +6,7 @@ import Beckn.Storage.Esqueleto
 import Beckn.Storage.Hedis
 import Beckn.Types.Error
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -22,9 +23,8 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.SearchRequest as QSearchReq
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Common
 
 getFCMConfig ::
   (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>

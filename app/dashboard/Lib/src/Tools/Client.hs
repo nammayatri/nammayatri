@@ -10,9 +10,9 @@ import qualified Domain.Types.RegistrationToken as DReg
 import qualified EulerHS.Types as ET
 import Servant hiding (throwError)
 import Servant.Client
+import "app-backend" Tools.Auth (DashboardTokenAuth)
 import Tools.Error
 import Tools.Metrics
-import "app-backend" Utils.Auth (DashboardTokenAuth)
 
 callAppBackendYatriApi,
   callAppBackendArduApi,

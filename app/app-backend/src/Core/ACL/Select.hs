@@ -6,10 +6,10 @@ import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Common.ItemCode as Common
 import qualified Beckn.Types.Core.Taxi.Select as Select
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types.VehicleVariant
 import Environment
-import Utils.Common
 
 buildSelectReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>

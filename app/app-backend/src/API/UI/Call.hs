@@ -12,7 +12,7 @@ where
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Utils.Logging
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.Call as DCall
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as SCS
@@ -20,8 +20,7 @@ import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment
 import Servant
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 type API =
   DeprecatedCallAPIs

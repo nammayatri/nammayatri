@@ -24,6 +24,7 @@ import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import Beckn.Types.SlidingWindowLimiter (APIRateLimitOptions)
+import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation
@@ -40,11 +41,10 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
+import Tools.Auth (authTokenCacheKey)
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Auth (authTokenCacheKey)
-import Utils.Common
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,

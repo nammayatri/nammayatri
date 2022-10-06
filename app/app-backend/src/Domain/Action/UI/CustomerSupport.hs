@@ -16,6 +16,7 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import Domain.Types.Person as SP
@@ -24,8 +25,7 @@ import qualified EulerHS.Language as L
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 newtype OrderResp = OrderResp {order :: OrderDetails}
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)

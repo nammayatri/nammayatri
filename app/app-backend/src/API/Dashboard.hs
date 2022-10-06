@@ -7,8 +7,8 @@ import qualified Domain.Types.Merchant as DMerchant
 import Environment
 import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant as QMerchant
-import Types.Error
-import Utils.Auth (Dashboard, DashboardTokenAuth)
+import Tools.Auth (Dashboard, DashboardTokenAuth)
+import Tools.Error
 
 -- TODO do we need different tokens for different merchants? now we have one common token
 

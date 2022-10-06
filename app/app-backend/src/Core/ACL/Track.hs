@@ -10,9 +10,9 @@ import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Track as Track
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Ride as DRide
 import Environment
-import Utils.Common
 
 data TrackBuildReq = TrackBuildReq
   { bppRideId :: Id DRide.BPPRide,

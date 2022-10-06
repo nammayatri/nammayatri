@@ -8,13 +8,13 @@ where
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Ride as DRide
 import qualified Environment as App
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 data FeedbackReq = FeedbackReq
   { rideId :: Id DRide.Ride,

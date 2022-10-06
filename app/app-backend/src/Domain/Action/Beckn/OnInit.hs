@@ -5,6 +5,7 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
@@ -13,8 +14,7 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 data OnInitReq = OnInitReq
   { bookingId :: Id Booking,

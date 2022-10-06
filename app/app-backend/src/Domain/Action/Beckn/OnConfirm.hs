@@ -8,13 +8,13 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRB
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 newtype OnConfirmReq = OnConfirmReq
   { bppBookingId :: Id DRB.BPPBooking

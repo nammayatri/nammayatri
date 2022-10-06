@@ -6,14 +6,14 @@ module API.UI.CancellationReason
 where
 
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.CancellationReason as DCancellationReason
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 type API =
   "cancellationReason"

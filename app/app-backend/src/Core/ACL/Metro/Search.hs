@@ -10,11 +10,11 @@ import qualified Beckn.Types.Core.Metro.Search as Search
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Types.TimeRFC339
+import Beckn.Utils.Common
 import Control.Lens ((?~))
 import qualified Domain.Action.UI.Search.OneWay as DSearch
 import Environment
 import EulerHS.Prelude hiding (state)
-import Utils.Common
 
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>

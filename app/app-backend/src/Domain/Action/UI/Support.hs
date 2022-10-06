@@ -10,6 +10,8 @@ import Beckn.Types.APISuccess
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Types.Predicate
+import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Issue as DIssue
@@ -18,7 +20,21 @@ import Domain.Types.Quote (Quote)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.Issues as Queries
-import Types.Issue
+
+data Issue = Issue
+  { reason :: Text,
+    description :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+validateIssue :: Validate Issue
+validateIssue Issue {..} =
+  sequenceA_
+    [ validateField "reason" reason $ LengthInRange 2 255 `And` text,
+      validateField "description" description $ LengthInRange 2 255 `And` text
+    ]
+  where
+    text = star $ alphanum \/ " " \/ ","
 
 data SendIssueReq = SendIssueReq
   { contactEmail :: Maybe Text,

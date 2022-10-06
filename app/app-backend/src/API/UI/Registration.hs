@@ -19,7 +19,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.RegistrationToken as SRT
 import Environment
 import Servant hiding (throwError)
-import Utils.Auth (TokenAuth)
+import Tools.Auth (TokenAuth)
 
 ---- Registration Flow ------
 type API =

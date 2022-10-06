@@ -11,6 +11,7 @@ import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Utils.Common
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
@@ -20,10 +21,9 @@ import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Common
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 type GetDriverLocRes = MapSearch.LatLong
 

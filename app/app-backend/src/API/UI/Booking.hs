@@ -6,6 +6,7 @@ module API.UI.Booking
 where
 
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.Booking as DBooking
 import Domain.Types.Booking (BookingAPIEntity)
 import qualified Domain.Types.Booking as SRB
@@ -13,8 +14,7 @@ import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 type API =
   "rideBooking"

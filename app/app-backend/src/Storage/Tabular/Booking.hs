@@ -21,7 +21,7 @@ import qualified Storage.Tabular.Person as SPerson
 import Storage.Tabular.Quote ()
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
 import qualified Storage.Tabular.TripTerms as STripTerms
-import Types.Error
+import Tools.Error
 
 derivePersistField "Domain.BookingStatus"
 

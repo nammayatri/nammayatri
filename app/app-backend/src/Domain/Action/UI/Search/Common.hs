@@ -7,13 +7,13 @@ where
 
 import Beckn.Prelude
 import Beckn.Types.MapSearch
+import Beckn.Utils.Common
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import Tools.Metrics (CoreMetrics)
-import Utils.Common
 
 buildSearchRequest ::
   ( (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]),

@@ -7,10 +7,10 @@ import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as OnUpdate
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
-import Utils.Common
 
 buildOnUpdateReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],

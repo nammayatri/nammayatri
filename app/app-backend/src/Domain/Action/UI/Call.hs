@@ -22,7 +22,7 @@ import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
-import Beckn.Utils.Logging
+import Beckn.Utils.Common
 import Data.Text
 import qualified Data.Text as T
 import Data.Text.Conversions
@@ -38,9 +38,8 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Common
 
 newtype CallRes = CallRes
   { callId :: Id DCS.CallStatus

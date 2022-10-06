@@ -8,13 +8,13 @@ import Beckn.Product.MapSearch.PolyLinePoints
 import Beckn.Storage.Hedis
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Person as Person
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry (someGeometriesContain)
 import qualified Storage.Queries.Person as QP
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 checkServiceability ::
   ( HasCacheConfig r,

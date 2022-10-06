@@ -7,13 +7,13 @@ module API.UI.Support
 where
 
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.Support as DSupport
 import Domain.Types.Person as Person
 import qualified Environment as App
 import EulerHS.Prelude hiding (length)
 import Servant
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 -------- Support Flow----------
 type API =

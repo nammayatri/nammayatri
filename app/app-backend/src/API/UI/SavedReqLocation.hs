@@ -15,7 +15,7 @@ import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (state)
 import Servant
-import Utils.Auth
+import Tools.Auth
 
 type API =
   "savedLocation"

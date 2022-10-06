@@ -8,6 +8,7 @@ import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
 import Beckn.Utils.App
+import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.FlowLogging as L
 import Beckn.Utils.Servant.SignatureAuth
@@ -23,7 +24,6 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import System.Environment (lookupEnv)
-import Utils.Common
 
 runAppBackend :: (AppCfg -> AppCfg) -> IO ()
 runAppBackend configModifier = do

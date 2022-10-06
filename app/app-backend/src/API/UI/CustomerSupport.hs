@@ -11,13 +11,13 @@ module API.UI.CustomerSupport
 where
 
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Action.UI.CustomerSupport as DCS
 import Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 -- Customer Support Flow --
 

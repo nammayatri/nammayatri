@@ -7,11 +7,11 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Core.ACL.Common
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Domain.Types.VehicleVariant
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 buildOnSelectReq ::
   HasFlowEnv m r '["coreVersion" ::: Text] =>

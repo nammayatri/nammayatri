@@ -1,4 +1,4 @@
-module Utils.Auth where
+module Tools.Auth where
 
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
@@ -13,7 +13,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import Servant hiding (Context, throwError)
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import Types.Error
+import Tools.Error
 
 -- | Performs simple token verification.
 type TokenAuth = HeaderAuth "token" VerifyToken

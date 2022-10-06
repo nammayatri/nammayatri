@@ -6,9 +6,9 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified Beckn.Types.Core.Taxi.OnInit as OnInit
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Core.ACL.Common
 import qualified Domain.Action.Beckn.OnInit as DOnInit
-import Utils.Common
 
 buildOnInitReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text]

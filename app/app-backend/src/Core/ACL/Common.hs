@@ -1,8 +1,8 @@
 module Core.ACL.Common where
 
 import Beckn.Prelude
-import Types.Error
-import Utils.Common
+import Beckn.Utils.Common
+import Tools.Error
 
 validatePrices :: (MonadThrow m, Log m, Num a, Ord a) => a -> a -> m ()
 validatePrices price priceWithDiscount = do

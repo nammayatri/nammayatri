@@ -8,6 +8,7 @@ where
 
 import Beckn.Prelude hiding (init)
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (BecknAPICallError)
 import qualified Core.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
@@ -17,8 +18,7 @@ import qualified Domain.Types.Quote as Quote
 import Environment
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 type API =
   "rideSearch"

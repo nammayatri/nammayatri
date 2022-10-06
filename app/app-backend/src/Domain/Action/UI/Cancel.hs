@@ -8,6 +8,7 @@ where
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
@@ -16,8 +17,7 @@ import qualified Domain.Types.Ride as Ride
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QR
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 data CancelReq = CancelReq
   { reasonCode :: SCR.CancellationReasonCode,

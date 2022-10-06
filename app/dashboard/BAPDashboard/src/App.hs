@@ -18,7 +18,7 @@ import qualified Data.Map.Strict as Map
 import "lib-dashboard" Environment
 import qualified EulerHS.Runtime as R
 import Servant (Context (..))
-import qualified Tools.Auth as Auth
+import qualified "lib-dashboard" Tools.Auth as Auth
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do

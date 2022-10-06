@@ -1,6 +1,7 @@
 module Domain.Types.Booking.API where
 
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
 import qualified Domain.Types.Booking.BookingLocation as SLoc
@@ -15,7 +16,6 @@ import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
-import Utils.Common
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,

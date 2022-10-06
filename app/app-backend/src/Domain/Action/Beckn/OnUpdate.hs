@@ -3,6 +3,7 @@ module Domain.Action.Beckn.OnUpdate (onUpdate, OnUpdateReq (..), OnUpdateFareBre
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis.Config (HedisFlow)
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
@@ -16,10 +17,9 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import Tools.Metrics (CoreMetrics)
-import Types.Error
-import Utils.Common
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 data OnUpdateReq
   = RideAssignedReq

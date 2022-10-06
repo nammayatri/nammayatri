@@ -9,9 +9,9 @@ import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.Common (withFlowHandlerAPI)
 import "lib-dashboard" Domain.Types.Person as DP
-import Environment
+import "lib-dashboard" Environment
 import Servant
-import Tools.Auth
+import "lib-dashboard" Tools.Auth
 import qualified Tools.Client as Client
 
 type API =

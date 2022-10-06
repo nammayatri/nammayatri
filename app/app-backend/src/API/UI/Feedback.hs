@@ -7,7 +7,7 @@ where
 
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Id
-import Beckn.Utils.Logging
+import Beckn.Utils.Common
 import qualified Core.ACL.Rating as ACL
 import qualified Domain.Action.UI.Feedback as DFeedback
 import qualified Domain.Types.Person as Person
@@ -15,8 +15,7 @@ import qualified Environment as App
 import EulerHS.Prelude hiding (product)
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 -------- Feedback Flow ----------
 type API =

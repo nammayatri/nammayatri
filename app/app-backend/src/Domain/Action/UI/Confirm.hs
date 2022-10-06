@@ -12,6 +12,7 @@ import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -27,10 +28,9 @@ import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
+import Tools.Error
 import Tools.Metrics (CoreMetrics)
-import Types.Error
-import Utils.Common
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 -- domain types
 

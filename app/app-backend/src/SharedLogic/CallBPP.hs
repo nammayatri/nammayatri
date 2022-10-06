@@ -13,6 +13,7 @@ import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Error
 import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Utils.Common
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Track as TrackACL
@@ -23,7 +24,6 @@ import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
 import Servant
 import Tools.Metrics (CoreMetrics)
-import Utils.Common
 
 search ::
   ( HasField "gatewayUrl" r BaseUrl,

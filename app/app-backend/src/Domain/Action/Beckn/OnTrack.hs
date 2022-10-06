@@ -8,14 +8,14 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Ride
 import EulerHS.Prelude hiding (id)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 data OnTrackReq = OnTrackReq
   { bppRideId :: Id BPPRide,
