@@ -123,16 +123,16 @@ verifyRCFlow personId rcNumber imageId = do
             updatedAt = now
           }
 
-onVerifyRC :: Idfy.VerificationResponse -> Flow AckResponse
-onVerifyRC [] = pure Ack
-onVerifyRC [resp] = do
-  verificationReq <- IVQuery.findByRequestId resp.request_id >>= fromMaybeM (InternalError "Verification request not found")
-  runTransaction $ IVQuery.updateResponse resp.request_id resp.status (show <$> resp.result)
-
+onVerifyRC :: Domain.IdfyVerification -> Idfy.RCVerificationOutput -> Flow AckResponse
+onVerifyRC verificationReq output = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   now <- getCurrentTime
+  id <- generateGUID
 
-  mVehicleRC <- mkVehicleRCEntry now verificationReq.documentImageId1 resp.result
+  mEncryptedRC <- encrypt `mapM` output.registration_number
+  let mbFitnessEpiry = convertTextToUTC output.fitness_upto
+
+  let mVehicleRC = createRC output id verificationReq.documentImageId1 now <$> mEncryptedRC <*> mbFitnessEpiry
   case mVehicleRC of
     Just vehicleRC -> do
       runTransaction $ RCQuery.upsert vehicleRC
@@ -159,22 +159,6 @@ onVerifyRC [resp] = do
             consent = True,
             consentTimestamp = now
           }
-onVerifyRC _ = pure Ack
-
-mkVehicleRCEntry ::
-  UTCTime ->
-  Id Image.Image ->
-  Maybe Idfy.IdfyResult ->
-  Flow (Maybe Domain.VehicleRegistrationCertificate)
-mkVehicleRCEntry _ _ Nothing = return Nothing
-mkVehicleRCEntry now imageId (Just result) =
-  case result.extraction_output of
-    Just output -> do
-      mEncryptedRC <- encrypt `mapM` output.registration_number
-      id <- generateGUID
-      let mbFitnessEpiry = convertTextToUTC output.fitness_upto
-      return $ createRC output id imageId now <$> mEncryptedRC <*> mbFitnessEpiry
-    Nothing -> return Nothing
 
 createRC ::
   Idfy.RCVerificationOutput ->

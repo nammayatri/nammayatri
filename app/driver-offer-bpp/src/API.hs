@@ -20,8 +20,7 @@ type DriverOfferAPI =
 type MainAPI =
   UI.API
     :<|> Beckn.API
-    :<|> Idfy.IdfyWebhookAckAPI
-    -- :<|> Idfy.IdfyWebhookAPI
+    :<|> Idfy.IdfyWebhookAPI
     :<|> Dashboard.API
 
 driverOfferAPI :: Proxy DriverOfferAPI
@@ -31,8 +30,7 @@ mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
     :<|> Beckn.handler
-    :<|> Idfy.idfyWebhookHandlerAck DriverOnboarding.onVerify
-    -- :<|> Idfy.idfyWebhookHandler DriverOnboarding.onVerifyDL DriverOnboarding.onVerifyRC
+    :<|> Idfy.idfyWebhookHandler DriverOnboarding.onVerify
     :<|> Dashboard.handler
 
 driverOfferServer :: FlowServer DriverOfferAPI

@@ -20,29 +20,15 @@ webhookHandler ::
     HasField "idfyCfg" a IdfyConfig
   ) =>
   (VerificationResponse -> FlowR a AckResponse) ->
-  (VerificationResponse -> FlowR a AckResponse) ->
   Maybe Text ->
   VerificationResponse ->
   FlowHandlerR a AckResponse
-webhookHandler verifyDL_ verifyRC_ secret result = withFlowHandlerAPI $ do
+webhookHandler verifyHandler secret resp = withFlowHandlerAPI $ do
+  -- withLogTag "webhookIdfy" $ do
+  -- logInfo $ show val
+  -- resp <- parseJSON val
   void $ verifyAuth secret
-  void $ verifyDL_ result
-  void $ verifyRC_ result
-  pure Ack
-
-webhookHandlerAck ::
-  ( HasField "isShuttingDown" a (TMVar ()),
-    HasField "coreMetrics" a CoreMetricsContainer,
-    HasField "loggerEnv" a LoggerEnv,
-    HasField "idfyCfg" a IdfyConfig
-  ) =>
-  (Value -> FlowR a AckResponse) ->
-  Maybe Text ->
-  Value ->
-  FlowHandlerR a AckResponse
-webhookHandlerAck verifyHandler secret ack = withFlowHandlerAPI $ do
-  void $ verifyAuth secret
-  void $ verifyHandler ack
+  void $ verifyHandler resp
   pure Ack
 
 verifyDL ::

@@ -127,39 +127,20 @@ verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 = do
             updatedAt = now
           }
 
-onVerifyDL :: Idfy.VerificationResponse -> Flow AckResponse
-onVerifyDL [] = pure Ack
-onVerifyDL [resp] = do
-  verificationReq <- IVQuery.findByRequestId resp.request_id >>= fromMaybeM (InternalError "Verification request not found")
-  runTransaction $ IVQuery.updateResponse resp.request_id resp.status (show <$> resp.result)
-
+onVerifyDL :: Domain.IdfyVerification -> Idfy.DLVerificationOutput -> Flow AckResponse
+onVerifyDL verificationReq output = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   now <- getCurrentTime
+  id <- generateGUID
 
-  mDriverLicense <- mkDriverLicenseEntry person.id now verificationReq.documentImageId1 verificationReq.documentImageId2 resp.result
+  mEncryptedDL <- encrypt `mapM` output.id_number
+  let mLicenseExpiry = convertTextToUTC output.nt_validity_to
+  let mDriverLicense = createDL person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
   case mDriverLicense of
     Just driverLicense -> do
       runTransaction $ Query.upsert driverLicense
       return Ack
     Nothing -> return Ack
-onVerifyDL _ = pure Ack
-
-mkDriverLicenseEntry ::
-  Id Person.Person ->
-  UTCTime ->
-  Id Image.Image ->
-  Maybe (Id Image.Image) ->
-  Maybe Idfy.IdfyResult ->
-  Flow (Maybe Domain.DriverLicense)
-mkDriverLicenseEntry _ _ _ _ Nothing = return Nothing
-mkDriverLicenseEntry driverId now imageId1 imageId2 (Just result) =
-  case result.source_output of
-    Just output -> do
-      mEncryptedDL <- encrypt `mapM` output.id_number
-      id <- generateGUID
-      let mLicenseExpiry = convertTextToUTC output.nt_validity_to
-      return $ createDL driverId output id imageId1 imageId2 now <$> mEncryptedDL <*> mLicenseExpiry
-    Nothing -> return Nothing
 
 createDL ::
   Id Person.Person ->

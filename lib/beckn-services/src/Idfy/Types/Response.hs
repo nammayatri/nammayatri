@@ -15,9 +15,9 @@ type RCExtractResponse = IdfyResponse (ExtractionOutput RCExtractionOutput)
 
 type DLExtractResponse = IdfyResponse (ExtractionOutput DLExtractionOutput)
 
-type VerificationResponse = [IdfyResponse IdfyResult]
+type VerificationResponse = [IdfyResponse [IdfyResult]]
 
-type IdfyResult = Output DLVerificationOutput RCVerificationOutput
+type IdfyResult = Output [DLVerificationOutput] [RCVerificationOutput]
 
 data IdfyResponse a = IdfyResponse
   { action :: Text,
