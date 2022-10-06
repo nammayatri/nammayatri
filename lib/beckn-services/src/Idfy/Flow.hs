@@ -24,7 +24,7 @@ import Servant hiding (throwError)
 type IdfyWebhookAPI =
   "service" :> "idfy" :> "verification"
     :> Header "Authorization" Text
-    :> ReqBody '[JSON] Text
+    :> ReqBody '[JSON] Value
     :> Post '[JSON] AckResponse
 
 idfyWebhookHandler ::
