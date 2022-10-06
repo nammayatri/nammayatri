@@ -8,7 +8,6 @@ module Domain.Action.UI.Select
   )
 where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -18,6 +17,7 @@ import Domain.Types.Quote (QuoteAPIEntity (..))
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Domain.Types.VehicleVariant (VehicleVariant)
+import Environment
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest

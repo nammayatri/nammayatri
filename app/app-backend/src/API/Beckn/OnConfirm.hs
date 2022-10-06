@@ -1,6 +1,5 @@
 module API.Beckn.OnConfirm (API, handler) where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
@@ -8,6 +7,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnConfirm as ACL
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
+import Environment
 
 type API = OnConfirm.OnConfirmAPI
 

@@ -6,7 +6,6 @@ module API.UI.Confirm
   )
 where
 
-import App.Types
 import Beckn.Prelude hiding (init)
 import Beckn.Types.Id
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (BecknAPICallError)
@@ -15,6 +14,7 @@ import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as Quote
+import Environment
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Utils.Auth

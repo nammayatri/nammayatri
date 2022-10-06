@@ -1,10 +1,10 @@
 module API.Dashboard where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Merchant as DMerchant
+import Environment
 import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Types.Error

@@ -12,8 +12,8 @@ import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI as UI
-import App.Types
 import Data.OpenApi (Info (..), OpenApi (..))
+import Environment
 import EulerHS.Prelude
 import Servant hiding (throwError)
 import Servant.OpenApi

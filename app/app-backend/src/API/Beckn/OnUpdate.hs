@@ -1,12 +1,12 @@
 module API.Beckn.OnUpdate (API, handler) where
 
-import App.Types
 import Beckn.Prelude
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as OnUpdate
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnUpdate as ACL
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
+import Environment
 
 type API = OnUpdate.OnUpdateAPI
 

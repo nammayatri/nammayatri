@@ -4,7 +4,6 @@ module Core.ACL.Track
   )
 where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Storage.Hedis as Redis
 import qualified Beckn.Types.Core.Context as Context
@@ -12,6 +11,7 @@ import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Track as Track
 import Beckn.Types.Id
 import qualified Domain.Types.Ride as DRide
+import Environment
 import Utils.Common
 
 data TrackBuildReq = TrackBuildReq

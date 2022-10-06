@@ -6,8 +6,8 @@ import qualified API.Beckn.OnSearch as OnSearch
 import qualified API.Beckn.OnSelect as OnSelect
 import qualified API.Beckn.OnTrack as OnTrack
 import qualified API.Beckn.OnUpdate as OnUpdate
-import App.Types
 import Beckn.Utils.Servant.SignatureAuth
+import Environment
 import Servant hiding (throwError)
 
 type API =

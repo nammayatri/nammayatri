@@ -22,7 +22,7 @@ import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Support as Support
-import App.Types
+import Environment
 import EulerHS.Prelude
 import Servant
 

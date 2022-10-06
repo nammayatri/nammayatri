@@ -9,7 +9,6 @@ module API.UI.Call
   )
 where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -19,6 +18,7 @@ import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
+import Environment
 import Servant
 import Utils.Auth
 import Utils.Common

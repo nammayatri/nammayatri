@@ -1,6 +1,5 @@
 module Core.ACL.Confirm (buildConfirmReq) where
 
-import App.Types
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
@@ -8,6 +7,7 @@ import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Types.LocationAddress as DBL
+import Environment
 import EulerHS.Prelude hiding (id, state)
 import Utils.Common
 

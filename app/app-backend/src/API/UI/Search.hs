@@ -9,7 +9,6 @@ module API.UI.Search
   )
 where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Storage.Hedis
 import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
@@ -27,6 +26,7 @@ import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
+import Environment
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport

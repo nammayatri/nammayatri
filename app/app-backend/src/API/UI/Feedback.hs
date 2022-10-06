@@ -5,13 +5,13 @@ module API.UI.Feedback
   )
 where
 
-import qualified App.Types as App
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Id
 import Beckn.Utils.Logging
 import qualified Core.ACL.Rating as ACL
 import qualified Domain.Action.UI.Feedback as DFeedback
 import qualified Domain.Types.Person as Person
+import qualified Environment as App
 import EulerHS.Prelude hiding (product)
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP

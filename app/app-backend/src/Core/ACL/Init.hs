@@ -1,6 +1,5 @@
 module Core.ACL.Init (buildInitReq) where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.App
 import qualified Beckn.Types.Core.Context as Context
@@ -11,6 +10,7 @@ import Beckn.Types.MapSearch (LatLong)
 import Beckn.Utils.Context (buildTaxiContext)
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.VehicleVariant as VehVar
+import Environment
 
 buildInitReq ::
   (HasBapInfo r m, MonadFlow m) =>

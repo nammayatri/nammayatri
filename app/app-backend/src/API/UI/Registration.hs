@@ -9,7 +9,6 @@ module API.UI.Registration
   )
 where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
@@ -18,6 +17,7 @@ import qualified Domain.Action.UI.Registration as DRegistration
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.RegistrationToken as SRT
+import Environment
 import Servant hiding (throwError)
 import Utils.Auth (TokenAuth)
 

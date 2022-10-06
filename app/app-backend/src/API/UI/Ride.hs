@@ -5,12 +5,12 @@ module API.UI.Ride
   )
 where
 
-import App.Types
 import Beckn.Types.Id
 import Data.Aeson.Types ()
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Types.Person as SPerson
 import qualified Domain.Types.Ride as SRide
+import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
 import Utils.Auth

@@ -1,6 +1,5 @@
 module SharedLogic.CallBPP where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Storage.Hedis (HedisFlow)
 import qualified Beckn.Types.Core.Metro.API.Search as MigAPI
@@ -19,6 +18,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Track as TrackACL
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DRide
+import Environment
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
 import Servant

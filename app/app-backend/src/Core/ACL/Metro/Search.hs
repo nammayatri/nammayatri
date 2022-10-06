@@ -2,7 +2,6 @@
 
 module Core.ACL.Metro.Search (buildSearchReq) where
 
-import App.Types
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import qualified Beckn.Types.Core.Context as Context
@@ -13,6 +12,7 @@ import Beckn.Types.Id
 import Beckn.Types.TimeRFC339
 import Control.Lens ((?~))
 import qualified Domain.Action.UI.Search.OneWay as DSearch
+import Environment
 import EulerHS.Prelude hiding (state)
 import Utils.Common
 

@@ -1,4 +1,4 @@
-module App.Types
+module Environment
   ( Env,
     FlowHandler,
     FlowServer,

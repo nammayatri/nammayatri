@@ -4,7 +4,6 @@ module API.UI.Cancel
   )
 where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Id
@@ -12,6 +11,7 @@ import qualified Core.ACL.Cancel as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
+import Environment
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Utils.Auth

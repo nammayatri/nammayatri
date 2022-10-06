@@ -6,13 +6,13 @@ module API.UI.SavedReqLocation
   )
 where
 
-import App.Types
 import Beckn.Types.APISuccess (APISuccess)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id (Id)
 import Beckn.Utils.Common
 import qualified Domain.Action.UI.SavedReqLocation as DSavedReqLocation
 import qualified Domain.Types.Person as Person
+import Environment
 import EulerHS.Prelude hiding (state)
 import Servant
 import Utils.Auth

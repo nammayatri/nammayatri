@@ -4,13 +4,13 @@ module API.UI.GoogleMaps
   )
 where
 
-import App.Types (FlowHandler, FlowServer)
 import qualified Beckn.External.GoogleMaps.Client as ClientGoogleMaps
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.App
 import Beckn.Types.Id
 import Beckn.Utils.Logging
 import qualified Domain.Types.Person as Person
+import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
 import Servant
 import Utils.Auth

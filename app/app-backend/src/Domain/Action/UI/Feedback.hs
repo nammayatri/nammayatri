@@ -5,12 +5,12 @@ module Domain.Action.UI.Feedback
   )
 where
 
-import qualified App.Types as App
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Ride as DRide
+import qualified Environment as App
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Types.Error

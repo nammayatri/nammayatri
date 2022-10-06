@@ -1,6 +1,5 @@
 module Core.ACL.Select (buildSelectReq) where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Context as Context
@@ -9,6 +8,7 @@ import qualified Beckn.Types.Core.Taxi.Common.ItemCode as Common
 import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types.VehicleVariant
+import Environment
 import Utils.Common
 
 buildSelectReq ::

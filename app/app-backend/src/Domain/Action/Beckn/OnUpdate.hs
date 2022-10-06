@@ -1,6 +1,5 @@
 module Domain.Action.Beckn.OnUpdate (onUpdate, OnUpdateReq (..), OnUpdateFareBreakup (..)) where
 
-import App.Types
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis.Config (HedisFlow)
 import Beckn.Types.Id
@@ -8,6 +7,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as SRide
+import Environment
 import EulerHS.Prelude hiding (state)
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig

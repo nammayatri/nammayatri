@@ -1,6 +1,5 @@
 module Core.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
 
-import App.Types
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
@@ -10,6 +9,7 @@ import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.SearchRequest as DSearchReq
+import Environment
 import EulerHS.Prelude hiding (state)
 import Utils.Common
 

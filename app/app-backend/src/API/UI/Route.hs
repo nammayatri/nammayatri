@@ -6,12 +6,12 @@ module API.UI.Route
   )
 where
 
-import App.Types
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Domain.Types.Person as Person
+import Environment
 import Servant
 import Utils.Auth
 import Utils.Common

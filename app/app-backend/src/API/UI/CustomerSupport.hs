@@ -10,10 +10,10 @@ module API.UI.CustomerSupport
   )
 where
 
-import App.Types
 import Beckn.Types.Id
 import qualified Domain.Action.UI.CustomerSupport as DCS
 import Domain.Types.Person as SP
+import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
 import Utils.Auth

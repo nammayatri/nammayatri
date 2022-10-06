@@ -6,7 +6,6 @@ module API.UI.Select
   )
 where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Id
@@ -15,6 +14,7 @@ import qualified Core.ACL.Select as ACL
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
+import Environment
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Utils.Auth

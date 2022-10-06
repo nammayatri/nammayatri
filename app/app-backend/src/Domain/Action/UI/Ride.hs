@@ -4,7 +4,6 @@ module Domain.Action.UI.Ride
   )
 where
 
-import App.Types
 import Beckn.External.GoogleMaps.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
@@ -15,6 +14,7 @@ import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
+import Environment
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig

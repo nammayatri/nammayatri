@@ -1,12 +1,12 @@
 module API.Beckn.OnSearch (API, handler) where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnSearch as TaxiACL
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
+import Environment
 import Servant hiding (throwError)
 
 type API =

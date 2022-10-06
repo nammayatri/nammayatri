@@ -15,7 +15,7 @@ import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Servant.Server (runServerWithHealthCheck)
 import qualified Data.Map.Strict as Map
-import Environment
+import "lib-dashboard" Environment
 import qualified EulerHS.Runtime as R
 import Servant (Context (..))
 import qualified Tools.Auth as Auth

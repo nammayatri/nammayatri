@@ -6,7 +6,7 @@ where
 
 import qualified API.BAP as BAP
 import qualified "lib-dashboard" API.Dashboard as Dashboard
-import Environment
+import "lib-dashboard" Environment
 import Servant
 
 type API =

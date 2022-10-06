@@ -10,7 +10,6 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
-import App.Types
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -20,6 +19,7 @@ import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
+import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Estimate as QEstimate

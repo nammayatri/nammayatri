@@ -6,13 +6,13 @@ module API.UI.Serviceability
   )
 where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Product.MapSearch.PolyLinePoints
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import qualified Domain.Action.UI.Serviceability as DServiceability
 import Domain.Types.Person as Person
+import Environment
 import Servant
 import Utils.Auth
 import Utils.Common

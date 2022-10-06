@@ -1,7 +1,6 @@
 module App where
 
 import qualified App.Server as App
-import App.Types
 import Beckn.Exit
 import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
@@ -13,6 +12,7 @@ import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.FlowLogging as L
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
+import Environment
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
