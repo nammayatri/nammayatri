@@ -4,6 +4,7 @@ module Idfy.External.Flow
     validateImage,
     extractRCImage,
     extractDLImage,
+    getTask,
   )
 where
 
@@ -17,7 +18,7 @@ import Idfy.Types.Error
 import Idfy.Types.IdfyConfig
 import Idfy.Types.Request
 import Idfy.Types.Response
-import Servant (Header, JSON, Post, ReqBody, (:>))
+import Servant (Get, Header, JSON, Post, ReqBody, (:>))
 
 type VerifyDLAPI =
   "v3" :> "tasks" :> "async" :> "verify_with_source" :> "ind_driving_license"
@@ -158,6 +159,34 @@ extractDLImage apiKey accountId url req = callIdfyAPI url task "extractDLImage"
         (Just apiKey)
         (Just accountId)
         req
+
+type GetTaskAPI =
+  "v3" :> "tasks"
+    :> Header "api-key" ApiKey
+    :> Header "account-id" AccountId
+    :> MandatoryQueryParam "request_id" Text
+    :> Get '[JSON] VerificationResponse
+
+getTaskApi :: Proxy GetTaskAPI
+getTaskApi = Proxy
+
+getTask ::
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
+  ApiKey ->
+  AccountId ->
+  BaseUrl ->
+  Text ->
+  m VerificationResponse
+getTask apiKey accountId url request_id = callIdfyAPI url task "getTask"
+  where
+    task =
+      T.client
+        getTaskApi
+        (Just apiKey)
+        (Just accountId)
+        request_id
 
 callIdfyAPI :: CallAPI env res
 callIdfyAPI = callApiUnwrappingApiError (identity @IdfyError) (Just idfyHttpManagerKey) (Just "IDFY_ERROR")

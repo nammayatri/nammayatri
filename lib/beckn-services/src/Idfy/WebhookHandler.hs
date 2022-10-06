@@ -30,6 +30,21 @@ webhookHandler verifyDL_ verifyRC_ secret result = withFlowHandlerAPI $ do
   void $ verifyRC_ result
   pure Ack
 
+webhookHandlerAck ::
+  ( HasField "isShuttingDown" a (TMVar ()),
+    HasField "coreMetrics" a CoreMetricsContainer,
+    HasField "loggerEnv" a LoggerEnv,
+    HasField "idfyCfg" a IdfyConfig
+  ) =>
+  (Value -> FlowR a AckResponse) ->
+  Maybe Text ->
+  Value ->
+  FlowHandlerR a AckResponse
+webhookHandlerAck verifyHandler secret ack = withFlowHandlerAPI $ do
+  void $ verifyAuth secret
+  void $ verifyHandler ack
+  pure Ack
+
 verifyDL ::
   ( HasField "isShuttingDown" a (TMVar ()),
     HasField "coreMetrics" a CoreMetricsContainer,
@@ -150,3 +165,16 @@ extractDLImage doc1 mbdoc2 = do
             ..
           }
   EF.extractDLImage idfyConfig.api_key idfyConfig.account_id idfyConfig.url req
+
+getTask ::
+  ( HasField "isShuttingDown" a (TMVar ()),
+    HasField "coreMetrics" a CoreMetricsContainer,
+    HasField "loggerEnv" a LoggerEnv,
+    CoreMetrics (FlowR a),
+    HasField "idfyCfg" a IdfyConfig
+  ) =>
+  Text ->
+  FlowR a VerificationResponse
+getTask request_id = do
+  idfyConfig <- asks (.idfyCfg)
+  EF.getTask idfyConfig.api_key idfyConfig.account_id idfyConfig.url request_id

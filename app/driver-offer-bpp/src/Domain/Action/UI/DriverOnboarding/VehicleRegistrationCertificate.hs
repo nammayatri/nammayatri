@@ -117,7 +117,7 @@ verifyRCFlow personId rcNumber imageId = do
             documentImageId2 = Nothing,
             requestId,
             docType = Image.VehicleRegistrationCertificate,
-            status = "PENDING",
+            status = "pending",
             idfyResponse = Nothing,
             createdAt = now,
             updatedAt = now
