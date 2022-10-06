@@ -18,26 +18,15 @@ import Idfy.Types
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 
 onVerify :: VerificationResponse -> Flow AckResponse
-onVerify [] = pure Ack
-onVerify [resp] = do
+onVerify resp = do
   verificationReq <- IVQuery.findByRequestId resp.request_id >>= fromMaybeM (InternalError "Verification request not found")
   runTransaction $ IVQuery.updateResponse resp.request_id resp.status (show <$> resp.result)
 
-  callFromMaybeArray (verifyDocument verificationReq) resp.result
+  maybe (pure Ack) (verifyDocument verificationReq) resp.result
   where
     verifyDocument verificationReq rslt
       | isJust rslt.extraction_output =
-        callFromMaybeArray (RC.onVerifyRC verificationReq) rslt.extraction_output
+        maybe (pure Ack) (RC.onVerifyRC verificationReq) rslt.extraction_output
       | isJust rslt.source_output =
-        callFromMaybeArray (DL.onVerifyDL verificationReq) rslt.source_output
+        maybe (pure Ack) (DL.onVerifyDL verificationReq) rslt.source_output
       | otherwise = pure Ack
-
-    callFromMaybeArray func mOutputArr = do
-      maybe
-        (pure Ack)
-        ( \arr_ -> do
-            let mOutput = listToMaybe arr_
-            maybe (pure Ack) func mOutput
-        )
-        mOutputArr
-onVerify _ = pure Ack

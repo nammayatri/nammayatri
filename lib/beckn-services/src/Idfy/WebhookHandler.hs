@@ -29,13 +29,24 @@ webhookHandler verifyHandler secret val = withFlowHandlerAPI $ do
     logInfo $ show val
     let mResp = fromJSON val
     case mResp of
-      DAT.Success resp -> do
+      DAT.Success (resp :: VerificationResponse) -> do
         void $ verifyAuth secret
         void $ verifyHandler resp
         pure Ack
-      DAT.Error err -> do
-        logInfo $ "Error: " <> show err
-        pure Ack
+      DAT.Error _ -> do
+        let mRespList = fromJSON val
+        case mRespList of
+          DAT.Success (respList :: VerificationResponseList) -> do
+            let mResp_ = listToMaybe respList
+            case mResp_ of
+              Just resp_ -> do
+                void $ verifyAuth secret
+                void $ verifyHandler resp_
+                pure Ack
+              Nothing -> pure Ack
+          DAT.Error err -> do
+            logInfo $ "Error: " <> show err
+            pure Ack
 
 verifyDL ::
   ( HasField "isShuttingDown" a (TMVar ()),
