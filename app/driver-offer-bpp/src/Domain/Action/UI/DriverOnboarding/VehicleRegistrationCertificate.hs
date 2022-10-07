@@ -155,7 +155,7 @@ onVerifyRC verificationReq output = do
             driverId,
             rcId,
             associatedOn = now,
-            associatedTill = Nothing,
+            associatedTill = convertTextToUTC (Just "2099-12-12"),
             consent = True,
             consentTimestamp = now
           }

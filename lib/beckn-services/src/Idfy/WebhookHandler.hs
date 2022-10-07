@@ -33,7 +33,8 @@ webhookHandler verifyHandler secret val = withFlowHandlerAPI $ do
         void $ verifyAuth secret
         void $ verifyHandler resp
         pure Ack
-      DAT.Error _ -> do
+      DAT.Error err1 -> do
+        logInfo $ "Error 1: " <> show err1
         let mRespList = fromJSON val
         case mRespList of
           DAT.Success (respList :: VerificationResponseList) -> do
@@ -45,7 +46,7 @@ webhookHandler verifyHandler secret val = withFlowHandlerAPI $ do
                 pure Ack
               Nothing -> pure Ack
           DAT.Error err -> do
-            logInfo $ "Error: " <> show err
+            logInfo $ "Error 2: " <> show err
             pure Ack
 
 verifyDL ::

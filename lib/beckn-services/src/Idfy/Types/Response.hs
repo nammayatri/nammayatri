@@ -114,7 +114,7 @@ data Output a b = Output {source_output :: Maybe a, extraction_output :: Maybe b
 
 -- RC verification response
 data RCVerificationOutput = RCVerificationOutput
-  { avg_gross_vehicle_weight :: Maybe Float,
+  { avg_gross_vehicle_weight :: Maybe Text,
     axle_configuration :: Maybe Text,
     chassis_number :: Maybe Text,
     emission_norms :: Maybe Text,

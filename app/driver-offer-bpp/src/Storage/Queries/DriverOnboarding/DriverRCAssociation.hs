@@ -21,27 +21,29 @@ findById ::
 findById = Esq.findById
 
 getActiveAssociationByDriver ::
-  Transactionable m =>
+  (Transactionable m, MonadFlow m) =>
   Id Person ->
   m (Maybe DriverRCAssociation)
 getActiveAssociationByDriver driverId = do
+  now <- getCurrentTime
   findOne $ do
     association <- from $ table @DriverRCAssociationT
     where_ $
       association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-        &&. association ^. DriverRCAssociationAssociatedTill ==. val Nothing
+        &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
     return association
 
 getActiveAssociationByRC ::
-  Transactionable m =>
+  (Transactionable m, MonadFlow m) =>
   Id VehicleRegistrationCertificate ->
   m (Maybe DriverRCAssociation)
 getActiveAssociationByRC rcId = do
+  now <- getCurrentTime
   findOne $ do
     association <- from $ table @DriverRCAssociationT
     where_ $
       association ^. DriverRCAssociationRcId ==. val (toKey rcId)
-        &&. association ^. DriverRCAssociationAssociatedTill ==. val Nothing
+        &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
     return association
 
 endAssociation ::
@@ -56,4 +58,4 @@ endAssociation driverId = do
       ]
     where_ $
       tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-        &&. tbl ^. DriverRCAssociationAssociatedTill ==. val Nothing
+        &&. tbl ^. DriverRCAssociationAssociatedTill >. val (Just now)
