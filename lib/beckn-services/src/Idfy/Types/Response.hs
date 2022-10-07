@@ -165,14 +165,14 @@ data DLVerificationOutput = DLVerificationOutput
     status :: Maybe Text,
     t_validity_from :: Maybe Text,
     t_validity_to :: Maybe Text,
-    cov_details :: [CovDetail]
+    cov_details :: Maybe [CovDetail]
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data CovDetail = CovDetail
-  { category :: Text,
+  { category :: Maybe Text,
     cov :: ClassOfVehicle,
-    issue_date :: Text
+    issue_date :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

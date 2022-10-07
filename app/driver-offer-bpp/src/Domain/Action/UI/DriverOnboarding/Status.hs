@@ -105,9 +105,9 @@ enableDriver personId orgId (Just rc) (Just dl) = do
     now <- getCurrentTime
     let vehicle = buildVehicle now personId orgId rcNumber
     DB.runTransaction $ VQuery.create vehicle
-    case dl.driverName of
-      Just name -> DB.runTransaction $ Person.updateName personId name
-      Nothing -> return ()
+  case dl.driverName of
+    Just name -> DB.runTransaction $ Person.updateName personId name
+    Nothing -> return ()
   where
     buildVehicle now personId_ orgId_ certificateNumber =
       Vehicle.Vehicle

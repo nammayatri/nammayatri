@@ -11,7 +11,6 @@ import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Data.ByteString as BS
 import qualified Domain.Types.DriverOnboarding.DriverLicense as Domain
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Idfy.Types as Idfy
@@ -31,7 +30,8 @@ mkPersist
       documentImageId2 ImageTId Maybe
       driverDob UTCTime Maybe
       driverName Text Maybe
-      licenseNumber Text
+      licenseNumberEncrypted Text
+      licenseNumberHash DbHash
       licenseExpiry UTCTime
       classOfVehicles (PostgresList Idfy.ClassOfVehicle)
       failedRules (PostgresList Text)
@@ -40,7 +40,7 @@ mkPersist
       consentTimestamp UTCTime
       createdAt UTCTime
       updatedAt UTCTime
-      UniqueDriverLicenseNumber licenseNumber
+      UniqueDriverLicenseNumber licenseNumberHash
       Primary id
       deriving Generic
     |]
@@ -58,7 +58,7 @@ instance TType DriverLicenseT Domain.DriverLicense where
           driverId = fromKey driverId,
           documentImageId1 = fromKey documentImageId1,
           documentImageId2 = fromKey <$> documentImageId2,
-          licenseNumber = EncryptedHashed (Encrypted licenseNumber) (DbHash BS.empty),
+          licenseNumber = EncryptedHashed (Encrypted licenseNumberEncrypted) licenseNumberHash,
           classOfVehicles = unPostgresList classOfVehicles,
           failedRules = unPostgresList failedRules,
           ..
@@ -69,7 +69,8 @@ instance TType DriverLicenseT Domain.DriverLicense where
         driverId = toKey driverId,
         documentImageId1 = toKey documentImageId1,
         documentImageId2 = toKey <$> documentImageId2,
-        licenseNumber = licenseNumber & unEncrypted . (.encrypted),
+        licenseNumberEncrypted = licenseNumber & unEncrypted . (.encrypted),
+        licenseNumberHash = licenseNumber & (.hash),
         classOfVehicles = PostgresList classOfVehicles,
         failedRules = PostgresList failedRules,
         ..

@@ -34,13 +34,14 @@ findById ::
 findById = Esq.findById
 
 findLastVehicleRC ::
-  Transactionable m =>
-  EncryptedHashedField 'AsEncrypted Text ->
+  (Transactionable m, EncFlow m r) =>
+  Text ->
   m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRC certNumber = do
+  certNumberHash <- getDbHash certNumber
   rcs <- findAll $ do
     rc <- from $ table @VehicleRegistrationCertificateT
-    where_ $ rc ^. VehicleRegistrationCertificateCertificateNumber ==. val (certNumber & unEncrypted . (.encrypted))
+    where_ $ rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
     orderBy [desc $ rc ^. VehicleRegistrationCertificateFitnessExpiry]
     return rc
   pure $ headMaybe rcs
@@ -54,9 +55,10 @@ findByRCAndExpiry ::
   UTCTime ->
   m (Maybe VehicleRegistrationCertificate)
 findByRCAndExpiry certNumber expiry = do
+  let certNumberHash = certNumber & (.hash)
   findOne $ do
     rc <- from $ table @VehicleRegistrationCertificateT
     where_ $
-      rc ^. VehicleRegistrationCertificateCertificateNumber ==. val (certNumber & unEncrypted . (.encrypted))
+      rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
         &&. rc ^. VehicleRegistrationCertificateFitnessExpiry ==. val expiry
     return rc

@@ -44,11 +44,12 @@ findByDriverId driverId = do
     return dl
 
 findByDLNumber ::
-  Transactionable m =>
-  EncryptedHashedField 'AsEncrypted Text ->
+  (Transactionable m, EncFlow m r) =>
+  Text ->
   m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
+  dlNumberHash <- getDbHash dlNumber
   findOne $ do
     dl <- from $ table @DriverLicenseT
-    where_ $ dl ^. DriverLicenseLicenseNumber ==. val (dlNumber & unEncrypted . (.encrypted))
+    where_ $ dl ^. DriverLicenseLicenseNumberHash ==. val dlNumberHash
     return dl

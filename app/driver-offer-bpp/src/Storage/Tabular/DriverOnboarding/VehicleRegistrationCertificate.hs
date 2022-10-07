@@ -11,7 +11,6 @@ import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Data.ByteString as BS
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
 import Storage.Tabular.DriverOnboarding.Image (ImageTId)
@@ -24,7 +23,8 @@ mkPersist
     VehicleRegistrationCertificateT sql=vehicle_registration_certificate
       id Text
       documentImageId ImageTId
-      certificateNumber Text
+      certificateNumberEncrypted Text
+      certificateNumberHash DbHash
       fitnessExpiry UTCTime
       permitExpiry UTCTime Maybe
       pucExpiry UTCTime Maybe
@@ -35,7 +35,7 @@ mkPersist
       failedRules (PostgresList Text)
       createdAt UTCTime
       updatedAt UTCTime
-      UniqueVehicleRegistrationCertificateRCId certificateNumber fitnessExpiry
+      UniqueVehicleRegistrationCertificateRCId certificateNumberHash fitnessExpiry
       Primary id
       deriving Generic
     |]
@@ -51,7 +51,7 @@ instance TType VehicleRegistrationCertificateT Domain.VehicleRegistrationCertifi
       Domain.VehicleRegistrationCertificate
         { id = Id id,
           documentImageId = fromKey documentImageId,
-          certificateNumber = EncryptedHashed (Encrypted certificateNumber) (DbHash BS.empty),
+          certificateNumber = EncryptedHashed (Encrypted certificateNumberEncrypted) certificateNumberHash,
           failedRules = unPostgresList failedRules,
           ..
         }
@@ -59,7 +59,8 @@ instance TType VehicleRegistrationCertificateT Domain.VehicleRegistrationCertifi
     VehicleRegistrationCertificateT
       { id = getId id,
         documentImageId = toKey documentImageId,
-        certificateNumber = certificateNumber & unEncrypted . (.encrypted),
+        certificateNumberEncrypted = certificateNumber & unEncrypted . (.encrypted),
+        certificateNumberHash = certificateNumber & (.hash),
         failedRules = PostgresList failedRules,
         ..
       }

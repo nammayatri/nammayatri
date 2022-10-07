@@ -82,8 +82,7 @@ verifyDL personId req@DriverDLReq {..} = do
         throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
     Nothing -> throwImageError imageId1 ImageExtractionFailed
 
-  eDl <- encrypt driverLicenseNumber
-  mdriverLicense <- Query.findByDLNumber eDl
+  mdriverLicense <- Query.findByDLNumber driverLicenseNumber
 
   case mdriverLicense of
     Just driverLicense -> do
@@ -153,7 +152,7 @@ createDL ::
   UTCTime ->
   Domain.DriverLicense
 createDL driverId output id imageId1 imageId2 now edl expiry = do
-  let classOfVehicles = map (.cov) output.cov_details
+  let classOfVehicles = maybe [] (map (.cov)) output.cov_details
   let verificationStatus = validateDLStatus expiry classOfVehicles now
   Domain.DriverLicense
     { id,

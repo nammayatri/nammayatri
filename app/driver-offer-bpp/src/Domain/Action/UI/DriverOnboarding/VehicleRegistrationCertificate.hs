@@ -88,8 +88,7 @@ verifyRC personId req@DriverRCReq {..} = do
       unless (driverRC.fitnessExpiry < now) $ throwImageError imageId RCAlreadyUpdated -- RC not expired
       verifyRCFlow personId vehicleRegistrationCertNumber imageId
     Nothing -> do
-      eRC <- encrypt vehicleRegistrationCertNumber
-      mVehicleRC <- RCQuery.findLastVehicleRC eRC
+      mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber
       case mVehicleRC of
         Just vehicleRC -> do
           mRCAssociation <- DAQuery.getActiveAssociationByRC vehicleRC.id
@@ -141,6 +140,8 @@ onVerifyRC verificationReq output = do
       rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (InternalError "RC not found")
       mRCAssociation <- DAQuery.getActiveAssociationByRC rc.id
       when (isNothing mRCAssociation) $ do
+        currAssoc <- DAQuery.getActiveAssociationByDriver person.id
+        when (isJust currAssoc) $ do runTransaction $ DAQuery.endAssociation person.id
         driverRCAssoc <- mkAssociation person.id rc.id
         runTransaction $ DAQuery.create driverRCAssoc
       return Ack
