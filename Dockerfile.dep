@@ -6,6 +6,9 @@ WORKDIR /opt/build
 RUN sudo apt-key del 41468433 \
   && wget -qO - https://packages.confluent.io/deb/5.5/archive.key | sudo apt-key add -
 
+# Updating nvidia cuda public key
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+
 # GHC dynamically links its compilation targets to lib gmp
 RUN apt-get update \
   && apt-get download libgmp10 \
