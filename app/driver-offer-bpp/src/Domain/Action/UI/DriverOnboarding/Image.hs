@@ -19,7 +19,10 @@ import qualified Domain.Types.Person as Person
 import Environment
 import Idfy.Flow as Idfy
 import SharedLogic.DriverOnboarding
+import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
+import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverOnboarding.Image as Query
+import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as Person
 
@@ -31,6 +34,12 @@ data ImageValidateRequest = ImageValidateRequest
 
 newtype ImageValidateResponse = ImageValidateResponse
   {imageId :: Id Domain.Image}
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+data GetDocsResponse = GetDocsResponse
+  { dlImage :: Maybe Text,
+    rcImage :: Maybe Text
+  }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
 createPath ::
@@ -115,3 +124,32 @@ validateImage personId ImageValidateRequest {..} = do
 
       unless (maybe False (60 <) result.readability.confidence) $
         throwImageError id_ ImageLowQuality
+
+-- FIXME: Temporary API will move to dashboard later
+getDocs :: Person.Person -> Text -> Flow GetDocsResponse
+getDocs _admin mobileNumber = do
+  driver <- Person.findByMobileNumber "+91" mobileNumber >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+
+  dl <- DLQuery.findByDriverId driver.id
+  let dlImageId = (.documentImageId1) <$> dl
+
+  association <- DRAQuery.getActiveAssociationByDriver driver.id
+  rc <-
+    maybe
+      (pure Nothing)
+      (\assoc_ -> RCQuery.findById assoc_.rcId)
+      association
+  let rcImageId = (.documentImageId) <$> rc
+
+  dlImage <- getImage `mapM` dlImageId
+  rcImage <- getImage `mapM` rcImageId
+
+  return GetDocsResponse {dlImage, rcImage}
+  where
+    getImage :: Id Domain.Image -> Flow Text
+    getImage imageId = do
+      imageMetadata <- Query.findById imageId
+      maybe
+        (pure T.empty)
+        (\img -> S3.get $ T.unpack img.s3Path)
+        imageMetadata

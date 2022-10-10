@@ -11,7 +11,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
 import Servant
-import Tools.Auth (TokenAuth)
+import Tools.Auth (AdminTokenAuth, TokenAuth)
 
 type API =
   "driver" :> "register"
@@ -35,6 +35,10 @@ type API =
       :> TokenAuth
       :> ReqBody '[JSON] DriverOnboarding.ReferralReq
       :> Post '[JSON] DriverOnboarding.ReferralRes
+    :<|> "driver" :> "getDocs" -- FIXME: Temporary API will move to dashboard later
+      :> AdminTokenAuth
+      :> MandatoryQueryParam "mobileNumber" Text
+      :> Get '[JSON] Image.GetDocsResponse
 
 handler :: FlowServer API
 handler =
@@ -44,6 +48,7 @@ handler =
       :<|> validateImage
   )
     :<|> addReferral
+    :<|> getDocs
 
 verifyDL :: Id DP.Person -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
 verifyDL personId = withFlowHandlerAPI . DriverOnboarding.verifyDL personId
@@ -59,3 +64,6 @@ validateImage personId = withFlowHandlerAPI . Image.validateImage personId
 
 addReferral :: Id DP.Person -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
 addReferral personId = withFlowHandlerAPI . DriverOnboarding.addReferral personId
+
+getDocs :: DP.Person -> Text -> FlowHandler Image.GetDocsResponse
+getDocs person = withFlowHandlerAPI . Image.getDocs person
