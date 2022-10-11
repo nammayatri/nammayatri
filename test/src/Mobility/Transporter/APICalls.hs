@@ -49,7 +49,7 @@ getNotificationInfo bookingId = getNotif
     _ :<|> getNotif = driver_rb_path bookingId
 
 tBookingStatus :: Id TRB.Booking -> Text -> ClientM TRB.BookingAPIEntity
-tBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM TbeBookingAPI.BookingListRes
+tBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe TRB.BookingStatus -> ClientM TbeBookingAPI.BookingListRes
 (tBookingStatus :<|> tBookingList :<|> _) :<|> _ = client (Proxy :: Proxy TbeBookingAPI.API)
 
 buildStartRideReq :: Text -> LatLong -> TbeRideAPI.StartRideReq

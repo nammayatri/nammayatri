@@ -96,17 +96,19 @@ findById bookingId = Esq.buildDType $ do
     pure (booking, fromLoc, mbOneWayBooking, mbToLoc, mbRentalBooking)
   join <$> mapM buildFullBooking mbFullBookingT
 
-findAllByOrg :: Transactionable m => Id Organization -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
-findAllByOrg orgId mbLimit mbOffset mbIsOnlyActive = Esq.buildDType $ do
+findAllByOrg :: Transactionable m => Id Organization -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
+findAllByOrg orgId mbLimit mbOffset mbIsOnlyActive mbBookingStatus = Esq.buildDType $ do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbIsOnlyActive
+      isJustBookingStatus = isJust mbBookingStatus
   fullBookingsT <- Esq.findAll' $ do
     (booking :& fromLoc :& mbOneWayBooking :& mbToLoc :& mbRentalBooking) <- from fullBookingTable
     where_ $
       booking ^. BookingProviderId ==. val (toKey orgId)
         &&. not_ (booking ^. BookingStatus `in_` valList [Booking.CONFIRMED, Booking.AWAITING_REASSIGNMENT])
         &&. whenTrue_ isOnlyActive (not_ $ booking ^. BookingStatus `in_` valList [Booking.COMPLETED, Booking.CANCELLED])
+        &&. whenTrue_ isJustBookingStatus (booking ^. BookingStatus `in_` valList [fromJust mbBookingStatus])
     orderBy [desc $ booking ^. BookingCreatedAt]
     limit limitVal
     offset offsetVal

@@ -79,10 +79,15 @@ bookingStatus bookingId = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   SRB.buildBookingAPIEntity booking
 
-bookingList :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m BookingListRes
-bookingList person mbLimit mbOffset mbOnlyActive = do
+bookingList :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Bool ->
+  Maybe SRB.BookingStatus ->
+  m BookingListRes
+bookingList person mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   let Just orgId = person.organizationId
-  rbList <- QRB.findAllByOrg orgId mbLimit mbOffset mbOnlyActive
+  rbList <- QRB.findAllByOrg orgId mbLimit mbOffset mbOnlyActive mbBookingStatus
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList
 
 bookingCancel ::

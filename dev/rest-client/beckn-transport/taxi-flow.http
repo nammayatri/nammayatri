@@ -201,9 +201,22 @@ POST {{app-host}}/rideBooking/{{bookingId}}
 token: {{token}}
 
 ###
-# confirmed booking shouldn't be in this list, because it hasn't ride yet
+#
 
 GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+  &filterByBookingStatus="NEW"
+content-type: application/json
+token: {{token}}
+
+###
+
+###
+# confirmed booking shouldn't be in this list, because it hasn't ride yet
+
+GET {{transporter-host}}/org/rideBooking/list
   ?offset=0
   &limit=50
   &onlyActive=false
