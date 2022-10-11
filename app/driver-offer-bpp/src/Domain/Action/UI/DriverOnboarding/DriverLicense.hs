@@ -58,7 +58,7 @@ validateDriverDLReq now DriverDLReq {..} =
   where
     licenseNum = MinLength 5 `And` star (latinUC \/ digit)
     t18YearsAgo = yearsAgo 18
-    t60YearsAgo = yearsAgo 60
+    t60YearsAgo = yearsAgo 80
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
 
 verifyDL ::
