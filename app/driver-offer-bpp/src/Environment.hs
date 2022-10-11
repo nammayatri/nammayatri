@@ -56,9 +56,8 @@ data AppCfg = AppCfg
     otpSmsTemplate :: Text,
     smsCfg :: SmsConfig,
     inviteSmsTemplate :: Text,
-    onboardSupportSmsTemplate :: Text,
+    driverOnboardingConfigs :: DriverOnboardingConfigs,
     slackCfg :: SlackConfig,
-    onboardingTryLimit :: Int,
     apiRateLimitOptions :: APIRateLimitOptions,
     driverPositionInfoExpiry :: Maybe Seconds,
     fcmJsonPath :: Maybe Text,
@@ -106,9 +105,8 @@ data AppEnv = AppEnv
     otpSmsTemplate :: Text,
     smsCfg :: SmsConfig,
     inviteSmsTemplate :: Text,
-    onboardSupportSmsTemplate :: Text,
+    driverOnboardingConfigs :: DriverOnboardingConfigs,
     slackCfg :: SlackConfig,
-    onboardingTryLimit :: Int,
     apiRateLimitOptions :: APIRateLimitOptions,
     driverPositionInfoExpiry :: Maybe Seconds,
     fcmJsonPath :: Maybe Text,
@@ -127,6 +125,17 @@ data AppEnv = AppEnv
     defaultDropLocThreshold :: Meters
   }
   deriving (Generic)
+
+data DriverOnboardingConfigs = DriverOnboardingConfigs
+  { onboardingTryLimit :: Int,
+    onboardSupportSmsTemplate :: Text,
+    checkRCInsuranceExpiry :: Bool,
+    checkRCExpiry :: Bool,
+    checkRCVehicleClass :: Bool,
+    checkDLExpiry :: Bool,
+    checkDLVehicleClass :: Bool
+  }
+  deriving (Generic, FromDhall)
 
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.signingKey)

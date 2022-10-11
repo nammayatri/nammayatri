@@ -18,7 +18,7 @@ notifyErrorToSupport ::
   Flow ()
 notifyErrorToSupport driverPhone orgName errs = do
   let reasons = catMaybes $ catMaybes $ toMsg <$> errs
-  onboardSupportSmsTemplate <- asks (.onboardSupportSmsTemplate)
+  onboardSupportSmsTemplate <- asks (.driverOnboardingConfigs.onboardSupportSmsTemplate)
   let message =
         T.replace "{#reasons#}" (show reasons) $
           T.replace "{#driver-phone#}" (fromMaybe "" driverPhone) $

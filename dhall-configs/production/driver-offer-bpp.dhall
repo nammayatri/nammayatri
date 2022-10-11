@@ -25,6 +25,16 @@ let slackCfg =
   , slackToken = common.slackToken
   }
 
+let driverOnboardingConfigs =
+  { onboardingTryLimit = +3
+  , onboardSupportSmsTemplate = "Driver Onboarding Alert!!\n Driver is facing following issues while onboarding to ({#org#}).\nReasons:\n {#reasons#}\nPlease contact him +91-{#driver-phone#}."
+  , checkRCInsuranceExpiry = False
+  , checkRCExpiry = False
+  , checkRCVehicleClass = True
+  , checkDLExpiry = True
+  , checkDLVehicleClass = True
+}
+
 let rcfg =
   { connectHost = "cache.primary.beckn.juspay.net"
   , connectPort = 6379
@@ -89,9 +99,8 @@ in
 , fcmTokenKeyPrefix = "driver-offer-bpp"
 , apiRateLimitOptions = apiRateLimitOptions
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
-, onboardSupportSmsTemplate = "Driver Onboarding Alert!!\n Driver is facing following issues while onboarding to ({#org#}).\nReasons:\n {#reasons#}\nPlease contact him +91-{#driver-phone#}."
 , slackCfg = slackCfg
-, onboardingTryLimit = +3
+, driverOnboardingConfigs = driverOnboardingConfigs
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , smsCfg = smsConfig
 , driverPositionInfoExpiry = None Integer

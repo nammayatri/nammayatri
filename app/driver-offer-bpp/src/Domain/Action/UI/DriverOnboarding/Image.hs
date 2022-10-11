@@ -81,7 +81,7 @@ validateImage personId ImageValidateRequest {..} = do
   org <- Organization.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
 
   images <- Query.findRecentByPersonIdAndImageType personId imageType
-  onboardingTryLimit <- asks (.onboardingTryLimit)
+  onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
   when (length images > onboardingTryLimit) $ do
     driverPhone <- mapM decrypt person.mobileNumber
     notifyErrorToSupport driverPhone org.name ((.failureReason) <$> images)

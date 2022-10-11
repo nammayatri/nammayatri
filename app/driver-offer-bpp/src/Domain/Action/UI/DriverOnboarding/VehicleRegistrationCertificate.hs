@@ -127,11 +127,12 @@ onVerifyRC verificationReq output = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   now <- getCurrentTime
   id <- generateGUID
+  driverOnboardingConfigs <- asks (.driverOnboardingConfigs)
 
   mEncryptedRC <- encrypt `mapM` output.registration_number
   let mbFitnessEpiry = convertTextToUTC output.fitness_upto
 
-  let mVehicleRC = createRC output id verificationReq.documentImageId1 now <$> mEncryptedRC <*> mbFitnessEpiry
+  let mVehicleRC = createRC driverOnboardingConfigs output id verificationReq.documentImageId1 now <$> mEncryptedRC <*> mbFitnessEpiry
   case mVehicleRC of
     Just vehicleRC -> do
       runTransaction $ RCQuery.upsert vehicleRC
@@ -162,6 +163,7 @@ onVerifyRC verificationReq output = do
           }
 
 createRC ::
+  DriverOnboardingConfigs ->
   Idfy.RCVerificationOutput ->
   Id Domain.VehicleRegistrationCertificate ->
   Id Image.Image ->
@@ -169,17 +171,17 @@ createRC ::
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   Domain.VehicleRegistrationCertificate
-createRC output id imageId now edl expiry = do
+createRC configs output id imageId now edl expiry = do
   let insuranceValidity = convertTextToUTC output.insurance_validity
   let vehicleClass = output.vehicle_class
-  let verificationStatus = validateRCStatus expiry insuranceValidity vehicleClass now
+  let verificationStatus = validateRCStatus configs expiry insuranceValidity vehicleClass now
   Domain.VehicleRegistrationCertificate
     { id,
       documentImageId = imageId,
       certificateNumber = edl,
       fitnessExpiry = expiry,
-      permitExpiry = convertTextToUTC output.permit_validity,
-      pucExpiry = convertTextToUTC output.puc_number_upto,
+      permitExpiry = convertTextToUTC output.permit_validity_upto,
+      pucExpiry = convertTextToUTC output.puc_validity_upto,
       vehicleClass,
       vehicleManufacturer = output.manufacturer,
       insuranceValidity,
@@ -189,11 +191,11 @@ createRC output id imageId now edl expiry = do
       updatedAt = now
     }
 
-validateRCStatus :: UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Domain.VerificationStatus
-validateRCStatus expiry insuranceValidity cov now = do
-  let validCOV = maybe False isValidCOVRC cov
-  let validInsurance = maybe False (now <) insuranceValidity
-  if (now < expiry) && validCOV && validInsurance then Domain.VALID else Domain.INVALID
+validateRCStatus :: DriverOnboardingConfigs -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Domain.VerificationStatus
+validateRCStatus configs expiry insuranceValidity cov now = do
+  let validCOV = (not configs.checkRCVehicleClass) || maybe False isValidCOVRC cov
+  let validInsurance = (not configs.checkRCInsuranceExpiry) || maybe False (now <) insuranceValidity
+  if ((not configs.checkRCExpiry) || now < expiry) && validCOV && validInsurance then Domain.VALID else Domain.INVALID
 
 convertTextToUTC :: Maybe Text -> Maybe UTCTime
 convertTextToUTC a = do

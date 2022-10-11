@@ -37,9 +37,9 @@ instance IsBaseError DriverOnboardingError where
     ImageNotFound id_ -> Just $ "Image with imageId \"" <> show id_ <> "\" not found."
     ImageNotValid id_ -> Just $ "Image with imageId \"" <> show id_ <> "\" is not valid."
     DriverAlreadyLinked -> Just "Other doc is already linked with driver."
-    DLAlreadyLinked -> Just "Driver license not available. Linked to other driver."
+    DLAlreadyLinked -> Just "Driver license not available."
     DLAlreadyUpdated -> Just "No action required. Driver license is already linked to driver."
-    RCAlreadyLinked -> Just "Vehicle RC not available. Linked to other driver."
+    RCAlreadyLinked -> Just "Vehicle RC not available."
     RCAlreadyUpdated -> Just "No action required. Vehicle RC is already linked to driver."
 
 instance IsHTTPError DriverOnboardingError where
@@ -67,12 +67,12 @@ instance IsHTTPError DriverOnboardingError where
     ImageInvalidType _ _ -> E400
     ImageDocumentNumberMismatch _ _ -> E400
     ImageExtractionFailed -> E400
-    ImageNotFound _ -> E500
-    ImageNotValid _ -> E500
+    ImageNotFound _ -> E400
+    ImageNotValid _ -> E400
     DriverAlreadyLinked -> E400
-    DLAlreadyLinked -> E500
+    DLAlreadyLinked -> E400
     DLAlreadyUpdated -> E400
-    RCAlreadyLinked -> E500
+    RCAlreadyLinked -> E400
     RCAlreadyUpdated -> E400
 
 instance IsAPIError DriverOnboardingError

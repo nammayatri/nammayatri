@@ -90,7 +90,7 @@ checkIfInVerification driverId docType = do
         else return PENDING
     Nothing -> do
       images <- IQuery.findRecentByPersonIdAndImageType driverId docType
-      onboardingTryLimit <- asks (.onboardingTryLimit)
+      onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
       if length images > onboardingTryLimit
         then return LIMIT_EXCEED
         else return NO_DOC_AVAILABLE

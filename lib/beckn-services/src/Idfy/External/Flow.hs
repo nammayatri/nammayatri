@@ -49,7 +49,7 @@ verifyDLAsync apiKey accountId url req = callIdfyAPI url task "verifyDLAsync"
         req
 
 type VerifyRCAPI =
-  "v3" :> "tasks" :> "async" :> "verify_with_source" :> "ind_rc_basic"
+  "v3" :> "tasks" :> "async" :> "verify_with_source" :> "ind_rc_plus"
     :> Header "api-key" ApiKey
     :> Header "account-id" AccountId
     :> ReqBody '[JSON] RCVerificationRequest

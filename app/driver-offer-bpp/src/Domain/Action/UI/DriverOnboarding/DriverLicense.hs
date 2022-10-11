@@ -131,17 +131,22 @@ onVerifyDL verificationReq output = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
   now <- getCurrentTime
   id <- generateGUID
+  configs <- asks (.driverOnboardingConfigs)
 
   mEncryptedDL <- encrypt `mapM` output.id_number
   let mLicenseExpiry = convertTextToUTC output.nt_validity_to
-  let mDriverLicense = createDL person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
+  let mDriverLicense = createDL configs person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
   case mDriverLicense of
     Just driverLicense -> do
       runTransaction $ Query.upsert driverLicense
+      case driverLicense.driverName of
+        Just name_ -> runTransaction $ Person.updateName person.id name_
+        Nothing -> return ()
       return Ack
     Nothing -> return Ack
 
 createDL ::
+  DriverOnboardingConfigs ->
   Id Person.Person ->
   Idfy.DLVerificationOutput ->
   Id Domain.DriverLicense ->
@@ -151,9 +156,9 @@ createDL ::
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   Domain.DriverLicense
-createDL driverId output id imageId1 imageId2 now edl expiry = do
+createDL configs driverId output id imageId1 imageId2 now edl expiry = do
   let classOfVehicles = maybe [] (map (.cov)) output.cov_details
-  let verificationStatus = validateDLStatus expiry classOfVehicles now
+  let verificationStatus = validateDLStatus configs expiry classOfVehicles now
   Domain.DriverLicense
     { id,
       driverId,
@@ -172,10 +177,10 @@ createDL driverId output id imageId1 imageId2 now edl expiry = do
       consentTimestamp = now
     }
 
-validateDLStatus :: UTCTime -> [Idfy.ClassOfVehicle] -> UTCTime -> Domain.VerificationStatus
-validateDLStatus expiry cov now = do
-  let validCOV = foldr' (\x acc -> isValidCOVDL x || acc) False cov
-  if (now < expiry) && validCOV then Domain.VALID else Domain.INVALID
+validateDLStatus :: DriverOnboardingConfigs -> UTCTime -> [Idfy.ClassOfVehicle] -> UTCTime -> Domain.VerificationStatus
+validateDLStatus configs expiry cov now = do
+  let validCOV = (not configs.checkDLVehicleClass) || foldr' (\x acc -> isValidCOVDL x || acc) False cov
+  if ((not configs.checkDLExpiry) || now < expiry) && validCOV then Domain.VALID else Domain.INVALID
 
 convertTextToUTC :: Maybe Text -> Maybe UTCTime
 convertTextToUTC a = do
