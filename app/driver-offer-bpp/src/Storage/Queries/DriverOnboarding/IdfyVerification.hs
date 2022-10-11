@@ -61,7 +61,7 @@ findByRequestId requestId = do
 updateResponse ::
   Text ->
   Text ->
-  Maybe Text ->
+  Text ->
   SqlDB ()
 updateResponse requestId status resp = do
   now <- getCurrentTime
@@ -69,7 +69,7 @@ updateResponse requestId status resp = do
     set
       tbl
       [ IdfyVerificationStatus =. val status,
-        IdfyVerificationIdfyResponse =. val resp,
+        IdfyVerificationIdfyResponse =. val (Just resp),
         IdfyVerificationUpdatedAt =. val now
       ]
     where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId

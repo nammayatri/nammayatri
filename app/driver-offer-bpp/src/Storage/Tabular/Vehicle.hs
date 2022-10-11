@@ -18,7 +18,6 @@ import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.Category"
 derivePersistField "Variant.Variant"
-derivePersistField "Domain.EnergyType"
 derivePersistField "Domain.RegistrationCategory"
 
 mkPersist
@@ -35,12 +34,13 @@ mkPersist
       category Domain.Category Maybe
       make Text Maybe
       size Text Maybe
-      energyType Domain.EnergyType Maybe
+      energyType Text Maybe
       registrationCategory Domain.RegistrationCategory Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary driverId
       Unique VehicleRegistrationNo
+      UniqueVehicleRegistrationNo registrationNo
       deriving Generic
     |]
 

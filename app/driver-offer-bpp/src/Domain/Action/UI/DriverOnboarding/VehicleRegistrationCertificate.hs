@@ -20,6 +20,7 @@ import Beckn.Types.Predicate
 import Beckn.Utils.Common
 import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
+import Control.Applicative ((<|>))
 import Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverOnboarding.DriverRCAssociation as Domain
@@ -183,7 +184,11 @@ createRC configs output id imageId now edl expiry = do
       permitExpiry = convertTextToUTC output.permit_validity_upto,
       pucExpiry = convertTextToUTC output.puc_validity_upto,
       vehicleClass,
-      vehicleManufacturer = output.manufacturer,
+      vehicleManufacturer = output.manufacturer <|> output.manufacturer_model,
+      vehicleCapacity = maybe (Just 3) (readMaybe . T.unpack) output.seating_capacity,
+      vehicleModel = output.m_y_manufacturing <|> output.manufacturer_model,
+      vehicleColor = output.color <|> output.colour,
+      vehicleEnergyType = output.fuel_type,
       insuranceValidity,
       verificationStatus,
       failedRules = [],

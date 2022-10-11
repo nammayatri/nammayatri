@@ -26,16 +26,6 @@ instance FromHttpApiData Category where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
------
-data EnergyType = PETROL | DIESEL | HYBRID | ELECTRIC | NG
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-  deriving (PrettyShow) via Showable EnergyType
-
-instance FromHttpApiData EnergyType where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
-
 ----
 data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -57,7 +47,7 @@ data Vehicle = Vehicle
     category :: Maybe Category,
     make :: Maybe Text,
     size :: Maybe Text,
-    energyType :: Maybe EnergyType,
+    energyType :: Maybe Text,
     registrationCategory :: Maybe RegistrationCategory,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

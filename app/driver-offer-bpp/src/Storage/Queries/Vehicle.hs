@@ -13,6 +13,23 @@ import Storage.Tabular.Vehicle
 create :: Vehicle -> SqlDB ()
 create = Esq.create
 
+upsert :: Vehicle -> SqlDB ()
+upsert a@Vehicle {..} =
+  Esq.upsert
+    a
+    [ VehicleDriverId =. val (toKey driverId),
+      VehicleCapacity =. val capacity,
+      VehicleCategory =. val category,
+      VehicleMake =. val make,
+      VehicleModel =. val model,
+      VehicleSize =. val size,
+      VehicleVariant =. val variant,
+      VehicleColor =. val color,
+      VehicleEnergyType =. val energyType,
+      VehicleRegistrationCategory =. val registrationCategory,
+      VehicleUpdatedAt =. val updatedAt
+    ]
+
 findById ::
   Transactionable m =>
   Id Person ->

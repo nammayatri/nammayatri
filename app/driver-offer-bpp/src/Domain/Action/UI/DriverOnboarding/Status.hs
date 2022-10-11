@@ -100,11 +100,9 @@ enableDriver _ _ Nothing Nothing = return ()
 enableDriver personId orgId (Just rc) (Just dl) = do
   DB.runTransaction $ DIQuery.verifyAndEnableDriver personId
   rcNumber <- decrypt rc.certificateNumber
-  mVehicle <- VQuery.findByRegistrationNo rcNumber
-  when (isNothing mVehicle) $ do
-    now <- getCurrentTime
-    let vehicle = buildVehicle now personId orgId rcNumber
-    DB.runTransaction $ VQuery.create vehicle
+  now <- getCurrentTime
+  let vehicle = buildVehicle now personId orgId rcNumber
+  DB.runTransaction $ VQuery.upsert vehicle
   case dl.driverName of
     Just name -> DB.runTransaction $ Person.updateName personId name
     Nothing -> return ()
@@ -112,15 +110,15 @@ enableDriver personId orgId (Just rc) (Just dl) = do
     buildVehicle now personId_ orgId_ certificateNumber =
       Vehicle.Vehicle
         { Vehicle.driverId = personId_,
-          Vehicle.capacity = Nothing,
+          Vehicle.capacity = rc.vehicleCapacity,
           Vehicle.category = Just Vehicle.AUTO_CATEGORY,
-          Vehicle.make = Nothing,
-          Vehicle.model = "2010",
+          Vehicle.make = rc.vehicleManufacturer,
+          Vehicle.model = fromMaybe "" rc.vehicleModel,
           Vehicle.size = Nothing,
           Vehicle.organizationId = orgId_,
           Vehicle.variant = AUTO_RICKSHAW,
-          Vehicle.color = "Yellow",
-          Vehicle.energyType = Nothing,
+          Vehicle.color = fromMaybe "Yellow" rc.vehicleColor,
+          Vehicle.energyType = rc.vehicleEnergyType,
           Vehicle.registrationNo = certificateNumber,
           Vehicle.registrationCategory = Nothing,
           Vehicle.createdAt = now,

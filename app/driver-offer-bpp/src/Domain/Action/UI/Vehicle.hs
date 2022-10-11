@@ -35,7 +35,7 @@ data UpdateVehicleReq = UpdateVehicleReq
     category :: Maybe Category,
     make :: Maybe Text,
     size :: Maybe Text,
-    energyType :: Maybe EnergyType,
+    energyType :: Maybe Text,
     registrationNo :: Maybe Text,
     registrationCategory :: Maybe RegistrationCategory
   }

@@ -20,18 +20,18 @@ webhookHandler ::
     HasField "loggerEnv" a LoggerEnv,
     HasField "idfyCfg" a IdfyConfig
   ) =>
-  (VerificationResponse -> FlowR a AckResponse) ->
+  (VerificationResponse -> Text -> FlowR a AckResponse) ->
   Maybe Text ->
   Value ->
   FlowHandlerR a AckResponse
 webhookHandler verifyHandler secret val = withFlowHandlerAPI $ do
   withLogTag "webhookIdfy" $ do
-    logInfo $ show val
+    let respDump = encodeToText val
     let mResp = fromJSON val
     case mResp of
       DAT.Success (resp :: VerificationResponse) -> do
         void $ verifyAuth secret
-        void $ verifyHandler resp
+        void $ verifyHandler resp respDump
         pure Ack
       DAT.Error err1 -> do
         logInfo $ "Error 1: " <> show err1
@@ -42,7 +42,7 @@ webhookHandler verifyHandler secret val = withFlowHandlerAPI $ do
             case mResp_ of
               Just resp_ -> do
                 void $ verifyAuth secret
-                void $ verifyHandler resp_
+                void $ verifyHandler resp_ respDump
                 pure Ack
               Nothing -> pure Ack
           DAT.Error err -> do

@@ -31,6 +31,10 @@ mkPersist
       insuranceValidity  UTCTime Maybe
       vehicleClass Text Maybe
       vehicleManufacturer Text Maybe
+      vehicleCapacity Int Maybe
+      vehicleModel Text Maybe
+      vehicleColor Text Maybe
+      vehicleEnergyType Text Maybe
       verificationStatus Domain.VerificationStatus
       failedRules (PostgresList Text)
       createdAt UTCTime

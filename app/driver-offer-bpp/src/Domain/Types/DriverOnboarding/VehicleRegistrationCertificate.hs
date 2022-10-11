@@ -21,6 +21,10 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     vehicleClass :: Maybe Text,
     failedRules :: [Text],
     vehicleManufacturer :: Maybe Text,
+    vehicleCapacity :: Maybe Int,
+    vehicleModel :: Maybe Text,
+    vehicleColor :: Maybe Text,
+    vehicleEnergyType :: Maybe Text,
     verificationStatus :: VerificationStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

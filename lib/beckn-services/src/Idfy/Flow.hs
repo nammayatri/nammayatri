@@ -33,6 +33,6 @@ idfyWebhookHandler ::
     HasField "loggerEnv" a LoggerEnv,
     HasField "idfyCfg" a IdfyConfig
   ) =>
-  (VerificationResponse -> FlowR a AckResponse) ->
+  (VerificationResponse -> Text -> FlowR a AckResponse) ->
   FlowServerR a IdfyWebhookAPI
 idfyWebhookHandler = webhookHandler
