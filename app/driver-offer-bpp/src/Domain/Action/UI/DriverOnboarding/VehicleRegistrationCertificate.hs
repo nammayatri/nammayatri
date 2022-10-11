@@ -57,7 +57,7 @@ validateDriverRCReq DriverRCReq {..} =
   sequenceA_
     [validateField "vehicleRegistrationCertNumber" vehicleRegistrationCertNumber certNum]
   where
-    certNum = LengthInRange 5 12 `And` star (latinUC \/ digit \/ ",")
+    certNum = LengthInRange 5 12 `And` ("KA" <> star (latinUC \/ digit \/ ","))
 
 verifyRC ::
   Bool ->
