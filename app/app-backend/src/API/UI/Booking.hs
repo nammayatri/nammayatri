@@ -26,6 +26,7 @@ type API =
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> QueryParam "onlyActive" Bool
+             :> QueryParam "filterByBookingStatus" SRB.BookingStatus
              :> Get '[JSON] DBooking.BookingListRes
        )
 
@@ -37,5 +38,5 @@ handler =
 bookingStatus :: Id SRB.Booking -> Id Person.Person -> FlowHandler BookingAPIEntity
 bookingStatus bookingId = withFlowHandlerAPI . DBooking.bookingStatus bookingId
 
-bookingList :: Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> FlowHandler DBooking.BookingListRes
-bookingList personId mbLimit mbOffset = withFlowHandlerAPI . DBooking.bookingList personId mbLimit mbOffset
+bookingList :: Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
+bookingList personId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI . DBooking.bookingList personId mbLimit mbOffset mbOnlyActive

@@ -127,9 +127,10 @@ findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   catMaybes <$> mapM buildFullBooking fullBookingsT
 
-findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
-findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
+findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
+findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus = Esq.buildDType $ do
   let isOnlyActive = Just True == mbOnlyActive
+  let isJustBookingStatus = isJust mbBookingStatus
   fullBookingsT <- Esq.findAll' $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab :& _) <-
       from $
@@ -137,7 +138,9 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive = Esq.buildDType 
           `Esq.on` (\(booking :& _ :& _ :& _ :& _ :& ride) -> booking ^. RB.BookingTId ==. ride ^. R.RideBookingId)
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
-        &&. whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
+        &&. ( whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
+                &&. whenTrue_ isJustBookingStatus (booking ^. RB.BookingStatus `in_` valList [fromJust mbBookingStatus])
+            )
     limit $ fromIntegral $ fromMaybe 10 mbLimit
     offset $ fromIntegral $ fromMaybe 0 mbOffset
     orderBy [desc $ booking ^. RB.BookingCreatedAt]

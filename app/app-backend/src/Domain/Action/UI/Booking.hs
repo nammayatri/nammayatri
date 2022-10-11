@@ -25,7 +25,7 @@ bookingStatus bookingId personId = do
   unless (booking.riderId == personId) $ throwError AccessDenied
   SRB.buildBookingAPIEntity booking
 
-bookingList :: EsqDBFlow m r => Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m BookingListRes
-bookingList personId mbLimit mbOffset mbOnlyActive = do
-  rbList <- QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive
+bookingList :: EsqDBFlow m r => Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
+bookingList personId mbLimit mbOffset mbOnlyActive mbBookingStatus = do
+  rbList <- QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList

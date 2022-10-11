@@ -180,6 +180,16 @@ token: {{app-token}}
 
 ###
 
+# @name listOfCompleted
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &filterByBookingStatus="COMPLETED"
+content-type: application/json
+token: {{app-token}}
+
+###
+
 # @name driverList
 GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
 token: {{token1}}

@@ -25,7 +25,7 @@ data BookingStatus
   | COMPLETED
   | CANCELLED
   | TRIP_ASSIGNED
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 instance FromHttpApiData BookingStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
