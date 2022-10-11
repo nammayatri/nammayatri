@@ -75,6 +75,7 @@ dependencies:
   - euler-hs
   - relude
   - wai
+  - servant
 
 ghc-options:
   - -Wall

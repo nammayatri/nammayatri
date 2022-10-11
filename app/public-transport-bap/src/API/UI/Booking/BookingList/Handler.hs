@@ -11,6 +11,6 @@ import Tools.Auth
 handler :: FlowServer API
 handler = bookingList
 
-bookingList :: PersonId -> Maybe Integer -> Maybe Integer -> FlowHandler BookingListRes
-bookingList personId mbLimit mbOffset = withFlowHandlerAPI $ do
-  BookingList.bookingListHandler personId mbLimit mbOffset
+bookingList :: PersonId -> Maybe Integer -> Maybe Integer -> Maybe BookingStatus -> FlowHandler BookingListRes
+bookingList personId mbLimit mbOffset mbBookingStatus = withFlowHandlerAPI $ do
+  BookingList.bookingListHandler personId mbLimit mbOffset mbBookingStatus

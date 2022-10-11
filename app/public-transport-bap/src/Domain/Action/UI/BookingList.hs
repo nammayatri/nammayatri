@@ -11,12 +11,12 @@ import qualified Storage.Queries.TransportStation as QTransportStation
 import Tools.Auth
 import Tools.Error
 
-bookingListHandler :: EsqDBFlow m r => PersonId -> Maybe Integer -> Maybe Integer -> m BookingListRes
-bookingListHandler personId mbLimit mbOffset = do
+bookingListHandler :: EsqDBFlow m r => PersonId -> Maybe Integer -> Maybe Integer -> Maybe BookingStatus -> m BookingListRes
+bookingListHandler personId mbLimit mbOffset mbBookingStatus = do
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   logDebug $ getId personId
-  bList <- QBooking.findAllByRequestorId personId limit offset
+  bList <- QBooking.findAllByRequestorId personId limit offset mbBookingStatus
   logDebug $ show bList
   BookingListRes
     <$> traverse buildBookingListRes bList
