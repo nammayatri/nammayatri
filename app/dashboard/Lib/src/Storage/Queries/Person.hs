@@ -10,8 +10,8 @@ import Beckn.Utils.Common
 import Control.Applicative (liftA2)
 import Database.Esqueleto.PostgreSQL
 import Domain.Types.Person as Person
-import Domain.Types.RegistrationToken as Reg
 import Domain.Types.Role as Role
+import Domain.Types.ServerName as DSN
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Role as Role
 import Storage.Tabular.ServerAccess as Server
@@ -48,7 +48,7 @@ findAllWithLimitOffset ::
   Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
-  m [(Person, Role, [Reg.ServerName])]
+  m [(Person, Role, [DSN.ServerName])]
 findAllWithLimitOffset mbSearchString mbLimit mbOffset =
   fromMaybeList <$> do
     mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
@@ -87,7 +87,7 @@ findAllWithLimitOffset mbSearchString mbLimit mbOffset =
           `ilike` likeSearchStr
         )
         ||. person ^. PersonMobileNumberHash ==. val searchStrDBHash --find by email also?
-    fromMaybeList :: [(Person, Role, Maybe [Reg.ServerName])] -> [(Person, Role, [Reg.ServerName])]
+    fromMaybeList :: [(Person, Role, Maybe [DSN.ServerName])] -> [(Person, Role, [DSN.ServerName])]
     fromMaybeList = map (\(person, role, mbServerName) -> (person, role, fromMaybe [] mbServerName))
 
 updatePersonRole :: Id Person -> Id Role -> SqlDB ()

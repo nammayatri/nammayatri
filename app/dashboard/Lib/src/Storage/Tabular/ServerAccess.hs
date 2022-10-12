@@ -10,11 +10,9 @@ module Storage.Tabular.ServerAccess where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.RegistrationToken as Domain
 import qualified Domain.Types.ServerAccess as Domain
+import qualified Domain.Types.ServerName as Domain
 import Storage.Tabular.Person (PersonTId)
-
-derivePersistField "Domain.ServerName"
 
 mkPersist
   defaultSqlSettings

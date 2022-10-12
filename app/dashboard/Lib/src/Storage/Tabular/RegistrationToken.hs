@@ -14,8 +14,6 @@ import Beckn.Types.Id
 import qualified Domain.Types.RegistrationToken as Domain
 import Storage.Tabular.Person (PersonTId)
 
-derivePersistField "Domain.ServerName"
-
 mkPersist
   defaultSqlSettings
   [defaultQQ|

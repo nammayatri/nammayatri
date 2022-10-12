@@ -34,13 +34,13 @@ let ServerName = < APP_BACKEND_YATRI | APP_BACKEND_ARDU | BECKN_TRANSPORT | DRIV
 
 let becknTransport =
   { name = ServerName.BECKN_TRANSPORT
-  , url = "http://localhost:8014/dashboard/"
+  , url = "http://localhost:8014/"
   , token = sec.becknTransportToken
   }
 
 let driverOfferBpp =
   { name = ServerName.DRIVER_OFFER_BPP
-  , url = "http://localhost:8016/dashboard/"
+  , url = "http://localhost:8016/"
   , token = sec.driverOfferBppToken
   }
 

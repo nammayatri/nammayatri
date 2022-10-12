@@ -1,64 +1,19 @@
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
-module Tools.Client where
+module Tools.Client (DataServer (..), CallServerAPI (..)) where
 
 import Beckn.Prelude
 import Beckn.Types.Error
 import Beckn.Utils.Common hiding (Error, callAPI)
 import Beckn.Utils.Dhall (FromDhall)
-import qualified Domain.Types.RegistrationToken as DReg
-import qualified EulerHS.Types as ET
-import Servant hiding (throwError)
-import Servant.Client
-import "app-backend" Tools.Auth (DashboardTokenAuth)
+import qualified Domain.Types.ServerName as DSN
+import qualified EulerHS.Types as Euler
 import Tools.Error
 import Tools.Metrics
 
-callAppBackendYatriApi,
-  callAppBackendArduApi,
-  callBecknTransportApi,
-  callDriverOfferApi ::
-    ( HasCallStack,
-      CoreMetrics m,
-      HasFlowEnv m r '["dataServers" ::: [DataServer]],
-      ET.JSONEx res,
-      ToJSON res
-    ) =>
-    (RegToken -> ET.EulerClient res) ->
-    Text ->
-    m res
-callAppBackendYatriApi = callHelperAPI DReg.APP_BACKEND_YATRI
-callAppBackendArduApi = callHelperAPI DReg.APP_BACKEND_ARDU
-callBecknTransportApi = callHelperAPI DReg.BECKN_TRANSPORT
-callDriverOfferApi = callHelperAPI DReg.DRIVER_OFFER_BPP
-
-callHelperAPI ::
-  ( HasCallStack,
-    CoreMetrics m,
-    HasFlowEnv m r '["dataServers" ::: [DataServer]],
-    ET.JSONEx res,
-    ToJSON res
-  ) =>
-  DReg.ServerName ->
-  (RegToken -> ET.EulerClient res) ->
-  Text ->
-  m res
-callHelperAPI serverName cl desc = do
-  dataServer <- getDataServer serverName
-  callAPI dataServer.url (cl dataServer.token) desc
-
-callAPI :: CallAPI env res
-callAPI = callApiUnwrappingApiError (identity @Error) Nothing Nothing
-
-client ::
-  forall api.
-  HasClient ET.EulerClient api =>
-  Proxy api ->
-  Client ET.EulerClient (DashboardTokenAuth :> api)
-client _ = ET.client (Proxy @(DashboardTokenAuth :> api))
-
 data DataServer = DataServer
-  { name :: DReg.ServerName,
+  { name :: DSN.ServerName,
     url :: BaseUrl,
     token :: Text
   }
@@ -66,7 +21,7 @@ data DataServer = DataServer
 
 getDataServer ::
   HasFlowEnv m r '["dataServers" ::: [DataServer]] =>
-  DReg.ServerName ->
+  DSN.ServerName ->
   m DataServer
 getDataServer serverName = do
   dataServers <- asks (.dataServers)
@@ -74,3 +29,37 @@ getDataServer serverName = do
     [dataServer] -> pure dataServer
     [] -> throwError (InternalError $ "Unknown data server: " <> show serverName)
     _ -> throwError (InternalError $ "Should be exactly one data server with name " <> show serverName)
+
+class
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DataServer]]
+  ) =>
+  CallServerAPI apis m r b c
+    | m b -> c
+  where
+  callServerAPI :: DSN.ServerName -> (Text -> apis) -> Text -> (apis -> b) -> c
+
+instance
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DataServer]],
+    ToJSON d,
+    FromJSON d
+  ) =>
+  CallServerAPI apis m r (Euler.EulerClient d) (m d)
+  where
+  callServerAPI serverName mkAPIs descr f = do
+    dataServer <- getDataServer serverName
+    let driverOfferAPIs = mkAPIs dataServer.token
+    callApiUnwrappingApiError (identity @Error) Nothing Nothing dataServer.url (f driverOfferAPIs) descr
+
+instance
+  ( CoreMetrics m,
+    HasFlowEnv m k '["dataServers" ::: [DataServer]],
+    MonadFlow m,
+    CallServerAPI apis m k d r1,
+    r ~ (c -> r1)
+  ) =>
+  CallServerAPI apis m k (c -> d) r
+  where
+  callServerAPI serverName mkAPIs descr f c =
+    callServerAPI @_ @m serverName mkAPIs descr (`f` c)

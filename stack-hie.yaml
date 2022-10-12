@@ -46,6 +46,7 @@ packages:
   - app/dashboard/BAPDashboard
   - app/dashboard/BPPDashboard
   - app/dashboard/Lib
+  - app/dashboard/CommonAPIs
   - app/example-service
   - app/mock-bap
   - app/mock-idfy

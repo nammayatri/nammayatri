@@ -11,18 +11,28 @@ import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Text as T
 import Domain.Types.Person
 import Environment
-import GHC.TypeLits
 import Servant hiding (throwError)
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.Person as QPerson
-import Tools.Auth (Dashboard, DashboardTokenAuth)
 
 type API =
-  DriverListAPI
-    :<|> DriverActivityAPI
-    :<|> EnableDriversAPI
-    :<|> DisableDriversAPI
-    :<|> DriverLocationAPI
+  "driver"
+    :> ( DriverListAPI
+           :<|> DriverActivityAPI
+           :<|> EnableDriversAPI
+           :<|> DisableDriversAPI
+           :<|> DriverLocationAPI
+       )
+
+type DriverListAPI = "list" :> Common.DriverListAPI
+
+type DriverActivityAPI = "activity" :> Common.DriverActivityAPI
+
+type EnableDriversAPI = "enable" :> Common.EnableDriversAPI
+
+type DisableDriversAPI = "disable" :> Common.DisableDriversAPI
+
+type DriverLocationAPI = "location" :> Common.DriverLocationAPI
 
 handler :: FlowServer API
 handler =
@@ -32,28 +42,12 @@ handler =
     :<|> disableDrivers
     :<|> driverLocation
 
-type FromCommon (t :: Symbol) api =
-  "driver"
-    :> DashboardTokenAuth
-    :> t
-    :> api
-
-type DriverListAPI = FromCommon "list" Common.DriverListAPI
-
-type DriverActivityAPI = FromCommon "activity" Common.DriverActivityAPI
-
-type EnableDriversAPI = FromCommon "enable" Common.EnableDriversAPI
-
-type DisableDriversAPI = FromCommon "disable" Common.DisableDriversAPI
-
-type DriverLocationAPI = FromCommon "location" Common.DriverLocationAPI
-
 limitOffset :: Maybe Int -> Maybe Int -> [a] -> [a]
 limitOffset mbLimit mbOffset =
   maybe identity take mbLimit . maybe identity drop mbOffset
 
-listDrivers :: Dashboard -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
-listDrivers _ mbLimit mbOffset _verified _rejected _pendingdoc mbSearchPhone = withFlowHandlerAPI $ do
+listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
+listDrivers mbLimit mbOffset _verified _rejected _pendingdoc mbSearchPhone = withFlowHandlerAPI $ do
   items <- mapM buildDriverListItem =<< QPerson.findAllDriversFirstnameAsc
   let filteredByPhone = filter (filterPhone . (.phoneNo)) items
       limitedItems = limitOffset mbLimit mbOffset filteredByPhone
@@ -80,8 +74,8 @@ buildDriverListItem f = do
         rcStatus = Nothing
       }
 
-driverActivity :: Dashboard -> FlowHandler Common.DriverActivityRes
-driverActivity _ = withFlowHandlerAPI $ do
+driverActivity :: FlowHandler Common.DriverActivityRes
+driverActivity = withFlowHandlerAPI $ do
   foldl' func Common.emptyDriverActivityRes <$> QPerson.findAllDrivers
   where
     func :: Common.DriverActivityRes -> QPerson.FullDriver -> Common.DriverActivityRes
@@ -90,8 +84,8 @@ driverActivity _ = withFlowHandlerAPI $ do
         then acc {Common.activeDriversInApp = acc.activeDriversInApp + 1}
         else acc {Common.inactiveDrivers = acc.inactiveDrivers + 1}
 
-enableDrivers :: Dashboard -> Common.DriverIds -> FlowHandler Common.EnableDriversRes
-enableDrivers _ req = withFlowHandlerAPI $ do
+enableDrivers :: Common.DriverIds -> FlowHandler Common.EnableDriversRes
+enableDrivers req = withFlowHandlerAPI $ do
   let enable = True
   updatedDrivers <- QDriverInfo.updateEnabledStateReturningIds (coerce req.driverIds) enable
   let driversNotFound = filter (not . (`elem` coerce @[Id Driver] @[Id Common.Driver] updatedDrivers)) req.driverIds
@@ -103,8 +97,8 @@ enableDrivers _ req = withFlowHandlerAPI $ do
         message = mconcat [show numDriversEnabled, " drivers enabled, following drivers not found: ", show $ coerce @_ @[Text] driversNotFound]
       }
 
-disableDrivers :: Dashboard -> Common.DriverIds -> FlowHandler Common.DisableDriversRes
-disableDrivers _ req = withFlowHandlerAPI $ do
+disableDrivers :: Common.DriverIds -> FlowHandler Common.DisableDriversRes
+disableDrivers req = withFlowHandlerAPI $ do
   let enable = False
   updatedDrivers <- QDriverInfo.updateEnabledStateReturningIds (coerce req.driverIds) enable
   let driversNotFound = filter (not . (`elem` coerce @_ @[Id Common.Driver] updatedDrivers)) req.driverIds
@@ -121,8 +115,8 @@ disableDrivers _ req = withFlowHandlerAPI $ do
             ]
       }
 
-driverLocation :: Dashboard -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
-driverLocation _ mbLimit mbOffset req = withFlowHandler $ do
+driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
+driverLocation mbLimit mbOffset req = withFlowHandler $ do
   let driverIds = coerce req.driverIds
   allDrivers <- QPerson.findAllDriversByIdsFirstnameAsc driverIds
   let driversNotFound =

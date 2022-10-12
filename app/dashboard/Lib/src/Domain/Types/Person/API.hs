@@ -6,8 +6,8 @@ module Domain.Types.Person.API where
 import Beckn.Prelude
 import Beckn.Types.Id
 import Domain.Types.Person.Type
-import qualified Domain.Types.RegistrationToken as DReg
 import qualified Domain.Types.Role as DRole
+import qualified Domain.Types.ServerName as DSN
 
 data PersonAPIEntity = PersonAPIEntity
   { id :: Id Person,
@@ -17,12 +17,12 @@ data PersonAPIEntity = PersonAPIEntity
     email :: Text,
     mobileNumber :: Text,
     mobileCountryCode :: Text,
-    availableServers :: [DReg.ServerName],
+    availableServers :: [DSN.ServerName],
     registeredAt :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-makePersonAPIEntity :: DecryptedPerson -> DRole.Role -> [DReg.ServerName] -> PersonAPIEntity
+makePersonAPIEntity :: DecryptedPerson -> DRole.Role -> [DSN.ServerName] -> PersonAPIEntity
 makePersonAPIEntity Person {..} personRole availableServers =
   PersonAPIEntity
     { registeredAt = createdAt,

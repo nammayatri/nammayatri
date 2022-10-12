@@ -68,6 +68,9 @@ dependencies:
   - euler-hs
   - containers
   - dashboard-bpp-helper-api
+  - http-client
+  - http-client-tls
+  - servant-client
 
 ghc-options:
   - -Wall

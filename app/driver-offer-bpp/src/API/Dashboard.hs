@@ -3,10 +3,13 @@ module API.Dashboard where
 import qualified API.Dashboard.Driver as Driver
 import Environment
 import Servant
+import Tools.Auth
 
 type API =
-  "dashboard" :> Driver.API
+  "dashboard"
+    :> DashboardTokenAuth
+    :> Driver.API
 
 handler :: FlowServer API
-handler =
+handler _ =
   Driver.handler

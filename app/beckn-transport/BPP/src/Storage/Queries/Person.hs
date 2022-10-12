@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Storage.Queries.Person where
 
 import Beckn.External.Encryption

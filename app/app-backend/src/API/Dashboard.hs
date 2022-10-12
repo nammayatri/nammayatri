@@ -10,11 +10,13 @@ import qualified Storage.CachedQueries.Merchant as QMerchant
 import Tools.Auth (Dashboard, DashboardTokenAuth)
 import Tools.Error
 
--- TODO do we need different tokens for different merchants? now we have one common token
-
 type API =
+  Capture "merchantId" (ShortId DMerchant.Merchant)
+    :> API'
+
+-- TODO do we need different tokens for different merchants? now we have one common token
+type API' =
   "dashboard"
-    :> Capture "merchantId" (ShortId DMerchant.Merchant)
     :> DashboardTokenAuth
     :> CustomerListAPI
 
