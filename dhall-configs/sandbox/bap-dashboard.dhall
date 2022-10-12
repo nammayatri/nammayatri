@@ -32,21 +32,9 @@ let encTools =
 
 let ServerName = < APP_BACKEND_YATRI | APP_BACKEND_ARDU | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
 
-let appBackendYatri =
-  { name = ServerName.APP_BACKEND_YATRI
-  , url = "https://api.sandbox.beckn.juspay.in/bap/dashboard/YATRI/"
-  , token = sec.appBackendToken
-  }
-
-let appBackendArdu =
-  { name = ServerName.APP_BACKEND_ARDU
-  , url = "https://api.sandbox.beckn.juspay.in/bap/dashboard/ARDU/"
-  , token = sec.appBackendToken
-  }
-
 let appBackend =
   { name = common.ServerName.APP_BACKEND
-  , url = "https://api.sandbox.beckn.juspay.in/bap/"
+  , url = "http://beckn-app-backend-sandbox.atlas:8013/dashboard/"
   , token = sec.appBackendToken
   }
 

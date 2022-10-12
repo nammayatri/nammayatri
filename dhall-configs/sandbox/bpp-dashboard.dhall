@@ -32,13 +32,13 @@ let encTools =
 
 let becknTransport =
   { name = common.ServerName.BECKN_TRANSPORT
-  , url = "https://api.sandbox.beckn.juspay.in/bpp/"
+  , url = "http://beckn-transport-sandbox.atlas:8014/dashboard/"
   , token = sec.becknTransportToken
   }
 
 let driverOfferBpp =
   { name = common.ServerName.DRIVER_OFFER_BPP
-  , url = "https://api.sandbox.beckn.juspay.in/dobpp/"
+  , url = "http://beckn-driver-offer-bpp-sandbox.atlas:8016/dashboard/"
   , token = sec.driverOfferBppToken
   }
 
