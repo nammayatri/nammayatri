@@ -7,6 +7,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.AccessMatrix as DMatrix
+import Domain.Types.Role
 import qualified Domain.Types.Role as DRole
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Role as QRole
@@ -22,6 +23,11 @@ data CreateRoleReq = CreateRoleReq
 data AssignAccessLevelReq = AssignAccessLevelReq
   { apiEntity :: DMatrix.ApiEntity,
     userAccessType :: DMatrix.UserAccessType
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+newtype ListRoleRes = ListRoleRes
+  { list :: [RoleAPIEntity]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -91,3 +97,18 @@ buildAccessMatrixItem roleId req = do
         createdAt = now,
         updatedAt = now
       }
+
+listRoles ::
+  ( EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  TokenInfo ->
+  Maybe Text ->
+  Maybe Integer ->
+  Maybe Integer ->
+  m ListRoleRes
+listRoles _ mbSearchString mbLimit mbOffset = do
+  personAndRoleList <- QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
+  res <- forM personAndRoleList $ \role -> do
+    pure $ mkRoleAPIEntity role
+  pure $ ListRoleRes res

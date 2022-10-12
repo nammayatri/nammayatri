@@ -22,12 +22,19 @@ type API =
              :> "assignAccessLevel"
              :> ReqBody '[JSON] DRoles.AssignAccessLevelReq
              :> Post '[JSON] APISuccess
+           :<|> "list"
+             :> DashboardAuth 'DASHBOARD_ADMIN
+             :> QueryParam "searchString" Text
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> Get '[JSON] DRoles.ListRoleRes
        )
 
 handler :: FlowServer API
 handler =
   createRole
     :<|> assignAccessLevel
+    :<|> listRoles
 
 createRole :: TokenInfo -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
 createRole tokenInfo =
@@ -36,3 +43,7 @@ createRole tokenInfo =
 assignAccessLevel :: TokenInfo -> Id DRole.Role -> DRoles.AssignAccessLevelReq -> FlowHandler APISuccess
 assignAccessLevel tokenInfo roleId =
   withFlowHandlerAPI . DRoles.assignAccessLevel tokenInfo roleId
+
+listRoles :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
+listRoles mbsearchstr mblimit mboffset =
+  withFlowHandlerAPI . DRoles.listRoles mbsearchstr mblimit mboffset

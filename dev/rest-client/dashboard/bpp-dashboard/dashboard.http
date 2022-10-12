@@ -110,6 +110,17 @@ token: {{token}}
 
 ###
 
+# @name roleslist
+
+GET {{bpp-dashboard-host}}/dashboard/admin/roles/list
+  ?searchString="ADMIN"
+  &limit=5
+  &offset=0
+content-type: application/json
+token: {{token}}
+
+###
+
 # @name resetMerchantAccess
 
 POST {{bpp-dashboard-host}}/dashboard/admin/person/{{personId}}/resetMerchantAccess
