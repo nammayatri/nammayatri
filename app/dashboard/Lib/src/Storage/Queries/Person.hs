@@ -100,3 +100,14 @@ updatePersonRole personId roleId = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updatePersonPassword :: Id Person -> DbHash -> SqlDB ()
+updatePersonPassword personId newPasswordHash = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonPasswordHash =. val newPasswordHash,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey personId)

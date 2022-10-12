@@ -1,7 +1,8 @@
 module Domain.Action.Dashboard.Person where
 
-import Beckn.External.Encryption (decrypt)
+import Beckn.External.Encryption (decrypt, getDbHash)
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto (Transactionable)
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
@@ -33,6 +34,12 @@ newtype ServerAccessReq = ServerAccessReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 type ServerAccessRes = ServerAccessReq
+
+data ResetPasswordReq = ResetPasswordReq
+  { oldPassword :: Text,
+    newPassword :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 validateAssignServerAccessReq :: [DReg.ServerName] -> Validate ServerAccessReq
 validateAssignServerAccessReq availableServerNames ServerAccessReq {..} =
@@ -111,6 +118,25 @@ resetServerAccess _ personId req = do
         QServer.deleteById serverAccess.id
         QReg.deleteAllByPersonIdAndServerName personId req.serverName
       pure Success
+
+resetPassword ::
+  (Transactionable m, EncFlow m r) =>
+  TokenInfo ->
+  ResetPasswordReq ->
+  m APISuccess
+resetPassword tokenInfo req = do
+  encPerson <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  newHash <- getDbHash req.newPassword
+  let oldActual = encPerson.passwordHash
+  oldProvided <- getDbHash req.oldPassword
+  if oldActual == oldProvided
+    then
+      ( do
+          Esq.runTransaction $
+            QP.updatePersonPassword tokenInfo.personId newHash
+          pure Success
+      )
+    else throwError $ InvalidRequest "Old password is incorrect."
 
 buildServerAccess :: MonadFlow m => Id DP.Person -> DReg.ServerName -> m DServer.ServerAccess
 buildServerAccess personId serverName = do
