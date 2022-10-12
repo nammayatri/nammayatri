@@ -5,17 +5,20 @@ where
 
 import Beckn.Prelude
 import Beckn.Product.MapSearch.PolyLinePoints
+import Beckn.Storage.Hedis
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Domain.Types.Person as Person
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry (someGeometriesContain)
-import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QP
 import Types.Error
 import Utils.Common
 
 checkServiceability ::
-  EsqDBFlow m r =>
+  ( HedisFlow m r,
+    EsqDBFlow m r
+  ) =>
   (GeofencingConfig -> GeoRestriction) ->
   Id Person.Person ->
   LatLong ->

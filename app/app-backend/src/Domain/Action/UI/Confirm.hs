@@ -9,6 +9,7 @@ where
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Esqueleto.Config
+import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Domain.Types.Booking as DRB
@@ -149,7 +150,7 @@ buildBooking searchRequest quote fromLoc mbToLoc now = do
       pure DRB.OneWayBookingDetails {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
-cancelBooking :: (EsqDBFlow m r, CoreMetrics m) => DRB.Booking -> m ()
+cancelBooking :: (EsqDBFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()
 cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason booking.id

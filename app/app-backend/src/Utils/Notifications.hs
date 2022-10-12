@@ -3,6 +3,7 @@ module Utils.Notifications where
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
 import Beckn.Storage.Esqueleto
+import Beckn.Storage.Hedis
 import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Data.Text as T
@@ -17,7 +18,7 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
-import qualified Storage.Queries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Metrics
@@ -25,7 +26,7 @@ import Types.Error
 import Utils.Common
 
 getFCMConfig ::
-  (MonadFlow m, Transactionable m) =>
+  (HedisFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   m FCM.FCMConfig
 getFCMConfig merchId = do
@@ -33,6 +34,7 @@ getFCMConfig merchId = do
 
 notifyOnDriverOfferIncoming ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   Id Estimate ->
@@ -62,6 +64,7 @@ notifyOnDriverOfferIncoming estimateId quotes person = do
 
 notifyOnRideAssigned ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -93,6 +96,7 @@ notifyOnRideAssigned booking ride = do
 
 notifyOnRideStarted ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -124,6 +128,7 @@ notifyOnRideStarted booking ride = do
 
 notifyOnRideCompleted ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -155,6 +160,7 @@ notifyOnRideCompleted booking ride = do
 
 notifyOnExpiration ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   SearchRequest ->
@@ -187,6 +193,7 @@ notifyOnExpiration searchReq = do
 
 notifyOnRegistration ::
   ( CoreMetrics m,
+    HedisFlow m r,
     EsqDBFlow m r
   ) =>
   RegistrationToken ->
@@ -214,7 +221,14 @@ notifyOnRegistration regToken person mbDeviceToken = do
             ]
    in FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId mbDeviceToken
 
-notifyOnBookingCancelled :: (CoreMetrics m, EsqDBFlow m r) => SRB.Booking -> SBCR.CancellationSource -> m ()
+notifyOnBookingCancelled ::
+  ( CoreMetrics m,
+    HedisFlow m r,
+    EsqDBFlow m r
+  ) =>
+  SRB.Booking ->
+  SBCR.CancellationSource ->
+  m ()
 notifyOnBookingCancelled booking cancellationSource = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   config <- getFCMConfig person.merchantId
@@ -266,7 +280,13 @@ notifyOnBookingCancelled booking cancellationSource = do
             "Please book again to get another ride."
           ]
 
-notifyOnBookingReallocated :: (CoreMetrics m, EsqDBFlow m r) => SRB.Booking -> m ()
+notifyOnBookingReallocated ::
+  ( CoreMetrics m,
+    HedisFlow m r,
+    EsqDBFlow m r
+  ) =>
+  SRB.Booking ->
+  m ()
 notifyOnBookingReallocated booking = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   notificationData <- buildNotificationData
@@ -295,7 +315,13 @@ notifyOnBookingReallocated booking = do
             "Please wait until we allocate other driver."
           ]
 
-notifyOnQuoteReceived :: (CoreMetrics m, EsqDBFlow m r) => DQuote.Quote -> m ()
+notifyOnQuoteReceived ::
+  ( CoreMetrics m,
+    HedisFlow m r,
+    EsqDBFlow m r
+  ) =>
+  DQuote.Quote ->
+  m ()
 notifyOnQuoteReceived quote = do
   searchRequest <- QSearchReq.findById quote.requestId >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
   person <- Person.findById searchRequest.riderId >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
@@ -322,6 +348,7 @@ notifyOnQuoteReceived quote = do
 
 notifyDriverOnTheWay ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   Id Person ->
@@ -348,6 +375,7 @@ notifyDriverOnTheWay personId = do
 
 notifyDriverHasReached ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   Id Person ->

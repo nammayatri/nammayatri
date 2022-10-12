@@ -1,6 +1,11 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Storage.Queries.Merchant where
+module Storage.Queries.Merchant
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (findById)
@@ -26,11 +31,4 @@ findByExoPhone countryCode exoPhone = do
     where_ $
       merchant ^. MerchantExoPhoneCountryCode ==. val (Just countryCode)
         &&. merchant ^. MerchantExoPhone ==. val (Just exoPhone)
-    return merchant
-
-findByRegistryUrl :: Transactionable m => BaseUrl -> m [Merchant]
-findByRegistryUrl registryUrl =
-  findAll $ do
-    merchant <- from $ table @MerchantT
-    where_ $ merchant ^. MerchantRegistryUrl ==. val (showBaseUrl registryUrl)
     return merchant

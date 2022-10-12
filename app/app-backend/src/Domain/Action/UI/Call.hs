@@ -18,6 +18,7 @@ import Beckn.External.Exotel.Types
 import qualified Beckn.External.Exotel.Types as Call
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto (runTransaction)
+import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
@@ -31,9 +32,9 @@ import qualified Domain.Types.CallStatus as DCS
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Servant.Client (BaseUrl (..))
+import qualified Storage.CachedQueries.Merchant as Merchant
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
-import qualified Storage.Queries.Merchant as Merchant
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics
@@ -108,7 +109,7 @@ directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
   runTransaction $ QCallStatus.updateCallStatus callStatus.id dialCallStatus (fromMaybe 0 callDuration) recordingUrl
   return Ack
 
-getDriverMobileNumber :: (EsqDBFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
+getDriverMobileNumber :: (EsqDBFlow m r, HedisFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ callStatus_ = do
   let callStatus = fromText callStatus_ :: ExotelCallStatus
   let callFrom = dropFirstZero callFrom_

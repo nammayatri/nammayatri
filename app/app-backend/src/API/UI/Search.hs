@@ -11,6 +11,7 @@ where
 
 import App.Types
 import Beckn.Prelude
+import Beckn.Storage.Hedis
 import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
 import Beckn.Streaming.MonadProducer
 import Beckn.Types.Common hiding (id)
@@ -91,6 +92,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
 
 oneWaySearch ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
     CoreMetrics m,
@@ -115,6 +117,7 @@ oneWaySearch personId req = do
 
 rentalSearch ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
     CoreMetrics m,

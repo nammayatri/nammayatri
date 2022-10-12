@@ -16,6 +16,7 @@ import Beckn.External.FCM.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Esqueleto as DB
+import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
@@ -35,7 +36,7 @@ import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Metrics
@@ -91,6 +92,7 @@ authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCo
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
+    HedisFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
     CoreMetrics m
@@ -188,6 +190,7 @@ verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
+    HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>

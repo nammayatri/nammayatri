@@ -9,13 +9,14 @@ where
 import Beckn.Prelude
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
+import Beckn.Storage.Hedis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry
-import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Metrics
@@ -39,6 +40,7 @@ data RentalSearchRes = RentalSearchRes
 
 rentalSearch ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasBAPMetrics m r

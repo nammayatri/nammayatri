@@ -8,6 +8,7 @@ import App.Types
 import Beckn.External.GoogleMaps.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
+import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -27,7 +28,7 @@ type GetDriverLocRes = MapSearch.LatLong
 
 getDriverLoc ::
   ( EsqDBFlow m r,
-    MonadFlow m,
+    HedisFlow m r,
     CoreMetrics m,
     HasGoogleMaps m r,
     HasField "rideCfg" r RideConfig

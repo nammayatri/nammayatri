@@ -6,7 +6,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Merchant as DMerchant
 import Servant hiding (throwError)
-import qualified Storage.Queries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import Types.Error
 import Utils.Auth (Dashboard, DashboardTokenAuth)
 

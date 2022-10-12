@@ -3,13 +3,14 @@ module Domain.Action.Beckn.OnInit where
 import Beckn.External.Encryption (decrypt)
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
+import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.LocationAddress as DBL
+import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRideB
-import qualified Storage.Queries.Merchant as QMerch
 import qualified Storage.Queries.Person as QP
 import Types.Error
 import Utils.Common
@@ -37,13 +38,13 @@ data OnInitRes = OnInitRes
   }
   deriving (Generic, Show, PrettyShow)
 
-onInit :: (EsqDBFlow m r, EncFlow m r) => BaseUrl -> OnInitReq -> m OnInitRes
+onInit :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => BaseUrl -> OnInitReq -> m OnInitRes
 onInit registryUrl req = do
   bookingOld <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findByRegistryUrl registryUrl
-  unless (elem bookingOld.merchantId $ merchant <&> (.id)) $ throwError (InvalidRequest "No merchant which works with passed registry.")
+  merchant <- QMerch.findById bookingOld.merchantId >>= fromMaybeM (MerchantNotFound bookingOld.merchantId.getId)
+  unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
 
   DB.runTransaction $ do
     QRideB.updateBPPBookingId req.bookingId req.bppBookingId
