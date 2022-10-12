@@ -99,3 +99,7 @@ build-local: Dockerfile
 	rm -rf .ssh && cp -R ~/.ssh .
 	docker build -t $(IMAGE_NAME):$(VERSION) -f Dockerfile . --build-arg "DEP_IMAGE_PATH=$(DEP_IMAGE)"
 	rm -rf .ssh
+
+precommit: ./dev/pre-commit
+	#Checks files for commiting
+	./dev/pre-commit
