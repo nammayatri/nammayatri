@@ -5,6 +5,7 @@ module Domain.Action.Beckn.Cancel
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -13,8 +14,8 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
+import qualified Storage.CachedQueries.Organization as Organization
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.RideRequest as RideRequest
 import Tools.Error
 
@@ -23,7 +24,7 @@ newtype CancelReq = CancelReq
   }
 
 cancel ::
-  (EsqDBFlow m r) =>
+  (HedisFlow m r, EsqDBFlow m r) =>
   Id Organization.Organization ->
   SignatureAuthResult ->
   CancelReq ->

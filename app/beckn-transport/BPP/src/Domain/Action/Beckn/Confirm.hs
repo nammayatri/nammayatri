@@ -10,6 +10,7 @@ import Beckn.External.Encryption (encrypt)
 import Beckn.External.GoogleMaps.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Types.Registry (Subscriber (..))
 import Beckn.Utils.Common
@@ -25,12 +26,12 @@ import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.RiderDetails as SRD
 import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.Schedule
+import qualified Storage.CachedQueries.Organization as Organization
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
-import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
@@ -64,6 +65,7 @@ data ConfirmResBDetails
 confirm ::
   ( EncFlow m r,
     EsqDBFlow m r,
+    HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["schedulingReserveTime" ::: Seconds],
     CoreMetrics m,

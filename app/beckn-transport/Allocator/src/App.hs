@@ -20,7 +20,7 @@ import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
 import Servant
 import qualified Service.Runner as Allocator
-import qualified Storage.Queries.Organization as Storage
+import qualified Storage.CachedQueries.Organization as Storage
 
 runAllocator :: (AppCfg -> AppCfg) -> IO ()
 runAllocator configModifier = do

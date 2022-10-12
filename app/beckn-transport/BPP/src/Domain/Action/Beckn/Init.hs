@@ -5,6 +5,7 @@ import Beckn.Prelude
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
+import Beckn.Storage.Hedis
 import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
@@ -16,10 +17,10 @@ import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Vehicle as Veh
 import SharedLogic.FareCalculator.OneWayFareCalculator
+import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.Queries.Geometry as QGeometry
-import qualified Storage.Queries.Organization as QOrg
 import Tools.Error
 
 data InitReq = InitReq
@@ -49,6 +50,7 @@ data InitRes = InitRes
 
 init ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     HasField "geofencingConfig" r GeofencingConfig,
     HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m,

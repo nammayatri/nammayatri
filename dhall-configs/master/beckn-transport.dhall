@@ -65,7 +65,7 @@ in
 
 { esqDBCfg = esqDBCfg
 , redisCfg = rcfg
-, hcfg = rcfg
+, hedisCfg = rcfg
 , smsCfg = smsConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"

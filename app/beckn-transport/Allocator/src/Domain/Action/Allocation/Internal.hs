@@ -2,6 +2,7 @@ module Domain.Action.Allocation.Internal where
 
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -23,6 +24,7 @@ import EulerHS.Prelude hiding (id)
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DrPool
+import qualified Storage.CachedQueries.Organization as QOrg
 import Storage.Queries.AllocationEvent (logAllocationEvent)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -31,7 +33,6 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
-import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideRequest as QRR
@@ -223,6 +224,7 @@ checkAvailability driverPool = do
 
 cancelBooking ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     FCMFlow m r,

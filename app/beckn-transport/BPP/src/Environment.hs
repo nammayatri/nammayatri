@@ -41,7 +41,7 @@ import Tools.Streaming.Kafka
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     redisCfg :: T.RedisConfig,
-    hcfg :: HedisCfg,
+    hedisCfg :: HedisCfg,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
     inviteSmsTemplate :: Text,
@@ -147,7 +147,7 @@ buildAppEnv AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBPPKafkaEnvs
-  hedisEnv <- connectHedis hcfg becknTransportPrefix
+  hedisEnv <- connectHedis hedisCfg becknTransportPrefix
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

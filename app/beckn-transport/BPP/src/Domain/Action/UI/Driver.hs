@@ -26,6 +26,7 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude
 import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -42,9 +43,9 @@ import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as SV
 import GHC.Records.Extra
+import qualified Storage.CachedQueries.Organization as QOrganization
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -173,6 +174,7 @@ type UpdateDriverRes = DriverInformationRes
 createDriver ::
   ( HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
+    HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>
@@ -233,6 +235,7 @@ createDriverDetails personId = do
 
 getInformation ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     EncFlow m r
   ) =>
   Id SP.Person ->
@@ -371,6 +374,7 @@ deleteDriver admin driverId = do
 
 updateDriver ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     EncFlow m r
   ) =>
   Id SP.Person ->

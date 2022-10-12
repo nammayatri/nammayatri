@@ -8,6 +8,7 @@ module Domain.Action.UI.Transporter
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
 import Beckn.Utils.Common
@@ -17,7 +18,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Organization as SO
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.Organization as QO
+import qualified Storage.CachedQueries.Organization as QO
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 
@@ -42,7 +43,7 @@ validateUpdateTransporterReq UpdateTransporterReq {..} =
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name
     ]
 
-updateTransporter :: (EsqDBFlow m r) => SP.Person -> Id SO.Organization -> UpdateTransporterReq -> m UpdateTransporterRes
+updateTransporter :: (HedisFlow m r, EsqDBFlow m r) => SP.Person -> Id SO.Organization -> UpdateTransporterReq -> m UpdateTransporterRes
 updateTransporter admin orgId req = do
   unless (Just orgId == admin.organizationId) $ throwError AccessDenied
   runRequestValidation validateUpdateTransporterReq req
@@ -54,11 +55,12 @@ updateTransporter admin orgId req = do
             SO.description = (req.description) <|> (org.description),
             SO.enabled = fromMaybe (org.enabled) (req.enabled)
            }
-  Esq.runTransaction $ QO.updateOrganizationRec updOrg
+  Esq.runTransaction $ QO.update updOrg
+  QO.clearCache updOrg
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updOrg)
   return $ SO.makeOrganizationAPIEntity updOrg
 
-getTransporter :: (EsqDBFlow m r) => Id SP.Person -> m TransporterRec
+getTransporter :: (HedisFlow m r, EsqDBFlow m r) => Id SP.Person -> m TransporterRec
 getTransporter personId = do
   person <-
     QP.findById personId

@@ -19,8 +19,8 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Environment
 import EulerHS.Prelude hiding (id, state)
+import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Geometry as QGeometry
-import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import qualified Tools.Metrics as Metrics

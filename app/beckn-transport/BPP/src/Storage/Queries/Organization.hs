@@ -1,4 +1,9 @@
-module Storage.Queries.Organization where
+module Storage.Queries.Organization
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
@@ -21,8 +26,8 @@ loadAllProviders =
         &&. org ^. OrganizationEnabled
     return org
 
-updateOrganizationRec :: Organization -> SqlDB ()
-updateOrganizationRec org = do
+update :: Organization -> SqlDB ()
+update org = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set

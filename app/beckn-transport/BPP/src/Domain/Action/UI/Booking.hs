@@ -18,6 +18,7 @@ import Beckn.External.GoogleMaps.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -32,11 +33,11 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude hiding (id)
+import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
-import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RideRequest as RideRequest
 import Tools.Error
@@ -84,7 +85,7 @@ bookingList person mbLimit mbOffset mbOnlyActive = do
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList
 
 bookingCancel ::
-  (EsqDBFlow m r) =>
+  (HedisFlow m r, EsqDBFlow m r) =>
   Id SRB.Booking ->
   SP.Person ->
   m APISuccess
@@ -153,7 +154,7 @@ responseToEventType ACCEPT = AllocationEvent.AcceptedByDriver
 responseToEventType REJECT = AllocationEvent.RejectedByDriver
 
 setDriverAcceptance ::
-  (EsqDBFlow m r) => Id SRB.Booking -> Id SP.Person -> SetDriverAcceptanceReq -> m SetDriverAcceptanceRes
+  (HedisFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id SP.Person -> SetDriverAcceptanceReq -> m SetDriverAcceptanceRes
 setDriverAcceptance bookingId personId req = do
   currentTime <- getCurrentTime
   logTagInfo "setDriverAcceptance" logMessage

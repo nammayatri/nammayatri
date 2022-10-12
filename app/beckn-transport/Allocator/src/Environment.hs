@@ -4,6 +4,8 @@ module Environment where
 
 import Beckn.External.Encryption (EncTools)
 import Beckn.Storage.Esqueleto.Config
+import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis.AppPrefixes
 import Beckn.Types.Common
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Id (ShortId)
@@ -29,6 +31,7 @@ data AppCfg = AppCfg
   { appCfg :: App.AppCfg,
     esqDBCfg :: EsqDBConfig,
     redisCfg :: RedisConfig,
+    hedisCfg :: HedisCfg,
     metricsPort :: Int,
     healthcheckPort :: Int,
     httpClientOptions :: HttpClientOptions,
@@ -84,6 +87,7 @@ data AppEnv = AppEnv
     btmMetrics :: AllocatorMetricsContainer,
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
+    hedisEnv :: HedisEnv,
     selfUIUrl :: BaseUrl
   }
   deriving (Generic)
@@ -96,12 +100,14 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  hedisEnv <- connectHedis hedisCfg becknTransportPrefix
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   pure AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   releaseKafkaProducerTools kafkaProducerTools
+  disconnectHedis hedisEnv
   releaseLoggerEnv loggerEnv
 
 instance AuthenticatingEntity AppEnv where

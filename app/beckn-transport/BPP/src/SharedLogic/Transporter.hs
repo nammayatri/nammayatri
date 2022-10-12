@@ -5,7 +5,7 @@ import Beckn.Utils.Common
 import qualified Domain.Types.Organization as DOrg
 import Environment
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.Organization as QOrg
+import qualified Storage.CachedQueries.Organization as QOrg
 import Tools.Error
 
 findTransporter :: Id DOrg.Organization -> Flow DOrg.Organization
