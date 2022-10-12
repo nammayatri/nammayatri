@@ -2,6 +2,7 @@ module Domain.Action.Beckn.Init where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -11,9 +12,9 @@ import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
-import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.SearchRequest as QSR
 
 data InitReq = InitReq
@@ -37,7 +38,7 @@ buildBookingLocation DLoc.SearchReqLocation {..} = do
         ..
       }
 
-handler :: (EsqDBFlow m r) => Id DOrg.Organization -> InitReq -> m InitRes
+handler :: (HedisFlow m r, EsqDBFlow m r) => Id DOrg.Organization -> InitReq -> m InitRes
 handler orgId req = do
   transporter <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
   now <- getCurrentTime

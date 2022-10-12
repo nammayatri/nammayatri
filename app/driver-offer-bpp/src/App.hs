@@ -25,7 +25,7 @@ import Network.Wai.Handler.Warp
     setInstallShutdownHandler,
     setPort,
   )
-import qualified Storage.Queries.Organization as Storage
+import qualified Storage.CachedQueries.Organization as Storage
 import System.Environment (lookupEnv)
 import Tools.SignatureAuth
 

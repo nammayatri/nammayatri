@@ -11,12 +11,13 @@ import Beckn.External.Encryption (decrypt)
 import Beckn.External.FCM.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Control.Applicative
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
-import qualified Storage.Queries.Organization as QOrg
+import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
@@ -41,7 +42,7 @@ data UpdateOrgAdminProfileReq = UpdateOrgAdminProfileReq
 
 type UpdateOrgAdminProfileRes = OrgAdminProfileRes
 
-getProfile :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
+getProfile :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
 getProfile admin = do
   let Just orgId = admin.organizationId
   org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
@@ -49,7 +50,7 @@ getProfile admin = do
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
 
-updateProfile :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
+updateProfile :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
 updateProfile admin req = do
   let Just orgId = admin.organizationId
       updAdmin =

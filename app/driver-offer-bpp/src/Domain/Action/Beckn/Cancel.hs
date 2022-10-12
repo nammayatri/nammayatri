@@ -5,6 +5,7 @@ module Domain.Action.Beckn.Cancel
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -15,10 +16,10 @@ import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
+import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
-import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -31,6 +32,7 @@ newtype CancelReq = CancelReq
 
 cancel ::
   ( FCMFlow m r,
+    HedisFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],

@@ -11,6 +11,7 @@ module SharedLogic.CallBAP
   )
 where
 
+import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
@@ -36,7 +37,7 @@ import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude
-import qualified Storage.Queries.Organization as QOrg
+import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
@@ -109,6 +110,7 @@ buildBppUrl (Id transporterId) =
 sendRideAssignedUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
+    HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -128,6 +130,7 @@ sendRideAssignedUpdateToBAP booking ride = do
 sendRideStartedUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
+    HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -145,6 +148,7 @@ sendRideStartedUpdateToBAP booking ride = do
 sendRideCompletedUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
+    HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>

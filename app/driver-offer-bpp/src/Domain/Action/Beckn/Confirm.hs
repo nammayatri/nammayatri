@@ -4,6 +4,7 @@ import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Types.Common
 import Beckn.Types.Error
@@ -22,13 +23,13 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
+import Storage.CachedQueries.Organization as QOrg
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
-import Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
@@ -55,6 +56,7 @@ data DConfirmRes = DConfirmRes
 
 handler ::
   ( FCMFlow m r,
+    HedisFlow m r,
     EsqDBFlow m r,
     HasPrettyLogger m r,
     EncFlow m r,

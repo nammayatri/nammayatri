@@ -2,6 +2,7 @@ module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
 import Beckn.External.GoogleMaps.Types
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
@@ -9,11 +10,11 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.CallBAP as BP
+import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -23,6 +24,7 @@ import qualified Tools.Notifications as Notify
 cancelRideImpl ::
   ( EsqDBFlow m r,
     EncFlow m r,
+    HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasGoogleMaps m r,

@@ -19,11 +19,11 @@ import qualified Domain.Types.Person as Person
 import Environment
 import Idfy.Flow as Idfy
 import SharedLogic.DriverOnboarding
+import qualified Storage.CachedQueries.Organization as Organization
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverOnboarding.Image as Query
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
-import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as Person
 
 data ImageValidateRequest = ImageValidateRequest

@@ -33,6 +33,7 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -62,13 +63,12 @@ import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.FareCalculator
+import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverStats as QDriverStats
 import Storage.Queries.FarePolicy (findFarePolicyByOrgAndVariant)
-import qualified Storage.Queries.Organization as QOrg
-import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.SearchRequest as QSReq
@@ -212,6 +212,7 @@ createDriver ::
   ( HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
+    HedisFlow m r,
     CoreMetrics m
   ) =>
   SP.Person ->
@@ -235,7 +236,7 @@ createDriver admin req = do
     QVehicle.create vehicle
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
-    QOrganization.findById orgId
+    QOrg.findById orgId
       >>= fromMaybeM (OrgNotFound orgId.getId)
   decPerson <- decrypt person
   let mobNum = personEntity.mobileNumber
@@ -268,7 +269,7 @@ createDriverDetails personId = do
   where
     driverId = cast personId
 
-getInformation :: (EsqDBFlow m r, EncFlow m r) => Id SP.Person -> m DriverInformationRes
+getInformation :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SP.Person -> m DriverInformationRes
 getInformation personId = do
   let driverId = cast personId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -276,7 +277,7 @@ getInformation personId = do
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   organization <-
-    QOrganization.findById orgId
+    QOrg.findById orgId
       >>= fromMaybeM (OrgNotFound orgId.getId)
   pure $ makeDriverInformationRes driverEntity organization
 
@@ -369,7 +370,7 @@ deleteDriver admin driverId = do
       for_ regTokens $ \regToken ->
         void $ Redis.deleteKeyRedis $ authTokenCacheKey regToken.token
 
-updateDriver :: (EsqDBFlow m r, EncFlow m r) => Id SP.Person -> UpdateDriverReq -> m UpdateDriverRes
+updateDriver :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SP.Person -> UpdateDriverReq -> m UpdateDriverRes
 updateDriver personId req = do
   runRequestValidation validateUpdateDriverReq req
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -387,7 +388,7 @@ updateDriver personId req = do
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   org <-
-    QOrganization.findById orgId
+    QOrg.findById orgId
       >>= fromMaybeM (OrgNotFound orgId.getId)
   return $ makeDriverInformationRes driverEntity org
 
@@ -491,6 +492,7 @@ isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFe
 
 offerQuote ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
