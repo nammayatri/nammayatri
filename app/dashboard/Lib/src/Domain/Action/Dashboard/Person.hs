@@ -35,7 +35,7 @@ newtype ServerAccessReq = ServerAccessReq
 
 type ServerAccessRes = ServerAccessReq
 
-data ResetPasswordReq = ResetPasswordReq
+data ChangePasswordReq = ChangePasswordReq
   { oldPassword :: Text,
     newPassword :: Text
   }
@@ -119,24 +119,20 @@ resetServerAccess _ personId req = do
         QReg.deleteAllByPersonIdAndServerName personId req.serverName
       pure Success
 
-resetPassword ::
+changePassword ::
   (Transactionable m, EncFlow m r) =>
   TokenInfo ->
-  ResetPasswordReq ->
+  ChangePasswordReq ->
   m APISuccess
-resetPassword tokenInfo req = do
+changePassword tokenInfo req = do
   encPerson <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
   newHash <- getDbHash req.newPassword
   let oldActual = encPerson.passwordHash
   oldProvided <- getDbHash req.oldPassword
-  if oldActual == oldProvided
-    then
-      ( do
-          Esq.runTransaction $
-            QP.updatePersonPassword tokenInfo.personId newHash
-          pure Success
-      )
-    else throwError $ InvalidRequest "Old password is incorrect."
+  unless (oldActual == oldProvided) . throwError $ InvalidRequest "Old password is incorrect."
+  Esq.runTransaction $
+    QP.updatePersonPassword tokenInfo.personId newHash
+  pure Success
 
 buildServerAccess :: MonadFlow m => Id DP.Person -> DReg.ServerName -> m DServer.ServerAccess
 buildServerAccess personId serverName = do

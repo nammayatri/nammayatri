@@ -44,8 +44,8 @@ type API =
                :> DashboardAuth 'DASHBOARD_USER
                :> Get '[JSON] DPerson.ServerAccessRes
              :<|> DashboardAuth 'DASHBOARD_USER
-               :> "resetPassword"
-               :> ReqBody '[JSON] DPerson.ResetPasswordReq
+               :> "changePassword"
+               :> ReqBody '[JSON] DPerson.ChangePasswordReq
                :> Post '[JSON] APISuccess
          )
 
@@ -58,7 +58,7 @@ handler =
   )
     :<|> ( profile
              :<|> getCurrentServer
-             :<|> resetPassword
+             :<|> changePassword
          )
 
 listPerson :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DPerson.ListPersonRes
@@ -85,6 +85,6 @@ getCurrentServer :: TokenInfo -> FlowHandler DPerson.ServerAccessRes
 getCurrentServer =
   withFlowHandlerAPI . pure . DPerson.getCurrentServer
 
-resetPassword :: TokenInfo -> DPerson.ResetPasswordReq -> FlowHandler APISuccess
-resetPassword req =
-  withFlowHandlerAPI . DPerson.resetPassword req
+changePassword :: TokenInfo -> DPerson.ChangePasswordReq -> FlowHandler APISuccess
+changePassword req =
+  withFlowHandlerAPI . DPerson.changePassword req
