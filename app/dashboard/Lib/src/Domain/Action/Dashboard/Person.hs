@@ -1,6 +1,6 @@
 module Domain.Action.Dashboard.Person where
 
-import Beckn.External.Encryption (decrypt, getDbHash)
+import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto (Transactionable)
 import qualified Beckn.Storage.Esqueleto as Esq
@@ -9,10 +9,15 @@ import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
+import Beckn.Types.Predicate
 import Beckn.Utils.Common
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
+import qualified Beckn.Utils.Predicates as P
+import Beckn.Utils.Validation
+import qualified Domain.Types.Person.API as AP
+import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
@@ -39,6 +44,49 @@ data ChangePasswordReq = ChangePasswordReq
     newPassword :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data CreatePersonReq = CreatePersonReq
+  { firstName :: Text,
+    lastName :: Text,
+    roleId :: Id DRole.Role,
+    email :: Text,
+    mobileNumber :: Text,
+    mobileCountryCode :: Text,
+    passwordHash :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+validateCreatePerson :: Validate CreatePersonReq
+validateCreatePerson CreatePersonReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
+      validateField "lastName" lastName $ NotEmpty `And` P.name,
+      validateField "mobileNumber" mobileNumber P.mobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode
+    ]
+
+newtype CreatePersonRes = CreatePersonRes
+  {person :: AP.PersonAPIEntity}
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+createPerson ::
+  (EsqDBFlow m r, EncFlow m r) =>
+  TokenInfo ->
+  CreatePersonReq ->
+  m CreatePersonRes
+createPerson _ personEntity = do
+  duplicateCheck
+    (QP.findByEmailAndPassword personEntity.email personEntity.passwordHash)
+    "Person already exists"
+  person <- buildPerson personEntity
+  Esq.runTransaction $ QP.create person
+  decPerson <- decrypt person
+  let roleId = personEntity.roleId
+  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  let personAPIEntity = AP.makePersonAPIEntity decPerson role []
+  return $ CreatePersonRes personAPIEntity
+  where
+    duplicateCheck cond err = whenM (isJust <$> cond) $ throwError (InvalidRequest err)
 
 listPerson ::
   (EsqDBFlow m r, EncFlow m r) =>
@@ -167,3 +215,24 @@ getCurrentMerchant tokenInfo = do
     QMerchant.findById tokenInfo.merchantId
       >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
   pure $ MerchantAccessReq merchant.shortId
+
+buildPerson :: (EncFlow m r) => CreatePersonReq -> m SP.Person
+buildPerson req = do
+  pid <- generateGUID
+  now <- getCurrentTime
+  mobileNumber <- encrypt req.mobileNumber
+  email <- encrypt req.email
+  password <- getDbHash req.passwordHash
+  return
+    SP.Person
+      { id = pid,
+        firstName = req.firstName,
+        lastName = req.lastName,
+        roleId = req.roleId,
+        email = email,
+        mobileNumber = mobileNumber,
+        mobileCountryCode = req.mobileCountryCode,
+        passwordHash = password,
+        createdAt = now,
+        updatedAt = now
+      }

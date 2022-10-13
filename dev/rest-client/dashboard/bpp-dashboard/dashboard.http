@@ -22,6 +22,23 @@ content-type: application/json
 
 ###
 
+# @name createPerson
+POST {{bpp-dashboard-host}}/dashboard/admin/person/create
+content-type: application/json
+token: {{token}}
+
+{
+  "firstName" : "unknown",
+  "lastName" : "known",
+  "roleId" : "508a0bac-258d-44a6-ac55-aef57ab87a76",
+  "email" : "xyzss@gmail.com",
+  "mobileNumber" : "9876543200",
+  "mobileCountryCode" : "+91",
+  "passwordHash" : "juspay@adminadad" 
+}
+
+###
+
 # @name personList
 
 @token = {{login.response.body.authToken}}

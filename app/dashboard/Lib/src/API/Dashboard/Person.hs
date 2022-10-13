@@ -3,7 +3,7 @@ module API.Dashboard.Person where
 import Beckn.Prelude
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
-import Beckn.Utils.Common (withFlowHandlerAPI)
+import Beckn.Utils.Common (withFlowHandler, withFlowHandlerAPI)
 import qualified Domain.Action.Dashboard.Person as DPerson
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
@@ -35,6 +35,10 @@ type API =
              :> "resetMerchantAccess"
              :> ReqBody '[JSON] DPerson.MerchantAccessReq
              :> Post '[JSON] APISuccess
+           :<|> "create"
+             :> DashboardAuth 'DASHBOARD_ADMIN
+             :> ReqBody '[JSON] DPerson.CreatePersonReq
+             :> Post '[JSON] DPerson.CreatePersonRes
        )
     :<|> "person"
       :> ( "profile"
@@ -55,6 +59,7 @@ handler =
       :<|> assignRole
       :<|> assignMerchantAccess
       :<|> resetMerchantAccess
+      :<|> createPerson
   )
     :<|> ( profile
              :<|> getCurrentMerchant
@@ -64,6 +69,9 @@ handler =
 listPerson :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DPerson.ListPersonRes
 listPerson tokenInfo mbSearchString mbLimit =
   withFlowHandlerAPI . DPerson.listPerson tokenInfo mbSearchString mbLimit
+
+createPerson :: TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
+createPerson tokenInfo = withFlowHandler . DPerson.createPerson tokenInfo
 
 assignRole :: TokenInfo -> Id DP.Person -> Id DRole.Role -> FlowHandler APISuccess
 assignRole tokenInfo personId =
