@@ -101,9 +101,9 @@ disableDrivers _ req = withFlowHandlerAPI $ do
     client =
       T.client (Proxy @DriverOfferBpp.DisableDriversAPI)
 
-driverLocation :: Id DP.Person -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
-driverLocation _ req = withFlowHandlerAPI $ do
+driverLocation :: Id DP.Person -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
+driverLocation _ mbLimit mbOffset req = withFlowHandlerAPI $ do
   -- FIXME: drivers for only one organization?
-  Client.callDriverOfferApi (\tok -> client tok req) "driverLocation"
+  Client.callDriverOfferApi (\tok -> client tok mbLimit mbOffset req) "driverLocation"
   where
     client = T.client (Proxy @DriverOfferBpp.DriverLocationAPI)

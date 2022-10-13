@@ -48,11 +48,16 @@ type DisableDriversAPI = FromCommon "disable" Common.DisableDriversAPI
 
 type DriverLocationAPI = FromCommon "location" Common.DriverLocationAPI
 
+limitOffset :: Maybe Int -> Maybe Int -> [a] -> [a]
+limitOffset mbLimit mbOffset =
+  maybe identity take mbLimit . maybe identity drop mbOffset
+
 listDrivers :: Dashboard -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
-listDrivers _ _mbLimit _mbOffset _verified _rejected _pendingdoc mbSearchPhone = withFlowHandlerAPI $ do
-  items <- mapM buildDriverListItem =<< QPerson.findAllDrivers
+listDrivers _ mbLimit mbOffset _verified _rejected _pendingdoc mbSearchPhone = withFlowHandlerAPI $ do
+  items <- mapM buildDriverListItem =<< QPerson.findAllDriversFirstnameAsc
   let filteredByPhone = filter (filterPhone . (.phoneNo)) items
-  pure $ Common.DriverListRes (length filteredByPhone) filteredByPhone
+      limitedItems = limitOffset mbLimit mbOffset filteredByPhone
+  pure $ Common.DriverListRes (length limitedItems) limitedItems
   where
     filterPhone :: Text -> Bool
     filterPhone driverPhone = maybe True (`T.isInfixOf` driverPhone) mbSearchPhone
@@ -67,7 +72,7 @@ buildDriverListItem f = do
         firstName = p.firstName,
         middleName = p.middleName,
         lastName = p.lastName,
-        vehicleNo = veh.registrationNo,
+        vehicleNo = Just veh.registrationNo,
         phoneNo,
         enabled = drin.enabled,
         verified = True,
@@ -116,13 +121,14 @@ disableDrivers _ req = withFlowHandlerAPI $ do
             ]
       }
 
-driverLocation :: Dashboard -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
-driverLocation _ req = withFlowHandler $ do
+driverLocation :: Dashboard -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
+driverLocation _ mbLimit mbOffset req = withFlowHandler $ do
   let driverIds = coerce req.driverIds
-  allDrivers <- QPerson.findAllDriversByIds driverIds
+  allDrivers <- QPerson.findAllDriversByIdsFirstnameAsc driverIds
   let driversNotFound =
         filter (not . (`elem` map ((.id) . (.person)) allDrivers)) driverIds
-  resultList <- mapM buildDriverLocationListItem allDrivers
+      limitedDrivers = limitOffset mbLimit mbOffset allDrivers
+  resultList <- mapM buildDriverLocationListItem limitedDrivers
   pure $ Common.DriverLocationRes (nonEmpty $ coerce driversNotFound) resultList
 
 buildDriverLocationListItem :: (EncFlow m r) => QPerson.FullDriver -> m Common.DriverLocationItem

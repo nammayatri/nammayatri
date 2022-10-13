@@ -74,19 +74,21 @@ findAllDrivers = fmap (map mkFullDriver) $
       from baseFullPersonQuery
     where_
       (person ^. PersonRole ==. val Person.DRIVER)
+    orderBy [asc (person ^. PersonFirstName)]
     return (person, driverLocation, driverInfo, vehicle)
 
-findAllDriversByIds ::
+findAllDriversByIdsFirstnameAsc ::
   (Transactionable m, Functor m) =>
   [Id Person] ->
   m [FullDriver]
-findAllDriversByIds driverIds = fmap (map mkFullDriver) $
+findAllDriversByIdsFirstnameAsc driverIds = fmap (map mkFullDriver) $
   Esq.findAll $ do
     (person :& driverLocation :& driverInfo :& vehicle) <-
       from baseFullPersonQuery
     where_ $
       (person ^. PersonRole ==. val Person.DRIVER)
         &&. person ^. PersonTId `in_` valList (map toKey driverIds)
+    orderBy [asc (person ^. PersonFirstName)]
     return (person, driverLocation, driverInfo, vehicle)
 
 findByIdAndRoleAndOrgId ::

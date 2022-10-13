@@ -40,7 +40,7 @@ data DriverListItem = DriverListItem
     firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
-    vehicleNo :: Text,
+    vehicleNo :: Maybe Text,
     phoneNo :: Text,
     enabled :: Bool,
     verified :: Bool,
@@ -189,7 +189,9 @@ data DisableDriversRes = DisableDriversRes
 -- driver location --------------------------------------
 
 type DriverLocationAPI =
-  ReqBody '[JSON] DriverIds
+  QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> ReqBody '[JSON] DriverIds
     :> Get '[JSON] DriverLocationRes
 
 data DriverLocationRes = DriverLocationRes

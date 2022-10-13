@@ -111,7 +111,7 @@ data FullDriverWithDocs = FullDriverWithDocs
     license :: Maybe DriverLicense,
     registration :: Maybe (DriverRCAssociation, VehicleRegistrationCertificate),
     info :: DriverInformation,
-    vehicle :: Vehicle
+    vehicle :: Maybe Vehicle
   }
 
 baseFullDriverWithDocsQuery ::
@@ -121,7 +121,7 @@ baseFullDriverWithDocsQuery ::
         :& MbTable DriverRCAssociationT
         :& MbTable VehicleRegistrationCertificateT
         :& Table DriverInformationT
-        :& Table VehicleT
+        :& MbTable VehicleT
     )
 baseFullDriverWithDocsQuery =
   table @PersonT
@@ -134,17 +134,18 @@ baseFullDriverWithDocsQuery =
       `Esq.on` ( \(person :& _ :& _ :& _ :& driverInfo) ->
                    person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
                )
-    `innerJoin` table @VehicleT
+    `leftJoin` table @VehicleT
       `Esq.on` ( \(person :& _ :& _ :& _ :& _ :& vehicle) ->
-                   person ^. PersonTId ==. vehicle ^. VehicleDriverId
+                   just (person ^. PersonTId) ==. vehicle ?. VehicleDriverId
                )
 
-fetchFullDriverInfoWithDocs :: (Transactionable m) => Maybe (NonEmpty (Id Driver)) -> m [FullDriverWithDocs]
-fetchFullDriverInfoWithDocs mbDriverIds = fmap (map mkFullDriverInfoWithDocs) $
+fetchFullDriverInfoWithDocsFirstnameAsc :: (Transactionable m) => Maybe (NonEmpty (Id Driver)) -> m [FullDriverWithDocs]
+fetchFullDriverInfoWithDocsFirstnameAsc mbDriverIds = fmap (map mkFullDriverInfoWithDocs) $
   Esq.findAll $ do
-    person :& license :& assoc :& registration :& info :& veh <- from baseFullDriverWithDocsQuery
+    person :& license :& assoc :& registration :& info :& mbVeh <- from baseFullDriverWithDocsQuery
     where_ $ maybe (val True) (\ids -> person ^. PersonTId `in_` valList (map (toKey . coerce) $ toList ids)) mbDriverIds
-    pure (person, license, assoc, registration, info, veh)
+    orderBy [asc (person ^. PersonFirstName)]
+    pure (person, license, assoc, registration, info, mbVeh)
 
 mkFullDriverInfoWithDocs ::
   ( Person,
@@ -152,7 +153,7 @@ mkFullDriverInfoWithDocs ::
     Maybe DriverRCAssociation,
     Maybe VehicleRegistrationCertificate,
     DriverInformation,
-    Vehicle
+    Maybe Vehicle
   ) ->
   FullDriverWithDocs
-mkFullDriverInfoWithDocs (p, l, a, v, i, veh) = FullDriverWithDocs p l ((,) <$> a <*> v) i veh
+mkFullDriverInfoWithDocs (p, l, a, v, i, mbVeh) = FullDriverWithDocs p l ((,) <$> a <*> v) i mbVeh

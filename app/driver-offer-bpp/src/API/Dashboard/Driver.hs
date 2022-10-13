@@ -77,7 +77,6 @@ driverDocumentsInfo _ = withFlowHandlerAPI $ do
     oneMonth :: NominalDiffTime
     oneMonth = 60 * 60 * 24 * 30
     func :: Int -> UTCTime -> Common.DriverDocumentsInfoRes -> QDocStatus.DriverDocsInfo -> Common.DriverDocumentsInfoRes
-    -- FIXME
     func onboardingTryLimit now acc fd = do
       let mbLic = fd.license
           mbRegCert = fd.assocReg
@@ -167,10 +166,16 @@ getRcStatusInfo rc = do
         details = rcDetails
       }
 
+limitOffset :: Maybe Int -> Maybe Int -> [a] -> [a]
+limitOffset mbLimit mbOffset =
+  maybe identity take mbLimit . maybe identity drop mbOffset
+
 listDrivers :: Dashboard -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
-listDrivers _ _mbLimit _mbOffset mbVerified mbEnabled mbPendingdoc mbSearchPhone = withFlowHandlerAPI $ do
-  items <- QDocStatus.fetchFullDriverInfoWithDocs Nothing >>= fmap catMaybes . mapM buildDriverListItem
-  pure $ Common.DriverListRes (length items) items
+listDrivers _ mbLimit mbOffset mbVerified mbEnabled mbPendingdoc mbSearchPhone = withFlowHandlerAPI $ do
+  driverDocsInfo <- QDocStatus.fetchFullDriverInfoWithDocsFirstnameAsc Nothing
+  items <- catMaybes <$> mapM buildDriverListItem driverDocsInfo
+  let limitedItems = limitOffset mbLimit mbOffset items
+  pure $ Common.DriverListRes (length limitedItems) limitedItems
   where
     filterOnStatus :: Maybe Bool -> Bool -> Bool
     filterOnStatus mbRequestedStatus driverStatus =
@@ -202,7 +207,7 @@ listDrivers _ _mbLimit _mbOffset mbVerified mbEnabled mbPendingdoc mbSearchPhone
                       firstName = p.firstName,
                       middleName = p.middleName,
                       lastName = p.lastName,
-                      vehicleNo = veh.registrationNo,
+                      vehicleNo = veh <&> (.registrationNo),
                       phoneNo,
                       enabled = drin.enabled,
                       verified = drin.verified,
@@ -249,13 +254,14 @@ disableDrivers _ req = withFlowHandlerAPI $ do
         message = mconcat [show numDriversDisabled, " drivers disabled, following drivers not found: ", show $ coerce @_ @[Text] driversNotFound]
       }
 
-driverLocation :: Dashboard -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
-driverLocation _ req = withFlowHandler $ do
+driverLocation :: Dashboard -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
+driverLocation _ mbLimit mbOffset req = withFlowHandler $ do
   let driverIds = coerce req.driverIds
-  allDrivers <- QPerson.findAllDriversByIds driverIds
+  allDrivers <- QPerson.findAllDriversByIdsFirstnameAsc driverIds
   let driversNotFound =
         filter (not . (`elem` map ((.id) . (.person)) allDrivers)) driverIds
-  resultList <- mapM buildDriverLocationListItem allDrivers
+      limitedDrivers = limitOffset mbLimit mbOffset allDrivers
+  resultList <- mapM buildDriverLocationListItem limitedDrivers
   pure $ Common.DriverLocationRes (nonEmpty $ coerce driversNotFound) resultList
 
 buildDriverLocationListItem :: (EncFlow m r) => QPerson.FullDriver -> m Common.DriverLocationItem
