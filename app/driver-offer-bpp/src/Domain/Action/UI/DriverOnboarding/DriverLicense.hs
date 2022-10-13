@@ -6,6 +6,7 @@ module Domain.Action.UI.DriverOnboarding.DriverLicense
     DriverDLRes,
     verifyDL,
     onVerifyDL,
+    convertUTCTimetoDate,
   )
 where
 
@@ -32,6 +33,7 @@ import qualified Domain.Types.Person as Person
 import Environment
 import qualified Idfy.Flow as Idfy
 import qualified Idfy.Types as Idfy
+import Idfy.Types.Response (DLExtractResponse)
 import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
@@ -43,7 +45,8 @@ data DriverDLReq = DriverDLReq
     operatingCity :: Text,
     driverDateOfBirth :: UTCTime,
     imageId1 :: Id Image.Image,
-    imageId2 :: Maybe (Id Image.Image)
+    imageId2 :: Maybe (Id Image.Image),
+    dateOfIssue :: Maybe UTCTime
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -72,27 +75,27 @@ verifyDL personId req@DriverDLReq {..} = do
 
   image1 <- getImage imageId1
   image2 <- getImage `mapM` imageId2
-
+  configs <- asks (.driverOnboardingConfigs)
   resp <- Idfy.extractDLImage image1 image2
-  case resp.result of
-    Just result -> do
-      let extractDLNumber = removeSpaceAndDash <$> result.extraction_output.id_number
-      let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
-      unless (extractDLNumber == dlNumber) $
-        throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
-    Nothing -> throwImageError imageId1 ImageExtractionFailed
-
+  when (isNothing dateOfIssue && configs.checkImageExtraction) $ do
+    case resp.result of
+      Just result -> do
+        let extractDLNumber = removeSpaceAndDash <$> result.extraction_output.id_number
+        let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
+        unless (extractDLNumber == dlNumber) $
+          throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
+      Nothing -> throwImageError imageId1 ImageExtractionFailed
   mdriverLicense <- Query.findByDLNumber driverLicenseNumber
 
   case mdriverLicense of
     Just driverLicense -> do
       unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
       unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2
+      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue resp
     Nothing -> do
       mDriverDL <- Query.findByDriverId personId
       when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
-      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2
+      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue resp
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -103,14 +106,18 @@ verifyDL personId req@DriverDLReq {..} = do
         throwError (ImageInvalidType (show Image.DriverLicense) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-verifyDLFlow :: Id Person.Person -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Flow ()
-verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 = do
+verifyDLFlow :: Id Person.Person -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> DLExtractResponse -> Flow ()
+verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue dlExtRes = do
   now <- getCurrentTime
+  let imageExtractionValidation = case dlExtRes.result of
+        Just _x -> Domain.Success
+        Nothing -> Domain.Failure
   idfyRes <- Idfy.verifyDL dlNumber driverDateOfBirth
-  idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now
+  encryptedDL <- encrypt dlNumber
+  idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now imageExtractionValidation encryptedDL
   runTransaction $ IVQuery.create idfyVerificationEntity
   where
-    mkIdfyVerificationEntity requestId now = do
+    mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedDL = do
       id <- generateGUID
       return $
         Domain.IdfyVerification
@@ -119,6 +126,9 @@ verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 = do
             documentImageId1 = imageId1,
             documentImageId2 = imageId2,
             requestId,
+            imageExtractionValidation = imageExtractionValidation,
+            documentNumber = encryptedDL,
+            issueDateOnDoc = dateOfIssue,
             docType = Image.DriverLicense,
             status = "pending",
             idfyResponse = Nothing,
@@ -136,6 +146,9 @@ onVerifyDL verificationReq output = do
   mEncryptedDL <- encrypt `mapM` output.id_number
   let mLicenseExpiry = convertTextToUTC output.nt_validity_to
   let mDriverLicense = createDL configs person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
+  when (isNothing verificationReq.issueDateOnDoc || (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc) /= (convertUTCTimetoDate <$> (convertTextToUTC output.date_of_issue))) $ do
+    let updIdfyVerificationRec = verificationReq{imageExtractionValidation = Domain.Mismatch}
+    runTransaction $ IVQuery.updateIdfyVerificationRec verificationReq.requestId updIdfyVerificationRec >> pure Ack >> return ()
   case mDriverLicense of
     Just driverLicense -> do
       runTransaction $ Query.upsert driverLicense
@@ -195,3 +208,6 @@ isValidCOVDL cov = foldr' (\x acc -> x == cov || acc) False dlValidCOV
 
 removeSpaceAndDash :: Text -> Text
 removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
+
+convertUTCTimetoDate :: UTCTime -> Text
+convertUTCTimetoDate utctime = T.pack (DT.formatTime DT.defaultTimeLocale "%d/%m/%Y" utctime)

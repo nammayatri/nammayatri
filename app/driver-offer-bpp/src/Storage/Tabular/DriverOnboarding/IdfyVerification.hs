@@ -7,6 +7,7 @@
 
 module Storage.Tabular.DriverOnboarding.IdfyVerification where
 
+import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
@@ -14,6 +15,8 @@ import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Storage.Tabular.DriverOnboarding.Image as ImageT
 import Storage.Tabular.Person (PersonTId)
+
+derivePersistField "Domain.ImageExtractionValidation"
 
 mkPersist
   defaultSqlSettings
@@ -26,6 +29,10 @@ mkPersist
       requestId Text
       docType Image.ImageType
       status Text
+      issueDateOnDoc UTCTime Maybe
+      documentNumberEncrypted Text
+      documentNumberHash DbHash
+      imageExtractionValidation Domain.ImageExtractionValidation
       idfyResponse Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
@@ -47,6 +54,7 @@ instance TType IdfyVerificationT Domain.IdfyVerification where
           driverId = fromKey driverId,
           documentImageId1 = fromKey documentImageId1,
           documentImageId2 = fromKey <$> documentImageId2,
+          documentNumber = EncryptedHashed (Encrypted documentNumberEncrypted) documentNumberHash,
           ..
         }
 
@@ -56,5 +64,7 @@ instance TType IdfyVerificationT Domain.IdfyVerification where
         driverId = toKey driverId,
         documentImageId1 = toKey documentImageId1,
         documentImageId2 = toKey <$> documentImageId2,
+        documentNumberEncrypted = documentNumber & unEncrypted . (.encrypted),
+        documentNumberHash = documentNumber & (.hash),
         ..
       }
