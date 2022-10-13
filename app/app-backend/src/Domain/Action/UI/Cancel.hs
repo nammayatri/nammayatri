@@ -42,10 +42,9 @@ cancel bookingId _ req = do
   when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
 
+  duplicateCheck
   bookingCancelationReason <- buildBookingCancelationReason
-  DB.runTransaction
-    (QBCR.create bookingCancelationReason)
-    `rethrow` \(SQLRequestError _ _) -> RideInvalidStatus "This ride is already cancelled"
+  DB.runTransaction $ QBCR.create bookingCancelationReason
   return $
     CancelRes
       { bppBookingId = bppBookingId,
@@ -54,6 +53,10 @@ cancel bookingId _ req = do
         cancellationSource = SBCR.ByUser
       }
   where
+    duplicateCheck = do
+      rideBookingCancelationM <- QBCR.findByRideBookingId bookingId
+      when (isJust rideBookingCancelationM) $
+        throwError $ InvalidRequest "This ride is already cancelled."
     buildBookingCancelationReason = do
       let CancelReq {..} = req
       id <- generateGUID
