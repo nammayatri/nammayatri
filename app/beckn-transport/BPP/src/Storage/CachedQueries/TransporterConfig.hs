@@ -31,4 +31,4 @@ cacheTransporterConfig cfg = do
     expTime = 60 * 60 * 24
 
 makeOrgIdKey :: Id Organization -> ConfigKey -> Text
-makeOrgIdKey id key = "CachedQueries:TransporterConfig:OrgId:" <> id.getId <> ":Key:" <> show key
+makeOrgIdKey id key = "CachedQueries:TransporterConfig:OrgId-" <> id.getId <> ":Key-" <> show key

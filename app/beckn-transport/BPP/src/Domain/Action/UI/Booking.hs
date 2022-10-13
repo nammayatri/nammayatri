@@ -73,12 +73,12 @@ newtype SetDriverAcceptanceReq = SetDriverAcceptanceReq
 
 type SetDriverAcceptanceRes = APISuccess
 
-bookingStatus :: (EsqDBFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
+bookingStatus :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
 bookingStatus bookingId = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   SRB.buildBookingAPIEntity booking
 
-bookingList :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m BookingListRes
+bookingList :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m BookingListRes
 bookingList person mbLimit mbOffset mbOnlyActive = do
   let Just orgId = person.organizationId
   rbList <- QRB.findAllByOrg orgId mbLimit mbOffset mbOnlyActive

@@ -8,6 +8,7 @@ module Domain.Action.UI.FarePolicy.OneWayFarePolicy
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
@@ -21,7 +22,7 @@ import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateAP
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate as DPerExtraKmRate
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.FarePolicy.OneWayFarePolicy as SFarePolicy
+import qualified Storage.CachedQueries.FarePolicy.OneWayFarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics
@@ -54,16 +55,16 @@ validateUpdateFarePolicyRequest UpdateOneWayFarePolicyReq {..} =
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
     ]
 
-listOneWayFarePolicies :: (EsqDBFlow m r) => SP.Person -> m ListOneWayFarePolicyRes
+listOneWayFarePolicies :: (HedisFlow m r, EsqDBFlow m r) => SP.Person -> m ListOneWayFarePolicyRes
 listOneWayFarePolicies person = do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
-  oneWayFarePolicies <- SFarePolicy.findOneWayFarePoliciesByOrgId orgId
+  oneWayFarePolicies <- SFarePolicy.findAllByOrgId orgId
   pure $
     ListOneWayFarePolicyRes
       { oneWayFarePolicies = map makeOneWayFarePolicyAPIEntity oneWayFarePolicies
       }
 
-updateOneWayFarePolicy :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> Id DFarePolicy.OneWayFarePolicy -> UpdateOneWayFarePolicyReq -> m UpdateOneWayFarePolicyRes
+updateOneWayFarePolicy :: (HedisFlow m r, EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> Id DFarePolicy.OneWayFarePolicy -> UpdateOneWayFarePolicyReq -> m UpdateOneWayFarePolicyRes
 updateOneWayFarePolicy admin fpId req = do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy
@@ -79,7 +80,7 @@ updateOneWayFarePolicy admin fpId req = do
   let Just orgId = admin.organizationId
   coordinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $
-    SFarePolicy.updateOneWayFarePolicy updatedFarePolicy
+    SFarePolicy.update updatedFarePolicy
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
   for_ otherCoordinators $ \cooridinator -> do
     Notify.notifyFarePolicyChange cooridinator.id cooridinator.deviceToken

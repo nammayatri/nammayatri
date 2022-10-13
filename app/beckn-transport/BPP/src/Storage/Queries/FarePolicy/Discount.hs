@@ -1,4 +1,9 @@
-module Storage.Queries.FarePolicy.Discount where
+module Storage.Queries.FarePolicy.Discount
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
@@ -18,25 +23,22 @@ findById ::
   m (Maybe Discount)
 findById = Esq.findById
 
-findAll ::
+findAllByOrgIdAndVariant ::
   Transactionable m =>
   Id Organization ->
   Vehicle.Variant ->
   m [Discount]
-findAll orgId vehicleVariant =
-  Esq.findAll $ do
-    discount <- from $ table @DiscountT
-    where_ $
-      discount ^. DiscountOrganizationId ==. val (toKey orgId)
-        &&. discount ^. DiscountVehicleVariant ==. val vehicleVariant
-    return discount
+findAllByOrgIdAndVariant orgId vehicleVariant =
+  Esq.buildDType $
+    fmap extractSolidType
+      <$> Storage.Queries.FarePolicy.Discount.findAllByOrgIdAndVariant' orgId vehicleVariant
 
-findAll' ::
+findAllByOrgIdAndVariant' ::
   Transactionable m =>
   Id Organization ->
   Vehicle.Variant ->
   DTypeBuilder m [DiscountT]
-findAll' orgId vehicleVariant =
+findAllByOrgIdAndVariant' orgId vehicleVariant =
   Esq.findAll' $ do
     discount <- from $ table @DiscountT
     where_ $
@@ -44,8 +46,8 @@ findAll' orgId vehicleVariant =
         &&. discount ^. DiscountVehicleVariant ==. val vehicleVariant
     return discount
 
-update :: Id Discount -> Discount -> SqlDB ()
-update discId disc = do
+update :: Discount -> SqlDB ()
+update disc = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
@@ -56,7 +58,7 @@ update discId disc = do
         DiscountDiscount =. val (fromIntegral disc.discount),
         DiscountUpdatedAt =. val now
       ]
-    where_ $ tbl ^. DiscountId ==. val (getId discId)
+    where_ $ tbl ^. DiscountId ==. val (getId disc.id)
 
 deleteById :: Id Discount -> SqlDB ()
 deleteById = deleteByKey @DiscountT

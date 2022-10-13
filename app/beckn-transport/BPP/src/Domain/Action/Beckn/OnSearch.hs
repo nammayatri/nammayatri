@@ -12,7 +12,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Environment
 import EulerHS.Prelude hiding (id, state)
-import qualified Storage.Queries.FarePolicy.FareProduct as QFareProduct
+import qualified Storage.CachedQueries.FarePolicy.FareProduct as QFareProduct
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.Metrics as Metrics
 

@@ -3,10 +3,11 @@ module Domain.Types.FarePolicy.RentalFarePolicy where
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
+import Domain.Types.Common
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle as Vehicle
 
-data RentalFarePolicy = RentalFarePolicy
+data RentalFarePolicyD s = RentalFarePolicy
   { id :: Id RentalFarePolicy,
     organizationId :: Id Organization.Organization,
     vehicleVariant :: Vehicle.Variant,
@@ -19,6 +20,12 @@ data RentalFarePolicy = RentalFarePolicy
     descriptions :: [Text]
   }
   deriving (Generic, Show, Eq)
+
+type RentalFarePolicy = RentalFarePolicyD 'Safe
+
+instance FromJSON (RentalFarePolicyD 'Unsafe)
+
+instance ToJSON (RentalFarePolicyD 'Unsafe)
 
 data RentalFarePolicyAPIEntity = RentalFarePolicyAPIEntity
   { id :: Id RentalFarePolicy,

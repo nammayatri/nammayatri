@@ -10,11 +10,12 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.APISuccess
 import Beckn.Utils.Common
 import Domain.Types.FarePolicy.FareProduct
 import qualified Domain.Types.Person as SP
-import qualified Storage.Queries.FarePolicy.FareProduct as SFareProduct
+import qualified Storage.CachedQueries.FarePolicy.FareProduct as SFareProduct
 import Tools.Error
 
 newtype ListFareProductsRes = ListFareProductsRes
@@ -30,17 +31,18 @@ data UpdateFareProductReq = UpdateFareProductReq
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-listFareProducts :: (EsqDBFlow m r) => SP.Person -> m ListFareProductsRes
+listFareProducts :: (HedisFlow m r, EsqDBFlow m r) => SP.Person -> m ListFareProductsRes
 listFareProducts person = do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   fareProducts <- SFareProduct.findEnabledByOrgId orgId
   pure $ ListFareProductsRes $ makeFareProductAPIEntity <$> fareProducts
 
-updateFareProduct :: (EsqDBFlow m r) => SP.Person -> UpdateFareProductReq -> m APISuccess
+updateFareProduct :: (HedisFlow m r, EsqDBFlow m r) => SP.Person -> UpdateFareProductReq -> m APISuccess
 updateFareProduct person updReq = do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   Esq.runTransaction $
     if updReq.enabled
-      then SFareProduct.upsertFareProduct orgId updReq.fareProductType
-      else SFareProduct.deleteFareProduct orgId updReq.fareProductType
+      then SFareProduct.insertIfNotExist orgId updReq.fareProductType
+      else SFareProduct.delete orgId updReq.fareProductType
+  SFareProduct.clearCache orgId updReq.fareProductType
   pure Success

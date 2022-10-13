@@ -39,7 +39,7 @@ cacheOrganization org = do
     expTime = 60 * 60 * 24
 
 makeIdKey :: Id Organization -> Text
-makeIdKey id = "CachedQueries:Organization:Id:" <> id.getId
+makeIdKey id = "CachedQueries:Organization:Id-" <> id.getId
 
 update :: Organization -> Esq.SqlDB ()
 update = Queries.update

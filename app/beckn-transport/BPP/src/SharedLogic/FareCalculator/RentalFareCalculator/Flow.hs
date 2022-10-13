@@ -10,6 +10,7 @@ module SharedLogic.FareCalculator.RentalFareCalculator.Flow
 where
 
 import Beckn.Prelude
+import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.Booking (Booking)
@@ -22,7 +23,7 @@ import SharedLogic.FareCalculator.RentalFareCalculator.Calculator
     rentalFareSum,
     rentalFareSumWithDiscount,
   )
-import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
+import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFP
 import Tools.Error
 
 type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
@@ -31,7 +32,7 @@ newtype ServiceHandle m = ServiceHandle
   { getRentalFarePolicy :: Id DRentalFP.RentalFarePolicy -> m (Maybe DRentalFP.RentalFarePolicy)
   }
 
-serviceHandle :: EsqDBFlow m r => ServiceHandle m
+serviceHandle :: (EsqDBFlow m r, HedisFlow m r) => ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getRentalFarePolicy = \rentalFarePolicyId -> do
@@ -39,7 +40,7 @@ serviceHandle =
     }
 
 calculateRentalFare ::
-  EsqDBFlow m r =>
+  (EsqDBFlow m r, HedisFlow m r) =>
   Id DRentalFP.RentalFarePolicy ->
   Meters ->
   UTCTime ->

@@ -1,4 +1,9 @@
-module Storage.Queries.FarePolicy.OneWayFarePolicy where
+module Storage.Queries.FarePolicy.OneWayFarePolicy
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
@@ -11,12 +16,12 @@ import qualified Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate as Q
 import Storage.Queries.FullEntityBuilders (buildFullOneWayFarePolicy)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy
 
-findOneWayFarePolicyByOrgAndVehicleVariant ::
+findByOrgAndVehicleVariant ::
   Transactionable m =>
   Id Organization ->
   Vehicle.Variant ->
   m (Maybe OneWayFarePolicy)
-findOneWayFarePolicyByOrgAndVehicleVariant orgId vehicleVariant_ =
+findByOrgAndVehicleVariant orgId vehicleVariant_ =
   Esq.buildDType $ do
     mbFarePolicy <- Esq.findOne' $ do
       farePolicy <- from $ table @OneWayFarePolicyT
@@ -26,8 +31,8 @@ findOneWayFarePolicyByOrgAndVehicleVariant orgId vehicleVariant_ =
       return farePolicy
     mapM buildFullOneWayFarePolicy mbFarePolicy
 
-findOneWayFarePoliciesByOrgId :: Transactionable m => Id Organization -> m [OneWayFarePolicy]
-findOneWayFarePoliciesByOrgId orgId =
+findAllByOrgId :: Transactionable m => Id Organization -> m [OneWayFarePolicy]
+findAllByOrgId orgId =
   Esq.buildDType $ do
     farePolicy <- Esq.findAll' $ do
       farePolicy <- from $ table @OneWayFarePolicyT
@@ -42,8 +47,8 @@ findById fpId =
     mbfarePolicy <- Esq.findById' fpId
     mapM buildFullOneWayFarePolicy mbfarePolicy
 
-updateOneWayFarePolicy :: OneWayFarePolicy -> SqlDB ()
-updateOneWayFarePolicy farePolicy = do
+update :: OneWayFarePolicy -> SqlDB ()
+update farePolicy = do
   now <- getCurrentTime
   withFullEntity farePolicy $ \(farePolicyT, perExtraKmRateList, _) -> do
     upsert'

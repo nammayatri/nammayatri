@@ -11,6 +11,7 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id (Id (..))
@@ -21,7 +22,7 @@ import Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import Domain.Types.Organization
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Vehicle
-import qualified Storage.Queries.FarePolicy.RentalFarePolicy as SRentalFarePolicy
+import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as SRentalFarePolicy
 import Tools.Error
 
 newtype ListRentalFarePoliciesRes = ListRentalFarePoliciesRes
@@ -59,7 +60,7 @@ validateCreateRentalsFarePolicyRequest CreateRentalFarePolicyItem {..} =
       validateField "driverAllowanceForDay" driverAllowanceForDay $ InMaybe $ Min @Money 0
     ]
 
-createRentalFarePolicy :: (EsqDBFlow m r) => SP.Person -> CreateRentalFarePolicyReq -> m APISuccess
+createRentalFarePolicy :: (EsqDBFlow m r, HedisFlow m r) => SP.Person -> CreateRentalFarePolicyReq -> m APISuccess
 createRentalFarePolicy admin req = do
   orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   mapM_ (runRequestValidation validateCreateRentalsFarePolicyRequest) req.createList
@@ -69,6 +70,7 @@ createRentalFarePolicy admin req = do
   Esq.runTransaction $ do
     SRentalFarePolicy.markAllAsDeleted orgId
     forM_ newRentalFarePolicyItems SRentalFarePolicy.create
+  SRentalFarePolicy.clearAllCacheByOrgId orgId
   pure Success
   where
     toDomainType :: Id Organization -> Id RentalFarePolicy -> CreateRentalFarePolicyItem -> RentalFarePolicy
@@ -83,10 +85,10 @@ createRentalFarePolicy admin req = do
           ..
         }
 
-listRentalFarePolicies :: (EsqDBFlow m r) => SP.Person -> m ListRentalFarePoliciesRes
+listRentalFarePolicies :: (EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListRentalFarePoliciesRes
 listRentalFarePolicies person = do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
-  rentalFarePolicies <- SRentalFarePolicy.findRentalFarePoliciesByOrg orgId
+  rentalFarePolicies <- SRentalFarePolicy.findAllByOrgId orgId
   pure $
     ListRentalFarePoliciesRes
       { rentalFarePolicies = map makeRentalFarePolicyAPIEntity rentalFarePolicies

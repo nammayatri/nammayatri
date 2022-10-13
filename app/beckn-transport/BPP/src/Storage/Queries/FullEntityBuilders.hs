@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.Queries.FullEntityBuilders where
 
@@ -26,7 +27,7 @@ buildFullOneWayFarePolicy farePolicy = do
   let orgId = fromKey $ Storage.Tabular.FarePolicy.OneWayFarePolicy.organizationId farePolicy
       vehicleVariant = Storage.Tabular.FarePolicy.OneWayFarePolicy.vehicleVariant farePolicy
   perExtraKmRate <- QExtraKmRate.findAll' orgId vehicleVariant
-  discount <- QDisc.findAll' orgId vehicleVariant
+  discount <- QDisc.findAllByOrgIdAndVariant' orgId vehicleVariant
 
   return $ extractSolidType @OneWayFarePolicy (farePolicy, perExtraKmRate, discount)
 

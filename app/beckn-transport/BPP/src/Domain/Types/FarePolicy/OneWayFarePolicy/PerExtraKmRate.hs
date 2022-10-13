@@ -4,13 +4,20 @@ import Beckn.Types.Common (HighPrecMoney, Meters)
 import Beckn.Types.Predicate
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
+import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
 
-data PerExtraKmRate = PerExtraKmRate
+data PerExtraKmRateD s = PerExtraKmRate
   { distanceRangeStart :: Meters,
     fare :: HighPrecMoney
   }
   deriving (Generic, Show, Eq)
+
+type PerExtraKmRate = PerExtraKmRateD 'Safe
+
+instance FromJSON (PerExtraKmRateD 'Unsafe)
+
+instance ToJSON (PerExtraKmRateD 'Unsafe)
 
 data PerExtraKmRateAPIEntity = PerExtraKmRateAPIEntity
   { distanceRangeStart :: Meters,

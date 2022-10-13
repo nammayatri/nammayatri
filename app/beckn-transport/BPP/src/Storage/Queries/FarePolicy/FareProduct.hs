@@ -1,6 +1,11 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Storage.Queries.FarePolicy.FareProduct where
+module Storage.Queries.FarePolicy.FareProduct
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
@@ -29,24 +34,21 @@ findEnabledByOrgIdAndType mbType orgId =
         &&. whenJust_ mbType (\typ -> fareProduct ^. FareProductProductType ==. val typ)
     pure fareProduct
 
-upsertFareProduct ::
+insertIfNotExist ::
   Id Organization ->
   FareProductType ->
   SqlDB ()
-upsertFareProduct orgId typ = do
-  mbFp <- find predicate <$> findEnabledByOrgIdAndType (Just typ) orgId
+insertIfNotExist orgId typ = do
+  mbFp <- listToMaybe <$> findEnabledByOrgIdAndType (Just typ) orgId
   case mbFp of
     Nothing -> insertFareProduct
     Just _ -> pure ()
   where
-    predicate :: FareProduct -> Bool
-    predicate fp = fp._type == typ && fp.organizationId == orgId
-
     insertFareProduct :: SqlDB ()
     insertFareProduct = do
       now <- getCurrentTime
       guid <- Id <$> generateGUIDText
-      Esq.create $
+      Esq.create @_ @FareProduct $
         FareProduct
           { id = guid,
             organizationId = orgId,
@@ -54,11 +56,11 @@ upsertFareProduct orgId typ = do
             createdAt = now
           }
 
-deleteFareProduct ::
+delete ::
   Id Organization ->
   FareProductType ->
   SqlDB ()
-deleteFareProduct orgId fpType = Esq.delete $ do
+delete orgId fpType = Esq.delete $ do
   fareProduct <- from $ table @FareProductT
   where_ $
     fareProduct ^. FareProductOrganizationId ==. val (toKey orgId)

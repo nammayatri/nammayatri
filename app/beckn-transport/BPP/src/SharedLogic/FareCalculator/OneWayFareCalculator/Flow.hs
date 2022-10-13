@@ -10,6 +10,7 @@ module SharedLogic.FareCalculator.OneWayFareCalculator.Flow
 where
 
 import Beckn.Prelude
+import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.Booking
@@ -25,7 +26,7 @@ import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
     fareSum,
     fareSumWithDiscount,
   )
-import qualified Storage.Queries.FarePolicy.OneWayFarePolicy as FarePolicyS
+import qualified Storage.CachedQueries.FarePolicy.OneWayFarePolicy as OWFarePolicy
 import Tools.Error
 
 type MonadHandler m = (MonadThrow m, Log m)
@@ -34,15 +35,17 @@ newtype ServiceHandle m = ServiceHandle
   { getFarePolicy :: Id Organization -> Vehicle.Variant -> m (Maybe OneWayFarePolicy)
   }
 
-serviceHandle :: EsqDBFlow m r => ServiceHandle m
+serviceHandle :: (HedisFlow m r, EsqDBFlow m r) => ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getFarePolicy = \orgId vehicleVariant -> do
-        FarePolicyS.findOneWayFarePolicyByOrgAndVehicleVariant orgId vehicleVariant
+        OWFarePolicy.findByOrgAndVehicleVariant orgId vehicleVariant
     }
 
 calculateFare ::
-  EsqDBFlow m r =>
+  ( HedisFlow m r,
+    EsqDBFlow m r
+  ) =>
   Id Organization ->
   Vehicle.Variant ->
   Meters ->

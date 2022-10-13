@@ -1,6 +1,11 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Storage.Queries.FarePolicy.RentalFarePolicy where
+module Storage.Queries.FarePolicy.RentalFarePolicy
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
@@ -24,11 +29,11 @@ create = Esq.create
 findById :: Transactionable m => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
 findById = Esq.findById
 
-findRentalFarePoliciesByOrg ::
+findAllByOrgId ::
   Transactionable m =>
   Id Organization ->
   m [RentalFarePolicy]
-findRentalFarePoliciesByOrg orgId = do
+findAllByOrgId orgId = do
   Esq.findAll $ do
     rentalFarePolicy <- from $ table @RentalFarePolicyT
     where_ $

@@ -3,6 +3,7 @@ module Domain.Action.Beckn.OnSearch.Rental where
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
@@ -15,7 +16,7 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
-import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFarePolicy
+import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFarePolicy
 import qualified Storage.Queries.Quote as QQuote
 import Tools.Metrics (CoreMetrics, HasBPPMetrics)
 
@@ -34,6 +35,7 @@ data QuoteInfo = QuoteInfo
 
 onSearchCallback ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasGoogleMaps m r,
     HasBPPMetrics m r,
@@ -45,7 +47,7 @@ onSearchCallback ::
   UTCTime ->
   m [QuoteInfo]
 onSearchCallback searchRequest transporterId fromLocation now = do
-  rentalFarePolicies <- QRentalFarePolicy.findRentalFarePoliciesByOrg transporterId
+  rentalFarePolicies <- QRentalFarePolicy.findAllByOrgId transporterId
 
   let fromLoc = getCoordinates fromLocation
   (listOfQuotes, quoteInfos) <- fmap unzip $

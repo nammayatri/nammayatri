@@ -57,10 +57,10 @@ cacheMerchant merchant = do
     expTime = 60 * 60 * 24
 
 makeIdKey :: Id Merchant -> Text
-makeIdKey id = "CachedQueries:Merchant:Id:" <> id.getId
+makeIdKey id = "CachedQueries:Merchant:Id-" <> id.getId
 
 makeShortIdKey :: ShortId Merchant -> Text
-makeShortIdKey shortId = "CachedQueries:Merchant:ShortId:" <> shortId.getShortId
+makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 
 makeExoPhoneKey :: Text -> Text -> Text
-makeExoPhoneKey countryCode phone = "CachedQueries:Merchant:ExoPhone:" <> countryCode <> phone
+makeExoPhoneKey countryCode phone = "CachedQueries:Merchant:ExoPhone-" <> countryCode <> phone

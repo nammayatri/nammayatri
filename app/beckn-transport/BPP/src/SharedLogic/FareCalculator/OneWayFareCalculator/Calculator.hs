@@ -21,7 +21,7 @@ import Data.Time
     utcToLocalTime,
   )
 import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
-import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRate (..))
+import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateD (..))
 
 type TripEndTime = UTCTime
 

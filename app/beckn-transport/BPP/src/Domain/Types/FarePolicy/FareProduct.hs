@@ -4,17 +4,24 @@ import Beckn.Prelude
 import Beckn.Types.Id (Id)
 import Beckn.Utils.JSON
 import Data.OpenApi
+import Domain.Types.Common
 import qualified Domain.Types.Organization as DOrg
 
 data FareProductType = ONE_WAY | RENTAL deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
-data FareProduct = FareProduct
+data FareProductD s = FareProduct
   { id :: Id FareProduct,
     organizationId :: Id DOrg.Organization,
     _type :: FareProductType,
     createdAt :: UTCTime
   }
   deriving (Generic, Show, Eq)
+
+type FareProduct = FareProductD 'Safe
+
+instance FromJSON (FareProductD 'Unsafe)
+
+instance ToJSON (FareProductD 'Unsafe)
 
 data FareProductAPIEntity = FareProductAPIEntity
   { id :: Id FareProduct,

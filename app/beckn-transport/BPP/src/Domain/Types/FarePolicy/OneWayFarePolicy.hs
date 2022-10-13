@@ -3,18 +3,19 @@ module Domain.Types.FarePolicy.OneWayFarePolicy where
 import Beckn.Prelude
 import Beckn.Types.Common (Money)
 import Beckn.Types.Id (Id)
+import Domain.Types.Common
 import Domain.Types.FarePolicy.Discount
 import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle as Vehicle
 
-data OneWayFarePolicy = OneWayFarePolicy
+data OneWayFarePolicyD s = OneWayFarePolicy
   { id :: Id OneWayFarePolicy,
     vehicleVariant :: Vehicle.Variant,
     organizationId :: Id Organization.Organization,
     baseFare :: Maybe Money,
-    perExtraKmRateList :: NonEmpty PerExtraKmRate,
-    discountList :: [Discount],
+    perExtraKmRateList :: NonEmpty (PerExtraKmRateD s),
+    discountList :: [DiscountD s],
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double,
@@ -22,6 +23,12 @@ data OneWayFarePolicy = OneWayFarePolicy
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq)
+
+type OneWayFarePolicy = OneWayFarePolicyD 'Safe
+
+instance FromJSON (OneWayFarePolicyD 'Unsafe)
+
+instance ToJSON (OneWayFarePolicyD 'Unsafe)
 
 data OneWayFarePolicyAPIEntity = OneWayFarePolicyAPIEntity
   { id :: Id OneWayFarePolicy,

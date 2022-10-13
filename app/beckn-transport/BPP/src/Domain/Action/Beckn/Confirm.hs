@@ -26,12 +26,12 @@ import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.RiderDetails as SRD
 import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.Schedule
+import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.CachedQueries.Organization as Organization
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
-import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error

@@ -31,4 +31,4 @@ cacheOrganization org = do
     expTime = 60 * 60 * 24
 
 makeShortIdKey :: ShortId Organization -> Text
-makeShortIdKey shortId = "CachedQueries:Organization:ShortId:" <> shortId.getShortId
+makeShortIdKey shortId = "CachedQueries:Organization:ShortId-" <> shortId.getShortId
