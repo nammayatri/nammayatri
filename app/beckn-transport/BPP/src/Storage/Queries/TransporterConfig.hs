@@ -1,4 +1,9 @@
-module Storage.Queries.TransporterConfig where
+module Storage.Queries.TransporterConfig
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq

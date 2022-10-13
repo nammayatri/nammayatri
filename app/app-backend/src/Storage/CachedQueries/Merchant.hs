@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant
@@ -14,17 +13,15 @@ import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Data.Coerce (coerce)
+import Domain.Types.Common
 import Domain.Types.Merchant
 import qualified Storage.Queries.Merchant as Queries
-
-newtype StoredMerchant = StoredMerchant Merchant
-  deriving newtype (Generic)
-  deriving anyclass (FromJSON, ToJSON)
 
 findById :: (HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
-    Just (StoredMerchant a) -> return $ Just a
+    Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
 
 findByShortId :: (HedisFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
@@ -33,7 +30,7 @@ findByShortId shortId_ =
     Nothing -> findAndCache
     Just id ->
       Hedis.get (makeIdKey id) >>= \case
-        Just (StoredMerchant a) -> return $ Just a
+        Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId_
@@ -44,7 +41,7 @@ findByExoPhone countryCode exoPhone =
     Nothing -> findAndCache
     Just id ->
       Hedis.get (makeIdKey id) >>= \case
-        Just (StoredMerchant a) -> return $ Just a
+        Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findByExoPhone countryCode exoPhone
@@ -52,7 +49,7 @@ findByExoPhone countryCode exoPhone =
 cacheMerchant :: HedisFlow m r => Merchant -> m ()
 cacheMerchant merchant = do
   let idKey = makeIdKey merchant.id
-  Hedis.setExp idKey (StoredMerchant merchant) expTime
+  Hedis.setExp idKey (coerce @Merchant @(MerchantD 'Unsafe) merchant) expTime
   Hedis.setExp (makeShortIdKey merchant.shortId) idKey expTime
   whenJust ((,) <$> merchant.exoPhoneCountryCode <*> merchant.exoPhone) $ \(exoPhoneCountryCode, exoPhone) ->
     Hedis.setExp (makeExoPhoneKey exoPhoneCountryCode exoPhone) idKey expTime

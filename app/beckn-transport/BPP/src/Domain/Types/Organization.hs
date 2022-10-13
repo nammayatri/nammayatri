@@ -10,6 +10,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
+import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
 import Servant.API
 
@@ -53,7 +54,7 @@ instance FromHttpApiData OrganizationDomain where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-data Organization = Organization
+data OrganizationD s = Organization
   { id :: Id Organization,
     name :: Text,
     description :: Maybe Text,
@@ -75,6 +76,12 @@ data Organization = Organization
     info :: Maybe Text
   }
   deriving (Generic, Show, Eq)
+
+type Organization = OrganizationD 'Safe
+
+instance FromJSON (OrganizationD 'Unsafe)
+
+instance ToJSON (OrganizationD 'Unsafe)
 
 data OrganizationAPIEntity = OrganizationAPIEntity
   { id :: Id Organization,

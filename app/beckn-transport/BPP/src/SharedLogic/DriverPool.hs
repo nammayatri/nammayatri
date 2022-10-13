@@ -8,6 +8,7 @@ where
 
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch.GoogleMaps as MapSearch
+import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
@@ -23,10 +24,10 @@ import qualified Domain.Types.TransporterConfig as STConf
 import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
+import qualified Storage.CachedQueries.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.TransporterConfig as QTConf
 import Tools.Error
 import Tools.Metrics
 
@@ -54,6 +55,7 @@ setExRedis = Redis.setExRedis
 
 getDriverPool ::
   ( CoreMetrics m,
+    HedisFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasGoogleMaps m r
@@ -75,6 +77,7 @@ getDriverPool bookingId =
 
 recalculateDriverPool ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
     HasGoogleMaps m r
@@ -96,6 +99,7 @@ recalculateDriverPool booking = do
 
 calculateDriverPool ::
   ( EsqDBFlow m r,
+    HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
     HasGoogleMaps m r

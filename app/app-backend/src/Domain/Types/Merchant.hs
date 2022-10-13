@@ -4,8 +4,9 @@ import Beckn.External.FCM.Types
 import Beckn.Prelude
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
+import Domain.Types.Common
 
-data Merchant = Merchant
+data MerchantD s = Merchant
   { id :: Id Merchant,
     shortId :: ShortId Merchant,
     exoPhone :: Maybe Text,
@@ -16,3 +17,9 @@ data Merchant = Merchant
     registryUrl :: BaseUrl
   }
   deriving (Generic)
+
+type Merchant = MerchantD 'Safe
+
+instance FromJSON (MerchantD 'Unsafe)
+
+instance ToJSON (MerchantD 'Unsafe)

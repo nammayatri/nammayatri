@@ -33,12 +33,12 @@ import Servant
 import SharedLogic.CallBAP
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
 import qualified SharedLogic.FareCalculator.RentalFareCalculator as RentalFare
+import qualified Storage.CachedQueries.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.TransporterConfig as QTConf
 import Tools.Auth
 import Tools.Error (RentalFarePolicyError (NoRentalFarePolicy))
 import Tools.Metrics (putFareAndDistanceDeviations)

@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Organization
@@ -16,17 +15,15 @@ import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Domain.Types.Common
 import Domain.Types.Organization
+import GHC.Base (coerce)
 import qualified Storage.Queries.Organization as Queries
-
-newtype StoredOrganization = StoredOrganization Organization
-  deriving newtype (Generic)
-  deriving anyclass (FromJSON, ToJSON)
 
 findById :: (HedisFlow m r, EsqDBFlow m r) => Id Organization -> m (Maybe Organization)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
-    Just (StoredOrganization a) -> return $ Just a
+    Just a -> return . Just $ (coerce @(OrganizationD 'Unsafe) @Organization) a
     Nothing -> flip whenJust cacheOrganization /=<< Queries.findById id
 
 -- Call it after any update
@@ -37,7 +34,7 @@ clearCache org =
 cacheOrganization :: HedisFlow m r => Organization -> m ()
 cacheOrganization org = do
   let idKey = makeIdKey org.id
-  Hedis.setExp idKey (StoredOrganization org) expTime
+  Hedis.setExp idKey (coerce @Organization @(OrganizationD 'Unsafe) org) expTime
   where
     expTime = 60 * 60 * 24
 

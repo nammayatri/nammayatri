@@ -29,11 +29,11 @@ import Servant
 import SharedLogic.CallBAP
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.FareCalculator as Fare
+import qualified Storage.CachedQueries.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.TransporterConfig as QTConf
 import Tools.Auth
 import Tools.Metrics
 
@@ -104,7 +104,7 @@ endRide personId rideId req =
           finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId,
           getDefaultPickupLocThreshold = asks (.defaultPickupLocThreshold),
           getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
-          findConfigByOrgId = QTConf.findValueByOrgId
+          findConfigByOrgId = QTConf.findByOrgId
         }
 
 cancelRide :: Id SP.Person -> Id Ride.Ride -> RideCancel.CancelRideReq -> FlowHandler APISuccess
