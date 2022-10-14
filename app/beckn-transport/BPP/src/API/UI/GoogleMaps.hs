@@ -36,6 +36,12 @@ type API =
              :> MandatoryQueryParam "latlng" Text -- Passing it as <latitude>,<longitude>
              :> QueryParam "language" Text
              :> Get '[JSON] GoogleMaps.GetPlaceNameResp
+           :<|> "getCoordinates"
+             :> TokenAuth
+             :> Header "sessiontoken" Text
+             :> MandatoryQueryParam "place_id" Text
+             :> QueryParam "language" Text
+             :> Get '[JSON] GoogleMaps.GetPlaceNameResp
        )
 
 handler :: FlowServer API
@@ -43,6 +49,7 @@ handler =
   autoComplete
     :<|> placeDetails
     :<|> getPlaceName
+    :<|> getCoordinates
 
 autoComplete :: Id SP.Person -> Maybe Text -> Text -> Text -> Integer -> Text -> FlowHandler SearchLocationResp
 autoComplete _ sessiontoken input location radius = withFlowHandlerAPI . DGoogleMaps.autoComplete sessiontoken input location radius
@@ -52,3 +59,6 @@ placeDetails _ sessiontoken = withFlowHandlerAPI . DGoogleMaps.placeDetails sess
 
 getPlaceName :: Id SP.Person -> Maybe Text -> Text -> Maybe Text -> FlowHandler GetPlaceNameResp
 getPlaceName _ sessiontoken latlng lang = withFlowHandlerAPI $ DGoogleMaps.getPlaceName sessiontoken latlng lang
+
+getCoordinates :: Id SP.Person -> Maybe Text -> Text -> Maybe Text -> FlowHandler GetPlaceNameResp
+getCoordinates _ sessiontoken placeId lang = withFlowHandlerAPI $ DGoogleMaps.getCoordinates sessiontoken placeId lang

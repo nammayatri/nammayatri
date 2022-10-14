@@ -5,6 +5,7 @@ module Domain.Action.UI.GoogleMaps
     autoComplete,
     placeDetails,
     getPlaceName,
+    getCoordinates,
   )
 where
 
@@ -38,3 +39,14 @@ getPlaceName sessiontoken latLng lang = do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
   ClientGoogleMaps.getPlaceName url sessiontoken latLng apiKey $ GoogleMaps.toMbLanguage lang
+
+getCoordinates ::
+  (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) =>
+  Maybe Text ->
+  Text ->
+  Maybe Text ->
+  m GoogleMaps.GetPlaceNameResp
+getCoordinates sessiontoken placeId lang = do
+  url <- asks (.googleMapsUrl)
+  apiKey <- asks (.googleMapsKey)
+  ClientGoogleMaps.getCoordinates url sessiontoken placeId apiKey $ GoogleMaps.toMbLanguage lang
