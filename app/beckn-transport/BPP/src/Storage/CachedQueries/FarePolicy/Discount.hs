@@ -22,6 +22,7 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy.Discount
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Vehicle as Vehicle
+import qualified Storage.CachedQueries.FarePolicy.OneWayFarePolicy as OWFP
 import qualified Storage.Queries.FarePolicy.Discount as Queries
 
 findById :: (HedisFlow m r, EsqDBFlow m r) => Id Discount -> m (Maybe Discount)
@@ -58,10 +59,12 @@ makeAllOrgIdVehVarKey :: Id Organization -> Vehicle.Variant -> Text
 makeAllOrgIdVehVarKey orgId vehVar = baseKey <> ":OrgId-" <> orgId.getId <> ":VehVar-" <> show vehVar <> ":All"
 
 -- Call it after any update
-clearCache :: HedisFlow m r => Discount -> m ()
+clearCache :: (HedisFlow m r, EsqDBFlow m r) => Discount -> m ()
 clearCache discount = do
   Hedis.del (makeIdKey discount.id)
   Hedis.del (makeAllOrgIdVehVarKey discount.organizationId discount.vehicleVariant)
+  owFP <- OWFP.findByOrgIdAndVariant discount.organizationId discount.vehicleVariant
+  whenJust owFP OWFP.clearCache
 
 create ::
   Discount ->

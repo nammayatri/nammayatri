@@ -3,7 +3,7 @@
 
 module Storage.CachedQueries.FarePolicy.OneWayFarePolicy
   ( findById,
-    findByOrgIdAndVehicleVariant,
+    findByOrgIdAndVariant,
     findAllByOrgId,
     clearCache,
     update,
@@ -29,12 +29,12 @@ findById id =
     Just a -> return . Just $ coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy a
     Nothing -> flip whenJust cacheOneWayFarePolicy /=<< Queries.findById id
 
-findByOrgIdAndVehicleVariant ::
+findByOrgIdAndVariant ::
   (HedisFlow m r, EsqDBFlow m r) =>
   Id Organization ->
   Vehicle.Variant ->
   m (Maybe OneWayFarePolicy)
-findByOrgIdAndVehicleVariant orgId vehVar =
+findByOrgIdAndVariant orgId vehVar =
   Hedis.get (makeOrgIdVehVarKey orgId vehVar) >>= \case
     Nothing -> findAndCache
     Just id ->
@@ -42,7 +42,7 @@ findByOrgIdAndVehicleVariant orgId vehVar =
         Just a -> return . Just $ coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy a
         Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheOneWayFarePolicy /=<< Queries.findByOrgIdAndVehicleVariant orgId vehVar
+    findAndCache = flip whenJust cacheOneWayFarePolicy /=<< Queries.findByOrgIdAndVariant orgId vehVar
 
 findAllByOrgId :: (HedisFlow m r, EsqDBFlow m r) => Id Organization -> m [OneWayFarePolicy]
 findAllByOrgId orgId =

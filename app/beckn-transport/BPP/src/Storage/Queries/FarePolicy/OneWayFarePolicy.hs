@@ -16,12 +16,12 @@ import qualified Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate as Q
 import Storage.Queries.FullEntityBuilders (buildFullOneWayFarePolicy)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy
 
-findByOrgIdAndVehicleVariant ::
+findByOrgIdAndVariant ::
   Transactionable m =>
   Id Organization ->
   Vehicle.Variant ->
   m (Maybe OneWayFarePolicy)
-findByOrgIdAndVehicleVariant orgId vehicleVariant_ =
+findByOrgIdAndVariant orgId vehicleVariant_ =
   Esq.buildDType $ do
     mbFarePolicy <- Esq.findOne' $ do
       farePolicy <- from $ table @OneWayFarePolicyT
