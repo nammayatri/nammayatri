@@ -100,6 +100,6 @@ build-local: Dockerfile
 	docker build -t $(IMAGE_NAME):$(VERSION) -f Dockerfile . --build-arg "DEP_IMAGE_PATH=$(DEP_IMAGE)"
 	rm -rf .ssh
 
-precommit: ./dev/pre-commit
-	#Checks files for commiting
-	./dev/pre-commit
+format-all-files: ./dev/format-all-files.sh
+	#Checking and formatting .hs and .dhall files
+	./dev/format-all-files.sh
