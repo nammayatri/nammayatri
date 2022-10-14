@@ -3,10 +3,11 @@ module Domain.Types.FarePolicy where
 import Beckn.Prelude
 import Beckn.Types.Common (HighPrecMoney, Meters, Money)
 import Beckn.Types.Id (Id)
+import Domain.Types.Common
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle.Variant as Variant
 
-data FarePolicy = FarePolicy
+data FarePolicyD s = FarePolicy
   { id :: Id FarePolicy,
     organizationId :: Id Organization.Organization,
     vehicleVariant :: Variant.Variant,
@@ -22,6 +23,12 @@ data FarePolicy = FarePolicy
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq)
+
+type FarePolicy = FarePolicyD 'Safe
+
+instance FromJSON (FarePolicyD 'Unsafe)
+
+instance ToJSON (FarePolicyD 'Unsafe)
 
 data ExtraFee = ExtraFee
   { minFee :: Money,

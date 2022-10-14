@@ -9,6 +9,7 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
@@ -18,7 +19,7 @@ import Data.Time
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Person as SP
-import qualified Storage.Queries.FarePolicy as SFarePolicy
+import qualified Storage.CachedQueries.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics
@@ -58,16 +59,16 @@ validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
     ]
 
-listFarePolicies :: EsqDBFlow m r => SP.Person -> m ListFarePolicyRes
+listFarePolicies :: (EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListFarePolicyRes
 listFarePolicies person = do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
-  oneWayFarePolicies <- SFarePolicy.findFarePoliciesByOrg orgId
+  oneWayFarePolicies <- SFarePolicy.findAllByOrgId orgId
   pure $
     ListFarePolicyRes
       { oneWayFarePolicies = map makeFarePolicyAPIEntity oneWayFarePolicies
       }
 
-updateFarePolicy :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyReq -> m UpdateFarePolicyRes
+updateFarePolicy :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m, HedisFlow m r) => SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyReq -> m UpdateFarePolicyRes
 updateFarePolicy admin fpId req = do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy
@@ -91,7 +92,8 @@ updateFarePolicy admin fpId req = do
   let Just orgId = admin.organizationId
   coordinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $
-    SFarePolicy.updateFarePolicy updatedFarePolicy
+    SFarePolicy.update updatedFarePolicy
+  SFarePolicy.clearCache updatedFarePolicy
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
   for_ otherCoordinators $ \cooridinator -> do
     Notify.notifyFarePolicyChange cooridinator.id cooridinator.deviceToken

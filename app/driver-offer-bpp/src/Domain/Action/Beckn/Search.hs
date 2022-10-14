@@ -3,7 +3,7 @@ module Domain.Action.Beckn.Search where
 import Beckn.Prelude
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
-import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -66,7 +66,7 @@ handler org sReq = do
   buildSearchRes org fromLocation toLocation estimates
 
 mkEstimate ::
-  (MonadFlow m, Esq.Transactionable m) =>
+  (EsqDBFlow m r, HedisFlow m r) =>
   DOrg.Organization ->
   UTCTime ->
   Meters ->

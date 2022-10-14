@@ -1,4 +1,9 @@
-module Storage.Queries.FarePolicy where
+module Storage.Queries.FarePolicy
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
@@ -9,23 +14,23 @@ import Domain.Types.Organization
 import Domain.Types.Vehicle.Variant (Variant)
 import Storage.Tabular.FarePolicy
 
-findFarePoliciesByOrg ::
+findAllByOrgId ::
   Transactionable m =>
   Id Organization ->
   m [FarePolicy]
-findFarePoliciesByOrg orgId = do
+findAllByOrgId orgId = do
   Esq.findAll $ do
     farePolicy <- from $ table @FarePolicyT
     where_ $
       farePolicy ^. FarePolicyOrganizationId ==. val (toKey orgId)
     return farePolicy
 
-findFarePolicyByOrgAndVariant ::
+findByOrgIdAndVariant ::
   Transactionable m =>
   Id Organization ->
   Variant ->
   m (Maybe FarePolicy)
-findFarePolicyByOrgAndVariant orgId variant = do
+findByOrgIdAndVariant orgId variant = do
   Esq.findOne $ do
     farePolicy <- from $ table @FarePolicyT
     where_ $
@@ -36,8 +41,8 @@ findFarePolicyByOrgAndVariant orgId variant = do
 findById :: Transactionable m => Id FarePolicy -> m (Maybe FarePolicy)
 findById = Esq.findById
 
-updateFarePolicy :: FarePolicy -> SqlDB ()
-updateFarePolicy farePolicy = do
+update :: FarePolicy -> SqlDB ()
+update farePolicy = do
   now <- getCurrentTime
   void $
     Esq.update $ \tbl -> do

@@ -63,12 +63,12 @@ import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.FareCalculator
+import Storage.CachedQueries.FarePolicy (findByOrgIdAndVariant)
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverStats as QDriverStats
-import Storage.Queries.FarePolicy (findFarePolicyByOrgAndVariant)
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.SearchRequest as QSReq
@@ -520,7 +520,7 @@ offerQuote driverId req = do
   sReqFD <-
     QSRD.findByDriverAndSearchReq driverId sReq.id
       >>= fromMaybeM NoSearchRequestForDriver
-  farePolicy <- findFarePolicyByOrgAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
+  farePolicy <- findByOrgIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
   whenJust mbOfferedFare $ \off ->
     unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
       throwError $ NotAllowedExtraFee $ show off

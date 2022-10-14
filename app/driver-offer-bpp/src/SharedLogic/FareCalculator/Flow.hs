@@ -8,7 +8,7 @@ module SharedLogic.FareCalculator.Flow
   )
 where
 
-import Beckn.Storage.Esqueleto (Transactionable)
+import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.FareParams
@@ -22,7 +22,7 @@ import SharedLogic.FareCalculator.Calculator
     fareSum,
     mkBreakupList,
   )
-import qualified Storage.Queries.FarePolicy as FarePolicyS
+import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import Tools.Error
 
 type MonadHandler m = (MonadThrow m, Log m)
@@ -31,14 +31,14 @@ newtype ServiceHandle m = ServiceHandle
   { getFarePolicy :: Id Organization -> Variant -> m (Maybe FarePolicy)
   }
 
-serviceHandle :: Transactionable m => ServiceHandle m
+serviceHandle :: (EsqDBFlow m r, HedisFlow m r) => ServiceHandle m
 serviceHandle =
   ServiceHandle
-    { getFarePolicy = FarePolicyS.findFarePolicyByOrgAndVariant
+    { getFarePolicy = FarePolicyS.findByOrgIdAndVariant
     }
 
 calculateFare ::
-  (Transactionable m, MonadFlow m) =>
+  (EsqDBFlow m r, HedisFlow m r) =>
   Id Organization ->
   Variant ->
   Meters ->

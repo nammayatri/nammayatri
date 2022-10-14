@@ -39,7 +39,7 @@ serviceHandle :: (HedisFlow m r, EsqDBFlow m r) => ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getFarePolicy = \orgId vehicleVariant -> do
-        OWFarePolicy.findByOrgAndVehicleVariant orgId vehicleVariant
+        OWFarePolicy.findByOrgIdAndVehicleVariant orgId vehicleVariant
     }
 
 calculateFare ::
