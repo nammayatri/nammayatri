@@ -96,7 +96,7 @@ initOneWayTrip req oneWayReq transporterId now = do
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
   distRes <- MapSearch.getDistance (Just MapSearch.CAR) req.fromLocation oneWayReq.toLocation
   let distance = distRes.distance
-      estimatedRideDuration = distRes.duration_in_traffic
+      estimatedRideDuration = distRes.duration
       estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` req.startTime
   fareParams <- calculateFare transporterId req.vehicleVariant distance estimatedRideFinishTime
   toLoc <- buildRBLoc oneWayReq.toLocation now

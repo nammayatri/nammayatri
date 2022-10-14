@@ -48,7 +48,7 @@ handler orgId sReq = do
   toLocation <- buildSearchReqLocation sReq.dropLocation
   driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId False
 
-  distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
+  distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) 
   let distance = distRes.distance
   fareParams <- calculateFare orgId sReq.variant distance sReq.pickupTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation orgId sReq

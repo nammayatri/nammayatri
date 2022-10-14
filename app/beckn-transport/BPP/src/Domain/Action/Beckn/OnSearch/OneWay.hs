@@ -73,7 +73,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
   distRes <- MapSearch.getDistance (Just MapSearch.CAR) fromLocation toLocation
   let distance = distRes.distance
-      estimatedRideDuration = distRes.duration_in_traffic
+      estimatedRideDuration = distRes.duration
       estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` searchRequest.startTime
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do

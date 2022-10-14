@@ -150,7 +150,7 @@ buildDriverPoolResults ::
   NonEmpty QP.NearestDriversResult ->
   m (NonEmpty DriverPoolResult)
 buildDriverPoolResults pickup ndResults = do
-  distDurs <- MapSearch.getDistances (Just MapSearch.CAR) (pickup :| []) ndResults Nothing
+  distDurs <- MapSearch.getDistances (Just MapSearch.CAR) (pickup :| []) ndResults 
   return $ mkDriverPoolResult <$> distDurs
   where
     mkDriverPoolResult distDur = do
