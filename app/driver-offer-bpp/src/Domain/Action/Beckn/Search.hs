@@ -59,7 +59,7 @@ handler org sReq = do
   let getVariant x = x.origin.vehicle.variant
       listOfProtoQuotes = nubBy ((==) `on` getVariant) driverPool
 
-  distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) 
+  distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation)
   let distance = distRes.distance
   logDebug $ "distance: " <> show distance
   estimates <- mapM (mkEstimate org sReq.pickupTime distance) listOfProtoQuotes

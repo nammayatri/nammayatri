@@ -58,7 +58,7 @@ filterOutDriversWithDistanceAboveThreshold ::
   NonEmpty QP.DriverPoolResult ->
   m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
 filterOutDriversWithDistanceAboveThreshold threshold pickupLatLong driverPoolResults = do
-  getDistanceResults <- GoogleMaps.getDistances (Just GoogleMaps.CAR) driverPoolResults (pickupLatLong :| []) 
+  getDistanceResults <- GoogleMaps.getDistances (Just GoogleMaps.CAR) driverPoolResults (pickupLatLong :| [])
   logDebug $ "get distance results" <> show getDistanceResults
   let result = NE.filter filterFunc getDistanceResults
   logDebug $ "secondly filtered driver pool" <> show result
