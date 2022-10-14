@@ -24,6 +24,7 @@ import qualified Domain.Types.TransporterConfig as STConf
 import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QP
@@ -54,7 +55,8 @@ setExRedis :: (MonadFlow m, MonadThrow m, Log m) => Text -> [DriverPoolItem] -> 
 setExRedis = Redis.setExRedis
 
 getDriverPool ::
-  ( CoreMetrics m,
+  ( HasCacheConfig r,
+    CoreMetrics m,
     HedisFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
@@ -76,7 +78,8 @@ getDriverPool bookingId =
       mkSortedDriverPool . map mkDriverPoolItem <$> calculateDriverPool pickupLatLong orgId (Just vehicleVariant) fareProductType
 
 recalculateDriverPool ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
@@ -98,7 +101,9 @@ recalculateDriverPool booking = do
   return filteredDriverPoolResults
 
 calculateDriverPool ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,

@@ -16,6 +16,7 @@ import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -31,7 +32,8 @@ newtype CancelReq = CancelReq
   }
 
 cancel ::
-  ( FCMFlow m r,
+  ( HasCacheConfig r,
+    FCMFlow m r,
     HedisFlow m r,
     EsqDBFlow m r,
     EncFlow m r,

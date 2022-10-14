@@ -27,6 +27,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Idfy.Types.IdfyConfig as Idfy
+import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
 import Tools.Metrics.ARDUBPPMetrics.Types
 
@@ -74,7 +75,8 @@ data AppCfg = AppCfg
     idfyCfg :: Idfy.IdfyConfig,
     dashboardToken :: Text,
     defaultPickupLocThreshold :: Meters,
-    defaultDropLocThreshold :: Meters
+    defaultDropLocThreshold :: Meters,
+    cacheConfig :: CacheConfig
   }
   deriving (Generic, FromDhall)
 
@@ -122,7 +124,8 @@ data AppEnv = AppEnv
     idfyCfg :: Idfy.IdfyConfig,
     dashboardToken :: Text,
     defaultPickupLocThreshold :: Meters,
-    defaultDropLocThreshold :: Meters
+    defaultDropLocThreshold :: Meters,
+    cacheConfig :: CacheConfig
   }
   deriving (Generic)
 

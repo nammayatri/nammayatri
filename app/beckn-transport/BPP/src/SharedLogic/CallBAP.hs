@@ -29,6 +29,7 @@ import Domain.Types.Organization as Org
 import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
@@ -36,7 +37,8 @@ import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
 sendRideAssignedUpdateToBAP ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -56,7 +58,8 @@ sendRideAssignedUpdateToBAP booking ride = do
   void $ callOnUpdate transporter booking rideAssignedMsg
 
 sendRideStartedUpdateToBAP ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -74,7 +77,8 @@ sendRideStartedUpdateToBAP booking ride = do
   void $ callOnUpdate transporter booking rideStartedMsg
 
 sendRideCompletedUpdateToBAP ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],

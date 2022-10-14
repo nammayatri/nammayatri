@@ -17,6 +17,7 @@ import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QPerson
@@ -42,7 +43,8 @@ data OneWaySearchRes = OneWaySearchRes
   }
 
 oneWaySearch ::
-  ( HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+  ( HasCacheConfig r,
+    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["googleMapsUrl" ::: BaseUrl, "googleMapsKey" ::: Text],
     HedisFlow m r,
     EsqDBFlow m r,

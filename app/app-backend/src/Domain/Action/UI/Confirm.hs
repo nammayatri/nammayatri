@@ -21,6 +21,7 @@ import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Domain.Types.VehicleVariant (VehicleVariant)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Quote as QQuote
@@ -150,7 +151,7 @@ buildBooking searchRequest quote fromLoc mbToLoc now = do
       pure DRB.OneWayBookingDetails {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
-cancelBooking :: (EsqDBFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()
+cancelBooking :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()
 cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason booking.id

@@ -9,6 +9,7 @@ import Beckn.Storage.Hedis
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Domain.Types.Person as Person
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry (someGeometriesContain)
 import qualified Storage.Queries.Person as QP
@@ -16,7 +17,8 @@ import Types.Error
 import Utils.Common
 
 checkServiceability ::
-  ( HedisFlow m r,
+  ( HasCacheConfig r,
+    HedisFlow m r,
     EsqDBFlow m r
   ) =>
   (GeofencingConfig -> GeoRestriction) ->

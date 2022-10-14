@@ -18,6 +18,7 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.SearchRequest as QSearchReq
@@ -26,14 +27,15 @@ import Types.Error
 import Utils.Common
 
 getFCMConfig ::
-  (HedisFlow m r, EsqDBFlow m r) =>
+  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   m FCM.FCMConfig
 getFCMConfig merchId = do
   fmap (.fcmConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
 
 notifyOnDriverOfferIncoming ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -63,7 +65,8 @@ notifyOnDriverOfferIncoming estimateId quotes person = do
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideAssigned ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -95,7 +98,8 @@ notifyOnRideAssigned booking ride = do
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideStarted ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -127,7 +131,8 @@ notifyOnRideStarted booking ride = do
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideCompleted ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -159,7 +164,8 @@ notifyOnRideCompleted booking ride = do
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnExpiration ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -192,7 +198,8 @@ notifyOnExpiration searchReq = do
     _ -> pure ()
 
 notifyOnRegistration ::
-  ( CoreMetrics m,
+  ( HasCacheConfig r,
+    CoreMetrics m,
     HedisFlow m r,
     EsqDBFlow m r
   ) =>
@@ -222,7 +229,8 @@ notifyOnRegistration regToken person mbDeviceToken = do
    in FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId mbDeviceToken
 
 notifyOnBookingCancelled ::
-  ( CoreMetrics m,
+  ( HasCacheConfig r,
+    CoreMetrics m,
     HedisFlow m r,
     EsqDBFlow m r
   ) =>
@@ -281,7 +289,8 @@ notifyOnBookingCancelled booking cancellationSource = do
           ]
 
 notifyOnBookingReallocated ::
-  ( CoreMetrics m,
+  ( HasCacheConfig r,
+    CoreMetrics m,
     HedisFlow m r,
     EsqDBFlow m r
   ) =>
@@ -316,7 +325,8 @@ notifyOnBookingReallocated booking = do
           ]
 
 notifyOnQuoteReceived ::
-  ( CoreMetrics m,
+  ( HasCacheConfig r,
+    CoreMetrics m,
     HedisFlow m r,
     EsqDBFlow m r
   ) =>
@@ -347,7 +357,8 @@ notifyOnQuoteReceived quote = do
         }
 
 notifyDriverOnTheWay ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -374,7 +385,8 @@ notifyDriverOnTheWay personId = do
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyDriverHasReached ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>

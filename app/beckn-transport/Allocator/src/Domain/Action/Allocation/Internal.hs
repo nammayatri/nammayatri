@@ -24,6 +24,7 @@ import EulerHS.Prelude hiding (id)
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DrPool
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QOrg
 import Storage.Queries.AllocationEvent (logAllocationEvent)
 import qualified Storage.Queries.Booking as QRB
@@ -223,7 +224,8 @@ checkAvailability driverPool = do
   pure $ filterDriverPool (`elem` availableDriverIds) driverPool
 
 cancelBooking ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],

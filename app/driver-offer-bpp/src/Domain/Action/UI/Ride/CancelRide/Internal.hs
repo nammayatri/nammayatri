@@ -10,6 +10,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.CallBAP as BP
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -22,7 +23,8 @@ import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
 cancelRideImpl ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     EncFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],

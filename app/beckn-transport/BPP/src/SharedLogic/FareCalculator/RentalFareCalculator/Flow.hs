@@ -23,6 +23,7 @@ import SharedLogic.FareCalculator.RentalFareCalculator.Calculator
     rentalFareSum,
     rentalFareSumWithDiscount,
   )
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFP
 import Tools.Error
 
@@ -32,7 +33,7 @@ newtype ServiceHandle m = ServiceHandle
   { getRentalFarePolicy :: Id DRentalFP.RentalFarePolicy -> m (Maybe DRentalFP.RentalFarePolicy)
   }
 
-serviceHandle :: (EsqDBFlow m r, HedisFlow m r) => ServiceHandle m
+serviceHandle :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getRentalFarePolicy = \rentalFarePolicyId -> do
@@ -40,7 +41,7 @@ serviceHandle =
     }
 
 calculateRentalFare ::
-  (EsqDBFlow m r, HedisFlow m r) =>
+  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   Id DRentalFP.RentalFarePolicy ->
   Meters ->
   UTCTime ->

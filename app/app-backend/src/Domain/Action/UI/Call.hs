@@ -32,6 +32,7 @@ import qualified Domain.Types.CallStatus as DCS
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Servant.Client (BaseUrl (..))
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as Merchant
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -109,7 +110,7 @@ directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
   runTransaction $ QCallStatus.updateCallStatus callStatus.id dialCallStatus (fromMaybe 0 callDuration) recordingUrl
   return Ack
 
-getDriverMobileNumber :: (EsqDBFlow m r, HedisFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
+getDriverMobileNumber :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ callStatus_ = do
   let callStatus = fromText callStatus_ :: ExotelCallStatus
   let callFrom = dropFirstZero callFrom_

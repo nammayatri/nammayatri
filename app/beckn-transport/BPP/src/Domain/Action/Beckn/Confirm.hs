@@ -26,6 +26,7 @@ import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.RiderDetails as SRD
 import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.Schedule
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.CachedQueries.Organization as Organization
 import qualified Storage.Queries.Booking as QRB
@@ -63,7 +64,8 @@ data ConfirmResBDetails
       }
 
 confirm ::
-  ( EncFlow m r,
+  ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],

@@ -53,6 +53,10 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kafkaProducerCfg = { brokers = [] : List Text }
 
+let cacheConfig =
+  { configsExpTime = +86400
+  }
+
 in
 
 { esqDBCfg = esqDBCfg
@@ -99,4 +103,5 @@ in
 , driverEstimatedPickupDuration = +300 -- seconds
 , defaultPickupLocThreshold = +500
 , defaultDropLocThreshold = +500
+, cacheConfig = cacheConfig
 }

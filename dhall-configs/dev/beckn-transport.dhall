@@ -61,6 +61,10 @@ let kafkaProducerCfg =
   { brokers = ["localhost:29092"]
   }
 
+let cacheConfig =
+  { configsExpTime = +86400
+  }
+
 in
 
 { esqDBCfg = esqDBCfg
@@ -107,4 +111,5 @@ in
 , dashboardToken = sec.dashboardToken
 , defaultPickupLocThreshold = +500
 , defaultDropLocThreshold = +500
+, cacheConfig = cacheConfig
 }

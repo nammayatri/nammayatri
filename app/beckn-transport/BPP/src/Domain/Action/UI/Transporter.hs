@@ -18,6 +18,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Organization as SO
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QO
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -43,7 +44,7 @@ validateUpdateTransporterReq UpdateTransporterReq {..} =
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name
     ]
 
-updateTransporter :: (HedisFlow m r, EsqDBFlow m r) => SP.Person -> Id SO.Organization -> UpdateTransporterReq -> m UpdateTransporterRes
+updateTransporter :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => SP.Person -> Id SO.Organization -> UpdateTransporterReq -> m UpdateTransporterRes
 updateTransporter admin orgId req = do
   unless (Just orgId == admin.organizationId) $ throwError AccessDenied
   runRequestValidation validateUpdateTransporterReq req
@@ -60,7 +61,7 @@ updateTransporter admin orgId req = do
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updOrg)
   return $ SO.makeOrganizationAPIEntity updOrg
 
-getTransporter :: (HedisFlow m r, EsqDBFlow m r) => Id SP.Person -> m TransporterRec
+getTransporter :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id SP.Person -> m TransporterRec
 getTransporter personId = do
   person <-
     QP.findById personId

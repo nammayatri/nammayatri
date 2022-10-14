@@ -30,6 +30,7 @@ import Domain.Types.SearchRequest (SearchRequest)
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
+import Storage.CachedQueries.CacheConfig
 import qualified Tools.JSON as J
 import Tools.Metrics
 import Utils.Auth
@@ -91,7 +92,8 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   return $ SearchRes searchId
 
 oneWaySearch ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
@@ -116,7 +118,8 @@ oneWaySearch personId req = do
   return dSearchRes.searchId
 
 rentalSearch ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,

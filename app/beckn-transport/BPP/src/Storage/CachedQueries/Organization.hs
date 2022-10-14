@@ -18,9 +18,10 @@ import Beckn.Utils.Common
 import Domain.Types.Common
 import Domain.Types.Organization
 import GHC.Base (coerce)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Organization as Queries
 
-findById :: (HedisFlow m r, EsqDBFlow m r) => Id Organization -> m (Maybe Organization)
+findById :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Organization -> m (Maybe Organization)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
     Just a -> return . Just $ (coerce @(OrganizationD 'Unsafe) @Organization) a
@@ -31,12 +32,11 @@ clearCache :: HedisFlow m r => Organization -> m ()
 clearCache org =
   Hedis.del (makeIdKey org.id)
 
-cacheOrganization :: HedisFlow m r => Organization -> m ()
+cacheOrganization :: (HasCacheConfig r, HedisFlow m r) => Organization -> m ()
 cacheOrganization org = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey org.id
   Hedis.setExp idKey (coerce @Organization @(OrganizationD 'Unsafe) org) expTime
-  where
-    expTime = 60 * 60 * 24
 
 makeIdKey :: Id Organization -> Text
 makeIdKey id = "CachedQueries:Organization:Id-" <> id.getId

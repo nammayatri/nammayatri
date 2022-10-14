@@ -22,6 +22,7 @@ import Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import Domain.Types.Organization
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Vehicle
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as SRentalFarePolicy
 import Tools.Error
 
@@ -60,7 +61,7 @@ validateCreateRentalsFarePolicyRequest CreateRentalFarePolicyItem {..} =
       validateField "driverAllowanceForDay" driverAllowanceForDay $ InMaybe $ Min @Money 0
     ]
 
-createRentalFarePolicy :: (EsqDBFlow m r, HedisFlow m r) => SP.Person -> CreateRentalFarePolicyReq -> m APISuccess
+createRentalFarePolicy :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> CreateRentalFarePolicyReq -> m APISuccess
 createRentalFarePolicy admin req = do
   orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   mapM_ (runRequestValidation validateCreateRentalsFarePolicyRequest) req.createList
@@ -85,7 +86,7 @@ createRentalFarePolicy admin req = do
           ..
         }
 
-listRentalFarePolicies :: (EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListRentalFarePoliciesRes
+listRentalFarePolicies :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListRentalFarePoliciesRes
 listRentalFarePolicies person = do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   rentalFarePolicies <- SRentalFarePolicy.findAllByOrgId orgId

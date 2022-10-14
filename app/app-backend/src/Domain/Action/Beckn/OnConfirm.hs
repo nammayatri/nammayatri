@@ -10,6 +10,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRB
 import Types.Error
@@ -19,7 +20,7 @@ newtype OnConfirmReq = OnConfirmReq
   { bppBookingId :: Id DRB.BPPBooking
   }
 
-onConfirm :: (HedisFlow m r, EsqDBFlow m r) => BaseUrl -> OnConfirmReq -> m ()
+onConfirm :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => BaseUrl -> OnConfirmReq -> m ()
 onConfirm registryUrl req = do
   booking <- QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> req.bppBookingId.getId)
 

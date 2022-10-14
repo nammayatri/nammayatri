@@ -20,10 +20,11 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FareProduct
 import Domain.Types.Organization (Organization)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.FareProduct as Queries
 
 findEnabledByOrgId ::
-  (HedisFlow m r, EsqDBFlow m r) =>
+  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
   Id Organization ->
   m [FareProduct]
 findEnabledByOrgId id =
@@ -32,11 +33,11 @@ findEnabledByOrgId id =
     Nothing -> cacheRes /=<< Queries.findEnabledByOrgId id
   where
     cacheRes fareProds = do
+      expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.setExp (makeAllOrgIdKey id) (coerce @[FareProduct] @[FareProductD 'Unsafe] fareProds) expTime
-    expTime = 60 * 60 * 24
 
 findEnabledByOrgIdAndType ::
-  (HedisFlow m r, EsqDBFlow m r) =>
+  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
   Maybe FareProductType ->
   Id Organization ->
   m [FareProduct]
@@ -46,8 +47,8 @@ findEnabledByOrgIdAndType mbFPType orgId =
     Nothing -> cacheRes /=<< Queries.findEnabledByOrgIdAndType mbFPType orgId
   where
     cacheRes fareProds = do
+      expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.setExp (makeAllOrgIdTypeKey orgId mbFPType) (coerce @[FareProduct] @[FareProductD 'Unsafe] fareProds) expTime
-    expTime = 60 * 60 * 24
 
 baseKey :: Text
 baseKey = "CachedQueries:FareProduct"

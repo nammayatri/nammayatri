@@ -23,6 +23,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
+import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.Organization as QOrg
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
@@ -55,7 +56,8 @@ data DConfirmRes = DConfirmRes
   }
 
 handler ::
-  ( FCMFlow m r,
+  ( HasCacheConfig r,
+    FCMFlow m r,
     HedisFlow m r,
     EsqDBFlow m r,
     HasPrettyLogger m r,

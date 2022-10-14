@@ -63,6 +63,7 @@ import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.FareCalculator
+import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.FarePolicy (findByOrgIdAndVariant)
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.DriverInformation as QDrInfo
@@ -209,7 +210,8 @@ data DriverOfferReq = DriverOfferReq
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 createDriver ::
-  ( HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
+  ( HasCacheConfig r,
+    HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
     HedisFlow m r,
@@ -269,7 +271,7 @@ createDriverDetails personId = do
   where
     driverId = cast personId
 
-getInformation :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SP.Person -> m DriverInformationRes
+getInformation :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SP.Person -> m DriverInformationRes
 getInformation personId = do
   let driverId = cast personId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -370,7 +372,7 @@ deleteDriver admin driverId = do
       for_ regTokens $ \regToken ->
         void $ Redis.deleteKeyRedis $ authTokenCacheKey regToken.token
 
-updateDriver :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SP.Person -> UpdateDriverReq -> m UpdateDriverRes
+updateDriver :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SP.Person -> UpdateDriverReq -> m UpdateDriverRes
 updateDriver personId req = do
   runRequestValidation validateUpdateDriverReq req
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -491,7 +493,8 @@ isAllowedExtraFee :: ExtraFee -> Money -> Bool
 isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee
 
 offerQuote ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,

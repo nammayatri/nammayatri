@@ -22,6 +22,7 @@ import SharedLogic.FareCalculator.Calculator
     fareSum,
     mkBreakupList,
   )
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import Tools.Error
 
@@ -31,14 +32,14 @@ newtype ServiceHandle m = ServiceHandle
   { getFarePolicy :: Id Organization -> Variant -> m (Maybe FarePolicy)
   }
 
-serviceHandle :: (EsqDBFlow m r, HedisFlow m r) => ServiceHandle m
+serviceHandle :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getFarePolicy = FarePolicyS.findByOrgIdAndVariant
     }
 
 calculateFare ::
-  (EsqDBFlow m r, HedisFlow m r) =>
+  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   Id Organization ->
   Variant ->
   Meters ->

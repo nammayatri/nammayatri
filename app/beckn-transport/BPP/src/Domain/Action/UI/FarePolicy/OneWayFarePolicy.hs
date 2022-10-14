@@ -22,6 +22,7 @@ import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateAP
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate as DPerExtraKmRate
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.OneWayFarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -55,7 +56,7 @@ validateUpdateFarePolicyRequest UpdateOneWayFarePolicyReq {..} =
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
     ]
 
-listOneWayFarePolicies :: (HedisFlow m r, EsqDBFlow m r) => SP.Person -> m ListOneWayFarePolicyRes
+listOneWayFarePolicies :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => SP.Person -> m ListOneWayFarePolicyRes
 listOneWayFarePolicies person = do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   oneWayFarePolicies <- SFarePolicy.findAllByOrgId orgId
@@ -64,7 +65,7 @@ listOneWayFarePolicies person = do
       { oneWayFarePolicies = map makeOneWayFarePolicyAPIEntity oneWayFarePolicies
       }
 
-updateOneWayFarePolicy :: (HedisFlow m r, EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> Id DFarePolicy.OneWayFarePolicy -> UpdateOneWayFarePolicyReq -> m UpdateOneWayFarePolicyRes
+updateOneWayFarePolicy :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> Id DFarePolicy.OneWayFarePolicy -> UpdateOneWayFarePolicyReq -> m UpdateOneWayFarePolicyRes
 updateOneWayFarePolicy admin fpId req = do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy

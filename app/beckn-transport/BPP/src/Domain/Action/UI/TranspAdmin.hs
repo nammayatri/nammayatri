@@ -19,6 +19,7 @@ import Domain.Types.Organization (OrganizationAPIEntity)
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
@@ -44,7 +45,7 @@ data UpdateTranspAdminProfileReq = UpdateTranspAdminProfileReq
 
 type UpdateTranspAdminProfileRes = TranspAdminProfileRes
 
-getProfile :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m TranspAdminProfileRes
+getProfile :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m TranspAdminProfileRes
 getProfile admin = do
   let Just orgId = admin.organizationId
   org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
@@ -52,7 +53,7 @@ getProfile admin = do
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeTranspAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
 
-updateProfile :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateTranspAdminProfileReq -> m UpdateTranspAdminProfileRes
+updateProfile :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateTranspAdminProfileReq -> m UpdateTranspAdminProfileRes
 updateProfile admin req = do
   let Just orgId = admin.organizationId
       updAdmin =

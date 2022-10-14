@@ -22,6 +22,7 @@ import EulerHS.Prelude hiding (id, state)
 import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.FareCalculator.OneWayFareCalculator
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Flow as Fare
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Quote as QQuote
 import Tools.Metrics (CoreMetrics, HasBPPMetrics)
@@ -39,7 +40,8 @@ data QuoteInfo = QuoteInfo
   }
 
 onSearchCallback ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["driverEstimatedPickupDuration" ::: Seconds],

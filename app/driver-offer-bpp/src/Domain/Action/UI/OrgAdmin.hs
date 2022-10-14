@@ -17,6 +17,7 @@ import Beckn.Utils.Common
 import Control.Applicative
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
@@ -42,7 +43,7 @@ data UpdateOrgAdminProfileReq = UpdateOrgAdminProfileReq
 
 type UpdateOrgAdminProfileRes = OrgAdminProfileRes
 
-getProfile :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
+getProfile :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
 getProfile admin = do
   let Just orgId = admin.organizationId
   org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
@@ -50,7 +51,7 @@ getProfile admin = do
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
 
-updateProfile :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
+updateProfile :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
 updateProfile admin req = do
   let Just orgId = admin.organizationId
       updAdmin =

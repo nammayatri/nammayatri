@@ -61,6 +61,10 @@ let kafkaProducerCfg =
   { brokers = ["alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"]
   }
 
+let cacheConfig =
+  { configsExpTime = +86400
+  }
+
 in
 
 { esqDBCfg = esqDBCfg
@@ -107,4 +111,5 @@ in
 , driverEstimatedPickupDuration = +300 -- seconds
 , defaultPickupLocThreshold = +500
 , defaultDropLocThreshold = +500
+, cacheConfig = cacheConfig
 }

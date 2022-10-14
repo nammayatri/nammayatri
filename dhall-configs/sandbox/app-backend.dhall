@@ -59,6 +59,10 @@ let kafkaProducerCfg =
 
 let rideConfig = { driverReachedDistance = +100  , driverOnTheWayNotifyExpiry = +3600 }
 
+let cacheConfig =
+  { configsExpTime = +86400
+  }
+
 in  { esqDBCfg
     , redisCfg = rcfg
     , hedisCfg = hcfg
@@ -99,4 +103,5 @@ in  { esqDBCfg
     , encTools
     , kafkaProducerCfg
     , rideCfg = rideConfig
+    , cacheConfig = cacheConfig
     }

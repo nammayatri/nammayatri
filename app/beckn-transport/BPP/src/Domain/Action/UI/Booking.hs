@@ -33,6 +33,7 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude hiding (id)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.Booking as QRB
@@ -73,19 +74,19 @@ newtype SetDriverAcceptanceReq = SetDriverAcceptanceReq
 
 type SetDriverAcceptanceRes = APISuccess
 
-bookingStatus :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
+bookingStatus :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
 bookingStatus bookingId = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   SRB.buildBookingAPIEntity booking
 
-bookingList :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m BookingListRes
+bookingList :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m BookingListRes
 bookingList person mbLimit mbOffset mbOnlyActive = do
   let Just orgId = person.organizationId
   rbList <- QRB.findAllByOrg orgId mbLimit mbOffset mbOnlyActive
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList
 
 bookingCancel ::
-  (HedisFlow m r, EsqDBFlow m r) =>
+  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
   Id SRB.Booking ->
   SP.Person ->
   m APISuccess
@@ -154,7 +155,7 @@ responseToEventType ACCEPT = AllocationEvent.AcceptedByDriver
 responseToEventType REJECT = AllocationEvent.RejectedByDriver
 
 setDriverAcceptance ::
-  (HedisFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id SP.Person -> SetDriverAcceptanceReq -> m SetDriverAcceptanceRes
+  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id SP.Person -> SetDriverAcceptanceReq -> m SetDriverAcceptanceRes
 setDriverAcceptance bookingId personId req = do
   currentTime <- getCurrentTime
   logTagInfo "setDriverAcceptance" logMessage

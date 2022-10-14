@@ -39,4 +39,5 @@ in  { appCfg = appCfg
     , graceTerminationPeriod = appCfg.graceTerminationPeriod
     , encTools = appCfg.encTools
     , selfUIUrl = appCfg.selfUIUrl
+    , cacheConfig = appCfg.cacheConfig
     }

@@ -17,6 +17,7 @@ import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Vehicle as Veh
 import SharedLogic.FareCalculator.OneWayFareCalculator
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Booking as QRB
@@ -49,7 +50,8 @@ data InitRes = InitRes
   }
 
 init ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     HasField "geofencingConfig" r GeofencingConfig,
     HasField "driverEstimatedPickupDuration" r Seconds,
@@ -75,7 +77,8 @@ init transporterId req = do
       }
 
 initOneWayTrip ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     HasField "geofencingConfig" r GeofencingConfig,
     HasField "driverEstimatedPickupDuration" r Seconds,
@@ -114,7 +117,8 @@ initOneWayTrip req oneWayReq transporterId now = do
   return booking
 
 initRentalTrip ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     HasField "geofencingConfig" r GeofencingConfig,
     CoreMetrics m,

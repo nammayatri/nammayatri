@@ -13,6 +13,7 @@ import Beckn.Utils.Common
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
@@ -27,7 +28,7 @@ data DTrackRes = TrackRes
   }
 
 track ::
-  (HedisFlow m r, EsqDBFlow m r) =>
+  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
   Id Org.Organization ->
   DTrackReq ->
   m DTrackRes

@@ -20,6 +20,7 @@ import Domain.Types.Organization (Organization)
 import qualified "beckn-transport" Environment as App
 import EulerHS.Prelude
 import EulerHS.Types (RedisConfig)
+import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -55,7 +56,8 @@ data AppCfg = AppCfg
     driverPositionInfoExpiry :: Maybe Seconds,
     graceTerminationPeriod :: Seconds,
     encTools :: EncTools,
-    selfUIUrl :: BaseUrl
+    selfUIUrl :: BaseUrl,
+    cacheConfig :: CacheConfig
   }
   deriving (Generic, FromDhall)
 
@@ -88,7 +90,8 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
     hedisEnv :: HedisEnv,
-    selfUIUrl :: BaseUrl
+    selfUIUrl :: BaseUrl,
+    cacheConfig :: CacheConfig
   }
   deriving (Generic)
 

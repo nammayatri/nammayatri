@@ -23,16 +23,17 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy.RentalFarePolicy
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Vehicle as Vehicle
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as Queries
 
-findById :: (HedisFlow m r, EsqDBFlow m r) => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
+findById :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy a
     Nothing -> flip whenJust cacheRentalFarePolicy /=<< Queries.findById id
 
 findByOffer ::
-  (HedisFlow m r, EsqDBFlow m r) =>
+  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
   Id Organization ->
   Vehicle.Variant ->
   Kilometers ->
@@ -48,23 +49,22 @@ findByOffer orgId vehVar kms hours =
   where
     findAndCache = flip whenJust cacheRentalFarePolicy /=<< Queries.findByOffer orgId vehVar kms hours
 
-findAllByOrgId :: (HedisFlow m r, EsqDBFlow m r) => Id Organization -> m [RentalFarePolicy]
+findAllByOrgId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Organization -> m [RentalFarePolicy]
 findAllByOrgId orgId =
   Hedis.get (makeAllOrgIdKey orgId) >>= \case
     Just a -> return $ fmap (coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy) a
     Nothing -> cacheRes /=<< Queries.findAllByOrgId orgId
   where
     cacheRes rFPs = do
+      expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.setExp (makeAllOrgIdKey orgId) (coerce @[RentalFarePolicy] @[RentalFarePolicyD 'Unsafe] rFPs) expTime
-    expTime = 60 * 60 * 24
 
-cacheRentalFarePolicy :: HedisFlow m r => RentalFarePolicy -> m ()
+cacheRentalFarePolicy :: (HasCacheConfig r, HedisFlow m r) => RentalFarePolicy -> m ()
 cacheRentalFarePolicy rFP = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey rFP.id
   Hedis.setExp idKey (coerce @RentalFarePolicy @(RentalFarePolicyD 'Unsafe) rFP) expTime
   Hedis.setExp (makeOrgIdVehVarKmHoursKey rFP.organizationId rFP.vehicleVariant rFP.baseDistance rFP.baseDuration) idKey expTime
-  where
-    expTime = 60 * 60 * 24
 
 baseKey :: Text
 baseKey = "CachedQueries:RentalFarePolicy"

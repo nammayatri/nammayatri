@@ -9,6 +9,7 @@ import Beckn.Utils.GenericPretty (PrettyShow)
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.LocationAddress as DBL
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
@@ -38,7 +39,7 @@ data OnInitRes = OnInitRes
   }
   deriving (Generic, Show, PrettyShow)
 
-onInit :: (HedisFlow m r, EsqDBFlow m r, EncFlow m r) => BaseUrl -> OnInitReq -> m OnInitRes
+onInit :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => BaseUrl -> OnInitReq -> m OnInitRes
 onInit registryUrl req = do
   bookingOld <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
 

@@ -10,6 +10,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Domain.Types.Ride
 import EulerHS.Prelude hiding (id)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
@@ -21,7 +22,7 @@ data OnTrackReq = OnTrackReq
     trackUrl :: BaseUrl
   }
 
-onTrack :: (HedisFlow m r, EsqDBFlow m r) => BaseUrl -> OnTrackReq -> m ()
+onTrack :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => BaseUrl -> OnTrackReq -> m ()
 onTrack registryUrl req = do
   ride <- QRide.findByBPPRideId req.bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId:" <> req.bppRideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

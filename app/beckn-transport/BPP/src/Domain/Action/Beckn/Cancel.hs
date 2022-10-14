@@ -14,6 +14,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as Organization
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.RideRequest as RideRequest
@@ -24,7 +25,7 @@ newtype CancelReq = CancelReq
   }
 
 cancel ::
-  (HedisFlow m r, EsqDBFlow m r) =>
+  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
   Id Organization.Organization ->
   SignatureAuthResult ->
   CancelReq ->

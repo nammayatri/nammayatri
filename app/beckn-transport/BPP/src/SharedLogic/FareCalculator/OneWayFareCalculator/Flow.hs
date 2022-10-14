@@ -26,6 +26,7 @@ import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
     fareSum,
     fareSumWithDiscount,
   )
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.OneWayFarePolicy as OWFarePolicy
 import Tools.Error
 
@@ -35,7 +36,7 @@ newtype ServiceHandle m = ServiceHandle
   { getFarePolicy :: Id Organization -> Vehicle.Variant -> m (Maybe OneWayFarePolicy)
   }
 
-serviceHandle :: (HedisFlow m r, EsqDBFlow m r) => ServiceHandle m
+serviceHandle :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getFarePolicy = \orgId vehicleVariant -> do
@@ -43,7 +44,8 @@ serviceHandle =
     }
 
 calculateFare ::
-  ( HedisFlow m r,
+  ( HasCacheConfig r,
+    HedisFlow m r,
     EsqDBFlow m r
   ) =>
   Id Organization ->

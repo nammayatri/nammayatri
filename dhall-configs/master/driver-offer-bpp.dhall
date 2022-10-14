@@ -78,6 +78,10 @@ let apiRateLimitOptions =
   , limitResetTimeInSec = +600
   }
 
+let cacheConfig =
+  { configsExpTime = +86400
+  }
+
 in
 
 { esqDBCfg = esqDBCfg
@@ -123,4 +127,5 @@ in
 , idfyCfg = common.idfyCfg
 , defaultPickupLocThreshold = +500
 , defaultDropLocThreshold = +500
+, cacheConfig = cacheConfig
 }

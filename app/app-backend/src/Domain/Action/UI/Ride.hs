@@ -17,6 +17,7 @@ import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.CallBPP as CallBPP
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics
@@ -27,7 +28,8 @@ import qualified Utils.Notifications as Notify
 type GetDriverLocRes = MapSearch.LatLong
 
 getDriverLoc ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m,
     HasGoogleMaps m r,

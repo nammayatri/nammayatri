@@ -66,6 +66,10 @@ let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
+let cacheConfig =
+  { configsExpTime = +86400
+  }
+
 in
 
 { esqDBCfg = esqDBCfg
@@ -111,4 +115,5 @@ in
 , idfyCfg = common.idfyCfg
 , defaultPickupLocThreshold = +500
 , defaultDropLocThreshold = +500
+, cacheConfig = cacheConfig
 }

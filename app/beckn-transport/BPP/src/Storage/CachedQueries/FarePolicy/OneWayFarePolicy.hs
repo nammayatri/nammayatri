@@ -21,16 +21,17 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy.OneWayFarePolicy
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Vehicle as Vehicle
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy as Queries
 
-findById :: (HedisFlow m r, EsqDBFlow m r) => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
+findById :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy a
     Nothing -> flip whenJust cacheOneWayFarePolicy /=<< Queries.findById id
 
 findByOrgIdAndVariant ::
-  (HedisFlow m r, EsqDBFlow m r) =>
+  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
   Id Organization ->
   Vehicle.Variant ->
   m (Maybe OneWayFarePolicy)
@@ -44,23 +45,22 @@ findByOrgIdAndVariant orgId vehVar =
   where
     findAndCache = flip whenJust cacheOneWayFarePolicy /=<< Queries.findByOrgIdAndVariant orgId vehVar
 
-findAllByOrgId :: (HedisFlow m r, EsqDBFlow m r) => Id Organization -> m [OneWayFarePolicy]
+findAllByOrgId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Organization -> m [OneWayFarePolicy]
 findAllByOrgId orgId =
   Hedis.get (makeAllOrgIdKey orgId) >>= \case
     Just a -> return $ fmap (coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy) a
     Nothing -> cacheRes /=<< Queries.findAllByOrgId orgId
   where
     cacheRes owFPs = do
+      expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.setExp (makeAllOrgIdKey orgId) (coerce @[OneWayFarePolicy] @[OneWayFarePolicyD 'Unsafe] owFPs) expTime
-    expTime = 60 * 60 * 24
 
-cacheOneWayFarePolicy :: HedisFlow m r => OneWayFarePolicy -> m ()
+cacheOneWayFarePolicy :: (HasCacheConfig r, HedisFlow m r) => OneWayFarePolicy -> m ()
 cacheOneWayFarePolicy owFP = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey owFP.id
   Hedis.setExp idKey (coerce @OneWayFarePolicy @(OneWayFarePolicyD 'Unsafe) owFP) expTime
   Hedis.setExp (makeOrgIdVehVarKey owFP.organizationId owFP.vehicleVariant) idKey expTime
-  where
-    expTime = 60 * 60 * 24
 
 makeIdKey :: Id OneWayFarePolicy -> Text
 makeIdKey id = "CachedQueries:OneWayFarePolicy:Id-" <> id.getId

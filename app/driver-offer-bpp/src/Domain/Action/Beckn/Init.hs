@@ -12,6 +12,7 @@ import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
@@ -38,7 +39,7 @@ buildBookingLocation DLoc.SearchReqLocation {..} = do
         ..
       }
 
-handler :: (HedisFlow m r, EsqDBFlow m r) => Id DOrg.Organization -> InitReq -> m InitRes
+handler :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id DOrg.Organization -> InitReq -> m InitRes
 handler orgId req = do
   transporter <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
   now <- getCurrentTime

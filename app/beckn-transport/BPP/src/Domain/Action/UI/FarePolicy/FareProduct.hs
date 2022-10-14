@@ -15,6 +15,7 @@ import Beckn.Types.APISuccess
 import Beckn.Utils.Common
 import Domain.Types.FarePolicy.FareProduct
 import qualified Domain.Types.Person as SP
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.FareProduct as SFareProduct
 import Tools.Error
 
@@ -31,7 +32,7 @@ data UpdateFareProductReq = UpdateFareProductReq
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-listFareProducts :: (HedisFlow m r, EsqDBFlow m r) => SP.Person -> m ListFareProductsRes
+listFareProducts :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => SP.Person -> m ListFareProductsRes
 listFareProducts person = do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   fareProducts <- SFareProduct.findEnabledByOrgId orgId

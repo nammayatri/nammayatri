@@ -36,6 +36,7 @@ import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.Organization (findByShortId)
 import Tools.Metrics
 import Tools.Streaming.Kafka
@@ -74,7 +75,8 @@ data AppCfg = AppCfg
     kafkaProducerCfg :: KafkaProducerCfg,
     selfUIUrl :: BaseUrl,
     rideCfg :: RideConfig,
-    dashboardToken :: Text
+    dashboardToken :: Text,
+    cacheConfig :: CacheConfig
   }
   deriving (Generic, FromDhall)
 
@@ -111,7 +113,8 @@ data AppEnv = AppEnv
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BAPKafkaEnvs,
     rideCfg :: RideConfig,
-    dashboardToken :: Text
+    dashboardToken :: Text,
+    cacheConfig :: CacheConfig
   }
   deriving (Generic)
 

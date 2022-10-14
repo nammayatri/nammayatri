@@ -14,9 +14,10 @@ import Beckn.Utils.Common
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Organization
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Organization as Queries
 
-findByShortId :: (HedisFlow m r, EsqDBFlow m r) => ShortId Organization -> m (Maybe Organization)
+findByShortId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Organization -> m (Maybe Organization)
 findByShortId shortId_ =
   Hedis.get (makeShortIdKey shortId_) >>= \case
     Just a -> return . Just $ coerce @(OrganizationD 'Unsafe) @Organization a
@@ -24,11 +25,10 @@ findByShortId shortId_ =
   where
     findAndCache = flip whenJust cacheOrganization /=<< Queries.findByShortId shortId_
 
-cacheOrganization :: HedisFlow m r => Organization -> m ()
+cacheOrganization :: (HasCacheConfig r, HedisFlow m r) => Organization -> m ()
 cacheOrganization org = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeShortIdKey org.shortId) (coerce @Organization @(OrganizationD 'Unsafe) org) expTime
-  where
-    expTime = 60 * 60 * 24
 
 makeShortIdKey :: ShortId Organization -> Text
 makeShortIdKey shortId = "CachedQueries:Organization:ShortId-" <> shortId.getShortId

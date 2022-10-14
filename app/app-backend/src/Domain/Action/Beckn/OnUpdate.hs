@@ -10,6 +10,7 @@ import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (state)
 import qualified SharedLogic.CallBPP as CallBPP
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -60,7 +61,8 @@ data OnUpdateFareBreakup = OnUpdateFareBreakup
   }
 
 onUpdate ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     CoreMetrics m,
     HasBapInfo r m,
     HasFlowEnv

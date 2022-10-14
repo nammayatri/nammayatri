@@ -21,16 +21,17 @@ import Domain.Types.Common
 import Domain.Types.FarePolicy
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Vehicle as Vehicle
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy as Queries
 
-findById :: (HedisFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
+findById :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
     Nothing -> flip whenJust cacheFarePolicy /=<< Queries.findById id
 
 findByOrgIdAndVariant ::
-  (HedisFlow m r, EsqDBFlow m r) =>
+  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
   Id Organization ->
   Vehicle.Variant ->
   m (Maybe FarePolicy)
@@ -44,23 +45,22 @@ findByOrgIdAndVariant orgId vehVar =
   where
     findAndCache = flip whenJust cacheFarePolicy /=<< Queries.findByOrgIdAndVariant orgId vehVar
 
-findAllByOrgId :: (HedisFlow m r, EsqDBFlow m r) => Id Organization -> m [FarePolicy]
+findAllByOrgId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Organization -> m [FarePolicy]
 findAllByOrgId orgId =
   Hedis.get (makeAllOrgIdKey orgId) >>= \case
     Just a -> return $ fmap (coerce @(FarePolicyD 'Unsafe) @FarePolicy) a
     Nothing -> cacheRes /=<< Queries.findAllByOrgId orgId
   where
     cacheRes fps = do
+      expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.setExp (makeAllOrgIdKey orgId) (coerce @[FarePolicy] @[FarePolicyD 'Unsafe] fps) expTime
-    expTime = 60 * 60 * 24
 
-cacheFarePolicy :: HedisFlow m r => FarePolicy -> m ()
+cacheFarePolicy :: (HasCacheConfig r, HedisFlow m r) => FarePolicy -> m ()
 cacheFarePolicy fp = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey fp.id
   Hedis.setExp idKey (coerce @FarePolicy @(FarePolicyD 'Unsafe) fp) expTime
   Hedis.setExp (makeOrgIdVehVarKey fp.organizationId fp.vehicleVariant) idKey expTime
-  where
-    expTime = 60 * 60 * 24
 
 makeIdKey :: Id FarePolicy -> Text
 makeIdKey id = "CachedQueries:FarePolicy:Id-" <> id.getId

@@ -16,6 +16,7 @@ import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as Organization
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -30,7 +31,8 @@ import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 
 cancelRide ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],

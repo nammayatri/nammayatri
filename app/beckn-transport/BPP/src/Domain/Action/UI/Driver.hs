@@ -43,6 +43,7 @@ import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as SV
 import GHC.Records.Extra
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QOrganization
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -172,7 +173,8 @@ validateUpdateDriverReq UpdateDriverReq {..} =
 type UpdateDriverRes = DriverInformationRes
 
 createDriver ::
-  ( HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
+  ( HasCacheConfig r,
+    HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     HedisFlow m r,
     EncFlow m r,
@@ -234,7 +236,8 @@ createDriverDetails personId = do
     driverId = cast personId
 
 getInformation ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     EncFlow m r
   ) =>
@@ -373,7 +376,8 @@ deleteDriver admin driverId = do
         void $ Redis.deleteKeyRedis $ authTokenCacheKey regToken.token
 
 updateDriver ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     HedisFlow m r,
     EncFlow m r
   ) =>

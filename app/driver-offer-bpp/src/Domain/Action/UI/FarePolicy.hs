@@ -19,6 +19,7 @@ import Data.Time
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Person as SP
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -59,7 +60,7 @@ validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
     ]
 
-listFarePolicies :: (EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListFarePolicyRes
+listFarePolicies :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListFarePolicyRes
 listFarePolicies person = do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   oneWayFarePolicies <- SFarePolicy.findAllByOrgId orgId
@@ -68,7 +69,7 @@ listFarePolicies person = do
       { oneWayFarePolicies = map makeFarePolicyAPIEntity oneWayFarePolicies
       }
 
-updateFarePolicy :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m, HedisFlow m r) => SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyReq -> m UpdateFarePolicyRes
+updateFarePolicy :: (HasCacheConfig r, EsqDBFlow m r, FCMFlow m r, CoreMetrics m, HedisFlow m r) => SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyReq -> m UpdateFarePolicyRes
 updateFarePolicy admin fpId req = do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy

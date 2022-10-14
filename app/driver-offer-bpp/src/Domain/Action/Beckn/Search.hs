@@ -15,6 +15,7 @@ import Domain.Types.Vehicle.Variant as Variant
 import Environment
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
+import Storage.CachedQueries.CacheConfig
 import Storage.Queries.Person (DriverPoolResult)
 
 data DSearchReq = DSearchReq
@@ -66,7 +67,7 @@ handler org sReq = do
   buildSearchRes org fromLocation toLocation estimates
 
 mkEstimate ::
-  (EsqDBFlow m r, HedisFlow m r) =>
+  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   DOrg.Organization ->
   UTCTime ->
   Meters ->

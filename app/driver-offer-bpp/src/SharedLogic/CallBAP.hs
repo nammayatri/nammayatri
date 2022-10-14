@@ -37,6 +37,7 @@ import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
@@ -108,7 +109,8 @@ buildBppUrl (Id transporterId) =
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
 sendRideAssignedUpdateToBAP ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     EncFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -128,7 +130,8 @@ sendRideAssignedUpdateToBAP booking ride = do
   void $ callOnUpdate transporter booking rideAssignedMsg
 
 sendRideStartedUpdateToBAP ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     EncFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -146,7 +149,8 @@ sendRideStartedUpdateToBAP booking ride = do
   void $ callOnUpdate transporter booking rideStartedMsg
 
 sendRideCompletedUpdateToBAP ::
-  ( EsqDBFlow m r,
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
     EncFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
