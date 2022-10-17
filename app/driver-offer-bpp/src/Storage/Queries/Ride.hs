@@ -7,6 +7,7 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong)
 import Beckn.Utils.Common
+import Data.Time hiding (getCurrentTime)
 import Domain.Types.Booking as Booking
 import Domain.Types.Organization
 import Domain.Types.Person
@@ -195,3 +196,18 @@ getCountByStatus orgId = do
     where_ $ booking ^. BookingProviderId ==. val (toKey orgId)
     groupBy $ ride ^. RideStatus
     return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))
+
+getRidesForDate :: Transactionable m => Id Person -> Day -> m [Ride]
+getRidesForDate driverId date = Esq.buildDType $ do
+  fullRideType <- Esq.findAll' $ do
+    (ride :& rating) <- from fullRideTable
+    where_ $
+      ride ^. RideDriverId ==. val (toKey driverId)
+        &&. ride ^. RideTripEndTime >=. val (Just minDayTime)
+        &&. ride ^. RideTripEndTime <=. val (Just maxDayTime)
+        &&. ride ^. RideStatus ==. val Ride.COMPLETED
+    return (ride, rating)
+  return $ extractSolidType <$> fullRideType
+  where
+    minDayTime = UTCTime date 0
+    maxDayTime = UTCTime date 86400

@@ -10,6 +10,7 @@ module API.UI.Driver
     DDriver.UpdateDriverRes,
     DDriver.GetNearbySearchRequestsRes (..),
     DDriver.DriverOfferReq (..),
+    DDriver.DriverStatsRes (..),
     API,
     handler,
   )
@@ -18,6 +19,7 @@ where
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Types.Person as SP
 import Environment
@@ -54,18 +56,21 @@ type API =
                       :> Get '[JSON] DDriver.GetNearbySearchRequestsRes
                   )
              :<|> "searchRequest"
-               :> ( TokenAuth
-                      :> "quote"
-                      :> "offer"
-                      :> ReqBody '[JSON] DDriver.DriverOfferReq
-                      :> Post '[JSON] APISuccess
-                  )
+               :> TokenAuth
+               :> "quote"
+               :> "offer"
+               :> ReqBody '[JSON] DDriver.DriverOfferReq
+               :> Post '[JSON] APISuccess
              :<|> "profile"
                :> ( TokenAuth
                       :> Get '[JSON] DDriver.DriverInformationRes
                       :<|> TokenAuth
                         :> ReqBody '[JSON] DDriver.UpdateDriverReq
                         :> Post '[JSON] DDriver.UpdateDriverRes
+                      :<|> "stats"
+                        :> TokenAuth
+                        :> MandatoryQueryParam "day" Day
+                        :> Get '[JSON] DDriver.DriverStatsRes
                   )
          )
 
@@ -81,6 +86,7 @@ handler =
              :<|> offerQuote
              :<|> ( getInformation
                       :<|> updateDriver
+                      :<|> getStats
                   )
          )
 
@@ -115,3 +121,6 @@ offerQuote ::
   DDriver.DriverOfferReq ->
   FlowHandler APISuccess
 offerQuote driverId = withFlowHandlerAPI . DDriver.offerQuote driverId
+
+getStats :: Id SP.Person -> Day -> FlowHandler DDriver.DriverStatsRes
+getStats day = withFlowHandlerAPI . DDriver.getStats day

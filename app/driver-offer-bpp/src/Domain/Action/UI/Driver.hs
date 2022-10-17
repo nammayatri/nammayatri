@@ -12,6 +12,7 @@ module Domain.Action.UI.Driver
     UpdateDriverRes,
     GetNearbySearchRequestsRes (..),
     DriverOfferReq (..),
+    DriverStatsRes (..),
     getInformation,
     setActivity,
     listDriver,
@@ -21,6 +22,7 @@ module Domain.Action.UI.Driver
     updateDriver,
     getNearbySearchRequests,
     offerQuote,
+    getStats,
   )
 where
 
@@ -43,6 +45,7 @@ import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
+import Data.Time (Day)
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
@@ -71,6 +74,7 @@ import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -207,6 +211,12 @@ data DriverOfferReq = DriverOfferReq
   }
   deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data DriverStatsRes = DriverStatsRes
+  { totalRidesOfDay :: Int,
+    totalEarningsOfDay :: Money
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 createDriver ::
   ( HasCacheConfig r,
@@ -583,3 +593,16 @@ offerQuote driverId req = do
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
       logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
       pure $ not $ null activeQuotes
+
+getStats ::
+  (EsqDBFlow m r, EncFlow m r) =>
+  Id SP.Person ->
+  Day ->
+  m DriverStatsRes
+getStats driverId date = do
+  rides <- QRide.getRidesForDate driverId date
+  return $
+    DriverStatsRes
+      { totalRidesOfDay = length rides,
+        totalEarningsOfDay = sum . catMaybes $ rides <&> (.fare)
+      }

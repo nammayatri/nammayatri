@@ -2,7 +2,7 @@
 @driver-offer-bpp-host = http://localhost:8016
 @token = favorit-suv-000000000000000000-token
 
-
+@today = {{$localDatetime 'YYYY-MM-DD'}}
 
 # @name setActive
 POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
@@ -68,4 +68,10 @@ token: {{token}}
 
 ###
 
+# @name getStats
+GET {{driver-offer-bpp-host}}/ui/driver/profile/stats?day={{today}}
+content-type: application/json
+# token: = favorit-auto1-0000000000000000-token
+token: {{token}}
 
+###

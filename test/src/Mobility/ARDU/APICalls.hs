@@ -32,6 +32,7 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
            :<|> offerQuote
            :<|> ( getDriverInfo
                     :<|> _
+                    :<|> _
                   )
          ) = client (Proxy :: Proxy DriverAPI.API)
 
