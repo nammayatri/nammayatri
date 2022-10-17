@@ -44,14 +44,16 @@ setInactiveByRequestId searchReqId = Esq.update $ \p -> do
   where_ $ p ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
 
 findActiveQuotesByDriverId :: (Transactionable m, MonadTime m) => Id Person -> Seconds -> m [Domain.DriverQuote]
-findActiveQuotesByDriverId driverId driverUnlockDelay = (getCurrentTime >>=) $ \now -> buildDType $ do
-  let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
-  fmap (fmap extractSolidType) $
-    Esq.findAll' $ do
-      (dQuote :& farePars) <-
-        from baseDriverQuoteQuery
-      where_ $
-        dQuote ^. DriverQuoteDriverId ==. val (toKey driverId)
-          &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
-          &&. dQuote ^. DriverQuoteValidTill >. val (addUTCTime delayToAvoidRaces now)
-      pure (dQuote, farePars)
+findActiveQuotesByDriverId driverId driverUnlockDelay = do
+  now <- getCurrentTime
+  buildDType $ do
+    let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
+    fmap (fmap extractSolidType) $
+      Esq.findAll' $ do
+        (dQuote :& farePars) <-
+          from baseDriverQuoteQuery
+        where_ $
+          dQuote ^. DriverQuoteDriverId ==. val (toKey driverId)
+            &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
+            &&. dQuote ^. DriverQuoteValidTill >. val (addUTCTime delayToAvoidRaces now)
+        pure (dQuote, farePars)

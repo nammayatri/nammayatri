@@ -18,19 +18,6 @@ findById ::
   m (Maybe Vehicle)
 findById = Esq.findById
 
-findByIdAndOrgId ::
-  Transactionable m =>
-  Id Person ->
-  Id Organization ->
-  m (Maybe Vehicle)
-findByIdAndOrgId vid orgId =
-  Esq.findOne $ do
-    vehicle <- from $ table @VehicleT
-    where_ $
-      vehicle ^. VehicleTId ==. val (toKey vid)
-        &&. vehicle ^. VehicleOrganizationId ==. val (toKey orgId)
-    return vehicle
-
 updateVehicleRec :: Vehicle -> SqlDB ()
 updateVehicleRec vehicle = do
   now <- getCurrentTime

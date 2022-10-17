@@ -6,14 +6,12 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.Booking.Type as Booking
 import Domain.Types.Organization
-import Domain.Types.Person
 import Domain.Types.RiderDetails (RiderDetails)
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Booking.BookingLocation as Loc
 import Storage.Tabular.Booking.OneWayBooking as OneWayBooking
 import Storage.Tabular.Booking.RentalBooking as RentalBooking
-import Storage.Tabular.Ride as Ride
 
 create :: Booking -> SqlDB ()
 create booking = do
@@ -108,28 +106,6 @@ findAllByOrg orgId mbLimit mbOffset mbIsOnlyActive = Esq.buildDType $ do
     where_ $
       booking ^. BookingProviderId ==. val (toKey orgId)
         &&. not_ (booking ^. BookingStatus `in_` valList [Booking.CONFIRMED, Booking.AWAITING_REASSIGNMENT])
-        &&. whenTrue_ isOnlyActive (not_ $ booking ^. BookingStatus `in_` valList [Booking.COMPLETED, Booking.CANCELLED])
-    orderBy [desc $ booking ^. BookingCreatedAt]
-    limit limitVal
-    offset offsetVal
-    pure (booking, fromLoc, mbOneWayBooking, mbToLoc, mbRentalBooking)
-  catMaybes <$> mapM buildFullBooking fullBookingsT
-
-findAllByDriver :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
-findAllByDriver driverId mbLimit mbOffset mbIsOnlyActive = Esq.buildDType $ do
-  let limitVal = fromIntegral $ fromMaybe 10 mbLimit
-      offsetVal = fromIntegral $ fromMaybe 0 mbOffset
-      isOnlyActive = Just True == mbIsOnlyActive
-  fullBookingsT <- Esq.findAll' $ do
-    (booking :& fromLoc :& mbOneWayBooking :& mbToLoc :& mbRentalBooking :& ride) <-
-      from $
-        fullBookingTable
-          `innerJoin` table @RideT
-            `Esq.on` ( \(booking :& _ :& _ :& _ :& _ :& ride) ->
-                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
-                     )
-    where_ $
-      ride ^. RideDriverId ==. val (toKey driverId)
         &&. whenTrue_ isOnlyActive (not_ $ booking ^. BookingStatus `in_` valList [Booking.COMPLETED, Booking.CANCELLED])
     orderBy [desc $ booking ^. BookingCreatedAt]
     limit limitVal
