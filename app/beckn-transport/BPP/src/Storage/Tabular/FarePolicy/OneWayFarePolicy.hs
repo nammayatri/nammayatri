@@ -9,7 +9,7 @@ module Storage.Tabular.FarePolicy.OneWayFarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common (HighPrecMoney)
+import Beckn.Types.Common (Centesimal, HighPrecMoney)
 import Beckn.Types.Id
 import Beckn.Utils.Error (throwError)
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy as Domain
@@ -30,7 +30,7 @@ mkPersist
       baseFare HighPrecMoney Maybe
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
-      nightShiftRate Double Maybe
+      nightShiftRate Centesimal Maybe
       createdAt UTCTime
       updatedAt UTCTime
       UniqueFarePolicyId id

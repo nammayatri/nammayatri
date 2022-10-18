@@ -9,6 +9,7 @@ module Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Common (HighPrecMoney, Meters (..))
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate as Domain
 import Domain.Types.Organization (Organization)
@@ -23,8 +24,8 @@ mkPersist
       Id Int
       vehicleVariant Vehicle.Variant
       organizationId OrganizationTId
-      distanceRangeStart Double
-      fare Double
+      distanceRangeStart Meters
+      fare HighPrecMoney
       deriving Generic
     |]
 
@@ -39,8 +40,8 @@ instance TType PerExtraKmRateT FullPerExtraKmRate where
       ( fromKey organizationId,
         vehicleVariant,
         Domain.PerExtraKmRate
-          { distanceRangeStart = roundToIntegral distanceRangeStart,
-            fare = realToFrac fare,
+          { distanceRangeStart = distanceRangeStart,
+            fare = fare,
             ..
           }
       )
@@ -48,7 +49,7 @@ instance TType PerExtraKmRateT FullPerExtraKmRate where
     PerExtraKmRateT
       { organizationId = toKey orgId,
         vehicleVariant = vehVar,
-        distanceRangeStart = fromIntegral distanceRangeStart,
-        fare = realToFrac fare,
+        distanceRangeStart = distanceRangeStart,
+        fare = fare,
         ..
       }

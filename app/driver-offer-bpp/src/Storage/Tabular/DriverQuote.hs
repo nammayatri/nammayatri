@@ -9,7 +9,7 @@ module Storage.Tabular.DriverQuote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Meters (..))
+import Beckn.Types.Common (Centesimal, Meters (..))
 import qualified Beckn.Types.Common as Common
 import Beckn.Types.Id
 import qualified Domain.Types.DriverQuote as Domain
@@ -30,7 +30,7 @@ mkPersist
       searchRequestId SReq.SearchRequestTId
       driverId PersonTId
       driverName Text
-      driverRating Double Maybe
+      driverRating Centesimal Maybe
       vehicleVariant Variant.Variant
       distance Meters
       distanceToPickup Meters

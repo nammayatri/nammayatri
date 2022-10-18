@@ -59,7 +59,7 @@ baseFareSum fareParams = roundToIntegral $ do
           ]
       )
 
-calculateDayPartRate :: FareParameters -> Double
+calculateDayPartRate :: FareParameters -> Centesimal
 calculateDayPartRate fareParams = do
   let defaultDayPartRate = 1
   if fareParams.nightCoefIncluded

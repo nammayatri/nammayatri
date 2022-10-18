@@ -1,7 +1,7 @@
 module Domain.Types.FarePolicy where
 
 import Beckn.Prelude
-import Beckn.Types.Common (HighPrecMoney, Meters, Money)
+import Beckn.Types.Common (Centesimal, HighPrecMoney, Meters, Money)
 import Beckn.Types.Id (Id)
 import Domain.Types.Common
 import qualified Domain.Types.Organization as Organization
@@ -16,7 +16,7 @@ data FarePolicyD s = FarePolicy
     perExtraKmFare :: HighPrecMoney,
     deadKmFare :: Money,
     driverExtraFee :: ExtraFee,
-    nightShiftRate :: Maybe Double,
+    nightShiftRate :: Maybe Centesimal,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     createdAt :: UTCTime,
@@ -50,7 +50,7 @@ data FarePolicyAPIEntity = FarePolicyAPIEntity
     driverExtraFee :: ExtraFee,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
-    nightShiftRate :: Maybe Double
+    nightShiftRate :: Maybe Centesimal
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

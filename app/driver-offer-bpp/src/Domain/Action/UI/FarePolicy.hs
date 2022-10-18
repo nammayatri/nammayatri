@@ -40,7 +40,7 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     driverMaxExtraFee :: Money,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
-    nightShiftRate :: Maybe Double
+    nightShiftRate :: Maybe Centesimal
   }
   deriving (Generic, Show, FromJSON, ToSchema)
 
@@ -55,7 +55,7 @@ validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
       validateField "deadKmFare" deadKmFare $ InRange @Money 0 500,
       validateField "driverMinExtraFee" driverMinExtraFee $ InRange @Money 0 500,
       validateField "driverMaxExtraFee" driverMaxExtraFee $ InRange @Money driverMinExtraFee 500,
-      validateField "nightShiftRate" nightShiftRate . InMaybe $ InRange @Double 1 2,
+      validateField "nightShiftRate" nightShiftRate . InMaybe $ InRange @Centesimal 1 2,
       validateField "nightShiftStart" nightShiftStart . InMaybe $ InRange (TimeOfDay 18 0 0) (TimeOfDay 23 30 0),
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
     ]

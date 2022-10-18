@@ -1,7 +1,7 @@
 module Domain.Types.FarePolicy.OneWayFarePolicy where
 
 import Beckn.Prelude
-import Beckn.Types.Common (Money)
+import Beckn.Types.Common (Centesimal, Money)
 import Beckn.Types.Id (Id)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.Discount
@@ -18,7 +18,7 @@ data OneWayFarePolicyD s = OneWayFarePolicy
     discountList :: [DiscountD s],
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
-    nightShiftRate :: Maybe Double,
+    nightShiftRate :: Maybe Centesimal,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -38,7 +38,7 @@ data OneWayFarePolicyAPIEntity = OneWayFarePolicyAPIEntity
     discountList :: [DiscountAPIEntity],
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
-    nightShiftRate :: Maybe Double
+    nightShiftRate :: Maybe Centesimal
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

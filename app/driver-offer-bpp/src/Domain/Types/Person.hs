@@ -7,7 +7,7 @@ import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.Id
-import Beckn.Utils.Common (EsqDBFlow, maskText)
+import Beckn.Utils.Common (Centesimal, EsqDBFlow, maskText)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -71,7 +71,7 @@ data PersonE e = Person
     mobileCountryCode :: Maybe Text,
     passwordHash :: Maybe DbHash,
     identifier :: Maybe Text,
-    rating :: Maybe Double,
+    rating :: Maybe Centesimal,
     isNew :: Bool,
     organizationId :: Maybe (Id DOrg.Organization),
     deviceToken :: Maybe FCM.FCMRecipientToken,

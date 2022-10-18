@@ -24,9 +24,9 @@ mkConfirmMessage msg = do
         Billing
           { name = msg.requestorName
           }
-      onePrice = rupeePrice $ realToFrac dQuote.fare
-      totalAmount = (realToFrac dQuote.fare) * fromIntegral quantity
-      totalPrice = rupeePrice totalAmount
+      onePrice = rupeePrice $ fromIntegral dQuote.fare
+      totalAmount = dQuote.fare * fromIntegral quantity
+      totalPrice = rupeePrice $ fromIntegral totalAmount
       breakupTitle = dQuote.description
       breakupItem = BreakupItem breakupTitle onePrice
       quote =

@@ -57,7 +57,7 @@ calculateAverageRating ::
 calculateAverageRating personId = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   allRatings <- QRating.findAllRatingsForPerson personId
-  let ratingsSum :: Double = fromIntegral $ sum (allRatings <&> (.ratingValue))
+  let ratingsSum = fromIntegral $ sum (allRatings <&> (.ratingValue))
   let ratingCount = length allRatings
   when (ratingCount == 0) $
     logTagInfo "PersonAPI" "No rating found to calculate"

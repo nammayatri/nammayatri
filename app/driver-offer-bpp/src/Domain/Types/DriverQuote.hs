@@ -21,7 +21,7 @@ data DriverQuote = DriverQuote
     searchRequestId :: Id SearchRequest,
     driverId :: Id Person,
     driverName :: Text,
-    driverRating :: Maybe Double,
+    driverRating :: Maybe Centesimal,
     vehicleVariant :: Variant.Variant,
     distance :: Meters,
     distanceToPickup :: Meters,

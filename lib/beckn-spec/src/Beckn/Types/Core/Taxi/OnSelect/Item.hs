@@ -29,7 +29,7 @@ data Item = Item
     driver_name :: Maybe Text,
     duration_to_pickup :: Maybe Int, -- Seconds?
     valid_till :: Maybe UTCTime,
-    rating :: Maybe Double
+    rating :: Maybe Centesimal
     -- TODO consider to make proper Item type for different FareProductType without Maybes with custom To/FromJSON
   }
   deriving (Generic, Show)

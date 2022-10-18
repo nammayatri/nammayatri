@@ -12,6 +12,7 @@ import Beckn.External.FCM.Types (FCMRecipientToken)
 import Beckn.External.GoogleMaps.Types (Language)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Common (Centesimal)
 import Beckn.Types.Id
 import qualified Domain.Types.Person as Domain
 import Storage.Tabular.Organization (OrganizationTId)
@@ -38,7 +39,7 @@ mkPersist
       mobileCountryCode Text Maybe
       passwordHash DbHash Maybe
       identifier Text Maybe
-      rating Double Maybe
+      rating Centesimal Maybe
       isNew Bool
       organizationId OrganizationTId Maybe
       deviceToken FCMRecipientToken Maybe

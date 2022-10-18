@@ -25,7 +25,7 @@ mkPersist
       distanceToPickup HighPrecMeters
       validTill UTCTime
       bppQuoteId Text
-      rating Double Maybe
+      rating Centesimal Maybe
       Primary id
       deriving Generic
     |]

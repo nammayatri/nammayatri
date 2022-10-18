@@ -174,7 +174,7 @@ setIsNewFalse personId = do
 deleteById :: Id Person -> SqlDB ()
 deleteById = Esq.deleteByKey @PersonT
 
-updateAverageRating :: Id Person -> Double -> SqlDB ()
+updateAverageRating :: Id Person -> Centesimal -> SqlDB ()
 updateAverageRating personId newAverageRating = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do

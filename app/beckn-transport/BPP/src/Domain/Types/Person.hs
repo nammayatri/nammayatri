@@ -5,6 +5,7 @@ module Domain.Types.Person where
 
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
+import Beckn.Types.Centesimal
 import Beckn.Types.Id
 import Beckn.Utils.Common (EsqDBFlow, maskText)
 import Data.Aeson
@@ -70,7 +71,7 @@ data PersonE e = Person
     mobileCountryCode :: Maybe Text,
     passwordHash :: Maybe DbHash,
     identifier :: Maybe Text,
-    rating :: Maybe Double,
+    rating :: Maybe Centesimal,
     isNew :: Bool,
     organizationId :: Maybe (Id DOrg.Organization),
     deviceToken :: Maybe FCM.FCMRecipientToken,

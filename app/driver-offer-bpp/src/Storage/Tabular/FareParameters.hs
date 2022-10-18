@@ -8,7 +8,7 @@ module Storage.Tabular.FareParameters where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Money)
+import Beckn.Types.Common (Centesimal, Money)
 import Beckn.Types.Id
 import qualified Domain.Types.FareParams as Domain
 import Storage.Tabular.Vehicle ()
@@ -22,7 +22,7 @@ mkPersist
       baseFare Money
       extraKmFare Money Maybe
       driverSelectedFare Money Maybe
-      nightShiftRate Double Maybe
+      nightShiftRate Centesimal Maybe
       nightCoefIncluded Bool
 
       Primary id

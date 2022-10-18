@@ -9,7 +9,7 @@ module Storage.Tabular.Ride where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (HighPrecMeters, HighPrecMoney)
+import Beckn.Types.Common (Centesimal, HighPrecMeters, HighPrecMoney)
 import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
@@ -27,7 +27,7 @@ mkPersist
       shortId Text
       status Domain.RideStatus
       driverName Text
-      driverRating Double Maybe
+      driverRating Centesimal Maybe
       driverMobileNumber Text
       driverRegisteredAt UTCTime
       vehicleNumber Text

@@ -51,7 +51,7 @@ data DriverOfferQuoteDetails = DriverOfferQuoteDetails
     durationToPickup :: Int, -- Seconds?
     distanceToPickup :: HighPrecMeters,
     validTill :: UTCTime,
-    rating :: Maybe Double,
+    rating :: Maybe Centesimal,
     bppDriverQuoteId :: Id DDriverOffer.BPPQuote
   }
   deriving (Generic, Show)

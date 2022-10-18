@@ -27,7 +27,7 @@ data OnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         driverName :: Text,
         driverMobileNumber :: Text,
-        driverRating :: Maybe Double,
+        driverRating :: Maybe Centesimal,
         driverRegisteredAt :: UTCTime,
         otp :: Text,
         vehicleNumber :: Text,

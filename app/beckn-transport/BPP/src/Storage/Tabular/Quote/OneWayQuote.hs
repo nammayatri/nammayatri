@@ -9,6 +9,7 @@ module Storage.Tabular.Quote.OneWayQuote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Centesimal
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as Domain
 import Storage.Tabular.Quote.Table
@@ -18,8 +19,8 @@ mkPersist
   [defaultQQ|
     OneWayQuoteT sql=one_way_quote
       quoteId QuoteTId
-      distance Double
-      distanceToNearestDriver Double
+      distance Centesimal
+      distanceToNearestDriver Centesimal
       estimatedFinishTime UTCTime
       Primary quoteId
       deriving Generic

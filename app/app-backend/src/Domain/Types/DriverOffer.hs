@@ -16,7 +16,7 @@ data DriverOffer = DriverOffer
     distanceToPickup :: HighPrecMeters,
     validTill :: UTCTime,
     bppQuoteId :: Id BPPQuote,
-    rating :: Maybe Double
+    rating :: Maybe Centesimal
   }
   deriving (Generic, Show, PrettyShow)
 
@@ -25,6 +25,6 @@ data DriverOfferAPIEntity = DriverOfferAPIEntity
     durationToPickup :: Int, -- Seconds?
     distanceToPickup :: HighPrecMeters,
     validTill :: UTCTime,
-    rating :: Maybe Double
+    rating :: Maybe Centesimal
   }
   deriving (Generic, Show, PrettyShow, ToJSON, FromJSON, ToSchema)

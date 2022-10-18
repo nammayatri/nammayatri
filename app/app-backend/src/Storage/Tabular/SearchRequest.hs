@@ -9,7 +9,7 @@ module Storage.Tabular.SearchRequest where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (HighPrecMeters (..))
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as Domain
 import qualified Storage.Tabular.Merchant as SMerchant
@@ -26,7 +26,7 @@ mkPersist
       riderId SP.PersonTId
       fromLocationId SLoc.SearchReqLocationTId
       toLocationId SLoc.SearchReqLocationTId Maybe
-      distance Double Maybe
+      distance Centesimal Maybe
       merchantId SMerchant.MerchantTId
       createdAt UTCTime
       Primary id

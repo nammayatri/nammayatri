@@ -9,6 +9,7 @@ module Storage.Tabular.FarePolicy.FareBreakup where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Common (Centesimal)
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.FareBreakup as Domain
 import qualified Storage.Tabular.Booking as SBooking
@@ -20,7 +21,7 @@ mkPersist
       id Text
       bookingId SBooking.BookingTId
       description Text
-      amount Double
+      amount Centesimal
       Primary id
       deriving Generic
     |]

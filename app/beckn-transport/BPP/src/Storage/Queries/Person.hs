@@ -7,6 +7,7 @@ import Beckn.External.FCM.Types (FCMRecipientToken)
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Centesimal
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Utils.Common
@@ -160,7 +161,7 @@ setIsNewFalse personId = do
 deleteById :: Id Person -> SqlDB ()
 deleteById = Esq.deleteByKey @PersonT
 
-updateAverageRating :: Id Person -> Double -> SqlDB ()
+updateAverageRating :: Id Person -> Centesimal -> SqlDB ()
 updateAverageRating personId newAverageRating = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -255,4 +256,4 @@ getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType = do
           suvResult <> sedanResult <> hatchbackResult
         Just poolVariant -> getResult poolVariant True
       where
-        getResult var cond = [NearestDriversResult (cast personId) (HighPrecMeters dist) var dlat dlon | cond]
+        getResult var cond = [NearestDriversResult (cast personId) (HighPrecMeters $ realToFrac dist) var dlat dlon | cond]

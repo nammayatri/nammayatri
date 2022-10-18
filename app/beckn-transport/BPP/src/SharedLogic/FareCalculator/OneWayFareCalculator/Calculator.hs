@@ -28,7 +28,7 @@ type TripEndTime = UTCTime
 data OneWayFareParameters = OneWayFareParameters
   { baseFare :: Money,
     distanceFare :: Money,
-    nightShiftRate :: Double,
+    nightShiftRate :: Centesimal,
     discount :: Maybe Money
   }
   deriving stock (Show, Eq)
@@ -83,12 +83,12 @@ calculateDistanceFare farePolicy distance = do
 calculateNightShiftRate ::
   OneWayFarePolicy ->
   TripEndTime ->
-  Double
+  Centesimal
 calculateNightShiftRate farePolicy tripStartTime = do
   let timeOfDay = localTimeOfDay $ utcToLocalTime timeZoneIST tripStartTime
-  let nightShiftRate = fromMaybe 1 $ farePolicy.nightShiftRate
-  let nightShiftStart = fromMaybe midnight $ farePolicy.nightShiftStart
-  let nightShiftEnd = fromMaybe midnight $ farePolicy.nightShiftEnd
+  let nightShiftRate = fromMaybe 1 farePolicy.nightShiftRate
+  let nightShiftStart = fromMaybe midnight farePolicy.nightShiftStart
+  let nightShiftEnd = fromMaybe midnight farePolicy.nightShiftEnd
   if isTimeWithinBounds nightShiftStart nightShiftEnd timeOfDay
     then nightShiftRate
     else 1

@@ -68,7 +68,7 @@ incrDistance :: Id Person -> Double -> TestM Double
 incrDistance driverId = Hedis.incrByFloat driverId.getId
 
 updateDistanceTest :: Id Person -> HighPrecMeters -> TestM ()
-updateDistanceTest driverId dist = void $ incrDistance driverId dist.getHighPrecMeters
+updateDistanceTest driverId dist = void $ incrDistance driverId (realToFrac dist)
 
 checkTraveledDistance :: Id Person -> TestM Double
 checkTraveledDistance driverId = incrDistance driverId 0

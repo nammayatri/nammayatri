@@ -46,6 +46,6 @@ getLocation rideId = do
     DrLoc.findById driver.id
       >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
-  let totalDistance = ride.traveledDistance.getHighPrecMeters
+  let totalDistance = realToFrac ride.traveledDistance.getHighPrecMeters
       currPoint = GoogleMaps.getCoordinates currLocation
   return $ GetLocationRes {..}
