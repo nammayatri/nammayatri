@@ -128,12 +128,14 @@ data AppEnv = AppEnv
 
 data DriverOnboardingConfigs = DriverOnboardingConfigs
   { onboardingTryLimit :: Int,
+    onboardingRetryTimeinHours :: Int,
     onboardSupportSmsTemplate :: Text,
     checkRCInsuranceExpiry :: Bool,
     checkRCExpiry :: Bool,
     checkRCVehicleClass :: Bool,
     checkDLExpiry :: Bool,
-    checkDLVehicleClass :: Bool
+    checkDLVehicleClass :: Bool,
+    checkImageExtraction :: Bool
   }
   deriving (Generic, FromDhall)
 

@@ -49,12 +49,14 @@ let slackCfg = { channelName = "#beckn-driver-onboard-test", slackToken = common
 
 let driverOnboardingConfigs =
   { onboardingTryLimit = +3
+  , onboardingRetryTimeinHours = +24
   , onboardSupportSmsTemplate = "Driver Onboarding Alert!!\n Driver is facing following issues while onboarding to ({#org#}).\nReasons:\n {#reasons#}\nPlease contact him +91-{#driver-phone#}."
   , checkRCInsuranceExpiry = False
   , checkRCExpiry = False
   , checkRCVehicleClass = True
   , checkDLExpiry = True
   , checkDLVehicleClass = True
+  , checkImageExtraction = True
 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }

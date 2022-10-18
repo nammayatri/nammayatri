@@ -6,6 +6,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     DriverRCRes,
     verifyRC,
     onVerifyRC,
+    convertUTCTimetoDate,
   )
 where
 
@@ -32,6 +33,7 @@ import qualified Domain.Types.Person as Person
 import Environment
 import qualified Idfy.Flow as Idfy
 import qualified Idfy.Types as Idfy
+import Idfy.Types.Response (RCExtractResponse)
 import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
@@ -42,7 +44,8 @@ import qualified Storage.Queries.Person as Person
 data DriverRCReq = DriverRCReq
   { vehicleRegistrationCertNumber :: Text,
     imageId :: Id Image.Image,
-    operatingCity :: Text
+    operatingCity :: Text,
+    dateOfRegistration :: Maybe UTCTime
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -69,14 +72,16 @@ verifyRC personId req@DriverRCReq {..} = do
     throwError (ImageInvalidType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
 
   image <- S3.get (T.unpack imageMetadata.s3Path)
+  configs <- asks (.driverOnboardingConfigs)
   resp <- Idfy.extractRCImage image Nothing
-  case resp.result of
-    Just result -> do
-      let extractRCNumber = removeSpaceAndDash <$> result.extraction_output.registration_number
-      let rcNumber = removeSpaceAndDash <$> Just vehicleRegistrationCertNumber
-      unless (extractRCNumber == rcNumber) $
-        throwImageError imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
-    Nothing -> throwImageError imageId ImageExtractionFailed
+  when (isNothing dateOfRegistration && configs.checkImageExtraction) $ do
+    case resp.result of
+      Just result -> do
+        let extractRCNumber = removeSpaceAndDash <$> result.extraction_output.registration_number
+        let rcNumber = removeSpaceAndDash <$> Just vehicleRegistrationCertNumber
+        unless (extractRCNumber == rcNumber) $
+          throwImageError imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
+      Nothing -> throwImageError imageId ImageExtractionFailed
 
   now <- getCurrentTime
   mDriverAssociation <- DAQuery.getActiveAssociationByDriver personId
@@ -87,27 +92,31 @@ verifyRC personId req@DriverRCReq {..} = do
       rcNumber <- decrypt driverRC.certificateNumber
       unless (rcNumber == vehicleRegistrationCertNumber) $ throwImageError imageId DriverAlreadyLinked
       unless (driverRC.fitnessExpiry < now) $ throwImageError imageId RCAlreadyUpdated -- RC not expired
-      verifyRCFlow personId vehicleRegistrationCertNumber imageId
+      verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration resp
     Nothing -> do
       mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber
       case mVehicleRC of
         Just vehicleRC -> do
           mRCAssociation <- DAQuery.getActiveAssociationByRC vehicleRC.id
           when (isJust mRCAssociation) $ throwImageError imageId RCAlreadyLinked
-          verifyRCFlow personId vehicleRegistrationCertNumber imageId
+          verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration resp
         Nothing -> do
-          verifyRCFlow personId vehicleRegistrationCertNumber imageId
+          verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration resp
 
   return Success
 
-verifyRCFlow :: Id Person.Person -> Text -> Id Image.Image -> Flow ()
-verifyRCFlow personId rcNumber imageId = do
+verifyRCFlow :: Id Person.Person -> Text -> Id Image.Image -> Maybe UTCTime -> RCExtractResponse -> Flow ()
+verifyRCFlow personId rcNumber imageId dateOfRegistration rcExtRes = do
   now <- getCurrentTime
+  encryptedRC <- encrypt rcNumber
+  let imageExtractionValidation = case rcExtRes.result of
+        Just _x -> Domain.Success
+        Nothing -> Domain.Failure
   idfyRes <- Idfy.verifyRC rcNumber
-  idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now
+  idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now imageExtractionValidation encryptedRC
   runTransaction $ IVQuery.create idfyVerificationEntity
   where
-    mkIdfyVerificationEntity requestId now = do
+    mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedRC = do
       id <- generateGUID
       return $
         Domain.IdfyVerification
@@ -117,6 +126,9 @@ verifyRCFlow personId rcNumber imageId = do
             documentImageId2 = Nothing,
             requestId,
             docType = Image.VehicleRegistrationCertificate,
+            documentNumber = encryptedRC,
+            imageExtractionValidation = imageExtractionValidation,
+            issueDateOnDoc = dateOfRegistration,
             status = "pending",
             idfyResponse = Nothing,
             createdAt = now,
@@ -134,6 +146,10 @@ onVerifyRC verificationReq output = do
   let mbFitnessEpiry = convertTextToUTC output.fitness_upto
 
   let mVehicleRC = createRC driverOnboardingConfigs output id verificationReq.documentImageId1 now <$> mEncryptedRC <*> mbFitnessEpiry
+  when (isNothing verificationReq.issueDateOnDoc || (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc) /= (convertUTCTimetoDate <$> (convertTextToUTC output.registration_date))) $ do
+    let updIdfyVerificationRec = verificationReq{imageExtractionValidation = Domain.Mismatch}
+    runTransaction $ IVQuery.updateIdfyVerificationRec verificationReq.requestId updIdfyVerificationRec >> pure Ack >> pure ()
+
   case mVehicleRC of
     Just vehicleRC -> do
       runTransaction $ RCQuery.upsert vehicleRC
@@ -212,3 +228,6 @@ isValidCOVRC = T.isInfixOf "3WT"
 
 removeSpaceAndDash :: Text -> Text
 removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
+
+convertUTCTimetoDate :: UTCTime -> Text
+convertUTCTimetoDate utctime = T.pack (DT.formatTime DT.defaultTimeLocale "%d/%m/%Y" utctime)
