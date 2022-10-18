@@ -20,6 +20,7 @@ type API =
   "googleMaps"
     :> ( "autoComplete"
            :> TokenAuth
+           :> Header "sessiontoken" Text
            :> MandatoryQueryParam "input" Text
            :> MandatoryQueryParam "location" Text -- Passing it as <latitude>,<longitude>
            :> MandatoryQueryParam "radius" Integer
@@ -27,10 +28,12 @@ type API =
            :> Get '[JSON] GoogleMaps.SearchLocationResp
            :<|> "placeDetails"
              :> TokenAuth
+             :> Header "sessiontoken" Text
              :> MandatoryQueryParam "place_id" Text
              :> Get '[JSON] GoogleMaps.PlaceDetailsResp
            :<|> "getPlaceName"
              :> TokenAuth
+             :> Header "sessiontoken" Text
              :> MandatoryQueryParam "latlng" Text -- Passing it as <latitude>,<longitude>
              :> QueryParam "language" Text
              :> Get '[JSON] GoogleMaps.GetPlaceNameResp
@@ -42,22 +45,22 @@ handler =
     :<|> placeDetails
     :<|> getPlaceName
 
-autoComplete :: Id Person.Person -> Text -> Text -> Integer -> Text -> FlowHandler GoogleMaps.SearchLocationResp
-autoComplete personId input location radius lang = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+autoComplete :: Id Person.Person -> Maybe Text -> Text -> Text -> Integer -> Text -> FlowHandler GoogleMaps.SearchLocationResp
+autoComplete personId sessiontoken input location radius lang = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
   let components = "country:in"
-  ClientGoogleMaps.autoComplete url apiKey input location radius components lang
+  ClientGoogleMaps.autoComplete url apiKey input sessiontoken location radius components lang
 
-placeDetails :: Id Person.Person -> Text -> FlowHandler GoogleMaps.PlaceDetailsResp
-placeDetails personId placeId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+placeDetails :: Id Person.Person -> Maybe Text -> Text -> FlowHandler GoogleMaps.PlaceDetailsResp
+placeDetails personId sessiontoken placeId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
   let fields = "geometry"
-  ClientGoogleMaps.placeDetails url apiKey placeId fields
+  ClientGoogleMaps.placeDetails url sessiontoken apiKey placeId fields
 
-getPlaceName :: Id Person.Person -> Text -> Maybe Text -> FlowHandler GoogleMaps.GetPlaceNameResp
-getPlaceName personId latLng lang = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+getPlaceName :: Id Person.Person -> Maybe Text -> Text -> Maybe Text -> FlowHandler GoogleMaps.GetPlaceNameResp
+getPlaceName personId sessiontoken latLng lang = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
-  ClientGoogleMaps.getPlaceName url latLng apiKey $ GoogleMaps.toMbLanguage lang
+  ClientGoogleMaps.getPlaceName url sessiontoken latLng apiKey $ GoogleMaps.toMbLanguage lang

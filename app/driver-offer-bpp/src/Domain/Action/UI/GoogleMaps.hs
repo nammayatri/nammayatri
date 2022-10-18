@@ -12,10 +12,11 @@ import Tools.Metrics
 
 getPlaceName ::
   (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) =>
+  Maybe Text ->
   Text ->
   Maybe GoogleMaps.Language ->
   m GoogleMaps.GetPlaceNameResp
-getPlaceName latLng language = do
+getPlaceName sessiontoken latLng language = do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
-  ClientGoogleMaps.getPlaceName url latLng apiKey language
+  ClientGoogleMaps.getPlaceName url sessiontoken latLng apiKey language

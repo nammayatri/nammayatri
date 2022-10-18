@@ -42,8 +42,8 @@ data DSelectReq = DSelectReq
 
 type LanguageDictionary = M.Map GoogleMaps.Language DSearchReq.SearchRequest
 
-handler :: Id DOrg.Organization -> DSelectReq -> Flow ()
-handler orgId sReq = do
+handler :: Text -> Id DOrg.Organization -> DSelectReq -> Flow ()
+handler sessiontoken orgId sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
   driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId False
@@ -60,7 +60,7 @@ handler orgId sReq = do
       <> "; estimated base fare:"
       <> show baseFare
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare distance) driverPool
-  languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
+  languageDictionary <- foldM (addLanguageToDictionary sessiontoken searchReq) M.empty driverPool
   Esq.runTransaction $ do
     QSReq.create searchReq
     mapM_ QSRD.create searchRequestsForDrivers
@@ -144,12 +144,13 @@ translateSearchReq ::
     GoogleMaps.HasGoogleMaps m r,
     CoreMetrics m
   ) =>
+  Text ->
   DSearchReq.SearchRequest ->
   GoogleMaps.Language ->
   m DSearchReq.SearchRequest
-translateSearchReq defaultSearchReq@DSearchReq.SearchRequest {..} language = do
-  from <- buildLocWithAddr defaultSearchReq.fromLocation language
-  to <- buildLocWithAddr defaultSearchReq.toLocation language
+translateSearchReq sessiontoken defaultSearchReq@DSearchReq.SearchRequest {..} language = do
+  from <- buildLocWithAddr sessiontoken defaultSearchReq.fromLocation language
+  to <- buildLocWithAddr sessiontoken defaultSearchReq.toLocation language
   pure
     DSearchReq.SearchRequest
       { fromLocation = from,
@@ -162,13 +163,14 @@ buildLocWithAddr ::
     GoogleMaps.HasGoogleMaps m r,
     CoreMetrics m
   ) =>
+  Text ->
   DLoc.SearchReqLocation ->
   GoogleMaps.Language ->
   m DLoc.SearchReqLocation
-buildLocWithAddr searchReqLoc@DLoc.SearchReqLocation {..} language = do
+buildLocWithAddr sessiontoken searchReqLoc@DLoc.SearchReqLocation {..} language = do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
-  placeNameResp <- ClientGoogleMaps.getPlaceName url (show lat <> "," <> show lon) apiKey (Just language)
+  placeNameResp <- ClientGoogleMaps.getPlaceName url (Just sessiontoken) (show lat <> "," <> show lon) apiKey (Just language)
   mkAddress <- mkLocation placeNameResp
   buildSearchReqLocation (buildSearchReqLocationAPIEntity mkAddress lat lon)
 
@@ -180,14 +182,15 @@ addLanguageToDictionary ::
     GoogleMaps.HasGoogleMaps m r,
     CoreMetrics m
   ) =>
+  Text ->
   DSearchReq.SearchRequest ->
   LanguageDictionary ->
   GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong ->
   m LanguageDictionary
-addLanguageToDictionary searchReq dict dPoolRes = do
+addLanguageToDictionary sessiontoken searchReq dict dPoolRes = do
   let language = fromMaybe GoogleMaps.ENGLISH dPoolRes.origin.language
   if isJust $ M.lookup language dict
     then return dict
     else do
-      translatedSearchReq <- translateSearchReq searchReq language
+      translatedSearchReq <- translateSearchReq sessiontoken searchReq language
       pure $ M.insert language translatedSearchReq dict

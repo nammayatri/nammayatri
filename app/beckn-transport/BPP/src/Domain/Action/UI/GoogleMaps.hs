@@ -14,26 +14,27 @@ import Beckn.Utils.Common (MonadFlow)
 import EulerHS.Prelude
 import Tools.Metrics
 
-autoComplete :: (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) => Text -> Text -> Integer -> Text -> m GoogleMaps.SearchLocationResp
-autoComplete input location radius lang = do
+autoComplete :: (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) => Maybe Text -> Text -> Text -> Integer -> Text -> m GoogleMaps.SearchLocationResp
+autoComplete sessiontoken input location radius lang = do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
   let components = "country:in"
-  ClientGoogleMaps.autoComplete url apiKey input location radius components lang
+  ClientGoogleMaps.autoComplete url apiKey input sessiontoken location radius components lang
 
-placeDetails :: (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) => Text -> m GoogleMaps.PlaceDetailsResp
-placeDetails placeId = do
+placeDetails :: (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) => Maybe Text -> Text -> m GoogleMaps.PlaceDetailsResp
+placeDetails sessiontoken placeId = do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
   let fields = "geometry"
-  ClientGoogleMaps.placeDetails url apiKey placeId fields
+  ClientGoogleMaps.placeDetails url sessiontoken apiKey placeId fields
 
 getPlaceName ::
   (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) =>
+  Maybe Text ->
   Text ->
   Maybe Text ->
   m GoogleMaps.GetPlaceNameResp
-getPlaceName latLng lang = do
+getPlaceName sessiontoken latLng lang = do
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
-  ClientGoogleMaps.getPlaceName url latLng apiKey $ GoogleMaps.toMbLanguage lang
+  ClientGoogleMaps.getPlaceName url sessiontoken latLng apiKey $ GoogleMaps.toMbLanguage lang

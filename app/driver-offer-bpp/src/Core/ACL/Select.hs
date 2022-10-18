@@ -21,10 +21,11 @@ buildSelectReq ::
     GoogleMaps.HasGoogleMaps m r,
     CoreMetrics m
   ) =>
+  Text ->
   Subscriber.Subscriber ->
   Select.SelectReq ->
   m DSelect.DSelectReq
-buildSelectReq subscriber req = do
+buildSelectReq sessiontoken subscriber req = do
   let context = req.context
   validateContext Context.SELECT context
   let order = req.message.order
@@ -40,10 +41,10 @@ buildSelectReq subscriber req = do
     _ -> throwError $ InvalidRequest "There should be only one item"
   url <- asks (.googleMapsUrl)
   apiKey <- asks (.googleMapsKey)
-  pickupRes <- ClientGoogleMaps.getPlaceName url (show (pickup.location.gps.lat) <> "," <> show (pickup.location.gps.lon)) apiKey Nothing
+  pickupRes <- ClientGoogleMaps.getPlaceName url (Just sessiontoken) (show (pickup.location.gps.lat) <> "," <> show (pickup.location.gps.lon)) apiKey Nothing
   pickUpAddress <- mkLocation pickupRes
   pickupLocation <- buildSearchReqLocationAPIEntity pickUpAddress (pickup.location.gps.lat) (pickup.location.gps.lon)
-  dropOffRes <- ClientGoogleMaps.getPlaceName url (show (dropOff.location.gps.lat) <> "," <> show (dropOff.location.gps.lon)) apiKey Nothing
+  dropOffRes <- ClientGoogleMaps.getPlaceName url (Just sessiontoken) (show (dropOff.location.gps.lat) <> "," <> show (dropOff.location.gps.lon)) apiKey Nothing
   dropOffAddress <- mkLocation dropOffRes
   dropLocation <- buildSearchReqLocationAPIEntity dropOffAddress (dropOff.location.gps.lat) (dropOff.location.gps.lon)
   pure

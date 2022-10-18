@@ -19,6 +19,7 @@ type API =
   "googleMaps"
     :> ( "autoComplete"
            :> TokenAuth
+           :> Header "sessiontoken" Text
            :> MandatoryQueryParam "input" Text
            :> MandatoryQueryParam "location" Text -- Passing it as <latitude>,<longitude>
            :> MandatoryQueryParam "radius" Integer
@@ -26,10 +27,12 @@ type API =
            :> Get '[JSON] GoogleMaps.SearchLocationResp
            :<|> "placeDetails"
              :> TokenAuth
+             :> Header "sessiontoken" Text
              :> MandatoryQueryParam "place_id" Text
              :> Get '[JSON] GoogleMaps.PlaceDetailsResp
            :<|> "getPlaceName"
              :> TokenAuth
+             :> Header "sessiontoken" Text
              :> MandatoryQueryParam "latlng" Text -- Passing it as <latitude>,<longitude>
              :> QueryParam "language" Text
              :> Get '[JSON] GoogleMaps.GetPlaceNameResp
@@ -41,11 +44,11 @@ handler =
     :<|> placeDetails
     :<|> getPlaceName
 
-autoComplete :: Id SP.Person -> Text -> Text -> Integer -> Text -> FlowHandler SearchLocationResp
-autoComplete _ input location radius = withFlowHandlerAPI . DGoogleMaps.autoComplete input location radius
+autoComplete :: Id SP.Person -> Maybe Text -> Text -> Text -> Integer -> Text -> FlowHandler SearchLocationResp
+autoComplete _ sessiontoken input location radius = withFlowHandlerAPI . DGoogleMaps.autoComplete sessiontoken input location radius
 
-placeDetails :: Id SP.Person -> Text -> FlowHandler PlaceDetailsResp
-placeDetails _ = withFlowHandlerAPI . DGoogleMaps.placeDetails
+placeDetails :: Id SP.Person -> Maybe Text -> Text -> FlowHandler PlaceDetailsResp
+placeDetails _ sessiontoken = withFlowHandlerAPI . DGoogleMaps.placeDetails sessiontoken
 
-getPlaceName :: Id SP.Person -> Text -> Maybe Text -> FlowHandler GetPlaceNameResp
-getPlaceName _ latlng lang = withFlowHandlerAPI $ DGoogleMaps.getPlaceName latlng lang
+getPlaceName :: Id SP.Person -> Maybe Text -> Text -> Maybe Text -> FlowHandler GetPlaceNameResp
+getPlaceName _ sessiontoken latlng lang = withFlowHandlerAPI $ DGoogleMaps.getPlaceName sessiontoken latlng lang
