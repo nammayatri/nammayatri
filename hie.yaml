@@ -102,6 +102,9 @@ cradle:
     - path: "app/dashboard/Lib/src"
       component: "lib-dashboard:lib"
 
+    - path: "app/dashboard/CommonAPIs/src"
+      component: "dashboard-bpp-helper-api:lib"
+
     - path: "app/example-service/src"
       component: "example-service:lib"
 
@@ -216,5 +219,4 @@ cradle:
     - path: "app/utils/route-extractor/app/Paths_route_extractor.hs"
       component: "route-extractor:exe:route-extractor-exe"
 
-    - path: "lib/dashboard-bpp-helper-api/src"
-      component: "dashboard-bpp-helper-api:lib"
+
