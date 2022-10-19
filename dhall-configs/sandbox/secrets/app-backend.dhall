@@ -3,4 +3,5 @@
 , smsOtpHash = "xxxxxxx"
 , signingKey = "xxxxxxx"
 , encHashSalt = "xxxxxxx"
+, dashboardToken = "xxxxxxx"
 }

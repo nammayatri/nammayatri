@@ -108,4 +108,5 @@ in
 , kafkaProducerCfg = kafkaProducerCfg
 , rideCfg = rideConfig
 , cacheConfig = cacheConfig
+, dashboardToken = sec.dashboardToken
 }

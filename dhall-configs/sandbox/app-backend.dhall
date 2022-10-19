@@ -93,4 +93,5 @@ in  { esqDBCfg
     , kafkaProducerCfg
     , rideCfg = rideConfig
     , cacheConfig = cacheConfig
+    , dashboardToken = sec.dashboardToken
     }

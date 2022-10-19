@@ -130,4 +130,5 @@ in
 , defaultDropLocThreshold = +500
 , cacheConfig = cacheConfig
 , metricsSearchDurationTimeout = +45
+, dashboardToken = sec.dashboardToken
 }

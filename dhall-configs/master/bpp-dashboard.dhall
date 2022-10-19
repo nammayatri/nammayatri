@@ -1,0 +1,62 @@
+let common = ./common.dhall
+let sec = ./secrets/bpp-dashboard.dhall
+
+let esqDBCfg =
+  { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+  , connectPort = 5432
+  , connectUser = sec.dbUserId
+  , connectPassword = sec.dbPassword
+  , connectDatabase = "atlas_bpp_dashboard"
+  , connectSchemaName = "atlas_bpp_dashboard"
+  }
+
+let rcfg =
+  { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
+  , connectPort = 6379
+  , connectAuth = None Text
+  , connectDatabase = +1
+  , connectMaxConnections = +50
+  , connectMaxIdleTime = +30
+  , connectTimeout = Some +100
+  }
+
+let apiRateLimitOptions =
+  { limit = +4
+  , limitResetTimeInSec = +600
+  }
+
+let encTools =
+  { service = common.passetto
+  , hashSalt = sec.encHashSalt
+  }
+
+let ServerName = < APP_BACKEND_YATRI | APP_BACKEND_ARDU | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
+
+let becknTransport =
+  { name = ServerName.BECKN_TRANSPORT
+  , url = "https://api.sandbox.beckn.juspay.in/dev/bpp/dashboard/"
+  , token = sec.becknTransportToken
+  }
+
+let driverOfferBpp =
+  { name = ServerName.DRIVER_OFFER_BPP
+  , url = "https://api.sandbox.beckn.juspay.in/dev/dobpp/dashboard/"
+  , token = sec.driverOfferBppToken
+  }
+
+in
+
+{ esqDBCfg = esqDBCfg
+, redisCfg = rcfg
+, port = +8018
+, migrationPath = None Text
+, autoMigrate = common.autoMigrate
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/bpp-dashboard.log"}
+, graceTerminationPeriod = +90
+, apiRateLimitOptions = apiRateLimitOptions
+, httpClientOptions = common.httpClientOptions
+, authTokenCacheExpiry = +600 --seconds
+, registrationTokenExpiry = +365 --days
+, encTools = encTools
+, dataServers = [becknTransport, driverOfferBpp]
+}
