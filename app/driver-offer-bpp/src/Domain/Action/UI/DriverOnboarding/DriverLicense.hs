@@ -33,7 +33,6 @@ import qualified Domain.Types.Person as Person
 import Environment
 import qualified Idfy.Flow as Idfy
 import qualified Idfy.Types as Idfy
-import Idfy.Types.Response (DLExtractResponse)
 import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
@@ -76,8 +75,8 @@ verifyDL personId req@DriverDLReq {..} = do
   image1 <- getImage imageId1
   image2 <- getImage `mapM` imageId2
   configs <- asks (.driverOnboardingConfigs)
-  resp <- Idfy.extractDLImage image1 image2
   when (isNothing dateOfIssue && configs.checkImageExtraction) $ do
+    resp <- Idfy.extractDLImage image1 image2
     case resp.result of
       Just result -> do
         let extractDLNumber = removeSpaceAndDash <$> result.extraction_output.id_number
@@ -91,27 +90,30 @@ verifyDL personId req@DriverDLReq {..} = do
     Just driverLicense -> do
       unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
       unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue resp
+      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
     Nothing -> do
       mDriverDL <- Query.findByDriverId personId
       when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
-      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue resp
+      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
     getImage imageId = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
       unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
+      unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
       unless (imageMetadata.imageType == Image.DriverLicense) $
         throwError (ImageInvalidType (show Image.DriverLicense) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-verifyDLFlow :: Id Person.Person -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> DLExtractResponse -> Flow ()
-verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue dlExtRes = do
+verifyDLFlow :: Id Person.Person -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Flow ()
+verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue = do
   now <- getCurrentTime
-  let imageExtractionValidation = case dlExtRes.result of
-        Just _x -> Domain.Success
-        Nothing -> Domain.Failure
+  configs <- asks (.driverOnboardingConfigs)
+  let imageExtractionValidation =
+        if isNothing dateOfIssue && configs.checkImageExtraction
+          then Domain.Success
+          else Domain.Skipped
   idfyRes <- Idfy.verifyDL dlNumber driverDateOfBirth
   encryptedDL <- encrypt dlNumber
   idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now imageExtractionValidation encryptedDL
@@ -139,24 +141,30 @@ verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue d
 onVerifyDL :: Domain.IdfyVerification -> Idfy.DLVerificationOutput -> Flow AckResponse
 onVerifyDL verificationReq output = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
-  now <- getCurrentTime
-  id <- generateGUID
-  configs <- asks (.driverOnboardingConfigs)
 
-  mEncryptedDL <- encrypt `mapM` output.id_number
-  let mLicenseExpiry = convertTextToUTC output.nt_validity_to
-  let mDriverLicense = createDL configs person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
-  when (isNothing verificationReq.issueDateOnDoc || (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc) /= (convertUTCTimetoDate <$> (convertTextToUTC output.date_of_issue))) $ do
-    let updIdfyVerificationRec = verificationReq{imageExtractionValidation = Domain.Mismatch}
-    runTransaction $ IVQuery.updateIdfyVerificationRec verificationReq.requestId updIdfyVerificationRec >> pure Ack >> return ()
-  case mDriverLicense of
-    Just driverLicense -> do
-      runTransaction $ Query.upsert driverLicense
-      case driverLicense.driverName of
-        Just name_ -> runTransaction $ Person.updateName person.id name_
-        Nothing -> return ()
-      return Ack
-    Nothing -> return Ack
+  if verificationReq.imageExtractionValidation == Domain.Skipped
+    && isJust verificationReq.issueDateOnDoc
+    && ( (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc)
+           /= (convertUTCTimetoDate <$> (convertTextToUTC output.date_of_issue))
+       )
+    then runTransaction $ IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> pure Ack
+    else do
+      now <- getCurrentTime
+      id <- generateGUID
+      configs <- asks (.driverOnboardingConfigs)
+
+      mEncryptedDL <- encrypt `mapM` output.id_number
+      let mLicenseExpiry = convertTextToUTC output.nt_validity_to
+      let mDriverLicense = createDL configs person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
+
+      case mDriverLicense of
+        Just driverLicense -> do
+          runTransaction $ Query.upsert driverLicense
+          case driverLicense.driverName of
+            Just name_ -> runTransaction $ Person.updateName person.id name_
+            Nothing -> return ()
+          return Ack
+        Nothing -> return Ack
 
 createDL ::
   DriverOnboardingConfigs ->

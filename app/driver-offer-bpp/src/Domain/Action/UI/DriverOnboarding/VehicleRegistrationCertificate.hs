@@ -33,7 +33,6 @@ import qualified Domain.Types.Person as Person
 import Environment
 import qualified Idfy.Flow as Idfy
 import qualified Idfy.Types as Idfy
-import Idfy.Types.Response (RCExtractResponse)
 import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
@@ -68,13 +67,14 @@ verifyRC personId req@DriverRCReq {..} = do
 
   imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
   unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
+  unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
   unless (imageMetadata.imageType == Image.VehicleRegistrationCertificate) $
     throwError (ImageInvalidType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
 
-  image <- S3.get (T.unpack imageMetadata.s3Path)
   configs <- asks (.driverOnboardingConfigs)
-  resp <- Idfy.extractRCImage image Nothing
   when (isNothing dateOfRegistration && configs.checkImageExtraction) $ do
+    image <- S3.get (T.unpack imageMetadata.s3Path)
+    resp <- Idfy.extractRCImage image Nothing
     case resp.result of
       Just result -> do
         let extractRCNumber = removeSpaceAndDash <$> result.extraction_output.registration_number
@@ -92,26 +92,28 @@ verifyRC personId req@DriverRCReq {..} = do
       rcNumber <- decrypt driverRC.certificateNumber
       unless (rcNumber == vehicleRegistrationCertNumber) $ throwImageError imageId DriverAlreadyLinked
       unless (driverRC.fitnessExpiry < now) $ throwImageError imageId RCAlreadyUpdated -- RC not expired
-      verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration resp
+      verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration
     Nothing -> do
       mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber
       case mVehicleRC of
         Just vehicleRC -> do
           mRCAssociation <- DAQuery.getActiveAssociationByRC vehicleRC.id
           when (isJust mRCAssociation) $ throwImageError imageId RCAlreadyLinked
-          verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration resp
+          verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration
         Nothing -> do
-          verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration resp
+          verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration
 
   return Success
 
-verifyRCFlow :: Id Person.Person -> Text -> Id Image.Image -> Maybe UTCTime -> RCExtractResponse -> Flow ()
-verifyRCFlow personId rcNumber imageId dateOfRegistration rcExtRes = do
+verifyRCFlow :: Id Person.Person -> Text -> Id Image.Image -> Maybe UTCTime -> Flow ()
+verifyRCFlow personId rcNumber imageId dateOfRegistration = do
   now <- getCurrentTime
   encryptedRC <- encrypt rcNumber
-  let imageExtractionValidation = case rcExtRes.result of
-        Just _x -> Domain.Success
-        Nothing -> Domain.Failure
+  configs <- asks (.driverOnboardingConfigs)
+  let imageExtractionValidation =
+        if isNothing dateOfRegistration && configs.checkImageExtraction
+          then Domain.Success
+          else Domain.Skipped
   idfyRes <- Idfy.verifyRC rcNumber
   idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now imageExtractionValidation encryptedRC
   runTransaction $ IVQuery.create idfyVerificationEntity
@@ -138,32 +140,36 @@ verifyRCFlow personId rcNumber imageId dateOfRegistration rcExtRes = do
 onVerifyRC :: Domain.IdfyVerification -> Idfy.RCVerificationOutput -> Flow AckResponse
 onVerifyRC verificationReq output = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
-  now <- getCurrentTime
-  id <- generateGUID
-  driverOnboardingConfigs <- asks (.driverOnboardingConfigs)
 
-  mEncryptedRC <- encrypt `mapM` output.registration_number
-  let mbFitnessEpiry = convertTextToUTC output.fitness_upto
+  if verificationReq.imageExtractionValidation == Domain.Skipped
+    && isJust verificationReq.issueDateOnDoc
+    && ( (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc)
+           /= (convertUTCTimetoDate <$> (convertTextToUTC output.registration_date))
+       )
+    then runTransaction $ IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> return Ack
+    else do
+      now <- getCurrentTime
+      id <- generateGUID
+      driverOnboardingConfigs <- asks (.driverOnboardingConfigs)
 
-  let mVehicleRC = createRC driverOnboardingConfigs output id verificationReq.documentImageId1 now <$> mEncryptedRC <*> mbFitnessEpiry
-  when (isNothing verificationReq.issueDateOnDoc || (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc) /= (convertUTCTimetoDate <$> (convertTextToUTC output.registration_date))) $ do
-    let updIdfyVerificationRec = verificationReq{imageExtractionValidation = Domain.Mismatch}
-    runTransaction $ IVQuery.updateIdfyVerificationRec verificationReq.requestId updIdfyVerificationRec >> pure Ack >> pure ()
+      mEncryptedRC <- encrypt `mapM` output.registration_number
+      let mbFitnessEpiry = convertTextToUTC output.fitness_upto
+      let mVehicleRC = createRC driverOnboardingConfigs output id verificationReq.documentImageId1 now <$> mEncryptedRC <*> mbFitnessEpiry
 
-  case mVehicleRC of
-    Just vehicleRC -> do
-      runTransaction $ RCQuery.upsert vehicleRC
+      case mVehicleRC of
+        Just vehicleRC -> do
+          runTransaction $ RCQuery.upsert vehicleRC
 
-      -- linking to driver
-      rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (InternalError "RC not found")
-      mRCAssociation <- DAQuery.getActiveAssociationByRC rc.id
-      when (isNothing mRCAssociation) $ do
-        currAssoc <- DAQuery.getActiveAssociationByDriver person.id
-        when (isJust currAssoc) $ do runTransaction $ DAQuery.endAssociation person.id
-        driverRCAssoc <- mkAssociation person.id rc.id
-        runTransaction $ DAQuery.create driverRCAssoc
-      return Ack
-    _ -> return Ack
+          -- linking to driver
+          rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (InternalError "RC not found")
+          mRCAssociation <- DAQuery.getActiveAssociationByRC rc.id
+          when (isNothing mRCAssociation) $ do
+            currAssoc <- DAQuery.getActiveAssociationByDriver person.id
+            when (isJust currAssoc) $ do runTransaction $ DAQuery.endAssociation person.id
+            driverRCAssoc <- mkAssociation person.id rc.id
+            runTransaction $ DAQuery.create driverRCAssoc
+          return Ack
+        _ -> return Ack
   where
     mkAssociation driverId rcId = do
       id <- generateGUID

@@ -74,13 +74,13 @@ updateResponse requestId status resp = do
       ]
     where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId
 
-updateIdfyVerificationRec :: Text -> IdfyVerification -> SqlDB ()
-updateIdfyVerificationRec requestId idfyVerification = do
+updateExtractValidationStatus :: Text -> ImageExtractionValidation -> SqlDB ()
+updateExtractValidationStatus requestId status = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ IdfyVerificationImageExtractionValidation =. val idfyVerification.imageExtractionValidation,
+      [ IdfyVerificationImageExtractionValidation =. val status,
         IdfyVerificationUpdatedAt =. val now
       ]
     where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId

@@ -11,7 +11,7 @@ import Domain.Types.Person
 data VerificationStatus = PENDING | VALID | INVALID
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)
 
-data ImageExtractionValidation = Success | Failure | Mismatch
+data ImageExtractionValidation = Success | Skipped | Failed
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)
 
 data IdfyVerificationE e = IdfyVerification
