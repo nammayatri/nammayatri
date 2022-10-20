@@ -3,14 +3,15 @@ version: "3"
 volumes:
   prometheus-volume:
   pgadmin-data:
-
 services:
-  db:
-    image: "postgis/postgis:12-3.0"
-    container_name: "atlas-dev"
+  db-primary:
+    # Refer docs https://github.com/bitnami/containers/tree/main/bitnami/postgresql for postgres replication setup
+    image: bitnami/postgresql:12.3.0
+    container_name: atlas-dev-primary
     ports:
-      - "5434:5432"
+      - 5434:5432
     volumes:
+      - ./sql-seed/pre-init.sql:/docker-entrypoint-initdb.d/0-pre-init.sql:Z
       - ./sql-seed/app-backend-seed.sql:/docker-entrypoint-initdb.d/1-app-backend-seed.sql:Z
       - ./local-testing-data/app-backend.sql:/docker-entrypoint-initdb.d/2-app-backend-testing-data.sql:Z
       - ./sql-seed/transporter-backend-seed.sql:/docker-entrypoint-initdb.d/1-transporter-backend-seed.sql:Z
@@ -26,13 +27,34 @@ services:
       - ./local-testing-data/bap-dashboard.sql:/docker-entrypoint-initdb.d/2-bap-dashboard-testing-data.sql:Z
       - ./sql-seed/bpp-dashboard-seed.sql:/docker-entrypoint-initdb.d/1-bpp-dashboard-seed.sql:Z
       - ./local-testing-data/bpp-dashboard.sql:/docker-entrypoint-initdb.d/2-bpp-dashboard-testing-data.sql:Z
-
     environment:
-      - POSTGRES_DB=atlas_dev
-      - POSTGRES_USER=atlas
-      - POSTGRES_PASSWORD=atlas
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
+      - BITNAMI_DEBUG=true
+      - POSTGRESQL_INITSCRIPTS_USERNAME=postgres
+      - POSTGRESQL_INITSCRIPTS_PASSWORD=root
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
+      - POSTGRESQL_USERNAME=atlas
+      - POSTGRESQL_PASSWORD=atlas
+      - POSTGRESQL_DATABASE=atlas_dev
+      - POSTGRESQL_POSTGRES_PASSWORD=root
+
+  db-replica:
+    image: bitnami/postgresql:12.3.0
+    container_name: atlas-dev-replica
+    ports:
+      - 5435:5432
+    depends_on:
+      - db-primary
+    environment:
+      - BITNAMI_DEBUG=true
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_password
+      - POSTGRESQL_MASTER_HOST=db-primary
+      - POSTGRESQL_PASSWORD=atlas
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+
   redis:
     image: "redis:5"
     ports:
@@ -115,7 +137,6 @@ services:
       - 8080:80
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-
 
   pg-admin:
     image: dpage/pgadmin4
