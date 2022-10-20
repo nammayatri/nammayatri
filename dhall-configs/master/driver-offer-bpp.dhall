@@ -44,8 +44,8 @@ let smsConfig =
       }
 
 let geofencingConfig =
-      { origin = GeoRestriction.Regions [ "Ernakulam" ]
-      , destination = GeoRestriction.Regions [ "Ernakulam", "Kerala" ]
+      { origin = GeoRestriction.Regions ["Karnataka"]
+      , destination = GeoRestriction.Regions ["Karnataka"]
       }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
@@ -136,4 +136,5 @@ in  { esqDBCfg
     , driverPoolLimit = Some +4
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
+    , geofencingConfig = geofencingConfig
     }

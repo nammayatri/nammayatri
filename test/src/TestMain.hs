@@ -100,7 +100,7 @@ specs' trees = do
         DriverHC.runDriverHealthcheck hideLogging,
         Gateway.runGateway hideLogging,
         do
-          runAppFlow "" $ Esq.runTransaction $ updateOrigAndDestRestriction ["Ernakulam", "Kochi"] ["Kerala", "Kochi"]
+          runAppFlow "" $ Esq.runTransaction $ updateOrigAndDestRestriction ["Ernakulam", "Kochi", "Karnataka"] ["Kerala", "Kochi", "Karnataka"]
           AppBackend.runAppBackend $
             \cfg ->
               cfg & hideLogging,

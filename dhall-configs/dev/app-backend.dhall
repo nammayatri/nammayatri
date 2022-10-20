@@ -1,8 +1,6 @@
 let common = ./common.dhall
 let sec = ./secrets/app-backend.dhall
 
-let GeoRestriction = < Unrestricted | Regions : List Text>
-
 let esqDBCfg =
   { connectHost = "localhost"
   , connectPort = 5434

@@ -22,8 +22,8 @@ ernakulamLocation = LatLong 10.0739 76.2733
 keralaLocation :: LatLong
 keralaLocation = LatLong 10.5449 76.4356
 
-karnatakaLocation :: LatLong
-karnatakaLocation = LatLong 12.4725 75.8328
+goaLocation :: LatLong
+goaLocation = LatLong 15.404242 74.015735
 
 verifyServiceability :: (Eq a, Show a) => a -> Either ClientError a -> IO ()
 verifyServiceability expectedValue = \case
@@ -56,7 +56,7 @@ nonServiceableDestination appClientEnv =
   runClient appClientEnv (destinationServiceability appRegistrationToken req)
     >>= verifyServiceability (ServiceabilityRes False)
   where
-    req = ServiceabilityReq karnatakaLocation
+    req = ServiceabilityReq goaLocation
 
 nonServiceableSearchRequest :: ClientEnv -> IO ()
 nonServiceableSearchRequest appClientEnv = do
@@ -65,7 +65,7 @@ nonServiceableSearchRequest appClientEnv = do
           AppBESearch.OneWaySearch $
             req
               & #origin . #gps .~ keralaLocation
-              & #destination . #gps .~ karnatakaLocation
+              & #destination . #gps .~ goaLocation
         AppBESearch.RentalSearch req ->
           AppBESearch.RentalSearch $
             req

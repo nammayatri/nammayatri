@@ -1,8 +1,9 @@
 module Domain.Action.Beckn.Search where
 
 import Beckn.Prelude
-import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
+import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
+import Beckn.Serviceability
 import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -22,6 +23,7 @@ import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Organization as CQOrg
+import qualified Storage.Queries.Geometry as QGeometry
 import Storage.Queries.Person (DriverPoolResult)
 import qualified Storage.Queries.Person as QP
 import System.Random
@@ -69,6 +71,11 @@ handler orgId sReq = do
   searchMetricsMVar <- Metrics.startSearchMetrics org.name
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
+  let pickupLatLong = getCoordinates fromLocation
+  let mbDropoffLatLong = Just $ getCoordinates toLocation
+  unlessM (rideServiceableDefault QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
+    throwError RideNotServiceable
+
   distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation)
   let distance = distRes.distance
   logDebug $ "distance: " <> show distance

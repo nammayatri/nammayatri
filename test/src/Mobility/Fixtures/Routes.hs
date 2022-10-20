@@ -41,6 +41,19 @@ locationUpdatesRoute1 =
               ]
        ]
 
+karnatakaLocationUpdates :: LocationUpdates
+karnatakaLocationUpdates =
+  (LatLong 14.445332 75.919028 :| [])
+    :| [ LatLong 14.445488 75.919687
+           :| [ LatLong 14.445093 75.919955,
+                LatLong 14.444636 75.920288
+              ],
+         LatLong 14.444491 75.920846
+           :| [ LatLong 14.443816 75.921533,
+                LatLong 14.441555 75.922259
+              ]
+       ]
+
 searchReqFromUpdatesList :: LocationUpdates -> (LatLong, LatLong, SearchReq)
 searchReqFromUpdatesList updList =
   let origin = NE.head $ NE.head updList
@@ -53,9 +66,25 @@ searchReqFromUpdatesList updList =
             }
    in (origin, destination, req)
 
+mkSearchReqFromLocations :: LatLong -> LatLong -> (LatLong, LatLong, SearchReq)
+mkSearchReqFromLocations origin destination =
+  let req =
+        OneWaySearch $
+          OneWaySearchReq
+            { origin = SearchReqLocation origin defaultSearchReqAddress,
+              destination = SearchReqLocation destination defaultSearchReqAddress
+            }
+   in (origin, destination, req)
+
 {-# NOINLINE route1SearchRequest #-}
 route1SearchRequest :: (LatLong, LatLong, SearchReq)
 route1SearchRequest = searchReqFromUpdatesList locationUpdatesRoute1
+
+karnatakaSearchReq :: (LatLong, LatLong, SearchReq)
+karnatakaSearchReq =
+  mkSearchReqFromLocations
+    (LatLong 14.467318 75.919232)
+    (LatLong 14.479898 75.915455)
 
 -- test case from production
 locationUpdatesIsolatedPoint :: LocationUpdates
@@ -231,6 +260,31 @@ locationUpdatesIsolatedPoint =
            LatLong 10.0440607 76.2777709,
            LatLong 10.0440626 76.2777709,
            LatLong 10.0440559 76.2777709
+         ]
+  )
+    :| []
+
+karnatakaRouteIsolatedPoint :: LocationUpdates
+karnatakaRouteIsolatedPoint =
+  ( LatLong 14.445983 75.947267
+      :| [ LatLong 14.451126 75.941377,
+           LatLong (-7.1629128) 68.7651748, -- isolated point
+           LatLong 14.454492 75.937407,
+           LatLong 14.456559 75.935100,
+           LatLong 14.458554 75.932686,
+           LatLong 14.460538 75.930358,
+           LatLong 14.462792 75.927805,
+           LatLong 14.465867 75.924243,
+           LatLong 14.466937 75.922956,
+           LatLong 14.467238 75.917345,
+           LatLong 14.468152 75.912914,
+           LatLong 14.468993 75.909095,
+           LatLong 14.469824 75.904825,
+           LatLong 14.470738 75.901027,
+           LatLong 14.472213 75.894568,
+           LatLong 14.472909 75.890845,
+           LatLong 14.473428 75.888581,
+           LatLong 14.472649 75.888420
          ]
   )
     :| []

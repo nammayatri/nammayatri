@@ -62,8 +62,8 @@ let smsConfig =
   }
 
 let geofencingConfig =
-{ origin = GeoRestriction.Unrestricted
-, destination = GeoRestriction.Unrestricted
+{ origin = GeoRestriction.Regions ["Karnataka"]
+, destination = GeoRestriction.Regions ["Karnataka"]
 }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
@@ -128,4 +128,5 @@ in
 , driverPoolLimit = Some +10
 , driverLocationUpdateRateLimitOptions
 , driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
+, geofencingConfig = geofencingConfig
 }

@@ -24,7 +24,7 @@ spec = do
 
 driverOffersTwice :: ClientEnvs -> IO ()
 driverOffersTwice clients = withBecknClients clients $ do
-  let (origin, _, searchReq') = route1SearchRequest
+  let (origin, _, searchReq') = karnatakaSearchReq
 
   Utils.setupDriver arduDriver1 origin
 
@@ -43,7 +43,7 @@ driverOffersTwice clients = withBecknClients clients $ do
 
 driverOffersOnRide :: ClientEnvs -> IO ()
 driverOffersOnRide clients = withBecknClients clients $ do
-  let (origin, destination, searchReq) = route1SearchRequest
+  let (origin, destination, searchReq) = karnatakaSearchReq
 
   Utils.setupDriver arduDriver1 origin
   scRes <- Utils.search'Confirm appRegistrationToken arduDriver1 searchReq

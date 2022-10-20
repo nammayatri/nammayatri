@@ -43,6 +43,11 @@ let smsConfig =
       , sender = "JUSPAY"
       }
 
+let geofencingConfig =
+{ origin = GeoRestriction.Regions ["Karnataka"]
+, destination = GeoRestriction.Regions ["Karnataka"]
+}
+
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let slackCfg = { channelName = "#beckn-driver-onboard-test", slackToken = common.slackToken }
@@ -123,4 +128,5 @@ in  { esqDBCfg = esqDBCfg
     , driverPoolLimit = Some +10
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
+    , geofencingConfig = geofencingConfig
     }

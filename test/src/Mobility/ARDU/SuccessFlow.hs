@@ -20,15 +20,15 @@ spec = do
   describe "Successful flow, location updates" $
     after_ (Utils.resetDriver arduDriver1) $ do
       it "Testing success flow and location updates for short curvy route" $
-        defaultSuccessFlow 10 680 680 locationUpdatesRoute1 clients
+        defaultSuccessFlow 30 680 680 karnatakaLocationUpdates clients
       it "Testing success flow and location updates for the route with far isolated point" $
-        defaultSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+        defaultSuccessFlow 700 8000 8000 karnatakaRouteIsolatedPoint clients
       it "Testing success flow and location updates with reversed points list" $
-        reversedPointsListSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+        reversedPointsListSuccessFlow 700 8000 8000 karnatakaRouteIsolatedPoint clients
       it "Testing success flow and location updates with outdated points" $
-        outdatedPointsSuccessFlow 800 3768 8350 locationUpdatesIsolatedPoint clients
+        outdatedPointsSuccessFlow 700 7000 8000 karnatakaRouteIsolatedPoint clients
       it "Testing success flow and location updates called multiple times at the same time " $
-        raceConditionSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+        raceConditionSuccessFlow 700 8000 8000 karnatakaRouteIsolatedPoint clients
 
 waitBetweenUpdates :: Int
 waitBetweenUpdates = 1e5 + 1e6 * fromIntegral timeBetweenLocationUpdates
@@ -59,7 +59,7 @@ outdatedPointsSuccessFlow eps distance chargeableDistance updates clients = with
       void . callBPP $ API.updateLocation arduDriver1.token updReq
       liftIO $ threadDelay waitBetweenUpdates
   where
-    makePointsOutdated points = fmap (\point -> point{ts = addUTCTime (negate 600) point.ts}) points
+    makePointsOutdated = fmap (\point -> point{ts = addUTCTime (negate 600) point.ts})
 
 raceConditionSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
 raceConditionSuccessFlow eps distance chargeableDistance updates clients = withBecknClients clients $ do

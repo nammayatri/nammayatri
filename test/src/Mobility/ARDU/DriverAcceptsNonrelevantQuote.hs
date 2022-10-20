@@ -20,7 +20,7 @@ spec = do
 
 driverOffersOnAnIrrelevantSearchRequest :: ClientEnvs -> IO ()
 driverOffersOnAnIrrelevantSearchRequest clients = withBecknClients clients $ do
-  let (origin, _, searchReq') = route1SearchRequest
+  let (origin, _, searchReq') = karnatakaSearchReq
 
   Utils.setupDriver arduDriver1 origin
   Utils.setupDriver arduDriver2 origin

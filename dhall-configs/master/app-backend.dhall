@@ -2,8 +2,6 @@ let common = ./common.dhall
 
 let sec = ./secrets/app-backend.dhall
 
-let GeoRestriction = < Unrestricted | Regions : List Text >
-
 let esqDBCfg =
       { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
       , connectPort = 5432
