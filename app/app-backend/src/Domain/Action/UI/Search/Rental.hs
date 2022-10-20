@@ -59,9 +59,9 @@ rentalSearch personId req = do
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   now <- getCurrentTime
   searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing now
-  Metrics.incrementSearchRequestCount
+  Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
-  Metrics.startSearchMetrics txnId
+  Metrics.startSearchMetrics merchant.name txnId
   DB.runTransaction $ do
     QSearchRequest.create searchRequest
   let dSearchRes =

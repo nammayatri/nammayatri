@@ -80,18 +80,19 @@ onSearch ::
   Maybe DOnSearchReq ->
   Flow ()
 onSearch registryUrl transactionId mbReq = do
-  Metrics.finishSearchMetrics transactionId -- move it to api handler or acl?
-  whenJust mbReq (onSearchService registryUrl)
+  whenJust mbReq (onSearchService transactionId registryUrl)
 
 onSearchService ::
+  Text ->
   BaseUrl ->
   DOnSearchReq ->
   Flow ()
-onSearchService registryUrl DOnSearchReq {..} = do
+onSearchService transactionId registryUrl DOnSearchReq {..} = do
   _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
+  Metrics.finishSearchMetrics merchant.name transactionId
   unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
 
   now <- getCurrentTime

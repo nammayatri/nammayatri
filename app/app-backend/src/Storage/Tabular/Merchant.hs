@@ -21,6 +21,7 @@ mkPersist
     MerchantT sql=merchant
       id Text
       shortId Text
+      name Text
       exoPhone Text Maybe
       exoPhoneCountryCode Text Maybe
       fcmUrl Text

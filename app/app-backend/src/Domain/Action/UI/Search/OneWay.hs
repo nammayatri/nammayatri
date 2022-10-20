@@ -64,9 +64,9 @@ oneWaySearch personId req = do
   now <- getCurrentTime
   distance <- (\res -> metersToHighPrecMeters res.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.origin.gps req.destination.gps
   searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (Just distance) now
-  Metrics.incrementSearchRequestCount
+  Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
-  Metrics.startSearchMetrics txnId
+  Metrics.startSearchMetrics merchant.name txnId
   DB.runTransaction $ do
     QSearchRequest.create searchRequest
   let dSearchRes =

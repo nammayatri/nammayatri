@@ -9,6 +9,7 @@ import Domain.Types.Common
 data MerchantD s = Merchant
   { id :: Id Merchant,
     shortId :: ShortId Merchant,
+    name :: Text,
     exoPhone :: Maybe Text,
     exoPhoneCountryCode :: Maybe Text,
     fcmConfig :: FCMConfig,
