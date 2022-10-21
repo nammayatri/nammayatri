@@ -65,4 +65,16 @@ instance IsHTTPError IdfyError where
     IdfyInternalServer -> "INTERNAL_SERVER_ERROR"
     IdfyBadGateway -> "INTERNAL_SERVER_ERROR"
 
+  toHttpCode = \case
+    IdfyNotConfigured -> E500
+    IdfyBadRequest -> E400
+    IdfyInvalidCredentials -> E500
+    IdfyMissingCredentials -> E500
+    IdfyNotFound -> E500
+    IdfySizeLimitExceed -> E400
+    IdfyUnprocessableEntity -> E400
+    IdfyRateLimitExceed -> E500
+    IdfyInternalServer -> E500
+    IdfyBadGateway -> E500
+
 instance IsAPIError IdfyError
