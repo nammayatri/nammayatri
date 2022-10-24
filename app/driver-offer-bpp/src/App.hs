@@ -1,6 +1,6 @@
 module App where
 
-import AWS.S3 (prepareS3AuthManager)
+import AWS.S3
 import qualified App.Server as App
 import Beckn.Exit
 import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
@@ -60,10 +60,11 @@ runDriverOfferBpp' appCfg = do
         flowRt' <-
           addAuthManagersToFlowRt
             flowRt
-            [ (Nothing, prepareAuthManagersWithRegistryUrl flowRt appEnv allShortIds),
-              (Nothing, prepareS3AuthManager flowRt appEnv),
-              (Just 20000, prepareIdfyHttpManager 20000)
-            ]
+            $ catMaybes
+              [ Just (Nothing, prepareAuthManagersWithRegistryUrl flowRt appEnv allShortIds),
+                (Nothing,) <$> mkS3MbManager flowRt appEnv appCfg.s3Config,
+                Just (Just 20000, prepareIdfyHttpManager 20000)
+              ]
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'

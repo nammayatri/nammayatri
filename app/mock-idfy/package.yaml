@@ -87,6 +87,8 @@ library:
     - wai-extra
     - warp
     - openapi3
+    - beckn-services
+    - random
 
 executables:
   mock-idfy-exe:

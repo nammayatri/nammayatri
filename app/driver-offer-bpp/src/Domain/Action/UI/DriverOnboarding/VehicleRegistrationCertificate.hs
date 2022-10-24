@@ -58,10 +58,11 @@ validateDriverRCReq DriverRCReq {..} =
     certNum = LengthInRange 5 12 `And` star (latinUC \/ digit \/ ",")
 
 verifyRC ::
+  Bool ->
   Id Person.Person ->
   DriverRCReq ->
   Flow DriverRCRes
-verifyRC personId req@DriverRCReq {..} = do
+verifyRC isDashboard personId req@DriverRCReq {..} = do
   runRequestValidation validateDriverRCReq req
   _ <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
@@ -72,16 +73,21 @@ verifyRC personId req@DriverRCReq {..} = do
     throwError (ImageInvalidType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
 
   configs <- asks (.driverOnboardingConfigs)
-  when (isNothing dateOfRegistration && configs.checkImageExtraction) $ do
-    image <- S3.get (T.unpack imageMetadata.s3Path)
-    resp <- Idfy.extractRCImage image Nothing
-    case resp.result of
-      Just result -> do
-        let extractRCNumber = removeSpaceAndDash <$> result.extraction_output.registration_number
-        let rcNumber = removeSpaceAndDash <$> Just vehicleRegistrationCertNumber
-        unless (extractRCNumber == rcNumber) $
-          throwImageError imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
-      Nothing -> throwImageError imageId ImageExtractionFailed
+  when
+    ( isNothing dateOfRegistration && configs.checkImageExtraction
+        && (not isDashboard || configs.checkImageExtractionForDashboard)
+    )
+    $ do
+      image <- S3.get (T.unpack imageMetadata.s3Path)
+      resp <- Idfy.extractRCImage image Nothing
+      case resp.result of
+        Just result -> do
+          let extractRCNumber = removeSpaceAndDash <$> result.extraction_output.registration_number
+          let rcNumber = removeSpaceAndDash <$> Just vehicleRegistrationCertNumber
+          -- disable this check for debugging with mock-idfy
+          unless (extractRCNumber == rcNumber) $
+            throwImageError imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
+        Nothing -> throwImageError imageId ImageExtractionFailed
 
   now <- getCurrentTime
   mDriverAssociation <- DAQuery.getActiveAssociationByDriver personId

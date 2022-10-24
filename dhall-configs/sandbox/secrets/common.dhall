@@ -7,13 +7,14 @@ let exotelCfg =
   , callerId = "xxxxxxx"
   } : globalCommon.ExotelCfg
 
-let s3Config =
+let s3Config1 =
   { secretAccessKey = "xxxxxxx"
   , accessKeyId = "xxxxxxx"
   , bucketName = "xxxxxxx"
   , region = "xxxxxxx"
   , pathPrefix = "xxxxxxx"
   }
+let s3Config = globalCommon.S3Config.S3AwsConf s3Config1
 
 let idfyCfg =
   { account_id = "xxxxxxx",

@@ -71,7 +71,8 @@ let driverOnboardingConfigs =
   , checkRCVehicleClass = True
   , checkDLExpiry = True
   , checkDLVehicleClass = True
-  , checkImageExtraction = True
+  , checkImageExtraction = False -- because mock-idfy can't return proper document numbers
+  , checkImageExtractionForDashboard = True
 }
 
 let apiRateLimitOptions =

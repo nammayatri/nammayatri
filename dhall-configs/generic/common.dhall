@@ -6,6 +6,21 @@ let mkShard =
 
 let LogLevel = < DEBUG | INFO | WARNING | ERROR >
 
+let S3AwsConfig =
+      { accessKeyId : Text,
+        secretAccessKey : Text,
+        bucketName : Text,
+        region : Text,
+        pathPrefix : Text
+      }
+let S3MockConfig =
+      { baseLocalDirectory : Text,
+        bucketName : Text,
+        pathPrefix : Text
+      }
+
+let S3Config = < S3AwsConf : S3AwsConfig | S3MockConf : S3MockConfig >
+
 let ExotelCfg =
   { apiKey : Text
   , apiToken : Text
@@ -43,4 +58,5 @@ in { smsSessionConfig = smsSessionConfig
    , mkShard = mkShard
    , httpClientOptions = httpClientOptions
    , ServerName = ServerName
+   , S3Config = S3Config
    }

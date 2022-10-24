@@ -1,16 +1,19 @@
 {-# LANGUAGE DerivingVia #-}
 
-module Dashboard.Common.Driver where
+module Dashboard.Common.Driver
+  ( module Dashboard.Common.Driver,
+    module Reexport,
+  )
+where
 
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Dashboard.Common as Reexport
 import Servant
 
 -- there are no paths in the API types in this module because they can be different in real applications
 --
-data Driver
-
 newtype DriverIds = EnableDriversRequest
   { driverIds :: [Id Driver]
   }

@@ -29,6 +29,8 @@ cabal.project.local~
 *.log
 dhall-configs/dev/secrets/top-secret.dhall
 *.gpx
+other
+s3
 
 # load test files
 .dev/load-test/*.json

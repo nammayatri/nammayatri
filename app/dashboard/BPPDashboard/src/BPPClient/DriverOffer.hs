@@ -9,8 +9,11 @@ where
 
 import "driver-offer-bpp" API.Dashboard as Dashboard
 import Beckn.Prelude
+import Beckn.Types.APISuccess (APISuccess)
+import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Dashboard.Common.Driver as Common
+import qualified Dashboard.Common.Driver.Registration as Common
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Servant
@@ -27,7 +30,12 @@ data DriversAPIs = DriversAPIs
     driverActivity :: Euler.EulerClient Common.DriverActivityRes,
     enableDrivers :: Common.DriverIds -> Euler.EulerClient Common.EnableDriversRes,
     disableDrivers :: Common.DriverIds -> Euler.EulerClient Common.DisableDriversRes,
-    driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> Euler.EulerClient Common.DriverLocationRes
+    driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> Euler.EulerClient Common.DriverLocationRes,
+    documentsList :: Id Common.Driver -> Euler.EulerClient Common.DocumentsListResponse,
+    getDocument :: Id Common.Image -> Euler.EulerClient Common.GetDocumentResponse,
+    uploadDocument :: Id Common.Driver -> Common.UploadDocumentReq -> Euler.EulerClient Common.UploadDocumentResp,
+    registerDL :: Id Common.Driver -> Common.RegisterDLReq -> Euler.EulerClient APISuccess,
+    registerRC :: Id Common.Driver -> Common.RegisterRCReq -> Euler.EulerClient APISuccess
   }
 
 mkDriverOfferAPIs :: Text -> DriverOfferAPIs
@@ -40,7 +48,14 @@ mkDriverOfferAPIs token = do
       :<|> driverActivity
       :<|> enableDrivers
       :<|> disableDrivers
-      :<|> driverLocation = Euler.client (Proxy :: Proxy Dashboard.API) token
+      :<|> driverLocation
+      :<|> ( documentsList
+               :<|> getDocument
+               :<|> uploadDocument
+               :<|> registerDL
+               :<|> registerRC
+             ) =
+        Euler.client (Proxy :: Proxy Dashboard.API) token
 
 callDriverOfferBPP ::
   forall m r b c.

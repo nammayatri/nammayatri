@@ -4,7 +4,6 @@ let globalCommon = ../generic/common.dhall
 let mockRegistryUrl = "http://localhost:8020/"
 let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
-
 in { smsSessionConfig = globalCommon.smsSessionConfig
    , autoMigrate = globalCommon.autoMigrate
    , loggerConfig = globalCommon.loggerConfig // { logToFile = True, logRawSql = True, prettyPrinting = True }

@@ -15,6 +15,7 @@ import Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.Image as Domain
+import Domain.Types.Organization
 import qualified Domain.Types.Person as Person
 import Environment
 import Idfy.Flow as Idfy
@@ -43,24 +44,24 @@ data GetDocsResponse = GetDocsResponse
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
 createPath ::
+  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
   Text ->
   Text ->
   Domain.ImageType ->
-  Flow Text
+  m Text
 createPath driverId orgId imageType = do
-  S3Config {..} <- asks (.s3Config)
+  pathPrefix <- asks (.s3Env.pathPrefix)
   now <- getCurrentTime
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return $
-    T.pack
-      ( T.unpack pathPrefix <> "/driver-onboarding/" <> "org-" <> T.unpack orgId <> "/"
-          <> T.unpack driverId
-          <> "/"
-          <> show imageType
-          <> "/"
-          <> T.unpack fileName
-          <> ".png"
-      )
+  return
+    ( pathPrefix <> "/driver-onboarding/" <> "org-" <> orgId <> "/"
+        <> driverId
+        <> "/"
+        <> show imageType
+        <> "/"
+        <> fileName
+        <> ".png"
+    )
 
 getDocType :: Domain.ImageType -> Text
 getDocType Domain.DriverLicense = "ind_driving_license"
@@ -72,20 +73,22 @@ getImageType "ind_rc" = Domain.VehicleRegistrationCertificate
 getImageType _ = Domain.VehicleRegistrationCertificate
 
 validateImage ::
+  Bool ->
   Id Person.Person ->
   ImageValidateRequest ->
   Flow ImageValidateResponse
-validateImage personId ImageValidateRequest {..} = do
+validateImage isDashboard personId ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   org <- Organization.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
 
   images <- Query.findRecentByPersonIdAndImageType personId imageType
-  onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
-  when (length images > onboardingTryLimit) $ do
-    driverPhone <- mapM decrypt person.mobileNumber
-    notifyErrorToSupport driverPhone org.name ((.failureReason) <$> images)
-    throwError (ImageValidationExceedLimit personId.getId)
+  unless isDashboard $ do
+    onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
+    when (length images > onboardingTryLimit) $ do
+      driverPhone <- mapM decrypt person.mobileNumber
+      notifyErrorToSupport driverPhone org.name ((.failureReason) <$> images)
+      throwError (ImageValidationExceedLimit personId.getId)
 
   imagePath <- createPath personId.getId orgId.getId imageType
   _ <- S3.put (T.unpack imagePath) image
@@ -100,21 +103,6 @@ validateImage personId ImageValidateRequest {..} = do
 
   return $ ImageValidateResponse {imageId = imageEntity.id}
   where
-    mkImage personId_ organizationId s3Path imageType_ isValid = do
-      id <- generateGUID
-      now <- getCurrentTime
-      return $
-        Domain.Image
-          { id,
-            personId = personId_,
-            organizationId,
-            s3Path,
-            imageType = imageType_,
-            isValid,
-            failureReason = Nothing,
-            createdAt = now
-          }
-
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed
     checkErrors id_ imgType (Just result) = do
       let outputImageType = getImageType result.detected_doc_type
@@ -124,6 +112,29 @@ validateImage personId ImageValidateRequest {..} = do
 
       unless (maybe False (60 <) result.readability.confidence) $
         throwImageError id_ ImageLowQuality
+
+mkImage ::
+  (MonadGuid m, MonadTime m) =>
+  Id Person.Person ->
+  Id Organization ->
+  Text ->
+  Domain.ImageType ->
+  Bool ->
+  m Domain.Image
+mkImage personId_ organizationId s3Path imageType_ isValid = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    Domain.Image
+      { id,
+        personId = personId_,
+        organizationId,
+        s3Path,
+        imageType = imageType_,
+        isValid,
+        failureReason = Nothing,
+        createdAt = now
+      }
 
 -- FIXME: Temporary API will move to dashboard later
 getDocs :: Person.Person -> Text -> Flow GetDocsResponse
@@ -145,11 +156,11 @@ getDocs _admin mobileNumber = do
   rcImage <- getImage `mapM` rcImageId
 
   return GetDocsResponse {dlImage, rcImage}
-  where
-    getImage :: Id Domain.Image -> Flow Text
-    getImage imageId = do
-      imageMetadata <- Query.findById imageId
-      maybe
-        (pure T.empty)
-        (\img -> S3.get $ T.unpack img.s3Path)
-        imageMetadata
+
+getImage :: Id Domain.Image -> Flow Text
+getImage imageId = do
+  imageMetadata <- Query.findById imageId
+  maybe
+    (pure T.empty)
+    (\img -> S3.get $ T.unpack img.s3Path)
+    imageMetadata

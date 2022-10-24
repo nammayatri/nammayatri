@@ -5,6 +5,11 @@ module Idfy.External.Flow
     extractRCImage,
     extractDLImage,
     getTask,
+    VerifyDLAPI,
+    VerifyRCAPI,
+    ValidateImage,
+    ExtractDLImage,
+    ExtractRCAPI,
   )
 where
 

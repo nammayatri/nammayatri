@@ -1,12 +1,10 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Avoid lambda using `infix`" #-}
 module API.BPP.DriverOffer.Driver
   ( API,
     handler,
   )
 where
 
+import qualified API.BPP.DriverOffer.Driver.Registration as Reg
 import qualified BPPClient.DriverOffer as Client
 import Beckn.Prelude
 import Beckn.Types.Id
@@ -25,6 +23,7 @@ type API =
            :<|> EnableDriversAPI
            :<|> DisableDriversAPI
            :<|> DriverLocationAPI
+           :<|> Reg.API
        )
 
 type DriverDocumentsInfoAPI =
@@ -66,6 +65,7 @@ handler =
     :<|> enableDrivers
     :<|> disableDrivers
     :<|> driverLocation
+    :<|> Reg.handler
 
 driverDocuments :: ShortId DMerchant.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocuments _ = withFlowHandlerAPI $ do

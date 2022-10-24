@@ -24,6 +24,19 @@ findById ::
   m (Maybe Image)
 findById = Esq.findById
 
+findImagesByPersonAndType ::
+  (Transactionable m) =>
+  Id Person ->
+  ImageType ->
+  m [Image]
+findImagesByPersonAndType personId imgType = do
+  findAll $ do
+    images <- from $ table @ImageT
+    where_ $
+      images ^. ImagePersonId ==. val (toKey personId)
+        &&. images ^. ImageImageType ==. val imgType
+    return images
+
 findRecentByPersonIdAndImageType ::
   ( Transactionable m,
     MonadFlow m,

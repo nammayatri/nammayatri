@@ -219,4 +219,13 @@ cradle:
     - path: "app/utils/route-extractor/app/Paths_route_extractor.hs"
       component: "route-extractor:exe:route-extractor-exe"
 
+    - path: "app/utils/image-api-helper/src"
+      component: "image-api-helper:lib"
+
+    - path: "app/utils/image-api-helper/app/Main.hs"
+      component: "image-api-helper:exe:image-api-helper-exe"
+
+    - path: "app/utils/image-api-helper/app/Paths_image_api_helper.hs"
+      component: "image-api-helper:exe:image-api-helper-exe"
+
 

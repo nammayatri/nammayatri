@@ -2,7 +2,7 @@
 
 module Environment where
 
-import AWS.S3 (S3AuthenticatingEntity (..), S3Config)
+import AWS.S3
 import Beckn.External.Encryption (EncTools)
 import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude (NominalDiffTime)
@@ -126,6 +126,7 @@ data AppEnv = AppEnv
     defaultDropLocThreshold :: Meters,
     cacheConfig :: CacheConfig,
     driverPoolLimit :: Maybe Int
+    s3Env :: S3Env Flow
   }
   deriving (Generic)
 
@@ -138,7 +139,8 @@ data DriverOnboardingConfigs = DriverOnboardingConfigs
     checkRCVehicleClass :: Bool,
     checkDLExpiry :: Bool,
     checkDLVehicleClass :: Bool,
-    checkImageExtraction :: Bool
+    checkImageExtraction :: Bool,
+    checkImageExtractionForDashboard :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -158,6 +160,7 @@ buildAppEnv cfg@AppCfg {..} = do
   coreMetrics <- Metrics.registerCoreMetricsContainer
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
+      s3Env = buildS3Env cfg.s3Config
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
@@ -173,12 +176,6 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 type Flow = FlowR AppEnv
-
-instance S3AuthenticatingEntity AppEnv where
-  getSecretAccessKey = (.s3Config.secretAccessKey)
-  getAccessKeyId = (.s3Config.accessKeyId)
-  getBucketName = (.s3Config.bucketName)
-  getRegion = (.s3Config.region)
 
 instance Registry Flow where
   registryLookup registryUrl = Registry.withSubscriberCache $ Registry.registryLookup registryUrl

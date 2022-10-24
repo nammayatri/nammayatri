@@ -55,6 +55,7 @@ packages:
   - app/mock-public-transport-bpp
   - app/scheduler-example
   - app/utils/route-extractor
+  - app/utils/image-api-helper
   - lib/beckn-spec
   - lib/beckn-services
   - lib/location-updates

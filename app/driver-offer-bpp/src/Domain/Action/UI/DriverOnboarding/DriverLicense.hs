@@ -64,10 +64,11 @@ validateDriverDLReq now DriverDLReq {..} =
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
 
 verifyDL ::
+  Bool ->
   Id Person.Person ->
   DriverDLReq ->
   Flow DriverDLRes
-verifyDL personId req@DriverDLReq {..} = do
+verifyDL isDashboard personId req@DriverDLReq {..} = do
   now <- getCurrentTime
   runRequestValidation (validateDriverDLReq now) req
   _ <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -75,15 +76,21 @@ verifyDL personId req@DriverDLReq {..} = do
   image1 <- getImage imageId1
   image2 <- getImage `mapM` imageId2
   configs <- asks (.driverOnboardingConfigs)
-  when (isNothing dateOfIssue && configs.checkImageExtraction) $ do
-    resp <- Idfy.extractDLImage image1 image2
-    case resp.result of
-      Just result -> do
-        let extractDLNumber = removeSpaceAndDash <$> result.extraction_output.id_number
-        let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
-        unless (extractDLNumber == dlNumber) $
-          throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
-      Nothing -> throwImageError imageId1 ImageExtractionFailed
+
+  when
+    ( isNothing dateOfIssue && configs.checkImageExtraction
+        && (not isDashboard || configs.checkImageExtractionForDashboard)
+    )
+    $ do
+      resp <- Idfy.extractDLImage image1 image2
+      case resp.result of
+        Just result -> do
+          let extractDLNumber = removeSpaceAndDash <$> result.extraction_output.id_number
+          let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
+          -- disable this check for debugging with mock-idfy
+          unless (extractDLNumber == dlNumber) $
+            throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
+        Nothing -> throwImageError imageId1 ImageExtractionFailed
   mdriverLicense <- Query.findByDLNumber driverLicenseNumber
 
   case mdriverLicense of
@@ -198,7 +205,7 @@ createDL configs driverId output id imageId1 imageId2 now edl expiry = do
       consentTimestamp = now
     }
 
-validateDLStatus :: DriverOnboardingConfigs -> UTCTime -> [Idfy.ClassOfVehicle] -> UTCTime -> Domain.VerificationStatus
+validateDLStatus :: DriverOnboardingConfigs -> UTCTime -> [Idfy.ClassOfVehicleDL] -> UTCTime -> Domain.VerificationStatus
 validateDLStatus configs expiry cov now = do
   let validCOV = (not configs.checkDLVehicleClass) || foldr' (\x acc -> isValidCOVDL x || acc) False cov
   if ((not configs.checkDLExpiry) || now < expiry) && validCOV then Domain.VALID else Domain.INVALID
@@ -208,10 +215,10 @@ convertTextToUTC a = do
   a_ <- a
   DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
-dlValidCOV :: [Idfy.ClassOfVehicle]
+dlValidCOV :: [Idfy.ClassOfVehicleDL]
 dlValidCOV = [Idfy.LMV, Idfy.W_CAB, Idfy.LMV_NT, Idfy.LMV_T, Idfy.LMV_CAB, Idfy.LMV_HMV, Idfy.W_T]
 
-isValidCOVDL :: Idfy.ClassOfVehicle -> Bool
+isValidCOVDL :: Idfy.ClassOfVehicleDL -> Bool
 isValidCOVDL cov = foldr' (\x acc -> x == cov || acc) False dlValidCOV
 
 removeSpaceAndDash :: Text -> Text

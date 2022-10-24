@@ -1,16 +1,20 @@
-module AWS.S3.Flow (get', put', get'', put'') where
+module AWS.S3.Flow (get', put', get'', put'', mockGet, mockPut) where
 
 import AWS.S3.Error
 import AWS.S3.Types
 import AWS.S3.Utils
 import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Utils.Common
+import Data.String.Conversions
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import EulerHS.Prelude hiding (decodeUtf8, get, put, show, traceShowId)
 import qualified EulerHS.Types as ET
 import Servant
 import Servant.Client
 import System.Directory (removeFile)
+import qualified System.Directory as Dir
+import System.FilePath.Posix as Path
 import qualified System.Posix.Files as Posix
 import qualified System.Posix.IO as Posix
 import System.Process
@@ -114,3 +118,33 @@ put'' bucketName path img = withLogTag "S3" $ do
 
 getTmpPath :: String -> String
 getTmpPath = (<>) "/tmp/" . T.unpack . last . T.split (== '/') . T.pack
+
+mockPut ::
+  (MonadIO m, Log m) =>
+  String ->
+  Text ->
+  String ->
+  Text ->
+  m ()
+mockPut baseDirectory bucketName path img =
+  withLogTag "S3" $
+    liftIO $ do
+      let fullPath'Name = getFullPathMock baseDirectory bucketName path
+          fullPath = Path.takeDirectory fullPath'Name
+      Dir.createDirectoryIfMissing True fullPath
+      T.writeFile fullPath'Name img
+
+mockGet ::
+  (MonadIO m, Log m) =>
+  String ->
+  Text ->
+  String ->
+  m Text
+mockGet baseDirectory bucketName path =
+  withLogTag "S3" $
+    liftIO $ do
+      let fullPath'Name = getFullPathMock baseDirectory bucketName path
+      T.readFile fullPath'Name
+
+getFullPathMock :: String -> Text -> String -> String
+getFullPathMock baseDirectory bucketName path = baseDirectory <> "/" <> cs bucketName <> "/" <> path

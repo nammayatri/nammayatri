@@ -1,6 +1,7 @@
 module AWS.S3.SignatureAuth
   ( prepareS3AuthManager,
     modFlowRtWithS3AuthManagers,
+    mkS3MbManager,
   )
 where
 
@@ -131,11 +132,11 @@ mkAuthorizationString params accessKeyId signature region =
 
 prepareS3AuthManager ::
   HasLog r =>
-  S3AuthenticatingEntity r =>
   R.FlowRuntime ->
   r ->
+  S3AwsConfig ->
   Map String Http.ManagerSettings
-prepareS3AuthManager flowRt appEnv =
+prepareS3AuthManager flowRt appEnv s3AwsConfig =
   Map.singleton s3AuthManagerKey $
     Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
@@ -161,9 +162,9 @@ prepareS3AuthManager flowRt appEnv =
             logDebug $ "Request headers: " +|| params.headers ||+ ""
             pure $ addHeader req (authHeaderName, authString)
 
-    accessKeyId = DTE.encodeUtf8 $ getAccessKeyId appEnv
-    secretAccessKey = DTE.encodeUtf8 $ getSecretAccessKey appEnv
-    region = DTE.encodeUtf8 $ getRegion appEnv
+    accessKeyId = DTE.encodeUtf8 s3AwsConfig.accessKeyId
+    secretAccessKey = DTE.encodeUtf8 s3AwsConfig.secretAccessKey
+    region = DTE.encodeUtf8 $ s3AwsConfig.region
 
     getBody (Http.RequestBodyLBS body) = BSL.toStrict body
     getBody (Http.RequestBodyBS body) = body
@@ -175,17 +176,21 @@ prepareS3AuthManager flowRt appEnv =
       req {Http.requestHeaders = header : headers}
 
 modFlowRtWithS3AuthManagers ::
-  ( S3AuthenticatingEntity r,
-    HasHttpClientOptions r c,
+  ( HasHttpClientOptions r c,
     MonadReader r m,
     HasLog r,
     MonadFlow m
   ) =>
   R.FlowRuntime ->
   r ->
+  S3AwsConfig ->
   m R.FlowRuntime
-modFlowRtWithS3AuthManagers flowRt appEnv = do
-  let managersSetting = prepareS3AuthManager flowRt appEnv
+modFlowRtWithS3AuthManagers flowRt appEnv s3AwsConfig = do
+  let managersSetting = prepareS3AuthManager flowRt appEnv s3AwsConfig
   managers <- createManagers managersSetting
   logInfo "Loaded S3 http manager - "
   pure $ flowRt {R._httpClientManagers = managers}
+
+mkS3MbManager :: (HasLog r) => R.FlowRuntime -> r -> S3Config -> Maybe (Map String ManagerSettings)
+mkS3MbManager _flowRt _appEnv S3MockConf {} = Nothing
+mkS3MbManager flowRt appEnv (S3AwsConf s3AwsConfig) = Just $ prepareS3AuthManager flowRt appEnv s3AwsConfig

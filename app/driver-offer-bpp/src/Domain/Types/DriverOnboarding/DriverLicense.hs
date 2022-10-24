@@ -19,7 +19,7 @@ data DriverLicenseE e = DriverLicense
     driverName :: Maybe Text,
     licenseNumber :: EncryptedHashedField e Text,
     licenseExpiry :: UTCTime,
-    classOfVehicles :: [Idfy.ClassOfVehicle],
+    classOfVehicles :: [Idfy.ClassOfVehicleDL],
     failedRules :: [Text],
     verificationStatus :: VerificationStatus,
     createdAt :: UTCTime,

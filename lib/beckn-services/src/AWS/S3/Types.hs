@@ -31,7 +31,10 @@ instance MimeRender S3ImageData Text where
 instance MimeUnrender S3ImageData Text where
   mimeUnrender _ = pure . T.decodeUtf8 . BSL.toStrict
 
-data S3Config = S3Config
+data S3Config = S3AwsConf S3AwsConfig | S3MockConf S3MockConfig
+  deriving (Generic, FromDhall)
+
+data S3AwsConfig = S3AwsConfig
   { accessKeyId :: Text,
     secretAccessKey :: Text,
     bucketName :: Text,
@@ -40,11 +43,12 @@ data S3Config = S3Config
   }
   deriving (Generic, FromDhall)
 
-class S3AuthenticatingEntity r where
-  getSecretAccessKey :: r -> Text
-  getAccessKeyId :: r -> Text
-  getBucketName :: r -> Text
-  getRegion :: r -> Text
+data S3MockConfig = S3MockConfig
+  { baseLocalDirectory :: String,
+    pathPrefix :: Text,
+    bucketName :: Text
+  }
+  deriving (Generic, FromDhall)
 
 data S3AuthParams = S3AuthParams
   { headers :: HttpTypes.RequestHeaders,
@@ -54,3 +58,19 @@ data S3AuthParams = S3AuthParams
     method :: HttpTypes.Method,
     date :: BS.ByteString
   }
+
+data S3Env m = S3Env
+  { pathPrefix :: Text,
+    getH :: String -> m Text,
+    putH :: String -> Text -> m ()
+  }
+
+get :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> m Text
+get path = do
+  s3env <- asks (.s3Env)
+  getH s3env path
+
+put :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> Text -> m ()
+put path file_ = do
+  s3env <- asks (.s3Env)
+  putH s3env path file_

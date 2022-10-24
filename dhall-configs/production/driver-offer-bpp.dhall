@@ -35,6 +35,7 @@ let driverOnboardingConfigs =
   , checkDLExpiry = True
   , checkDLVehicleClass = True
   , checkImageExtraction = True
+  , checkImageExtractionForDashboard = True
 }
 
 let rcfg =

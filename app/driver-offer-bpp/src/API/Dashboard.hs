@@ -11,5 +11,5 @@ type API =
     :> Driver.API
 
 handler :: FlowServer API
-handler _ =
+handler =
   Driver.handler

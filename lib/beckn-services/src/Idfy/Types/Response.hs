@@ -47,10 +47,22 @@ data IdfySuccess = IdfySuccess {request_id :: Text, _a :: Maybe Text}
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- class of vehicle
-data ClassOfVehicle = W_NT | W_T | W_CAB | HGV_T | HMV_HGV | HMV | HTV | LMV | LMV_NT | LMV_T | LMV_CAB | LMV_HMV | LTV | MCWG | MCWOG | HPMV | MGV | MMV | LDRXCV | PSV_BUS | TRANS | TRCTOR | OTHERS | NotDefined Text
-  deriving (Show, Generic, ToSchema, Eq, Read, ToJSON)
+data ClassOfVehicleDL = W_NT | W_T | W_CAB | HGV_T | HMV_HGV | HMV | HTV | LMV | LMV_NT | LMV_T | LMV_CAB | LMV_HMV | LTV | MCWG | MCWOG | HPMV | MGV | MMV | LDRXCV | PSV_BUS | TRANS | TRCTOR | OTHERS | NotDefined Text
+  deriving (Show, Generic, ToSchema, Eq, Read)
 
-instance FromJSON ClassOfVehicle where
+instance ToJSON ClassOfVehicleDL where
+  toJSON c = String $ case c of
+    W_NT -> "3W-NT"
+    W_T -> "3W-T"
+    W_CAB -> "3W-CAB"
+    NotDefined t -> t
+    cl -> T.map hyphenToUnderscore $ show cl
+
+hyphenToUnderscore :: Char -> Char
+hyphenToUnderscore '-' = '_'
+hyphenToUnderscore c = c
+
+instance FromJSON ClassOfVehicleDL where
   parseJSON (String val) =
     case T.toUpper val of
       "3W-NT" -> return W_NT
@@ -78,16 +90,6 @@ instance FromJSON ClassOfVehicle where
       "OTHERS" -> return OTHERS
       v -> return $ NotDefined v
   parseJSON _ = fail ""
-
-constructorForCOVToJson :: Options
-constructorForCOVToJson =
-  defaultOptions
-    { constructorTagModifier = \case
-        "W_NT" -> "3W-NT"
-        "W_T" -> "3W-T"
-        "W_CAB" -> "3W-CAB"
-        val -> T.unpack $ T.toLower $ replaceUnderscores $ T.pack val
-    }
 
 -- RC Result
 newtype ExtractionOutput a = ExtractionOutput {extraction_output :: a}
@@ -210,7 +212,7 @@ data DLVerificationOutput = DLVerificationOutput
 
 data CovDetail = CovDetail
   { category :: Maybe Text,
-    cov :: ClassOfVehicle,
+    cov :: ClassOfVehicleDL,
     issue_date :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -242,7 +244,7 @@ data DLExtractionOutput = DLExtractionOutput
     pincode :: Maybe Text,
     state :: Maybe Text,
     issue_dates :: Maybe ValidateIssueDate,
-    _type :: [ClassOfVehicle],
+    _type :: [ClassOfVehicleDL],
     validity :: Maybe Validity,
     status :: Maybe Text
   }

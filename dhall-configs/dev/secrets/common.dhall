@@ -8,13 +8,12 @@ let exotelCfg =
   , callerId = "xxxxxxx"
   } : globalCommon.ExotelCfg
 
-let s3Config =
-  { secretAccessKey = "xxxxxxx"
-  , accessKeyId = "xxxxxxx"
-  , bucketName = "xxxxxxx"
-  , region = "xxxxxxx"
-  , pathPrefix = "dev"
-  }
+let mockS3Config1 =
+      { baseLocalDirectory = "./s3/local"
+      , bucketName = "test-bucket"
+      , pathPrefix = ""
+      }
+let mockS3Config = globalCommon.S3Config.S3MockConf mockS3Config1
 
 let idfyCfg =
   { account_id = "xxxxxxx",
@@ -28,7 +27,7 @@ in
 { smsUserName = "xxxxxxx"
 , smsPassword = "yyyyyyy"
 , exotelCfg = exotelCfg
-, s3Config = s3Config
+, s3Config = mockS3Config
 , idfyCfg = idfyCfg
 , googleMapsKey = topSecret.googleMapsKey
 , slackToken = "xxxxxxx"

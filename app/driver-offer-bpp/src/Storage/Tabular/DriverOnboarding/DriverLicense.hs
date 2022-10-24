@@ -18,7 +18,7 @@ import Storage.Tabular.DriverOnboarding.Image (ImageTId)
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.VerificationStatus"
-derivePersistField "Idfy.ClassOfVehicle"
+derivePersistField "Idfy.ClassOfVehicleDL"
 
 mkPersist
   defaultSqlSettings
@@ -33,7 +33,7 @@ mkPersist
       licenseNumberEncrypted Text
       licenseNumberHash DbHash
       licenseExpiry UTCTime
-      classOfVehicles (PostgresList Idfy.ClassOfVehicle)
+      classOfVehicles (PostgresList Idfy.ClassOfVehicleDL)
       failedRules (PostgresList Text)
       verificationStatus Domain.VerificationStatus
       consent Bool

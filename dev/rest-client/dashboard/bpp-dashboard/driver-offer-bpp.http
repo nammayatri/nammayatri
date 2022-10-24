@@ -14,7 +14,7 @@ GET {{bpp-dashboard-host}}
 
 # @name driverList
 
-GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/list?pendingdoc=true&limit=10&offset=0&phone=66
+GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/list?pendingdoc=false&limit=100&offset=0&phone=66
 token: {{customer_service}}
 
 ###

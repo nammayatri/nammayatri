@@ -20,6 +20,7 @@ scheduler-example-scheduler
 driver-offer-bpp
 bap-dashboard
 bpp-dashboard
+image-api-helper
 EOF
 }
 

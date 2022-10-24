@@ -75,6 +75,8 @@ dependencies:
 - process
 - directory
 - unix
+- string-conversions
+- filepath
 
 ghc-options:
   - -fwrite-ide-info

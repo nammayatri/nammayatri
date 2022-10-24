@@ -1,110 +1,81 @@
 module Types.Webhook where
 
 import Beckn.Utils.Time
-import Data.OpenApi hiding (name)
 import EulerHS.Prelude
-import Types.API.VerifyDLAsync
-import Types.API.VerifyRCAsync
+import Idfy.Types.Request
+import Idfy.Types.Response
+import System.Random
 
-type RCVerificationResponse = [RCVerificationValue]
+buildSuccessRC :: (MonadIO m) => RCVerificationRequest -> Text -> UTCTime -> m VerificationResponse
+buildSuccessRC IdfyRequest {..} request_id now = do
+  idNumberRnd <- ("KA-" <>) . show <$> liftIO (randomRIO (10000000, 99999999 :: Int))
+  let result =
+        RCVerificationOutput
+          { avg_gross_vehicle_weight = Nothing,
+            axle_configuration = Nothing,
+            chassis_number = Just "MB8DP12DMM89XXXXX",
+            emission_norms = Just "BHARAT STAGE VI",
+            engine_number = Just "AF2127XXXXX",
+            fitness_upto = Just "2036-12-27",
+            fuel_type = Just "PETROL",
+            insurance_details = Nothing,
+            insurance_validity = Just "3026-12-21",
+            manufacturer = Just "SUZUKI MOTORCYCLE INDIA PVT LTD",
+            mv_tax_upto = Nothing,
+            owner_name = Just "PRITHIVI RAJ KOTA",
+            permit_issue_date = Just "1900-01-01",
+            permit_number = Just "",
+            permit_type = Nothing,
+            permit_validity_upto = Just "3000-01-01",
+            puc_validity_upto = Just "1900-01-01",
+            registration_date = Just "2021-12-28",
+            registration_number = Just idNumberRnd,
+            rto_name = Nothing,
+            status = Just "id_found",
+            vehicle_class = Just "3WT_CAB",
+            vehicle_financier = Nothing,
+            noc_valid_upto = Just "noc_valid_upto",
+            seating_capacity = Just "seating_capacity",
+            variant = Just "variant",
+            npermit_upto = Just "npermit_upto",
+            manufacturer_model = Just "manufacturer_model",
+            standing_capacity = Just "standing_capacity",
+            status_message = Just "status_message",
+            number_of_cylinder = Just "number_of_cylinder",
+            colour = Just "colour",
+            color = Just "color",
+            puc_valid_upto = Just "puc_valid_upto",
+            permanent_address = Just "permanent_address",
+            permit_no = Just "permit_no",
+            father_name = Just "father_name",
+            status_verfy_date = Just "status_verfy_date",
+            m_y_manufacturing = Just "m_y_manufacturing",
+            gross_vehicle_weight = Just "gross_vehicle_weight",
+            registered_place = Just "registered_place",
+            insurance_policy_no = Just "insurance_policy_no",
+            noc_details = Just "noc_details",
+            npermit_issued_by = Just "npermit_issued_by",
+            sleeper_capacity = Just "sleeper_capacity",
+            current_address = Just "current_address",
+            status_verification = Just "status_verification",
+            permit_validity_from = Just "permit_validity_from",
+            puc_number = Just "puc_number",
+            owner_mobile_no = Just "owner_mobile_no",
+            blacklist_status = Just "blacklist_status",
+            body_type = Just "body_type",
+            unladden_weight = Just "unladden_weight",
+            insurance_name = Just "insurance_name",
+            owner_serial_number = Just "owner_serial_number",
+            vehicle_category = Just "vehicle_category",
+            npermit_no = Just "npermit_no",
+            cubic_capacity = Just "cubic_capacity",
+            norms_type = Just "norms_type",
+            financer = Just "financer",
+            wheelbase = Just "wheelbase"
+          }
 
-data RCVerificationValue = RCVerificationValue
-  { action :: Text,
-    completed_at :: UTCTime,
-    created_at :: UTCTime,
-    group_id :: Text,
-    request_id :: Text,
-    result :: RCResult,
-    status :: Text,
-    task_id :: Text,
-    _type :: Text
-  }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
-
-data DLVerificationResponse = DLVerificationResponse
-  { action :: Text,
-    completed_at :: UTCTime,
-    created_at :: UTCTime,
-    group_id :: Text,
-    request_id :: Text,
-    result :: DLResult,
-    status :: Text,
-    task_id :: Text,
-    _type :: Text
-  }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
-
-newtype RCResult = RCResult {extraction_output :: RCExtractionResult}
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
-
-newtype DLResult = DLResult {source_output :: SourceOutput}
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
-
-data RCExtractionResult = RCExtractionResult
-  { avg_gross_vehicle_weight :: Maybe Float,
-    axle_configuration :: Maybe Text,
-    chassis_number :: Maybe Text,
-    emission_norms :: Maybe Text,
-    engine_number :: Maybe Text,
-    fitness_upto :: Maybe Text,
-    fuel_type :: Maybe Text,
-    insurance_details :: Maybe Text,
-    insurance_validity :: Maybe Text,
-    manufacturer :: Maybe Text,
-    mv_tax_upto :: Maybe Text,
-    owner_name :: Maybe Text,
-    permit_type :: Maybe Text,
-    permit_validity :: Maybe Text,
-    permit_issue_date :: Maybe Text,
-    permit_number :: Maybe Text,
-    puc_number_upto :: Maybe Text,
-    registration_date :: Maybe Text,
-    registration_number :: Maybe Text,
-    rto_name :: Maybe Text,
-    status :: Maybe Text,
-    vehicle_class :: Maybe Text,
-    vehicle_financier :: Maybe Text
-  }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
-
-data SourceOutput = SourceOutput
-  { address :: Maybe Text,
-    badge_details :: Maybe Text,
-    card_serial_no :: Maybe Text,
-    city :: Maybe Text,
-    date_of_issue :: Maybe Text,
-    date_of_last_transaction :: Maybe Text,
-    dl_status :: Maybe Text,
-    dob :: Maybe Text,
-    face_image :: Maybe Text,
-    gender :: Maybe Text,
-    hazardous_valid_till :: Maybe Text,
-    hill_valid_till :: Maybe Text,
-    id_number :: Maybe Text,
-    issuing_rto_name :: Maybe Text,
-    last_transacted_at :: Maybe Text,
-    name :: Maybe Text,
-    nt_validity_from :: Maybe Text,
-    nt_validity_to :: Maybe Text,
-    relatives_name :: Maybe Text,
-    source :: Maybe Text,
-    status :: Maybe Text,
-    t_validity_from :: Maybe Text,
-    t_validity_to :: Maybe Text,
-    cov_details :: [CovDetail]
-  }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
-
-data CovDetail = CovDetail
-  { category :: Maybe Text,
-    cov :: Maybe Text,
-    issue_date :: Maybe Text
-  }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
-
-mkSuccessRC :: VerifyRCReq -> Text -> UTCTime -> RCVerificationResponse
-mkSuccessRC VerifyRCReq {..} request_id now =
-  [ RCVerificationValue
+  pure
+    IdfyResponse
       { action = "verify_with_source",
         completed_at = now,
         created_at = now,
@@ -112,89 +83,62 @@ mkSuccessRC VerifyRCReq {..} request_id now =
         request_id = request_id,
         status = "completed",
         task_id = task_id,
-        _type = "ind_rc_basic",
-        result =
-          RCResult
-            { extraction_output =
-                RCExtractionResult
-                  { avg_gross_vehicle_weight = Nothing,
-                    axle_configuration = Nothing,
-                    chassis_number = Just "MB8DP12DMM89XXXXX",
-                    emission_norms = Just "BHARAT STAGE VI",
-                    engine_number = Just "AF2127XXXXX",
-                    fitness_upto = Just "2036-12-27",
-                    fuel_type = Just "PETROL",
-                    insurance_details = Nothing,
-                    insurance_validity = Just "3026-12-21",
-                    manufacturer = Just "SUZUKI MOTORCYCLE INDIA PVT LTD",
-                    mv_tax_upto = Nothing,
-                    owner_name = Just "PRITHIVI RAJ KOTA",
-                    permit_issue_date = Just "1900-01-01",
-                    permit_number = Just "",
-                    permit_type = Nothing,
-                    permit_validity = Just "3000-01-01",
-                    puc_number_upto = Just "1900-01-01",
-                    registration_date = Just "2021-12-28",
-                    registration_number = Just "KA01JN9280",
-                    rto_name = Nothing,
-                    status = Just "id_found",
-                    vehicle_class = Just "M-Cycle/Scooter(2WN)",
-                    vehicle_financier = Nothing
-                  }
-            }
+        _type = "ind_rc",
+        result = Just Output {source_output = Nothing, extraction_output = Just result}
       }
-  ]
 
-mkSuccessDL :: VerifyDLReq -> Text -> UTCTime -> DLVerificationResponse
-mkSuccessDL VerifyDLReq {..} request_id now =
-  DLVerificationResponse
-    { action = "verify_with_source",
-      completed_at = now,
-      created_at = now,
-      group_id = group_id,
-      request_id = request_id,
-      status = "completed",
-      task_id = task_id,
-      _type = "ind_driving_license",
-      result =
-        DLResult
-          { source_output =
-              SourceOutput
-                { address = Just "Address as available on Gov. Source",
-                  badge_details = Just "Badge details",
-                  card_serial_no = Just "Card serial no",
-                  city = Just "ABC",
-                  cov_details =
-                    [ CovDetail
-                        { category = Just "NT",
-                          cov = Just "MCWG",
-                          issue_date = Just "2015-05-20"
-                        },
-                      CovDetail
-                        { category = Just "NT",
-                          cov = Just "LMV",
-                          issue_date = Just "2015-05-20"
-                        }
-                    ],
-                  date_of_issue = Just "2015-05-20",
-                  date_of_last_transaction = Nothing,
-                  dl_status = Just "Active",
-                  dob = Just "1985-02-15",
-                  face_image = Nothing,
-                  gender = Nothing,
-                  hazardous_valid_till = Nothing,
-                  hill_valid_till = Nothing,
-                  id_number = Just "MH-123412341234",
-                  issuing_rto_name = Just "MH, MOTIHARI",
-                  last_transacted_at = Nothing,
-                  name = Just "JOHN CARL DOE",
-                  nt_validity_from = Just "2015-05-20",
-                  nt_validity_to = Just "2035-02-14",
-                  relatives_name = Nothing,
-                  source = Just "SARATHI",
-                  status = Just "id_found",
-                  t_validity_from = Nothing,
-                  t_validity_to = Nothing
-                }
+buildSuccessDL :: MonadIO m => DLVerificationRequest -> Text -> UTCTime -> m VerificationResponse
+buildSuccessDL IdfyRequest {..} request_id now = do
+  idNumberRnd <- ("MH-" <>) . show <$> liftIO (randomRIO (10000000, 99999999 :: Int))
+  let result =
+        DLVerificationOutput
+          { address = Just "Address as available on Gov. Source",
+            badge_details = Just "Badge details",
+            card_serial_no = Just "Card serial no",
+            city = Just "ABC",
+            cov_details =
+              Just
+                [ CovDetail
+                    { category = Just "NT",
+                      cov = MCWG,
+                      issue_date = Just "2015-05-20"
+                    },
+                  CovDetail
+                    { category = Just "NT",
+                      cov = LMV,
+                      issue_date = Just "2015-05-20"
+                    }
+                ],
+            date_of_issue = Just "2015-05-20",
+            date_of_last_transaction = Nothing,
+            dl_status = Just "Active",
+            dob = Just "1985-02-15",
+            face_image = Nothing,
+            gender = Nothing,
+            hazardous_valid_till = Nothing,
+            hill_valid_till = Nothing,
+            id_number = Just idNumberRnd,
+            issuing_rto_name = Just "MH, MOTIHARI",
+            last_transacted_at = Nothing,
+            name = Just "JOHN CARL DOE",
+            nt_validity_from = Just "2015-05-20",
+            nt_validity_to = Just "2035-02-14",
+            relatives_name = Nothing,
+            source = Just "SARATHI",
+            status = Just "id_found",
+            t_validity_from = Nothing,
+            t_validity_to = Nothing
           }
-    }
+
+  pure
+    IdfyResponse
+      { action = "verify_with_source",
+        completed_at = now,
+        created_at = now,
+        group_id = group_id,
+        request_id = request_id,
+        status = "completed",
+        task_id = task_id,
+        _type = "ind_driving_license",
+        result = Just Output {source_output = Just result, extraction_output = Nothing}
+      }
