@@ -20,7 +20,7 @@ buildMetroOffers ::
   OnSearch.OnSearchReq ->
   m (Maybe [MetroOffer])
 buildMetroOffers req = do
-  validateContext Context.ON_SEARCH req.context
+  validateMetroContext Context.ON_SEARCH req.context
   let searchReqId = Id req.context.message_id
   handleError req.contents $ \message -> do
     catalogToMetroOffers searchReqId message.catalog
@@ -83,7 +83,7 @@ offerInfoToMetroRide (item, fulfillments) = do
       return
         MetroStation
           { name = name,
-            stationCode = loc.code,
+            stationCode = Nothing,
             point = gpsToLatLon loc.gps
           }
     gpsToLatLon Gps {..} = LatLong {..}

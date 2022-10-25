@@ -7,7 +7,6 @@ import EulerHS.Prelude hiding (id)
 
 data Location = Location
   { descriptor :: Descriptor,
-    gps :: Gps,
-    code :: Text
+    gps :: Gps
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

@@ -39,7 +39,7 @@ data ScheduleElement = ScheduleElement
 
 data MetroStation = MetroStation
   { name :: Text,
-    stationCode :: Text,
+    stationCode :: Maybe Text,
     point :: LatLong
   }
   deriving (Show, Generic, ToSchema, FromJSON, ToJSON)
