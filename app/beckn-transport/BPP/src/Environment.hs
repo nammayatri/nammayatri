@@ -22,7 +22,6 @@ import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Credentials (PrivateKey)
 import Beckn.Types.Flow
-import Beckn.Types.Geofencing
 import Beckn.Types.Registry
 import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
@@ -55,7 +54,6 @@ data AppCfg = AppCfg
     autoMigrate :: Bool,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
-    geofencingConfig :: GeofencingConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
@@ -97,7 +95,6 @@ data AppEnv = AppEnv
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
-    geofencingConfig :: GeofencingConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,

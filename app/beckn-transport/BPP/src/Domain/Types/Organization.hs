@@ -2,6 +2,7 @@
 
 module Domain.Types.Organization where
 
+import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
@@ -73,9 +74,10 @@ data OrganizationD s = Organization
     enabled :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
+    geofencingConfig :: GeofencingConfig,
     info :: Maybe Text
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show)
 
 type Organization = OrganizationD 'Safe
 

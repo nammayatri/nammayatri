@@ -7,7 +7,6 @@ import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis
 import Beckn.Tools.Metrics.CoreMetrics
-import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -53,7 +52,6 @@ init ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
-    HasField "geofencingConfig" r GeofencingConfig,
     HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m,
     HasGoogleMaps m r
@@ -67,9 +65,9 @@ init transporterId req = do
   now <- getCurrentTime
   booking <- case req.initTypeReq of
     InitOneWayTypeReq oneWayReq -> do
-      initOneWayTrip req oneWayReq transporter.id now
+      initOneWayTrip req oneWayReq transporter now
     InitRentalTypeReq rentalReq -> do
-      initRentalTrip req rentalReq transporter.id now
+      initRentalTrip req rentalReq transporter now
   return $
     InitRes
       { booking = booking,
@@ -80,25 +78,24 @@ initOneWayTrip ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
-    HasField "geofencingConfig" r GeofencingConfig,
     HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m,
     HasGoogleMaps m r
   ) =>
   InitReq ->
   InitOneWayReq ->
-  Id DOrg.Organization ->
+  DOrg.Organization ->
   UTCTime ->
   m DRB.Booking
-initOneWayTrip req oneWayReq transporterId now = do
-  unlessM (rideServiceableDefault QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
+initOneWayTrip req oneWayReq transporter now = do
+  unlessM (rideServiceable transporter.geofencingConfig QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
     throwError RideNotServiceable
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
   distRes <- MapSearch.getDistance (Just MapSearch.CAR) req.fromLocation oneWayReq.toLocation
   let distance = distRes.distance
       estimatedRideDuration = distRes.duration
       estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` req.startTime
-  fareParams <- calculateFare transporterId req.vehicleVariant distance estimatedRideFinishTime
+  fareParams <- calculateFare transporter.id req.vehicleVariant distance estimatedRideFinishTime
   toLoc <- buildRBLoc oneWayReq.toLocation now
   let estimatedFare = fareSum fareParams
       discount = fareParams.discount
@@ -111,7 +108,7 @@ initOneWayTrip req oneWayReq transporterId now = do
               DRB.estimatedFinishTime = estimatedRideFinishTime
             }
   fromLoc <- buildRBLoc req.fromLocation now
-  booking <- buildBooking req transporterId estimatedFare discount estimatedTotalFare owDetails fromLoc now
+  booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare owDetails fromLoc now
   DB.runTransaction $ do
     QRB.create booking
   return booking
@@ -120,25 +117,24 @@ initRentalTrip ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
-    HasField "geofencingConfig" r GeofencingConfig,
     CoreMetrics m,
     HasGoogleMaps m r
   ) =>
   InitReq ->
   InitRentalReq ->
-  Id DOrg.Organization ->
+  DOrg.Organization ->
   UTCTime ->
   m DRB.Booking
-initRentalTrip req rentalReq transporterId now = do
-  unlessM (rideServiceableDefault QGeometry.someGeometriesContain req.fromLocation Nothing) $
+initRentalTrip req rentalReq transporter now = do
+  unlessM (rideServiceable transporter.geofencingConfig QGeometry.someGeometriesContain req.fromLocation Nothing) $
     throwError RideNotServiceable
   let estimatedFare = 0
       discount = Nothing
       estimatedTotalFare = 0
-  rentalFarePolicy <- QRFP.findByOffer transporterId req.vehicleVariant rentalReq.distance rentalReq.duration >>= fromMaybeM NoFarePolicy
+  rentalFarePolicy <- QRFP.findByOffer transporter.id req.vehicleVariant rentalReq.distance rentalReq.duration >>= fromMaybeM NoFarePolicy
   let rentDetails = DRB.RentalDetails $ DRB.RentalBookingDetails {rentalFarePolicyId = rentalFarePolicy.id}
   fromLoc <- buildRBLoc req.fromLocation now
-  booking <- buildBooking req transporterId estimatedFare discount estimatedTotalFare rentDetails fromLoc now
+  booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare rentDetails fromLoc now
   DB.runTransaction $ do
     QRB.create booking
   return booking

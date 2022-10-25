@@ -42,11 +42,6 @@ let smsConfig =
   , sender = "JUSPAY"
   }
 
-let geofencingConfig =
-{ origin = GeoRestriction.Regions ["Ernakulam"]
-, destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
-}
-
 let apiRateLimitOptions =
   { limit = +4
   , limitResetTimeInSec = +600
@@ -83,7 +78,6 @@ in
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"
-, geofencingConfig = geofencingConfig
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey

@@ -9,6 +9,8 @@ module Storage.Tabular.Organization where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Geofencing (GeoRestriction)
+import qualified Beckn.Types.Geofencing as Geo
 import Beckn.Types.Id
 import qualified Domain.Types.Organization as Domain
 
@@ -39,6 +41,8 @@ mkPersist
       createdAt UTCTime
       updatedAt UTCTime
       info Text Maybe
+      originRestriction GeoRestriction
+      destinationRestriction GeoRestriction
       Primary id
       Unique OrganizationShortId
       deriving Generic
@@ -56,6 +60,11 @@ instance TType OrganizationT Domain.Organization where
         { id = Id id,
           shortId = ShortId shortId,
           _type = orgType,
+          geofencingConfig =
+            Geo.GeofencingConfig
+              { origin = originRestriction,
+                destination = destinationRestriction
+              },
           ..
         }
   toTType Domain.Organization {..} =
@@ -63,5 +72,7 @@ instance TType OrganizationT Domain.Organization where
       { id = getId id,
         shortId = getShortId shortId,
         orgType = _type,
+        originRestriction = geofencingConfig.origin,
+        destinationRestriction = geofencingConfig.destination,
         ..
       }
