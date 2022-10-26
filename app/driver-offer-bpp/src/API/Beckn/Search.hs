@@ -15,7 +15,6 @@ import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Organization as Org
 import Environment
 import Servant
-import qualified SharedLogic.Transporter as Shared
 
 type API =
   Capture "orgId" (Id Org.Organization)
@@ -36,9 +35,8 @@ search transporterId (SignatureAuthResult _ subscriber _) (SignatureAuthResult _
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Search API Flow" "Reached"
     dSearchReq <- ACL.buildSearchReq subscriber req
-    transporter <- Shared.findTransporter transporterId
-    dSearchRes <- DSearch.handler transporter dSearchReq
+    dSearchRes <- DSearch.handler transporterId dSearchReq
     let context = req.context
     let callbackUrl = gateway.subscriber_url
-    CallBAP.withCallback transporter Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
+    CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
       pure $ ACL.mkOnSearchMessage dSearchRes

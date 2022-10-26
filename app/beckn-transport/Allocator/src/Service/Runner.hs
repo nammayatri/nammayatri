@@ -15,7 +15,6 @@ import Domain.Types.Organization
 import Environment
 import EulerHS.Prelude
 import Tools.Error
-import qualified Tools.Metrics as Metrics
 import qualified Tools.Metrics as TMetrics
 
 handle :: Allocation.ServiceHandle Flow
@@ -49,9 +48,9 @@ handle =
       logDriverEvents = I.logDriverEvents,
       metrics =
         Allocation.AllocatorMetricsHandle
-          { incrementTaskCounter = Metrics.incrementTaskCounter,
-            incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter,
-            putTaskDuration = Metrics.putTaskDuration,
+          { incrementTaskCounter = I.incrementTaskCounter,
+            incrementFailedTaskCounter = I.incrementFailedTaskCounter,
+            putTaskDuration = I.putTaskDuration,
             incrementErrorCounter = TMetrics.incrementErrorCounter "ALLOCATOR_ERROR"
           }
     }

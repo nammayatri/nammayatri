@@ -61,7 +61,7 @@ onSearch DOnSearchReq {..} = do
             then OneWayQuoteInfo <$> OneWay.onSearchCallback searchRequest transporter.id now fromLocation toLocation
             else pure (OneWayQuoteInfo [])
         buildDOnSearchRes transporter quotesInfos DFareProduct.ONE_WAY
-  Metrics.finishSearchMetrics transporter.id searchMetricsMVar
+  Metrics.finishSearchMetrics transporter.name searchMetricsMVar
   pure onSearchReq
 
 buildDOnSearchRes ::

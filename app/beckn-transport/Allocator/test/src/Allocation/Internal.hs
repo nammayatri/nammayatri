@@ -232,9 +232,9 @@ handle repository@Repository {..} =
       logDriverEvents = \_ _ _ -> pure (),
       metrics =
         AllocatorMetricsHandle
-          { incrementTaskCounter = return (),
-            incrementFailedTaskCounter = return (),
-            putTaskDuration = \_ -> return (),
+          { incrementTaskCounter = \_ -> return (),
+            incrementFailedTaskCounter = \_ -> return (),
+            putTaskDuration = \_ _ -> return (),
             incrementErrorCounter = \_ -> return ()
           }
     }

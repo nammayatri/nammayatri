@@ -47,7 +47,7 @@ data ServiceHandle m = ServiceHandle
     buildOneWayFareBreakups :: Fare.OneWayFareParameters -> Id SRB.Booking -> m [DFareBreakup.FareBreakup],
     buildRentalFareBreakups :: RentalFare.RentalFareParameters -> Id SRB.Booking -> m [DFareBreakup.FareBreakup],
     recalculateFareEnabled :: m Bool,
-    putDiffMetric :: Money -> Meters -> m (),
+    putDiffMetric :: Id Organization -> Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     finalDistanceCalculation :: Id Person.Person -> LatLong -> m (),
     isDistanceCalculationFailed :: Id Person.Person -> m Bool,
@@ -147,7 +147,7 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
               <> show fareDiff
               <> ", Distance difference: "
               <> show distanceDiff
-          putDiffMetric fareDiff distanceDiff
+          putDiffMetric transporterId fareDiff distanceDiff
           fareBreakups <- buildOneWayFareBreakups fareParams booking.id
           return (actualDistance, updatedFare, totalFare, fareBreakups)
         else do

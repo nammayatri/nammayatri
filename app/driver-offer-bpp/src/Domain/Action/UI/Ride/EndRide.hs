@@ -44,7 +44,7 @@ data ServiceHandle m = ServiceHandle
       UTCTime ->
       Maybe Money ->
       m Fare.FareParameters,
-    putDiffMetric :: Money -> Meters -> m (),
+    putDiffMetric :: Id Organization -> Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     isDistanceCalculationFailed :: Id Person.Person -> m Bool,
     finalDistanceCalculation :: Id Person.Person -> LatLong -> m (),
@@ -137,5 +137,5 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           <> show (realToFrac @_ @Double fareDiff)
           <> ", Distance difference: "
           <> show distanceDiff
-      putDiffMetric fareDiff distanceDiff
+      putDiffMetric transporterId fareDiff distanceDiff
       return (actualDistance, updatedFare)

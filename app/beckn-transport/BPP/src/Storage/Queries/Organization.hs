@@ -15,6 +15,13 @@ import Storage.Tabular.Organization
 findById :: Transactionable m => Id Organization -> m (Maybe Organization)
 findById = Esq.findById
 
+findByShortId :: Transactionable m => ShortId Organization -> m (Maybe Organization)
+findByShortId shortId = Esq.findOne $ do
+  org <- from $ table @OrganizationT
+  where_ $
+    org ^. OrganizationShortId ==. val (shortId.getShortId)
+  return org
+
 loadAllProviders :: Transactionable m => m [Organization]
 loadAllProviders =
   Esq.findAll $ do

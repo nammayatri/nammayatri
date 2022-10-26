@@ -25,6 +25,7 @@ import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DrPool
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Organization as CQOrg
 import qualified Storage.CachedQueries.Organization as QOrg
 import Storage.Queries.AllocationEvent (logAllocationEvent)
 import qualified Storage.Queries.Booking as QRB
@@ -39,6 +40,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideRequest as QRR
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
+import qualified Tools.Metrics.AllocatorMetrics as TMetrics
 import Tools.Notifications
 import qualified Tools.Notifications as Notify
 
@@ -340,3 +342,18 @@ getRideInfo bookingId = do
       SRB.TRIP_ASSIGNED -> Assigned
       SRB.COMPLETED -> Completed
       SRB.CANCELLED -> Cancelled
+
+incrementTaskCounter :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Organization -> m ()
+incrementTaskCounter orgShortId = do
+  org <- CQOrg.findByShortId orgShortId >>= fromMaybeM (OrgNotFound ("shortId-" <> orgShortId.getShortId))
+  TMetrics.incrementTaskCounter org.name
+
+incrementFailedTaskCounter :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Organization -> m ()
+incrementFailedTaskCounter orgShortId = do
+  org <- CQOrg.findByShortId orgShortId >>= fromMaybeM (OrgNotFound ("shortId-" <> orgShortId.getShortId))
+  TMetrics.incrementFailedTaskCounter org.name
+
+putTaskDuration :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Organization -> Milliseconds -> m ()
+putTaskDuration orgShortId ms = do
+  org <- CQOrg.findByShortId orgShortId >>= fromMaybeM (OrgNotFound ("shortId-" <> orgShortId.getShortId))
+  TMetrics.putTaskDuration org.name ms

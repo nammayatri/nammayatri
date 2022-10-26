@@ -60,7 +60,7 @@ search transporterId req@DSearchReq {..} = do
     (QSearchRequest.findByMsgIdAndBapIdAndBppId messageId bapId transporter.id)
     (\_ -> throwError $ InvalidRequest "Duplicate Search request")
 
-  searchMetricsMVar <- Metrics.startSearchMetrics transporter.id
+  searchMetricsMVar <- Metrics.startSearchMetrics transporter.name
 
   now <- getCurrentTime
   validity <- getValidTime now pickupTime

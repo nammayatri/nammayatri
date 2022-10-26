@@ -13,11 +13,11 @@ import Prometheus as P
 
 type HasAllocatorMetrics m r = (HasFlowEnv m r '["btmMetrics" ::: AllocatorMetricsContainer])
 
-type TaskCounterMetric = P.Counter
+type TaskCounterMetric = P.Vector P.Label1 P.Counter
 
-type TaskDurationMetric = P.Histogram
+type TaskDurationMetric = P.Vector P.Label1 P.Histogram
 
-type FailedTaskCounterMetric = P.Counter
+type FailedTaskCounterMetric = P.Vector P.Label1 P.Counter
 
 data AllocatorMetricsContainer = AllocatorMetricsContainer
   { taskCounter :: TaskCounterMetric,
@@ -33,10 +33,10 @@ registerAllocatorMetricsContainer = do
   return $ AllocatorMetricsContainer {..}
 
 registerTaskCounter :: IO TaskCounterMetric
-registerTaskCounter = P.register . P.counter $ P.Info "BTM_task_count" ""
+registerTaskCounter = P.register . P.vector "agency_name" . P.counter $ P.Info "BTM_task_count" ""
 
 registerFailedTaskCounter :: IO FailedTaskCounterMetric
-registerFailedTaskCounter = P.register . P.counter $ P.Info "BTM_failed_task_count" ""
+registerFailedTaskCounter = P.register . P.vector "agency_name" . P.counter $ P.Info "BTM_failed_task_count" ""
 
 registerTaskDurationMetric :: IO TaskDurationMetric
-registerTaskDurationMetric = P.register . P.histogram (P.Info "BTM_task_duration" "") $ P.linearBuckets 0 0.1 20
+registerTaskDurationMetric = P.register . P.vector "agency_name" . P.histogram (P.Info "BTM_task_duration" "") $ P.linearBuckets 0 0.1 20

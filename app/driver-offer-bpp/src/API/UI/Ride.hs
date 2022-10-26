@@ -17,7 +17,7 @@ import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as RideCancel
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
-import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEnd
+import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import qualified Domain.Action.UI.Ride.StartRide.Internal as RideStart
 import qualified Domain.Types.Person as SP
@@ -35,7 +35,6 @@ import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
-import Tools.Metrics
 
 type API =
   "driver" :> "ride"
@@ -96,9 +95,9 @@ endRide personId rideId req =
           findBookingById = QRB.findById,
           findRideById = QRide.findById,
           notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
-          endRide = RideEnd.endRideTransaction,
+          endRide = RideEndInt.endRideTransaction,
           calculateFare = Fare.calculateFare,
-          putDiffMetric = putFareAndDistanceDeviations,
+          putDiffMetric = RideEndInt.putDiffMetric,
           findDriverLocById = DrLoc.findById,
           isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed LocUpd.defaultRideInterpolationHandler,
           finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId,

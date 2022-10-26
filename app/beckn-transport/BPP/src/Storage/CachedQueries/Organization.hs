@@ -3,6 +3,7 @@
 
 module Storage.CachedQueries.Organization
   ( findById,
+    findByShortId,
     update,
     loadAllProviders,
     clearCache,
@@ -27,19 +28,35 @@ findById id =
     Just a -> return . Just $ (coerce @(OrganizationD 'Unsafe) @Organization) a
     Nothing -> flip whenJust cacheOrganization /=<< Queries.findById id
 
+findByShortId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Organization -> m (Maybe Organization)
+findByShortId shortId =
+  Hedis.get (makeShortIdKey shortId) >>= \case
+    Nothing -> findAndCache
+    Just id ->
+      Hedis.get (makeIdKey id) >>= \case
+        Just a -> return . Just $ coerce @(OrganizationD 'Unsafe) @Organization a
+        Nothing -> findAndCache
+  where
+    findAndCache = flip whenJust cacheOrganization /=<< Queries.findByShortId shortId
+
 -- Call it after any update
 clearCache :: HedisFlow m r => Organization -> m ()
-clearCache org =
+clearCache org = do
   Hedis.del (makeIdKey org.id)
+  Hedis.del (makeShortIdKey org.shortId)
 
 cacheOrganization :: (HasCacheConfig r, HedisFlow m r) => Organization -> m ()
 cacheOrganization org = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey org.id
   Hedis.setExp idKey (coerce @Organization @(OrganizationD 'Unsafe) org) expTime
+  Hedis.setExp (makeShortIdKey org.shortId) idKey expTime
 
 makeIdKey :: Id Organization -> Text
 makeIdKey id = "CachedQueries:Organization:Id-" <> id.getId
+
+makeShortIdKey :: ShortId Organization -> Text
+makeShortIdKey shortId = "CachedQueries:Organization:ShortId-" <> shortId.getShortId
 
 update :: Organization -> Esq.SqlDB ()
 update = Queries.update

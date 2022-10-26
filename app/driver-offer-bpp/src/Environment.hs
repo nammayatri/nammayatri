@@ -27,7 +27,7 @@ import EulerHS.Prelude
 import qualified Idfy.Types.IdfyConfig as Idfy
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
-import Tools.Metrics.ARDUBPPMetrics.Types
+import Tools.Metrics.ARDUBPPMetrics
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -73,7 +73,8 @@ data AppCfg = AppCfg
     dashboardToken :: Text,
     defaultPickupLocThreshold :: Meters,
     defaultDropLocThreshold :: Meters,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    metricsSearchDurationTimeout :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -114,7 +115,7 @@ data AppEnv = AppEnv
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     defaultRadiusOfSearch :: Meters,
-    transporterMetrics :: TransporterMetricsContainer,
+    bppMetrics :: BPPMetricsContainer,
     searchRequestExpirationSeconds :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
@@ -151,8 +152,8 @@ buildAppEnv cfg@AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   let modifierFunc = ("driver-offer-bpp:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc
+  bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- Metrics.registerCoreMetricsContainer
-  transporterMetrics <- registerTransporterMetricsContainer
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
   return AppEnv {..}

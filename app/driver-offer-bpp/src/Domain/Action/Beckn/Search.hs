@@ -16,7 +16,10 @@ import Environment
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Organization as CQOrg
 import Storage.Queries.Person (DriverPoolResult)
+import Tools.Error
+import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
@@ -29,11 +32,12 @@ data DSearchReq = DSearchReq
   }
 
 data DSearchRes = DSearchRes
-  { transporterInfo :: TransporterInfo,
+  { provider :: DOrg.Organization,
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: DLoc.SearchReqLocation,
     now :: UTCTime,
-    estimateList :: [EstimateItem]
+    estimateList :: [EstimateItem],
+    searchMetricsMVar :: Metrics.SearchMetricsMVar
   }
 
 data EstimateItem = EstimateItem
@@ -51,8 +55,11 @@ data TransporterInfo = TransporterInfo
     ridesConfirmed :: Int
   }
 
-handler :: DOrg.Organization -> DSearchReq -> Flow DSearchRes
-handler org sReq = do
+handler :: Id DOrg.Organization -> DSearchReq -> Flow DSearchRes
+handler orgId sReq = do
+  org <- CQOrg.findById orgId >>= fromMaybeM (OrgDoesNotExist orgId.getId)
+  unless org.enabled $ throwError AgencyDisabled
+  searchMetricsMVar <- Metrics.startSearchMetrics org.name
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
   driverPool <- calculateDriverPool Nothing (getCoordinates fromLocation) org.id True
@@ -64,7 +71,7 @@ handler org sReq = do
   logDebug $ "distance: " <> show distance
   estimates <- mapM (mkEstimate org sReq.pickupTime distance) listOfProtoQuotes
   logDebug $ "bap uri: " <> show sReq.bapUri
-  buildSearchRes org fromLocation toLocation estimates
+  buildSearchRes org fromLocation toLocation estimates searchMetricsMVar
 
 mkEstimate ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
@@ -100,23 +107,16 @@ buildSearchRes ::
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
   [EstimateItem] ->
+  Metrics.SearchMetricsMVar ->
   m DSearchRes
-buildSearchRes org fromLocation toLocation estimateList = do
+buildSearchRes org fromLocation toLocation estimateList searchMetricsMVar = do
   now <- getCurrentTime
-  let transporterInfo =
-        TransporterInfo
-          { shortId = org.shortId,
-            name = org.name,
-            contacts = fromMaybe "" org.mobileNumber,
-            ridesInProgress = 0, -- FIXME
-            ridesCompleted = 0, -- FIXME
-            ridesConfirmed = 0 -- FIXME
-          }
   pure $
     DSearchRes
-      { transporterInfo,
+      { provider = org,
         now,
         fromLocation,
         toLocation,
-        estimateList
+        estimateList,
+        searchMetricsMVar
       }

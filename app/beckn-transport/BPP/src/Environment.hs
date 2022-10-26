@@ -112,7 +112,6 @@ data AppEnv = AppEnv
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
     updateLocationRefreshPeriod :: Seconds,
-    metricsSearchDurationTimeout :: Seconds,
     registryUrl :: BaseUrl,
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
@@ -122,7 +121,6 @@ data AppEnv = AppEnv
     isShuttingDown :: TMVar (),
     bppMetrics :: BPPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
-    transporterMetrics :: TransporterMetricsContainer,
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BPPKafkaEnvs,
@@ -141,7 +139,6 @@ buildAppEnv AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
-  transporterMetrics <- registerTransporterMetricsContainer
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

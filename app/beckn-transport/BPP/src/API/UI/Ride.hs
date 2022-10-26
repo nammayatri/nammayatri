@@ -41,7 +41,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
 import Tools.Error (RentalFarePolicyError (NoRentalFarePolicy))
-import Tools.Metrics (putFareAndDistanceDeviations)
 
 type API =
   "driver" :> "ride"
@@ -107,7 +106,7 @@ endRide personId rideId req = withFlowHandlerAPI $ do
           buildRentalFareBreakups = RentalFare.buildRentalFareBreakups,
           buildOneWayFareBreakups = Fare.buildOneWayFareBreakups,
           recalculateFareEnabled = asks (.recalculateFareEnabled),
-          putDiffMetric = putFareAndDistanceDeviations,
+          putDiffMetric = EInternal.putDiffMetric,
           findDriverLocById = DrLoc.findById,
           finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId,
           isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed LocUpd.defaultRideInterpolationHandler,

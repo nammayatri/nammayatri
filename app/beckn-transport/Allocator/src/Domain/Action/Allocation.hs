@@ -92,9 +92,9 @@ type MonadHandler m =
   )
 
 data AllocatorMetricsHandle m = AllocatorMetricsHandle
-  { incrementTaskCounter :: m (),
-    incrementFailedTaskCounter :: m (),
-    putTaskDuration :: Milliseconds -> m (),
+  { incrementTaskCounter :: ShortId Organization -> m (),
+    incrementFailedTaskCounter :: ShortId Organization -> m (),
+    putTaskDuration :: ShortId Organization -> Milliseconds -> m (),
     incrementErrorCounter :: SomeException -> m ()
   }
 
@@ -146,8 +146,8 @@ process handle@ServiceHandle {..} shortOrgId requestsNum = do
 
 processRequest :: MonadHandler m => ServiceHandle m -> ShortId Organization -> RideRequest -> m ()
 processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
-  metrics.incrementTaskCounter
-  measuringDuration (\dur _ -> metrics.putTaskDuration dur) $ do
+  metrics.incrementTaskCounter shortOrgId
+  measuringDuration (\dur _ -> metrics.putTaskDuration shortOrgId dur) $ do
     let requestId = rideRequest.requestId
     let bookingId = rideRequest.bookingId
     rideInfo <- getRideInfo bookingId
@@ -187,7 +187,7 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
         let message = "Error processing request " <> show requestId <> ": " <> makeLogSomeException exc
         logError message
         metrics.incrementErrorCounter exc
-        metrics.incrementFailedTaskCounter
+        metrics.incrementFailedTaskCounter shortOrgId
     removeRequest requestId
 
 processDriverResponse :: MonadHandler m => ServiceHandle m -> DriverResponseType -> Id SRB.Booking -> m ()

@@ -26,12 +26,12 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   let quoteEntitiesList = map (mkQuoteEntities startInfo stopInfo) estimateList
       items = map (.item) quoteEntitiesList
       fulfillments = map (.fulfillment) quoteEntitiesList
-      contacts = transporterInfo.contacts
+      contacts = fromMaybe "" provider.mobileNumber
       tags =
         OS.ProviderTags
-          { rides_inprogress = transporterInfo.ridesInProgress,
-            rides_completed = transporterInfo.ridesCompleted,
-            rides_confirmed = transporterInfo.ridesConfirmed
+          { rides_inprogress = 0, --FIXME
+            rides_completed = 0, --FIXME
+            rides_confirmed = 0 --FIXME
           }
       payment =
         OS.Payment
@@ -39,10 +39,10 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
             _type = OS.ON_FULFILLMENT,
             time = OS.TimeDuration "P2A" -- FIXME: what is this?
           }
-  let provider =
+  let providerSpec =
         OS.Provider
-          { id = transporterInfo.shortId.getShortId,
-            descriptor = OS.Descriptor {name = transporterInfo.name},
+          { id = provider.shortId.getShortId,
+            descriptor = OS.Descriptor {name = provider.name},
             locations = [],
             categories = [autoOneWayCategory],
             items,
@@ -55,8 +55,8 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
           }
   OS.OnSearchMessage $
     OS.Catalog
-      { bpp_providers = [provider],
-        bpp_descriptor = OS.Descriptor transporterInfo.shortId.getShortId
+      { bpp_providers = [providerSpec],
+        bpp_descriptor = OS.Descriptor provider.shortId.getShortId
       }
 
 mkStartInfo :: DSearch.DSearchRes -> OS.StartInfo

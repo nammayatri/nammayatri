@@ -2,9 +2,6 @@ module Tools.Metrics.TransporterBPPMetrics.Types
   ( HasBPPMetrics,
     BPPMetricsContainer (..),
     module CoreMetrics,
-    registerTransporterMetricsContainer,
-    TransporterMetricsContainer (..),
-    HasTransporterMetrics,
     registerBPPMetricsContainer,
   )
 where
@@ -20,21 +17,26 @@ type SearchDurationMetric = (P.Vector P.Label1 P.Histogram, P.Vector P.Label1 P.
 
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
-    searchDuration :: SearchDurationMetric
+    searchDuration :: SearchDurationMetric,
+    countingDeviation :: CountingDeviationMetric
   }
 
-type HasTransporterMetrics m r = HasFlowEnv m r '["transporterMetrics" ::: TransporterMetricsContainer]
-
-data TransporterMetricsContainer = TransporterMetricsContainer
-  { realFareDeviation :: P.Histogram,
-    realDistanceDeviation :: P.Histogram
+data CountingDeviationMetric = CountingDeviationMetric
+  { realFareDeviation :: P.Vector P.Label1 P.Histogram,
+    realDistanceDeviation :: P.Vector P.Label1 P.Histogram
   }
 
-registerTransporterMetricsContainer :: IO TransporterMetricsContainer
-registerTransporterMetricsContainer =
-  TransporterMetricsContainer
-    <$> (P.register . P.histogram fareDeviation $ aroundZero 10 5)
-    <*> (P.register . P.histogram distanceDeviation $ aroundZero 10 6)
+registerBPPMetricsContainer :: Seconds -> IO BPPMetricsContainer
+registerBPPMetricsContainer searchDurationTimeout = do
+  searchDuration <- registerSearchDurationMetric searchDurationTimeout
+  countingDeviation <- registerCountingDeviationMetric
+  return $ BPPMetricsContainer {..}
+
+registerCountingDeviationMetric :: IO CountingDeviationMetric
+registerCountingDeviationMetric =
+  CountingDeviationMetric
+    <$> (P.register . P.vector "agency_name" $ P.histogram fareDeviation $ aroundZero 10 5)
+    <*> (P.register . P.vector "agency_name" $ P.histogram distanceDeviation $ aroundZero 10 6)
   where
     aroundZero factor b =
       let l = P.exponentialBuckets 1 factor b
@@ -48,22 +50,17 @@ registerTransporterMetricsContainer =
         "BPP_distance_deviation"
         "Difference between estimated distance and real distance of a ride"
 
-registerBPPMetricsContainer :: Seconds -> IO BPPMetricsContainer
-registerBPPMetricsContainer searchDurationTimeout = do
-  searchDuration <- registerSearchDurationMetric searchDurationTimeout
-  return $ BPPMetricsContainer {..}
-
 registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do
   searchDurationHistogram <-
     P.register $
-      P.vector "transporter_id" $
+      P.vector "agency_name" $
         P.histogram
           infoSearchDuration
           buckets
   failureCounter <-
     P.register $
-      P.vector "transporter_id" $
+      P.vector "agency_name" $
         P.counter $ P.Info "BPP_search_failure_counter" ""
 
   pure (searchDurationHistogram, failureCounter)
