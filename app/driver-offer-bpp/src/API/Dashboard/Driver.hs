@@ -94,8 +94,7 @@ driverDocumentsInfo _ = withFlowHandlerAPI $ do
             flip fmap mbExp $
               \exp_ -> let dif = diffUTCTime exp_ now in dif < oneMonth && dif > 0
 
-      acc
-        { Common.registered = acc.registered + 1,
+      acc{Common.registered = acc.registered + 1,
           Common.verified = incrIf fd.driverInfo.verified acc.verified,
           Common.enabled = incrIf fd.driverInfo.enabled acc.enabled,
           Common.validDocuments = incrDocs (dlStatus == VALID) (rcStatus == VALID) acc.validDocuments,
@@ -104,17 +103,16 @@ driverDocumentsInfo _ = withFlowHandlerAPI $ do
           Common.verificationFailed = incrDocs (dlStatus == FAILED) (rcStatus == FAILED) acc.verificationFailed,
           Common.verificationLimitExceeded = incrDocs (dlStatus == LIMIT_EXCEED) (rcStatus == LIMIT_EXCEED) acc.verificationLimitExceeded,
           Common.docsExpiringInMonth = incrDocs dlExpiresInMonth rcExpiresInMonth acc.docsExpiringInMonth
-        }
+         }
 
 incrIf :: Num a => Bool -> a -> a
 incrIf b = if b then (+ 1) else identity
 
 incrDocs :: Bool -> Bool -> Common.DocumentsByStateInfo -> Common.DocumentsByStateInfo
 incrDocs lic vehReg old =
-  old
-    { Common.driverLicense = incrIf lic old.driverLicense,
+  old{Common.driverLicense = incrIf lic old.driverLicense,
       Common.vehicleRegistrationCertificate = incrIf vehReg old.vehicleRegistrationCertificate
-    }
+     }
 
 getRcExpiration :: VehicleRegistrationCertificate -> UTCTime
 getRcExpiration = (.fitnessExpiry)
