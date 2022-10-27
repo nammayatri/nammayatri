@@ -285,7 +285,7 @@ getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType = do
                       )
               )
           &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                  ||. (location ^. DriverLocationUpdatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
+                  ||. (location ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
               )
       return
         ( person ^. PersonTId,
