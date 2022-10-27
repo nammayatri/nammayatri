@@ -124,7 +124,7 @@ in
 , driverOnboardingConfigs = driverOnboardingConfigs
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , smsCfg = smsConfig
-, driverPositionInfoExpiry = None Integer
+, driverPositionInfoExpiry = Some +36000
 , searchRequestExpirationSeconds = +3600
 , driverQuoteExpirationSeconds = +60
 , defaultRadiusOfSearch = +5000 -- meters

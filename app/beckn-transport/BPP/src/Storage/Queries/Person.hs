@@ -250,16 +250,16 @@ data NearestDriversResult = NearestDriversResult
   deriving (Generic, GoogleMaps.HasCoordinates)
 
 getNearestDrivers ::
-  (Transactionable m, HasFlowEnv m r '["driverPositionInfoExpiry" ::: Maybe Seconds]) =>
+  (Transactionable m, MonadTime m) =>
   LatLong ->
   Integer ->
   Id Organization ->
   Maybe Vehicle.Variant ->
   SFP.FareProductType ->
+  Maybe Seconds ->
   m [NearestDriversResult]
-getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType = do
+getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType mbDriverPositionInfoExpiry = do
   let isRental = fareProductType == SFP.RENTAL
-  mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   now <- getCurrentTime
   res <- Esq.findAll $ do
     withTable <- with $ do

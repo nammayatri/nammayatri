@@ -111,6 +111,7 @@ calculateDriverPool ::
   m [DriverPoolResult]
 calculateDriverPool pickupLatLong orgId variant fareProductType = do
   radius <- getRadius
+  mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   nearestDriversResult <-
     measuringDurationToLog INFO "calculateDriverPool" $
       QP.getNearestDrivers
@@ -119,6 +120,7 @@ calculateDriverPool pickupLatLong orgId variant fareProductType = do
         orgId
         variant
         fareProductType
+        mbDriverPositionInfoExpiry
   case nearestDriversResult of
     [] -> pure []
     (a : xs) -> do

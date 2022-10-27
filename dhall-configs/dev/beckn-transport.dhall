@@ -93,7 +93,7 @@ in
 , fcmTokenKeyPrefix = "transporter-bpp"
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
-, driverPositionInfoExpiry = None Integer
+, driverPositionInfoExpiry = Some +36000
 , apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = common.httpClientOptions
 , authTokenCacheExpiry = +600
