@@ -34,6 +34,10 @@ mkPersist
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
       nightShiftRate Centesimal Maybe
+
+      maxAllowedTripDistance Meters Maybe
+      minAllowedTripDistance Meters Maybe
+
       createdAt UTCTime
       updatedAt UTCTime
       UniqueFarePolicyId id

@@ -19,6 +19,8 @@ data FarePolicyD s = FarePolicy
     nightShiftRate :: Maybe Centesimal,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
+    maxAllowedTripDistance :: Maybe Meters,
+    minAllowedTripDistance :: Maybe Meters,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -50,7 +52,9 @@ data FarePolicyAPIEntity = FarePolicyAPIEntity
     driverExtraFee :: ExtraFee,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
-    nightShiftRate :: Maybe Centesimal
+    nightShiftRate :: Maybe Centesimal,
+    maxAllowedTripDistance :: Maybe Meters,
+    minAllowedTripDistance :: Maybe Meters
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

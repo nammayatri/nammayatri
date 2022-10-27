@@ -9,6 +9,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import Data.List
+import Domain.Types.FarePolicy (FarePolicy)
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
@@ -16,8 +17,10 @@ import Environment
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Organization as CQOrg
 import Storage.Queries.Person (DriverPoolResult)
+import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
@@ -62,34 +65,64 @@ handler orgId sReq = do
   searchMetricsMVar <- Metrics.startSearchMetrics org.name
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
-  driverPool <- calculateDriverPool Nothing (getCoordinates fromLocation) org.id True
-  let getVariant x = x.origin.vehicle.variant
-      listOfProtoQuotes = nubBy ((==) `on` getVariant) driverPool
-
   distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation)
   let distance = distRes.distance
   logDebug $ "distance: " <> show distance
-  estimates <- mapM (mkEstimate org sReq.pickupTime distance) listOfProtoQuotes
-  logDebug $ "bap uri: " <> show sReq.bapUri
+
+  allFarePolicies <- FarePolicyS.findAllByOrgId org.id
+  let farePolicies = filter (checkTripConstraints distance) allFarePolicies
+
+  estimates <-
+    if null farePolicies
+      then do
+        logDebug "Trip doesnot match any fare policy constraints."
+        return []
+      else do
+        driverPool <- calculateDriverPool Nothing (getCoordinates fromLocation) org.id True
+        let getVariant x = x.origin.vehicle.variant
+            listOfProtoQuotes = nubBy ((==) `on` getVariant) driverPool
+            filteredProtoQuotes = zipMatched farePolicies listOfProtoQuotes
+
+        estimates <- mapM (mkEstimate org sReq.pickupTime distance) filteredProtoQuotes
+        logDebug $ "bap uri: " <> show sReq.bapUri
+        return estimates
+
   buildSearchRes org fromLocation toLocation estimates searchMetricsMVar
+  where
+    checkTripConstraints tripDistance fp =
+      let cond1 = (<= tripDistance) <$> fp.minAllowedTripDistance
+          cond2 = (>= tripDistance) <$> fp.maxAllowedTripDistance
+       in and $ catMaybes [cond1, cond2]
+
+type DriverMetaData = GoogleMaps.GetDistanceResult QP.DriverPoolResult MapSearch.LatLong
+
+zipMatched :: [FarePolicy] -> [DriverMetaData] -> [(FarePolicy, DriverMetaData)]
+zipMatched farePolicies driverPool =
+  mapMaybe match farePolicies
+  where
+    match :: FarePolicy -> Maybe (FarePolicy, DriverMetaData)
+    match farePolicy =
+      let fpVehicleVariant = farePolicy.vehicleVariant
+          driverPoolVariants = map (\d -> d.origin.vehicle.variant) driverPool
+          midx = elemIndex fpVehicleVariant driverPoolVariants
+       in fmap (\idx -> (farePolicy, driverPool !! idx)) midx
 
 mkEstimate ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   DOrg.Organization ->
   UTCTime ->
   Meters ->
-  GoogleMaps.GetDistanceResult DriverPoolResult a ->
+  (FarePolicy, GoogleMaps.GetDistanceResult DriverPoolResult a) ->
   m EstimateItem
-mkEstimate org startTime dist g = do
-  let variant = g.origin.vehicle.variant
-  fareParams <- calculateFare org.id variant dist startTime Nothing
+mkEstimate org startTime dist (farePolicy, driverMetadata) = do
+  fareParams <- calculateFare org.id farePolicy dist startTime Nothing
   let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare
-  logDebug $ "distanceToPickup: " <> show g.distance
+  logDebug $ "distanceToPickup: " <> show driverMetadata.distance
   pure
     EstimateItem
-      { vehicleVariant = g.origin.vehicle.variant,
-        distanceToPickup = g.distance,
+      { vehicleVariant = driverMetadata.origin.vehicle.variant,
+        distanceToPickup = driverMetadata.distance,
         baseFare
       }
 

@@ -29,6 +29,7 @@ import Servant
 import SharedLogic.CallBAP
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.FareCalculator as Fare
+import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as DrLoc
@@ -96,6 +97,7 @@ endRide personId rideId req =
           findRideById = QRide.findById,
           notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
           endRide = RideEndInt.endRideTransaction,
+          getFarePolicy = FarePolicyS.findByOrgIdAndVariant,
           calculateFare = Fare.calculateFare,
           putDiffMetric = RideEndInt.putDiffMetric,
           findDriverLocById = DrLoc.findById,

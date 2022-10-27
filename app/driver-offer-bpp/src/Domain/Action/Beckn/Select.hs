@@ -11,7 +11,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
-import Beckn.Utils.Common (logDebug)
+import Beckn.Utils.Common (fromMaybeM, logDebug)
 import qualified Data.Map as M
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Organization as DOrg
@@ -23,9 +23,11 @@ import Environment
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import SharedLogic.GoogleMaps (Address (..), mkLocation)
+import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import Storage.Queries.Person
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import Tools.Error (FarePolicyError (NoFarePolicy))
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 
@@ -46,11 +48,12 @@ handler :: Text -> Id DOrg.Organization -> DSelectReq -> Flow ()
 handler sessiontoken orgId sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
+  farePolicy <- FarePolicyS.findByOrgIdAndVariant orgId sReq.variant >>= fromMaybeM NoFarePolicy
   driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId False
 
   distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation)
   let distance = distRes.distance
-  fareParams <- calculateFare orgId sReq.variant distance sReq.pickupTime Nothing
+  fareParams <- calculateFare orgId farePolicy distance sReq.pickupTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation orgId sReq
   let baseFare = fareSum fareParams
   logDebug $

@@ -17,6 +17,7 @@ import Data.OpenApi
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.FareParams as Fare
+import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
@@ -37,9 +38,10 @@ data ServiceHandle m = ServiceHandle
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
     endRide :: Id SRB.Booking -> Ride.Ride -> Id Person.Driver -> m (),
     notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> Money -> m (),
+    getFarePolicy :: Id Organization -> Variant -> m (Maybe FarePolicy),
     calculateFare ::
       Id Organization ->
-      Variant ->
+      FarePolicy ->
       Meters ->
       UTCTime ->
       Maybe Money ->
@@ -128,7 +130,8 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
 
       -- maybe compare only distance fare?
       let estimatedFare = Fare.fareSum booking.fareParams
-      fareParams <- calculateFare transporterId booking.vehicleVariant actualDistance booking.startTime booking.fareParams.driverSelectedFare
+      farePolicy <- getFarePolicy transporterId booking.vehicleVariant >>= fromMaybeM NoFarePolicy
+      fareParams <- calculateFare transporterId farePolicy actualDistance booking.startTime booking.fareParams.driverSelectedFare
       let updatedFare = Fare.fareSum fareParams
       let distanceDiff = actualDistance - oldDistance
       let fareDiff = updatedFare - estimatedFare
