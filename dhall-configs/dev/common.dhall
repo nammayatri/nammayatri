@@ -19,6 +19,7 @@ in { smsSessionConfig = globalCommon.smsSessionConfig
 
    , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword
+   , InfobipConfig = sec.InfobipConfig
    , passetto = { _1 = "localhost", _2 = 8021 }
    , fcmJsonPath = Some "dummy-fcm.json"
    , googleMapsUrl = "https://maps.googleapis.com/maps/api/"

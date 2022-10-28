@@ -44,6 +44,14 @@ let smsConfig =
   , sender = "JUSPAY"
   }
 
+let InfobipConfig =
+  { username = common.InfobipConfig.username
+  , password = common.InfobipConfig.password
+  , token = common.InfobipConfig.token
+  , url = "https://5vmxvj.api.infobip.com"
+  , sender = "JUSPAY"
+  }
+
 let gwUri = "http://localhost:8015/v1"
 
 let apiRateLimitOptions =
@@ -85,6 +93,7 @@ in
 { esqDBCfg = esqDBCfg
 , hedisCfg = hcfg
 , smsCfg = smsConfig
+, infoBIPCfg = InfobipConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , port = +8013
 , metricsPort = +9999
