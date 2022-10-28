@@ -6,8 +6,8 @@ module API.UI.Serviceability
   )
 where
 
+import Beckn.External.Maps.Types
 import Beckn.Prelude
-import Beckn.Product.MapSearch.PolyLinePoints
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Beckn.Utils.Common

@@ -34,7 +34,7 @@ in
 , exotelCfg = exotelCfg
 , s3Config = mockS3Config
 , idfyCfg = idfyCfg
-, googleMapsKey = topSecret.googleMapsKey
+, googleKey = topSecret.googleKey
 , googleTranslateKey = topSecret.googleTranslateKey
 , slackToken = "xxxxxxx"
 , InfoBIPConfig = InfoBIPConfig

@@ -4,6 +4,12 @@ let globalCommon = ../generic/common.dhall
 
 let branchName = "$DEPLOY_VARIANT"
 
+let googleCfg = {
+   googleMapsUrl = "https://maps.googleapis.com/maps/api/"
+,  googleRoadsUrl = "https://roads.googleapis.com/"
+,  googleKey = sec.googleKey
+}
+
 in  { smsSessionConfig = globalCommon.smsSessionConfig
     , autoMigrate = globalCommon.autoMigrate
     , loggerConfig = globalCommon.loggerConfig // { logRawSql = True }
@@ -22,8 +28,7 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , branchName = branchName
     , passetto = { _1 = "passetto-hs.atlas", _2 = 8012 }
     , fcmJsonPath = Some "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
-    , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
-    , googleMapsKey = sec.googleMapsKey
+    , googleCfg = googleCfg
     , googleTranslateUrl = "https://www.googleapis.com/"
     , googleTranslateKey = sec.googleTranslateKey
     , fcmUrl =

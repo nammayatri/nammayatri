@@ -1,15 +1,12 @@
 module Domain.Action.Beckn.Init where
 
-import Beckn.External.GoogleMaps.Types
+import Beckn.External.Maps.Google as MapSearch
 import Beckn.Prelude
-import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis
 import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
@@ -54,7 +51,7 @@ init ::
     HedisFlow m r,
     HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m,
-    HasGoogleMaps m r
+    HasGoogleCfg r
   ) =>
   Id DOrg.Organization ->
   InitReq ->
@@ -80,7 +77,7 @@ initOneWayTrip ::
     HedisFlow m r,
     HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m,
-    HasGoogleMaps m r
+    HasGoogleCfg r
   ) =>
   InitReq ->
   InitOneWayReq ->
@@ -119,7 +116,7 @@ initRentalTrip ::
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m,
-    HasGoogleMaps m r
+    HasGoogleCfg r
   ) =>
   InitReq ->
   InitRentalReq ->

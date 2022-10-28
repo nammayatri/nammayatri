@@ -1,6 +1,6 @@
 module Domain.Types.Booking.BookingLocation where
 
-import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates)
+import Beckn.External.Maps.HasCoordinates (HasCoordinates)
 import Beckn.Types.Id
 import Data.Aeson
 import Data.OpenApi (ToSchema)

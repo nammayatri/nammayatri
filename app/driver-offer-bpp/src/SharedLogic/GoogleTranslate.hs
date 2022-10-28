@@ -3,10 +3,10 @@ module SharedLogic.GoogleTranslate
   )
 where
 
-import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import qualified Beckn.External.GoogleTranslate.Client as ClientGoogleTranslate
 import Beckn.External.GoogleTranslate.Types
 import qualified Beckn.External.GoogleTranslate.Types as GoogleTranslate
+import qualified Beckn.External.Maps.Google as GoogleMaps
 import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Utils.Common (MonadFlow)
 import EulerHS.Prelude

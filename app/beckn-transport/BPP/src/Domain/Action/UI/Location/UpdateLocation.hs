@@ -7,13 +7,13 @@ module Domain.Action.UI.Location.UpdateLocation
   )
 where
 
+import Beckn.External.Maps.Types
 import Beckn.Prelude hiding (Handler)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Beckn.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Beckn.Utils.Common hiding (id)
 import Beckn.Utils.GenericPretty (PrettyShow)

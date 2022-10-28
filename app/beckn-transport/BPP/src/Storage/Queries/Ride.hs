@@ -2,10 +2,10 @@
 
 module Storage.Queries.Ride where
 
+import Beckn.External.Maps.Types (LatLong)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong)
 import Beckn.Utils.Common
 import Domain.Types.Booking.Type as Booking
 import Domain.Types.Organization

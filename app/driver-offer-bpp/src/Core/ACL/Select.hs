@@ -1,7 +1,6 @@
 module Core.ACL.Select (buildSelectReq) where
 
-import qualified Beckn.External.GoogleMaps.Client as ClientGoogleMaps
-import Beckn.External.GoogleMaps.Types as GoogleMaps hiding (Address)
+import qualified Beckn.External.Maps.Google as GoogleMaps
 import Beckn.Prelude hiding (error, setField)
 import Beckn.Product.Validation.Context
 import qualified Beckn.Types.Core.Context as Context
@@ -18,7 +17,7 @@ import Tools.Metrics (CoreMetrics)
 
 buildSelectReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],
-    GoogleMaps.HasGoogleMaps m r,
+    GoogleMaps.HasGoogleCfg r,
     CoreMetrics m
   ) =>
   Text ->
@@ -39,12 +38,10 @@ buildSelectReq sessiontoken subscriber req = do
   item <- case order.items of
     [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
-  url <- asks (.googleMapsUrl)
-  apiKey <- asks (.googleMapsKey)
-  pickupRes <- ClientGoogleMaps.getPlaceName url (Just sessiontoken) (show (pickup.location.gps.lat) <> "," <> show (pickup.location.gps.lon)) apiKey Nothing
+  pickupRes <- GoogleMaps.getPlaceName (Just sessiontoken) (GoogleMaps.ByLatLong $ GoogleMaps.LatLong pickup.location.gps.lat pickup.location.gps.lon) Nothing
   pickUpAddress <- mkLocation pickupRes
   pickupLocation <- buildSearchReqLocationAPIEntity pickUpAddress (pickup.location.gps.lat) (pickup.location.gps.lon)
-  dropOffRes <- ClientGoogleMaps.getPlaceName url (Just sessiontoken) (show (dropOff.location.gps.lat) <> "," <> show (dropOff.location.gps.lon)) apiKey Nothing
+  dropOffRes <- GoogleMaps.getPlaceName (Just sessiontoken) (GoogleMaps.ByLatLong $ GoogleMaps.LatLong dropOff.location.gps.lat dropOff.location.gps.lon) Nothing
   dropOffAddress <- mkLocation dropOffRes
   dropLocation <- buildSearchReqLocationAPIEntity dropOffAddress (dropOff.location.gps.lat) (dropOff.location.gps.lon)
   pure

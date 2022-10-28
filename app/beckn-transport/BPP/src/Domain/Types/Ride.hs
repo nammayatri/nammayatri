@@ -2,9 +2,9 @@
 
 module Domain.Types.Ride where
 
+import Beckn.External.Maps.Types (LatLong)
 import Beckn.Prelude (roundToIntegral)
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong)
 import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL

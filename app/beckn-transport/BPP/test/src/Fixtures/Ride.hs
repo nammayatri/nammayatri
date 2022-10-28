@@ -1,7 +1,7 @@
 module Fixtures.Ride where
 
+import Beckn.External.Maps.Types
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures

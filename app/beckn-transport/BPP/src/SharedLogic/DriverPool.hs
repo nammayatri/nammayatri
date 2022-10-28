@@ -6,12 +6,9 @@ module SharedLogic.DriverPool
   )
 where
 
-import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
-import qualified Beckn.Product.MapSearch.GoogleMaps as MapSearch
+import Beckn.External.Maps.Google as Google
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (LatLong))
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Booking as SRB
@@ -39,7 +36,7 @@ data DriverPoolResult = DriverPoolResult
     lat :: Double,
     lon :: Double
   }
-  deriving (Generic, MapSearch.HasCoordinates)
+  deriving (Generic, HasCoordinates)
 
 mkDriverPoolItem :: DriverPoolResult -> DriverPoolItem
 mkDriverPoolItem DriverPoolResult {..} = DriverPoolItem {..}
@@ -59,7 +56,7 @@ getDriverPool ::
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    HasGoogleMaps m r
+    HasGoogleCfg r
   ) =>
   Id SRB.Booking ->
   m SortedDriverPool
@@ -82,7 +79,7 @@ recalculateDriverPool ::
     Redis.HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
-    HasGoogleMaps m r
+    HasGoogleCfg r
   ) =>
   SRB.Booking ->
   m [DriverPoolResult]
@@ -105,7 +102,7 @@ calculateDriverPool ::
     Redis.HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
-    HasGoogleMaps m r
+    HasGoogleCfg r
   ) =>
   LatLong ->
   Id SOrg.Organization ->
@@ -142,13 +139,13 @@ calculateDriverPool pickupLatLong orgId variant fareProductType = do
 buildDriverPoolResults ::
   ( EsqDBFlow m r,
     CoreMetrics m,
-    HasGoogleMaps m r
+    HasGoogleCfg r
   ) =>
   LatLong ->
   NonEmpty QP.NearestDriversResult ->
   m (NonEmpty DriverPoolResult)
 buildDriverPoolResults pickup ndResults = do
-  distDurs <- MapSearch.getDistances (Just MapSearch.CAR) (pickup :| []) ndResults
+  distDurs <- Google.getDistances (Just Google.CAR) (pickup :| []) ndResults
   return $ mkDriverPoolResult <$> distDurs
   where
     mkDriverPoolResult distDur = do

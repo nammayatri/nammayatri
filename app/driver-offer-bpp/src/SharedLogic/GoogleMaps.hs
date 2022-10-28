@@ -2,7 +2,7 @@
 
 module SharedLogic.GoogleMaps where
 
-import Beckn.External.GoogleMaps.Types as GoogleMaps hiding (Address)
+import Beckn.External.Maps.Google hiding (Address)
 import Beckn.Prelude hiding (const, error, getField, setField)
 import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.App (MonadFlow)

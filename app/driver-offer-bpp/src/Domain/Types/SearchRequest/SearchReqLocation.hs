@@ -1,9 +1,8 @@
 module Domain.Types.SearchRequest.SearchReqLocation where
 
+import Beckn.External.Maps.HasCoordinates (HasCoordinates)
 import Beckn.Prelude
-import Beckn.Product.MapSearch.GoogleMaps
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Beckn.Utils.GenericPretty (PrettyShow)
 
 data SearchReqLocation = SearchReqLocation
@@ -21,7 +20,7 @@ data SearchReqLocation = SearchReqLocation
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow, HasCoordinates)
 
 data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
   { lat :: Double,
@@ -42,6 +41,3 @@ makeSearchReqLocationAPIEntity SearchReqLocation {..} =
   SearchReqLocationAPIEntity
     { ..
     }
-
-instance HasCoordinates SearchReqLocation where
-  getCoordinates SearchReqLocation {..} = LatLong lat lon

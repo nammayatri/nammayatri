@@ -3,12 +3,12 @@ module Mobility.ARDU.Utils (module Mobility.ARDU.Utils) where
 import qualified "driver-offer-bpp" API.UI.Driver as TDriver
 import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
 import qualified "app-backend" API.UI.Search as AppSearch
+import Beckn.External.Maps.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Common (Money)
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Common
 import qualified "app-backend" Domain.Action.UI.Cancel as AppCancel
 import qualified "app-backend" Domain.Types.Booking as AppRB

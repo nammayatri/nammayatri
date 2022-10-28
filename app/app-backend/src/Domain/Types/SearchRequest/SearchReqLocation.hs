@@ -1,7 +1,7 @@
 module Domain.Types.SearchRequest.SearchReqLocation where
 
+import Beckn.External.Maps.HasCoordinates
 import Beckn.Prelude
-import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates)
 import Beckn.Types.Id
 import Domain.Types.LocationAddress
 

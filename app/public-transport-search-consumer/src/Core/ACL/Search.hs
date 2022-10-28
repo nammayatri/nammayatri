@@ -1,9 +1,9 @@
 module Core.ACL.Search where
 
+import Beckn.External.Maps.Types (LatLong (..))
 import Beckn.Prelude
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Utils.Common
 import Core.Context
 import qualified Core.Spec.Common.Context as Context

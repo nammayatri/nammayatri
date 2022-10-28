@@ -1,8 +1,8 @@
 module Storage.Queries.Geometry where
 
+import Beckn.External.Maps.Types (LatLong)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.MapSearch (LatLong)
 import Domain.Types.Geometry
 import Storage.Tabular.Geometry
 

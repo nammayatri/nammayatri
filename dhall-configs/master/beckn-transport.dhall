@@ -75,8 +75,7 @@ in  { esqDBCfg
     , coreVersion = "0.9.3"
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/beckn-transport.log" }
-    , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
-    , googleMapsKey = common.googleMapsKey
+    , googleCfg = common.googleCfg
     , fcmUrl = common.fcmUrl
     , fcmJsonPath = common.fcmJsonPath
     , fcmTokenKeyPrefix = "FIXME"

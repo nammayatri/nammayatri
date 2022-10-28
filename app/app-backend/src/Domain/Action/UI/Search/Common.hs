@@ -5,8 +5,8 @@ module Domain.Action.UI.Search.Common
   )
 where
 
+import Beckn.External.Maps.Types
 import Beckn.Prelude
-import Beckn.Types.MapSearch
 import Beckn.Utils.Common
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Person as DPerson

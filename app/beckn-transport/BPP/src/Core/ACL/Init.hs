@@ -1,11 +1,11 @@
 module Core.ACL.Init where
 
+import Beckn.External.Maps.Types
 import Beckn.Prelude
 import Beckn.Product.Validation.Context
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import qualified Beckn.Types.Core.Taxi.Init as Init
-import Beckn.Types.MapSearch
 import qualified Beckn.Types.Registry as Subscriber
 import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Init as DInit

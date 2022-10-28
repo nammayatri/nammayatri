@@ -1,9 +1,9 @@
 module Domain.Action.UI.Ride.StartRide.Internal (startRideTransaction) where
 
+import Beckn.External.Maps.Types (LatLong)
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide

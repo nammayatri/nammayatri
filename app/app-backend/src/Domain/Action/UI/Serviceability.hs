@@ -3,8 +3,8 @@ module Domain.Action.UI.Serviceability
   )
 where
 
+import Beckn.External.Maps.Types
 import Beckn.Prelude
-import Beckn.Product.MapSearch.PolyLinePoints
 import Beckn.Storage.Hedis
 import Beckn.Types.Geofencing
 import Beckn.Types.Id

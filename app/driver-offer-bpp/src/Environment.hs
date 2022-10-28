@@ -4,6 +4,7 @@ module Environment where
 
 import AWS.S3
 import Beckn.External.Encryption (EncTools)
+import Beckn.External.Maps.Google.Config
 import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config
@@ -62,8 +63,7 @@ data AppCfg = AppCfg
     fcmJsonPath :: Maybe Text,
     fcmUrl :: BaseUrl,
     fcmTokenKeyPrefix :: Text,
-    googleMapsUrl :: BaseUrl,
-    googleMapsKey :: Text,
+    googleCfg :: GoogleCfg,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     defaultRadiusOfSearch :: Meters,
@@ -119,8 +119,7 @@ data AppEnv = AppEnv
     fcmJsonPath :: Maybe Text,
     fcmUrl :: BaseUrl,
     fcmTokenKeyPrefix :: Text,
-    googleMapsUrl :: BaseUrl,
-    googleMapsKey :: Text,
+    googleCfg :: GoogleCfg,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     defaultRadiusOfSearch :: Meters,

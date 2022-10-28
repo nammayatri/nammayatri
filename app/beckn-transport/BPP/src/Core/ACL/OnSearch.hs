@@ -1,8 +1,8 @@
 module Core.ACL.OnSearch (mkOnSearchMessage) where
 
+import Beckn.External.Maps.Types (LatLong (..))
 import Beckn.Prelude
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
-import Beckn.Types.MapSearch (LatLong (..))
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.OnSearch.OneWay as DOneWaySearch
 import qualified Domain.Action.Beckn.OnSearch.Rental as DRentalSearch

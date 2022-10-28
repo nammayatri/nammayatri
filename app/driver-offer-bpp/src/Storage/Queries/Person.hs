@@ -5,12 +5,10 @@ module Storage.Queries.Person where
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.External.FCM.Types as FCM
-import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
+import Beckn.External.Maps.Google as GoogleMaps
 import Beckn.Prelude
-import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Utils.Common
 import Beckn.Utils.GenericPretty
 import qualified Data.Maybe as Mb
@@ -255,10 +253,7 @@ data DriverPoolResult = DriverPoolResult
     lat :: Double,
     lon :: Double
   }
-  deriving (Generic, Show, PrettyShow)
-
-instance GoogleMaps.HasCoordinates DriverPoolResult where
-  getCoordinates dpRes = LatLong dpRes.lat dpRes.lon
+  deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDrivers ::
   (Transactionable m, MonadTime m) =>

@@ -3,10 +3,10 @@ module Mobility.ARDU.APICalls where
 import qualified "driver-offer-bpp" API.UI.Driver as DriverAPI
 import "driver-offer-bpp" API.UI.Location as LocationAPI
 import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
+import Beckn.External.Maps.Types (LatLong (..))
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
 import Data.Time
 import qualified "driver-offer-bpp" Domain.Types.Ride as TRide
 import EulerHS.Prelude

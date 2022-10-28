@@ -1,11 +1,11 @@
 module Domain.Action.UI.Location (Status (..), GetLocationRes (..), getLocation) where
 
+import qualified Beckn.External.Maps.HasCoordinates as GoogleMaps
+import Beckn.External.Maps.Types
 import Beckn.Prelude
-import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra

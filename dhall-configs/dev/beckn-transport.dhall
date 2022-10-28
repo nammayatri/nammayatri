@@ -87,8 +87,7 @@ in
 , autoMigrate = True
 , coreVersion = "0.9.3"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
-, googleMapsUrl = common.googleMapsUrl
-, googleMapsKey = common.googleMapsKey
+, googleCfg = common.googleCfg
 , fcmUrl = common.fcmUrl
 , fcmJsonPath = common.fcmJsonPath
 , fcmTokenKeyPrefix = "transporter-bpp"

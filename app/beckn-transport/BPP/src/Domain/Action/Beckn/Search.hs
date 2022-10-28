@@ -6,8 +6,8 @@ module Domain.Action.Beckn.Search
   )
 where
 
+import Beckn.External.Maps.HasCoordinates
 import Beckn.Prelude (ToSchema)
-import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common

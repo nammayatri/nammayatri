@@ -1,5 +1,6 @@
 module Core.ACL.Metro.OnSearch where
 
+import Beckn.External.Maps.Types
 import Beckn.Prelude
 import Beckn.Product.Validation.Context
 import Beckn.Types.Common
@@ -8,7 +9,6 @@ import qualified Beckn.Types.Core.Metro.API.OnSearch as OnSearch
 import Beckn.Types.Core.Metro.OnSearch
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Beckn.Utils.Common
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.SearchRequest (SearchRequest)

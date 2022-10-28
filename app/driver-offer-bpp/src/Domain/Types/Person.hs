@@ -5,7 +5,7 @@ module Domain.Types.Person where
 
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
-import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
+import qualified Beckn.External.Maps.Google as GoogleMaps
 import Beckn.Types.Id
 import Beckn.Utils.Common (Centesimal, EsqDBFlow, maskText)
 import Data.Aeson

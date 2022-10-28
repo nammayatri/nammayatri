@@ -22,8 +22,7 @@ in  { appCfg = appCfg
     , healthcheckPort = +8114
     , httpClientOptions = appCfg.httpClientOptions
     , esqDBCfg = appCfg.esqDBCfg
-    , googleMapsUrl = appCfg.googleMapsUrl
-    , googleMapsKey = appCfg.googleMapsKey
+    , googleCfg = appCfg.googleCfg
     , hedisCfg = appCfg.hedisCfg
     , loggerConfig = appCfg.loggerConfig
               //  { logFilePath = "/tmp/allocation-service.log", logRawSql = False }

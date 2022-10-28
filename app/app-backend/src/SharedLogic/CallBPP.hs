@@ -1,5 +1,6 @@
 module SharedLogic.CallBPP where
 
+import qualified Beckn.External.Maps.Types as MapSearch
 import Beckn.Prelude
 import Beckn.Storage.Hedis (HedisFlow)
 import qualified Beckn.Types.Core.Metro.API.Search as MigAPI
@@ -12,7 +13,6 @@ import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Error
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth

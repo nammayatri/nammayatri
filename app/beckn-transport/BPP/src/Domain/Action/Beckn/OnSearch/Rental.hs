@@ -1,12 +1,12 @@
 module Domain.Action.Beckn.OnSearch.Rental where
 
-import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
-import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
+import Beckn.External.Maps.Google.Config
+import Beckn.External.Maps.HasCoordinates
+import Beckn.External.Maps.Types (LatLong (..))
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Utils.Common
 import Data.Traversable
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
@@ -39,7 +39,7 @@ onSearchCallback ::
     EsqDBFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    HasGoogleMaps m r,
+    HasGoogleCfg r,
     HasBPPMetrics m r,
     CoreMetrics m
   ) =>

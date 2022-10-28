@@ -4,12 +4,9 @@ module Domain.Action.UI.Ride
   )
 where
 
-import Beckn.External.GoogleMaps.Types
-import qualified Beckn.Product.MapSearch as MapSearch
-import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
+import qualified Beckn.External.Maps.Google as MapSearch
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
@@ -31,7 +28,7 @@ getDriverLoc ::
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m,
-    HasGoogleMaps m r,
+    MapSearch.HasGoogleCfg r,
     HasField "rideCfg" r RideConfig
   ) =>
   Id SRide.Ride ->
@@ -50,7 +47,7 @@ getDriverLoc rideId personId = do
   mbIsOnTheWayNotified <- Redis.get @() (driverOnTheWay rideId)
   mbHasReachedNotified <- Redis.get @() (driverHasReached rideId)
   when (ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)) $ do
-    distance <- (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) (GoogleMaps.getCoordinates fromLocation) res.currPoint
+    distance <- (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) (MapSearch.getCoordinates fromLocation) res.currPoint
     mbStartDistance <- Redis.get @Meters (distanceUpdates rideId)
     case mbStartDistance of
       Nothing -> Redis.setExp (distanceUpdates rideId) distance 3600

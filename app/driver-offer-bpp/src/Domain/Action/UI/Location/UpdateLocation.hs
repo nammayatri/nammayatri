@@ -6,6 +6,7 @@ module Domain.Action.UI.Location.UpdateLocation
   )
 where
 
+import Beckn.External.Maps.Types
 import qualified Beckn.External.Slack.Flow as SF
 import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude
@@ -14,7 +15,6 @@ import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Beckn.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Beckn.Utils.Common hiding (id)
 import Beckn.Utils.GenericPretty (PrettyShow)

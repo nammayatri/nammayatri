@@ -2,9 +2,9 @@
 
 module Flow.RideAPI.EndRide (endRideTests) where
 
+import Beckn.External.Maps.Types
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Beckn.Utils.Common
 import Domain.Action.UI.Ride.EndRide as Handle
 import qualified Domain.Types.Booking as SRB

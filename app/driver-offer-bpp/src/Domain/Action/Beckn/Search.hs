@@ -1,13 +1,12 @@
 module Domain.Action.Beckn.Search where
 
+import Beckn.External.Maps.Google as GoogleMaps
+import qualified Beckn.External.Maps.Types as MapSearch
 import Beckn.Prelude
-import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
-import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Serviceability
 import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import Data.List
 import qualified Data.Set as Set

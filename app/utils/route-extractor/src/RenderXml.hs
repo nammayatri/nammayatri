@@ -1,7 +1,7 @@
 module RenderXml where
 
+import Beckn.External.Maps.Types (LatLong (..))
 import Beckn.Prelude
-import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Utils.GenericPretty
 import qualified Data.Map.Strict as Map
 import Text.XML

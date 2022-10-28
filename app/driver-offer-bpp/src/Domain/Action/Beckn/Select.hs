@@ -2,15 +2,12 @@
 
 module Domain.Action.Beckn.Select where
 
-import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import qualified Beckn.External.GoogleTranslate.Types as GoogleTranslate
+import qualified Beckn.External.Maps.Google as GoogleMaps
 import Beckn.Prelude
-import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
-import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common (fromMaybeM, logDebug)
 import qualified Data.Map as M
 import Data.Time.Clock (addUTCTime)
@@ -49,9 +46,9 @@ handler sessiontoken orgId sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
   farePolicy <- FarePolicyS.findByOrgIdAndVariant orgId sReq.variant >>= fromMaybeM NoFarePolicy
-  driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId False True
+  driverPool <- calculateDriverPool (Just sReq.variant) fromLocation orgId False True
 
-  distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation)
+  distRes <- GoogleMaps.getDistance (Just GoogleMaps.CAR) fromLocation toLocation
   let distance = distRes.distance
   let duration = distRes.duration
   fareParams <- calculateFare orgId farePolicy distance sReq.pickupTime Nothing
@@ -80,7 +77,7 @@ handler sessiontoken orgId sReq = do
       (MonadFlow m) =>
       DSearchReq.SearchRequest ->
       Money ->
-      GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong ->
+      GoogleMaps.GetDistanceResult DriverPoolResult GoogleMaps.LatLong ->
       m SearchRequestForDriver
     buildSearchRequestForDriver searchRequest baseFare_ gdRes = do
       guid <- generateGUID
@@ -176,12 +173,9 @@ buildLocWithAddr ::
   m DLoc.SearchReqLocation
 buildLocWithAddr sessiontoken searchReqLoc@DLoc.SearchReqLocation {..} language = do
   mAreaObj <- translate GoogleMaps.ENGLISH language `mapM` searchReqLoc.area
-  let translation = (\areaObj -> headMaybe areaObj._data.translations) =<< mAreaObj
+  let translation = (\areaObj -> listToMaybe areaObj._data.translations) =<< mAreaObj
   let areaRegional = (.translatedText) <$> translation
   buildSearchReqLocation (buildSearchReqLocationAPIEntity searchReqLoc areaRegional)
-  where
-    headMaybe [] = Nothing
-    headMaybe (x : _) = Just x
 
 buildSearchReqLocationAPIEntity :: DLoc.SearchReqLocation -> Maybe Text -> DLoc.SearchReqLocationAPIEntity
 buildSearchReqLocationAPIEntity DLoc.SearchReqLocation {..} areaRegional = DLoc.SearchReqLocationAPIEntity {area = areaRegional, ..}
@@ -194,7 +188,7 @@ addLanguageToDictionary ::
   Text ->
   DSearchReq.SearchRequest ->
   LanguageDictionary ->
-  GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong ->
+  GoogleMaps.GetDistanceResult DriverPoolResult GoogleMaps.LatLong ->
   m LanguageDictionary
 addLanguageToDictionary sessiontoken searchReq dict dPoolRes = do
   let language = fromMaybe GoogleMaps.ENGLISH dPoolRes.origin.language

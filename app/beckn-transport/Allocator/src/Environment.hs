@@ -3,6 +3,7 @@
 module Environment where
 
 import Beckn.External.Encryption (EncTools)
+import Beckn.External.Maps.Google.Config
 import Beckn.Storage.Esqueleto.Config
 import qualified Beckn.Storage.Hedis as Redis
 import qualified Beckn.Storage.Hedis.AppPrefixes as Redis
@@ -39,8 +40,7 @@ data AppCfg = AppCfg
     defaultSortMode :: SortMode,
     driverBatchSize :: Int,
     reallocationsLimit :: Int,
-    googleMapsUrl :: BaseUrl,
-    googleMapsKey :: Text,
+    googleCfg :: GoogleCfg,
     requestsNumPerIteration :: Integer,
     processDelay :: Milliseconds,
     shards :: Shards,
@@ -67,8 +67,7 @@ data AppEnv = AppEnv
     defaultSortMode :: SortMode,
     driverBatchSize :: Int,
     reallocationsLimit :: Int,
-    googleMapsUrl :: BaseUrl,
-    googleMapsKey :: Text,
+    googleCfg :: GoogleCfg,
     requestsNumPerIteration :: Integer,
     processDelay :: Milliseconds,
     shards :: Shards,

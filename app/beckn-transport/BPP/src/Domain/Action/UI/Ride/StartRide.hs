@@ -1,10 +1,10 @@
 module Domain.Action.UI.Ride.StartRide where
 
+import Beckn.External.Maps.Types
 import Beckn.Prelude (ToSchema)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person

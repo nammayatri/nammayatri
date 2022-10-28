@@ -1,6 +1,6 @@
 module Domain.Types.DriverLocation where
 
-import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates)
+import Beckn.External.Maps.HasCoordinates (HasCoordinates)
 import Beckn.Types.Id
 import Data.Time
 import Domain.Types.Person (Person)

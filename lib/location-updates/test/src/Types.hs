@@ -1,5 +1,6 @@
 module Types where
 
+import Beckn.External.Maps.Google.Config
 import Beckn.Prelude
 import Beckn.Storage.Hedis.Config
 import qualified Beckn.Storage.Hedis.Queries as Hedis
@@ -22,7 +23,7 @@ data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
     hedisEnv :: HedisEnv,
-    googleMapsKey :: Text,
+    googleCfg :: GoogleCfg,
     coreMetrics :: Metrics.CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions
   }
@@ -52,12 +53,14 @@ wrapTests func = do
     let loggerConfig = defaultLoggerConfig {logToFile = True, prettyPrinting = True}
     withLoggerEnv loggerConfig Nothing $ \loggerEnv -> do
       coreMetrics <- Metrics.registerCoreMetricsContainer
-      googleMapsKey <- (.googleMapsKey) <$> readTopSecrets
-      let appEnv = AppEnv loggerConfig loggerEnv hedisEnv googleMapsKey coreMetrics defaultHttpClientOptions
+      googleKey <- (.googleKey) <$> readTopSecrets
+      googleMapsUrl <- parseBaseUrl "https://maps.googleapis.com/maps/api/"
+      googleRoadsUrl <- parseBaseUrl "https://roads.googleapis.com/"
+      let appEnv = AppEnv loggerConfig loggerEnv hedisEnv (GoogleCfg {..}) coreMetrics defaultHttpClientOptions
       func appEnv
 
 data TopSecrets = TopSecrets
-  { googleMapsKey :: Text,
+  { googleKey :: Text,
     googleTranslateKey :: Text
   }
   deriving (Generic, FromDhall, Show)

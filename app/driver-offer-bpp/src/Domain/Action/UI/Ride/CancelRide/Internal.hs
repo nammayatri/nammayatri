@@ -1,6 +1,6 @@
 module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
-import Beckn.External.GoogleMaps.Types
+import Beckn.External.Maps.Google.Config (HasGoogleCfg)
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Id
@@ -29,7 +29,7 @@ cancelRideImpl ::
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    HasGoogleMaps m r,
+    HasGoogleCfg r,
     FCMFlow m r,
     CoreMetrics m
   ) =>

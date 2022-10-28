@@ -3,11 +3,11 @@
 
 module Storage.Queries.DriverLocation where
 
+import Beckn.External.Maps.Types (LatLong (..))
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common (MonadTime (getCurrentTime))
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
 import Domain.Types.DriverLocation
 import Domain.Types.Person
 import Storage.Tabular.DriverLocation

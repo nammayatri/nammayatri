@@ -3,9 +3,9 @@
 
 module RedisAlgorithm where
 
+import Beckn.External.Maps.Types (LatLong (LatLong))
 import Beckn.Prelude
 import Beckn.Types.Id (Id (Id))
-import Beckn.Types.MapSearch (LatLong (LatLong))
 import Beckn.Types.MonadGuid
 import Beckn.Utils.Common
 import qualified Data.List.NonEmpty as NE

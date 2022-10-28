@@ -1,11 +1,11 @@
 module Domain.Action.UI.Ride.EndRide where
 
+import Beckn.External.Maps.HasCoordinates
+import Beckn.External.Maps.Types
 import Beckn.Prelude (ToSchema, roundToIntegral)
-import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Beckn.Utils.CalculateDistance (distanceBetweenInMeters)
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB

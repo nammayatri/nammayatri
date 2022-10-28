@@ -1,13 +1,11 @@
 module Domain.Action.Beckn.OnSearch.OneWay where
 
-import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
-import qualified Beckn.Product.MapSearch as MapSearch
-import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
+import Beckn.External.Maps.Google as Google
+import qualified Beckn.External.Maps.Types as MapSearch
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import qualified Data.Text as T
 import Data.Traversable
@@ -45,7 +43,7 @@ onSearchCallback ::
     HedisFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["driverEstimatedPickupDuration" ::: Seconds],
-    HasGoogleMaps m r,
+    HasGoogleCfg r,
     HasBPPMetrics m r,
     CoreMetrics m
   ) =>
@@ -71,7 +69,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   -- we take nearest one and calculate fare and make PI for him
 
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
-  distRes <- MapSearch.getDistance (Just MapSearch.CAR) fromLocation toLocation
+  distRes <- Google.getDistance (Just Google.CAR) fromLocation toLocation
   let distance = distRes.distance
       estimatedRideDuration = distRes.duration
       estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` searchRequest.startTime

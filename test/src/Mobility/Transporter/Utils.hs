@@ -5,10 +5,10 @@ import "beckn-transport" API.UI.Location as LocationAPI
 import "app-backend" API.UI.Quote
 import qualified "beckn-transport" API.UI.Ride as RideAPI
 import qualified "app-backend" API.UI.Search as AppSearch
+import Beckn.External.Maps.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Beckn.Types.Time
 import Beckn.Utils.Common
 import Common

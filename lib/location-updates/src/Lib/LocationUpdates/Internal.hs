@@ -14,13 +14,12 @@ module Lib.LocationUpdates.Internal
   )
 where
 
-import Beckn.Product.MapSearch.GoogleMaps.SnapToRoad
+import Beckn.External.Maps.Google
 import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
-import Beckn.Types.MapSearch
 import Beckn.Utils.CalculateDistance
 import Beckn.Utils.Logging
 import qualified Control.Monad.Catch as C
@@ -120,7 +119,7 @@ mkHandlerWithDefaultRedisFuncs ::
     Metrics.CoreMetrics m,
     MonadFlow m,
     MonadReader env m,
-    HasField "googleMapsKey" env Text,
+    HasGoogleCfg env,
     EsqDBFlow m env
   ) =>
   (Id person -> HighPrecMeters -> m ()) ->
@@ -170,10 +169,10 @@ callSnapToRoad ::
     Metrics.CoreMetrics m,
     MonadFlow m,
     MonadReader r m,
-    HasField "googleMapsKey" r Text
+    HasGoogleCfg r
   ) =>
   [LatLong] ->
   m [LatLong]
 callSnapToRoad wps = do
-  res <- callSnapToRoadAPI True (PointsList wps)
-  pure $ map (snappedLocationtoLatLong . (.location)) (res.snappedPoints)
+  res <- snapToRoad True wps
+  pure $ map (.location) (res.snappedPoints)

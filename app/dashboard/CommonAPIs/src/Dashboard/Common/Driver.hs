@@ -6,9 +6,9 @@ module Dashboard.Common.Driver
   )
 where
 
+import Beckn.External.Maps.Types
 import Beckn.Prelude
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Dashboard.Common as Reexport
 import Servant
 

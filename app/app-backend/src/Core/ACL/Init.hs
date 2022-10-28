@@ -1,12 +1,12 @@
 module Core.ACL.Init (buildInitReq) where
 
+import Beckn.External.Maps.Types (LatLong)
 import Beckn.Prelude
 import Beckn.Types.App
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import Beckn.Types.Logging
-import Beckn.Types.MapSearch (LatLong)
 import Beckn.Utils.Context (buildTaxiContext)
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.VehicleVariant as VehVar

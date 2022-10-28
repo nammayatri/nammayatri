@@ -1,9 +1,9 @@
 module API.Dashboard.Driver where
 
 import Beckn.External.Encryption (decrypt)
+import Beckn.External.Maps.Types
 import Beckn.Prelude
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Beckn.Utils.Common
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
 import Data.Coerce

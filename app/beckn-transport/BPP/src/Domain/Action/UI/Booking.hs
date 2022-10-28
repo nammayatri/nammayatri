@@ -14,15 +14,13 @@ module Domain.Action.UI.Booking
   )
 where
 
-import Beckn.External.GoogleMaps.Types
-import qualified Beckn.Product.MapSearch as MapSearch
-import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
+import Beckn.External.Maps.Google as Google
+import qualified Beckn.External.Maps.Types as MapSearch
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import Data.OpenApi (ToSchema (..))
 import Domain.Types.AllocationEvent
@@ -121,7 +119,7 @@ bookingCancel bookingId admin = do
           }
 
 getRideInfo ::
-  (EsqDBFlow m r, CoreMetrics m, HasGoogleMaps m r) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes
+  (EsqDBFlow m r, CoreMetrics m, HasGoogleCfg r) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes
 getRideInfo bookingId personId = do
   mbNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId bookingId
   case mbNotification of
@@ -139,7 +137,7 @@ getRideInfo bookingId personId = do
       let toLocation = case booking.bookingDetails of
             SRB.OneWayDetails details -> Just details.toLocation
             SRB.RentalDetails _ -> Nothing
-      distanceDuration <- MapSearch.getDistance (Just MapSearch.CAR) driverLatLong fromLatLong
+      distanceDuration <- Google.getDistance (Just MapSearch.CAR) driverLatLong fromLatLong
       return $
         GetRideInfoRes $
           Just $

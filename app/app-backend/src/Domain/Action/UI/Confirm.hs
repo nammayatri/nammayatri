@@ -6,12 +6,12 @@ module Domain.Action.UI.Confirm
   )
 where
 
+import Beckn.External.Maps.Types (LatLong (..))
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL

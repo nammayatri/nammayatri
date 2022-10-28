@@ -1,6 +1,6 @@
 module DistanceCalculation where
 
-import Beckn.Types.MapSearch
+import Beckn.External.Maps.Types
 import Beckn.Utils.CalculateDistance
 import Beckn.Utils.Common
 import EulerHS.Prelude

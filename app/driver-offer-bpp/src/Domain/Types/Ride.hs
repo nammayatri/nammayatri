@@ -2,7 +2,7 @@
 
 module Domain.Types.Ride where
 
-import Beckn.Product.MapSearch.PolyLinePoints (LatLong)
+import Beckn.External.Maps.Types
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Aeson

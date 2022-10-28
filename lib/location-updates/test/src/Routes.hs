@@ -1,7 +1,7 @@
 module Routes where
 
+import Beckn.External.Maps.Types
 import Beckn.Prelude
-import Beckn.Types.MapSearch
 import qualified Data.List.NonEmpty as NE
 
 type LocationUpdates = NonEmpty (NonEmpty LatLong)

@@ -9,6 +9,7 @@ module API.UI.Search
   )
 where
 
+import Beckn.External.Maps.Google.Config (HasGoogleCfg)
 import qualified Beckn.External.Slack.Flow as SF
 import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude
@@ -106,7 +107,7 @@ oneWaySearch ::
     HasHttpClientOptions r c,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "gatewayUrl" ::: BaseUrl],
-    HasFlowEnv m r '["googleMapsUrl" ::: BaseUrl, "googleMapsKey" ::: Text],
+    HasGoogleCfg r,
     HasBAPMetrics m r,
     MonadProducer PublicTransportSearch m
   ) =>

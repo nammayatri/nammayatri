@@ -5,13 +5,9 @@ module SharedLogic.DriverPool
   )
 where
 
-import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
-import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
+import Beckn.External.Maps.Google as GoogleMaps
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
-import qualified Beckn.Types.MapSearch as GoogleMaps
 import Beckn.Utils.Common
 import Data.List.NonEmpty as NE
 import qualified Domain.Types.Organization as SOrg
@@ -22,19 +18,20 @@ import qualified Storage.Queries.Person as QP
 import Tools.Metrics
 
 calculateDriverPool ::
-  ( EsqDBReplicaFlow m r,
+  ( Esq.EsqDBReplicaFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
-    HasGoogleMaps m r,
-    HasPrettyLogger m r
+    HasGoogleCfg r,
+    HasPrettyLogger m r,
+    HasCoordinates a
   ) =>
   Maybe Variant ->
-  LatLong ->
+  a ->
   Id SOrg.Organization ->
   Bool ->
   Bool ->
   m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
-calculateDriverPool variant pickupLatLong orgId onlyNotOnRide shouldFilterByActualDistance = do
+calculateDriverPool variant pickup orgId onlyNotOnRide shouldFilterByActualDistance = do
   radius <- fromIntegral <$> asks (.defaultRadiusOfSearch)
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   approxDriverPool <-
@@ -55,6 +52,7 @@ calculateDriverPool variant pickupLatLong orgId onlyNotOnRide shouldFilterByActu
         then filterOutDriversWithDistanceAboveThreshold radius pickupLatLong (a :| pprox)
         else return $ buildGetDistanceResult <$> approxDriverPool
   where
+    pickupLatLong = getCoordinates pickup
     buildGetDistanceResult :: QP.DriverPoolResult -> GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong
     buildGetDistanceResult driverMetadata =
       let distance = driverMetadata.distanceToDriver
@@ -70,7 +68,7 @@ calculateDriverPool variant pickupLatLong orgId onlyNotOnRide shouldFilterByActu
 filterOutDriversWithDistanceAboveThreshold ::
   ( CoreMetrics m,
     MonadFlow m,
-    HasGoogleMaps m r,
+    HasGoogleCfg r,
     HasPrettyLogger m r
   ) =>
   Integer ->

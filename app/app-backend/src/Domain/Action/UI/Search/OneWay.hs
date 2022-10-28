@@ -6,14 +6,13 @@ module Domain.Action.UI.Search.OneWay
   )
 where
 
+import qualified Beckn.External.Maps.Google as MapSearch
 import Beckn.Prelude
-import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Person as Person
@@ -45,7 +44,7 @@ data OneWaySearchRes = OneWaySearchRes
 oneWaySearch ::
   ( HasCacheConfig r,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    HasFlowEnv m r '["googleMapsUrl" ::: BaseUrl, "googleMapsKey" ::: Text],
+    MapSearch.HasGoogleCfg r,
     HedisFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,

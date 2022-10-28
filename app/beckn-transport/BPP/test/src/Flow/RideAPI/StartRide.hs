@@ -1,8 +1,8 @@
 module Flow.RideAPI.StartRide where
 
+import Beckn.External.Maps.Types
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Domain.Action.UI.Ride.StartRide as StartRide
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person

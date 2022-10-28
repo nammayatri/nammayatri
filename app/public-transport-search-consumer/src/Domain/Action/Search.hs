@@ -1,11 +1,11 @@
 module Domain.Action.Search where
 
+import Beckn.External.Maps.Types (LatLong)
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Streaming.Kafka.Topic.PublicTransportSearch (PublicTransportSearch)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong)
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Search as DSearch
 import qualified Storage.Queries.Search as QSearch

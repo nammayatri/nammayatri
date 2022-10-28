@@ -8,9 +8,9 @@ module Lib.LocationUpdates
   )
 where
 
+import Beckn.External.Maps.Types
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
-import Beckn.Types.MapSearch
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import qualified Lib.LocationUpdates.Internal as I

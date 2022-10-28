@@ -1,9 +1,9 @@
 module Mobility.Transporter.NearestDrivers (spec) where
 
+import Beckn.External.Maps.Types (LatLong (..))
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
 import qualified "beckn-transport" Domain.Types.FarePolicy.FareProduct as SFP
 import "beckn-transport" Domain.Types.Vehicle
 import qualified "beckn-transport" Environment as BecknTransport

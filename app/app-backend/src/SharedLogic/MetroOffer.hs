@@ -8,11 +8,11 @@ module SharedLogic.MetroOffer
   )
 where
 
+import Beckn.External.Maps.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.MapSearch
 import Domain.Types.SearchRequest (SearchRequest)
 
 data MetroOffer = MetroOffer

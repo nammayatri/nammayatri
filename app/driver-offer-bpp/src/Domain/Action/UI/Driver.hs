@@ -29,7 +29,7 @@ where
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.External.FCM.Types as FCM
-import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
+import qualified Beckn.External.Maps.Google as GoogleMaps
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude (NominalDiffTime)

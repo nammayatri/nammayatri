@@ -1,9 +1,9 @@
 module Mobility.ARDU.NearestDrivers (spec) where
 
+import Beckn.External.Maps.Types (LatLong (..))
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
 import qualified "driver-offer-bpp" Environment as ARDUEnv
 import EulerHS.Prelude
 import qualified "driver-offer-bpp" Storage.Queries.DriverInformation as Q

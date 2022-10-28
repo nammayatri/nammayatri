@@ -1,7 +1,7 @@
 module Storage.Queries.BusinessEvent where
 
+import qualified Beckn.External.Maps.Google as Google
 import Beckn.Prelude
-import qualified Beckn.Product.MapSearch.GoogleMaps as Google
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
