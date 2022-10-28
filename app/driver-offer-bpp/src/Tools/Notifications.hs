@@ -279,3 +279,32 @@ notifyDiscountChange coordinatorId =
           fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DISCOUNT_CHANGED
         }
+
+notifyDriverClearedFare ::
+  ( FCMFlow m r,
+    HedisFlow m r,
+    CoreMetrics m
+  ) =>
+  Id Person ->
+  Money ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+notifyDriverClearedFare driverId fare =
+  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient driverId.getId
+  where
+    title = FCM.FCMNotificationTitle "Clearing Fare!"
+    body =
+      FCM.FCMNotificationBody $
+        unwords
+          [ "Clearing fare - ",
+            show fare.getMoney <> "."
+          ]
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = FCM.CLEARED_FARE,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = getId driverId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CLEARED_FARE
+        }

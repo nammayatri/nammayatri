@@ -57,3 +57,15 @@ findActiveQuotesByDriverId driverId driverUnlockDelay = do
             &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
             &&. dQuote ^. DriverQuoteValidTill >. val (addUTCTime delayToAvoidRaces now)
         pure (dQuote, farePars)
+
+findAllByRequestId :: Transactionable m => Id DSReq.SearchRequest -> m [Domain.DriverQuote]
+findAllByRequestId searchReqId = do
+  buildDType $ do
+    fmap (fmap extractSolidType) $
+      Esq.findAll' $ do
+        (dQuote :& farePars) <-
+          from baseDriverQuoteQuery
+        where_ $
+          dQuote ^. DriverQuoteStatus ==. val Domain.Active
+            &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+        pure (dQuote, farePars)
