@@ -11,5 +11,5 @@ type API =
     :> TokenAuth
     :> QueryParam "limit" Integer
     :> QueryParam "offset" Integer
-    :> QueryParam "filterByBookingStatus" BookingStatus
+    :> QueryParam "status" BookingStatus
     :> Get '[JSON] BookingListRes

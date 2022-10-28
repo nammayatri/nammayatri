@@ -101,14 +101,13 @@ findAllByOrg orgId mbLimit mbOffset mbIsOnlyActive mbBookingStatus = Esq.buildDT
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbIsOnlyActive
-      isJustBookingStatus = isJust mbBookingStatus
   fullBookingsT <- Esq.findAll' $ do
     (booking :& fromLoc :& mbOneWayBooking :& mbToLoc :& mbRentalBooking) <- from fullBookingTable
     where_ $
       booking ^. BookingProviderId ==. val (toKey orgId)
         &&. not_ (booking ^. BookingStatus `in_` valList [Booking.CONFIRMED, Booking.AWAITING_REASSIGNMENT])
         &&. whenTrue_ isOnlyActive (not_ $ booking ^. BookingStatus `in_` valList [Booking.COMPLETED, Booking.CANCELLED])
-        &&. whenTrue_ isJustBookingStatus (booking ^. BookingStatus `in_` valList [fromJust mbBookingStatus])
+        &&. whenJust_ mbBookingStatus (\status -> booking ^. BookingStatus ==. val status)
     orderBy [desc $ booking ^. BookingCreatedAt]
     limit limitVal
     offset offsetVal

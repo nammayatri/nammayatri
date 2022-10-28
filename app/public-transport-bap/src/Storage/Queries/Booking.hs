@@ -67,12 +67,11 @@ findAllByRequestorId :: Transactionable m => PersonId -> Integer -> Integer -> M
 findAllByRequestorId personId limitInt offSetInt mbBookingStatus = do
   let limit_ :: Int64 = fromInteger limitInt
       offset_ :: Int64 = fromInteger offSetInt
-      isJustBookingStatus = isJust mbBookingStatus
   Esq.findAll $ do
     transportStationSearch <- from $ table @BookingT
     where_ $
       transportStationSearch ^. BookingRequestorId ==. val (getId personId)
-        &&. whenTrue_ isJustBookingStatus (transportStationSearch ^. BookingStatus `in_` valList [fromJust mbBookingStatus])
+        &&. whenJust_ mbBookingStatus (\status -> transportStationSearch ^. BookingStatus ==. val status)
     limit limit_
     offset offset_
     return transportStationSearch

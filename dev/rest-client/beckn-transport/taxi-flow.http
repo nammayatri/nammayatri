@@ -207,7 +207,7 @@ GET {{app-host}}/rideBooking/list
   ?offset=0
   &limit=50
   &onlyActive=false
-  &filterByBookingStatus="NEW"
+  &status="NEW"
 content-type: application/json
 token: {{token}}
 

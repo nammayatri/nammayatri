@@ -79,7 +79,9 @@ bookingStatus bookingId = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   SRB.buildBookingAPIEntity booking
 
-bookingList :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person ->
+bookingList ::
+  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  SP.Person ->
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->

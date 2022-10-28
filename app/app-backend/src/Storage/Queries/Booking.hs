@@ -130,7 +130,6 @@ findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
 findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
 findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus = Esq.buildDType $ do
   let isOnlyActive = Just True == mbOnlyActive
-  let isJustBookingStatus = isJust mbBookingStatus
   fullBookingsT <- Esq.findAll' $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab :& _) <-
       from $
@@ -139,7 +138,7 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus =
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
         &&. ( whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
-                &&. whenTrue_ isJustBookingStatus (booking ^. RB.BookingStatus `in_` valList [fromJust mbBookingStatus])
+                &&. whenJust_ mbBookingStatus (\status -> booking ^. RB.BookingStatus ==. val status)
             )
     limit $ fromIntegral $ fromMaybe 10 mbLimit
     offset $ fromIntegral $ fromMaybe 0 mbOffset

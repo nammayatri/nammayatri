@@ -86,7 +86,7 @@ token: ea37f941-427a-4085-a7d0-96240f166672
 GET {{public-transport-bap-host}}/ui/booking/list
 ?limit=30
 &offset=0
-&filterByBookingStatus="CONFIRMED"
+&status="CONFIRMED"
 token: ea37f941-427a-4085-a7d0-96240f166672
 
 ###

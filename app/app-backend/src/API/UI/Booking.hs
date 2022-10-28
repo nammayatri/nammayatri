@@ -26,7 +26,7 @@ type API =
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> QueryParam "onlyActive" Bool
-             :> QueryParam "filterByBookingStatus" SRB.BookingStatus
+             :> QueryParam "status" SRB.BookingStatus
              :> Get '[JSON] DBooking.BookingListRes
        )
 
