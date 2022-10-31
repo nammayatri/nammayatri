@@ -9,12 +9,13 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Control.Applicative (liftA2)
 import Database.Esqueleto.PostgreSQL
+import Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Role as Role
-import Domain.Types.ServerName as DSN
+import Storage.Tabular.Merchant as Merchant
+import Storage.Tabular.MerchantAccess as Access
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Role as Role
-import Storage.Tabular.ServerAccess as Server
 
 create :: Person -> SqlDB ()
 create = Esq.create
@@ -48,27 +49,31 @@ findAllWithLimitOffset ::
   Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
-  m [(Person, Role, [DSN.ServerName])]
+  m [(Person, Role, [ShortId Merchant.Merchant])]
 findAllWithLimitOffset mbSearchString mbLimit mbOffset =
   fromMaybeList <$> do
     mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
     findAll $ do
-      serverAccessAggTable <- with $ do
-        serverAccess <-
+      merchantAccessAggTable <- with $ do
+        (merchantAccess :& merchant) <-
           from $
-            table @ServerAccessT
-        groupBy (serverAccess ^. ServerAccessPersonId)
-        return (serverAccess ^. ServerAccessPersonId, arrayAgg (serverAccess ^. ServerAccessServerName))
+            table @MerchantAccessT
+              `innerJoin` table @MerchantT
+                `Esq.on` ( \(merchantAccess :& merchant) ->
+                             merchantAccess ^. Access.MerchantAccessMerchantId ==. merchant ^. Merchant.MerchantTId
+                         )
+        groupBy (merchantAccess ^. MerchantAccessPersonId)
+        return (merchantAccess ^. MerchantAccessPersonId, arrayAgg (merchant ^. MerchantShortId))
 
-      (person :& role :& (_, mbServerNames)) <-
+      (person :& role :& (_, mbMerchantShortIds)) <-
         from $
           table @PersonT
             `innerJoin` table @RoleT
               `Esq.on` ( \(person :& role) ->
                            person ^. Person.PersonRoleId ==. role ^. Role.RoleTId
                        )
-            `leftJoin` serverAccessAggTable
-              `Esq.on` ( \(person :& _ :& (mbPersonId, _mbServerNames)) ->
+            `leftJoin` merchantAccessAggTable
+              `Esq.on` ( \(person :& _ :& (mbPersonId, _mbMerchantShortIds)) ->
                            just (person ^. Person.PersonTId) ==. mbPersonId
                        )
       where_ $
@@ -76,7 +81,7 @@ findAllWithLimitOffset mbSearchString mbLimit mbOffset =
       orderBy [desc $ person ^. PersonCreatedAt]
       limit limitVal
       offset offsetVal
-      return (person, role, mbServerNames)
+      return (person, role, mbMerchantShortIds)
   where
     limitVal = maybe 100 fromIntegral mbLimit
     offsetVal = maybe 0 fromIntegral mbOffset
@@ -87,8 +92,8 @@ findAllWithLimitOffset mbSearchString mbLimit mbOffset =
           `ilike` likeSearchStr
         )
         ||. person ^. PersonMobileNumberHash ==. val searchStrDBHash --find by email also?
-    fromMaybeList :: [(Person, Role, Maybe [DSN.ServerName])] -> [(Person, Role, [DSN.ServerName])]
-    fromMaybeList = map (\(person, role, mbServerName) -> (person, role, fromMaybe [] mbServerName))
+    fromMaybeList :: [(Person, Role, Maybe [Text])] -> [(Person, Role, [ShortId Merchant.Merchant])]
+    fromMaybeList = map (\(person, role, mbMerchantShortIds) -> (person, role, ShortId <$> fromMaybe [] mbMerchantShortIds))
 
 updatePersonRole :: Id Person -> Id Role -> SqlDB ()
 updatePersonRole personId roleId = do

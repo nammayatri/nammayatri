@@ -1,14 +1,11 @@
 module API.Dashboard where
 
-import Beckn.Prelude
+import qualified API.Dashboard.Customer as Customer
 import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Merchant as DMerchant
 import Environment
 import Servant hiding (throwError)
-import qualified Storage.CachedQueries.Merchant as QMerchant
-import Tools.Auth (Dashboard, DashboardTokenAuth)
-import Tools.Error
+import Tools.Auth (DashboardTokenAuth)
 
 type API =
   Capture "merchantId" (ShortId DMerchant.Merchant)
@@ -18,27 +15,8 @@ type API =
 type API' =
   "dashboard"
     :> DashboardTokenAuth
-    :> CustomerListAPI
-
-type CustomerListAPI =
-  "customer"
-    :> "list"
-    :> QueryParam "limit" Integer
-    :> QueryParam "offset" Integer
-    :> Get '[JSON] Text
+    :> Customer.API
 
 handler :: FlowServer API
-handler =
-  listCustomer
-
-listCustomer ::
-  ShortId DMerchant.Merchant ->
-  Dashboard ->
-  Maybe Integer ->
-  Maybe Integer ->
-  FlowHandler Text
-listCustomer merchantShortId _ _ _ = withFlowHandlerAPI $ do
-  _merhant <-
-    QMerchant.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  pure "To be done"
+handler merchantId _dashboard =
+  Customer.handler merchantId

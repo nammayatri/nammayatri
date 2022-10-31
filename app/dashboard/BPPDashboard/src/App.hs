@@ -33,7 +33,6 @@ runService configModifier = do
     context =
       Auth.verifyApiAction @(FlowR AppEnv)
         :. Auth.verifyDashboardAction @(FlowR AppEnv)
-        :. Auth.verifyServerAction @(FlowR AppEnv)
         :. EmptyContext
 
     authTokenCacheKeyPrefix :: Text

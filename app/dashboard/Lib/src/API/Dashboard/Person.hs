@@ -27,22 +27,22 @@ type API =
              :> Post '[JSON] APISuccess
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
-             :> "assignServerAccess"
-             :> ReqBody '[JSON] DPerson.ServerAccessReq
+             :> "assignMerchantAccess"
+             :> ReqBody '[JSON] DPerson.MerchantAccessReq
              :> Post '[JSON] APISuccess
            :<|> DashboardAuth 'DASHBOARD_ADMIN
              :> Capture "personId" (Id DP.Person)
-             :> "resetServerAccess"
-             :> ReqBody '[JSON] DPerson.ServerAccessReq
+             :> "resetMerchantAccess"
+             :> ReqBody '[JSON] DPerson.MerchantAccessReq
              :> Post '[JSON] APISuccess
        )
     :<|> "person"
       :> ( "profile"
              :> DashboardAuth 'DASHBOARD_USER
              :> Get '[JSON] DP.PersonAPIEntity
-             :<|> "getCurrentServer"
+             :<|> "getCurrentMerchant"
                :> DashboardAuth 'DASHBOARD_USER
-               :> Get '[JSON] DPerson.ServerAccessRes
+               :> Get '[JSON] DPerson.MerchantAccessRes
              :<|> DashboardAuth 'DASHBOARD_USER
                :> "changePassword"
                :> ReqBody '[JSON] DPerson.ChangePasswordReq
@@ -53,11 +53,11 @@ handler :: FlowServer API
 handler =
   ( listPerson
       :<|> assignRole
-      :<|> assignServerAccess
-      :<|> resetServerAccess
+      :<|> assignMerchantAccess
+      :<|> resetMerchantAccess
   )
     :<|> ( profile
-             :<|> getCurrentServer
+             :<|> getCurrentMerchant
              :<|> changePassword
          )
 
@@ -69,21 +69,21 @@ assignRole :: TokenInfo -> Id DP.Person -> Id DRole.Role -> FlowHandler APISucce
 assignRole tokenInfo personId =
   withFlowHandlerAPI . DPerson.assignRole tokenInfo personId
 
-assignServerAccess :: TokenInfo -> Id DP.Person -> DPerson.ServerAccessReq -> FlowHandler APISuccess
-assignServerAccess tokenInfo personId =
-  withFlowHandlerAPI . DPerson.assignServerAccess tokenInfo personId
+assignMerchantAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
+assignMerchantAccess tokenInfo personId =
+  withFlowHandlerAPI . DPerson.assignMerchantAccess tokenInfo personId
 
-resetServerAccess :: TokenInfo -> Id DP.Person -> DPerson.ServerAccessReq -> FlowHandler APISuccess
-resetServerAccess tokenInfo personId =
-  withFlowHandlerAPI . DPerson.resetServerAccess tokenInfo personId
+resetMerchantAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
+resetMerchantAccess tokenInfo personId =
+  withFlowHandlerAPI . DPerson.resetMerchantAccess tokenInfo personId
 
 profile :: TokenInfo -> FlowHandler DP.PersonAPIEntity
 profile =
   withFlowHandlerAPI . DPerson.profile
 
-getCurrentServer :: TokenInfo -> FlowHandler DPerson.ServerAccessRes
-getCurrentServer =
-  withFlowHandlerAPI . pure . DPerson.getCurrentServer
+getCurrentMerchant :: TokenInfo -> FlowHandler DPerson.MerchantAccessRes
+getCurrentMerchant =
+  withFlowHandlerAPI . DPerson.getCurrentMerchant
 
 changePassword :: TokenInfo -> DPerson.ChangePasswordReq -> FlowHandler APISuccess
 changePassword req =

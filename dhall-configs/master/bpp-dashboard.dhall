@@ -30,17 +30,15 @@ let encTools =
   , hashSalt = sec.encHashSalt
   }
 
-let ServerName = < APP_BACKEND_YATRI | APP_BACKEND_ARDU | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
-
 let becknTransport =
-  { name = ServerName.BECKN_TRANSPORT
-  , url = "https://api.sandbox.beckn.juspay.in/dev/bpp/dashboard/"
+  { name = common.ServerName.BECKN_TRANSPORT
+  , url = "https://api.sandbox.beckn.juspay.in/dev/bpp/"
   , token = sec.becknTransportToken
   }
 
 let driverOfferBpp =
-  { name = ServerName.DRIVER_OFFER_BPP
-  , url = "https://api.sandbox.beckn.juspay.in/dev/dobpp/dashboard/"
+  { name = common.ServerName.DRIVER_OFFER_BPP
+  , url = "https://api.sandbox.beckn.juspay.in/dev/dobpp/"
   , token = sec.driverOfferBppToken
   }
 

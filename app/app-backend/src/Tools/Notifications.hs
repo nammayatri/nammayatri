@@ -23,7 +23,6 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.SearchRequest as QSearchReq
-import Tools.Error
 import Tools.Metrics
 
 getFCMConfig ::

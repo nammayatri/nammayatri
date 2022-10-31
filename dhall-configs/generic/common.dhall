@@ -32,6 +32,8 @@ let httpClientOptions =
   , maxRetries = +3
   }
 
+let ServerName = < APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
+
 in { smsSessionConfig = smsSessionConfig
    , autoMigrate = False
    , loggerConfig = loggerConfig
@@ -40,4 +42,5 @@ in { smsSessionConfig = smsSessionConfig
    , signatureExpiry = +600 -- in seconds
    , mkShard = mkShard
    , httpClientOptions = httpClientOptions
+   , ServerName = ServerName
    }

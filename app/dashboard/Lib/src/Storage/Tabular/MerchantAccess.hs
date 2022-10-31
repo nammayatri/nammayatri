@@ -5,47 +5,46 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.RegistrationToken where
+module Storage.Tabular.MerchantAccess where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.App (RegToken)
 import Beckn.Types.Id
-import qualified Domain.Types.RegistrationToken as Domain
+import qualified Domain.Types.MerchantAccess as Domain
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    RegistrationTokenT sql=registration_token
+    MerchantAccessT sql=merchant_access
       id Text
-      token RegToken
       personId PersonTId
       merchantId MerchantTId
       createdAt UTCTime
       Primary id
+      Unique (MerchantAccessPersonId, MerchantAccessMerchantId)
       deriving Generic
     |]
 
-instance TEntityKey RegistrationTokenT where
-  type DomainKey RegistrationTokenT = Id Domain.RegistrationToken
-  fromKey (RegistrationTokenTKey _id) = Id _id
-  toKey (Id id) = RegistrationTokenTKey id
+instance TEntityKey MerchantAccessT where
+  type DomainKey MerchantAccessT = Id Domain.MerchantAccess
+  fromKey (MerchantAccessTKey _id) = Id _id
+  toKey (Id id) = MerchantAccessTKey id
 
-instance TType RegistrationTokenT Domain.RegistrationToken where
-  fromTType RegistrationTokenT {..} = do
+instance TType MerchantAccessT Domain.MerchantAccess where
+  fromTType MerchantAccessT {..} = do
     return $
-      Domain.RegistrationToken
+      Domain.MerchantAccess
         { id = Id id,
-          personId = fromKey personId,
           merchantId = fromKey merchantId,
+          personId = fromKey personId,
           ..
         }
-  toTType Domain.RegistrationToken {..} =
-    RegistrationTokenT
+  toTType Domain.MerchantAccess {..} =
+    MerchantAccessT
       { id = getId id,
-        personId = toKey personId,
         merchantId = toKey merchantId,
+        personId = toKey personId,
         ..
       }

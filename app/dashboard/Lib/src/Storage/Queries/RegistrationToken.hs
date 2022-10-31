@@ -6,6 +6,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.RegistrationToken
 import Storage.Tabular.RegistrationToken
@@ -27,13 +28,13 @@ findAllByPersonId personId =
     where_ $ regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
     return regToken
 
-findAllByPersonIdAndServerName :: Transactionable m => Id Person -> ServerName -> m [RegistrationToken]
-findAllByPersonIdAndServerName personId serverName =
+findAllByPersonIdAndMerchantId :: Transactionable m => Id Person -> Id Merchant -> m [RegistrationToken]
+findAllByPersonIdAndMerchantId personId merchantId =
   findAll $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $
       regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
-        &&. regToken ^. RegistrationTokenServerName ==. val serverName
+        &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
     return regToken
 
 deleteAllByPersonId :: Id Person -> SqlDB ()
@@ -42,13 +43,13 @@ deleteAllByPersonId personId =
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
 
-deleteAllByPersonIdAndServerName :: Id Person -> ServerName -> SqlDB ()
-deleteAllByPersonIdAndServerName personId serverName =
+deleteAllByPersonIdAndMerchantId :: Id Person -> Id Merchant -> SqlDB ()
+deleteAllByPersonIdAndMerchantId personId merchantId =
   Esq.delete $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $
       regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
-        &&. regToken ^. RegistrationTokenServerName ==. val serverName
+        &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
 
 deleteById :: Id RegistrationToken -> SqlDB ()
 deleteById = Esq.deleteByKey @RegistrationTokenT

@@ -1,14 +1,13 @@
-module Domain.Types.ServerAccess where
+module Domain.Types.Merchant where
 
 import Beckn.Prelude
 import Beckn.Types.Id
-import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.ServerName as DSN
 
-data ServerAccess = ServerAccess
-  { id :: Id ServerAccess,
+data Merchant = Merchant
+  { id :: Id Merchant,
+    shortId :: ShortId Merchant,
     serverName :: DSN.ServerName,
-    personId :: Id DPerson.Person,
     createdAt :: UTCTime
   }
   deriving (Generic, Show)

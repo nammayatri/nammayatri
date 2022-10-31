@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByServerName, AuthFlow) where
+module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, AuthFlow) where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
@@ -10,10 +10,11 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Beckn.Utils.Common as Utils
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
+import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.RegistrationToken as QR
-import qualified Storage.Queries.ServerAccess as QServer
 
 type AuthFlow m r =
   ( EsqDBFlow m r,
@@ -24,25 +25,25 @@ type AuthFlow m r =
 verifyPerson ::
   (AuthFlow m r, Redis.HedisFlow m r) =>
   RegToken ->
-  m (Id DP.Person, DR.ServerName)
+  m (Id DP.Person, Id DMerchant.Merchant)
 verifyPerson token = do
   key <- authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
   mbTuple <- getKeyRedis key
-  (personId, serverName) <- case mbTuple of
-    Just (personId, serverName) -> return (personId, serverName)
+  (personId, merchantId) <- case mbTuple of
+    Just (personId, merchantId) -> return (personId, merchantId)
     Nothing -> do
       sr <- verifyToken token
       let personId = sr.personId
-      let serverName = sr.serverName
-      setExRedis key (personId, serverName) authTokenCacheExpiry
-      return (personId, serverName)
-  return (personId, serverName)
+      let merchantId = sr.merchantId
+      setExRedis key (personId, merchantId) authTokenCacheExpiry
+      return (personId, merchantId)
+  return (personId, merchantId)
 
-getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe (Id DP.Person, DR.ServerName))
+getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe (Id DP.Person, Id DMerchant.Merchant))
 getKeyRedis = Redis.get
 
-setExRedis :: Redis.HedisFlow m r => Text -> (Id DP.Person, DR.ServerName) -> Int -> m ()
+setExRedis :: Redis.HedisFlow m r => Text -> (Id DP.Person, Id DMerchant.Merchant) -> Int -> m ()
 setExRedis = Redis.setExp
 
 authTokenCacheKey ::
@@ -78,8 +79,8 @@ validateToken sr = do
     Esq.runTransaction $
       QR.deleteById sr.id
     Utils.throwError TokenExpired
-  mbServerAccess <- QServer.findByPersonIdAndServerName sr.personId sr.serverName
-  when (isNothing mbServerAccess) $ do
+  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId sr.personId sr.merchantId
+  when (isNothing mbMerchantAccess) $ do
     Esq.runTransaction $
       QR.deleteById sr.id
     Utils.throwError AccessDenied
@@ -98,16 +99,16 @@ cleanCachedTokens personId = do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key
 
-cleanCachedTokensByServerName ::
+cleanCachedTokensByMerchantId ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   Id DP.Person ->
-  DR.ServerName ->
+  Id DMerchant.Merchant ->
   m ()
-cleanCachedTokensByServerName personId serverName = do
-  regTokens <- QR.findAllByPersonIdAndServerName personId serverName
+cleanCachedTokensByMerchantId personId merchantId = do
+  regTokens <- QR.findAllByPersonIdAndMerchantId personId merchantId
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key

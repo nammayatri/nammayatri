@@ -7,13 +7,11 @@ where
 import qualified API.BPP.DriverOffer.Driver as Driver
 import "lib-dashboard" Environment
 import Servant
-import "lib-dashboard" Tools.Auth
 
 type API =
   "driver-offer"
-    :> ServerAuth 'DRIVER_OFFER_BPP
     :> Driver.API
 
 handler :: FlowServer API
-handler _serverName =
+handler =
   Driver.handler

@@ -44,6 +44,12 @@ let appBackendArdu =
   , token = sec.appBackendToken
   }
 
+let appBackend =
+  { name = common.ServerName.APP_BACKEND
+  , url = "https://api.sandbox.beckn.juspay.in/bap/"
+  , token = sec.appBackendToken
+  }
+
 in
 
 { esqDBCfg = esqDBCfg
@@ -58,5 +64,5 @@ in
 , authTokenCacheExpiry = +600 --seconds
 , registrationTokenExpiry = +365 --days
 , encTools = encTools
-, dataServers = [appBackendYatri, appBackendArdu]
+, dataServers = [appBackend]
 }

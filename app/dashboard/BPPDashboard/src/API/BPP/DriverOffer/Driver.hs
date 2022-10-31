@@ -10,9 +10,9 @@ where
 import qualified BPPClient.DriverOffer as Client
 import Beckn.Prelude
 import Beckn.Types.Id
-import Beckn.Utils.Common
+import Beckn.Utils.Common (withFlowHandlerAPI)
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
-import "lib-dashboard" Domain.Types.Person as DP
+import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
 import Servant
 import "lib-dashboard" Tools.Auth
@@ -30,32 +30,32 @@ type API =
 type DriverDocumentsInfoAPI =
   "documents"
     :> "info"
-    :> ApiAuth 'READ_ACCESS 'DRIVERS
+    :> ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
     :> Common.DriverDocumentsInfoAPI
 
 type DriverListAPI =
   "list"
-    :> ApiAuth 'READ_ACCESS 'DRIVERS
+    :> ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
     :> Common.DriverListAPI
 
 type DriverActivityAPI =
   "activity"
-    :> ApiAuth 'READ_ACCESS 'DRIVERS
+    :> ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
     :> Common.DriverActivityAPI
 
 type EnableDriversAPI =
   "enable"
-    :> ApiAuth 'WRITE_ACCESS 'DRIVERS
+    :> ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
     :> Common.EnableDriversAPI
 
 type DisableDriversAPI =
   "disable"
-    :> ApiAuth 'WRITE_ACCESS 'DRIVERS
+    :> ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
     :> Common.DisableDriversAPI
 
 type DriverLocationAPI =
   "location"
-    :> ApiAuth 'READ_ACCESS 'DRIVERS
+    :> ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
     :> Common.DriverLocationAPI
 
 handler :: FlowServer API
@@ -67,26 +67,26 @@ handler =
     :<|> disableDrivers
     :<|> driverLocation
 
-driverDocuments :: Id DP.Person -> FlowHandler Common.DriverDocumentsInfoRes
+driverDocuments :: ShortId DMerchant.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocuments _ = withFlowHandlerAPI $ do
   Client.callDriverOfferBPP (.drivers.driverDocumentsInfo)
 
-listDriver :: Id DP.Person -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
+listDriver :: ShortId DMerchant.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
 listDriver _ mbLimit mbOffset verified rejected pendingdoc phone = withFlowHandlerAPI $ do
   Client.callDriverOfferBPP (.drivers.listDrivers) mbLimit mbOffset verified rejected pendingdoc phone
 
-driverActivity :: Id DP.Person -> FlowHandler Common.DriverActivityRes
+driverActivity :: ShortId DMerchant.Merchant -> FlowHandler Common.DriverActivityRes
 driverActivity _ = withFlowHandlerAPI $ do
   Client.callDriverOfferBPP (.drivers.driverActivity)
 
-enableDrivers :: Id DP.Person -> Common.DriverIds -> FlowHandler Common.EnableDriversRes
+enableDrivers :: ShortId DMerchant.Merchant -> Common.DriverIds -> FlowHandler Common.EnableDriversRes
 enableDrivers _ req = withFlowHandlerAPI $ do
   Client.callDriverOfferBPP (.drivers.enableDrivers) req
 
-disableDrivers :: Id DP.Person -> Common.DriverIds -> FlowHandler Common.DisableDriversRes
+disableDrivers :: ShortId DMerchant.Merchant -> Common.DriverIds -> FlowHandler Common.DisableDriversRes
 disableDrivers _ req = withFlowHandlerAPI $ do
   Client.callDriverOfferBPP (.drivers.disableDrivers) req
 
-driverLocation :: Id DP.Person -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
+driverLocation :: ShortId DMerchant.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
 driverLocation _ mbLimit mbOffset req = withFlowHandlerAPI $ do
   Client.callDriverOfferBPP (.drivers.driverLocation) mbLimit mbOffset req

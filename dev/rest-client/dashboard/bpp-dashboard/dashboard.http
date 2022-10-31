@@ -17,7 +17,7 @@ content-type: application/json
 {
   "email" : "juspay_admin@dashboard.com",
   "password" : "juspay_admin",
-  "serverName" : "BECKN_TRANSPORT"
+  "merchantId" : "YATRI_PARTNER"
 }
 
 ###
@@ -93,14 +93,26 @@ token: {{token}}
 
 ###
 
-# @name assignServerAccess
+# @name resetMerchantAccess
 
-POST {{bpp-dashboard-host}}/dashboard/admin/person/{{personId}}/assignServerAccess
+POST {{bpp-dashboard-host}}/dashboard/admin/person/{{personId}}/resetMerchantAccess
 content-type: application/json
 token: {{token}}
 
 {
-  "serverName" : "DRIVER_OFFER_BPP"
+  "merchantId" : "NAMMA_YATRI_PARTNER"
+}
+
+###
+
+# @name assignMerchantAccess
+
+POST {{bpp-dashboard-host}}/dashboard/admin/person/{{personId}}/assignMerchantAccess
+content-type: application/json
+token: {{token}}
+
+{
+  "merchantId" : "NAMMA_YATRI_PARTNER"
 }
 
 ###
@@ -115,8 +127,6 @@ token: {{customerToken}}
 
 ###
 
-# separate login for another server
-
 # @name driverOfferCustomerLogin
 
 # name = customer, driver, juspay_ops, juspay_admin, customer_service
@@ -128,16 +138,16 @@ content-type: application/json
 {
   "email" : "{{customerLogin}}@dashboard.com",
   "password" : "{{customerLogin}}",
-  "serverName" : "DRIVER_OFFER_BPP"
+  "merchantId" : "NAMMA_YATRI_PARTNER"
 }
 
 ###
 
-# @name getCurrentServer
+# @name getCurrentMerchant
 
 @driverOfferCustomerToken = {{driverOfferCustomerLogin.response.body.authToken}}
 
-GET {{bpp-dashboard-host}}/dashboard/person/getCurrentServer
+GET {{bpp-dashboard-host}}/dashboard/person/getCurrentMerchant
 content-type: application/json
 token: {{driverOfferCustomerToken}}
 
@@ -152,18 +162,6 @@ GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/list
   &offset=0
 content-type: application/json
 token: {{driverOfferCustomerToken}}
-
-###
-
-# @name resetServerAccess
-
-POST {{bpp-dashboard-host}}/dashboard/admin/person/{{personId}}/resetServerAccess
-content-type: application/json
-token: {{token}}
-
-{
-  "serverName" : "DRIVER_OFFER_BPP"
-}
 
 ###
 

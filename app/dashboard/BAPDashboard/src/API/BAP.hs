@@ -4,18 +4,17 @@ module API.BAP
   )
 where
 
-import qualified API.BAP.ARDU as ARDU
-import qualified API.BAP.Yatri as Yatri
+import qualified API.BAP.Customer as Customer
+import Beckn.Types.Id
+import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
 import Servant
 
 type API =
   "bap"
-    :> ( ARDU.API
-           :<|> Yatri.API
-       )
+    :> Capture "merchantId" (ShortId DMerchant.Merchant)
+    :> Customer.API
 
 handler :: FlowServer API
 handler =
-  ARDU.handler
-    :<|> Yatri.handler
+  Customer.handler

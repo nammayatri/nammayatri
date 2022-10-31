@@ -70,7 +70,6 @@ dependencies:
   - wai
   - singletons
   - euler-hs
-  - app-backend
 
 ghc-options:
   - -Wall

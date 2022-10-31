@@ -7,21 +7,21 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Beckn.Utils.Validation
+import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
+import qualified Storage.Queries.Merchant as QMerchant
+import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import qualified Storage.Queries.ServerAccess as QServer
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import qualified Tools.Client as Client
-import Tools.Validation
 
 data LoginReq = LoginReq
   { email :: Text,
     password :: Text,
-    serverName :: DR.ServerName
+    merchantId :: ShortId DMerchant.Merchant
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -34,12 +34,6 @@ data LoginRes = LoginRes
 newtype LogoutRes = LogoutRes {message :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-validateLoginReq :: [DR.ServerName] -> Validate LoginReq
-validateLoginReq availableServerNames LoginReq {..} =
-  sequenceA_
-    [ validateField "serverName" serverName $ InList availableServerNames
-    ]
-
 login ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
@@ -49,12 +43,14 @@ login ::
   ) =>
   LoginReq ->
   m LoginRes
-login req@LoginReq {..} = do
+login LoginReq {..} = do
   availableServers <- asks (.dataServers)
-  runRequestValidation (validateLoginReq $ availableServers <&> (.name)) req
+  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
+  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
+    throwError $ InvalidRequest "Server for this merchant is not available"
   person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
-  _serverAccess <- QServer.findByPersonIdAndServerName person.id serverName >>= fromMaybeM AccessDenied --FIXME cleanup tokens for this serverName
-  token <- generateToken person.id serverName
+  _merchantAccess <- QAccess.findByPersonIdAndMerchantId person.id merchant.id >>= fromMaybeM AccessDenied --FIXME cleanup tokens for this merchantId
+  token <- generateToken person.id merchant.id
   pure $ LoginRes token "Logged in successfully"
 
 generateToken ::
@@ -63,14 +59,14 @@ generateToken ::
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   Id DP.Person ->
-  DR.ServerName ->
+  Id DMerchant.Merchant ->
   m Text
-generateToken personId serverName = do
-  regToken <- buildRegistrationToken personId serverName
+generateToken personId merchantId = do
+  regToken <- buildRegistrationToken personId merchantId
   -- this function uses tokens from db, so should be called before transaction
-  Auth.cleanCachedTokensByServerName personId serverName
+  Auth.cleanCachedTokensByMerchantId personId merchantId
   DB.runTransaction $ do
-    QR.deleteAllByPersonIdAndServerName personId serverName
+    QR.deleteAllByPersonIdAndMerchantId personId merchantId
     QR.create regToken
   pure $ regToken.token
 
@@ -85,8 +81,8 @@ logout tokenInfo = do
   let personId = tokenInfo.personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- this function uses tokens from db, so should be called before transaction
-  Auth.cleanCachedTokensByServerName personId tokenInfo.serverName
-  DB.runTransaction (QR.deleteAllByPersonIdAndServerName person.id tokenInfo.serverName)
+  Auth.cleanCachedTokensByMerchantId personId tokenInfo.merchantId
+  DB.runTransaction (QR.deleteAllByPersonIdAndMerchantId person.id tokenInfo.merchantId)
   pure $ LogoutRes "Logged out successfully"
 
 logoutAllServers ::
@@ -104,8 +100,8 @@ logoutAllServers tokenInfo = do
   DB.runTransaction (QR.deleteAllByPersonId person.id)
   pure $ LogoutRes "Logged out successfully from all servers"
 
-buildRegistrationToken :: MonadFlow m => Id DP.Person -> DR.ServerName -> m DR.RegistrationToken
-buildRegistrationToken personId serverName = do
+buildRegistrationToken :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> m DR.RegistrationToken
+buildRegistrationToken personId merchantId = do
   rtid <- generateGUID
   token <- generateGUID
   now <- getCurrentTime
@@ -114,6 +110,6 @@ buildRegistrationToken personId serverName = do
       { id = Id rtid,
         token = token,
         personId = personId,
-        serverName = serverName,
+        merchantId = merchantId,
         createdAt = now
       }

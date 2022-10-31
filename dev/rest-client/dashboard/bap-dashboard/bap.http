@@ -14,8 +14,19 @@ GET {{bap-dashboard-host}}
 
 # @name customerList
 
-GET {{bap-dashboard-host}}/bap/yatri/customer/list
+GET {{bap-dashboard-host}}/bap/YATRI/customer/list
   ?limit=10
   &offset=0
 content-type: application/json
 token: {{customer_service}}
+
+###
+
+# You have no access to this operation.
+# @name updateCustomer
+
+POST {{bap-dashboard-host}}/bap/NAMMA_YATRI/customer/111/update
+content-type: application/json
+token: {{juspay_ops}}
+
+"request"

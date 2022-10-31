@@ -1,15 +1,15 @@
-module Domain.Types.RegistrationToken (module Domain.Types.RegistrationToken, module Reexport) where
+module Domain.Types.RegistrationToken where
 
 import Beckn.Prelude
 import Beckn.Types.Id
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.Type as DP
-import Domain.Types.ServerName as Reexport
 
 data RegistrationToken = RegistrationToken
   { id :: Id RegistrationToken,
     token :: Text,
     personId :: Id DP.Person,
     createdAt :: UTCTime,
-    serverName :: ServerName
+    merchantId :: Id DMerchant.Merchant
   }
   deriving (Generic, Show)

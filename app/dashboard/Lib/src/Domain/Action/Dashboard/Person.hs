@@ -10,42 +10,35 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Beckn.Utils.Validation
+import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.RegistrationToken as DReg
 import qualified Domain.Types.Role as DRole
-import qualified Domain.Types.ServerAccess as DServer
+import qualified Storage.Queries.Merchant as QMerchant
+import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
-import qualified Storage.Queries.ServerAccess as QServer
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
 import qualified Tools.Client as Client
 import Tools.Error
-import Tools.Validation
 
 newtype ListPersonRes = ListPersonRes
   {list :: [DP.PersonAPIEntity]}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-newtype ServerAccessReq = ServerAccessReq
-  {serverName :: DReg.ServerName}
+newtype MerchantAccessReq = MerchantAccessReq
+  {merchantId :: ShortId DMerchant.Merchant}
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-type ServerAccessRes = ServerAccessReq
+type MerchantAccessRes = MerchantAccessReq
 
 data ChangePasswordReq = ChangePasswordReq
   { oldPassword :: Text,
     newPassword :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
-
-validateAssignServerAccessReq :: [DReg.ServerName] -> Validate ServerAccessReq
-validateAssignServerAccessReq availableServerNames ServerAccessReq {..} =
-  sequenceA_
-    [ validateField "serverName" serverName $ InList availableServerNames
-    ]
 
 listPerson ::
   (EsqDBFlow m r, EncFlow m r) =>
@@ -56,9 +49,9 @@ listPerson ::
   m ListPersonRes
 listPerson _ mbSearchString mbLimit mbOffset = do
   personAndRoleList <- QP.findAllWithLimitOffset mbSearchString mbLimit mbOffset
-  res <- forM personAndRoleList $ \(encPerson, role, serverAccess) -> do
+  res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList) -> do
     decPerson <- decrypt encPerson
-    pure $ DP.makePersonAPIEntity decPerson role serverAccess
+    pure $ DP.makePersonAPIEntity decPerson role merchantAccessList
   pure $ ListPersonRes res
 
 assignRole ::
@@ -74,27 +67,31 @@ assignRole _ personId roleId = do
     QP.updatePersonRole personId roleId
   pure Success
 
-assignServerAccess ::
+assignMerchantAccess ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["dataServers" ::: [Client.DataServer]]
   ) =>
   TokenInfo ->
   Id DP.Person ->
-  ServerAccessReq ->
+  MerchantAccessReq ->
   m APISuccess
-assignServerAccess _ personId req = do
+assignMerchantAccess _ personId req = do
+  merchant <-
+    QMerchant.findByShortId req.merchantId
+      >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   availableServers <- asks (.dataServers)
-  runRequestValidation (validateAssignServerAccessReq $ availableServers <&> (.name)) req
+  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
+    throwError $ InvalidRequest "Server for this merchant is not available"
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  mbServerAccess <- QServer.findByPersonIdAndServerName personId req.serverName
-  whenJust mbServerAccess $ \_ -> do
-    throwError $ InvalidRequest "Server access already assigned."
-  serverAccess <- buildServerAccess personId req.serverName
+  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId personId merchant.id
+  whenJust mbMerchantAccess $ \_ -> do
+    throwError $ InvalidRequest "Merchant access already assigned."
+  merchantAccess <- buildMerchantAccess personId merchant.id
   Esq.runTransaction $
-    QServer.create serverAccess
+    QAccess.create merchantAccess
   pure Success
 
-resetServerAccess ::
+resetMerchantAccess ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
@@ -102,21 +99,25 @@ resetServerAccess ::
   ) =>
   TokenInfo ->
   Id DP.Person ->
-  ServerAccessReq ->
+  MerchantAccessReq ->
   m APISuccess
-resetServerAccess _ personId req = do
+resetMerchantAccess _ personId req = do
+  merchant <-
+    QMerchant.findByShortId req.merchantId
+      >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   availableServers <- asks (.dataServers)
-  runRequestValidation (validateAssignServerAccessReq $ availableServers <&> (.name)) req
+  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
+    throwError $ InvalidRequest "Server for this merchant is not available"
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  mbServerAccess <- QServer.findByPersonIdAndServerName personId req.serverName
-  case mbServerAccess of
+  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId personId merchant.id
+  case mbMerchantAccess of
     Nothing -> throwError $ InvalidRequest "Server access already denied."
-    Just serverAccess -> do
+    Just merchantAccess -> do
       -- this function uses tokens from db, so should be called before transaction
-      Auth.cleanCachedTokensByServerName personId req.serverName
+      Auth.cleanCachedTokensByMerchantId personId merchant.id
       Esq.runTransaction $ do
-        QServer.deleteById serverAccess.id
-        QReg.deleteAllByPersonIdAndServerName personId req.serverName
+        QAccess.deleteById merchantAccess.id
+        QReg.deleteAllByPersonIdAndMerchantId personId merchant.id
       pure Success
 
 changePassword ::
@@ -134,15 +135,15 @@ changePassword tokenInfo req = do
     QP.updatePersonPassword tokenInfo.personId newHash
   pure Success
 
-buildServerAccess :: MonadFlow m => Id DP.Person -> DReg.ServerName -> m DServer.ServerAccess
-buildServerAccess personId serverName = do
+buildMerchantAccess :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> m DAccess.MerchantAccess
+buildMerchantAccess personId merchantId = do
   uid <- generateGUID
   now <- getCurrentTime
   return $
-    DServer.ServerAccess
+    DAccess.MerchantAccess
       { id = Id uid,
         personId = personId,
-        serverName = serverName,
+        merchantId = merchantId,
         createdAt = now
       }
 
@@ -153,12 +154,16 @@ profile ::
 profile tokenInfo = do
   encPerson <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
   role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
-  serverAccessList <- QServer.findAllByPersonId tokenInfo.personId
+  merchantAccessList <- QAccess.findAllByPersonId tokenInfo.personId
   decPerson <- decrypt encPerson
-  pure $ DP.makePersonAPIEntity decPerson role (serverAccessList <&> (.serverName))
+  pure $ DP.makePersonAPIEntity decPerson role (merchantAccessList <&> (.shortId))
 
-getCurrentServer ::
+getCurrentMerchant ::
+  EsqDBFlow m r =>
   TokenInfo ->
-  ServerAccessRes
-getCurrentServer tokenInfo = do
-  ServerAccessReq tokenInfo.serverName
+  m MerchantAccessRes
+getCurrentMerchant tokenInfo = do
+  merchant <-
+    QMerchant.findById tokenInfo.merchantId
+      >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
+  pure $ MerchantAccessReq merchant.shortId

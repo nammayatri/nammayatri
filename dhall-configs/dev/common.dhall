@@ -16,6 +16,7 @@ in { smsSessionConfig = globalCommon.smsSessionConfig
    , slackToken = sec.slackToken
    , signatureExpiry = globalCommon.signatureExpiry
    , httpClientOptions = globalCommon.httpClientOptions
+   , ServerName = globalCommon.ServerName
 
    , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword

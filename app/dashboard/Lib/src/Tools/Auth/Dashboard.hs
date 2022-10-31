@@ -10,8 +10,8 @@ import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import Data.Singletons.TH
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.RegistrationToken as DReg
 import Domain.Types.Role as Reexport (DashboardAccessType (..))
 import qualified Domain.Types.Role as DRole
 import Servant hiding (throwError)
@@ -36,7 +36,7 @@ data DashboardPayload (at :: DRole.DashboardAccessType)
 
 data TokenInfo = TokenInfo
   { personId :: Id DP.Person,
-    serverName :: DReg.ServerName
+    merchantId :: Id DMerchant.Merchant
   }
 
 instance VerificationMethod VerifyDashboard where
@@ -59,9 +59,9 @@ verifyDashboard ::
   RegToken ->
   m TokenInfo
 verifyDashboard requiredAccessType token = do
-  (personId, serverName) <- Common.verifyPerson token
+  (personId, merchantId) <- Common.verifyPerson token
   void $ verifyDashboardAccess requiredAccessType personId
-  pure TokenInfo {personId, serverName}
+  pure TokenInfo {personId, merchantId}
 
 instance
   forall (at :: DRole.DashboardAccessType).

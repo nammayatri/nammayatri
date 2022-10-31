@@ -6,6 +6,7 @@ import Beckn.Prelude
 import Beckn.Types.Id
 import Data.Singletons.TH
 import Domain.Types.Role as DRole
+import Domain.Types.ServerName as DSN
 
 -------- Possible user access levels for helper API --------
 
@@ -28,7 +29,8 @@ data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING
 genSingletons [''ApiEntity]
 
 data ApiAccessLevel = ApiAccessLevel
-  { apiAccessType :: ApiAccessType,
+  { serverName :: DSN.ServerName,
+    apiAccessType :: ApiAccessType,
     apiEntity :: ApiEntity
   }
 

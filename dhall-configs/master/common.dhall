@@ -9,6 +9,7 @@ in { smsSessionConfig = globalCommon.smsSessionConfig
    , loggerConfig = globalCommon.loggerConfig // { logRawSql = True }
    , LogLevel = globalCommon.LogLevel
    , ExotelCfg = globalCommon.ExotelCfg
+   , ServerName = globalCommon.ServerName
    , exotelCfg = sec.exotelCfg
    , s3Config = sec.s3Config
    , idfyCfg = sec.idfyCfg

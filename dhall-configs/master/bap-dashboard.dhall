@@ -30,17 +30,9 @@ let encTools =
   , hashSalt = sec.encHashSalt
   }
 
-let ServerName = < APP_BACKEND_YATRI | APP_BACKEND_ARDU | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
-
-let appBackendYatri =
-  { name = ServerName.APP_BACKEND_YATRI
-  , url = "https://api.sandbox.beckn.juspay.in/dev/bap/dashboard/YATRI/"
-  , token = sec.appBackendToken
-  }
-
-let appBackendArdu =
-  { name = ServerName.APP_BACKEND_ARDU
-  , url = "https://api.sandbox.beckn.juspay.in/dev/bap/dashboard/ARDU/"
+let appBackend =
+  { name = common.ServerName.APP_BACKEND
+  , url = "https://api.sandbox.beckn.juspay.in/dev/bap/"
   , token = sec.appBackendToken
   }
 
@@ -58,5 +50,5 @@ in
 , authTokenCacheExpiry = +600 --seconds
 , registrationTokenExpiry = +365 --days
 , encTools = encTools
-, dataServers = [appBackendYatri, appBackendArdu]
+, dataServers = [appBackend]
 }
