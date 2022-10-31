@@ -116,4 +116,5 @@ in  { esqDBCfg = esqDBCfg
     , cacheConfig = cacheConfig
     , metricsSearchDurationTimeout = +45
     , dashboardToken = sec.dashboardToken
+    , driverPoolLimit = Some +10
     }

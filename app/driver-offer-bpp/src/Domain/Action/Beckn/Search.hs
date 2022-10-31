@@ -8,12 +8,16 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
+import qualified Control.Monad.Extra as C
 import Data.List
+import qualified Data.Set as Set
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import Domain.Types.FarePolicy (FarePolicy)
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
 import Environment
+import qualified EulerHS.Language as L
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
@@ -21,6 +25,7 @@ import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Organization as CQOrg
 import Storage.Queries.Person (DriverPoolResult)
 import qualified Storage.Queries.Person as QP
+import System.Random
 import Tools.Error
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
@@ -78,7 +83,14 @@ handler orgId sReq = do
         logDebug "Trip doesnot match any fare policy constraints."
         return []
       else do
-        driverPool <- calculateDriverPool Nothing (getCoordinates fromLocation) org.id True
+        driverPool' <- calculateDriverPool Nothing (getCoordinates fromLocation) org.id True
+
+        driverPool <-
+          C.maybeM (return driverPool') (randomizeAndLimitSelection driverPool') $
+            asks (.driverPoolLimit)
+
+        logDebug $ "Search handler: driver pool " <> show driverPool
+
         let getVariant x = x.origin.vehicle.variant
             listOfProtoQuotes = nubBy ((==) `on` getVariant) driverPool
             filteredProtoQuotes = zipMatched farePolicies listOfProtoQuotes
@@ -93,6 +105,28 @@ handler orgId sReq = do
       let cond1 = (<= tripDistance) <$> fp.minAllowedTripDistance
           cond2 = (>= tripDistance) <$> fp.maxAllowedTripDistance
        in and $ catMaybes [cond1, cond2]
+
+    randomizeAndLimitSelection driverPool limit = do
+      let poolLen = length driverPool
+          startIdx = 0
+          endIdx = poolLen - 1
+      randomNumList <- getRandomNumberList startIdx endIdx limit
+      return $ fmap (\idx -> driverPool !! idx) randomNumList
+
+-- Generate `count` number of random numbers with bounds `start` and `end`
+getRandomNumberList :: (L.MonadFlow m) => Int -> Int -> Int -> m [Int]
+getRandomNumberList start end count = do
+  n <- round <$> L.runIO getPOSIXTime
+  let pureGen = mkStdGen n
+  return $ toList $ nextNumber pureGen Set.empty
+  where
+    nextNumber :: RandomGen g => g -> Set.Set Int -> Set.Set Int
+    nextNumber gen acc =
+      if Set.size acc == (min (end - start + 1) count)
+        then acc
+        else
+          let (n, gen') = randomR (start, end) gen
+           in nextNumber gen' (Set.union (Set.singleton n) acc)
 
 type DriverMetaData = GoogleMaps.GetDistanceResult QP.DriverPoolResult MapSearch.LatLong
 
