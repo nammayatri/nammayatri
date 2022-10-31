@@ -41,6 +41,16 @@ let apiRateLimitOptions =
   , limitResetTimeInSec = +600
   }
 
+let searchRateLimitOptions =
+  { limit = +4
+  , limitResetTimeInSec = +600
+  }
+
+let slackCfg =
+  { channelName = "#beckn-driver-onboard-test"
+  , slackToken = common.slackToken
+  }
+
 let httpClientOptions =
   { timeoutMs = +2000
   , maxRetries = +3
@@ -99,6 +109,9 @@ in
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90
 , apiRateLimitOptions = apiRateLimitOptions
+, searchRateLimitOptions = searchRateLimitOptions
+, slackCfg = slackCfg
+, searchLimitExceedNotificationTemplate = "Customer with {#cust-id#} is exceeding the search limit."
 , httpClientOptions = httpClientOptions
 , authTokenCacheExpiry = +600
 , registryUrl = common.registryUrl

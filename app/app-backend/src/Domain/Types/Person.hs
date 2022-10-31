@@ -69,6 +69,7 @@ data PersonE e = Person
     identifier :: Maybe Text,
     rating :: Maybe Text,
     isNew :: Bool,
+    enabled :: Bool,
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,

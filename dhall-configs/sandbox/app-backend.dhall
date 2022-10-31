@@ -39,6 +39,10 @@ let juspayGatewayUrl = "https://api.sandbox.beckn.juspay.in/gateway/v1"
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
+let searchRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
+
+let slackCfg = { channelName = "#beckn-driver-onboard-test", slackToken = common.slackToken }
+
 let httpClientOptions = { timeoutMs = +2000, maxRetries = +3 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
@@ -84,6 +88,9 @@ in  { esqDBCfg
     , metricsSearchDurationTimeout = +45
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
+    , searchRateLimitOptions
+    , slackCfg
+    , searchLimitExceedNotificationTemplate = "Customer with {#cust-id#} is exceeding the search limit."
     , httpClientOptions
     , authTokenCacheExpiry = +600
     , registryUrl = common.registryUrl

@@ -15,6 +15,7 @@ where
 
 import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
+import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis as Redis
@@ -61,6 +62,9 @@ data AppCfg = AppCfg
     metricsSearchDurationTimeout :: Seconds,
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
+    searchRateLimitOptions :: APIRateLimitOptions,
+    slackCfg :: SlackConfig,
+    searchLimitExceedNotificationTemplate :: Text,
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
     registryUrl :: BaseUrl,
@@ -92,6 +96,9 @@ data AppEnv = AppEnv
     googleMapsKey :: Text,
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
+    searchRateLimitOptions :: APIRateLimitOptions,
+    slackCfg :: SlackConfig,
+    searchLimitExceedNotificationTemplate :: Text,
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
     registryUrl :: BaseUrl,

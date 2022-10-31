@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.person ADD COLUMN enabled boolean DEFAULT True NOT NULL;

@@ -9,25 +9,32 @@ module API.UI.Search
   )
 where
 
+import qualified Beckn.External.Slack.Flow as SF
+import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude
 import Beckn.Storage.Hedis (HedisFlow)
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
 import Beckn.Streaming.MonadProducer
 import Beckn.Types.Common hiding (id)
+import Beckn.Types.Error
 import Beckn.Types.Id
+import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Common
+import Beckn.Utils.SlidingWindowLimiter
 import qualified Core.ACL.Metro.Search as MetroACL
 import qualified Core.ACL.Search as TaxiACL
 import Data.Aeson
 import Data.OpenApi
 import qualified Data.OpenApi as OpenApi
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Environment
-import Servant
+import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.CachedQueries.CacheConfig
@@ -85,6 +92,7 @@ fareProductConstructorModifier = \case
 
 search :: Id Person.Person -> SearchReq -> FlowHandler SearchRes
 search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  checkSearchRateLimit personId
   searchId <- case req of
     OneWaySearch oneWay -> oneWaySearch personId oneWay
     RentalSearch rental -> rentalSearch personId rental
@@ -136,3 +144,26 @@ rentalSearch personId req = do
     becknReq <- TaxiACL.buildRentalSearchReq dSearchRes
     void $ CallBPP.search dSearchRes.gatewayUrl becknReq
   pure $ dSearchRes.searchId
+
+checkSearchRateLimit ::
+  ( Redis.HedisFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
+    HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],
+    MonadTime m
+  ) =>
+  Id Person.Person ->
+  m ()
+checkSearchRateLimit personId = do
+  let key = searchHitsCountKey personId
+  hitsLimit <- asks (.searchRateLimitOptions.limit)
+  limitResetTimeInSec <- asks (.searchRateLimitOptions.limitResetTimeInSec)
+  unlessM (slidingWindowLimiter key hitsLimit limitResetTimeInSec) $ do
+    msgTemplate <- asks (.searchLimitExceedNotificationTemplate)
+    let message = T.replace "{#cust-id#}" (getId personId) msgTemplate
+    _ <- SF.postMessage message
+    throwError $ HitsLimitError limitResetTimeInSec
+
+searchHitsCountKey :: Id Person.Person -> Text
+searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCount"

@@ -39,6 +39,7 @@ mkPersist
       identifier Text Maybe
       rating Text Maybe
       isNew Bool
+      enabled Bool
       deviceToken FCMRecipientToken Maybe
       description Text Maybe
       merchantId SMerchant.MerchantTId

@@ -117,12 +117,17 @@ auth req = do
       scfg = sessionConfig smsCfg
 
   token <- makeSession scfg entityId (show <$> useFakeOtpM)
-  DB.runTransaction (RegistrationToken.create token)
-  whenNothing_ useFakeOtpM $ do
-    otpSmsTemplate <- asks (.otpSmsTemplate)
-    withLogTag ("personId_" <> getId person.id) $
-      SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
-        >>= SF.checkSmsResult
+
+  if person.enabled
+    then do
+      DB.runTransaction (RegistrationToken.create token)
+      whenNothing_ useFakeOtpM $ do
+        otpSmsTemplate <- asks (.otpSmsTemplate)
+        withLogTag ("personId_" <> getId person.id) $
+          SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
+            >>= SF.checkSmsResult
+    else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
+
   let attempts = SR.attempts token
       authId = SR.id token
   return $ AuthRes {attempts, authId}
@@ -148,6 +153,7 @@ buildPerson req merchantId = do
         identifier = Nothing,
         rating = Nothing,
         isNew = True,
+        enabled = True,
         deviceToken = Nothing,
         description = Nothing,
         merchantId = merchantId,
