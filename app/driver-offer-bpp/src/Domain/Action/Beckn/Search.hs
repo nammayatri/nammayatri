@@ -111,7 +111,7 @@ handler orgId sReq = do
           startIdx = 0
           endIdx = poolLen - 1
       randomNumList <- getRandomNumberList startIdx endIdx limit
-      return $ fmap (\idx -> driverPool !! idx) randomNumList
+      return $ fmap (driverPool !!) randomNumList
 
 -- Generate `count` number of random numbers with bounds `start` and `end`
 getRandomNumberList :: (L.MonadFlow m) => Int -> Int -> Int -> m [Int]
@@ -122,7 +122,7 @@ getRandomNumberList start end count = do
   where
     nextNumber :: RandomGen g => g -> Set.Set Int -> Set.Set Int
     nextNumber gen acc =
-      if Set.size acc == (min (end - start + 1) count)
+      if Set.size acc == min (end - start + 1) count
         then acc
         else
           let (n, gen') = randomR (start, end) gen
