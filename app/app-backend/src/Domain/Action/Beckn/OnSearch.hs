@@ -49,6 +49,7 @@ data EstimateInfo = EstimateInfo
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
+    totalFareRange :: DEstimate.FareRange,
     descriptions :: [Text]
   }
 

@@ -17,6 +17,7 @@ data Estimate = Estimate
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
+    totalFareRange :: FareRange,
     providerId :: Text,
     providerUrl :: BaseUrl,
     providerName :: Text,
@@ -28,12 +29,19 @@ data Estimate = Estimate
   }
   deriving (Generic, Show, PrettyShow)
 
+data FareRange = FareRange
+  { minFare :: Money,
+    maxFare :: Money
+  }
+  deriving (Generic, Show, PrettyShow, ToJSON, FromJSON, ToSchema)
+
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
     vehicleVariant :: VehicleVariant,
     estimatedFare :: Money,
     estimatedTotalFare :: Money,
     discount :: Maybe Money,
+    totalFareRange :: FareRange,
     agencyName :: Text,
     agencyNumber :: Text,
     agencyCompletedRidesCount :: Int,

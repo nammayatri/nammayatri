@@ -25,6 +25,8 @@ mkPersist
       estimatedFare HighPrecMoney
       discount HighPrecMoney Maybe
       estimatedTotalFare HighPrecMoney
+      minTotalFare HighPrecMoney
+      maxTotalFare HighPrecMoney
       providerId Text
       providerUrl Text
       providerName Text
@@ -48,6 +50,11 @@ instance TType FullEstimateT Domain.Estimate where
   fromTType (EstimateT {..}, mbTripTermsT) = do
     pUrl <- parseBaseUrl providerUrl
     tripTerms <- forM mbTripTermsT fromTType
+    let totalFareRange =
+          Domain.FareRange
+            { minFare = roundToIntegral minTotalFare,
+              maxFare = roundToIntegral maxTotalFare
+            }
     return $
       Domain.Estimate
         { id = Id id,
@@ -68,6 +75,8 @@ instance TType FullEstimateT Domain.Estimate where
               estimatedFare = realToFrac estimatedFare,
               discount = realToFrac <$> discount,
               estimatedTotalFare = realToFrac estimatedTotalFare,
+              minTotalFare = realToFrac totalFareRange.minFare,
+              maxTotalFare = realToFrac totalFareRange.maxFare,
               ..
             }
     let mbTripTermsT = toTType <$> tripTerms

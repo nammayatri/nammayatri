@@ -12,6 +12,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Core.ACL.Common (validatePrices)
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
+import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, unpack)
@@ -83,6 +84,14 @@ buildEstimateOrQuoteInfo item = do
       estimatedTotalFare = roundToIntegral item.price.offered_value
       descriptions = item.quote_terms
   validatePrices estimatedFare estimatedTotalFare
+
+  let totalFareRange =
+        DEstimate.FareRange
+          { minFare = roundToIntegral item.price.minimum_value,
+            maxFare = roundToIntegral item.price.maximum_value
+          }
+  validateFareRange estimatedTotalFare totalFareRange
+
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
   let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
   case item.category_id of
@@ -123,3 +132,10 @@ buildRentalQuoteDetails item = do
   baseDistance <- item.base_distance & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
   baseDuration <- item.base_duration & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
   pure DOnSearch.RentalQuoteDetails {..}
+
+validateFareRange :: (MonadThrow m, Log m) => Money -> DEstimate.FareRange -> m ()
+validateFareRange totalFare DEstimate.FareRange {..} = do
+  when (minFare < 0) $ throwError $ InvalidRequest "Minimum discounted price is less than zero"
+  when (maxFare < 0) $ throwError $ InvalidRequest "Maximum discounted price is less than zero"
+  when (maxFare < minFare) $ throwError $ InvalidRequest "Maximum discounted price is less than minimum discounted price"
+  when (totalFare > maxFare || totalFare < minFare) $ throwError $ InvalidRequest "Discounted price outside of range"

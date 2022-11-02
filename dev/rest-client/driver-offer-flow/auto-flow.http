@@ -20,8 +20,8 @@ content-type: application/json
 [
     {
         "pt": {
-            "lon": 77.6245,
-            "lat": 12.9352
+            "lon": 76.308364,
+            "lat": 10.025263
         },
         "ts": "{{$localDatetime iso8601}}"
     }
@@ -81,8 +81,8 @@ token: {{app-token}}
           "area": "Edappally"
       },
       "gps": {
-          "lon": 77.6245,
-          "lat": 12.9352
+          "lon": 76.308364,
+          "lat": 10.025263
       }
     },
     "destination": {
@@ -97,8 +97,8 @@ token: {{app-token}}
               "area": "Choornikkara"
           },
       "gps": {
-          "lon": 77.5857,
-          "lat": 12.9063
+          "lon": 76.3388894,
+          "lat": 10.0792806
       }
     }
   }
