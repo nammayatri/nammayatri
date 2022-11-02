@@ -83,7 +83,8 @@ currency = "INR"
 mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DSearch.EstimateItem -> QuoteEntities
 mkQuoteEntities start end it = do
   let variant = castVariant it.vehicleVariant
-      priceDecimalValue = OS.DecimalValue $ toRational it.baseFare
+      minPriceDecimalValue = OS.DecimalValue $ toRational it.minFare
+      maxPriceDecimalValue = OS.DecimalValue $ toRational it.maxFare
       fulfillment =
         OS.FulfillmentInfo
           { start,
@@ -99,8 +100,10 @@ mkQuoteEntities start end it = do
             price =
               OS.ItemPrice
                 { currency,
-                  value = priceDecimalValue,
-                  offered_value = priceDecimalValue
+                  value = minPriceDecimalValue,
+                  offered_value = minPriceDecimalValue,
+                  minimum_value = minPriceDecimalValue,
+                  maximum_value = maxPriceDecimalValue
                 },
             descriptor =
               OS.ItemDescriptor

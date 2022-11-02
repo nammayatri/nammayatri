@@ -46,6 +46,7 @@ mkMainOneWayEntities (quoteInfo, quoteNum) = do
 mkOneWayItem :: DOneWaySearch.QuoteInfo -> Maybe Text -> Text -> OnSearch.Item
 mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
   let vehVar = castVehicleVariant vehicleVariant
+      offered_value = fromIntegral estimatedTotalFare
       descriptor =
         OnSearch.ItemDescriptor
           { name = mkVehicleRideDescription vehVar,
@@ -61,7 +62,9 @@ mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
         OnSearch.ItemPrice
           { currency = "INR",
             value = fromIntegral estimatedFare,
-            offered_value = fromIntegral estimatedTotalFare
+            offered_value,
+            minimum_value = offered_value,
+            maximum_value = offered_value
           }
       tags =
         OnSearch.ItemTags
@@ -116,6 +119,7 @@ mkRentalFulfillment DRentalSearch.QuoteInfo {..} fulfillmentId = do
 mkRentalItem :: DRentalSearch.QuoteInfo -> Maybe Text -> Text -> OnSearch.Item
 mkRentalItem DRentalSearch.QuoteInfo {..} offer_id fulfillment_id = do
   let vehVar = castVehicleVariant vehicleVariant
+      offered_value = fromIntegral estimatedTotalFare
       descriptor =
         OnSearch.ItemDescriptor
           { name = mkVehicleRideDescription vehVar,
@@ -131,7 +135,9 @@ mkRentalItem DRentalSearch.QuoteInfo {..} offer_id fulfillment_id = do
         OnSearch.ItemPrice
           { currency = "INR",
             value = fromIntegral estimatedFare,
-            offered_value = fromIntegral estimatedTotalFare
+            offered_value,
+            minimum_value = offered_value,
+            maximum_value = offered_value
           }
   OnSearch.Item
     { category_id = OnSearch.RENTAL_TRIP,

@@ -50,7 +50,8 @@ data DSearchRes = DSearchRes
 data EstimateItem = EstimateItem
   { vehicleVariant :: Variant.Variant,
     distanceToPickup :: Meters,
-    baseFare :: Money
+    minFare :: Money,
+    maxFare :: Money
   }
 
 data TransporterInfo = TransporterInfo
@@ -158,7 +159,8 @@ mkEstimate org startTime dist (farePolicy, driverMetadata) = do
     EstimateItem
       { vehicleVariant = driverMetadata.origin.vehicle.variant,
         distanceToPickup = driverMetadata.distance,
-        baseFare
+        minFare = baseFare,
+        maxFare = baseFare + farePolicy.driverExtraFee.maxFee
       }
 
 buildSearchReqLocation :: (MonadGuid m, MonadTime m) => DLoc.SearchReqLocationAPIEntity -> m DLoc.SearchReqLocation
