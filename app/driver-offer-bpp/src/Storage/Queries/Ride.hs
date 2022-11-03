@@ -204,10 +204,10 @@ getRidesForDate driverId date = Esq.buildDType $ do
     where_ $
       ride ^. RideDriverId ==. val (toKey driverId)
         &&. ride ^. RideTripEndTime >=. val (Just minDayTime)
-        &&. ride ^. RideTripEndTime <=. val (Just maxDayTime)
+        &&. ride ^. RideTripEndTime <. val (Just maxDayTime)
         &&. ride ^. RideStatus ==. val Ride.COMPLETED
     return (ride, rating)
   return $ extractSolidType <$> fullRideType
   where
-    minDayTime = UTCTime date 0
-    maxDayTime = UTCTime date 86400
+    minDayTime = UTCTime (addDays (-1) date) 66600
+    maxDayTime = UTCTime date 66600
