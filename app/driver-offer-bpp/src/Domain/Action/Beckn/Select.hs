@@ -49,7 +49,7 @@ handler sessiontoken orgId sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
   farePolicy <- FarePolicyS.findByOrgIdAndVariant orgId sReq.variant >>= fromMaybeM NoFarePolicy
-  driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId False
+  driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId False True
 
   distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation)
   let distance = distRes.distance

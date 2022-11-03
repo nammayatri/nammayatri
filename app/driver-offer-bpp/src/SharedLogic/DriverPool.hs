@@ -16,6 +16,7 @@ import Data.List.NonEmpty as NE
 import qualified Domain.Types.Organization as SOrg
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
+import GHC.Float (double2Int)
 import qualified Storage.Queries.Person as QP
 import Tools.Metrics
 
@@ -30,8 +31,9 @@ calculateDriverPool ::
   LatLong ->
   Id SOrg.Organization ->
   Bool ->
+  Bool ->
   m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
-calculateDriverPool variant pickupLatLong orgId onlyNotOnRide = do
+calculateDriverPool variant pickupLatLong orgId onlyNotOnRide shouldFilterByActualDistance = do
   radius <- fromIntegral <$> asks (.defaultRadiusOfSearch)
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
@@ -44,7 +46,22 @@ calculateDriverPool variant pickupLatLong orgId onlyNotOnRide = do
   logPretty DEBUG "approxDriverPool" approxDriverPool
   case approxDriverPool of
     [] -> pure []
-    (a : pprox) -> filterOutDriversWithDistanceAboveThreshold radius pickupLatLong (a :| pprox)
+    (a : pprox) ->
+      if shouldFilterByActualDistance
+        then filterOutDriversWithDistanceAboveThreshold radius pickupLatLong (a :| pprox)
+        else return $ buildGetDistanceResult <$> approxDriverPool
+  where
+    buildGetDistanceResult :: QP.DriverPoolResult -> GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong
+    buildGetDistanceResult driverMetadata =
+      let distance = driverMetadata.distanceToDriver
+          duration = distance / 30000 * 3600 -- Average speed of 30km/hr
+       in GoogleMaps.GetDistanceResult
+            { origin = driverMetadata,
+              destination = pickupLatLong,
+              distance = Meters . double2Int $ distance,
+              duration = Seconds . double2Int $ duration,
+              status = "OK"
+            }
 
 filterOutDriversWithDistanceAboveThreshold ::
   ( Transactionable m,

@@ -8,7 +8,6 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
-import qualified Control.Monad.Extra as C
 import Data.List
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -83,11 +82,15 @@ handler orgId sReq = do
         logDebug "Trip doesnot match any fare policy constraints."
         return []
       else do
-        driverPool' <- calculateDriverPool Nothing (getCoordinates fromLocation) org.id True
+        mdriverPoolLimitForRandomize <- asks (.driverPoolLimit)
+        let shouldFilterByActualDistance = isNothing mdriverPoolLimitForRandomize
+        driverPool' <- calculateDriverPool Nothing (getCoordinates fromLocation) org.id True shouldFilterByActualDistance
 
         driverPool <-
-          C.maybeM (return driverPool') (randomizeAndLimitSelection driverPool') $
-            asks (.driverPoolLimit)
+          maybe
+            (return driverPool')
+            (randomizeAndLimitSelection driverPool')
+            mdriverPoolLimitForRandomize
 
         logDebug $ "Search handler: driver pool " <> show driverPool
 
