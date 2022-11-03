@@ -197,7 +197,8 @@ createRC ::
 createRC configs output id imageId now edl expiry = do
   let insuranceValidity = convertTextToUTC output.insurance_validity
   let vehicleClass = output.vehicle_class
-  let verificationStatus = validateRCStatus configs expiry insuranceValidity vehicleClass now
+  let vehicleCapacity = maybe (Just 3) (readMaybe . T.unpack) output.seating_capacity
+  let verificationStatus = validateRCStatus configs expiry insuranceValidity vehicleClass now vehicleCapacity
   Domain.VehicleRegistrationCertificate
     { id,
       documentImageId = imageId,
@@ -207,7 +208,7 @@ createRC configs output id imageId now edl expiry = do
       pucExpiry = convertTextToUTC output.puc_validity_upto,
       vehicleClass,
       vehicleManufacturer = output.manufacturer <|> output.manufacturer_model,
-      vehicleCapacity = maybe (Just 3) (readMaybe . T.unpack) output.seating_capacity,
+      vehicleCapacity,
       vehicleModel = output.m_y_manufacturing <|> output.manufacturer_model,
       vehicleColor = output.color <|> output.colour,
       vehicleEnergyType = output.fuel_type,
@@ -218,9 +219,9 @@ createRC configs output id imageId now edl expiry = do
       updatedAt = now
     }
 
-validateRCStatus :: DriverOnboardingConfigs -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Domain.VerificationStatus
-validateRCStatus configs expiry insuranceValidity cov now = do
-  let validCOV = (not configs.checkRCVehicleClass) || maybe False isValidCOVRC cov
+validateRCStatus :: DriverOnboardingConfigs -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Maybe Int -> Domain.VerificationStatus
+validateRCStatus configs expiry insuranceValidity cov now capacity = do
+  let validCOV = (not configs.checkRCVehicleClass) || maybe False (isValidCOVRC capacity) cov
   let validInsurance = (not configs.checkRCInsuranceExpiry) || maybe False (now <) insuranceValidity
   if ((not configs.checkRCExpiry) || now < expiry) && validCOV && validInsurance then Domain.VALID else Domain.INVALID
 
@@ -229,8 +230,8 @@ convertTextToUTC a = do
   a_ <- a
   DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
-isValidCOVRC :: Text -> Bool
-isValidCOVRC = T.isInfixOf "3WT"
+isValidCOVRC :: Maybe Int -> Text -> Bool
+isValidCOVRC capacity cov = T.isInfixOf "3WT" cov || (T.isInfixOf "Passenger" cov && capacity == Just 4) || T.isInfixOf "3WN" cov
 
 removeSpaceAndDash :: Text -> Text
 removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
