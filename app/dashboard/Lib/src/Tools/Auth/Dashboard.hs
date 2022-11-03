@@ -42,7 +42,7 @@ data TokenInfo = TokenInfo
 instance VerificationMethod VerifyDashboard where
   type VerificationResult VerifyDashboard = TokenInfo
   verificationDescription =
-    "Checks whether token is registered and checks person dashboard access.\
+    "Checks whether token is registered and checks person dashboard access. \
     \If you don't have a token, use registration endpoints."
 
 instance VerificationMethodWithPayload VerifyDashboard where

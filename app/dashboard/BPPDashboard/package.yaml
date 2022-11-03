@@ -72,6 +72,8 @@ dependencies:
   - http-client
   - http-client-tls
   - servant-client
+  - openapi3
+  - servant-openapi3
 
 ghc-options:
   - -Wall

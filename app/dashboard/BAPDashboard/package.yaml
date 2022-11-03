@@ -68,6 +68,8 @@ dependencies:
   - template-haskell
   - euler-hs
   - containers
+  - openapi3
+  - servant-openapi3
 
 ghc-options:
   - -Wall

@@ -39,7 +39,7 @@ data ApiPayload (sn :: DSN.ServerName) (at :: DMatrix.ApiAccessType) (ae :: DMat
 instance VerificationMethod VerifyApi where
   type VerificationResult VerifyApi = (ShortId DMerchant.Merchant)
   verificationDescription =
-    "Checks whether token is registered and checks person api access.\
+    "Checks whether token is registered and checks person api access. \
     \If you don't have a token, use registration endpoints."
 
 instance VerificationMethodWithPayload VerifyApi where
