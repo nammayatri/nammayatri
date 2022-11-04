@@ -29,7 +29,7 @@ instance TType FullRideT Domain.Ride where
           chargeableDistance = roundToIntegral <$> chargeableDistance,
           trackingUrl = tUrl,
           fare = roundToIntegral <$> fare,
-          totalFare = roundToIntegral <$> fare,
+          totalFare = roundToIntegral <$> totalFare,
           tripStartPos = mbTripStartLoc,
           tripEndPos = mbTripEndLoc,
           ..
@@ -44,7 +44,7 @@ instance TType FullRideT Domain.Ride where
               chargeableDistance = fromIntegral <$> chargeableDistance,
               trackingUrl = showBaseUrl trackingUrl,
               fare = fromIntegral <$> fare,
-              totalFare = fromIntegral <$> fare,
+              totalFare = fromIntegral <$> totalFare,
               tripStartLat = tripStartPos <&> (.lat),
               tripStartLon = tripStartPos <&> (.lon),
               tripEndLat = tripEndPos <&> (.lat),

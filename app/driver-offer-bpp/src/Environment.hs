@@ -125,7 +125,7 @@ data AppEnv = AppEnv
     defaultPickupLocThreshold :: Meters,
     defaultDropLocThreshold :: Meters,
     cacheConfig :: CacheConfig,
-    driverPoolLimit :: Maybe Int
+    driverPoolLimit :: Maybe Int,
     s3Env :: S3Env Flow
   }
   deriving (Generic)
