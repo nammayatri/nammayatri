@@ -47,7 +47,6 @@ cacheDiscount discount = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey discount.id
   Hedis.setExp idKey (coerce @Discount @(DiscountD 'Unsafe) discount) expTime
-  Hedis.setExp (makeAllOrgIdVehVarKey discount.organizationId discount.vehicleVariant) idKey expTime
 
 baseKey :: Text
 baseKey = "CachedQueries:Discount"
