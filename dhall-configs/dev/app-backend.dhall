@@ -47,13 +47,13 @@ let smsConfig =
 let gwUri = "http://localhost:8015/v1"
 
 let apiRateLimitOptions =
-  { limit = +4
-  , limitResetTimeInSec = +600
+  { limit = +8000
+  , limitResetTimeInSec = +1
   }
 
 let searchRateLimitOptions =
-  { limit = +4
-  , limitResetTimeInSec = +600
+  { limit = +8000
+  , limitResetTimeInSec = +1
   }
 
 let slackCfg =
