@@ -112,8 +112,8 @@ token: {{token}}
 
 # @name roleslist
 
-GET {{bpp-dashboard-host}}/dashboard/admin/roles/list
-  ?searchString="ADMIN"
+GET {{bpp-dashboard-host}}/admin/roles/list
+  ?searchString=ADMIN
   &limit=5
   &offset=0
 content-type: application/json
@@ -205,10 +205,10 @@ token: {{becknTransportCustomerToken}}
 
 ###
 
-# @name logoutAllServers
+# @name logoutAllMerchants
 
 # this endpoint should remove all tokens for customer
 
-POST {{bpp-dashboard-host}}/user/logoutAllServers
+POST {{bpp-dashboard-host}}/user/logoutAllMerchants
 content-type: application/json
 token: {{driverOfferCustomerToken}}

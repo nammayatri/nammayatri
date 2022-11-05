@@ -85,14 +85,14 @@ logout tokenInfo = do
   DB.runTransaction (QR.deleteAllByPersonIdAndMerchantId person.id tokenInfo.merchantId)
   pure $ LogoutRes "Logged out successfully"
 
-logoutAllServers ::
+logoutAllMerchants ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   TokenInfo ->
   m LogoutRes
-logoutAllServers tokenInfo = do
+logoutAllMerchants tokenInfo = do
   let personId = tokenInfo.personId
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- this function uses tokens from db, so should be called before transaction

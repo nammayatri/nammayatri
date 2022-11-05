@@ -114,8 +114,8 @@ token: {{token}}
 
 # @name roleslist
 
-GET {{bap-dashboard-host}}/dashboard/admin/roles/list
-  ?searchString="ADMIN"
+GET {{bap-dashboard-host}}/admin/roles/list
+  ?searchString=ADMIN
   &limit=5
   &offset=0
 content-type: application/json
@@ -221,10 +221,10 @@ token: {{yatriCustomerToken}}
 
 ###
 
-# @name logoutAllServers
+# @name logoutAllMerchants
 
 # this endpoint should remove all tokens for customer
 
-POST {{bap-dashboard-host}}/user/logoutAllServers
+POST {{bap-dashboard-host}}/user/logoutAllMerchants
 content-type: application/json
 token: {{arduCustomerToken}}
