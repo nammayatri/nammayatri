@@ -40,7 +40,7 @@ type API =
              :> ReqBody '[JSON] DPerson.CreatePersonReq
              :> Post '[JSON] DPerson.CreatePersonRes
        )
-    :<|> "person"
+    :<|> "user"
       :> ( "profile"
              :> DashboardAuth 'DASHBOARD_USER
              :> Get '[JSON] DP.PersonAPIEntity

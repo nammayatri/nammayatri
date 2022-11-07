@@ -8,15 +8,17 @@ import Servant
 import Tools.Auth
 
 type API =
-  "login"
-    :> ReqBody '[JSON] DReg.LoginReq
-    :> Post '[JSON] DReg.LoginRes
-    :<|> "logout"
-      :> DashboardAuth 'DASHBOARD_USER
-      :> Post '[JSON] DReg.LogoutRes
-    :<|> "logoutAllServers"
-      :> DashboardAuth 'DASHBOARD_USER
-      :> Post '[JSON] DReg.LogoutRes
+  "user"
+    :> ( "login"
+           :> ReqBody '[JSON] DReg.LoginReq
+           :> Post '[JSON] DReg.LoginRes
+           :<|> "logout"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> Post '[JSON] DReg.LogoutRes
+           :<|> "logoutAllServers"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> Post '[JSON] DReg.LogoutRes
+       )
 
 handler :: FlowServer API
 handler =

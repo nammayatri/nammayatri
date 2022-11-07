@@ -8,12 +8,10 @@ import Environment
 import Servant
 
 type API =
-  "dashboard"
-    :> ( Person.API
-           :<|> Registration.API
-           :<|> AccessMatrix.API
-           :<|> Roles.API
-       )
+  Person.API
+    :<|> Registration.API
+    :<|> AccessMatrix.API
+    :<|> Roles.API
 
 handler :: FlowServer API
 handler =

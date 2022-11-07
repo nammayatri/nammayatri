@@ -11,7 +11,7 @@ GET {{bap-dashboard-host}}
 
 # @name login
 
-POST {{bap-dashboard-host}}/dashboard/login
+POST {{bap-dashboard-host}}/user/login
 content-type: application/json
 
 {
@@ -24,7 +24,7 @@ content-type: application/json
 
 # @name createPerson
 
-POST {{bap-dashboard-host}}/dashboard/admin/person/create
+POST {{bap-dashboard-host}}/admin/person/create
 content-type: application/json
 token: {{token}}
 
@@ -35,7 +35,7 @@ token: {{token}}
   "email" : "xyz@gmail.com",
   "mobileNumber" : "9876543200",
   "mobileCountryCode" : "+91",
-  "passwordHash" : "juspay@adminadad" 
+  "passwordHash" : "juspay@adminadad"
 }
 
 
@@ -45,7 +45,7 @@ token: {{token}}
 
 @token = {{login.response.body.authToken}}
 
-GET {{bap-dashboard-host}}/dashboard/admin/person/list
+GET {{bap-dashboard-host}}/admin/person/list
   ?limit=10
   &offset=0
   # &searchString=customer
@@ -57,7 +57,7 @@ token: {{token}}
 
 # @name getAccessMatrix
 
-GET {{bap-dashboard-host}}/dashboard/admin/accessMatrix
+GET {{bap-dashboard-host}}/admin/accessMatrix
   ?limit=10
   &offset=0
 content-type: application/json
@@ -69,7 +69,7 @@ token: {{token}}
 
 @roleId = {{getAccessMatrix.response.body.accessMatrix[0].role.id}}
 
-GET {{bap-dashboard-host}}/dashboard/admin/accessMatrix/role/{{roleId}}
+GET {{bap-dashboard-host}}/admin/accessMatrix/role/{{roleId}}
 content-type: application/json
 token: {{token}}
 
@@ -77,7 +77,7 @@ token: {{token}}
 
 # @name createRole
 
-POST {{bap-dashboard-host}}/dashboard/admin/roles/create
+POST {{bap-dashboard-host}}/admin/roles/create
 content-type: application/json
 token: {{token}}
 
@@ -90,11 +90,11 @@ token: {{token}}
 # @name assignRole
 
 # assign new "DEVELOPER" role to person with name "customer"
-@personId = {{personList.response.body.list[0].id}}
+@customerPersonId = 25e77f37-75e5-4665-8ed0-4be2af35940a
 
 @developerRoleId = {{createRole.response.body.id}}
 
-POST {{bap-dashboard-host}}/dashboard/admin/person/{{personId}}/assignRole/{{developerRoleId}}
+POST {{bap-dashboard-host}}/admin/person/{{customerPersonId}}/assignRole/{{developerRoleId}}
 content-type: application/json
 token: {{token}}
 
@@ -102,7 +102,7 @@ token: {{token}}
 
 # @name assignAccessLevel
 
-POST {{bap-dashboard-host}}/dashboard/admin/roles/{{developerRoleId}}/assignAccessLevel
+POST {{bap-dashboard-host}}/admin/roles/{{developerRoleId}}/assignAccessLevel
 content-type: application/json
 token: {{token}}
 
@@ -125,7 +125,7 @@ token: {{token}}
 
 # @name assignMerchantAccess
 
-POST {{bap-dashboard-host}}/dashboard/admin/person/{{personId}}/assignMerchantAccess
+POST {{bap-dashboard-host}}/admin/person/{{customerPersonId}}/assignMerchantAccess
 content-type: application/json
 token: {{token}}
 
@@ -139,16 +139,39 @@ token: {{token}}
 
 @customerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
 
-GET {{bap-dashboard-host}}/dashboard/person/profile
+GET {{bap-dashboard-host}}/user/profile
 content-type: application/json
 token: {{customerToken}}
 
 ###
 
+# @name resetMerchantAccess
+
+POST {{bap-dashboard-host}}/admin/person/{{customerPersonId}}/resetMerchantAccess
+content-type: application/json
+token: {{token}}
+
+{
+  "merchantId" : "NAMMA_YATRI"
+}
+
+###
+
+# @name assignMerchantAccess2
+
+POST {{bap-dashboard-host}}/admin/person/{{customerPersonId}}/assignMerchantAccess
+content-type: application/json
+token: {{token}}
+
+{
+  "merchantId" : "NAMMA_YATRI"
+}
+
+###
 
 # @name arduCustomerLogin
 
-POST {{bap-dashboard-host}}/dashboard/login
+POST {{bap-dashboard-host}}/user/login
 content-type: application/json
 
 {
@@ -163,7 +186,7 @@ content-type: application/json
 
 @arduCustomerToken = {{arduCustomerLogin.response.body.authToken}}
 
-GET {{bap-dashboard-host}}/dashboard/person/getCurrentMerchant
+GET {{bap-dashboard-host}}/user/getCurrentMerchant
 content-type: application/json
 token: {{arduCustomerToken}}
 
@@ -186,25 +209,13 @@ token: {{arduCustomerToken}}
 
 ###
 
-# @name resetMerchantAccess
-
-POST {{bap-dashboard-host}}/dashboard/admin/person/{{personId}}/resetMerchantAccess
-content-type: application/json
-token: {{token}}
-
-{
-  "merchantId" : "NAMMA_YATRI"
-}
-
-###
-
 # @name logout
 
 # this endpoint should remove only one token for APP_BACKEND_YATRI server
 
 @yatriCustomerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
 
-POST {{bap-dashboard-host}}/dashboard/logout
+POST {{bap-dashboard-host}}/user/logout
 content-type: application/json
 token: {{yatriCustomerToken}}
 
@@ -213,8 +224,7 @@ token: {{yatriCustomerToken}}
 # @name logoutAllServers
 
 # this endpoint should remove all tokens for customer
-# INVALID_TOKEN
 
-POST {{bap-dashboard-host}}/dashboard/logoutAllServers
+POST {{bap-dashboard-host}}/user/logoutAllServers
 content-type: application/json
 token: {{arduCustomerToken}}
