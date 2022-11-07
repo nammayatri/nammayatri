@@ -49,7 +49,7 @@ data WebengageRes = WebengageRes
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 callInfobip ::
-  ( HasFlowEnv m r '["infoBIPCfg" ::: InfobipConfig],
+  ( HasFlowEnv m r '["infoBIPCfg" ::: InfoBIPConfig],
     EncFlow m r,
     EsqDBFlow m r,
     CoreMetrics m,

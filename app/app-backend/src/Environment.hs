@@ -15,7 +15,7 @@ where
 
 import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
-import Beckn.External.Infobip.Types (InfobipConfig)
+import Beckn.External.Infobip.Types (InfoBIPConfig)
 import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
@@ -45,7 +45,7 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     smsCfg :: SmsConfig,
-    infoBIPCfg :: InfobipConfig,
+    infoBIPCfg :: InfoBIPConfig,
     otpSmsTemplate :: Text,
     port :: Int,
     metricsPort :: Int,
@@ -86,7 +86,7 @@ data AppCfg = AppCfg
 -- TODO coreVersion should be hardcoded in spec, because we can't change coreVersion without changing code
 data AppEnv = AppEnv
   { smsCfg :: SmsConfig,
-    infoBIPCfg :: InfobipConfig,
+    infoBIPCfg :: InfoBIPConfig,
     otpSmsTemplate :: Text,
     hostName :: Text,
     bapSelfIds :: BAPs Text,

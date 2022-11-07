@@ -44,10 +44,10 @@ let smsConfig =
   , sender = "JUSPAY"
   }
 
-let InfobipConfig =
-  { username = common.InfobipConfig.username
-  , password = common.InfobipConfig.password
-  , token = common.InfobipConfig.token
+let InfoBIPConfig =
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
   , url = "https://5vmxvj.api.infobip.com"
   , sender = "JUSPAY"
   }
@@ -93,7 +93,7 @@ in
 { esqDBCfg = esqDBCfg
 , hedisCfg = hcfg
 , smsCfg = smsConfig
-, infoBIPCfg = InfobipConfig
+, infoBIPCfg = InfoBIPConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , port = +8013
 , metricsPort = +9999

@@ -47,10 +47,10 @@ let geofencingConfig =
 , destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
 }
 
-let InfobipConfig =
-  { username = common.InfobipConfig.username
-  , password = common.InfobipConfig.password
-  , token = common.InfobipConfig.token
+let InfoBIPConfig =
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
   , url = "https://5vmxvj.api.infobip.com/sms/2/text/advanced"
   , sender = "JUSPAY"
   }
@@ -78,7 +78,7 @@ in
 { esqDBCfg = esqDBCfg
 , hedisCfg = rcfg
 , smsCfg = smsConfig
-, infoBIPCfg = InfobipConfig
+, infoBIPCfg = InfoBIPConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
 , port = +8014
