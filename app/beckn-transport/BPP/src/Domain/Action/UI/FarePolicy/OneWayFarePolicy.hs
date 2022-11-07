@@ -92,6 +92,7 @@ updateOneWayFarePolicy admin fpId req = do
   coordinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $
     SFarePolicy.update updatedFarePolicy
+  SFarePolicy.clearCache updatedFarePolicy
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
   for_ otherCoordinators $ \cooridinator -> do
     Notify.notifyFarePolicyChange cooridinator.id cooridinator.deviceToken
