@@ -11,11 +11,11 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import Beckn.Utils.Common
+import qualified Beckn.Utils.Predicates as P
+import Beckn.Utils.Validation
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
-import qualified Beckn.Utils.Predicates as P
-import Beckn.Utils.Validation
 import qualified Domain.Types.Person.API as AP
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
