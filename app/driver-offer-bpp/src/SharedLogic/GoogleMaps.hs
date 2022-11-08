@@ -6,7 +6,6 @@ import Beckn.External.GoogleMaps.Types as GoogleMaps hiding (Address)
 import Beckn.Prelude hiding (const, error, getField, setField)
 import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.App (MonadFlow)
-import Control.Applicative ((<|>))
 import Data.HashMap.Strict as HashMap hiding (map)
 import Data.Text as T hiding (dropWhile, foldl, head, init, length, map, zip)
 
@@ -26,6 +25,9 @@ mkLocation :: (MonadFlow m, CoreMetrics m) => GetPlaceNameResp -> m Address
 mkLocation placeNameResp = do
   let resultsResp = head placeNameResp.results
   let hashMap = iterateAddrResp resultsResp.address_components
+  let hmTypeAddr = iterateResultResp placeNameResp.results
+  let areaAddrComp = HashMap.lookup "sublocality_level_2" hmTypeAddr
+  let hmArea = maybe initial iterateAddrResp areaAddrComp
   pure
     Address
       { areaCode = getField ["postal_code"] hashMap,
@@ -34,10 +36,19 @@ mkLocation placeNameResp = do
         state = getField ["administrative_area_level_1"] hashMap,
         country = getField ["country"] hashMap,
         building = getField ["premise", "sub_premise"] hashMap,
-        area = getField ["sublocality_level_5", "sublocality_level_4", "sublocality_level_3", "sublocality_level_2", "sublocality_level_1"] hashMap <|> getField ["sublocality"] hashMap,
+        area = getField ["sublocality_level_2"] hmArea,
         full_address = resultsResp.formatted_address,
         ..
       }
+
+iterateResultResp :: [ResultsResp] -> HashMap Text [AddressResp]
+iterateResultResp = foldl iterateResultTypes initial
+
+iterateResultTypes :: HashMap Text [AddressResp] -> ResultsResp -> HashMap Text [AddressResp]
+iterateResultTypes prevMap resultObj = foldl (insertAddrComp resultObj.address_components) prevMap resultObj.types
+
+insertAddrComp :: [AddressResp] -> HashMap Text [AddressResp] -> Text -> HashMap Text [AddressResp]
+insertAddrComp address_components prevMap typeName = HashMap.insert typeName address_components prevMap
 
 iterateAddrResp :: [AddressResp] -> HashMap Text Text
 iterateAddrResp = foldl iterateAddrTypes initial
