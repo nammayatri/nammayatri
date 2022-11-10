@@ -23,6 +23,12 @@ let idfyCfg =
     url = "http://localhost:6235"
   }
 
+let InfoBIPConfig =
+  { username = "xxxxxxx",
+    password = "xxxxxxx",
+    token = "xxxxxxx"
+  }
+
 in
 
 { smsUserName = "xxxxxxx"
@@ -31,5 +37,6 @@ in
 , s3Config = s3Config
 , idfyCfg = idfyCfg
 , googleMapsKey = ""
+, InfoBIPConfig = InfoBIPConfig
 , slackToken = "xxxxxxx"
 }

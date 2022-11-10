@@ -36,6 +36,14 @@ let smsConfig =
 
 let gwUri = "https://api.sandbox.beckn.juspay.in/dev/gateway/v1"
 
+let InfoBIPConfig =
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
+  , url = "https://5vmxvj.api.infobip.com"
+  , sender = "JUSPAY"
+  }
+
 let apiRateLimitOptions =
   { limit = +4
   , limitResetTimeInSec = +600
@@ -79,6 +87,7 @@ in
 { esqDBCfg = esqDBCfg
 , hedisCfg = hcfg
 , smsCfg = smsConfig
+, infoBIPCfg = InfoBIPConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , port = +8013
 , metricsPort = +9999

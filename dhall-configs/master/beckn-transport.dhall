@@ -42,6 +42,14 @@ let smsConfig =
   , sender = "JUSPAY"
   }
 
+let InfoBIPConfig =
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
+  , url = "https://5vmxvj.api.infobip.com/sms/2/text/advanced"
+  , sender = "JUSPAY"
+  }
+
 let apiRateLimitOptions =
   { limit = +4
   , limitResetTimeInSec = +600
@@ -65,6 +73,7 @@ in
 { esqDBCfg = esqDBCfg
 , hedisCfg = rcfg
 , smsCfg = smsConfig
+, infoBIPCfg = InfoBIPConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
 , port = +8014

@@ -18,6 +18,7 @@ in { smsSessionConfig = globalCommon.smsSessionConfig
    , ServerName = globalCommon.ServerName
    , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword
+   , InfoBIPConfig = sec.InfoBIPConfig
    , branchName = branchName
    , passetto = { _1 = "passetto-hs.passetto.svc.cluster.local", _2 = 8012 }
    , fcmJsonPath = Some "/var/local/beckn/beckn-fcm.json"
