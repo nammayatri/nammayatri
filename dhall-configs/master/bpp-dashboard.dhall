@@ -25,7 +25,6 @@ let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
-
 let becknTransport =
       { name = common.ServerName.BECKN_TRANSPORT
       , url = "http://beckn-transport-master.atlas:8014/dashboard/"

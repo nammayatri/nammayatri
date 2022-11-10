@@ -44,5 +44,5 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
     , encTools
-    , dataServers = [appBackend]
+    , dataServers = [ appBackend ]
     }
