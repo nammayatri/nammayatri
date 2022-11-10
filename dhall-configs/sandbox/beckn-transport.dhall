@@ -110,6 +110,8 @@ in  { esqDBCfg
     , driverEstimatedPickupDuration = +300 -- seconds
     , defaultPickupLocThreshold = +500
     , defaultDropLocThreshold = +500
+    , defaultRideTravelledDistanceThreshold = +700
+    , defaultRideTimeEstimatedThreshold = +900 --seconds
     , cacheConfig = cacheConfig
     , dashboardToken = sec.dashboardToken
     , driverLocationUpdateRateLimitOptions

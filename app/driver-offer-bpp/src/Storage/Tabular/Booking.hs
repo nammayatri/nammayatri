@@ -39,6 +39,7 @@ mkPersist
       vehicleVariant Veh.Variant
       estimatedDistance Meters
       estimatedFare Money
+      estimatedDuration Double
       fareParametersId Fare.FareParametersTId
       riderName Text Maybe
       createdAt UTCTime
@@ -68,6 +69,7 @@ instance TType (BookingT, BookingLocationT, BookingLocationT, Fare.FareParameter
           bapUri = pUrl,
           riderId = fromKey <$> riderId,
           fareParams = Fare.mkDomainFromTabularFareParams fareParametersT,
+          estimatedDuration = roundToIntegral estimatedDuration,
           ..
         }
   toTType Domain.Booking {..} =
@@ -81,6 +83,7 @@ instance TType (BookingT, BookingLocationT, BookingLocationT, Fare.FareParameter
               bapUri = showBaseUrl bapUri,
               riderId = toKey <$> riderId,
               fareParametersId = toKey fareParamsId,
+              estimatedDuration = realToFrac estimatedDuration,
               ..
             },
           mkTabularBookingLocation fromLocation,

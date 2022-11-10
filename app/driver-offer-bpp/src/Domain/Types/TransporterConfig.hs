@@ -12,6 +12,8 @@ data TransporterConfigD u = TransporterConfig
   { organizationId :: Id Organization,
     pickupLocThreshold :: Maybe Meters,
     dropLocThreshold :: Maybe Meters,
+    rideTravelledDistanceThreshold :: Maybe Meters,
+    rideTimeEstimatedThreshold :: Maybe Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

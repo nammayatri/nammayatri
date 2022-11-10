@@ -48,6 +48,7 @@ data Booking = Booking
     vehicleVariant :: DVeh.Variant,
     estimatedDistance :: Meters,
     estimatedFare :: Money,
+    estimatedDuration :: Seconds,
     fareParams :: FareParameters,
     riderName :: Maybe Text,
     createdAt :: UTCTime,

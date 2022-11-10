@@ -80,6 +80,8 @@ data AppCfg = AppCfg
     dashboardToken :: Text,
     defaultPickupLocThreshold :: Meters,
     defaultDropLocThreshold :: Meters,
+    defaultRideTravelledDistanceThreshold :: Meters,
+    defaultRideTimeEstimatedThreshold :: Seconds,
     cacheConfig :: CacheConfig,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text
@@ -130,6 +132,8 @@ data AppEnv = AppEnv
     dashboardToken :: Text,
     defaultPickupLocThreshold :: Meters,
     defaultDropLocThreshold :: Meters,
+    defaultRideTravelledDistanceThreshold :: Meters,
+    defaultRideTimeEstimatedThreshold :: Seconds,
     cacheConfig :: CacheConfig,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text

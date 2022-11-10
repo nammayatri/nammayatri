@@ -88,6 +88,8 @@ handle =
       isDistanceCalculationFailed = \_ -> pure False,
       getDefaultPickupLocThreshold = pure 500,
       getDefaultDropLocThreshold = pure 500,
+      getDefaultRideTravelledDistanceThreshold = pure 700,
+      getDefaultRideTimeEstimatedThreshold = pure 900,
       findConfigByOrgIdAndKey = \_ _ -> pure Nothing
     }
 

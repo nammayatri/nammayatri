@@ -74,6 +74,7 @@ handler orgId req = do
             toLocation,
             estimatedFare = driverQuote.estimatedFare,
             riderName = Nothing,
+            estimatedDuration = searchRequest.estimatedDuration,
             fareParams = driverQuote.fareParams,
             ..
           }

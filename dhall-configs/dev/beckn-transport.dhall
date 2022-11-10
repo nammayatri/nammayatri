@@ -119,6 +119,8 @@ in
 , dashboardToken = sec.dashboardToken
 , defaultPickupLocThreshold = +500
 , defaultDropLocThreshold = +500
+, defaultRideTravelledDistanceThreshold = +700
+, defaultRideTimeEstimatedThreshold = +900 --seconds
 , cacheConfig = cacheConfig
 , driverLocationUpdateRateLimitOptions
 , driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."

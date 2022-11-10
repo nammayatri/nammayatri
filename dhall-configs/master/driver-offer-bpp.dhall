@@ -125,6 +125,8 @@ in  { esqDBCfg
     , idfyCfg = common.idfyCfg
     , defaultPickupLocThreshold = +500
     , defaultDropLocThreshold = +500
+    , defaultRideTravelledDistanceThreshold = +700
+    , defaultRideTimeEstimatedThreshold = +900 --seconds
     , cacheConfig
     , metricsSearchDurationTimeout = +45
     , dashboardToken = sec.dashboardToken

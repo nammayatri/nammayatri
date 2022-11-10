@@ -105,7 +105,8 @@ initOneWayTrip req oneWayReq transporter now = do
           DRB.OneWayBookingDetails
             { DRB.toLocation = toLoc,
               DRB.estimatedDistance = distance,
-              DRB.estimatedFinishTime = estimatedRideFinishTime
+              DRB.estimatedFinishTime = estimatedRideFinishTime,
+              DRB.estimatedDuration = estimatedRideDuration
             }
   fromLoc <- buildRBLoc req.fromLocation now
   booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare owDetails fromLoc now

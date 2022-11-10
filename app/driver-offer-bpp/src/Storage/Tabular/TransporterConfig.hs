@@ -11,6 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common (Meters)
 import Beckn.Types.Id
+import Beckn.Types.Time
 import qualified Domain.Types.Organization as Domain
 import qualified Domain.Types.TransporterConfig as Domain
 import Storage.Tabular.Organization (OrganizationTId)
@@ -22,6 +23,8 @@ mkPersist
       organizationId OrganizationTId
       pickupLocThreshold Meters Maybe
       dropLocThreshold Meters Maybe
+      rideTravelledDistanceThreshold Meters Maybe
+      rideTimeEstimatedThreshold Seconds Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary organizationId

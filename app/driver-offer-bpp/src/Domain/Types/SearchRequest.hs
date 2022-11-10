@@ -3,6 +3,7 @@
 module Domain.Types.SearchRequest where
 
 import Beckn.Prelude
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
 import qualified Domain.Types.Organization as DOrg
@@ -20,6 +21,7 @@ data SearchRequest = SearchRequest
     toLocation :: DLoc.SearchReqLocation,
     bapId :: Text,
     bapUri :: BaseUrl,
+    estimatedDuration :: Seconds,
     createdAt :: UTCTime,
     vehicleVariant :: Variant.Variant
   }

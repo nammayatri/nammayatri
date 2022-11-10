@@ -129,6 +129,8 @@ in
 , dashboardToken = sec.dashboardToken
 , defaultPickupLocThreshold = +500
 , defaultDropLocThreshold = +500
+, defaultRideTravelledDistanceThreshold = +700
+, defaultRideTimeEstimatedThreshold = +900 --seconds
 , cacheConfig = cacheConfig
 , metricsSearchDurationTimeout = +45
 , driverPoolLimit = Some +10

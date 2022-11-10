@@ -23,6 +23,7 @@ mkPersist
       estimatedFinishTime UTCTime
       toLocationId BookingLocationTId
       estimatedDistance HighPrecMeters
+      estimatedDuration Double
       Primary bookingId
       deriving Generic
     |]

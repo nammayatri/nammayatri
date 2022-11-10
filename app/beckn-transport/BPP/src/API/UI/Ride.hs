@@ -112,6 +112,8 @@ endRide personId rideId req = withFlowHandlerAPI $ do
           isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed LocUpd.defaultRideInterpolationHandler,
           getDefaultPickupLocThreshold = asks (.defaultPickupLocThreshold),
           getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
+          getDefaultRideTravelledDistanceThreshold = asks (.defaultRideTravelledDistanceThreshold),
+          getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
           findConfigByOrgIdAndKey = QTConf.findValueByOrgIdAndKey
         }
 

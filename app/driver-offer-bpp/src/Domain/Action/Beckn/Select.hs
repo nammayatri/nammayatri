@@ -53,8 +53,9 @@ handler sessiontoken orgId sReq = do
 
   distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation)
   let distance = distRes.distance
+  let duration = distRes.duration
   fareParams <- calculateFare orgId farePolicy distance sReq.pickupTime Nothing
-  searchReq <- buildSearchRequest fromLocation toLocation orgId sReq
+  searchReq <- buildSearchRequest fromLocation toLocation orgId sReq duration
   let baseFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
@@ -112,8 +113,9 @@ buildSearchRequest ::
   DLoc.SearchReqLocation ->
   Id DOrg.Organization ->
   DSelectReq ->
+  Seconds ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to orgId sReq = do
+buildSearchRequest from to orgId sReq duration = do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -130,6 +132,7 @@ buildSearchRequest from to orgId sReq = do
         toLocation = to,
         bapId = sReq.bapId,
         bapUri = sReq.bapUri,
+        estimatedDuration = duration,
         createdAt = createdAt_,
         vehicleVariant = sReq.variant
       }

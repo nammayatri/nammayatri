@@ -30,6 +30,7 @@ mkPersist
       toLocationId SearchReqLocationTId
       bapId Text
       bapUri Text
+      estimatedDuration Double
       createdAt UTCTime
       vehicleVariant Variant.Variant
       Primary id
@@ -54,6 +55,7 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
+          estimatedDuration = roundToIntegral estimatedDuration,
           ..
         }
   toTType Domain.SearchRequest {..} =
@@ -63,6 +65,7 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
+          estimatedDuration = realToFrac estimatedDuration,
           ..
         },
       mkTabularSearchReqLocation fromLocation,

@@ -105,6 +105,8 @@ endRide personId rideId req =
           finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId,
           getDefaultPickupLocThreshold = asks (.defaultPickupLocThreshold),
           getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
+          getDefaultRideTravelledDistanceThreshold = asks (.defaultRideTravelledDistanceThreshold),
+          getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
           findConfigByOrgId = QTConf.findByOrgId
         }
 

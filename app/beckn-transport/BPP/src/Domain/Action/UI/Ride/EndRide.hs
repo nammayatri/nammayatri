@@ -1,7 +1,9 @@
 module Domain.Action.UI.Ride.EndRide where
 
+import Beckn.External.GoogleMaps.Types
 import Beckn.Prelude (ToSchema, roundToIntegral)
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
+import Beckn.Tools.Metrics.CoreMetrics
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -18,9 +20,9 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.Vehicle as Vehicle
-import EulerHS.Prelude hiding (pi)
-import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
-import qualified SharedLogic.FareCalculator.RentalFareCalculator as RentalFare
+import EulerHS.Prelude
+import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Flow as Fare
+import qualified SharedLogic.FareCalculator.RentalFareCalculator.Flow as RentalFare
 import Tools.Error
 
 data ServiceHandle m = ServiceHandle
@@ -53,6 +55,8 @@ data ServiceHandle m = ServiceHandle
     isDistanceCalculationFailed :: Id Person.Person -> m Bool,
     getDefaultPickupLocThreshold :: m Meters,
     getDefaultDropLocThreshold :: m Meters,
+    getDefaultRideTravelledDistanceThreshold :: m Meters,
+    getDefaultRideTimeEstimatedThreshold :: m Seconds,
     findConfigByOrgIdAndKey :: Id Organization -> DTConf.ConfigKey -> m (Maybe DTConf.TransporterConfig)
   }
 
@@ -62,7 +66,7 @@ newtype EndRideReq = EndRideReq
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 endRideHandler ::
-  (MonadThrow m, Log m, MonadTime m) =>
+  (MonadThrow m, Log m, MonadTime m, CoreMetrics m, HasGoogleMaps m r, EsqDBFlow m r) =>
   ServiceHandle m ->
   Id Person.Person ->
   Id Ride.Ride ->
@@ -88,7 +92,7 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
 
   (chargeableDistance, fare, totalFare, fareBreakups) <- do
     case booking.bookingDetails of
-      SRB.OneWayDetails oneWayDetails -> recalculateFare booking ride oneWayDetails
+      SRB.OneWayDetails oneWayDetails -> recalculateFare booking ride oneWayDetails now
       SRB.RentalDetails rentalDetails -> calcRentalFare booking ride rentalDetails now
 
   let updRide =
@@ -105,7 +109,7 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
 
   return APISuccess.Success
   where
-    recalculateFare booking ride oneWayDetails = do
+    recalculateFare booking ride oneWayDetails now = do
       let transporterId = booking.providerId
           vehicleVariant = booking.vehicleVariant
 
@@ -126,6 +130,7 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
           let pickupDifference = distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
           let dropDifference = distanceBetweenInMeters (getCoordinates oneWayDetails.toLocation) req.point
           let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
+
           logTagInfo "Locations differences" $
             "Pickup difference: "
               <> show pickupDifference
@@ -135,7 +140,37 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
               <> show pickupDropOutsideOfThreshold
           pure pickupDropOutsideOfThreshold
 
-      if shouldRecalculateFare && not distanceCalculationFailed && pickupDropOutsideOfThreshold
+      distanceOutsideOfThreshold <- do
+        rideTravelledDistanceThreshold <- metersToHighPrecMeters <$> getRideDistanceThreshold handle transporterId
+        let rideDistanceDifference = ride.traveledDistance - metersToHighPrecMeters oneWayDetails.estimatedDistance
+        let distanceOutsideOfThreshold = rideDistanceDifference >= rideTravelledDistanceThreshold
+        logTagInfo "endRide" ("distanceOutsideOfThreshold" <> show distanceOutsideOfThreshold)
+        logTagInfo "RideDistance differences" $
+          "Distance Difference: "
+            <> show rideDistanceDifference
+            <> "rideTravelledDistanceThreshold "
+            <> show rideTravelledDistanceThreshold
+        pure distanceOutsideOfThreshold
+
+      timeOutsideOfThreshold <- do
+        rideTimeEstimatedThreshold <- getRideTimeThreshold handle transporterId
+        let tripStartTime = fromJust ride.tripStartTime
+        let actualRideDuration = nominalDiffTimeToSeconds $ tripStartTime `diffUTCTime` now
+        let estimatedRideDuration = oneWayDetails.estimatedDuration
+        let rideTimeDifference = estimatedRideDuration - actualRideDuration
+        let timeOutsideOfThreshold = (rideTimeDifference >= rideTimeEstimatedThreshold) && (ride.traveledDistance > metersToHighPrecMeters oneWayDetails.estimatedDistance)
+        logTagInfo "RideTime differences" $
+          "Distance Difference: "
+            <> show rideTimeDifference
+            <> "estimatedRideDuration "
+            <> show estimatedRideDuration
+            <> "actualRideDuration"
+            <> show actualRideDuration
+        pure timeOutsideOfThreshold
+
+      if shouldRecalculateFare && (not distanceCalculationFailed && pickupDropOutsideOfThreshold)
+        || shouldRecalculateFare && (not distanceCalculationFailed && distanceOutsideOfThreshold)
+        || shouldRecalculateFare && (not distanceCalculationFailed && timeOutsideOfThreshold)
         then do
           fareParams <- calculateFare transporterId vehicleVariant actualDistance oneWayDetails.estimatedFinishTime
           let updatedFare = Fare.fareSum fareParams
@@ -207,6 +242,43 @@ getLocThreshold ServiceHandle {..} orgId stop = do
     thresholdFromConfig paramName conf =
       fromMaybeM (InternalError $ show paramName <> " is not a number.")
         . (Meters <$>)
+        . (readMaybe @Int)
+        . toString
+        $ conf.value
+
+getRideDistanceThreshold ::
+  (MonadThrow m, Log m) =>
+  ServiceHandle m ->
+  Id DOrg.Organization ->
+  m Meters
+getRideDistanceThreshold ServiceHandle {..} orgId = do
+  (paramName, defaultThreshold) <- (DTConf.ConfigKey "ride_travelled_distance",) <$> getDefaultRideTravelledDistanceThreshold
+  mbThresholdConfig <- findConfigByOrgIdAndKey orgId paramName
+  mbThreshold <- thresholdFromConfigMeter paramName `mapM` mbThresholdConfig
+  pure $ fromMaybe defaultThreshold mbThreshold
+  where
+    -- TODO derive instance Read Meters
+    thresholdFromConfigMeter paramName conf =
+      fromMaybeM (InternalError $ show paramName <> " is not a number.")
+        . (Meters <$>)
+        . (readMaybe @Int)
+        . toString
+        $ conf.value
+
+getRideTimeThreshold ::
+  (MonadThrow m, Log m) =>
+  ServiceHandle m ->
+  Id DOrg.Organization ->
+  m Seconds
+getRideTimeThreshold ServiceHandle {..} orgId = do
+  (paramName, defaultThreshold) <- (DTConf.ConfigKey "ride_estimated_time",) <$> getDefaultRideTimeEstimatedThreshold
+  mbThresholdConfig <- findConfigByOrgIdAndKey orgId paramName
+  mbThreshold <- thresholdFromConfigSeconds paramName `mapM` mbThresholdConfig
+  pure $ fromMaybe defaultThreshold mbThreshold
+  where
+    thresholdFromConfigSeconds paramName conf =
+      fromMaybeM (InternalError $ show paramName <> " is not a number.")
+        . (Seconds <$>)
         . (readMaybe @Int)
         . toString
         $ conf.value
