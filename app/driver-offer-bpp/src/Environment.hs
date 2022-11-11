@@ -144,7 +144,8 @@ data DriverOnboardingConfigs = DriverOnboardingConfigs
     checkDLExpiry :: Bool,
     checkDLVehicleClass :: Bool,
     checkImageExtraction :: Bool,
-    checkImageExtractionForDashboard :: Bool
+    checkImageExtractionForDashboard :: Bool,
+    validDLVehicleClassInfixes :: [Text]
   }
   deriving (Generic, FromDhall)
 

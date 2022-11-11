@@ -6,7 +6,6 @@ import Beckn.Utils.JSON
 import Beckn.Utils.Time
 import Data.Aeson hiding (Error)
 import Data.OpenApi hiding (name)
-import qualified Data.Text as T
 import EulerHS.Prelude hiding (state)
 
 type ImageValidateResponse = IdfyResponse ValidateResponse
@@ -45,51 +44,6 @@ instance (ToJSON a) => ToJSON (IdfyResponse a) where
 
 data IdfySuccess = IdfySuccess {request_id :: Text, _a :: Maybe Text}
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
-
--- class of vehicle
-data ClassOfVehicleDL = W_NT | W_T | W_CAB | HGV_T | HMV_HGV | HMV | HTV | LMV | LMV_NT | LMV_T | LMV_CAB | LMV_HMV | LTV | MCWG | MCWOG | HPMV | MGV | MMV | LDRXCV | PSV_BUS | TRANS | TRCTOR | OTHERS | NotDefined Text
-  deriving (Show, Generic, ToSchema, Eq, Read)
-
-instance ToJSON ClassOfVehicleDL where
-  toJSON c = String $ case c of
-    W_NT -> "3W-NT"
-    W_T -> "3W-T"
-    W_CAB -> "3W-CAB"
-    NotDefined t -> t
-    cl -> T.map hyphenToUnderscore $ show cl
-
-hyphenToUnderscore :: Char -> Char
-hyphenToUnderscore '-' = '_'
-hyphenToUnderscore c = c
-
-instance FromJSON ClassOfVehicleDL where
-  parseJSON (String val) =
-    case T.toUpper val of
-      "3W-NT" -> return W_NT
-      "3W-T" -> return W_T
-      "3W-CAB" -> return W_CAB
-      "HGV-T" -> return HGV_T
-      "HMV-HGV" -> return HMV_HGV
-      "HMV" -> return HMV
-      "HTV" -> return HTV
-      "LMV" -> return LMV
-      "LMV-NT" -> return LMV_NT
-      "LMV-T" -> return LMV_T
-      "LMV-CAB" -> return LMV_CAB
-      "LMV-HMV" -> return LMV_HMV
-      "LTV" -> return LTV
-      "MCWG" -> return MCWG
-      "MCWOG" -> return MCWOG
-      "HPMV" -> return HPMV
-      "MGV" -> return MGV
-      "MMV" -> return MMV
-      "LDRXCV" -> return LDRXCV
-      "PSV-BUS" -> return PSV_BUS
-      "TRANS" -> return TRANS
-      "TRCTOR" -> return TRCTOR
-      "OTHERS" -> return OTHERS
-      v -> return $ NotDefined v
-  parseJSON _ = fail ""
 
 -- RC Result
 newtype ExtractionOutput a = ExtractionOutput {extraction_output :: a}
@@ -212,7 +166,7 @@ data DLVerificationOutput = DLVerificationOutput
 
 data CovDetail = CovDetail
   { category :: Maybe Text,
-    cov :: ClassOfVehicleDL,
+    cov :: Text,
     issue_date :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -244,7 +198,7 @@ data DLExtractionOutput = DLExtractionOutput
     pincode :: Maybe Text,
     state :: Maybe Text,
     issue_dates :: Maybe ValidateIssueDate,
-    _type :: [ClassOfVehicleDL],
+    _type :: [Text],
     validity :: Maybe Validity,
     status :: Maybe Text
   }

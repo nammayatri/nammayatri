@@ -71,7 +71,7 @@ extractDLImage apiKey accountId _req = withFlowHandlerAPI $ do
             pincode = Just "pincode",
             state = Just "state",
             issue_dates = Nothing,
-            _type = [W_CAB],
+            _type = ["W_CAB"],
             validity = Nothing,
             status = Just "status"
           }

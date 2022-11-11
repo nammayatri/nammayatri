@@ -8,7 +8,6 @@ import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.IdfyVerification
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.Person (Person)
-import Idfy.Types as Idfy
 
 data DriverLicenseE e = DriverLicense
   { id :: Id DriverLicense,
@@ -19,7 +18,7 @@ data DriverLicenseE e = DriverLicense
     driverName :: Maybe Text,
     licenseNumber :: EncryptedHashedField e Text,
     licenseExpiry :: UTCTime,
-    classOfVehicles :: [Idfy.ClassOfVehicleDL],
+    classOfVehicles :: [Text],
     failedRules :: [Text],
     verificationStatus :: VerificationStatus,
     createdAt :: UTCTime,

@@ -100,12 +100,12 @@ buildSuccessDL IdfyRequest {..} request_id now = do
               Just
                 [ CovDetail
                     { category = Just "NT",
-                      cov = MCWG,
+                      cov = "MCWG",
                       issue_date = Just "2015-05-20"
                     },
                   CovDetail
                     { category = Just "NT",
-                      cov = LMV,
+                      cov = "LMV",
                       issue_date = Just "2015-05-20"
                     }
                 ],

@@ -13,12 +13,10 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.DriverOnboarding.DriverLicense as Domain
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
-import qualified Idfy.Types as Idfy
 import Storage.Tabular.DriverOnboarding.Image (ImageTId)
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.VerificationStatus"
-derivePersistField "Idfy.ClassOfVehicleDL"
 
 mkPersist
   defaultSqlSettings
@@ -33,7 +31,7 @@ mkPersist
       licenseNumberEncrypted Text
       licenseNumberHash DbHash
       licenseExpiry UTCTime
-      classOfVehicles (PostgresList Idfy.ClassOfVehicleDL)
+      classOfVehicles (PostgresList Text)
       failedRules (PostgresList Text)
       verificationStatus Domain.VerificationStatus
       consent Bool

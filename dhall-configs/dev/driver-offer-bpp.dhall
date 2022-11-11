@@ -73,6 +73,7 @@ let driverOnboardingConfigs =
   , checkDLVehicleClass = True
   , checkImageExtraction = False -- because mock-idfy can't return proper document numbers
   , checkImageExtractionForDashboard = True
+  , validDLVehicleClassInfixes = ["AUTORICKSHAW", "LMV", "3W-NT", "3WT", "3W-T", "LIGHT MOTOR VEHICLE", "3W-CAB"]
 }
 
 let apiRateLimitOptions =

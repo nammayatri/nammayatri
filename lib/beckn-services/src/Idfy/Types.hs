@@ -1,6 +1,5 @@
 module Idfy.Types
-  ( ClassOfVehicleDL (..),
-    VerificationResponse,
+  ( VerificationResponse,
     RCVerificationOutput,
     DLVerificationOutput,
     IdfyResult,

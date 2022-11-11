@@ -58,6 +58,7 @@ let driverOnboardingConfigs =
   , checkDLVehicleClass = True
   , checkImageExtraction = True
   , checkImageExtractionForDashboard = True
+  , validDLVehicleClassInfixes = ["AUTORICKSHAW", "LMV", "3W-NT", "3WT", "3W-T", "LIGHT MOTOR VEHICLE", "3W-CAB"]
 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }

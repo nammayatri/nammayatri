@@ -22,6 +22,7 @@ import Beckn.Types.Validation
 import Beckn.Utils.Common
 import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
+import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import Data.Time (nominalDay)
 import qualified Data.Time as DT
@@ -161,7 +162,7 @@ onVerifyDL verificationReq output = do
       configs <- asks (.driverOnboardingConfigs)
 
       mEncryptedDL <- encrypt `mapM` output.id_number
-      let mLicenseExpiry = convertTextToUTC output.nt_validity_to
+      let mLicenseExpiry = convertTextToUTC (output.t_validity_to <|> output.nt_validity_to)
       let mDriverLicense = createDL configs person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
 
       case mDriverLicense of
@@ -205,21 +206,19 @@ createDL configs driverId output id imageId1 imageId2 now edl expiry = do
       consentTimestamp = now
     }
 
-validateDLStatus :: DriverOnboardingConfigs -> UTCTime -> [Idfy.ClassOfVehicleDL] -> UTCTime -> Domain.VerificationStatus
+validateDLStatus :: DriverOnboardingConfigs -> UTCTime -> [Text] -> UTCTime -> Domain.VerificationStatus
 validateDLStatus configs expiry cov now = do
-  let validCOV = (not configs.checkDLVehicleClass) || foldr' (\x acc -> isValidCOVDL x || acc) False cov
-  if ((not configs.checkDLExpiry) || now < expiry) && validCOV then Domain.VALID else Domain.INVALID
+  let validCOVs = configs.validDLVehicleClassInfixes
+  let isCOVValid = (not configs.checkDLVehicleClass) || foldr' (\x acc -> isValidCOVDL validCOVs x || acc) False cov
+  if ((not configs.checkDLExpiry) || now < expiry) && isCOVValid then Domain.VALID else Domain.INVALID
 
 convertTextToUTC :: Maybe Text -> Maybe UTCTime
 convertTextToUTC a = do
   a_ <- a
   DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
-dlValidCOV :: [Idfy.ClassOfVehicleDL]
-dlValidCOV = [Idfy.LMV, Idfy.W_CAB, Idfy.LMV_NT, Idfy.LMV_T, Idfy.LMV_CAB, Idfy.LMV_HMV, Idfy.W_T]
-
-isValidCOVDL :: Idfy.ClassOfVehicleDL -> Bool
-isValidCOVDL cov = foldr' (\x acc -> x == cov || acc) False dlValidCOV
+isValidCOVDL :: [Text] -> Text -> Bool
+isValidCOVDL validCOVs cov = foldr' (\x acc -> T.isInfixOf x cov || acc) False validCOVs
 
 removeSpaceAndDash :: Text -> Text
 removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
