@@ -67,6 +67,8 @@ let geofencingConfig =
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
+let driverLocationUpdateRateLimitOptions = { limit = +4, limitResetTimeInSec = +40 }
+
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let cacheConfig =
@@ -89,8 +91,6 @@ in
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False}
-, updateLocationRefreshPeriod = +1
-, updateLocationAllowedDelay = +60
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
 , graceTerminationPeriod = +90
@@ -121,4 +121,6 @@ in
 , metricsSearchDurationTimeout = +45
 , dashboardToken = sec.dashboardToken
 , driverPoolLimit = Some +10
+, driverLocationUpdateRateLimitOptions
+, driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
 }

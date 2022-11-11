@@ -46,8 +46,6 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     registryUrl :: BaseUrl,
-    updateLocationRefreshPeriod :: Seconds,
-    updateLocationAllowedDelay :: Seconds,
     encTools :: EncTools,
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
@@ -75,7 +73,9 @@ data AppCfg = AppCfg
     defaultDropLocThreshold :: Meters,
     cacheConfig :: CacheConfig,
     metricsSearchDurationTimeout :: Seconds,
-    driverPoolLimit :: Maybe Int
+    driverPoolLimit :: Maybe Int,
+    driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
+    driverLocationUpdateNotificationTemplate :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -90,8 +90,6 @@ data AppEnv = AppEnv
     s3Config :: S3Config,
     graceTerminationPeriod :: Seconds,
     registryUrl :: BaseUrl,
-    updateLocationRefreshPeriod :: Seconds,
-    updateLocationAllowedDelay :: Seconds,
     disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
@@ -126,7 +124,9 @@ data AppEnv = AppEnv
     defaultDropLocThreshold :: Meters,
     cacheConfig :: CacheConfig,
     driverPoolLimit :: Maybe Int,
-    s3Env :: S3Env Flow
+    s3Env :: S3Env Flow,
+    driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
+    driverLocationUpdateNotificationTemplate :: Text
   }
   deriving (Generic)
 

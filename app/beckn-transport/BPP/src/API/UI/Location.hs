@@ -19,7 +19,6 @@ import qualified Domain.Action.UI.Location.UpdateLocation as DLocation
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment
-import GHC.Records.Extra
 import qualified Lib.LocationUpdates as LocUpd
 import Servant
 import qualified Storage.Queries.DriverLocation as DrLoc
@@ -48,11 +47,9 @@ updateLocation personId waypoints = withFlowHandlerAPI $ do
   DLocation.updateLocationHandler hdlr personId waypoints
   where
     constructHandler = do
-      refreshPeriod <- fromIntegral <$> asks (.updateLocationRefreshPeriod)
       pure $
         DLocation.Handler
-          { refreshPeriod,
-            findPersonById = Person.findById,
+          { findPersonById = Person.findById,
             findDriverLocationById = DrLoc.findById,
             upsertDriverLocation = \driverId point timestamp ->
               Esq.runTransaction $ DrLoc.upsertGpsCoord driverId point timestamp,

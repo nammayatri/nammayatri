@@ -78,6 +78,8 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
+let driverLocationUpdateRateLimitOptions = { limit = +20, limitResetTimeInSec = +40 }
+
 let cacheConfig = { configsExpTime = +86400 }
 
 in  { esqDBCfg
@@ -96,8 +98,6 @@ in  { esqDBCfg
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False }
-    , updateLocationRefreshPeriod = +1
-    , updateLocationAllowedDelay = +60
     , googleMapsUrl = common.googleMapsUrl
     , googleMapsKey = common.googleMapsKey
     , graceTerminationPeriod = +90
@@ -129,4 +129,6 @@ in  { esqDBCfg
     , metricsSearchDurationTimeout = +45
     , dashboardToken = sec.dashboardToken
     , driverPoolLimit = Some +4
+    , driverLocationUpdateRateLimitOptions
+    , driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     }

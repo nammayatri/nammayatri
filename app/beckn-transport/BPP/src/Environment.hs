@@ -69,7 +69,6 @@ data AppCfg = AppCfg
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
-    updateLocationRefreshPeriod :: Seconds,
     metricsSearchDurationTimeout :: Seconds,
     registryUrl :: BaseUrl,
     disableSignatureAuth :: Bool,
@@ -81,7 +80,9 @@ data AppCfg = AppCfg
     dashboardToken :: Text,
     defaultPickupLocThreshold :: Meters,
     defaultDropLocThreshold :: Meters,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
+    driverLocationUpdateNotificationTemplate :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -111,7 +112,6 @@ data AppEnv = AppEnv
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
-    updateLocationRefreshPeriod :: Seconds,
     registryUrl :: BaseUrl,
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
@@ -130,7 +130,9 @@ data AppEnv = AppEnv
     dashboardToken :: Text,
     defaultPickupLocThreshold :: Meters,
     defaultDropLocThreshold :: Meters,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
+    driverLocationUpdateNotificationTemplate :: Text
   }
   deriving (Generic)
 

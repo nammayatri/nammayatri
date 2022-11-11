@@ -14,17 +14,19 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Beckn.Utils.Common hiding (id)
 import Beckn.Utils.GenericPretty (PrettyShow)
+import Beckn.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
+import Tools.Metrics (CoreMetrics)
 
 data Handler m = Handler
-  { refreshPeriod :: NominalDiffTime,
-    findPersonById :: Id Person.Person -> m (Maybe Person.Person),
+  { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findDriverLocationById :: Id Person.Person -> m (Maybe DriverLocation),
     upsertDriverLocation :: Id Person.Person -> LatLong -> UTCTime -> m (),
     getInProgressByDriverId :: Id Person.Person -> m (Maybe SRide.Ride),
@@ -43,8 +45,20 @@ data Waypoint = Waypoint
 
 type UpdateLocationRes = APISuccess
 
-updateLocationHandler :: (Redis.HedisFlow m r, MonadTime m) => Handler m -> Id Person.Person -> UpdateLocationReq -> m UpdateLocationRes
+updateLocationHandler ::
+  ( Redis.HedisFlow m r,
+    CoreMetrics m,
+    MonadFlow m,
+    HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["driverLocationUpdateNotificationTemplate" ::: Text],
+    MonadTime m
+  ) =>
+  Handler m ->
+  Id Person.Person ->
+  UpdateLocationReq ->
+  m UpdateLocationRes
 updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocationUpdate" $ do
+  checkLocationUpdatesRateLimit driverId
   logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
   driver <-
     findPersonById driverId
@@ -52,11 +66,9 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
   whenM (Redis.tryLockRedis lockKey 60) $ do
     mbOldLoc <- findDriverLocationById driver.id
-    now <- getCurrentTime
-    case (isCalledBeforeRefreshPeriod mbOldLoc now, filterNewWaypoints mbOldLoc) of
-      (True, _) -> logWarning "Called before refresh period passed, ignoring"
-      (_, []) -> logWarning "Incoming points are older than current one, ignoring"
-      (_, a : ax) -> do
+    case filterNewWaypoints mbOldLoc of
+      [] -> logWarning "Incoming points are older than current one, ignoring"
+      (a : ax) -> do
         let newWaypoints = a :| ax
             currPoint = NE.last newWaypoints
         upsertDriverLocation driver.id currPoint.pt currPoint.ts
@@ -72,9 +84,28 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
       maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
 
-    isCalledBeforeRefreshPeriod mbLoc now =
-      maybe False (\loc -> now `diffUTCTime` loc.updatedAt < refreshPeriod) mbLoc
     lockKey = makeLockKey driverId
 
 makeLockKey :: Id Person.Person -> Text
 makeLockKey (Id driverId) = "beckn-transport:driverLocationUpdate:" <> driverId
+
+checkLocationUpdatesRateLimit ::
+  ( Redis.HedisFlow m r,
+    CoreMetrics m,
+    MonadFlow m,
+    HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["driverLocationUpdateNotificationTemplate" ::: Text],
+    MonadTime m
+  ) =>
+  Id Person.Person ->
+  m ()
+checkLocationUpdatesRateLimit personId = do
+  let key = locationUpdatesHitsCountKey personId
+  hitsLimit <- asks (.driverLocationUpdateRateLimitOptions.limit)
+  limitResetTimeInSec <- asks (.driverLocationUpdateRateLimitOptions.limitResetTimeInSec)
+  unlessM (slidingWindowLimiter key hitsLimit limitResetTimeInSec) $ do
+    logError "Location updates hitting limit, ignoring"
+    throwError $ HitsLimitError limitResetTimeInSec
+
+locationUpdatesHitsCountKey :: Id Person.Person -> Text
+locationUpdatesHitsCountKey personId = "BPP:DriverLocationUpdates:" <> getId personId <> ":hitsCount"

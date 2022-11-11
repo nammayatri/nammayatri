@@ -20,17 +20,15 @@ import Beckn.Exit (exitDBMigrationFailure)
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Esqueleto.Migration as Esq
 import Beckn.Utils.App (handleLeft)
-import Beckn.Utils.Common
+import Beckn.Utils.Common hiding (id)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Data.Text as T (replace, toUpper, unpack)
 import qualified "app-backend" Environment as AppBackend
 import qualified "beckn-transport" Environment as TransporterBackend
 import qualified "driver-offer-bpp" Environment as DriverOfferBpp
 import EulerHS.Prelude
-import qualified Mobility.ARDU.Fixtures as ARDU
 import qualified Mobility.ARDU.Spec as Mobility.ARDU
 import Mobility.AppBackend.Queries
-import qualified Mobility.Transporter.Fixtures as Transporter
 import qualified Mobility.Transporter.Spec as Transporter.Mobility
 import PublicTransport.Common
 import qualified PublicTransport.Spec as PublicTransport
@@ -106,9 +104,7 @@ specs' trees = do
           AppBackend.runAppBackend $
             \cfg ->
               cfg & hideLogging,
-        TransporterBackend.runTransporterBackendApp $ \cfg ->
-          cfg & hideLogging
-            & #updateLocationRefreshPeriod .~ Transporter.timeBetweenLocationUpdates,
+        TransporterBackend.runTransporterBackendApp id,
         MockSms.runMockSms hideLogging,
         MockFcm.runMockFcm hideLogging,
         MockRegistry.runRegistryService hideLogging,
@@ -123,9 +119,7 @@ specs' trees = do
         SearchResultAggregator.runSearchResultAggregator $ \cfg ->
           cfg & hideLogging
             & #kafkaConsumerCfgs . #publicTransportQuotes . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
-        DriverOfferBpp.runDriverOfferBpp $ \cfg ->
-          cfg & hideLogging
-            & #updateLocationRefreshPeriod .~ ARDU.timeBetweenLocationUpdates
+        DriverOfferBpp.runDriverOfferBpp id
       ]
 
     startServers servers = do

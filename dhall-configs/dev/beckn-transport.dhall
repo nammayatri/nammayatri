@@ -60,6 +60,8 @@ let apiRateLimitOptions =
   , limitResetTimeInSec = +600
   }
 
+let driverLocationUpdateRateLimitOptions = { limit = +100, limitResetTimeInSec = +1 }
+
 let encTools =
   { service = common.passetto
   , hashSalt = sec.encHashSalt
@@ -106,7 +108,6 @@ in
 , authTokenCacheExpiry = +600
 , minimumDriverRatesCount = +5
 , recalculateFareEnabled = True
-, updateLocationRefreshPeriod = +5
 , metricsSearchDurationTimeout = +45
 , registryUrl = common.registryUrl
 , disableSignatureAuth = False
@@ -119,4 +120,6 @@ in
 , defaultPickupLocThreshold = +500
 , defaultDropLocThreshold = +500
 , cacheConfig = cacheConfig
+, driverLocationUpdateRateLimitOptions
+, driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
 }

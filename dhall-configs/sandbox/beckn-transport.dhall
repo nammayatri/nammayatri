@@ -53,6 +53,8 @@ let InfoBIPConfig =
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
+let driverLocationUpdateRateLimitOptions = { limit = +10, limitResetTimeInSec = +40 }
+
 let httpClientOptions = { timeoutMs = +2000, maxRetries = +3 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
@@ -98,8 +100,6 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , minimumDriverRatesCount = +5
     , recalculateFareEnabled = True
-    , updateLocationRefreshPeriod = +5
-    , updateLocationAllowedDelay = +60
     , metricsSearchDurationTimeout = +45
     , registryUrl = common.registryUrl
     , disableSignatureAuth = False
@@ -112,4 +112,6 @@ in  { esqDBCfg
     , defaultDropLocThreshold = +500
     , cacheConfig = cacheConfig
     , dashboardToken = sec.dashboardToken
+    , driverLocationUpdateRateLimitOptions
+    , driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     }

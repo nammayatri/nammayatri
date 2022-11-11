@@ -80,6 +80,8 @@ let apiRateLimitOptions =
   , limitResetTimeInSec = +600
   }
 
+let driverLocationUpdateRateLimitOptions = { limit = +100, limitResetTimeInSec = +1 }
+
 let cacheConfig =
   { configsExpTime = +86400
   }
@@ -100,8 +102,6 @@ in
 , autoMigrate = True
 , coreVersion = "0.9.3"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False}
-, updateLocationRefreshPeriod = +1
-, updateLocationAllowedDelay = +60
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
 , graceTerminationPeriod = +90
@@ -132,4 +132,6 @@ in
 , cacheConfig = cacheConfig
 , metricsSearchDurationTimeout = +45
 , driverPoolLimit = Some +10
+, driverLocationUpdateRateLimitOptions
+, driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
 }

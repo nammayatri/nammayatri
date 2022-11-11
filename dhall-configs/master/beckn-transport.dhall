@@ -53,6 +53,8 @@ let InfoBIPConfig =
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
+let driverLocationUpdateRateLimitOptions = { limit = +20, limitResetTimeInSec = +40 }
+
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kafkaProducerCfg =
@@ -94,7 +96,6 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , minimumDriverRatesCount = +5
     , recalculateFareEnabled = True
-    , updateLocationRefreshPeriod = +5
     , metricsSearchDurationTimeout = +45
     , registryUrl = common.registryUrl
     , disableSignatureAuth = False
@@ -107,4 +108,6 @@ in  { esqDBCfg
     , defaultDropLocThreshold = +500
     , cacheConfig
     , dashboardToken = sec.dashboardToken
+    , driverLocationUpdateRateLimitOptions
+    , driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     }
