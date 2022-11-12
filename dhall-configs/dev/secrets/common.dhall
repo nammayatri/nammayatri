@@ -35,6 +35,7 @@ in
 , s3Config = mockS3Config
 , idfyCfg = idfyCfg
 , googleMapsKey = topSecret.googleMapsKey
+, googleTranslateKey = topSecret.googleTranslateKey
 , slackToken = "xxxxxxx"
 , InfoBIPConfig = InfoBIPConfig
 }

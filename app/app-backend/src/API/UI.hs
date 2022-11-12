@@ -12,6 +12,7 @@ import qualified API.UI.Confirm as Confirm
 import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Feedback as Feedback
 import qualified API.UI.GoogleMaps as GoogleMapsProxy
+import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Registration as Registration
@@ -46,6 +47,7 @@ type API =
            :<|> Feedback.API
            :<|> CustomerSupport.API
            :<|> GoogleMapsProxy.API
+           :<|> GoogleTranslateProxy.API
            :<|> CancellationReason.API
            :<|> SavedReqLocation.API
            :<|> Webengage.API
@@ -70,6 +72,7 @@ handler =
     :<|> Feedback.handler
     :<|> CustomerSupport.handler
     :<|> GoogleMapsProxy.handler
+    :<|> GoogleTranslateProxy.handler
     :<|> CancellationReason.handler
     :<|> SavedReqLocation.handler
     :<|> Webengage.handler

@@ -121,6 +121,8 @@ in
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
+, googleTranslateUrl = common.googleTranslateUrl
+, googleTranslateKey = common.googleTranslateKey
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90
 , apiRateLimitOptions = apiRateLimitOptions

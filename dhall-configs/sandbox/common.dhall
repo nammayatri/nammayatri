@@ -24,6 +24,8 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , fcmJsonPath = Some "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
     , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
     , googleMapsKey = sec.googleMapsKey
+    , googleTranslateUrl = "https://www.googleapis.com/"
+    , googleTranslateKey = sec.googleTranslateKey
     , fcmUrl =
         "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/"
     , registryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"

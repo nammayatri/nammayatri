@@ -96,6 +96,8 @@ in  { esqDBCfg
         common.loggerConfig // { logFilePath = "/tmp/app-backend.log" }
     , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
     , googleMapsKey = common.googleMapsKey
+    , googleTranslateUrl = common.googleTranslateUrl
+    , googleTranslateKey = common.googleTranslateKey
     , metricsSearchDurationTimeout = +45
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
