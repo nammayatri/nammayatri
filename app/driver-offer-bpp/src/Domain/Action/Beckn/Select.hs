@@ -2,8 +2,8 @@
 
 module Domain.Action.Beckn.Select where
 
-import qualified Beckn.External.GoogleMaps.Client as ClientGoogleMaps
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
+import qualified Beckn.External.GoogleTranslate.Types as GoogleTranslate
 import Beckn.Prelude
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
@@ -22,7 +22,7 @@ import Domain.Types.Vehicle.Variant (Variant)
 import Environment
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
-import SharedLogic.GoogleMaps (Address (..), mkLocation)
+import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import Storage.Queries.Person
 import qualified Storage.Queries.SearchRequest as QSReq
@@ -147,7 +147,7 @@ buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do
 
 translateSearchReq ::
   ( MonadFlow m,
-    GoogleMaps.HasGoogleMaps m r,
+    GoogleTranslate.HasGoogleTranslate m r,
     CoreMetrics m
   ) =>
   Text ->
@@ -166,7 +166,7 @@ translateSearchReq sessiontoken defaultSearchReq@DSearchReq.SearchRequest {..} l
 
 buildLocWithAddr ::
   ( MonadFlow m,
-    GoogleMaps.HasGoogleMaps m r,
+    GoogleTranslate.HasGoogleTranslate m r,
     CoreMetrics m
   ) =>
   Text ->
@@ -174,18 +174,20 @@ buildLocWithAddr ::
   GoogleMaps.Language ->
   m DLoc.SearchReqLocation
 buildLocWithAddr sessiontoken searchReqLoc@DLoc.SearchReqLocation {..} language = do
-  url <- asks (.googleMapsUrl)
-  apiKey <- asks (.googleMapsKey)
-  placeNameResp <- ClientGoogleMaps.getPlaceName url (Just sessiontoken) (show lat <> "," <> show lon) apiKey (Just language)
-  mkAddress <- mkLocation placeNameResp
-  buildSearchReqLocation (buildSearchReqLocationAPIEntity mkAddress lat lon)
+  mAreaObj <- translate GoogleMaps.ENGLISH language `mapM` searchReqLoc.area
+  let translation = (\areaObj -> headMaybe areaObj._data.translations) =<< mAreaObj
+  let areaRegional = (.translatedText) <$> translation
+  buildSearchReqLocation (buildSearchReqLocationAPIEntity searchReqLoc areaRegional)
+  where
+    headMaybe [] = Nothing
+    headMaybe (x : _) = Just x
 
-buildSearchReqLocationAPIEntity :: Address -> Double -> Double -> DLoc.SearchReqLocationAPIEntity
-buildSearchReqLocationAPIEntity Address {..} lat lon = DLoc.SearchReqLocationAPIEntity {..}
+buildSearchReqLocationAPIEntity :: DLoc.SearchReqLocation -> Maybe Text -> DLoc.SearchReqLocationAPIEntity
+buildSearchReqLocationAPIEntity DLoc.SearchReqLocation {..} areaRegional = DLoc.SearchReqLocationAPIEntity {area = areaRegional, ..}
 
 addLanguageToDictionary ::
   ( MonadFlow m,
-    GoogleMaps.HasGoogleMaps m r,
+    GoogleTranslate.HasGoogleTranslate m r,
     CoreMetrics m
   ) =>
   Text ->

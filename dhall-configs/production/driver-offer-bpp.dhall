@@ -94,6 +94,8 @@ in
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False}
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
+, googleTranslateUrl = common.googleTranslateUrl
+, googleTranslateKey = common.googleTranslateKey
 , graceTerminationPeriod = +90
 , registryUrl = common.registryUrl
 , encTools = encTools

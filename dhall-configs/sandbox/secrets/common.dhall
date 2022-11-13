@@ -38,7 +38,6 @@ in
 , idfyCfg = idfyCfg
 , googleMapsKey = topSecret.googleMapsKey
 , googleTranslateKey = topSecret.googleTranslateKey
-, googleMapsKey = "xxxxxxx"
 , InfoBIPConfig = InfoBIPConfig
 , slackToken = "xxxxxxx"
 }
