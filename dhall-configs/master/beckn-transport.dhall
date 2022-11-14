@@ -4,22 +4,14 @@ let sec = ./secrets/beckn-transport.dhall
 
 let GeoRestriction = < Unrestricted | Regions : List Text >
 
-let postgresConfig =
-      { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
-      , connectPort = 5432
-      , connectUser = sec.dbUserId
-      , connectPassword = sec.dbPassword
-      , connectDatabase = "atlas_transporter_v2"
-      }
-
 let esqDBCfg =
-      { connectHost = postgresConfig.connectHost
-      , connectPort = postgresConfig.connectPort
-      , connectUser = postgresConfig.connectUser
-      , connectPassword = postgresConfig.connectPassword
-      , connectDatabase = postgresConfig.connectDatabase
-      , connectSchemaName = "atlas_transporter"
-      }
+  { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+  , connectPort = 5432
+  , connectUser = sec.dbUserId
+  , connectPassword = sec.dbPassword
+  , connectDatabase = "atlas_transporter_v2"
+  , connectSchemaName = "atlas_transporter"
+  }
 
 let rcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"

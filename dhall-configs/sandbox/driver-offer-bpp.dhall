@@ -4,22 +4,23 @@ let sec = ./secrets/driver-offer-bpp.dhall
 
 let GeoRestriction = < Unrestricted | Regions : List Text >
 
-let postgresConfig =
+let esqDBCfg =
       { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
       , connectPort = 5432
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_driver_offer_bpp"
-      }
-
-let esqDBCfg =
-      { connectHost = postgresConfig.connectHost
-      , connectPort = postgresConfig.connectPort
-      , connectUser = postgresConfig.connectUser
-      , connectPassword = postgresConfig.connectPassword
-      , connectDatabase = postgresConfig.connectDatabase
       , connectSchemaName = "atlas_driver_offer_bpp"
       }
+
+let esqDBReplicaCfg =
+  { connectHost = "beckn-integ-v2-r1.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+  , connectPort = esqDBCfg.connectPort
+  , connectUser = esqDBCfg.connectUser
+  , connectPassword = esqDBCfg.connectPassword
+  , connectDatabase = esqDBCfg.connectDatabase
+  , connectSchemaName = esqDBCfg.connectSchemaName
+  }
 
 let rcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
@@ -76,7 +77,7 @@ let cacheConfig =
   }
 
 in  { esqDBCfg = esqDBCfg
-    , esqDBReplicaCfg = esqDBCfg
+    , esqDBReplicaCfg = esqDBReplicaCfg
     , hedisCfg = rcfg
     , port = +8016
     , metricsPort = +9997

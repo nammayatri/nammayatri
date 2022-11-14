@@ -61,8 +61,8 @@ updateEnabledState driverId isEnabled = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-updateEnabledStateReturningIds :: (Transactionable m) => [Id Driver] -> Bool -> m [Id Driver]
-updateEnabledStateReturningIds driverIds isEnabled =
+updateEnabledStateReturningIds :: EsqDBFlow m r => [Id Driver] -> Bool -> m [Id Driver]
+updateEnabledStateReturningIds driverIds isEnabled = do
   Esq.runTransaction $ do
     present <- fmap (cast . (.driverId)) <$> fetchAllByIds driverIds
     updateEnabledStateForIds

@@ -3,21 +3,12 @@ let sec = ./secrets/beckn-transport.dhall
 
 let JobType = < PrintBananasCount | PrintCurrentTimeWithErrorProbability | IncorrectDataJobType | FakeJobType | TestTermination >
 
-let postgresConfig =
+let esqDBCfg =
   { connectHost = "localhost"
   , connectPort = 5434
-  , connectUser = sec.dbUserId
+  , connectUser = "atlas_scheduler_example_user"
   , connectPassword = sec.dbPassword
   , connectDatabase = "atlas_dev"
-  }
-
-let esqDBCfg =
-  { connectHost = postgresConfig.connectHost
-  , connectPort = postgresConfig.connectPort
---  , connectUser = postgresConfig.connectUser
-  , connectUser = "atlas_scheduler_example_user"
-  , connectPassword = postgresConfig.connectPassword
-  , connectDatabase = postgresConfig.connectDatabase
   , connectSchemaName = "atlas_scheduler_example"
   }
 

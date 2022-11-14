@@ -4,22 +4,23 @@ let sec = ./secrets/driver-offer-bpp.dhall
 
 let GeoRestriction = < Unrestricted | Regions : List Text >
 
-let postgresConfig =
-      { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
-      , connectPort = 5432
-      , connectUser = sec.dbUserId
-      , connectPassword = sec.dbPassword
-      , connectDatabase = "atlas_driver_offer_bpp_v2"
-      }
-
 let esqDBCfg =
-      { connectHost = postgresConfig.connectHost
-      , connectPort = postgresConfig.connectPort
-      , connectUser = postgresConfig.connectUser
-      , connectPassword = postgresConfig.connectPassword
-      , connectDatabase = postgresConfig.connectDatabase
-      , connectSchemaName = "atlas_driver_offer_bpp"
-      }
+  { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+  , connectPort = 5432
+  , connectUser = sec.dbUserId
+  , connectPassword = sec.dbPassword
+  , connectDatabase = "atlas_driver_offer_bpp_v2"
+  , connectSchemaName = "atlas_driver_offer_bpp"
+  }
+
+let esqDBReplicaCfg =
+  { connectHost = "beckn-integ-v2-r1.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+  , connectPort = esqDBCfg.connectPort
+  , connectUser = esqDBCfg.connectUser
+  , connectPassword = esqDBCfg.connectPassword
+  , connectDatabase = esqDBCfg.connectDatabase
+  , connectSchemaName = esqDBCfg.connectSchemaName
+  }
 
 let rcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
@@ -84,7 +85,7 @@ let driverLocationUpdateRateLimitOptions = { limit = +20, limitResetTimeInSec = 
 let cacheConfig = { configsExpTime = +86400 }
 
 in  { esqDBCfg
-    , esqDBReplicaCfg = esqDBCfg
+    , esqDBReplicaCfg = esqDBReplicaCfg
     , hedisCfg = rcfg
     , port = +8016
     , metricsPort = +9997

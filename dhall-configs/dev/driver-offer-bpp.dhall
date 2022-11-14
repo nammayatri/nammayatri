@@ -3,21 +3,22 @@ let sec = ./secrets/driver-offer-bpp.dhall
 
 let GeoRestriction = < Unrestricted | Regions : List Text>
 
-let postgresConfig =
+let esqDBCfg =
   { connectHost = "localhost"
   , connectPort = 5434
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
   , connectDatabase = "atlas_dev"
+  , connectSchemaName = "atlas_driver_offer_bpp"
   }
 
-let esqDBCfg =
-  { connectHost = postgresConfig.connectHost
-  , connectPort = postgresConfig.connectPort
-  , connectUser = postgresConfig.connectUser
-  , connectPassword = postgresConfig.connectPassword
-  , connectDatabase = postgresConfig.connectDatabase
-  , connectSchemaName = "atlas_driver_offer_bpp"
+let esqDBReplicaCfg =
+  { connectHost = esqDBCfg.connectHost
+  , connectPort = esqDBCfg.connectPort
+  , connectUser = esqDBCfg.connectUser
+  , connectPassword = esqDBCfg.connectPassword
+  , connectDatabase = esqDBCfg.connectDatabase
+  , connectSchemaName = esqDBCfg.connectSchemaName
   }
 
 let rcfg =
@@ -90,7 +91,7 @@ let cacheConfig =
 in
 
 { esqDBCfg = esqDBCfg
-, esqDBReplicaCfg = esqDBCfg
+, esqDBReplicaCfg = esqDBReplicaCfg
 , hedisCfg = rcfg
 , port = +8016
 , metricsPort = +9997
