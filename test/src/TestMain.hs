@@ -104,7 +104,9 @@ specs' trees = do
           AppBackend.runAppBackend $
             \cfg ->
               cfg & hideLogging,
-        TransporterBackend.runTransporterBackendApp id,
+        TransporterBackend.runTransporterBackendApp $
+          \cfg ->
+            cfg & hideLogging,
         MockSms.runMockSms hideLogging,
         MockFcm.runMockFcm hideLogging,
         MockRegistry.runRegistryService hideLogging,
@@ -119,7 +121,9 @@ specs' trees = do
         SearchResultAggregator.runSearchResultAggregator $ \cfg ->
           cfg & hideLogging
             & #kafkaConsumerCfgs . #publicTransportQuotes . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
-        DriverOfferBpp.runDriverOfferBpp id
+        DriverOfferBpp.runDriverOfferBpp $
+          \cfg ->
+            cfg & hideLogging
       ]
 
     startServers servers = do

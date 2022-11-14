@@ -1,1 +1,0 @@
-ALTER TABLE atlas_transporter.one_way_booking ADD COLUMN estimated_duration double precision NOT NULL,

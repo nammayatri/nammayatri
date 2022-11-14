@@ -55,7 +55,7 @@ handler sessiontoken orgId sReq = do
   let distance = distRes.distance
   let duration = distRes.duration
   fareParams <- calculateFare orgId farePolicy distance sReq.pickupTime Nothing
-  searchReq <- buildSearchRequest fromLocation toLocation orgId sReq duration
+  searchReq <- buildSearchRequest fromLocation toLocation orgId sReq distance duration
   let baseFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
@@ -63,7 +63,7 @@ handler sessiontoken orgId sReq = do
       <> show distance
       <> "; estimated base fare:"
       <> show baseFare
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare distance) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare) driverPool
   languageDictionary <- foldM (addLanguageToDictionary sessiontoken searchReq) M.empty driverPool
   Esq.runTransaction $ do
     QSReq.create searchReq
@@ -80,10 +80,9 @@ handler sessiontoken orgId sReq = do
       (MonadFlow m) =>
       DSearchReq.SearchRequest ->
       Money ->
-      Meters ->
       GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchRequest baseFare_ distance gdRes = do
+    buildSearchRequestForDriver searchRequest baseFare_ gdRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let driver = gdRes.origin
@@ -113,9 +112,10 @@ buildSearchRequest ::
   DLoc.SearchReqLocation ->
   Id DOrg.Organization ->
   DSelectReq ->
+  Meters ->
   Seconds ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to orgId sReq duration = do
+buildSearchRequest from to orgId sReq distance duration = do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -132,6 +132,7 @@ buildSearchRequest from to orgId sReq duration = do
         toLocation = to,
         bapId = sReq.bapId,
         bapUri = sReq.bapUri,
+        estimatedDistance = distance,
         estimatedDuration = duration,
         createdAt = createdAt_,
         vehicleVariant = sReq.variant

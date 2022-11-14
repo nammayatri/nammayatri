@@ -1,9 +1,7 @@
 module Domain.Action.UI.Ride.EndRide where
 
-import Beckn.External.GoogleMaps.Types
 import Beckn.Prelude (ToSchema, roundToIntegral)
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
-import Beckn.Tools.Metrics.CoreMetrics
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -66,7 +64,7 @@ newtype EndRideReq = EndRideReq
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 endRideHandler ::
-  (MonadThrow m, Log m, MonadTime m, CoreMetrics m, HasGoogleMaps m r, EsqDBFlow m r) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
   Id Person.Person ->
   Id Ride.Ride ->

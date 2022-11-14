@@ -10,6 +10,7 @@ module Storage.Tabular.SearchRequest where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
+import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.SearchRequest as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import Storage.Tabular.Organization (OrganizationTId)
@@ -30,7 +31,8 @@ mkPersist
       toLocationId SearchReqLocationTId
       bapId Text
       bapUri Text
-      estimatedDuration Double
+      estimatedDistance Meters
+      estimatedDuration Seconds
       createdAt UTCTime
       vehicleVariant Variant.Variant
       Primary id
@@ -55,7 +57,6 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
-          estimatedDuration = roundToIntegral estimatedDuration,
           ..
         }
   toTType Domain.SearchRequest {..} =
@@ -65,7 +66,6 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
-          estimatedDuration = realToFrac estimatedDuration,
           ..
         },
       mkTabularSearchReqLocation fromLocation,

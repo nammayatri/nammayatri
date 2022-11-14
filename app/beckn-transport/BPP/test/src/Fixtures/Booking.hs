@@ -14,7 +14,8 @@ defaultBooking = do
         SRB.OneWayBookingDetails
           { toLocation = bookingStopLocation,
             estimatedDistance = 20000,
-            estimatedFinishTime = Fixtures.defaultTime
+            estimatedFinishTime = Fixtures.defaultTime,
+            estimatedDuration = 1200
           }
   SRB.Booking
     { id = Id "1",

@@ -56,7 +56,10 @@ wrapTests func = do
       let appEnv = AppEnv loggerConfig loggerEnv hedisEnv googleMapsKey coreMetrics defaultHttpClientOptions
       func appEnv
 
-newtype TopSecrets = TopSecrets {googleMapsKey :: Text}
+data TopSecrets = TopSecrets
+  { googleMapsKey :: Text,
+    googleTranslateKey :: Text
+  }
   deriving (Generic, FromDhall, Show)
 
 readTopSecrets :: IO TopSecrets

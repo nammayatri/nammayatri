@@ -28,7 +28,6 @@ mkPersist
       distanceToPickup Meters
       durationToPickup Seconds
       vehicleVariant Variant.Variant
-      distance Meters
       baseFare Money
       searchRequestValidTill UTCTime
       driverId PersonTId

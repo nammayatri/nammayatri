@@ -552,7 +552,7 @@ offerQuote driverId req = do
   whenJust mbOfferedFare $ \off ->
     unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
       throwError $ NotAllowedExtraFee $ show off
-  fareParams <- calculateFare organization.id farePolicy sReqFD.distance sReqFD.startTime mbOfferedFare
+  fareParams <- calculateFare organization.id farePolicy sReq.estimatedDistance sReqFD.startTime mbOfferedFare
   driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
   Esq.runTransaction $ QDrQt.create driverQuote
   sendDriverOffer organization sReq driverQuote
@@ -579,7 +579,7 @@ offerQuote driverId req = do
             driverName = driver.firstName,
             driverRating = driver.rating,
             vehicleVariant = sd.vehicleVariant,
-            distance = sd.distance,
+            distance = s.estimatedDistance,
             distanceToPickup = sd.distanceToPickup,
             durationToPickup = sd.durationToPickup,
             createdAt = now,

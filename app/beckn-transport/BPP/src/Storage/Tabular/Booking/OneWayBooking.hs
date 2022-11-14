@@ -11,6 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common (HighPrecMeters)
 import Beckn.Types.Id
+import Beckn.Utils.Common (Seconds)
 import qualified Domain.Types.Booking.Type as Domain
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.Booking.Table
@@ -23,7 +24,7 @@ mkPersist
       estimatedFinishTime UTCTime
       toLocationId BookingLocationTId
       estimatedDistance HighPrecMeters
-      estimatedDuration Double
+      estimatedDuration Seconds
       Primary bookingId
       deriving Generic
     |]

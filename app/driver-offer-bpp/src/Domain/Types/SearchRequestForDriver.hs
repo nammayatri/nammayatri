@@ -19,7 +19,6 @@ data SearchRequestForDriver = SearchRequestForDriver
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     vehicleVariant :: Variant.Variant,
-    distance :: Meters,
     baseFare :: Money,
     createdAt :: UTCTime
   }
@@ -49,5 +48,5 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest =
       baseFare = nearbyReq.baseFare,
       fromLocation = searchRequest.fromLocation,
       toLocation = searchRequest.toLocation,
-      distance = nearbyReq.distance
+      distance = searchRequest.estimatedDistance
     }

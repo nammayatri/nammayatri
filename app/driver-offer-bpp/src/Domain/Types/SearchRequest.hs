@@ -21,6 +21,7 @@ data SearchRequest = SearchRequest
     toLocation :: DLoc.SearchReqLocation,
     bapId :: Text,
     bapUri :: BaseUrl,
+    estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
     createdAt :: UTCTime,
     vehicleVariant :: Variant.Variant

@@ -64,8 +64,8 @@ fromOneWayDetailsT (toLocT, OneWayBookingT {..}) =
   Domain.OneWayBookingDetails
     { estimatedDistance = roundToIntegral estimatedDistance,
       estimatedFinishTime = estimatedFinishTime,
-      estimatedDuration = roundToIntegral estimatedDuration,
-      toLocation = mkDomainBookingLocation toLocT
+      toLocation = mkDomainBookingLocation toLocT,
+      ..
     }
 
 toOneWayDetailsT :: Id Domain.Booking -> Domain.OneWayBookingDetails -> (BookingLocationT, OneWayBookingT)
@@ -75,7 +75,6 @@ toOneWayDetailsT bookingId Domain.OneWayBookingDetails {..} =
       { bookingId = toKey bookingId,
         toLocationId = toKey toLocation.id,
         estimatedDistance = realToFrac estimatedDistance,
-        estimatedDuration = realToFrac estimatedDuration,
         ..
       }
   )
