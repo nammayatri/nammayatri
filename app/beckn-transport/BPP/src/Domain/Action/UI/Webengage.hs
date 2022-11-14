@@ -29,13 +29,18 @@ data MetaData = MetaData
   { campaignType :: Text,
     custom :: Custom,
     timestamp :: UTCTime, --to be confirmed
-    messageId :: Text
+    messageId :: Text,
+    indiaDLT :: Maybe IndiaDLT
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-data Custom = Custom
-  { key1 :: Text,
-    key2 :: Text
+newtype Custom = Custom
+  { api_key :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+newtype IndiaDLT = IndiaDLT
+  { principalEntityId :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -55,12 +60,11 @@ callInfobip ::
     CoreMetrics m,
     Log m
   ) =>
-  Maybe Text ->
   WebengageReq ->
   m WebengageRes
-callInfobip token req = withTransactionIdLogTag' req.metadata.messageId $ do
+callInfobip req = withTransactionIdLogTag' req.metadata.messageId $ do
   infoBIPCfg <- asks (.infoBIPCfg)
-  unless (token == Just infoBIPCfg.token) $ throwError $ InvalidRequest "Invalid Authorization Token"
+  unless (req.metadata.custom.api_key == infoBIPCfg.token) $ throwError $ InvalidRequest "Invalid Authorization Token"
   let personId = req.smsData.toNumber
   let smsBody = req.smsData.body
   person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)

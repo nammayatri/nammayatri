@@ -15,12 +15,11 @@ type API =
   "webengage"
     :> "1"
     :> "customer"
-    :> Header "Authorization" Text
     :> ReqBody '[JSON] WE.WebengageReq
     :> Post '[JSON] WE.WebengageRes
 
-handler :: Maybe Text -> WE.WebengageReq -> FlowHandler WE.WebengageRes
+handler :: WE.WebengageReq -> FlowHandler WE.WebengageRes
 handler = sendSms
 
-sendSms :: Maybe Text -> WE.WebengageReq -> FlowHandler WE.WebengageRes
-sendSms token req = withFlowHandlerAPI (WE.callInfobip token req)
+sendSms :: WE.WebengageReq -> FlowHandler WE.WebengageRes
+sendSms = withFlowHandlerAPI . WE.callInfobip
