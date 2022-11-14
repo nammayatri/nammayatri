@@ -32,6 +32,7 @@ import Tools.Metrics.ARDUBPPMetrics
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
+    esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     port :: Int,
     metricsPort :: Int,
@@ -98,6 +99,7 @@ data AppEnv = AppEnv
     registryUrl :: BaseUrl,
     disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,
+    esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
     isShuttingDown :: TMVar (),
     loggerEnv :: LoggerEnv,
@@ -166,6 +168,7 @@ buildAppEnv cfg@AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   let modifierFunc = ("driver-offer-bpp:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout

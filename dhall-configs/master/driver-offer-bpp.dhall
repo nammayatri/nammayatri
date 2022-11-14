@@ -84,6 +84,7 @@ let driverLocationUpdateRateLimitOptions = { limit = +20, limitResetTimeInSec = 
 let cacheConfig = { configsExpTime = +86400 }
 
 in  { esqDBCfg
+    , esqDBReplicaCfg = esqDBCfg
     , hedisCfg = rcfg
     , port = +8016
     , metricsPort = +9997

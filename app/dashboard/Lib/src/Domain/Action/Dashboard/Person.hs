@@ -2,7 +2,6 @@ module Domain.Action.Dashboard.Person where
 
 import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto (Transactionable)
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
@@ -169,7 +168,7 @@ resetMerchantAccess _ personId req = do
       pure Success
 
 changePassword ::
-  (Transactionable m, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r) =>
   TokenInfo ->
   ChangePasswordReq ->
   m APISuccess

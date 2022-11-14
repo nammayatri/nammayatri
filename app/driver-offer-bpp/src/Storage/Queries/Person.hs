@@ -261,15 +261,15 @@ instance GoogleMaps.HasCoordinates DriverPoolResult where
   getCoordinates dpRes = LatLong dpRes.lat dpRes.lon
 
 getNearestDrivers ::
-  (Transactionable m, HasFlowEnv m r '["driverPositionInfoExpiry" ::: Maybe Seconds]) =>
+  (Transactionable m, MonadTime m) =>
   Maybe Variant ->
   LatLong ->
   Integer ->
   Id Organization ->
   Bool ->
+  Maybe Seconds ->
   m [DriverPoolResult]
-getNearestDrivers mbVariant LatLong {..} radiusMeters orgId onlyNotOnRide = do
-  mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
+getNearestDrivers mbVariant LatLong {..} radiusMeters orgId onlyNotOnRide mbDriverPositionInfoExpiry = do
   now <- getCurrentTime
   res <- Esq.findAll $ do
     withTable <- with $ do

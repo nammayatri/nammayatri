@@ -7,7 +7,8 @@ where
 
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
-import Beckn.Storage.Esqueleto (Transactionable)
+import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import qualified Beckn.Types.MapSearch as GoogleMaps
@@ -21,7 +22,7 @@ import qualified Storage.Queries.Person as QP
 import Tools.Metrics
 
 calculateDriverPool ::
-  ( Transactionable m,
+  ( EsqDBReplicaFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
     HasGoogleMaps m r,
@@ -35,14 +36,17 @@ calculateDriverPool ::
   m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
 calculateDriverPool variant pickupLatLong orgId onlyNotOnRide shouldFilterByActualDistance = do
   radius <- fromIntegral <$> asks (.defaultRadiusOfSearch)
+  mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
-      QP.getNearestDrivers
-        variant
-        pickupLatLong
-        radius
-        orgId
-        onlyNotOnRide
+      Esq.runInReplica $
+        QP.getNearestDrivers
+          variant
+          pickupLatLong
+          radius
+          orgId
+          onlyNotOnRide
+          mbDriverPositionInfoExpiry
   logPretty DEBUG "approxDriverPool" approxDriverPool
   case approxDriverPool of
     [] -> pure []
@@ -64,8 +68,7 @@ calculateDriverPool variant pickupLatLong orgId onlyNotOnRide shouldFilterByActu
             }
 
 filterOutDriversWithDistanceAboveThreshold ::
-  ( Transactionable m,
-    CoreMetrics m,
+  ( CoreMetrics m,
     MonadFlow m,
     HasGoogleMaps m r,
     HasPrettyLogger m r

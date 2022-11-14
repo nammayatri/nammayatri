@@ -76,6 +76,7 @@ let cacheConfig =
   }
 
 in  { esqDBCfg = esqDBCfg
+    , esqDBReplicaCfg = esqDBCfg
     , hedisCfg = rcfg
     , port = +8016
     , metricsPort = +9997
