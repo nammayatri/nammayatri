@@ -8,7 +8,6 @@ where
 import Beckn.External.Maps.HasCoordinates (HasCoordinates (..))
 import Beckn.External.Maps.Types
 import Beckn.Prelude (roundToIntegral)
-import Beckn.Tools.Metrics.CoreMetrics
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -59,7 +58,7 @@ data ServiceHandle m = ServiceHandle
   }
 
 endRideHandler ::
-  (MonadThrow m, Log m, MonadTime m, CoreMetrics m, EsqDBFlow m r) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
   Id Person.Person ->
   Id Ride.Ride ->
@@ -115,11 +114,11 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
     let rideTravelledDistanceThreshold = metersToHighPrecMeters . fromMaybe defaultRideTravelledDistanceThreshold . join $ mbThresholdConfig <&> (.rideTravelledDistanceThreshold)
     let rideDistanceDifference = ride.traveledDistance - metersToHighPrecMeters booking.estimatedDistance
     let distanceOutsideOfThreshold = rideDistanceDifference >= rideTravelledDistanceThreshold
-    logTagInfo "endRide" ("distanceOutsideOfThreshold" <> show distanceOutsideOfThreshold)
+    logTagInfo "endRide" ("distanceOutsideOfThreshold: " <> show distanceOutsideOfThreshold)
     logTagInfo "RideDistance differences" $
       "Distance Difference: "
         <> show rideDistanceDifference
-        <> "rideTravelledDistanceThreshold "
+        <> ", rideTravelledDistanceThreshold: "
         <> show rideTravelledDistanceThreshold
     pure distanceOutsideOfThreshold
 
@@ -130,21 +129,20 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
     let tripStartTime = fromJust ride.tripStartTime
     let estimatedRideDuration = booking.estimatedDuration
     let actualRideDuration = nominalDiffTimeToSeconds $ tripStartTime `diffUTCTime` now
-    let rideTimeDifference = estimatedRideDuration - actualRideDuration
+    let rideTimeDifference = actualRideDuration - estimatedRideDuration
     let timeOutsideOfThreshold = (rideTimeDifference >= rideTimeEstimatedThreshold) && (ride.traveledDistance > metersToHighPrecMeters booking.estimatedDistance)
+    logTagInfo "endRide" ("timeOutsideOfThreshold: " <> show timeOutsideOfThreshold)
     logTagInfo "RideTime differences" $
-      "Distance Difference: "
+      "Time Difference: "
         <> show rideTimeDifference
-        <> "estimatedRideDuration "
+        <> ", estimatedRideDuration: "
         <> show estimatedRideDuration
-        <> "actualRideDuration"
+        <> ", actualRideDuration: "
         <> show actualRideDuration
     pure timeOutsideOfThreshold
 
   (chargeableDistance, finalFare) <-
-    if (not distanceCalculationFailed && pickupDropOutsideOfThreshold)
-      || (not distanceCalculationFailed && distanceOutsideOfThreshold)
-      || (not distanceCalculationFailed && timeOutsideOfThreshold)
+    if not distanceCalculationFailed && (pickupDropOutsideOfThreshold || distanceOutsideOfThreshold || timeOutsideOfThreshold)
       then recalculateFare booking ride
       else pure (booking.estimatedDistance, booking.estimatedFare)
 

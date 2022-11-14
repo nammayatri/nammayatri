@@ -142,11 +142,11 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
         rideTravelledDistanceThreshold <- metersToHighPrecMeters <$> getRideDistanceThreshold handle transporterId
         let rideDistanceDifference = ride.traveledDistance - metersToHighPrecMeters oneWayDetails.estimatedDistance
         let distanceOutsideOfThreshold = rideDistanceDifference >= rideTravelledDistanceThreshold
-        logTagInfo "endRide" ("distanceOutsideOfThreshold" <> show distanceOutsideOfThreshold)
+        logTagInfo "endRide" ("distanceOutsideOfThreshold: " <> show distanceOutsideOfThreshold)
         logTagInfo "RideDistance differences" $
           "Distance Difference: "
             <> show rideDistanceDifference
-            <> "rideTravelledDistanceThreshold "
+            <> ", rideTravelledDistanceThreshold: "
             <> show rideTravelledDistanceThreshold
         pure distanceOutsideOfThreshold
 
@@ -155,20 +155,19 @@ endRideHandler handle@ServiceHandle {..} requestorId rideId req = do
         let tripStartTime = fromJust ride.tripStartTime
         let actualRideDuration = nominalDiffTimeToSeconds $ tripStartTime `diffUTCTime` now
         let estimatedRideDuration = oneWayDetails.estimatedDuration
-        let rideTimeDifference = estimatedRideDuration - actualRideDuration
+        let rideTimeDifference = actualRideDuration - estimatedRideDuration
         let timeOutsideOfThreshold = (rideTimeDifference >= rideTimeEstimatedThreshold) && (ride.traveledDistance > metersToHighPrecMeters oneWayDetails.estimatedDistance)
+        logTagInfo "endRide" ("timeOutsideOfThreshold: " <> " " <> show timeOutsideOfThreshold)
         logTagInfo "RideTime differences" $
-          "Distance Difference: "
+          "Time Difference: "
             <> show rideTimeDifference
-            <> "estimatedRideDuration "
+            <> ", estimatedRideDuration: "
             <> show estimatedRideDuration
-            <> "actualRideDuration"
+            <> ", actualRideDuration: "
             <> show actualRideDuration
         pure timeOutsideOfThreshold
 
-      if shouldRecalculateFare && (not distanceCalculationFailed && pickupDropOutsideOfThreshold)
-        || shouldRecalculateFare && (not distanceCalculationFailed && distanceOutsideOfThreshold)
-        || shouldRecalculateFare && (not distanceCalculationFailed && timeOutsideOfThreshold)
+      if shouldRecalculateFare && not distanceCalculationFailed && (pickupDropOutsideOfThreshold || distanceOutsideOfThreshold || timeOutsideOfThreshold)
         then do
           fareParams <- calculateFare transporterId vehicleVariant actualDistance oneWayDetails.estimatedFinishTime
           let updatedFare = Fare.fareSum fareParams
