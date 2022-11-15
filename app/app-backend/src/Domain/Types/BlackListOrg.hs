@@ -1,4 +1,4 @@
-module Domain.Types.Organization where
+module Domain.Types.BlackListOrg where
 
 import Beckn.Prelude
 import Beckn.Types.Id
@@ -9,26 +9,26 @@ import qualified Data.Text.Encoding as DT
 import Domain.Types.Common
 import Servant.API
 
-data OrganizationType
+data BlackListOrgType
   = PROVIDER
   | APP
   | GATEWAY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance FromHttpApiData OrganizationType where
+instance FromHttpApiData BlackListOrgType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = left T.pack . eitherDecode . BSL.fromStrict
 
-data OrganizationD s = Organization
-  { id :: Id Organization,
-    shortId :: ShortId Organization,
-    _type :: OrganizationType
+data BlackListOrgD s = BlackListOrg
+  { id :: Id BlackListOrg,
+    shortId :: ShortId BlackListOrg,
+    _type :: BlackListOrgType
   }
   deriving (Generic)
 
-type Organization = OrganizationD 'Safe
+type BlackListOrg = BlackListOrgD 'Safe
 
-instance FromJSON (OrganizationD 'Unsafe)
+instance FromJSON (BlackListOrgD 'Unsafe)
 
-instance ToJSON (OrganizationD 'Unsafe)
+instance ToJSON (BlackListOrgD 'Unsafe)

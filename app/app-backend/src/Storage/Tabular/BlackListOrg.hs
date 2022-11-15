@@ -5,43 +5,43 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Organization where
+module Storage.Tabular.BlackListOrg where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.Organization as Domain
+import qualified Domain.Types.BlackListOrg as Domain
 
-derivePersistField "Domain.OrganizationType"
+derivePersistField "Domain.BlackListOrgType"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    OrganizationT sql=organization
+    BlackListOrgT sql=black_list_org
       id Text
       shortId Text
-      orgType Domain.OrganizationType sql=type
+      orgType Domain.BlackListOrgType sql=type
       Primary id
       Unique OrganizationShortId
       deriving Generic
     |]
 
-instance TEntityKey OrganizationT where
-  type DomainKey OrganizationT = Id Domain.Organization
-  fromKey (OrganizationTKey _id) = Id _id
-  toKey (Id id) = OrganizationTKey id
+instance TEntityKey BlackListOrgT where
+  type DomainKey BlackListOrgT = Id Domain.BlackListOrg
+  fromKey (BlackListOrgTKey _id) = Id _id
+  toKey (Id id) = BlackListOrgTKey id
 
-instance TType OrganizationT Domain.Organization where
-  fromTType OrganizationT {..} = do
+instance TType BlackListOrgT Domain.BlackListOrg where
+  fromTType BlackListOrgT {..} = do
     return $
-      Domain.Organization
+      Domain.BlackListOrg
         { id = Id id,
           shortId = ShortId shortId,
           _type = orgType,
           ..
         }
-  toTType Domain.Organization {..} =
-    OrganizationT
+  toTType Domain.BlackListOrg {..} =
+    BlackListOrgT
       { id = getId id,
         shortId = getShortId shortId,
         orgType = _type,

@@ -37,8 +37,8 @@ import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
+import Storage.CachedQueries.BlackListOrg (findByShortId)
 import Storage.CachedQueries.CacheConfig
-import Storage.CachedQueries.Organization (findByShortId)
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -176,7 +176,7 @@ instance Registry Flow where
     Registry.withSubscriberCache $
       Registry.whitelisting isWhiteListed <=< Registry.registryLookup registryUrl
     where
-      isWhiteListed subscriberId = findByShortId (ShortId subscriberId) <&> isJust
+      isWhiteListed subscriberId = findByShortId (ShortId subscriberId) <&> isNothing
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
