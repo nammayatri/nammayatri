@@ -52,7 +52,8 @@ data OnUpdateReq
       }
   | BookingReallocationReq
       { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide
+        bppRideId :: Id SRide.BPPRide,
+        reallocationSource :: SBCR.CancellationSource
       }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
@@ -187,6 +188,8 @@ onUpdate registryUrl BookingCancelledReq {..} = do
       booking.status `elem` [SRB.NEW, SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
 onUpdate registryUrl BookingReallocationReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  mbRide <- QRide.findActiveByRBId booking.id
+  bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
@@ -195,6 +198,7 @@ onUpdate registryUrl BookingReallocationReq {..} = do
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
     QRide.updateStatus ride.id SRide.CANCELLED
+    QBCR.create bookingCancellationReason
   -- notify customer
   Notify.notifyOnBookingReallocated booking
 

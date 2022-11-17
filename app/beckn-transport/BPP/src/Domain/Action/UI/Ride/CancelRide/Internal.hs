@@ -58,7 +58,7 @@ cancelRide rideId bookingCReason = do
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   fork "cancelRide - Notify BAP" $ do
     if isCancelledByDriver
-      then BP.sendBookingReallocationUpdateToBAP booking ride.id transporter
+      then BP.sendBookingReallocationUpdateToBAP booking ride.id transporter bookingCReason.source
       else BP.sendBookingCancelledUpdateToBAP booking transporter bookingCReason.source
   fork "cancelRide - Notify driver" $ do
     driver <- Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)

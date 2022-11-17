@@ -16,7 +16,8 @@ import GHC.Exts (fromList)
 data BookingReallocationEvent = BookingReallocationEvent
   { id :: Text,
     update_target :: Text,
-    fulfillment :: FulfillmentInfo
+    fulfillment :: FulfillmentInfo,
+    reallocation_reason :: CancellationSource
   }
   deriving (Generic, Show)
 
@@ -26,6 +27,7 @@ instance ToJSON BookingReallocationEvent where
     A.Object $
       "id" .= id
         <> "./komn/update_target" .= update_target
+        <> "./komn/reallocation_reason" .= reallocation_reason
         <> "fulfillment" .= (fulfJSON <> ("state" .= (("code" .= RIDE_BOOKING_REALLOCATION) :: A.Object)))
 
 instance FromJSON BookingReallocationEvent where
@@ -36,11 +38,13 @@ instance FromJSON BookingReallocationEvent where
       <$> obj .: "id"
       <*> obj .: "./komn/update_target"
       <*> obj .: "fulfillment"
+      <*> obj .: "./komn/reallocation_reason"
 
 instance ToSchema BookingReallocationEvent where
   declareNamedSchema _ = do
     txt <- declareSchemaRef (Proxy :: Proxy Text)
     update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
+    reallocationSource <- declareSchemaRef (Proxy :: Proxy CancellationSource)
     let st =
           mempty
             & type_ L.?~ OpenApiObject
@@ -61,9 +65,10 @@ instance ToSchema BookingReallocationEvent where
             L..~ fromList
               [ ("id", txt),
                 ("./komn/update_target", txt),
+                ("./komn/reallocation_reason", reallocationSource),
                 ("fulfillment", Inline fulfillment)
               ]
-          & required L..~ ["id", "./komn/update_target", "fulfillment"]
+          & required L..~ ["id", "./komn/update_target", "./komn/reallocation_reason", "fulfillment"]
 
 newtype FulfillmentInfo = FulfillmentInfo
   { id :: Text -- bppRideId

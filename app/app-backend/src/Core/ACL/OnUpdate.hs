@@ -83,7 +83,8 @@ parseEvent (OnUpdate.BookingReallocation rbrEvent) =
   return $
     DOnUpdate.BookingReallocationReq
       { bppBookingId = Id $ rbrEvent.id,
-        bppRideId = Id rbrEvent.fulfillment.id
+        bppRideId = Id rbrEvent.fulfillment.id,
+        reallocationSource = castCancellationSource rbrEvent.reallocation_reason
       }
 
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource

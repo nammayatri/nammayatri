@@ -41,7 +41,8 @@ data OnUpdateBuildReq
       }
   | BookingReallocationBuildReq
       { booking :: SRB.Booking,
-        rideId :: Id SRide.Ride
+        rideId :: Id SRide.Ride,
+        reallocationSource :: SBCR.CancellationSource
       }
 
 buildOnUpdateMessage ::
@@ -153,7 +154,8 @@ buildOnUpdateMessage BookingReallocationBuildReq {..} = do
         BookingReallocationOU.BookingReallocationEvent
           { id = booking.id.getId,
             update_target = "fulfillment.state.code",
-            fulfillment = BookingReallocationOU.FulfillmentInfo rideId.getId
+            fulfillment = BookingReallocationOU.FulfillmentInfo rideId.getId,
+            reallocation_reason = castCancellationSource reallocationSource
           }
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource

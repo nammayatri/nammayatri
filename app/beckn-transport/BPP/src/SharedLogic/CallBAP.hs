@@ -119,8 +119,9 @@ sendBookingReallocationUpdateToBAP ::
   SRB.Booking ->
   Id SRide.Ride ->
   DM.Merchant ->
+  SRBCR.CancellationSource ->
   m ()
-sendBookingReallocationUpdateToBAP booking rideId transporter = do
+sendBookingReallocationUpdateToBAP booking rideId transporter reallocationSource = do
   let bookingReallocationBuildReq = ACL.BookingReallocationBuildReq {..}
   bookingReallocationMsg <- ACL.buildOnUpdateMessage bookingReallocationBuildReq
   void $ callOnUpdate transporter booking bookingReallocationMsg
