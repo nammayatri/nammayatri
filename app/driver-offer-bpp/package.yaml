@@ -66,6 +66,7 @@ dependencies:
   - servant-client
   - servant-client-core
   - servant-server
+  - servant-multipart
   - text
   - wai
   - warp

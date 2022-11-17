@@ -11,6 +11,7 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import qualified Data.ByteString as BS
 import Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
 import Domain.Types.DriverOnboarding.Error
@@ -18,7 +19,10 @@ import qualified Domain.Types.DriverOnboarding.Image as Domain
 import Domain.Types.Organization
 import qualified Domain.Types.Person as Person
 import Environment
-import Idfy.Flow as Idfy
+import qualified EulerHS.Language as L
+import EulerHS.Types (base64Encode)
+import qualified Idfy.Flow as Idfy
+import Servant.Multipart
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Organization as Organization
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
@@ -32,6 +36,18 @@ data ImageValidateRequest = ImageValidateRequest
     imageType :: Domain.ImageType
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+data ImageValidateFormDataRequest = ImageValidateFormDataRequest
+  { image :: FilePath,
+    imageType :: Domain.ImageType
+  }
+  deriving (Generic, ToSchema, ToJSON, FromJSON)
+
+instance FromMultipart Tmp ImageValidateFormDataRequest where
+  fromMultipart form = do
+    ImageValidateFormDataRequest
+      <$> fmap fdPayload (lookupFile "image" form)
+      <*> fmap (read . T.unpack) (lookupInput "imageType" form)
 
 newtype ImageValidateResponse = ImageValidateResponse
   {imageId :: Id Domain.Image}
@@ -112,6 +128,15 @@ validateImage isDashboard personId ImageValidateRequest {..} = do
 
       unless (maybe False (60 <) result.readability.confidence) $
         throwImageError id_ ImageLowQuality
+
+validateImageFormData ::
+  Bool ->
+  Id Person.Person ->
+  ImageValidateFormDataRequest ->
+  Flow ImageValidateResponse
+validateImageFormData isDashboard personId ImageValidateFormDataRequest {..} = do
+  image' <- L.runIO $ base64Encode <$> BS.readFile image
+  validateImage isDashboard personId $ ImageValidateRequest image' imageType
 
 mkImage ::
   (MonadGuid m, MonadTime m) =>

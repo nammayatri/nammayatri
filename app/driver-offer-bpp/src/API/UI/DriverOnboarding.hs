@@ -10,6 +10,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
+import Lib.Servant.MultipartFormData
 import Servant
 import Tools.Auth (AdminTokenAuth, TokenAuth)
 
@@ -30,6 +31,10 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] Image.ImageValidateRequest
              :> Post '[JSON] Image.ImageValidateResponse
+           :<|> "validateImg"
+             :> TokenAuth
+             :> MultipartForm Tmp Image.ImageValidateFormDataRequest
+             :> Post '[JSON] Image.ImageValidateResponse
        )
     :<|> "driver" :> "referral"
       :> TokenAuth
@@ -46,6 +51,7 @@ handler =
       :<|> verifyRC
       :<|> statusHandler
       :<|> validateImage
+      :<|> validateImageFormData
   )
     :<|> addReferral
     :<|> getDocs
@@ -61,6 +67,9 @@ statusHandler = withFlowHandlerAPI . DriverOnboarding.statusHandler
 
 validateImage :: Id DP.Person -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage personId = withFlowHandlerAPI . Image.validateImage False personId
+
+validateImageFormData :: Id DP.Person -> Image.ImageValidateFormDataRequest -> FlowHandler Image.ImageValidateResponse
+validateImageFormData personId = withFlowHandlerAPI . Image.validateImageFormData False personId
 
 addReferral :: Id DP.Person -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
 addReferral personId = withFlowHandlerAPI . DriverOnboarding.addReferral personId
