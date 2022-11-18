@@ -216,7 +216,7 @@ createDriver admin req = do
   where
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
 
-createDriverDetails :: Id SP.Person -> Id SP.Person ->  Esq.SqlDB ()
+createDriverDetails :: Id SP.Person -> Id SP.Person -> Esq.SqlDB ()
 createDriverDetails personId adminId = do
   now <- getCurrentTime
   let driverInfo =
