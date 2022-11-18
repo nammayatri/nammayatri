@@ -37,15 +37,15 @@ data ImageValidateRequest = ImageValidateRequest
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
-data ImageValidateFormDataRequest = ImageValidateFormDataRequest
+data ImageValidateFileRequest = ImageValidateFileRequest
   { image :: FilePath,
     imageType :: Domain.ImageType
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
-instance FromMultipart Tmp ImageValidateFormDataRequest where
+instance FromMultipart Tmp ImageValidateFileRequest where
   fromMultipart form = do
-    ImageValidateFormDataRequest
+    ImageValidateFileRequest
       <$> fmap fdPayload (lookupFile "image" form)
       <*> fmap (read . T.unpack) (lookupInput "imageType" form)
 
@@ -107,7 +107,7 @@ validateImage isDashboard personId ImageValidateRequest {..} = do
       throwError (ImageValidationExceedLimit personId.getId)
 
   imagePath <- createPath personId.getId orgId.getId imageType
-  _ <- S3.put (T.unpack imagePath) image
+  _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
   imageEntity <- mkImage personId orgId imagePath imageType False
   runTransaction $ Query.create imageEntity
 
@@ -129,12 +129,12 @@ validateImage isDashboard personId ImageValidateRequest {..} = do
       unless (maybe False (60 <) result.readability.confidence) $
         throwImageError id_ ImageLowQuality
 
-validateImageFormData ::
+validateImageFile ::
   Bool ->
   Id Person.Person ->
-  ImageValidateFormDataRequest ->
+  ImageValidateFileRequest ->
   Flow ImageValidateResponse
-validateImageFormData isDashboard personId ImageValidateFormDataRequest {..} = do
+validateImageFile isDashboard personId ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
   validateImage isDashboard personId $ ImageValidateRequest image' imageType
 

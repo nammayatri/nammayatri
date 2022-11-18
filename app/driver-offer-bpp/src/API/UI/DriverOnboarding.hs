@@ -31,9 +31,9 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] Image.ImageValidateRequest
              :> Post '[JSON] Image.ImageValidateResponse
-           :<|> "validateImg"
+           :<|> "validateImageFile"
              :> TokenAuth
-             :> MultipartForm Tmp Image.ImageValidateFormDataRequest
+             :> MultipartForm Tmp Image.ImageValidateFileRequest
              :> Post '[JSON] Image.ImageValidateResponse
        )
     :<|> "driver" :> "referral"
@@ -51,7 +51,7 @@ handler =
       :<|> verifyRC
       :<|> statusHandler
       :<|> validateImage
-      :<|> validateImageFormData
+      :<|> validateImageFile
   )
     :<|> addReferral
     :<|> getDocs
@@ -68,8 +68,8 @@ statusHandler = withFlowHandlerAPI . DriverOnboarding.statusHandler
 validateImage :: Id DP.Person -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage personId = withFlowHandlerAPI . Image.validateImage False personId
 
-validateImageFormData :: Id DP.Person -> Image.ImageValidateFormDataRequest -> FlowHandler Image.ImageValidateResponse
-validateImageFormData personId = withFlowHandlerAPI . Image.validateImageFormData False personId
+validateImageFile :: Id DP.Person -> Image.ImageValidateFileRequest -> FlowHandler Image.ImageValidateResponse
+validateImageFile personId = withFlowHandlerAPI . Image.validateImageFile False personId
 
 addReferral :: Id DP.Person -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
 addReferral personId = withFlowHandlerAPI . DriverOnboarding.addReferral personId

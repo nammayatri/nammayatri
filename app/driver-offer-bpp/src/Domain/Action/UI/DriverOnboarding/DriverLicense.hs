@@ -74,8 +74,8 @@ verifyDL isDashboard personId req@DriverDLReq {..} = do
   runRequestValidation (validateDriverDLReq now) req
   _ <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
-  image1 <- getImage imageId1
-  image2 <- getImage `mapM` imageId2
+  image1Metadata <- verifyImage imageId1
+  image2Metadata <- verifyImage `mapM` imageId2
   configs <- asks (.driverOnboardingConfigs)
 
   when
@@ -83,6 +83,8 @@ verifyDL isDashboard personId req@DriverDLReq {..} = do
         && (not isDashboard || configs.checkImageExtractionForDashboard)
     )
     $ do
+      image1 <- S3.get $ T.unpack image1Metadata.s3Path
+      image2 <- (S3.get . T.unpack . Image.s3Path) `mapM` image2Metadata
       resp <- Idfy.extractDLImage image1 image2
       case resp.result of
         Just result -> do
@@ -105,14 +107,14 @@ verifyDL isDashboard personId req@DriverDLReq {..} = do
       verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
   return Success
   where
-    getImage :: Id Image.Image -> Flow Text
-    getImage imageId = do
+    verifyImage :: Id Image.Image -> Flow Image.Image
+    verifyImage imageId = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
       unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
       unless (imageMetadata.imageType == Image.DriverLicense) $
         throwError (ImageInvalidType (show Image.DriverLicense) (show imageMetadata.imageType))
-      S3.get $ T.unpack imageMetadata.s3Path
+      pure imageMetadata
 
 verifyDLFlow :: Id Person.Person -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Flow ()
 verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue = do
