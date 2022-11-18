@@ -27,15 +27,15 @@ instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
 
 instance IsBaseError DriverOnboardingError where
   toMessage = \case
-    ImageValidationExceedLimit id_ -> Just $ "Number of validation try exceed for person \"" <> show id_ <> "\"."
+    ImageValidationExceedLimit id_ -> Just $ "Number of validation try exceed for person \"" <> id_ <> "\"."
     ImageValidationFailed -> Just "Validation of Image failed."
     ImageNotReadable -> Just "Image is not readable."
     ImageLowQuality -> Just "Image quality is not good"
-    ImageInvalidType provided actual -> Just $ "Provided image type \"" <> show provided <> "\" doesn't match actual type \"" <> show actual <> "\"."
-    ImageDocumentNumberMismatch a b -> Just $ "Document number " <> show a <> " in image is not matching with input " <> show b <> " ."
+    ImageInvalidType provided actual -> Just $ "Provided image type \"" <> provided <> "\" doesn't match actual type \"" <> actual <> "\"."
+    ImageDocumentNumberMismatch a b -> Just $ "Document number \"" <> a <> "\" in image is not matching with input \"" <> b <> "\"."
     ImageExtractionFailed -> Just "Image extraction failed"
-    ImageNotFound id_ -> Just $ "Image with imageId \"" <> show id_ <> "\" not found."
-    ImageNotValid id_ -> Just $ "Image with imageId \"" <> show id_ <> "\" is not valid."
+    ImageNotFound id_ -> Just $ "Image with imageId \"" <> id_ <> "\" not found."
+    ImageNotValid id_ -> Just $ "Image with imageId \"" <> id_ <> "\" is not valid."
     DriverAlreadyLinked -> Just "Other doc is already linked with driver."
     DLAlreadyLinked -> Just "Driver license not available."
     DLAlreadyUpdated -> Just "No action required. Driver license is already linked to driver."

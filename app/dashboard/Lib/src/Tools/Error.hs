@@ -3,26 +3,34 @@
 module Tools.Error where
 
 import Beckn.Prelude
-import Beckn.Types.Common
 import Beckn.Types.Error.BaseError.HTTPError.FromResponse
+import Beckn.Types.Error.BaseError.HTTPError.HttpCode
 import Beckn.Utils.Common hiding (Error)
+import Data.Aeson (decode)
+import Network.HTTP.Types.Status
+import Servant.Client
 
 data Error = Error
-  { code :: Text,
-    message :: Text,
-    details :: Value
+  { statusCode :: HttpCode,
+    contents :: ErrorResponseContents
+  }
+  deriving (Show, Generic, IsAPIError)
+
+data ErrorResponseContents = ErrorResponseContents
+  { errorCode :: Text,
+    errorMessage :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, IsAPIError)
 
 instance FromResponse Error where
-  fromResponse = fromJsonResponse
+  fromResponse (Response (Status code _) _ _ body) = Error (codeToHttpCodeWith500Default code) <$> decode body
 
 instance IsHTTPError Error where
-  toErrorCode Error {code} = code
-  toHttpCode _ = E500
+  toErrorCode err = err.contents.errorCode
+  toHttpCode err = err.statusCode
 
 instance IsBaseError Error where
-  toMessage Error {message} = Just message
+  toMessage err = err.contents.errorMessage
 
 instance IsBecknAPIError Error where
   toType _ = DOMAIN_ERROR
