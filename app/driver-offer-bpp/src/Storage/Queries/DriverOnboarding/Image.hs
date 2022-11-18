@@ -84,3 +84,9 @@ addFailureReason id reason = do
       tbl
       [ImageFailureReason =. val (Just reason)]
     where_ $ tbl ^. ImageTId ==. val (toKey id)
+
+deleteByPersonId :: Id Person -> SqlDB ()
+deleteByPersonId personId =
+  Esq.delete $ do
+    images <- from $ table @ImageT
+    where_ $ images ^. ImagePersonId ==. val (toKey personId)

@@ -1,8 +1,13 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Domain.Action.Dashboard.Driver where
 
 import Beckn.External.Encryption (decrypt)
 import Beckn.External.Maps.Types (LatLong (..))
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as Esq
+import qualified Beckn.Storage.Hedis as Redis
+import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
@@ -18,8 +23,21 @@ import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Person
 import Environment
 import qualified Storage.Queries.DriverInformation as QDriverInfo
+import qualified Storage.Queries.DriverLocation as QDriverLocation
+import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
+import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
+import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
+import qualified Storage.Queries.DriverOnboarding.Image as QImage
 import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
+import qualified Storage.Queries.DriverQuote as QDriverQuote
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequestForDriver as QSearchReqForDriver
+import qualified Storage.Queries.Vehicle as QVehicle
+import Tools.Auth (authTokenCacheKey)
+import Tools.Error
 
 -- FIXME: not tested yet because of no onboarding test data
 driverDocumentsInfo :: FlowHandler Common.DriverDocumentsInfoRes
@@ -125,7 +143,7 @@ limitOffset mbLimit mbOffset =
 
 listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
 listDrivers mbLimit mbOffset mbVerified mbEnabled mbPendingdoc mbSearchPhone = withFlowHandlerAPI $ do
-  driverDocsInfo <- QDocStatus.fetchFullDriverInfoWithDocsFirstnameAsc Nothing
+  driverDocsInfo <- QDocStatus.fetchFullDriversInfoWithDocsFirstNameAsc Nothing
   items <- catMaybes <$> mapM buildDriverListItem driverDocsInfo
   let limitedItems = limitOffset mbLimit mbOffset items
   pure $ Common.DriverListRes (length limitedItems) limitedItems
@@ -207,6 +225,7 @@ disableDrivers req = withFlowHandlerAPI $ do
         message = mconcat [show numDriversDisabled, " drivers disabled, following drivers not found: ", show $ coerce @_ @[Text] driversNotFound]
       }
 
+---------------------------------------------------------------------
 driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
 driverLocation mbLimit mbOffset req = withFlowHandler $ do
   let driverIds = coerce req.driverIds
@@ -235,3 +254,96 @@ buildDriverLocationListItem f = do
         location = LatLong f.location.lat f.location.lon,
         lastLocationTimestamp = f.location.coordinatesCalculatedAt
       }
+
+---------------------------------------------------------------------
+-- FIXME Do we need to include mobileCountryCode into query params?
+mobileIndianCode :: Text
+mobileIndianCode = "+91"
+
+driverInfo :: Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
+driverInfo mbMobileNumber mbVehicleNumber = withFlowHandler $ do
+  driverDocsInfo <- case (mbMobileNumber, mbVehicleNumber) of
+    (Just mobileNumber, Nothing) ->
+      QDocStatus.fetchFullDriverInfoWithDocsByMobileNumber mobileNumber mobileIndianCode
+        >>= fromMaybeM (PersonDoesNotExist $ mobileIndianCode <> mobileNumber)
+    (Nothing, Just vehicleNumber) ->
+      QDocStatus.fetchFullDriverInfoWithDocsByVehNumber vehicleNumber
+        >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+    _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
+  buildDriverInfoRes driverDocsInfo
+  where
+    buildDriverInfoRes :: (EncFlow m r) => QDocStatus.FullDriverWithDocs -> m Common.DriverInfoRes
+    buildDriverInfoRes driver@QDocStatus.FullDriverWithDocs {..} = do
+      mobileNumber <- traverse decrypt person.mobileNumber
+      dlNumber <- traverse decrypt $ license <&> (.licenseNumber)
+      let vehicleDetails = mkVehicleAPIEntity driver <$> (vehicle <&> (.registrationNo))
+      pure
+        Common.DriverInfoRes
+          { driverId = cast @Person @Common.Driver person.id,
+            firstName = person.firstName, -- license.driverName ?
+            middleName = person.middleName,
+            lastName = person.lastName,
+            dlNumber,
+            dateOfBirth = join $ license <&> (.driverDob),
+            numberOfRides = fromMaybe 0 ridesCount,
+            mobileNumber,
+            enabled = info.enabled,
+            verified = info.verified,
+            vehicleDetails
+          }
+
+    mkVehicleAPIEntity :: QDocStatus.FullDriverWithDocs -> Text -> Common.VehicleAPIEntity
+    mkVehicleAPIEntity QDocStatus.FullDriverWithDocs {..} vehicleNumber = do
+      let mbAssociation = fst <$> registration
+      let mbCertificate = snd <$> registration
+      Common.VehicleAPIEntity
+        { vehicleNumber,
+          dateOfReg = mbAssociation <&> (.associatedOn),
+          vehicleClass = join $ mbCertificate <&> (.vehicleClass)
+        }
+
+---------------------------------------------------------------------
+deleteDriver :: Id Common.Driver -> FlowHandler APISuccess
+deleteDriver reqDriverId = withFlowHandler $ do
+  let driverId = cast @Common.Driver @Driver reqDriverId
+  let personId = cast @Common.Driver @Person reqDriverId
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (driver.role == DRIVER) $ throwError Unauthorized
+
+  ride <- QRide.findOneByDriverId personId
+  unless (isNothing ride) $
+    throwError $ InvalidRequest "Unable to delete driver, which have at least one ride"
+
+  dl <- QDriverLicense.findByDriverId personId
+  unless (isNothing dl) $
+    throwError $ InvalidRequest "Unable to delete driver, which have driver license"
+
+  rcAssociation <- QRCAssociation.findOneByDriverId personId
+  unless (isNothing rcAssociation) $
+    throwError $ InvalidRequest "Unable to delete driver, which have registration certificate associated"
+
+  driverInformation <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  when driverInformation.enabled $
+    throwError $ InvalidRequest "Driver should be disabled before deletion"
+
+  clearDriverSession personId
+  Esq.runTransaction $ do
+    QIV.deleteByPersonId personId
+    QImage.deleteByPersonId personId
+    QDriverQuote.deleteByDriverId personId
+    QSearchReqForDriver.deleteByDriverId personId
+    QDriverInfo.deleteById driverId
+    QDriverStats.deleteById driverId
+    QDriverLocation.deleteById personId
+    QR.deleteByPersonId personId
+    QVehicle.deleteById personId
+    QPerson.deleteById personId
+  logTagInfo "dashboard -> deleteDriver : " (show driverId)
+  return Success
+  where
+    clearDriverSession personId = do
+      regTokens <- QR.findAllByPersonId personId
+      for_ regTokens $ \regToken -> do
+        void $ Redis.del $ authTokenCacheKey regToken.token

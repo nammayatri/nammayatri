@@ -50,3 +50,6 @@ upsertGpsCoord drLocationId latLong calculationTime = do
             DriverLocationUpdatedAt =. val now
           ]
         where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
+
+deleteById :: Id Person -> SqlDB ()
+deleteById = deleteByKey @DriverLocationT

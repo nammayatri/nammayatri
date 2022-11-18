@@ -97,6 +97,16 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
       let ride = extractSolidType fullRideT
       return $ mbFullBooking <&> (ride,)
 
+findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
+findOneByDriverId driverId = Esq.buildDType $ do
+  mbFullRideT <- Esq.findOne' $ do
+    (ride :& mbRating) <- from fullRideTable
+    where_ $
+      ride ^. RideDriverId ==. val (toKey driverId)
+    limit 1
+    pure (ride, mbRating)
+  pure $ extractSolidType <$> mbFullRideT
+
 findAllRideAPIEntityDataByRBId :: Transactionable m => Id Booking -> m [(Ride, Maybe Vehicle, Maybe Person)]
 findAllRideAPIEntityDataByRBId rbId = Esq.buildDType $ do
   res <- Esq.findAll' $ do

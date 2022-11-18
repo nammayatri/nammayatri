@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.Person where
 
 import Beckn.External.Encryption
@@ -8,17 +10,19 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Centesimal
 import Beckn.Types.Id
-import Beckn.Utils.Common
+import Beckn.Utils.Common hiding (Value)
 import qualified Data.Maybe as Mb
 import Domain.Types.DriverInformation
 import Domain.Types.DriverLocation
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import Domain.Types.Organization
 import Domain.Types.Person as Person
+import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
+import Storage.Tabular.Ride
 import Storage.Tabular.Vehicle
 
 baseFullPersonQuery ::
@@ -60,7 +64,7 @@ data FullDriver = FullDriver
   }
 
 mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriver
-mkFullDriver (p, l, i, v) = FullDriver p l i v
+mkFullDriver (person, location, info, vehicle) = FullDriver {..}
 
 findAllDrivers ::
   (Transactionable m) =>
@@ -97,6 +101,70 @@ findAllDriversByIdsFirstnameAsc driverIds = fmap (map mkFullDriver) $
         &&. person ^. PersonTId `in_` valList (map toKey driverIds)
     orderBy [asc (person ^. PersonFirstName)]
     return (person, driverLocation, driverInfo, vehicle)
+
+data DriverWithRidesCount = DriverWithRidesCount
+  { person :: Person,
+    info :: DriverInformation,
+    vehicle :: Vehicle,
+    ridesCount :: Maybe Int
+  }
+
+mkDriverWithRidesCount :: (Person, DriverInformation, Vehicle, Maybe Int) -> DriverWithRidesCount
+mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
+
+mkDriverWithRidesCountQuery ::
+  From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->
+  From
+    ( Table PersonT
+        :& Table DriverInformationT
+        :& Table VehicleT
+        :& (SqlExpr (Value (Maybe PersonTId)), SqlExpr (Value (Maybe Int)))
+    )
+mkDriverWithRidesCountQuery ridesCountAggQuery =
+  table @PersonT
+    `innerJoin` table @DriverInformationT
+    `Esq.on` ( \(person :& driverInfo) ->
+                 person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
+             )
+    `innerJoin` table @VehicleT
+    `Esq.on` ( \(person :& _ :& vehicle) ->
+                 person ^. PersonTId ==. vehicle ^. VehicleDriverId
+             )
+    `leftJoin` ridesCountAggQuery
+    `Esq.on` ( \(person :& _ :& _ :& (mbPersonId, _mbRidesCount)) ->
+                 just (person ^. PersonTId) ==. mbPersonId
+             )
+
+ridesCountAggTable :: SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
+ridesCountAggTable = with $ do
+  ride <- from $ table @RideT
+  where_ (not_ $ ride ^. RideStatus `in_` valList [Ride.NEW, Ride.CANCELLED])
+  groupBy $ ride ^. RideDriverId
+  pure (ride ^. RideDriverId, count @Int $ ride ^. RideId)
+
+fetchFullDriverByMobileNumber :: (Transactionable m, EncFlow m r) => Text -> Text -> m (Maybe DriverWithRidesCount)
+fetchFullDriverByMobileNumber mobileNumber mobileCountryCode = fmap (fmap mkDriverWithRidesCount) $ do
+  mobileNumberDbHash <- getDbHash mobileNumber
+  Esq.findOne $ do
+    ridesCountAggQuery <- ridesCountAggTable
+    person :& driverInfo :& vehicle :& (_, mbRidesCount) <-
+      from $ mkDriverWithRidesCountQuery ridesCountAggQuery
+    where_ $
+      (person ^. PersonRole ==. val Person.DRIVER)
+        &&. person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
+        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+    pure (person, driverInfo, vehicle, mbRidesCount)
+
+fetchFullDriverInfoByVehNumber :: Transactionable m => Text -> m (Maybe DriverWithRidesCount)
+fetchFullDriverInfoByVehNumber vehicleNumber = fmap (fmap mkDriverWithRidesCount) $
+  Esq.findOne $ do
+    ridesCountAggQuery <- ridesCountAggTable
+    person :& driverInfo :& vehicle :& (_, mbRidesCount) <-
+      from $ mkDriverWithRidesCountQuery ridesCountAggQuery
+    where_ $
+      (person ^. PersonRole ==. val Person.DRIVER)
+        &&. vehicle ^. VehicleRegistrationNo ==. val vehicleNumber
+    pure (person, driverInfo, vehicle, mbRidesCount)
 
 findByIdAndRoleAndOrgId ::
   Transactionable m =>

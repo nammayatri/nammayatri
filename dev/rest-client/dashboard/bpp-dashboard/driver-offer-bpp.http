@@ -74,3 +74,21 @@ content-type: application/json
 {
     "driverIds": ["{{driverId1e}}", "{{driverId2e}}", "{{driverId3e}}"]
 }
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/info?mobileNumber=6666666666
+token: {{customer_service}}
+content-type: application/json
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/info?vehicleNumber=4810
+token: {{customer_service}}
+content-type: application/json
+
+###
+
+DELETE {{bpp-dashboard-host}}/bpp/driver-offer/driver/{{driverId2e}}/permanentlyDelete
+token: {{juspay_admin}}
+content-type: application/json

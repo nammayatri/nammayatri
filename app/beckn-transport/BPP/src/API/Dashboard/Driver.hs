@@ -3,6 +3,9 @@ module API.Dashboard.Driver where
 import Beckn.External.Encryption (decrypt)
 import Beckn.External.Maps.Types
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as Esq
+import qualified Beckn.Storage.Hedis as Redis
+import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
@@ -10,10 +13,21 @@ import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Text as T
 import Domain.Types.Person
+import qualified Domain.Types.Person as DP
 import Environment
-import Servant hiding (throwError)
+import Servant hiding (Unauthorized, throwError)
+import qualified Storage.Queries.AllocationEvent as QAllocationEvent
+import qualified Storage.Queries.BusinessEvent as QBusinessEvent
 import qualified Storage.Queries.DriverInformation as QDriverInfo
+import qualified Storage.Queries.DriverLocation as QDriverLocation
+import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.Vehicle as QVehicle
+import Tools.Auth (authTokenCacheKey)
+import Tools.Error
 
 type API =
   "driver"
@@ -22,6 +36,8 @@ type API =
            :<|> EnableDriversAPI
            :<|> DisableDriversAPI
            :<|> DriverLocationAPI
+           :<|> DriverInfoAPI
+           :<|> DeleteDriverAPI
        )
 
 type DriverListAPI = "list" :> Common.DriverListAPI
@@ -34,6 +50,10 @@ type DisableDriversAPI = "disable" :> Common.DisableDriversAPI
 
 type DriverLocationAPI = "location" :> Common.DriverLocationAPI
 
+type DriverInfoAPI = "info" :> Common.DriverInfoAPI
+
+type DeleteDriverAPI = Common.DeleteDriverAPI
+
 handler :: FlowServer API
 handler =
   listDrivers
@@ -41,11 +61,14 @@ handler =
     :<|> enableDrivers
     :<|> disableDrivers
     :<|> driverLocation
+    :<|> driverInfo
+    :<|> deleteDriver
 
 limitOffset :: Maybe Int -> Maybe Int -> [a] -> [a]
 limitOffset mbLimit mbOffset =
   maybe identity take mbLimit . maybe identity drop mbOffset
 
+-- TODO move all this logic to domain layer
 listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
 listDrivers mbLimit mbOffset _verified _rejected _pendingdoc mbSearchPhone = withFlowHandlerAPI $ do
   items <- mapM buildDriverListItem =<< QPerson.findAllDriversFirstnameAsc
@@ -143,3 +166,82 @@ buildDriverLocationListItem f = do
         location = LatLong f.location.lat f.location.lon,
         lastLocationTimestamp = f.location.coordinatesCalculatedAt
       }
+
+-- FIXME Do we need to include mobileCountryCode into query params?
+mobileIndianCode :: Text
+mobileIndianCode = "+91"
+
+driverInfo :: Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
+driverInfo mbMobileNumber mbVehicleNumber = withFlowHandler $ do
+  driverDocsInfo <- case (mbMobileNumber, mbVehicleNumber) of
+    (Just mobileNumber, Nothing) ->
+      QPerson.fetchFullDriverByMobileNumber mobileNumber mobileIndianCode
+        >>= fromMaybeM (PersonDoesNotExist $ mobileIndianCode <> mobileNumber)
+    (Nothing, Just vehicleNumber) ->
+      QPerson.fetchFullDriverInfoByVehNumber vehicleNumber
+        >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+    _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
+  buildDriverInfoRes driverDocsInfo
+  where
+    buildDriverInfoRes :: EncFlow m r => QPerson.DriverWithRidesCount -> m Common.DriverInfoRes
+    buildDriverInfoRes QPerson.DriverWithRidesCount {..} = do
+      mobileNumber <- traverse decrypt person.mobileNumber
+      let vehicleDetails = mkVehicleAPIEntity vehicle.registrationNo
+      pure
+        Common.DriverInfoRes
+          { driverId = cast @Person @Common.Driver person.id,
+            firstName = person.firstName,
+            middleName = person.middleName,
+            lastName = person.lastName,
+            dlNumber = Nothing, -- not implemented for this bpp
+            dateOfBirth = Nothing, -- not implemented for this bpp
+            numberOfRides = fromMaybe 0 ridesCount,
+            mobileNumber,
+            enabled = info.enabled,
+            verified = True, -- not implemented for this bpp
+            vehicleDetails = Just vehicleDetails
+          }
+
+    mkVehicleAPIEntity :: Text -> Common.VehicleAPIEntity
+    mkVehicleAPIEntity vehicleNumber = do
+      Common.VehicleAPIEntity
+        { vehicleNumber,
+          dateOfReg = Nothing, -- not implemented for this bpp,
+          vehicleClass = Nothing -- not implemented for this bpp
+        }
+
+deleteDriver :: Id Common.Driver -> FlowHandler APISuccess
+deleteDriver reqDriverId = withFlowHandler $ do
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (driver.role == DP.DRIVER) $ throwError Unauthorized
+
+  rides <- QRide.findOneByDriverId personId
+  unless (isNothing rides) $
+    throwError $ InvalidRequest "Unable to delete driver, which have at least one ride"
+
+  driverInformation <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  when driverInformation.enabled $
+    throwError $ InvalidRequest "Driver should be disabled before deletion"
+
+  clearDriverSession personId
+  Esq.runTransaction $ do
+    QNotificationStatus.deleteByPersonId driverId
+    QAllocationEvent.deleteByPersonId driverId
+    QBusinessEvent.deleteByPersonId driverId
+    QDriverInfo.deleteById driverId
+    QDriverStats.deleteById driverId
+    QDriverLocation.deleteById personId
+    QR.deleteByPersonId personId
+    QVehicle.deleteById personId
+    QPerson.deleteById personId
+  logTagInfo "dashboard -> deleteDriver : " (show driverId)
+  return Success
+  where
+    clearDriverSession personId = do
+      regTokens <- QR.findAllByPersonId personId
+      for_ regTokens $ \regToken -> do
+        void $ Redis.del $ authTokenCacheKey regToken.token

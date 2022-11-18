@@ -70,3 +70,20 @@ content-type: application/json
     "driverIds": ["{{driverId1e}}", "{{driverId2e}}", "{{driverId3e}}"]
 }
 
+###
+
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/info?mobileNumber=6666666666
+token: {{customer_service}}
+content-type: application/json
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/info?vehicleNumber=3211
+token: {{customer_service}}
+content-type: application/json
+
+###
+
+DELETE {{bpp-dashboard-host}}/bpp/beckn-transport/driver/{{driverId2e}}/permanentlyDelete
+token: {{juspay_admin}}
+content-type: application/json

@@ -6,8 +6,8 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.AllocationEvent
 import Domain.Types.Booking
-import Domain.Types.Person (Driver)
-import Storage.Tabular.AllocationEvent ()
+import Domain.Types.Person (Driver, Person)
+import Storage.Tabular.AllocationEvent
 
 logAllocationEvent :: AllocationEventType -> Id Booking -> Maybe (Id Driver) -> SqlDB ()
 logAllocationEvent eventType bookingId driverId = do
@@ -21,3 +21,9 @@ logAllocationEvent eventType bookingId driverId = do
         driverId = driverId,
         bookingId = bookingId
       }
+
+deleteByPersonId :: Id Driver -> SqlDB ()
+deleteByPersonId driverId =
+  Esq.delete $ do
+    allocationEvents <- from $ table @AllocationEventT
+    where_ $ allocationEvents ^. AllocationEventDriverId ==. just (val . toKey . cast @Driver @Person $ driverId)

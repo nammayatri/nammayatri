@@ -84,3 +84,9 @@ updateExtractValidationStatus requestId status = do
         IdfyVerificationUpdatedAt =. val now
       ]
     where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId
+
+deleteByPersonId :: Id Person -> SqlDB ()
+deleteByPersonId personId =
+  Esq.delete $ do
+    verifications <- from $ table @IdfyVerificationT
+    where_ $ verifications ^. IdfyVerificationDriverId ==. val (toKey personId)

@@ -35,3 +35,8 @@ removeAllBySearchId :: Id SearchRequest -> SqlDB ()
 removeAllBySearchId searchReqId = Esq.delete $ do
   sReqForDriver <- from $ table @SearchRequestForDriverT
   where_ $ sReqForDriver ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
+
+deleteByDriverId :: Id Person -> SqlDB ()
+deleteByDriverId personId = Esq.delete $ do
+  sReqForDriver <- from $ table @SearchRequestForDriverT
+  where_ $ sReqForDriver ^. SearchRequestForDriverDriverId ==. val (toKey personId)

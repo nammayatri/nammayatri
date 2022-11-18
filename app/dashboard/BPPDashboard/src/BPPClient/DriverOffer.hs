@@ -31,6 +31,8 @@ data DriversAPIs = DriversAPIs
     enableDrivers :: Common.DriverIds -> Euler.EulerClient Common.EnableDriversRes,
     disableDrivers :: Common.DriverIds -> Euler.EulerClient Common.DisableDriversRes,
     driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> Euler.EulerClient Common.DriverLocationRes,
+    driverInfo :: Maybe Text -> Maybe Text -> Euler.EulerClient Common.DriverInfoRes,
+    deleteDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
     documentsList :: Id Common.Driver -> Euler.EulerClient Common.DocumentsListResponse,
     getDocument :: Id Common.Image -> Euler.EulerClient Common.GetDocumentResponse,
     uploadDocument :: Id Common.Driver -> Common.UploadDocumentReq -> Euler.EulerClient Common.UploadDocumentResp,
@@ -49,6 +51,8 @@ mkDriverOfferAPIs token = do
       :<|> enableDrivers
       :<|> disableDrivers
       :<|> driverLocation
+      :<|> driverInfo
+      :<|> deleteDriver
       :<|> ( documentsList
                :<|> getDocument
                :<|> uploadDocument

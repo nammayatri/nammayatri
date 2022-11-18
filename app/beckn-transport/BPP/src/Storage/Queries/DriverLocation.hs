@@ -50,3 +50,6 @@ upsertGpsCoord drLocationId latLong coordinatesUpdatedAt = do
             DriverLocationPoint =. Esq.getPoint (val latLong.lat, val latLong.lon)
           ]
         where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
+
+deleteById :: Id Person -> SqlDB ()
+deleteById = deleteByKey @DriverLocationT

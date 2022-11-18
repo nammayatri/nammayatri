@@ -8,6 +8,7 @@ where
 
 import Beckn.External.Maps.Types
 import Beckn.Prelude
+import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Dashboard.Common as Reexport
 import Servant
@@ -218,3 +219,43 @@ data DriverLocationItem = DriverLocationItem
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---------------------------------------------------------
+-- driver info ------------------------------------------
+
+type DriverInfoAPI =
+  QueryParam "mobileNumber" Text
+    :> QueryParam "vehicleNumber" Text
+    :> Get '[JSON] DriverInfoRes
+
+data DriverInfoRes = DriverInfoRes
+  { driverId :: Id Driver,
+    firstName :: Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    dlNumber :: Maybe Text,
+    dateOfBirth :: Maybe UTCTime,
+    numberOfRides :: Int,
+    mobileNumber :: Maybe Text,
+    enabled :: Bool,
+    verified :: Bool,
+    vehicleDetails :: Maybe VehicleAPIEntity
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleAPIEntity = VehicleAPIEntity
+  { dateOfReg :: Maybe UTCTime,
+    vehicleClass :: Maybe Text,
+    vehicleNumber :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---------------------------------------------------------
+-- delete driver ----------------------------------------
+
+type DeleteDriverAPI =
+  Capture "driverId" (Id Driver)
+    :> "permanentlyDelete"
+    :> Delete '[JSON] APISuccess

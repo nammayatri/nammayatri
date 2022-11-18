@@ -69,3 +69,9 @@ findAllByRequestId searchReqId = do
           dQuote ^. DriverQuoteStatus ==. val Domain.Active
             &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
         pure (dQuote, farePars)
+
+deleteByDriverId :: Id Person -> SqlDB ()
+deleteByDriverId personId =
+  Esq.delete $ do
+    driverQuotes <- from $ table @DriverQuoteT
+    where_ $ driverQuotes ^. DriverQuoteDriverId ==. val (toKey personId)

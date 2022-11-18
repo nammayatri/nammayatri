@@ -15,6 +15,8 @@ type API =
            :<|> EnableDriversAPI
            :<|> DisableDriversAPI
            :<|> DriverLocationAPI
+           :<|> DriverInfoAPI
+           :<|> DeleteDriverAPI
            :<|> Reg.API
        )
 
@@ -23,6 +25,7 @@ type DriverDocumentsInfoAPI =
     :> "info"
     :> Common.DriverDocumentsInfoAPI
 
+-- TODO refactor it so that "list" becomes part of Common.DriverListAPI
 type DriverListAPI = "list" :> Common.DriverListAPI
 
 type DriverActivityAPI = "activity" :> Common.DriverActivityAPI
@@ -33,6 +36,10 @@ type DisableDriversAPI = "disable" :> Common.DisableDriversAPI
 
 type DriverLocationAPI = "location" :> Common.DriverLocationAPI
 
+type DriverInfoAPI = "info" :> Common.DriverInfoAPI
+
+type DeleteDriverAPI = Common.DeleteDriverAPI
+
 handler :: Dashboard -> FlowServer API
 handler d =
   driverDocumentsInfo
@@ -41,4 +48,6 @@ handler d =
     :<|> enableDrivers
     :<|> disableDrivers
     :<|> driverLocation
+    :<|> driverInfo
+    :<|> deleteDriver
     :<|> Reg.handler d

@@ -10,6 +10,8 @@ where
 import "beckn-transport" API.Dashboard as Dashboard
 import Beckn.Prelude
 import Beckn.Tools.Metrics.CoreMetrics
+import Beckn.Types.APISuccess (APISuccess)
+import Beckn.Types.Id
 import Beckn.Utils.Common hiding (callAPI)
 import qualified Dashboard.Common.Driver as Common
 import Domain.Types.ServerName
@@ -26,7 +28,9 @@ data DriversAPIs = DriversAPIs
     driverActivity :: Euler.EulerClient Common.DriverActivityRes,
     enableDrivers :: Common.DriverIds -> Euler.EulerClient Common.EnableDriversRes,
     disableDrivers :: Common.DriverIds -> Euler.EulerClient Common.DisableDriversRes,
-    driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> Euler.EulerClient Common.DriverLocationRes
+    driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> Euler.EulerClient Common.DriverLocationRes,
+    driverInfo :: Maybe Text -> Maybe Text -> Euler.EulerClient Common.DriverInfoRes,
+    deleteDriver :: Id Common.Driver -> Euler.EulerClient APISuccess
   }
 
 mkBecknTransportAPIs :: Text -> BecknTransportAPIs
@@ -38,7 +42,9 @@ mkBecknTransportAPIs token = do
       :<|> driverActivity
       :<|> enableDrivers
       :<|> disableDrivers
-      :<|> driverLocation = Euler.client (Proxy :: Proxy Dashboard.API) token
+      :<|> driverLocation
+      :<|> driverInfo
+      :<|> deleteDriver = Euler.client (Proxy :: Proxy Dashboard.API) token
 
 callBecknTransportBPP ::
   forall m r b c.

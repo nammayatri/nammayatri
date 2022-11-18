@@ -6,11 +6,11 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.Booking
 import Domain.Types.BusinessEvent
-import Domain.Types.Person (Driver)
+import Domain.Types.Person (Driver, Person)
 import Domain.Types.Ride
 import Domain.Types.Vehicle (Variant)
 import SharedLogic.DriverPool (DriverPoolResult)
-import Storage.Tabular.BusinessEvent ()
+import Storage.Tabular.BusinessEvent
 
 logBusinessEvent ::
   Maybe (Id Driver) ->
@@ -86,3 +86,9 @@ logRideCommencedEvent driverId bookingId rideId = do
     Nothing
     Nothing
     (Just rideId)
+
+deleteByPersonId :: Id Driver -> SqlDB ()
+deleteByPersonId driverId =
+  Esq.delete $ do
+    businessEvents <- from $ table @BusinessEventT
+    where_ $ businessEvents ^. BusinessEventDriverId ==. just (val . toKey . cast @Driver @Person $ driverId)

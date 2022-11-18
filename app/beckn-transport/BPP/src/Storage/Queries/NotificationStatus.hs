@@ -6,7 +6,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.Booking
 import Domain.Types.NotificationStatus as NotificationStatus
-import Domain.Types.Person (Driver)
+import Domain.Types.Person (Driver, Person)
 import Storage.Tabular.NotificationStatus
 
 createMany :: [NotificationStatus] -> SqlDB ()
@@ -72,3 +72,9 @@ cleanupOldNotifications = do
     notificationStatus <- from $ table @NotificationStatusT
     where_ (notificationStatus ^. NotificationStatusExpiresAt ==. val compareTime)
   return $ fromIntegral res
+
+deleteByPersonId :: Id Driver -> SqlDB ()
+deleteByPersonId personId =
+  Esq.delete $ do
+    notificationStatuses <- from $ table @NotificationStatusT
+    where_ $ notificationStatuses ^. NotificationStatusDriverId ==. val (toKey . cast @Driver @Person $ personId)

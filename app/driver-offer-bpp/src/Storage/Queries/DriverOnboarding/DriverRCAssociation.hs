@@ -33,6 +33,18 @@ getActiveAssociationByDriver driverId = do
         &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
     return association
 
+findOneByDriverId ::
+  (Transactionable m, MonadFlow m) =>
+  Id Person ->
+  m (Maybe DriverRCAssociation)
+findOneByDriverId driverId = do
+  findOne $ do
+    association <- from $ table @DriverRCAssociationT
+    where_ $
+      association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+    limit 1
+    return association
+
 getActiveAssociationByRC ::
   (Transactionable m, MonadFlow m) =>
   Id VehicleRegistrationCertificate ->

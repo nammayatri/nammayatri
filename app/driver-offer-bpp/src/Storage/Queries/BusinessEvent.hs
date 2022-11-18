@@ -40,6 +40,7 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
         rideId = rideId
       }
 
+-- FIXME we don't use this event
 logDriverInPoolEvent :: WhenPoolWasComputed -> Maybe (Id Booking) -> Google.GetDistanceResult DriverPoolResult a -> SqlDB ()
 logDriverInPoolEvent whenPoolWasComputed bookingId getDistanceRes = do
   let driverInPool = getDistanceRes.origin

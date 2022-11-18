@@ -9,12 +9,14 @@ where
 
 import qualified BPPClient.BecknTransport as Client
 import Beckn.Prelude
+import Beckn.Types.APISuccess (APISuccess)
+import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Utils.Common (withFlowHandlerAPI)
+import Beckn.Utils.Common (throwError, withFlowHandlerAPI)
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
 import qualified Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
-import Servant
+import Servant hiding (throwError)
 import "lib-dashboard" Tools.Auth
 
 type API =
@@ -24,6 +26,8 @@ type API =
            :<|> EnableDriversAPI
            :<|> DisableDriversAPI
            :<|> DriverLocationAPI
+           :<|> DriverInfoAPI
+           :<|> DeleteDriverAPI
        )
 
 type DriverListAPI =
@@ -51,6 +55,15 @@ type DriverLocationAPI =
     :> ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
     :> Common.DriverLocationAPI
 
+type DriverInfoAPI =
+  "info"
+    :> ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
+    :> Common.DriverInfoAPI
+
+type DeleteDriverAPI =
+  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+    :> Common.DeleteDriverAPI
+
 handler :: FlowServer API
 handler =
   listDriver
@@ -58,6 +71,8 @@ handler =
     :<|> enableDrivers
     :<|> disableDrivers
     :<|> driverLocation
+    :<|> driverInfo
+    :<|> deleteDriver
 
 listDriver :: ShortId DMerchant.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
 listDriver _ mbLimit mbOffset verified rejected pendingdoc phone = withFlowHandlerAPI $ do
@@ -78,3 +93,13 @@ disableDrivers _ req = withFlowHandlerAPI $ do
 driverLocation :: ShortId DMerchant.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
 driverLocation _ mbLimit mbOffset req = withFlowHandlerAPI $ do
   Client.callBecknTransportBPP (.drivers.driverLocation) mbLimit mbOffset req
+
+driverInfo :: ShortId DMerchant.Merchant -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
+driverInfo _ mbMobileNumber mbVehicleNumber = withFlowHandlerAPI $ do
+  when (isJust mbMobileNumber == isJust mbVehicleNumber) $
+    throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
+  Client.callBecknTransportBPP (.drivers.driverInfo) mbMobileNumber mbVehicleNumber
+
+deleteDriver :: ShortId DMerchant.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+deleteDriver _ driverId = withFlowHandlerAPI $ do
+  Client.callBecknTransportBPP (.drivers.deleteDriver) driverId
