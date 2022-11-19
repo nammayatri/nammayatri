@@ -24,7 +24,7 @@ import Network.Wai.Handler.Warp
     setInstallShutdownHandler,
     setPort,
   )
-import qualified Storage.CachedQueries.Organization as Storage
+import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
 import Tools.SignatureAuth
 
@@ -56,12 +56,12 @@ runDriverOfferBpp' appCfg = do
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
-        let allShortIds = map ((.shortId.getShortId) &&& (.uniqueKeyId)) allProviders
+        let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
         flowRt' <-
           addAuthManagersToFlowRt
             flowRt
             $ catMaybes
-              [ Just (Nothing, prepareAuthManagersWithRegistryUrl flowRt appEnv allShortIds),
+              [ Just (Nothing, prepareAuthManagersWithRegistryUrl flowRt appEnv allSubscriberIds),
                 (Nothing,) <$> mkS3MbManager flowRt appEnv appCfg.s3Config,
                 Just (Just 20000, prepareIdfyHttpManager 20000)
               ]

@@ -13,7 +13,7 @@ import Beckn.Types.Common (Centesimal, HighPrecMoney, Meters, Money)
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 
 mkPersist
@@ -21,7 +21,7 @@ mkPersist
   [defaultQQ|
     FarePolicyT sql=fare_policy
       id Text
-      organizationId OrganizationTId
+      merchantId MerchantTId
       vehicleVariant Variant.Variant
 
       baseDistanceFare HighPrecMoney
@@ -60,14 +60,14 @@ instance TType FarePolicyT Domain.FarePolicy where
     return $
       Domain.FarePolicy
         { id = Id id,
-          organizationId = fromKey organizationId,
+          merchantId = fromKey merchantId,
           ..
         }
 
   toTType Domain.FarePolicy {..} =
     FarePolicyT
       { id = getId id,
-        organizationId = toKey organizationId,
+        merchantId = toKey merchantId,
         driverMinExtraFee = driverExtraFee.minFee,
         driverMaxExtraFee = driverExtraFee.maxFee,
         ..

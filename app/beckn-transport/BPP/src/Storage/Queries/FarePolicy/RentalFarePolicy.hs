@@ -13,7 +13,7 @@ import Beckn.Types.Common (Hours, Kilometers)
 import Beckn.Types.Id
 import Domain.Types.FarePolicy.RentalFarePolicy
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as Domain
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.FarePolicy.RentalFarePolicy
 
@@ -29,39 +29,39 @@ create = Esq.create
 findById :: Transactionable m => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
 findById = Esq.findById
 
-findAllByOrgId ::
+findAllByMerchantId ::
   Transactionable m =>
-  Id Organization ->
+  Id Merchant ->
   m [RentalFarePolicy]
-findAllByOrgId orgId = do
+findAllByMerchantId merchantId = do
   Esq.findAll $ do
     rentalFarePolicy <- from $ table @RentalFarePolicyT
     where_ $
-      rentalFarePolicy ^. RentalFarePolicyOrganizationId ==. val (toKey orgId)
+      rentalFarePolicy ^. RentalFarePolicyMerchantId ==. val (toKey merchantId)
         &&. rentalFarePolicy ^. RentalFarePolicyDeleted ==. val False
     return rentalFarePolicy
 
 markAllAsDeleted ::
-  Id Organization ->
+  Id Merchant ->
   SqlDB ()
-markAllAsDeleted orgId = Esq.update $ \rentalFp -> do
+markAllAsDeleted merchantId = Esq.update $ \rentalFp -> do
   set
     rentalFp
     [RentalFarePolicyDeleted =. val True]
-  where_ $ rentalFp ^. RentalFarePolicyOrganizationId ==. val (toKey orgId)
+  where_ $ rentalFp ^. RentalFarePolicyMerchantId ==. val (toKey merchantId)
 
 findByOffer ::
   Transactionable m =>
-  Id Organization ->
+  Id Merchant ->
   Vehicle.Variant ->
   Kilometers ->
   Hours ->
   m (Maybe RentalFarePolicy)
-findByOffer orgId vehicleVariant_ baseDistance baseDuration = do
+findByOffer merchantId vehicleVariant_ baseDistance baseDuration = do
   Esq.findOne $ do
     rentalFarePolicy <- from $ table @RentalFarePolicyT
     where_ $
-      rentalFarePolicy ^. RentalFarePolicyOrganizationId ==. val (toKey orgId)
+      rentalFarePolicy ^. RentalFarePolicyMerchantId ==. val (toKey merchantId)
         &&. rentalFarePolicy ^. RentalFarePolicyVehicleVariant ==. val vehicleVariant_
         &&. rentalFarePolicy ^. RentalFarePolicyBaseDistance ==. val baseDistance.getKilometers
         &&. rentalFarePolicy ^. RentalFarePolicyBaseDuration ==. val baseDuration.getHours

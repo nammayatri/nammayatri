@@ -7,16 +7,18 @@ module BPPClient.BecknTransport
   )
 where
 
-import "beckn-transport" API.Dashboard as Dashboard
+import "beckn-transport" API.Dashboard as BPP
 import Beckn.Prelude
 import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Utils.Common hiding (callAPI)
 import qualified Dashboard.Common.Driver as Common
+import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Servant
+import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 
 newtype BecknTransportAPIs = BecknTransportAPIs
@@ -33,8 +35,8 @@ data DriversAPIs = DriversAPIs
     deleteDriver :: Id Common.Driver -> Euler.EulerClient APISuccess
   }
 
-mkBecknTransportAPIs :: Text -> BecknTransportAPIs
-mkBecknTransportAPIs token = do
+mkBecknTransportAPIs :: CheckedShortId DM.Merchant -> Text -> BecknTransportAPIs
+mkBecknTransportAPIs merchantId token = do
   let drivers = DriversAPIs {..}
   BecknTransportAPIs {..}
   where
@@ -44,7 +46,7 @@ mkBecknTransportAPIs token = do
       :<|> disableDrivers
       :<|> driverLocation
       :<|> driverInfo
-      :<|> deleteDriver = Euler.client (Proxy :: Proxy Dashboard.API) token
+      :<|> deleteDriver = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
 callBecknTransportBPP ::
   forall m r b c.
@@ -52,6 +54,7 @@ callBecknTransportBPP ::
     HasFlowEnv m r '["dataServers" ::: [DataServer]],
     CallServerAPI BecknTransportAPIs m r b c
   ) =>
+  CheckedShortId DM.Merchant ->
   (BecknTransportAPIs -> b) ->
   c
-callBecknTransportBPP = callServerAPI @_ @m @r BECKN_TRANSPORT mkBecknTransportAPIs "callBecknTransportBPP"
+callBecknTransportBPP merchantId = callServerAPI @_ @m @r BECKN_TRANSPORT (mkBecknTransportAPIs merchantId) "callBecknTransportBPP"

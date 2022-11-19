@@ -5,31 +5,28 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Organization where
+module Storage.Tabular.Merchant where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.Organization as Domain
+import qualified Domain.Types.Merchant as Domain
 
-derivePersistField "Domain.OrganizationType"
-derivePersistField "Domain.OrganizationDomain"
 derivePersistField "Domain.Status"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    OrganizationT sql=organization
+    MerchantT sql=merchant
       id Text
       name Text
       description Text Maybe
-      shortId Text
+      subscriberId Text
       uniqueKeyId Text
+      shortId Text
       mobileNumber Text Maybe
       mobileCountryCode Text Maybe
       gstin Text Maybe
-      orgType Domain.OrganizationType sql=type
-      domain Domain.OrganizationDomain Maybe
       fromTime UTCTime Maybe
       toTime UTCTime Maybe
       headCount Int Maybe
@@ -40,28 +37,29 @@ mkPersist
       updatedAt UTCTime
       info Text Maybe
       Primary id
-      Unique OrganizationShortId
+      Unique MerchantSubscriberId
+      Unique MerchantShortId
       deriving Generic
     |]
 
-instance TEntityKey OrganizationT where
-  type DomainKey OrganizationT = Id Domain.Organization
-  fromKey (OrganizationTKey _id) = Id _id
-  toKey (Id id) = OrganizationTKey id
+instance TEntityKey MerchantT where
+  type DomainKey MerchantT = Id Domain.Merchant
+  fromKey (MerchantTKey _id) = Id _id
+  toKey (Id id) = MerchantTKey id
 
-instance TType OrganizationT Domain.Organization where
-  fromTType OrganizationT {..} = do
+instance TType MerchantT Domain.Merchant where
+  fromTType MerchantT {..} = do
     return $
-      Domain.Organization
+      Domain.Merchant
         { id = Id id,
+          subscriberId = ShortId subscriberId,
           shortId = ShortId shortId,
-          _type = orgType,
           ..
         }
-  toTType Domain.Organization {..} =
-    OrganizationT
+  toTType Domain.Merchant {..} =
+    MerchantT
       { id = getId id,
+        subscriberId = getShortId subscriberId,
         shortId = getShortId shortId,
-        orgType = _type,
         ..
       }

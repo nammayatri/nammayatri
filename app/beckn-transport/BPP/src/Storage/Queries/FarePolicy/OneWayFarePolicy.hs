@@ -10,33 +10,33 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.FarePolicy.OneWayFarePolicy
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.Vehicle as Vehicle
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate as QExtraKmRate
 import Storage.Queries.FullEntityBuilders (buildFullOneWayFarePolicy)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy
 
-findByOrgIdAndVariant ::
+findByMerchantIdAndVariant ::
   Transactionable m =>
-  Id Organization ->
+  Id Merchant ->
   Vehicle.Variant ->
   m (Maybe OneWayFarePolicy)
-findByOrgIdAndVariant orgId vehicleVariant_ =
+findByMerchantIdAndVariant merchantId vehicleVariant_ =
   Esq.buildDType $ do
     mbFarePolicy <- Esq.findOne' $ do
       farePolicy <- from $ table @OneWayFarePolicyT
       where_ $
-        farePolicy ^. OneWayFarePolicyOrganizationId ==. val (toKey orgId)
+        farePolicy ^. OneWayFarePolicyMerchantId ==. val (toKey merchantId)
           &&. farePolicy ^. OneWayFarePolicyVehicleVariant ==. val vehicleVariant_
       return farePolicy
     mapM buildFullOneWayFarePolicy mbFarePolicy
 
-findAllByOrgId :: Transactionable m => Id Organization -> m [OneWayFarePolicy]
-findAllByOrgId orgId =
+findAllByMerchantId :: Transactionable m => Id Merchant -> m [OneWayFarePolicy]
+findAllByMerchantId merchantId =
   Esq.buildDType $ do
     farePolicy <- Esq.findAll' $ do
       farePolicy <- from $ table @OneWayFarePolicyT
-      where_ $ farePolicy ^. OneWayFarePolicyOrganizationId ==. val (toKey orgId)
+      where_ $ farePolicy ^. OneWayFarePolicyMerchantId ==. val (toKey merchantId)
       orderBy [asc $ farePolicy ^. OneWayFarePolicyVehicleVariant]
       return farePolicy
     mapM buildFullOneWayFarePolicy farePolicy
@@ -60,5 +60,5 @@ update farePolicy = do
         OneWayFarePolicyUpdatedAt =. val now
       ]
 
-    QExtraKmRate.deleteAll' farePolicy.organizationId farePolicy.vehicleVariant
+    QExtraKmRate.deleteAll' farePolicy.merchantId farePolicy.vehicleVariant
     Esq.createMany' perExtraKmRateList

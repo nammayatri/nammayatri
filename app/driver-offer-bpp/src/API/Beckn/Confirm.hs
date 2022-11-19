@@ -9,13 +9,13 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Confirm as ACL
 import qualified Core.ACL.OnConfirm as ACL
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Merchant as DM
 import Environment
 import Servant
 import qualified SharedLogic.CallBAP as BP
 
 type API =
-  Capture "orgId" (Id Org.Organization)
+  Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth "Authorization"
     :> Confirm.ConfirmAPI
 
@@ -23,7 +23,7 @@ handler :: FlowServer API
 handler = confirm
 
 confirm ::
-  Id Org.Organization ->
+  Id DM.Merchant ->
   SignatureAuthResult ->
   Confirm.ConfirmReq ->
   FlowHandler AckResponse

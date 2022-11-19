@@ -19,8 +19,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.BookingLocation as SBL
 import qualified Domain.Types.BusinessEvent as SB
 import Domain.Types.DiscountTransaction
-import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RideRequest as RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.RiderDetails as SRD
@@ -28,7 +27,7 @@ import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.Schedule
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
-import qualified Storage.CachedQueries.Organization as Organization
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -53,7 +52,7 @@ data DConfirmRes = DConfirmRes
     fromLocation :: SBL.BookingLocation,
     toLocation :: Maybe SBL.BookingLocation,
     riderDetails :: SRD.RiderDetails,
-    transporter :: DOrg.Organization
+    transporter :: DM.Merchant
   }
 
 data ConfirmResBDetails
@@ -73,7 +72,7 @@ confirm ::
     CoreMetrics m,
     HasGoogleCfg r
   ) =>
-  Id Organization.Organization ->
+  Id DM.Merchant ->
   Subscriber ->
   DConfirmReq ->
   m DConfirmRes
@@ -81,17 +80,17 @@ confirm transporterId subscriber req = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   transporter <-
-    Organization.findById transporterId'
-      >>= fromMaybeM (OrgNotFound transporterId'.getId)
+    CQM.findById transporterId'
+      >>= fromMaybeM (MerchantNotFound transporterId'.getId)
   unless (transporterId' == transporterId) $ throwError AccessDenied
-  let bapOrgId = booking.bapId
-  unless (subscriber.subscriber_id == bapOrgId) $ throwError AccessDenied
+  let bapMerchantId = booking.bapId
+  unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   now <- getCurrentTime
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
   rideRequest <-
     buildRideReq
-      (booking.id)
-      (transporter.shortId)
+      booking.id
+      transporter.subscriberId
       now
 
   let finalTransaction addons = Esq.runTransaction $ do
@@ -129,7 +128,7 @@ confirm transporterId subscriber req = do
             createScheduleRentalRideRequestJob scheduledTime $
               AllocateRentalJobData
                 { bookingId = booking.id,
-                  shortOrgId = transporter.shortId
+                  shortOrgId = transporter.subscriberId
                 }
       rentalFP <- QRFP.findById details.rentalFarePolicyId >>= fromMaybeM NoFarePolicy
       return $
@@ -148,13 +147,13 @@ confirm transporterId subscriber req = do
   Esq.runTransaction $ QBE.logRideConfirmedEvent booking.id
   return res
   where
-    buildRideReq bookingId shortOrgId now = do
+    buildRideReq bookingId subscriberId now = do
       guid <- generateGUID
       pure
         SRideRequest.RideRequest
           { id = Id guid,
             bookingId = bookingId,
-            shortOrgId = shortOrgId,
+            subscriberId = subscriberId,
             createdAt = now,
             _type = RideRequest.ALLOCATION,
             info = Nothing
@@ -181,7 +180,7 @@ mkDiscountTransaction :: SRB.Booking -> Money -> UTCTime -> DiscountTransaction
 mkDiscountTransaction booking discount currTime =
   DiscountTransaction
     { bookingId = booking.id,
-      organizationId = booking.providerId,
+      merchantId = booking.providerId,
       discount = discount,
       createdAt = currTime
     }

@@ -7,7 +7,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
@@ -31,7 +31,7 @@ ratingImpl ::
     HasFlowEnv m r '["minimumDriverRatesCount" ::: Int],
     CoreMetrics m
   ) =>
-  Id DOrg.Organization ->
+  Id DM.Merchant ->
   DRatingReq ->
   m ()
 ratingImpl transporterId req = do

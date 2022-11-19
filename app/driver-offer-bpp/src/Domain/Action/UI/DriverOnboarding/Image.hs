@@ -16,7 +16,7 @@ import Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.Image as Domain
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import qualified Domain.Types.Person as Person
 import Environment
 import qualified EulerHS.Language as L
@@ -24,7 +24,7 @@ import EulerHS.Types (base64Encode)
 import qualified Idfy.Flow as Idfy
 import Servant.Multipart
 import SharedLogic.DriverOnboarding
-import qualified Storage.CachedQueries.Organization as Organization
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverOnboarding.Image as Query
@@ -65,12 +65,12 @@ createPath ::
   Text ->
   Domain.ImageType ->
   m Text
-createPath driverId orgId imageType = do
+createPath driverId merchantId imageType = do
   pathPrefix <- asks (.s3Env.pathPrefix)
   now <- getCurrentTime
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
   return
-    ( pathPrefix <> "/driver-onboarding/" <> "org-" <> orgId <> "/"
+    ( pathPrefix <> "/driver-onboarding/" <> "org-" <> merchantId <> "/"
         <> driverId
         <> "/"
         <> show imageType
@@ -90,13 +90,21 @@ getImageType _ = Domain.VehicleRegistrationCertificate
 
 validateImage ::
   Bool ->
+  Maybe Merchant ->
   Id Person.Person ->
   ImageValidateRequest ->
   Flow ImageValidateResponse
-validateImage isDashboard personId ImageValidateRequest {..} = do
+validateImage isDashboard mbMerchant personId ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
-  org <- Organization.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
+  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+
+  org <- case mbMerchant of
+    Nothing -> do
+      CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    Just merchant -> do
+      -- merchant access checking
+      unless (merchant.id == merchantId) $ throwError (PersonNotFound personId.getId)
+      pure merchant
 
   images <- Query.findRecentByPersonIdAndImageType personId imageType
   unless isDashboard $ do
@@ -106,9 +114,9 @@ validateImage isDashboard personId ImageValidateRequest {..} = do
       notifyErrorToSupport driverPhone org.name ((.failureReason) <$> images)
       throwError (ImageValidationExceedLimit personId.getId)
 
-  imagePath <- createPath personId.getId orgId.getId imageType
+  imagePath <- createPath personId.getId merchantId.getId imageType
   _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId orgId imagePath imageType False
+  imageEntity <- mkImage personId merchantId imagePath imageType False
   runTransaction $ Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
@@ -136,24 +144,24 @@ validateImageFile ::
   Flow ImageValidateResponse
 validateImageFile isDashboard personId ImageValidateFileRequest {..} = do
   image' <- L.runIO $ base64Encode <$> BS.readFile image
-  validateImage isDashboard personId $ ImageValidateRequest image' imageType
+  validateImage isDashboard Nothing personId $ ImageValidateRequest image' imageType
 
 mkImage ::
   (MonadGuid m, MonadTime m) =>
   Id Person.Person ->
-  Id Organization ->
+  Id Merchant ->
   Text ->
   Domain.ImageType ->
   Bool ->
   m Domain.Image
-mkImage personId_ organizationId s3Path imageType_ isValid = do
+mkImage personId_ merchantId s3Path imageType_ isValid = do
   id <- generateGUID
   now <- getCurrentTime
   return $
     Domain.Image
       { id,
         personId = personId_,
-        organizationId,
+        merchantId,
         s3Path,
         imageType = imageType_,
         isValid,
@@ -165,6 +173,7 @@ mkImage personId_ organizationId s3Path imageType_ isValid = do
 getDocs :: Person.Person -> Text -> Flow GetDocsResponse
 getDocs _admin mobileNumber = do
   driver <- Person.findByMobileNumber "+91" mobileNumber >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
 
   dl <- DLQuery.findByDriverId driver.id
   let dlImageId = (.documentImageId1) <$> dl
@@ -177,15 +186,14 @@ getDocs _admin mobileNumber = do
       association
   let rcImageId = (.documentImageId) <$> rc
 
-  dlImage <- getImage `mapM` dlImageId
-  rcImage <- getImage `mapM` rcImageId
+  dlImage <- getImage merchantId `mapM` dlImageId
+  rcImage <- getImage merchantId `mapM` rcImageId
 
   return GetDocsResponse {dlImage, rcImage}
 
-getImage :: Id Domain.Image -> Flow Text
-getImage imageId = do
+getImage :: Id Merchant -> Id Domain.Image -> Flow Text
+getImage merchantId imageId = do
   imageMetadata <- Query.findById imageId
-  maybe
-    (pure T.empty)
-    (\img -> S3.get $ T.unpack img.s3Path)
-    imageMetadata
+  case imageMetadata of
+    Just img | img.merchantId == merchantId -> S3.get $ T.unpack img.s3Path
+    _ -> pure T.empty

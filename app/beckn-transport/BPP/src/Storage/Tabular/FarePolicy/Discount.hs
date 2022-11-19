@@ -15,7 +15,7 @@ import qualified Domain.Types.FarePolicy.Discount as Domain
 import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
 import qualified Domain.Types.Vehicle as DVeh
 import Storage.Tabular.FarePolicy.FareProduct ()
-import qualified Storage.Tabular.Organization as TOrg
+import qualified Storage.Tabular.Merchant as TM
 import Storage.Tabular.Vehicle ()
 
 mkPersist
@@ -24,7 +24,7 @@ mkPersist
     DiscountT sql=fare_policy_discount
       id Text
       vehicleVariant DVeh.Variant
-      organizationId TOrg.OrganizationTId
+      merchantId TM.MerchantTId
       fareProductType DFareProduct.FareProductType
       fromDate UTCTime
       toDate UTCTime
@@ -46,14 +46,14 @@ instance TType DiscountT Domain.Discount where
     return $
       Domain.Discount
         { id = Id id,
-          organizationId = fromKey organizationId,
+          merchantId = fromKey merchantId,
           discount = roundToIntegral discount,
           ..
         }
   toTType Domain.Discount {..} =
     DiscountT
       { id = getId id,
-        organizationId = toKey organizationId,
+        merchantId = toKey merchantId,
         discount = fromIntegral discount,
         ..
       }

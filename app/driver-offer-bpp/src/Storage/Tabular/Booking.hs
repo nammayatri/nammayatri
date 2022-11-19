@@ -16,7 +16,7 @@ import qualified Domain.Types.Vehicle.Variant as Veh
 import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
 import Storage.Tabular.DriverQuote (DriverQuoteTId)
 import qualified Storage.Tabular.FareParameters as Fare
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()
 
@@ -29,7 +29,7 @@ mkPersist
       id Text
       quoteId DriverQuoteTId
       status Domain.BookingStatus
-      providerId OrganizationTId
+      providerId MerchantTId
       bapId Text
       bapUri Text
       startTime UTCTime

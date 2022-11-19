@@ -7,7 +7,7 @@ import qualified Beckn.Types.Core.Taxi.OnSelect as OS
 import Beckn.Types.Id (ShortId)
 import Core.ACL.Common
 import qualified Domain.Types.DriverQuote as DQuote
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest
 
 data DOnSelectReq = DOnSelectReq
@@ -18,7 +18,7 @@ data DOnSelectReq = DOnSelectReq
   }
 
 data TransporterInfo = TransporterInfo
-  { shortId :: ShortId DOrg.Organization,
+  { subscriberId :: ShortId DM.Subscriber,
     name :: Text,
     contacts :: Text,
     ridesInProgress :: Int,
@@ -49,7 +49,7 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
 
   let provider =
         OS.Provider
-          { id = transporterInfo.shortId.getShortId,
+          { id = transporterInfo.subscriberId.getShortId,
             descriptor = OS.Descriptor {name = transporterInfo.name},
             locations = [],
             categories = categories_,

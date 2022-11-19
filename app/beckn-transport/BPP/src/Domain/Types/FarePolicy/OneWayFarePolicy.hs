@@ -6,13 +6,13 @@ import Beckn.Types.Id (Id)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.Discount
 import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate
-import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Vehicle
 
 data OneWayFarePolicyD s = OneWayFarePolicy
   { id :: Id OneWayFarePolicy,
     vehicleVariant :: Vehicle.Variant,
-    organizationId :: Id Organization.Organization,
+    merchantId :: Id DM.Merchant,
     baseFare :: Maybe Money,
     perExtraKmRateList :: NonEmpty (PerExtraKmRateD s),
     discountList :: [DiscountD s],

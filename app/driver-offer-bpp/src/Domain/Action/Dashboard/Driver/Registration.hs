@@ -11,33 +11,46 @@ import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.DriverOnboarding.Image
 import qualified Domain.Types.DriverOnboarding.Image as Domain
+import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified Storage.CachedQueries.Merchant as QM
 import Storage.Queries.DriverOnboarding.Image as QImage
+import Tools.Error
 
-documentsList :: Id Common.Driver -> FlowHandler Common.DocumentsListResponse
-documentsList driverId = withFlowHandlerAPI $ do
-  licImgs <- map (.id.getId) <$> findImagesByPersonAndType (cast driverId) DriverLicense
-  vehRegImgs <- map (.id.getId) <$> findImagesByPersonAndType (cast driverId) VehicleRegistrationCertificate
+documentsList :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
+documentsList merchantShortId driverId = withFlowHandlerAPI $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  licImgs <- map (.id.getId) <$> findImagesByPersonAndType merchant.id (cast driverId) DriverLicense
+  vehRegImgs <- map (.id.getId) <$> findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate
   pure
     Common.DocumentsListResponse
       { driverLicense = licImgs,
         vehicleRegistrationCertificate = vehRegImgs
       }
 
-getDocument :: Id Common.Image -> FlowHandler Common.GetDocumentResponse
-getDocument imageId = withFlowHandlerAPI $ do
-  img <- getImage (cast imageId)
+getDocument :: ShortId DM.Merchant -> Id Common.Image -> FlowHandler Common.GetDocumentResponse
+getDocument merchantShortId imageId = withFlowHandlerAPI $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  img <- getImage merchant.id (cast imageId)
   pure Common.GetDocumentResponse {imageBase64 = img}
 
 mapImageType :: Common.DocumentType -> Domain.ImageType
 mapImageType Common.DriverLicense = Domain.DriverLicense
 mapImageType Common.VehicleRegistrationCertificate = Domain.VehicleRegistrationCertificate
 
-uploadDocument :: Id Common.Driver -> Common.UploadDocumentReq -> FlowHandler Common.UploadDocumentResp
-uploadDocument driverId_ req = withFlowHandlerAPI $ do
+uploadDocument :: ShortId DM.Merchant -> Id Common.Driver -> Common.UploadDocumentReq -> FlowHandler Common.UploadDocumentResp
+uploadDocument merchantShortId driverId_ req = withFlowHandlerAPI $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   res <-
     validateImage
       True
+      (Just merchant)
       (cast driverId_)
       ImageValidateRequest
         { image = req.imageBase64,
@@ -45,10 +58,14 @@ uploadDocument driverId_ req = withFlowHandlerAPI $ do
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 
-registerDL :: Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess
-registerDL driverId_ Common.RegisterDLReq {..} = withFlowHandlerAPI $ do
+registerDL :: ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess
+registerDL merchantShortId driverId_ Common.RegisterDLReq {..} = withFlowHandlerAPI $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   verifyDL
     True
+    (Just merchant)
     (cast driverId_)
     DriverDLReq
       { imageId1 = cast imageId1,
@@ -56,10 +73,14 @@ registerDL driverId_ Common.RegisterDLReq {..} = withFlowHandlerAPI $ do
         ..
       }
 
-registerRC :: Id Common.Driver -> Common.RegisterRCReq -> FlowHandler APISuccess
-registerRC driverId_ Common.RegisterRCReq {..} = withFlowHandlerAPI $ do
+registerRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterRCReq -> FlowHandler APISuccess
+registerRC merchantShortId driverId_ Common.RegisterRCReq {..} = withFlowHandlerAPI $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   verifyRC
     True
+    (Just merchant)
     (cast driverId_)
     DriverRCReq
       { imageId = cast imageId,

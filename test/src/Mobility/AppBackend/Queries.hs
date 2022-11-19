@@ -4,7 +4,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (findById)
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Geofencing (GeoRestriction (Regions))
-import Storage.Tabular.Merchant
+import "app-backend" Storage.Tabular.Merchant
 
 updateOrigAndDestRestriction :: [Text] -> [Text] -> SqlDB ()
 updateOrigAndDestRestriction originList destinationList =

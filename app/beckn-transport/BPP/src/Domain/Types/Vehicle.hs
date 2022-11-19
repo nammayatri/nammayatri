@@ -9,7 +9,7 @@ import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
 import Servant.API
@@ -61,7 +61,7 @@ instance FromHttpApiData RegistrationCategory where
 
 data Vehicle = Vehicle
   { driverId :: Id DPers.Person,
-    organizationId :: Id DOrg.Organization,
+    merchantId :: Id DM.Merchant,
     variant :: Variant,
     model :: Text,
     color :: Text,

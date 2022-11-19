@@ -12,7 +12,7 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.DriverOnboarding.Error as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Domain
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.ImageType"
@@ -24,7 +24,7 @@ mkPersist
     ImageT sql=image
       id Text
       personId PersonTId
-      organizationId OrganizationTId
+      merchantId MerchantTId
       s3Path Text
       imageType Domain.ImageType
       isValid Bool
@@ -44,7 +44,7 @@ instance TType ImageT Domain.Image where
     return $
       Domain.Image
         { id = Id id,
-          organizationId = fromKey organizationId,
+          merchantId = fromKey merchantId,
           personId = fromKey personId,
           ..
         }
@@ -52,7 +52,7 @@ instance TType ImageT Domain.Image where
   toTType Domain.Image {..} =
     ImageT
       { id = getId id,
-        organizationId = toKey organizationId,
+        merchantId = toKey merchantId,
         personId = toKey personId,
         ..
       }

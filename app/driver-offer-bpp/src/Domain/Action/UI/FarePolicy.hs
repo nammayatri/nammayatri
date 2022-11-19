@@ -62,8 +62,8 @@ validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
 
 listFarePolicies :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListFarePolicyRes
 listFarePolicies person = do
-  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
-  oneWayFarePolicies <- SFarePolicy.findAllByOrgId orgId
+  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
+  oneWayFarePolicies <- SFarePolicy.findAllByMerchantId merchantId
   pure $
     ListFarePolicyRes
       { oneWayFarePolicies = map makeFarePolicyAPIEntity oneWayFarePolicies
@@ -73,7 +73,7 @@ updateFarePolicy :: (HasCacheConfig r, EsqDBFlow m r, FCMFlow m r, CoreMetrics m
 updateFarePolicy admin fpId req = do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy
-  unless (admin.organizationId == Just farePolicy.organizationId) $ throwError AccessDenied
+  unless (admin.merchantId == Just farePolicy.merchantId) $ throwError AccessDenied
   let updatedFarePolicy =
         farePolicy
           { baseDistanceFare = req.baseDistanceFare,
@@ -90,8 +90,8 @@ updateFarePolicy admin fpId req = do
             nightShiftRate = req.nightShiftRate
           } ::
           DFarePolicy.FarePolicy
-  let Just orgId = admin.organizationId
-  coordinators <- QP.findAdminsByOrgId orgId
+  let Just merchantId = admin.merchantId
+  coordinators <- QP.findAdminsByMerchantId merchantId
   Esq.runTransaction $
     SFarePolicy.update updatedFarePolicy
   SFarePolicy.clearCache updatedFarePolicy

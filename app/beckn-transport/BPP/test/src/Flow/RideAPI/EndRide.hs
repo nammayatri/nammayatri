@@ -90,7 +90,7 @@ handle =
       getDefaultDropLocThreshold = pure 500,
       getDefaultRideTravelledDistanceThreshold = pure 700,
       getDefaultRideTimeEstimatedThreshold = pure 900,
-      findConfigByOrgIdAndKey = \_ _ -> pure Nothing
+      findConfigByMerchantIdAndKey = \_ _ -> pure Nothing
     }
 
 endRideDefault ::

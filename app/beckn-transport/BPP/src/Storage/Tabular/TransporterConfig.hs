@@ -11,7 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.TransporterConfig as Domain
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 
 derivePersistField "Domain.ConfigKey"
 
@@ -20,7 +20,7 @@ mkPersist
   [defaultQQ|
     TransporterConfigT sql=transporter_config
       id Text
-      transporterId OrganizationTId
+      transporterId MerchantTId
       configKey Domain.ConfigKey sql=key
       value Text
       createdAt UTCTime

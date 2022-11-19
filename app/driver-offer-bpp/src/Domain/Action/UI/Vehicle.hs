@@ -18,7 +18,7 @@ import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
-import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -73,15 +73,15 @@ data Driver = Driver
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     rating :: Maybe Int,
-    organizationId :: Maybe (Id Org.Organization)
+    merchantId :: Maybe (Id DM.Merchant)
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 listVehicles :: EsqDBFlow m r => SP.Person -> Maybe Variant.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
 listVehicles admin variantM mbRegNum limitM offsetM = do
-  let Just orgId = admin.organizationId
-  personList <- QP.findAllByOrgId [SP.DRIVER] orgId
-  vehicleList <- QV.findAllByVariantRegNumOrgId variantM mbRegNum limit offset orgId
+  let Just merchantId = admin.merchantId
+  personList <- QP.findAllByMerchantId [SP.DRIVER] merchantId
+  vehicleList <- QV.findAllByVariantRegNumMerchantId variantM mbRegNum limit offset merchantId
   respList <- buildVehicleRes personList `traverse` vehicleList
   return $ ListVehicleRes respList
   where
@@ -90,10 +90,10 @@ listVehicles admin variantM mbRegNum limitM offsetM = do
 
 updateVehicle :: EsqDBFlow m r => SP.Person -> Id SP.Person -> UpdateVehicleReq -> m UpdateVehicleRes
 updateVehicle admin driverId req = do
-  let Just orgId = admin.organizationId
+  let Just merchantId = admin.merchantId
   runRequestValidation validateUpdateVehicleReq req
   driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  unless (driver.organizationId == Just orgId || driver.role == SP.DRIVER) $ throwError Unauthorized
+  unless (driver.merchantId == Just merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
   vehicle <- QV.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
   whenJust req.registrationNo $ \regNum -> do
     vehicleWithRegistrationNoM <- QV.findByRegistrationNo regNum
@@ -130,7 +130,7 @@ getVehicle personId registrationNoM vehicleIdM = do
   return . GetVehicleRes $ SV.makeVehicleAPIEntity vehicle
   where
     hasAccess user vehicle =
-      when (user.organizationId /= Just (vehicle.organizationId)) $
+      when (user.merchantId /= Just (vehicle.merchantId)) $
         throwError Unauthorized
 
 buildVehicleRes :: MonadFlow m => [SP.Person] -> SV.Vehicle -> m VehicleRes
@@ -155,5 +155,5 @@ mkDriverObj person =
       middleName = person.middleName,
       lastName = person.lastName,
       rating = round <$> person.rating,
-      organizationId = person.organizationId
+      merchantId = person.merchantId
     }

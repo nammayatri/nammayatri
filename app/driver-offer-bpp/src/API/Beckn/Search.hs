@@ -12,12 +12,12 @@ import qualified Core.ACL.OnSearch as ACL
 import qualified Core.ACL.Search as ACL
 import qualified Core.Beckn as CallBAP
 import qualified Domain.Action.Beckn.Search as DSearch
-import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Merchant as DM
 import Environment
 import Servant
 
 type API =
-  Capture "orgId" (Id Org.Organization)
+  Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth "Authorization"
     :> SignatureAuth "X-Gateway-Authorization"
     :> Search.SearchAPI
@@ -26,7 +26,7 @@ handler :: FlowServer API
 handler = search
 
 search ::
-  Id Org.Organization ->
+  Id DM.Merchant ->
   SignatureAuthResult ->
   SignatureAuthResult ->
   Search.SearchReq ->

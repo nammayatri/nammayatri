@@ -1,14 +1,18 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Tools.Client (DataServer (..), CallServerAPI (..)) where
+module Tools.Client (DataServer (..), CallServerAPI (..), clientWithMerchant) where
 
 import Beckn.Prelude
 import Beckn.Types.Error
 import Beckn.Utils.Common hiding (Error, callAPI)
 import Beckn.Utils.Dhall (FromDhall)
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.ServerName as DSN
 import qualified EulerHS.Types as Euler
+import Servant hiding (throwError)
+import Servant.Client hiding (client)
+import Tools.Auth.Merchant
 import Tools.Error
 import Tools.Metrics
 
@@ -63,3 +67,15 @@ instance
   where
   callServerAPI serverName mkAPIs descr f c =
     callServerAPI @_ @m serverName mkAPIs descr (`f` c)
+
+type ApiWithMerchant api =
+  "dashboard"
+    :> Capture "merchantId" (CheckedShortId DM.Merchant)
+    :> api
+
+clientWithMerchant ::
+  forall api.
+  HasClient Euler.EulerClient api =>
+  Proxy api ->
+  Client Euler.EulerClient (ApiWithMerchant api)
+clientWithMerchant _ = Euler.client (Proxy @(ApiWithMerchant api))

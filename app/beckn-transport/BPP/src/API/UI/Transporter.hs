@@ -8,8 +8,8 @@ import Domain.Action.UI.Transporter as Reexport
     UpdateTransporterRes,
   )
 import qualified Domain.Action.UI.Transporter as DTransp
-import Domain.Types.Organization (Organization)
-import qualified Domain.Types.Organization as SO
+import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -21,7 +21,7 @@ type API =
     :> ( TokenAuth
            :> Get '[JSON] TransporterRec
            :<|> AdminTokenAuth
-           :> Capture "orgId" (Id Organization)
+           :> Capture "merchantId" (Id Merchant)
            :> ReqBody '[JSON] UpdateTransporterReq
            :> Post '[JSON] UpdateTransporterRes
        )
@@ -31,8 +31,8 @@ handler =
   getTransporter
     :<|> updateTransporter
 
-updateTransporter :: SP.Person -> Id SO.Organization -> UpdateTransporterReq -> FlowHandler UpdateTransporterRes
-updateTransporter admin orgId = withFlowHandlerAPI . DTransp.updateTransporter admin orgId
+updateTransporter :: SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> FlowHandler UpdateTransporterRes
+updateTransporter admin merchantId = withFlowHandlerAPI . DTransp.updateTransporter admin merchantId
 
 getTransporter :: Id SP.Person -> FlowHandler TransporterRec
 getTransporter = withFlowHandlerAPI . DTransp.getTransporter

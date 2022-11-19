@@ -2,14 +2,14 @@ module SharedLogic.Transporter where
 
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Error
 
-findTransporter :: Id DOrg.Organization -> Flow DOrg.Organization
+findTransporter :: Id DM.Merchant -> Flow DM.Merchant
 findTransporter transporterId = do
-  transporter <- QOrg.findById transporterId >>= fromMaybeM (OrgDoesNotExist transporterId.getId)
+  transporter <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
   unless transporter.enabled $ throwError AgencyDisabled
   pure transporter

@@ -16,7 +16,7 @@ import Beckn.Utils.Common
 import Domain.Types.Booking
 import Domain.Types.FarePolicy.FareBreakup
 import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
@@ -33,14 +33,14 @@ import Tools.Error
 type MonadHandler m = (MonadThrow m, Log m)
 
 newtype ServiceHandle m = ServiceHandle
-  { getFarePolicy :: Id Organization -> Vehicle.Variant -> m (Maybe OneWayFarePolicy)
+  { getFarePolicy :: Id Merchant -> Vehicle.Variant -> m (Maybe OneWayFarePolicy)
   }
 
 serviceHandle :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ServiceHandle m
 serviceHandle =
   ServiceHandle
-    { getFarePolicy = \orgId vehicleVariant -> do
-        OWFarePolicy.findByOrgIdAndVariant orgId vehicleVariant
+    { getFarePolicy = \merchantId vehicleVariant -> do
+        OWFarePolicy.findByMerchantIdAndVariant merchantId vehicleVariant
     }
 
 calculateFare ::
@@ -48,7 +48,7 @@ calculateFare ::
     HedisFlow m r,
     EsqDBFlow m r
   ) =>
-  Id Organization ->
+  Id Merchant ->
   Vehicle.Variant ->
   Meters ->
   UTCTime ->
@@ -58,14 +58,14 @@ calculateFare = doCalculateFare serviceHandle
 doCalculateFare ::
   MonadHandler m =>
   ServiceHandle m ->
-  Id Organization ->
+  Id Merchant ->
   Vehicle.Variant ->
   Meters ->
   TripEndTime ->
   m OneWayFareParameters
-doCalculateFare ServiceHandle {..} orgId vehicleVariant distance endTime = do
-  logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
-  farePolicy <- getFarePolicy orgId vehicleVariant >>= fromMaybeM NoFarePolicy
+doCalculateFare ServiceHandle {..} merchantId vehicleVariant distance endTime = do
+  logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| merchantId ||+ " for " +|| vehicleVariant ||+ ""
+  farePolicy <- getFarePolicy merchantId vehicleVariant >>= fromMaybeM NoFarePolicy
   let fareParams = calculateFareParameters farePolicy distance endTime
   logTagInfo
     "FareCalculator"

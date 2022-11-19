@@ -25,12 +25,11 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
-import Domain.Types.Organization as Org
-import qualified Domain.Types.Organization as SOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
@@ -49,8 +48,8 @@ sendRideAssignedUpdateToBAP ::
   m ()
 sendRideAssignedUpdateToBAP booking ride = do
   transporter <-
-    QOrg.findById booking.providerId
-      >>= fromMaybeM (OrgNotFound booking.providerId.getId)
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
@@ -70,8 +69,8 @@ sendRideStartedUpdateToBAP ::
   m ()
 sendRideStartedUpdateToBAP booking ride = do
   transporter <-
-    QOrg.findById booking.providerId
-      >>= fromMaybeM (OrgNotFound booking.providerId.getId)
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   let rideStartedBuildReq = ACL.RideStartedBuildReq {..}
   rideStartedMsg <- ACL.buildOnUpdateMessage rideStartedBuildReq
   void $ callOnUpdate transporter booking rideStartedMsg
@@ -90,8 +89,8 @@ sendRideCompletedUpdateToBAP ::
   m ()
 sendRideCompletedUpdateToBAP booking ride fareBreakups = do
   transporter <-
-    QOrg.findById booking.providerId
-      >>= fromMaybeM (OrgNotFound booking.providerId.getId)
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   let rideCompletedBuildReq = ACL.RideCompletedBuildReq {..}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
   void $ callOnUpdate transporter booking rideCompletedMsg
@@ -103,7 +102,7 @@ sendBookingCancelledUpdateToBAP ::
     CoreMetrics m
   ) =>
   SRB.Booking ->
-  SOrg.Organization ->
+  DM.Merchant ->
   SRBCR.CancellationSource ->
   m ()
 sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
@@ -119,7 +118,7 @@ sendBookingReallocationUpdateToBAP ::
   ) =>
   SRB.Booking ->
   Id SRide.Ride ->
-  SOrg.Organization ->
+  DM.Merchant ->
   m ()
 sendBookingReallocationUpdateToBAP booking rideId transporter = do
   let bookingReallocationBuildReq = ACL.BookingReallocationBuildReq {..}
@@ -131,25 +130,25 @@ callOnUpdate ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  Org.Organization ->
+  DM.Merchant ->
   SRB.Booking ->
   OnUpdate.OnUpdateMessage ->
   m ()
 callOnUpdate transporter booking content = do
   let bapId = booking.bapId
       bapUri = booking.bapUri
-  let bppShortId = getShortId $ transporter.shortId
-      authKey = getHttpManagerKey bppShortId
+  let bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl transporter.id
   msgId <- generateGUID
-  context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
+  context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just bppSubscriberId) (Just bppUri)
   void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  Id Org.Organization ->
+  Id DM.Merchant ->
   m BaseUrl
 buildBppUrl (Id transporterId) =
   asks (.nwAddress)

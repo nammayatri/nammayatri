@@ -12,12 +12,12 @@ import qualified Core.ACL.Init as ACL
 import qualified Core.ACL.OnInit as ACL
 import qualified Core.Beckn as CallBAP
 import qualified Domain.Action.Beckn.Init as DInit
-import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Merchant as DM
 import Environment
 import Servant
 
 type API =
-  Capture "orgId" (Id Org.Organization)
+  Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth "Authorization"
     :> Init.InitAPI
 
@@ -25,7 +25,7 @@ handler :: FlowServer API
 handler = init
 
 init ::
-  Id Org.Organization ->
+  Id DM.Merchant ->
   SignatureAuthResult ->
   Init.InitReq ->
   FlowHandler AckResponse

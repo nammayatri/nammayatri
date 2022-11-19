@@ -8,12 +8,12 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Select as ACL
 import qualified Domain.Action.Beckn.Select as DSelect
-import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Merchant as DM
 import Environment
 import Servant
 
 type API =
-  Capture "orgId" (Id Org.Organization)
+  Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth "Authorization"
     :> Select.SelectAPI
 
@@ -21,7 +21,7 @@ handler :: FlowServer API
 handler = select
 
 select ::
-  Id Org.Organization ->
+  Id DM.Merchant ->
   SignatureAuthResult ->
   Select.SelectReq ->
   FlowHandler AckResponse

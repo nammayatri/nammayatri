@@ -6,10 +6,11 @@ import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver.Registration as Common
-import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
+import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Servant
 import "lib-dashboard" Tools.Auth
+import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
   DocumentsListAPI
@@ -18,13 +19,13 @@ type API =
     :<|> RegisterDLAPI
     :<|> RegisterRCAPI
 
-handler :: FlowServer API
-handler =
-  documentsList
-    :<|> getDocument
-    :<|> uploadDocument
-    :<|> registerDL
-    :<|> registerRC
+handler :: ShortId DM.Merchant -> FlowServer API
+handler merchantId =
+  documentsList merchantId
+    :<|> getDocument merchantId
+    :<|> uploadDocument merchantId
+    :<|> registerDL merchantId
+    :<|> registerRC merchantId
 
 type DocumentsListAPI = ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS :> Common.DocumentsListAPI
 
@@ -36,32 +37,32 @@ type RegisterDLAPI = ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS :> Common.
 
 type RegisterRCAPI = ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS :> Common.RegisterRCAPI
 
-documentsList :: ShortId DMerchant.Merchant -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
-documentsList _ driverId =
-  withFlowHandlerAPI $
-    -- FIXME: drivers for only one organization?
-    Client.callDriverOfferBPP (.drivers.documentsList) driverId
+documentsList :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
+documentsList userMerchantId merchantId driverId =
+  withFlowHandlerAPI $ do
+    checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.documentsList) driverId
 
-getDocument :: ShortId DMerchant.Merchant -> Id Common.Image -> FlowHandler Common.GetDocumentResponse
-getDocument _ imageId =
-  withFlowHandlerAPI $
-    -- FIXME: drivers for only one organization?
-    Client.callDriverOfferBPP (.drivers.getDocument) imageId
+getDocument :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Image -> FlowHandler Common.GetDocumentResponse
+getDocument userMerchantId merchantId imageId =
+  withFlowHandlerAPI $ do
+    checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.getDocument) imageId
 
-uploadDocument :: ShortId DMerchant.Merchant -> Id Common.Driver -> Common.UploadDocumentReq -> FlowHandler Common.UploadDocumentResp
-uploadDocument _ driverId req =
-  withFlowHandlerAPI $
-    -- FIXME: drivers for only one organization?
-    Client.callDriverOfferBPP (.drivers.uploadDocument) driverId req
+uploadDocument :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.UploadDocumentReq -> FlowHandler Common.UploadDocumentResp
+uploadDocument userMerchantId merchantId driverId req =
+  withFlowHandlerAPI $ do
+    checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.uploadDocument) driverId req
 
-registerDL :: ShortId DMerchant.Merchant -> Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess
-registerDL _ driverId req =
-  withFlowHandlerAPI $
-    -- FIXME: drivers for only one organization?
-    Client.callDriverOfferBPP (.drivers.registerDL) driverId req
+registerDL :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess
+registerDL userMerchantId merchantId driverId req =
+  withFlowHandlerAPI $ do
+    checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.registerDL) driverId req
 
-registerRC :: ShortId DMerchant.Merchant -> Id Common.Driver -> Common.RegisterRCReq -> FlowHandler APISuccess
-registerRC _ driverId req =
-  withFlowHandlerAPI $
-    -- FIXME: drivers for only one organization?
-    Client.callDriverOfferBPP (.drivers.registerRC) driverId req
+registerRC :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterRCReq -> FlowHandler APISuccess
+registerRC userMerchantId merchantId driverId req =
+  withFlowHandlerAPI $ do
+    checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.registerRC) driverId req

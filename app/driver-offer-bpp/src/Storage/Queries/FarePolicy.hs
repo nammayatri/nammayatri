@@ -10,31 +10,31 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.FarePolicy
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
 import Storage.Tabular.FarePolicy
 
-findAllByOrgId ::
+findAllByMerchantId ::
   Transactionable m =>
-  Id Organization ->
+  Id Merchant ->
   m [FarePolicy]
-findAllByOrgId orgId = do
+findAllByMerchantId merchantId = do
   Esq.findAll $ do
     farePolicy <- from $ table @FarePolicyT
     where_ $
-      farePolicy ^. FarePolicyOrganizationId ==. val (toKey orgId)
+      farePolicy ^. FarePolicyMerchantId ==. val (toKey merchantId)
     return farePolicy
 
-findByOrgIdAndVariant ::
+findByMerchantIdAndVariant ::
   Transactionable m =>
-  Id Organization ->
+  Id Merchant ->
   Variant ->
   m (Maybe FarePolicy)
-findByOrgIdAndVariant orgId variant = do
+findByMerchantIdAndVariant merchantId variant = do
   Esq.findOne $ do
     farePolicy <- from $ table @FarePolicyT
     where_ $
-      farePolicy ^. FarePolicyOrganizationId ==. val (toKey orgId)
+      farePolicy ^. FarePolicyMerchantId ==. val (toKey merchantId)
         &&. farePolicy ^. FarePolicyVehicleVariant ==. val variant
     return farePolicy
 

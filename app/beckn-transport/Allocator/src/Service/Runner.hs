@@ -11,7 +11,7 @@ import Control.Monad.Catch (Handler (..), catches)
 import qualified Data.Map as Map
 import qualified Domain.Action.Allocation as Allocation
 import qualified Domain.Action.Allocation.Internal as I
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Environment
 import EulerHS.Prelude
 import Tools.Error
@@ -55,19 +55,19 @@ handle =
           }
     }
 
-getOrganizationLock :: Flow (ShortId Organization)
-getOrganizationLock = do
+getMerchantLock :: Flow (ShortId Subscriber)
+getMerchantLock = do
   shardMap <- asks (.shards)
   let numShards = Map.size shardMap
   shardCounter <- Redis.incr "beckn:allocation:shardCounter"
   let shardId = fromIntegral $ abs $ shardCounter `rem` fromIntegral numShards
   case Map.lookup shardId shardMap of
-    Just shortOrgId -> do
-      lockAvailable <- Redis.tryLockRedis ("beckn:allocation:lock_" <> getShortId shortOrgId) 10
-      logInfo ("Counter: " <> show shardCounter <> " | Shard id: " <> show shardId <> " | Lock availability on " <> getShortId shortOrgId <> ": " <> show lockAvailable)
+    Just subscriberId -> do
+      lockAvailable <- Redis.tryLockRedis ("beckn:allocation:lock_" <> getShortId subscriberId) 10
+      logInfo ("Counter: " <> show shardCounter <> " | Shard id: " <> show shardId <> " | Lock availability on " <> getShortId subscriberId <> ": " <> show lockAvailable)
       if lockAvailable
-        then pure shortOrgId
-        else getOrganizationLock
+        then pure subscriberId
+        else getMerchantLock
     Nothing ->
       throwError $
         ShardMappingError $ "Shard " <> show shardId <> " does not have an associated organization."
@@ -75,14 +75,14 @@ getOrganizationLock = do
 run :: Flow ()
 run = do
   untilShutdown . runnerHandler . withLogTag "Allocation service" $ do
-    shortOrgId <- getOrganizationLock
-    log INFO $ "Got lock for " <> shortOrgId.getShortId
+    subscriberId <- getMerchantLock
+    log INFO $ "Got lock for " <> subscriberId.getShortId
     iAmAlive
     ((), processTime) <- measureDuration $ do
       requestsNum <- asks (.requestsNumPerIteration)
-      eres <- try $ Allocation.process handle shortOrgId requestsNum
+      eres <- try $ Allocation.process handle subscriberId requestsNum
       whenLeft eres $ Log.logError . show @_ @SomeException
-      Redis.unlockRedis $ "beckn:allocation:lock_" <> getShortId shortOrgId
+      Redis.unlockRedis $ "beckn:allocation:lock_" <> getShortId subscriberId
     -- If process handling took less than processDelay we delay for remain to processDelay time
     processDelay <- asks (.processDelay)
     liftIO . threadDelay . max 0 . getMicroseconds $ millisecondsToMicroseconds (processDelay - processTime)

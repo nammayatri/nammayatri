@@ -10,7 +10,7 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.FarePolicy.Discount
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.FarePolicy.Discount
 
@@ -23,26 +23,26 @@ findById ::
   m (Maybe Discount)
 findById = Esq.findById
 
-findAllByOrgIdAndVariant ::
+findAllByMerchantIdAndVariant ::
   Transactionable m =>
-  Id Organization ->
+  Id Merchant ->
   Vehicle.Variant ->
   m [Discount]
-findAllByOrgIdAndVariant orgId vehicleVariant =
+findAllByMerchantIdAndVariant merchantId vehicleVariant =
   Esq.buildDType $
     fmap extractSolidType
-      <$> Storage.Queries.FarePolicy.Discount.findAllByOrgIdAndVariant' orgId vehicleVariant
+      <$> Storage.Queries.FarePolicy.Discount.findAllByMerchantIdAndVariant' merchantId vehicleVariant
 
-findAllByOrgIdAndVariant' ::
+findAllByMerchantIdAndVariant' ::
   Transactionable m =>
-  Id Organization ->
+  Id Merchant ->
   Vehicle.Variant ->
   DTypeBuilder m [DiscountT]
-findAllByOrgIdAndVariant' orgId vehicleVariant =
+findAllByMerchantIdAndVariant' merchantId vehicleVariant =
   Esq.findAll' $ do
     discount <- from $ table @DiscountT
     where_ $
-      discount ^. DiscountOrganizationId ==. val (toKey orgId)
+      discount ^. DiscountMerchantId ==. val (toKey merchantId)
         &&. discount ^. DiscountVehicleVariant ==. val vehicleVariant
     return discount
 

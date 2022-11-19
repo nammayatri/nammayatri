@@ -11,7 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.FareProduct as Domain
-import qualified Storage.Tabular.Organization as TOrg
+import qualified Storage.Tabular.Merchant as TM
 
 derivePersistField "Domain.FareProductType"
 
@@ -20,7 +20,7 @@ mkPersist
   [defaultQQ|
     FareProductT sql=fare_product
       id Text
-      organizationId TOrg.OrganizationTId
+      merchantId TM.MerchantTId
       productType Domain.FareProductType sql=type
       createdAt UTCTime
       Primary id
@@ -37,14 +37,14 @@ instance TType FareProductT Domain.FareProduct where
     return $
       Domain.FareProduct
         { id = Id id,
-          organizationId = fromKey organizationId,
+          merchantId = fromKey merchantId,
           _type = productType,
           ..
         }
   toTType Domain.FareProduct {..} =
     FareProductT
       { id = getId id,
-        organizationId = toKey organizationId,
+        merchantId = toKey merchantId,
         productType = _type,
         ..
       }

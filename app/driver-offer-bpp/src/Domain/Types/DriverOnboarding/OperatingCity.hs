@@ -2,11 +2,11 @@ module Domain.Types.DriverOnboarding.OperatingCity where
 
 import Beckn.Prelude
 import Beckn.Types.Id
-import Domain.Types.Organization
+import Domain.Types.Merchant
 
 data OperatingCity = OperatingCity
   { id :: Id OperatingCity,
-    organizationId :: Id Organization,
+    merchantId :: Id Merchant,
     cityName :: Text,
     enabled :: Bool,
     createdAt :: UTCTime,

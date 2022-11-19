@@ -14,7 +14,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.DriverPool
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
-import qualified Domain.Types.Organization as SOrg
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.TransporterConfig as STConf
 import qualified Domain.Types.Vehicle as SV
@@ -67,11 +67,11 @@ getDriverPool bookingId =
     calcDriverPool = do
       booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
       let vehicleVariant = booking.vehicleVariant
-          orgId = booking.providerId
+          merchantId = booking.providerId
       let pickupLoc = booking.fromLocation
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
           fareProductType = SRB.getFareProductType booking.bookingDetails
-      mkSortedDriverPool . map mkDriverPoolItem <$> calculateDriverPool pickupLatLong orgId (Just vehicleVariant) fareProductType
+      mkSortedDriverPool . map mkDriverPoolItem <$> calculateDriverPool pickupLatLong merchantId (Just vehicleVariant) fareProductType
 
 recalculateDriverPool ::
   ( HasCacheConfig r,
@@ -105,11 +105,11 @@ calculateDriverPool ::
     HasGoogleCfg r
   ) =>
   LatLong ->
-  Id SOrg.Organization ->
+  Id DM.Merchant ->
   Maybe SV.Variant ->
   SFP.FareProductType ->
   m [DriverPoolResult]
-calculateDriverPool pickupLatLong orgId variant fareProductType = do
+calculateDriverPool pickupLatLong merchantId variant fareProductType = do
   radius <- getRadius
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   nearestDriversResult <-
@@ -117,7 +117,7 @@ calculateDriverPool pickupLatLong orgId variant fareProductType = do
       QP.getNearestDrivers
         pickupLatLong
         radius
-        orgId
+        merchantId
         variant
         fareProductType
         mbDriverPositionInfoExpiry
@@ -128,7 +128,7 @@ calculateDriverPool pickupLatLong orgId variant fareProductType = do
       filterOutDriversWithDistanceAboveThreshold radius approxDriverPool'
   where
     getRadius =
-      QTConf.findValueByOrgIdAndKey orgId (STConf.ConfigKey "radius")
+      QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "radius")
         >>= maybe
           (fromIntegral <$> asks (.defaultRadiusOfSearch))
           radiusFromTransporterConfig

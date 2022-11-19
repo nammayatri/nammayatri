@@ -18,7 +18,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.FareParams as Fare
 import Domain.Types.FarePolicy (FarePolicy)
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.TransporterConfig as DTConf
@@ -38,15 +38,15 @@ data ServiceHandle m = ServiceHandle
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
     endRide :: Id SRB.Booking -> Ride.Ride -> Id Person.Driver -> m (),
     notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> Money -> m (),
-    getFarePolicy :: Id Organization -> Variant -> m (Maybe FarePolicy),
+    getFarePolicy :: Id Merchant -> Variant -> m (Maybe FarePolicy),
     calculateFare ::
-      Id Organization ->
+      Id Merchant ->
       FarePolicy ->
       Meters ->
       UTCTime ->
       Maybe Money ->
       m Fare.FareParameters,
-    putDiffMetric :: Id Organization -> Money -> Meters -> m (),
+    putDiffMetric :: Id Merchant -> Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     isDistanceCalculationFailed :: Id Person.Person -> m Bool,
     finalDistanceCalculation :: Id Person.Person -> LatLong -> m (),
@@ -54,7 +54,7 @@ data ServiceHandle m = ServiceHandle
     getDefaultDropLocThreshold :: m Meters,
     getDefaultRideTravelledDistanceThreshold :: m Meters,
     getDefaultRideTimeEstimatedThreshold :: m Seconds,
-    findConfigByOrgId :: Id Organization -> m (Maybe DTConf.TransporterConfig)
+    findConfigByMerchantId :: Id Merchant -> m (Maybe DTConf.TransporterConfig)
   }
 
 endRideHandler ::
@@ -90,7 +90,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
   pickupDropOutsideOfThreshold <- case mbTripStartLoc of
     Nothing -> pure True
     Just tripStartLoc -> do
-      mbThresholdConfig <- findConfigByOrgId booking.providerId
+      mbThresholdConfig <- findConfigByMerchantId booking.providerId
       defaultPickupLocThreshold <- getDefaultPickupLocThreshold
       defaultDropLocThreshold <- getDefaultDropLocThreshold
       let pickupLocThreshold = metersToHighPrecMeters . fromMaybe defaultPickupLocThreshold . join $ mbThresholdConfig <&> (.pickupLocThreshold)
@@ -109,7 +109,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
       pure pickupDropOutsideOfThreshold
 
   distanceOutsideOfThreshold <- do
-    mbThresholdConfig <- findConfigByOrgId booking.providerId
+    mbThresholdConfig <- findConfigByMerchantId booking.providerId
     defaultRideTravelledDistanceThreshold <- getDefaultRideTravelledDistanceThreshold
     let rideTravelledDistanceThreshold = metersToHighPrecMeters . fromMaybe defaultRideTravelledDistanceThreshold . join $ mbThresholdConfig <&> (.rideTravelledDistanceThreshold)
     let rideDistanceDifference = ride.traveledDistance - metersToHighPrecMeters booking.estimatedDistance
@@ -123,7 +123,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
     pure distanceOutsideOfThreshold
 
   timeOutsideOfThreshold <- do
-    mbThresholdConfig <- findConfigByOrgId booking.providerId
+    mbThresholdConfig <- findConfigByMerchantId booking.providerId
     defaultRideTimeEstimatedThreshold <- getDefaultRideTimeEstimatedThreshold
     let rideTimeEstimatedThreshold = fromMaybe defaultRideTimeEstimatedThreshold . join $ mbThresholdConfig <&> (.rideTimeEstimatedThreshold)
     let tripStartTime = fromJust ride.tripStartTime

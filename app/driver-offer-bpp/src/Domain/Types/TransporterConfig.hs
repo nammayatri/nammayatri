@@ -4,12 +4,12 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time (UTCTime)
 import Domain.Types.Common
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
 
 -- ProviderConfig?
 data TransporterConfigD u = TransporterConfig
-  { organizationId :: Id Organization,
+  { merchantId :: Id Merchant,
     pickupLocThreshold :: Maybe Meters,
     dropLocThreshold :: Maybe Meters,
     rideTravelledDistanceThreshold :: Maybe Meters,

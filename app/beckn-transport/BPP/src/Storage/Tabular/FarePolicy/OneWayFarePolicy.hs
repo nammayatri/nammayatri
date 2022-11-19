@@ -16,7 +16,7 @@ import qualified Domain.Types.FarePolicy.OneWayFarePolicy as Domain
 import qualified Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.FarePolicy.Discount (DiscountT)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateT, getDomainPart)
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 import Tools.Error
 
@@ -26,7 +26,7 @@ mkPersist
     OneWayFarePolicyT sql=fare_policy
       id Text
       vehicleVariant Vehicle.Variant
-      organizationId OrganizationTId
+      merchantId MerchantTId
       baseFare HighPrecMoney Maybe
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
@@ -56,17 +56,17 @@ instance TType FullOneWayFarePolicyT Domain.OneWayFarePolicy where
     return $
       Domain.OneWayFarePolicy
         { id = Id id,
-          organizationId = fromKey organizationId,
+          merchantId = fromKey merchantId,
           baseFare = roundToIntegral <$> baseFare,
           ..
         }
   toTType Domain.OneWayFarePolicy {..} = do
-    let fullPerExtraKmRateList = (organizationId,vehicleVariant,) <$> toList perExtraKmRateList
+    let fullPerExtraKmRateList = (merchantId,vehicleVariant,) <$> toList perExtraKmRateList
         perExtraKmRateTTypeList = toTType <$> fullPerExtraKmRateList
         discountTTypeList = toTType <$> discountList
     ( OneWayFarePolicyT
         { id = getId id,
-          organizationId = toKey organizationId,
+          merchantId = toKey merchantId,
           baseFare = fromIntegral <$> baseFare,
           ..
         },

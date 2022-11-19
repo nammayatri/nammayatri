@@ -8,14 +8,14 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Cancel as ACL
 import qualified Domain.Action.Beckn.Cancel as DCancel
-import Domain.Types.Organization (Organization)
-import qualified Domain.Types.Organization as Organization
+import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
 import Servant
 
 type API =
-  Capture "orgId" (Id Organization)
+  Capture "merchantId" (Id Merchant)
     :> SignatureAuth "Authorization"
     :> API.CancelAPI
 
@@ -23,7 +23,7 @@ handler :: FlowServer API
 handler = cancel
 
 cancel ::
-  Id Organization.Organization ->
+  Id DM.Merchant ->
   SignatureAuthResult ->
   Cancel.CancelReq ->
   FlowHandler AckResponse

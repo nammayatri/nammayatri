@@ -15,7 +15,7 @@ import qualified Domain.Types.FarePolicy.FareProduct as Domain
 import qualified Domain.Types.Quote as Domain
 import qualified Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.FarePolicy.FareProduct ()
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 
@@ -29,7 +29,7 @@ mkPersist
       estimatedFare HighPrecMoney
       discount HighPrecMoney Maybe
       estimatedTotalFare HighPrecMoney
-      providerId OrganizationTId
+      providerId MerchantTId
       vehicleVariant Vehicle.Variant
       createdAt UTCTime
       Primary id

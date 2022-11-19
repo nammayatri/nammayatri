@@ -29,7 +29,7 @@ import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation
 import Data.OpenApi hiding (info)
 import qualified Domain.Types.DriverInformation as DriverInfo
-import qualified Domain.Types.Organization as DO
+import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
@@ -44,7 +44,7 @@ import Tools.Metrics
 data AuthReq = AuthReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text,
-    organizationId :: Text
+    merchantId :: Text
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -143,7 +143,7 @@ makePerson req = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   encMobNum <- encrypt req.mobileNumber
-  let orgId = Just (Id req.organizationId :: Id DO.Organization)
+  let merchantId = Just (Id req.merchantId :: Id DO.Merchant)
   return $
     SP.Person
       { id = pid,
@@ -159,7 +159,7 @@ makePerson req = do
         mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,
         rating = Nothing,
-        organizationId = orgId,
+        merchantId = merchantId,
         isNew = True,
         deviceToken = Nothing,
         language = Nothing,

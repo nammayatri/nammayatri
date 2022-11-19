@@ -5,7 +5,7 @@ module Storage.Queries.SearchRequest where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.SearchRequest
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
@@ -42,13 +42,13 @@ findById searchRequestId = Esq.buildDType $ do
     pure (sReq, sFromLoc, mbSToLoc)
   pure $ extractSolidType <$> mbFullSearchReqT
 
-findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Organization -> m (Maybe SearchRequest)
-findByMsgIdAndBapIdAndBppId txnId bapId orgId = Esq.buildDType $ do
+findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequest)
+findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
   mbFullSearchReqT <- Esq.findOne' $ do
     (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $
       sReq ^. SearchRequestMessageId ==. val txnId
-        &&. sReq ^. SearchRequestProviderId ==. val (toKey orgId)
+        &&. sReq ^. SearchRequestProviderId ==. val (toKey merchantId)
         &&. sReq ^. SearchRequestBapId ==. val bapId
     pure (sReq, sFromLoc, mbSToLoc)
   pure $ extractSolidType <$> mbFullSearchReqT

@@ -34,16 +34,16 @@ data UpdateFareProductReq = UpdateFareProductReq
 
 listFareProducts :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => SP.Person -> m ListFareProductsRes
 listFareProducts person = do
-  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
-  fareProducts <- SFareProduct.findEnabledByOrgId orgId
+  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
+  fareProducts <- SFareProduct.findEnabledByMerchantId merchantId
   pure $ ListFareProductsRes $ makeFareProductAPIEntity <$> fareProducts
 
 updateFareProduct :: (HedisFlow m r, EsqDBFlow m r) => SP.Person -> UpdateFareProductReq -> m APISuccess
 updateFareProduct person updReq = do
-  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
+  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
   Esq.runTransaction $
     if updReq.enabled
-      then SFareProduct.insertIfNotExist orgId updReq.fareProductType
-      else SFareProduct.delete orgId updReq.fareProductType
-  SFareProduct.clearCache orgId updReq.fareProductType
+      then SFareProduct.insertIfNotExist merchantId updReq.fareProductType
+      else SFareProduct.delete merchantId updReq.fareProductType
+  SFareProduct.clearCache merchantId updReq.fareProductType
   pure Success

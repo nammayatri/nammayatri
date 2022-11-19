@@ -23,7 +23,7 @@ mkPersist
     RideRequestT sql=ride_request
       id Text
       bookingId BookingTId
-      shortOrgId Text
+      subscriberId Text
       createdAt UTCTime
       reqType Domain.RideRequestType sql=type
       info Text Maybe
@@ -43,7 +43,7 @@ instance TType RideRequestT Domain.RideRequest where
       Domain.RideRequest
         { id = Id id,
           bookingId = fromKey bookingId,
-          shortOrgId = ShortId shortOrgId,
+          subscriberId = ShortId subscriberId,
           _type = reqType,
           info = decInfo,
           ..
@@ -52,7 +52,7 @@ instance TType RideRequestT Domain.RideRequest where
     RideRequestT
       { id = getId id,
         bookingId = toKey bookingId,
-        shortOrgId = getShortId shortOrgId,
+        subscriberId = getShortId subscriberId,
         reqType = _type,
         info = encodeToText <$> info,
         ..

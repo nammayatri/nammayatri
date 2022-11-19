@@ -9,7 +9,7 @@ import qualified BAPClient.AppBackend as Client
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
+import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "app-backend" Domain.Types.Person as BAP
 import "lib-dashboard" Environment
 import Servant hiding (throwError)
@@ -24,14 +24,14 @@ type API =
              :> BAP.CustomerUpdateAPI
        )
 
-handler :: ShortId DMerchant.Merchant -> FlowServer API
+handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   listCustomer merchantId
     :<|> updateCustomer merchantId
 
 listCustomer ::
-  ShortId DMerchant.Merchant ->
-  ShortId DMerchant.Merchant ->
+  ShortId DM.Merchant ->
+  ShortId DM.Merchant ->
   Maybe Integer ->
   Maybe Integer ->
   FlowHandler Text
@@ -40,8 +40,8 @@ listCustomer userMerchantId merchantId mbLimit mbOffset = withFlowHandlerAPI $ d
   Client.callAppBackendBAP checkedMerchantId (.customers.customerList) mbLimit mbOffset
 
 updateCustomer ::
-  ShortId DMerchant.Merchant ->
-  ShortId DMerchant.Merchant ->
+  ShortId DM.Merchant ->
+  ShortId DM.Merchant ->
   Id BAP.Person ->
   Text ->
   FlowHandler Text

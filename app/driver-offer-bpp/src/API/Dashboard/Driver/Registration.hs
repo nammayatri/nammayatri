@@ -1,10 +1,11 @@
 module API.Dashboard.Driver.Registration where
 
+import Beckn.Types.Id
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver.Registration as Common
 import Domain.Action.Dashboard.Driver.Registration
+import qualified Domain.Types.Merchant as DM
 import Environment
 import Servant
-import Tools.Auth (Dashboard)
 
 type API =
   Common.DocumentsListAPI
@@ -13,10 +14,10 @@ type API =
     :<|> Common.RegisterDLAPI
     :<|> Common.RegisterRCAPI
 
-handler :: Dashboard -> FlowServer API
-handler _ =
-  documentsList
-    :<|> getDocument
-    :<|> uploadDocument
-    :<|> registerDL
-    :<|> registerRC
+handler :: ShortId DM.Merchant -> FlowServer API
+handler merchantId =
+  documentsList merchantId
+    :<|> getDocument merchantId
+    :<|> uploadDocument merchantId
+    :<|> registerDL merchantId
+    :<|> registerRC merchantId

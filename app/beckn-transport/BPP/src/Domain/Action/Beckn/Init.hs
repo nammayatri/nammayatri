@@ -10,12 +10,12 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Veh
 import SharedLogic.FareCalculator.OneWayFareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Geometry as QGeometry
 import Tools.Error
@@ -42,7 +42,7 @@ data InitRentalReq = InitRentalReq
 
 data InitRes = InitRes
   { booking :: DRB.Booking,
-    transporter :: DOrg.Organization
+    transporter :: DM.Merchant
   }
 
 init ::
@@ -53,11 +53,11 @@ init ::
     CoreMetrics m,
     HasGoogleCfg r
   ) =>
-  Id DOrg.Organization ->
+  Id DM.Merchant ->
   InitReq ->
   m InitRes
 init transporterId req = do
-  transporter <- QOrg.findById transporterId >>= fromMaybeM (OrgDoesNotExist transporterId.getId)
+  transporter <- QM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
   unless transporter.enabled $ throwError AgencyDisabled
   now <- getCurrentTime
   booking <- case req.initTypeReq of
@@ -81,7 +81,7 @@ initOneWayTrip ::
   ) =>
   InitReq ->
   InitOneWayReq ->
-  DOrg.Organization ->
+  DM.Merchant ->
   UTCTime ->
   m DRB.Booking
 initOneWayTrip req oneWayReq transporter now = do
@@ -120,7 +120,7 @@ initRentalTrip ::
   ) =>
   InitReq ->
   InitRentalReq ->
-  DOrg.Organization ->
+  DM.Merchant ->
   UTCTime ->
   m DRB.Booking
 initRentalTrip req rentalReq transporter now = do
@@ -166,7 +166,7 @@ buildRBLoc latLon now = do
 buildBooking ::
   MonadFlow m =>
   InitReq ->
-  Id DOrg.Organization ->
+  Id DM.Merchant ->
   Money ->
   Maybe Money ->
   Money ->
@@ -174,13 +174,13 @@ buildBooking ::
   DLoc.BookingLocation ->
   UTCTime ->
   m DRB.Booking
-buildBooking req orgId estimatedFare discount estimatedTotalFare bookingDetails fromLocation now = do
+buildBooking req merchantId estimatedFare discount estimatedTotalFare bookingDetails fromLocation now = do
   id <- generateGUID
   return $
     DRB.Booking
       { id = Id id,
         status = DRB.NEW,
-        providerId = orgId,
+        providerId = merchantId,
         startTime = req.startTime,
         riderId = Nothing,
         fromLocation,

@@ -14,7 +14,7 @@ GET {{bpp-dashboard-host}}
 
 # @name driverList
 
-GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/list?verified=true&limit=10&offset=0&phone=66
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/list?verified=true&limit=10&offset=0&phone=66
 token: {{customer_service}}
 
 ###
@@ -23,7 +23,7 @@ token: {{customer_service}}
 
 @driverId = 001b93df-4f7c-440f-bada-4d46c396d7d0
 
-GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/activity
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/activity
 token: {{customer_service}}
 
 ###
@@ -35,7 +35,7 @@ token: {{customer_service}}
 
 @driverId3e = driver-not-found-0000000000000000000
 
-PUT {{bpp-dashboard-host}}/bpp/beckn-transport/driver/enable
+PUT {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/enable
 token: {{juspay_ops}}
 content-type: application/json
 
@@ -52,7 +52,7 @@ content-type: application/json
 
 @driverId3d = driver-not-found-0000000000000000000
 
-PUT {{bpp-dashboard-host}}/bpp/beckn-transport/driver/disable
+PUT {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/disable
 token: {{juspay_ops}}
 content-type: application/json
 
@@ -62,7 +62,7 @@ content-type: application/json
 
 ###
 
-GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/location
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/location
 token: {{customer_service}}
 content-type: application/json
 
@@ -72,18 +72,18 @@ content-type: application/json
 
 ###
 
-GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/info?mobileNumber=6666666666
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/info?mobileNumber=6666666666
 token: {{customer_service}}
 content-type: application/json
 
 ###
 
-GET {{bpp-dashboard-host}}/bpp/beckn-transport/driver/info?vehicleNumber=3211
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/info?vehicleNumber=3211
 token: {{customer_service}}
 content-type: application/json
 
 ###
 
-DELETE {{bpp-dashboard-host}}/bpp/beckn-transport/driver/{{driverId2e}}/permanentlyDelete
+DELETE {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId2e}}/permanentlyDelete
 token: {{juspay_admin}}
 content-type: application/json

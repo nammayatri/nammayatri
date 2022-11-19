@@ -17,7 +17,7 @@ import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
 import Domain.Action.Allocation (SortMode)
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Subscriber)
 import qualified "beckn-transport" Environment as App
 import EulerHS.Prelude
 import Storage.CachedQueries.CacheConfig
@@ -26,7 +26,7 @@ import Tools.Streaming.Kafka
 
 type Flow = FlowR AppEnv
 
-type Shards = Map Int (ShortId Organization)
+type Shards = Map Int (ShortId Subscriber)
 
 data AppCfg = AppCfg
   { appCfg :: App.AppCfg,

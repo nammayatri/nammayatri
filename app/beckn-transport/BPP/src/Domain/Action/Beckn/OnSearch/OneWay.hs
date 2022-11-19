@@ -11,7 +11,7 @@ import qualified Data.Text as T
 import Data.Traversable
 import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -48,7 +48,7 @@ onSearchCallback ::
     CoreMetrics m
   ) =>
   DSearchRequest.SearchRequest ->
-  Id DOrg.Organization ->
+  Id DM.Merchant ->
   UTCTime ->
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
@@ -93,7 +93,7 @@ buildOneWayQuote ::
   EsqDBFlow m r =>
   DSearchRequest.SearchRequest ->
   Fare.OneWayFareParameters ->
-  Id DOrg.Organization ->
+  Id DM.Merchant ->
   Meters ->
   Meters ->
   DVeh.Variant ->

@@ -14,7 +14,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id)
 import Servant.API
 
@@ -73,7 +73,7 @@ data PersonE e = Person
     identifier :: Maybe Text,
     rating :: Maybe Centesimal,
     isNew :: Bool,
-    organizationId :: Maybe (Id DOrg.Organization),
+    merchantId :: Maybe (Id DM.Merchant), -- TODO remove Maybe
     deviceToken :: Maybe FCM.FCMRecipientToken,
     language :: Maybe GoogleMaps.Language,
     description :: Maybe Text,

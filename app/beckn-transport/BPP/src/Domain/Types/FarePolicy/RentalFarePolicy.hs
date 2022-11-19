@@ -4,15 +4,15 @@ import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Domain.Types.Common
-import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Vehicle
 
 data RentalFarePolicyD s = RentalFarePolicy
   { id :: Id RentalFarePolicy,
-    organizationId :: Id Organization.Organization,
+    merchantId :: Id DM.Merchant,
     vehicleVariant :: Vehicle.Variant,
     baseFare :: Money,
-    baseDistance :: Kilometers, -- Distance
+    baseDistance :: Kilometers,
     baseDuration :: Hours,
     extraKmFare :: HighPrecMoney,
     extraMinuteFare :: HighPrecMoney,
@@ -31,7 +31,7 @@ data RentalFarePolicyAPIEntity = RentalFarePolicyAPIEntity
   { id :: Id RentalFarePolicy,
     vehicleVariant :: Vehicle.Variant,
     baseFare :: Money,
-    baseDistance :: Kilometers, -- Distance
+    baseDistance :: Kilometers,
     baseDuration :: Hours,
     extraKmFare :: HighPrecMoney,
     extraMinuteFare :: HighPrecMoney,

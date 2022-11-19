@@ -12,12 +12,12 @@ import qualified Core.ACL.OnTrack as ACL
 import qualified Core.ACL.Track as ACL
 import Core.Beckn (withCallback)
 import qualified Domain.Action.Beckn.Track as DTrack
-import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Merchant as DM
 import Environment
 import Servant
 
 type API =
-  Capture "orgId" (Id Org.Organization)
+  Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth "Authorization"
     :> Track.TrackAPI
 
@@ -25,7 +25,7 @@ handler :: FlowServer API
 handler = track
 
 track ::
-  Id Org.Organization ->
+  Id DM.Merchant ->
   SignatureAuthResult ->
   Track.TrackReq ->
   FlowHandler AckResponse

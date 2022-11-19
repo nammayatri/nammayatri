@@ -14,12 +14,12 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Traversable
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Environment
 import EulerHS.Prelude hiding (id, state)
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -36,7 +36,7 @@ data DSearchReq = DSearchReq
 
 data DSearchRes = DSearchRes
   { searchRequest :: DSR.SearchRequest,
-    transporter :: DOrg.Organization,
+    transporter :: DM.Merchant,
     fromLocation :: DLoc.SearchReqLocation,
     mbToLocation :: Maybe DLoc.SearchReqLocation,
     searchMetricsMVar :: Metrics.SearchMetricsMVar
@@ -48,9 +48,9 @@ data LocationReq = LocationReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, HasCoordinates)
 
-search :: Id DOrg.Organization -> DSearchReq -> Flow DSearchRes
+search :: Id DM.Merchant -> DSearchReq -> Flow DSearchRes
 search transporterId req@DSearchReq {..} = do
-  transporter <- QOrg.findById transporterId >>= fromMaybeM (OrgDoesNotExist transporterId.getId)
+  transporter <- QM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
   unless transporter.enabled $ throwError AgencyDisabled
   let pickupLatLong = getCoordinates pickupLocation
   let mbDropoffLatLong = getCoordinates <$> mbDropLocation
@@ -98,7 +98,7 @@ getValidTime now startTime = do
 buildSearchRequest ::
   MonadGuid m =>
   DSearchReq ->
-  Id DOrg.Organization ->
+  Id DM.Merchant ->
   UTCTime ->
   UTCTime ->
   DLoc.SearchReqLocation ->

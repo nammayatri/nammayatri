@@ -15,12 +15,12 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Maybe
 import Data.OpenApi (ToSchema)
-import Domain.Types.Organization (OrganizationAPIEntity)
-import qualified Domain.Types.Organization as Org
+import Domain.Types.Merchant (MerchantAPIEntity)
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
@@ -31,7 +31,7 @@ data TranspAdminProfileRes = TranspAdminProfileRes
     lastName :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe FCMRecipientToken,
-    organization :: OrganizationAPIEntity
+    organization :: MerchantAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -47,15 +47,15 @@ type UpdateTranspAdminProfileRes = TranspAdminProfileRes
 
 getProfile :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m TranspAdminProfileRes
 getProfile admin = do
-  let Just orgId = admin.organizationId
-  org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
+  let Just merchantId = admin.merchantId
+  org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   decAdmin <- decrypt admin
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
-  return $ makeTranspAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
+  return $ makeTranspAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
 updateProfile :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateTranspAdminProfileReq -> m UpdateTranspAdminProfileRes
 updateProfile admin req = do
-  let Just orgId = admin.organizationId
+  let Just merchantId = admin.merchantId
       updAdmin =
         admin{firstName = fromMaybe admin.firstName req.firstName,
               middleName = req.middleName <|> admin.middleName,
@@ -64,12 +64,12 @@ updateProfile admin req = do
              }
   Esq.runTransaction $
     QPerson.updatePersonRec updAdmin.id updAdmin
-  org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
+  org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   decUpdAdmin <- decrypt updAdmin
   let personAPIEntity = SP.makePersonAPIEntity decUpdAdmin
-  return $ makeTranspAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
+  return $ makeTranspAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
-makeTranspAdminProfileRes :: SP.PersonAPIEntity -> Org.OrganizationAPIEntity -> TranspAdminProfileRes
+makeTranspAdminProfileRes :: SP.PersonAPIEntity -> DM.MerchantAPIEntity -> TranspAdminProfileRes
 makeTranspAdminProfileRes SP.PersonAPIEntity {..} org =
   TranspAdminProfileRes
     { organization = org,

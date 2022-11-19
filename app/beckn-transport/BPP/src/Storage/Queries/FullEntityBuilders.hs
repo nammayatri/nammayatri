@@ -24,10 +24,10 @@ import Storage.Tabular.Quote.RentalQuote (RentalQuoteT (..))
 
 buildFullOneWayFarePolicy :: Transactionable m => OneWayFarePolicyT -> DTypeBuilder m (SolidType FullOneWayFarePolicyT)
 buildFullOneWayFarePolicy farePolicy = do
-  let orgId = fromKey $ Storage.Tabular.FarePolicy.OneWayFarePolicy.organizationId farePolicy
+  let merchantId = fromKey $ Storage.Tabular.FarePolicy.OneWayFarePolicy.merchantId farePolicy
       vehicleVariant = Storage.Tabular.FarePolicy.OneWayFarePolicy.vehicleVariant farePolicy
-  perExtraKmRate <- QExtraKmRate.findAll' orgId vehicleVariant
-  discount <- QDisc.findAllByOrgIdAndVariant' orgId vehicleVariant
+  perExtraKmRate <- QExtraKmRate.findAll' merchantId vehicleVariant
+  discount <- QDisc.findAllByMerchantIdAndVariant' merchantId vehicleVariant
 
   return $ extractSolidType @OneWayFarePolicy (farePolicy, perExtraKmRate, discount)
 

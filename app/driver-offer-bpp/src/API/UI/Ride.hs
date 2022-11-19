@@ -97,7 +97,7 @@ endRide personId rideId req =
           findRideById = QRide.findById,
           notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
           endRide = RideEndInt.endRideTransaction,
-          getFarePolicy = FarePolicyS.findByOrgIdAndVariant,
+          getFarePolicy = FarePolicyS.findByMerchantIdAndVariant,
           calculateFare = Fare.calculateFare,
           putDiffMetric = RideEndInt.putDiffMetric,
           findDriverLocById = DrLoc.findById,
@@ -107,7 +107,7 @@ endRide personId rideId req =
           getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
           getDefaultRideTravelledDistanceThreshold = asks (.defaultRideTravelledDistanceThreshold),
           getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
-          findConfigByOrgId = QTConf.findByOrgId
+          findConfigByMerchantId = QTConf.findByMerchantId
         }
 
 cancelRide :: Id SP.Person -> Id Ride.Ride -> RideCancel.CancelRideReq -> FlowHandler APISuccess

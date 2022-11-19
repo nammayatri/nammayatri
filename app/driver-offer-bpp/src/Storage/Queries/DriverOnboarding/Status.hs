@@ -11,6 +11,7 @@ import Domain.Types.DriverOnboarding.DriverRCAssociation
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegistrationCertificate)
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as Vehicle
@@ -80,15 +81,17 @@ baseDriverDocumentsInfoQuery licenseImagesAggTable vehicleRegistrationImagesAggT
     `Esq.leftJoin` vehicleRegistrationImagesAggTable
       `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& _ :& _ :& (vehRegImgPersonId, _)) -> just (p ^. PersonTId) ==. vehRegImgPersonId)
 
-fetchDriverDocsInfo :: (Transactionable m) => Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
-fetchDriverDocsInfo mbDriverIds = fmap (map mkDriverDocsInfo) $
+fetchDriverDocsInfo :: (Transactionable m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
+fetchDriverDocsInfo merchantId mbDriverIds = fmap (map mkDriverDocsInfo) $
   Esq.findAll $ do
     imagesCountLic <- imagesAggTableCTEbyDoctype Image.DriverLicense
     imagesCountVehReg <- imagesAggTableCTEbyDoctype Image.VehicleRegistrationCertificate
     person :& license :& licReq :& assoc :& registration :& regReq :& driverInfo :& licImages :& vehRegImages <-
       from $ baseDriverDocumentsInfoQuery imagesCountLic imagesCountVehReg
 
-    where_ $ maybe (val True) (\ids -> person ^. PersonTId `in_` valList (map (toKey . coerce) $ toList ids)) mbDriverIds
+    where_ $
+      maybe (val True) (\ids -> person ^. PersonTId `in_` valList (map (toKey . coerce) $ toList ids)) mbDriverIds
+        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
     pure (person, license, licReq, assoc, registration, regReq, driverInfo, snd licImages, snd vehRegImages)
 
 mkDriverDocsInfo ::
@@ -143,11 +146,13 @@ baseFullDriverWithDocsQuery =
                    just (person ^. PersonTId) ==. vehicle ?. VehicleDriverId
                )
 
-fetchFullDriversInfoWithDocsFirstNameAsc :: (Transactionable m) => Maybe (NonEmpty (Id Driver)) -> m [FullDriverWithDocs]
-fetchFullDriversInfoWithDocsFirstNameAsc mbDriverIds = fmap (map mkFullDriverInfoWithDocs) $
+fetchFullDriverInfoWithDocsFirstNameAsc :: (Transactionable m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [FullDriverWithDocs]
+fetchFullDriverInfoWithDocsFirstNameAsc merchantId mbDriverIds = fmap (map mkFullDriverInfoWithDocs) $
   Esq.findAll $ do
     person :& license :& assoc :& registration :& info :& mbVeh <- from baseFullDriverWithDocsQuery
-    where_ $ maybe (val True) (\ids -> person ^. PersonTId `in_` valList (map (toKey . coerce) $ toList ids)) mbDriverIds
+    where_ $
+      maybe (val True) (\ids -> person ^. PersonTId `in_` valList (map (toKey . coerce) $ toList ids)) mbDriverIds
+        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
     orderBy [asc (person ^. PersonFirstName)]
     pure (person, license, assoc, registration, info, mbVeh, nothing @Int)
 
@@ -176,8 +181,8 @@ mkFullDriverWithRidesCountQuery ridesCountAggQuery =
                    just (person ^. PersonTId) ==. mbPersonId
                )
 
-fetchFullDriverInfoWithDocsByMobileNumber :: (Transactionable m, EncFlow m r) => Text -> Text -> m (Maybe FullDriverWithDocs)
-fetchFullDriverInfoWithDocsByMobileNumber mobileNumber mobileCountryCode = fmap (fmap mkFullDriverInfoWithDocs) $ do
+fetchFullDriverInfoWithDocsByMobileNumber :: (Transactionable m, EncFlow m r) => Id Merchant -> Text -> Text -> m (Maybe FullDriverWithDocs)
+fetchFullDriverInfoWithDocsByMobileNumber merchantId mobileNumber mobileCountryCode = fmap (fmap mkFullDriverInfoWithDocs) $ do
   mobileNumberDbHash <- getDbHash mobileNumber
   Esq.findOne $ do
     ridesCountAggQuery <- ridesCountAggTable
@@ -187,15 +192,19 @@ fetchFullDriverInfoWithDocsByMobileNumber mobileNumber mobileCountryCode = fmap 
       (person ^. PersonRole ==. val DRIVER)
         &&. person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
     pure (person, license, assoc, registration, info, mbVeh, mbRidesCount)
 
-fetchFullDriverInfoWithDocsByVehNumber :: Transactionable m => Text -> m (Maybe FullDriverWithDocs)
-fetchFullDriverInfoWithDocsByVehNumber vehicleNumber = fmap (fmap mkFullDriverInfoWithDocs) $
+fetchFullDriverInfoWithDocsByVehNumber :: Transactionable m => Id Merchant -> Text -> m (Maybe FullDriverWithDocs)
+fetchFullDriverInfoWithDocsByVehNumber merchantId vehicleNumber = fmap (fmap mkFullDriverInfoWithDocs) $
   Esq.findOne $ do
     ridesCountAggQuery <- ridesCountAggTable
     person :& license :& assoc :& registration :& info :& mbVeh :& (_, mbRidesCount) <-
       from $ mkFullDriverWithRidesCountQuery ridesCountAggQuery
-    where_ $ mbVeh ?. VehicleRegistrationNo ==. val (Just vehicleNumber)
+    where_ $
+      (person ^. PersonRole ==. val DRIVER) 
+        &&. mbVeh ?. VehicleRegistrationNo ==. val (Just vehicleNumber)
+        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
     pure (person, license, assoc, registration, info, mbVeh, mbRidesCount)
 
 mkFullDriverInfoWithDocs ::

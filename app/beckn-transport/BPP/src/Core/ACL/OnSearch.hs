@@ -19,7 +19,7 @@ mkOnSearchMessage DOnSearch.DOnSearchRes {..} = do
   let catalogDescriptor = OnSearch.Descriptor "Yatri partner"
       provider =
         OnSearch.Provider
-          { id = transporterInfo.shortId.getShortId,
+          { id = transporterInfo.subscriberId.getShortId,
             descriptor = OnSearch.Descriptor transporterInfo.name,
             locations = [],
             categories = [mkCategory fareProductType],

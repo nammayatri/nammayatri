@@ -11,7 +11,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.FareParams
 import Domain.Types.FarePolicy (FarePolicy)
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
 import SharedLogic.FareCalculator.Calculator
   ( baseFareSum,
@@ -22,14 +22,14 @@ import SharedLogic.FareCalculator.Calculator
 
 calculateFare ::
   (Monad m, Log m) =>
-  Id Organization ->
+  Id Merchant ->
   FarePolicy ->
   Meters ->
   UTCTime ->
   Maybe Money ->
   m FareParameters
-calculateFare orgId farePolicy distance time driverSelectedFare = do
-  logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " and vehicle variant " +|| farePolicy.vehicleVariant ||+ ""
+calculateFare merchantId farePolicy distance time driverSelectedFare = do
+  logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| merchantId ||+ " and vehicle variant " +|| farePolicy.vehicleVariant ||+ ""
   let fareParams = calculateFareParameters farePolicy distance time driverSelectedFare
   logTagInfo
     "FareCalculator"

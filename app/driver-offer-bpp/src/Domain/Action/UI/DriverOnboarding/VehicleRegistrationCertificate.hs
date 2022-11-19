@@ -29,6 +29,7 @@ import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment
 import qualified Idfy.Flow as Idfy
@@ -59,12 +60,18 @@ validateDriverRCReq DriverRCReq {..} =
 
 verifyRC ::
   Bool ->
+  Maybe DM.Merchant ->
   Id Person.Person ->
   DriverRCReq ->
   Flow DriverRCRes
-verifyRC isDashboard personId req@DriverRCReq {..} = do
+verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
   runRequestValidation validateDriverRCReq req
-  _ <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+
+  whenJust mbMerchant $ \merchant -> do
+    -- merchant access checking
+    merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+    unless (merchant.id == merchantId) $ throwError (PersonNotFound personId.getId)
 
   imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
   unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)

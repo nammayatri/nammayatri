@@ -10,7 +10,7 @@ where
 import Beckn.Types.Id (Id (..))
 import Beckn.Utils.Common
 import qualified Domain.Action.UI.Transporter as DTransporter
-import qualified Domain.Types.Organization as SO
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -23,7 +23,7 @@ type API =
     :> ( TokenAuth
            :> Get '[JSON] DTransporter.TransporterRec
            :<|> AdminTokenAuth
-           :> Capture "orgId" (Id SO.Organization)
+           :> Capture "merchantId" (Id DM.Merchant)
            :> ReqBody '[JSON] DTransporter.UpdateTransporterReq
            :> Post '[JSON] DTransporter.UpdateTransporterRes
        )
@@ -33,8 +33,8 @@ handler =
   getTransporter
     :<|> updateTransporter
 
-updateTransporter :: SP.Person -> Id SO.Organization -> DTransporter.UpdateTransporterReq -> FlowHandler DTransporter.UpdateTransporterRes
-updateTransporter admin orgId = withFlowHandlerAPI . DTransporter.updateTransporter admin orgId
+updateTransporter :: SP.Person -> Id DM.Merchant -> DTransporter.UpdateTransporterReq -> FlowHandler DTransporter.UpdateTransporterRes
+updateTransporter admin merchantId = withFlowHandlerAPI . DTransporter.updateTransporter admin merchantId
 
 getTransporter :: Id SP.Person -> FlowHandler DTransporter.TransporterRec
 getTransporter = withFlowHandlerAPI . DTransporter.getTransporter

@@ -12,9 +12,9 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Common (HighPrecMoney, Meters (..))
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate as Domain
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 
 mkPersist
@@ -23,13 +23,13 @@ mkPersist
     PerExtraKmRateT sql=one_way_fare_policy_per_extra_km_rate
       Id Int
       vehicleVariant Vehicle.Variant
-      organizationId OrganizationTId
+      merchantId MerchantTId
       distanceRangeStart Meters
       fare HighPrecMoney
       deriving Generic
     |]
 
-type FullPerExtraKmRate = (Id Organization, Vehicle.Variant, Domain.PerExtraKmRate)
+type FullPerExtraKmRate = (Id Merchant, Vehicle.Variant, Domain.PerExtraKmRate)
 
 getDomainPart :: FullPerExtraKmRate -> Domain.PerExtraKmRate
 getDomainPart (_, _, domain) = domain
@@ -37,7 +37,7 @@ getDomainPart (_, _, domain) = domain
 instance TType PerExtraKmRateT FullPerExtraKmRate where
   fromTType PerExtraKmRateT {..} = do
     return
-      ( fromKey organizationId,
+      ( fromKey merchantId,
         vehicleVariant,
         Domain.PerExtraKmRate
           { distanceRangeStart = distanceRangeStart,
@@ -45,9 +45,9 @@ instance TType PerExtraKmRateT FullPerExtraKmRate where
             ..
           }
       )
-  toTType (orgId, vehVar, Domain.PerExtraKmRate {..}) =
+  toTType (merchantId, vehVar, Domain.PerExtraKmRate {..}) =
     PerExtraKmRateT
-      { organizationId = toKey orgId,
+      { merchantId = toKey merchantId,
         vehicleVariant = vehVar,
         distanceRangeStart = distanceRangeStart,
         fare = fare,

@@ -1,15 +1,21 @@
 module API.Dashboard where
 
 import qualified API.Dashboard.Driver as Driver
+import Beckn.Types.Id
+import qualified Domain.Types.Merchant as DM
 import Environment
 import Servant
 import Tools.Auth
 
 type API =
   "dashboard"
-    :> DashboardTokenAuth
+    :> Capture "merchantId" (ShortId DM.Merchant)
+    :> API'
+
+type API' =
+  DashboardTokenAuth
     :> Driver.API
 
 handler :: FlowServer API
-handler _ =
-  Driver.handler
+handler merchantId _dashboard =
+  Driver.handler merchantId

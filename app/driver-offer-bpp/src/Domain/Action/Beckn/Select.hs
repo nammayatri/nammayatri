@@ -11,7 +11,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common (fromMaybeM, logDebug)
 import qualified Data.Map as M
 import Data.Time.Clock (addUTCTime)
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
@@ -41,18 +41,18 @@ data DSelectReq = DSelectReq
 
 type LanguageDictionary = M.Map GoogleMaps.Language DSearchReq.SearchRequest
 
-handler :: Text -> Id DOrg.Organization -> DSelectReq -> Flow ()
-handler sessiontoken orgId sReq = do
+handler :: Text -> Id DM.Merchant -> DSelectReq -> Flow ()
+handler sessiontoken merchantId sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
-  farePolicy <- FarePolicyS.findByOrgIdAndVariant orgId sReq.variant >>= fromMaybeM NoFarePolicy
-  driverPool <- calculateDriverPool (Just sReq.variant) fromLocation orgId False True
+  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId sReq.variant >>= fromMaybeM NoFarePolicy
+  driverPool <- calculateDriverPool (Just sReq.variant) fromLocation merchantId False True
 
   distRes <- GoogleMaps.getDistance (Just GoogleMaps.CAR) fromLocation toLocation
   let distance = distRes.distance
   let duration = distRes.duration
-  fareParams <- calculateFare orgId farePolicy distance sReq.pickupTime Nothing
-  searchReq <- buildSearchRequest fromLocation toLocation orgId sReq distance duration
+  fareParams <- calculateFare merchantId farePolicy distance sReq.pickupTime Nothing
+  searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration
   let baseFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
@@ -107,12 +107,12 @@ buildSearchRequest ::
   ) =>
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
-  Id DOrg.Organization ->
+  Id DM.Merchant ->
   DSelectReq ->
   Meters ->
   Seconds ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to orgId sReq distance duration = do
+buildSearchRequest from to merchantId sReq distance duration = do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -124,7 +124,7 @@ buildSearchRequest from to orgId sReq distance duration = do
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,
         validTill = validTill_,
-        providerId = orgId,
+        providerId = merchantId,
         fromLocation = from,
         toLocation = to,
         bapId = sReq.bapId,

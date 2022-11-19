@@ -11,13 +11,13 @@ import qualified Core.ACL.OnTrack as ACL
 import qualified Core.ACL.Track as ACL
 import Core.Beckn (withCallback)
 import qualified Domain.Action.Beckn.Track as DTrack
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import Environment
 import EulerHS.Prelude
 import Servant hiding (throwError)
 
 type API =
-  Capture "orgId" (Id Organization)
+  Capture "merchantId" (Id Merchant)
     :> SignatureAuth "Authorization"
     :> API.TrackAPI
 
@@ -25,7 +25,7 @@ handler :: FlowServer API
 handler = track
 
 track ::
-  Id Organization ->
+  Id Merchant ->
   SignatureAuthResult ->
   API.TrackReq ->
   FlowHandler AckResponse

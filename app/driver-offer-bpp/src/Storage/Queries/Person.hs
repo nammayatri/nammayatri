@@ -14,7 +14,7 @@ import Beckn.Utils.GenericPretty
 import qualified Data.Maybe as Mb
 import Domain.Types.DriverInformation
 import Domain.Types.DriverLocation
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.DriverInformation
@@ -65,64 +65,68 @@ mkFullDriver (p, l, i, v) = FullDriver p l i v
 
 findAllDrivers ::
   (Transactionable m, Functor m) =>
+  Id Merchant ->
   m [FullDriver]
-findAllDrivers = fmap (map mkFullDriver) $
-  Esq.findAll $ do
-    (person :& driverLocation :& driverInfo :& vehicle) <-
-      from baseFullPersonQuery
-    where_
-      (person ^. PersonRole ==. val Person.DRIVER)
-    orderBy [asc (person ^. PersonFirstName)]
-    return (person, driverLocation, driverInfo, vehicle)
-
-findAllDriversByIdsFirstnameAsc ::
-  (Transactionable m, Functor m) =>
-  [Id Person] ->
-  m [FullDriver]
-findAllDriversByIdsFirstnameAsc driverIds = fmap (map mkFullDriver) $
+findAllDrivers merchantId = fmap (map mkFullDriver) $
   Esq.findAll $ do
     (person :& driverLocation :& driverInfo :& vehicle) <-
       from baseFullPersonQuery
     where_ $
-      (person ^. PersonRole ==. val Person.DRIVER)
-        &&. person ^. PersonTId `in_` valList (map toKey driverIds)
+      person ^. PersonRole ==. val Person.DRIVER
+        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
     orderBy [asc (person ^. PersonFirstName)]
     return (person, driverLocation, driverInfo, vehicle)
 
-findByIdAndRoleAndOrgId ::
+findAllDriversByIdsFirstNameAsc ::
+  (Transactionable m, Functor m) =>
+  Id Merchant ->
+  [Id Person] ->
+  m [FullDriver]
+findAllDriversByIdsFirstNameAsc merchantId driverIds = fmap (map mkFullDriver) $
+  Esq.findAll $ do
+    (person :& driverLocation :& driverInfo :& vehicle) <-
+      from baseFullPersonQuery
+    where_ $
+      person ^. PersonRole ==. val Person.DRIVER
+        &&. person ^. PersonTId `in_` valList (map toKey driverIds)
+        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
+    orderBy [asc (person ^. PersonFirstName)]
+    return (person, driverLocation, driverInfo, vehicle)
+
+findByIdAndRoleAndMerchantId ::
   Transactionable m =>
   Id Person ->
   Person.Role ->
-  Id Organization ->
+  Id Merchant ->
   m (Maybe Person)
-findByIdAndRoleAndOrgId pid role_ orgId =
+findByIdAndRoleAndMerchantId pid role_ merchantId =
   Esq.findOne $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonTId ==. val (toKey pid)
         &&. person ^. PersonRole ==. val role_
-        &&. person ^. PersonOrganizationId ==. val (Just $ toKey orgId)
+        &&. person ^. PersonMerchantId ==. val (Just $ toKey merchantId)
     return person
 
-findAllByOrgId ::
+findAllByMerchantId ::
   Transactionable m =>
   [Person.Role] ->
-  Id Organization ->
+  Id Merchant ->
   m [Person]
-findAllByOrgId roles orgId =
+findAllByMerchantId roles merchantId =
   Esq.findAll $ do
     person <- from $ table @PersonT
     where_ $
       (person ^. PersonRole `in_` valList roles ||. val (null roles))
-        &&. person ^. PersonOrganizationId ==. val (Just $ toKey orgId)
+        &&. person ^. PersonMerchantId ==. val (Just $ toKey merchantId)
     return person
 
-findAdminsByOrgId :: Transactionable m => Id Organization -> m [Person]
-findAdminsByOrgId orgId =
+findAdminsByMerchantId :: Transactionable m => Id Merchant -> m [Person]
+findAdminsByMerchantId merchantId =
   Esq.findAll $ do
     person <- from $ table @PersonT
     where_ $
-      person ^. PersonOrganizationId ==. val (Just (toKey orgId))
+      person ^. PersonMerchantId ==. val (Just (toKey merchantId))
         &&. person ^. PersonRole ==. val Person.ADMIN
     return person
 
@@ -162,13 +166,13 @@ findByEmail email_ =
       person ^. PersonEmail ==. val (Just email_)
     return person
 
-updateOrganizationIdAndMakeAdmin :: Id Person -> Id Organization -> SqlDB ()
-updateOrganizationIdAndMakeAdmin personId orgId = do
+updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB ()
+updateMerchantIdAndMakeAdmin personId merchantId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ PersonOrganizationId =. val (Just $ toKey orgId),
+      [ PersonMerchantId =. val (Just $ toKey merchantId),
         PersonRole =. val Person.ADMIN,
         PersonUpdatedAt =. val now
       ]
@@ -201,7 +205,7 @@ updatePersonRec personId person = do
         PersonRating =. val (person.rating),
         PersonLanguage =. val (person.language),
         PersonDeviceToken =. val (person.deviceToken),
-        PersonOrganizationId =. val (toKey <$> person.organizationId),
+        PersonMerchantId =. val (toKey <$> person.merchantId),
         PersonDescription =. val (person.description),
         PersonUpdatedAt =. val now
       ]
@@ -260,11 +264,11 @@ getNearestDrivers ::
   Maybe Variant ->
   LatLong ->
   Integer ->
-  Id Organization ->
+  Id Merchant ->
   Bool ->
   Maybe Seconds ->
   m [DriverPoolResult]
-getNearestDrivers mbVariant LatLong {..} radiusMeters orgId onlyNotOnRide mbDriverPositionInfoExpiry = do
+getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
   now <- getCurrentTime
   res <- Esq.findAll $ do
     withTable <- with $ do
@@ -272,7 +276,7 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters orgId onlyNotOnRide mbDriv
         from baseFullPersonQuery
       where_ $
         person ^. PersonRole ==. val Person.DRIVER
-          &&. person ^. PersonOrganizationId ==. val (Just $ toKey orgId)
+          &&. person ^. PersonMerchantId ==. val (Just $ toKey merchantId)
           &&. driverInfo ^. DriverInformationActive
           &&. (if onlyNotOnRide then not_ (driverInfo ^. DriverInformationOnRide) else val True)
           &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)

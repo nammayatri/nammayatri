@@ -6,7 +6,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.OperatingCity
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Storage.Tabular.DriverOnboarding.OperatingCity
 
 create :: OperatingCity -> SqlDB ()
@@ -18,12 +18,12 @@ findById ::
   m (Maybe OperatingCity)
 findById = Esq.findById
 
-findByorgId ::
+findByMerchantId ::
   Transactionable m =>
-  Id Organization ->
+  Id Merchant ->
   m (Maybe OperatingCity)
-findByorgId personid = do
+findByMerchantId personid = do
   findOne $ do
     vechileRegCert <- from $ table @OperatingCityT
-    where_ $ vechileRegCert ^. OperatingCityOrganizationId ==. val (toKey personid)
+    where_ $ vechileRegCert ^. OperatingCityMerchantId ==. val (toKey personid)
     return vechileRegCert

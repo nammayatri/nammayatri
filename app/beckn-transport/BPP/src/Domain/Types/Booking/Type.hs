@@ -11,7 +11,7 @@ import Data.Time
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
@@ -39,7 +39,7 @@ instance ToHttpApiData BookingStatus where
 data Booking = Booking
   { id :: Id Booking,
     status :: BookingStatus,
-    providerId :: Id DOrg.Organization,
+    providerId :: Id DM.Merchant,
     bapId :: Text,
     bapUri :: BaseUrl,
     startTime :: UTCTime,

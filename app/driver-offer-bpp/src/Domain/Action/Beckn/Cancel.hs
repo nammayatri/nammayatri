@@ -12,12 +12,12 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
@@ -41,14 +41,14 @@ cancel ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  Id Org.Organization ->
+  Id DM.Merchant ->
   SignatureAuthResult ->
   CancelReq ->
   m ()
 cancel transporterId _ req = do
   transporter <-
-    QOrg.findById transporterId
-      >>= fromMaybeM (OrgNotFound transporterId.getId)
+    QM.findById transporterId
+      >>= fromMaybeM (MerchantNotFound transporterId.getId)
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied

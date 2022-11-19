@@ -63,7 +63,7 @@ doCalculateRentalFare ServiceHandle {..} rentalFarePolicyId distance startTime s
       >>= fromMaybeM NoRentalFarePolicy
   logTagInfo "RentalFareCalculator" $
     "Initiating rental fare calculation for organization "
-      +|| rentalFarePolicy.organizationId ||+ " for "
+      +|| rentalFarePolicy.merchantId ||+ " for "
       +|| rentalFarePolicy.vehicleVariant ||+ ""
   let fareParams = calculateRentalFareParameters rentalFarePolicy distance startTime stopTime
   logTagInfo

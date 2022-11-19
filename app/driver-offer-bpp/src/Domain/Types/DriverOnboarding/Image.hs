@@ -3,7 +3,7 @@ module Domain.Types.DriverOnboarding.Image where
 import Beckn.Prelude
 import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.Error
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.Person
 
 data ImageType = DriverLicense | VehicleRegistrationCertificate
@@ -12,7 +12,7 @@ data ImageType = DriverLicense | VehicleRegistrationCertificate
 data Image = Image
   { id :: Id Image,
     personId :: Id Person,
-    organizationId :: Id Organization,
+    merchantId :: Id Merchant,
     s3Path :: Text,
     imageType :: ImageType,
     isValid :: Bool,

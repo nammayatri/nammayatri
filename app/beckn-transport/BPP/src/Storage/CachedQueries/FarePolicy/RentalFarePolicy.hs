@@ -4,11 +4,11 @@
 module Storage.CachedQueries.FarePolicy.RentalFarePolicy
   ( findById,
     findByOffer,
-    findAllByOrgId,
+    findAllByMerchantId,
     markAllAsDeleted,
     create,
     clearCache,
-    clearAllCacheByOrgId,
+    clearAllCacheByMerchantId,
   )
 where
 
@@ -21,7 +21,7 @@ import Beckn.Utils.Common
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.RentalFarePolicy
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as Queries
@@ -34,37 +34,37 @@ findById id =
 
 findByOffer ::
   (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
-  Id Organization ->
+  Id Merchant ->
   Vehicle.Variant ->
   Kilometers ->
   Hours ->
   m (Maybe RentalFarePolicy)
-findByOffer orgId vehVar kms hours =
-  Hedis.get (makeOrgIdVehVarKmHoursKey orgId vehVar kms hours) >>= \case
+findByOffer merchantId vehVar kms hours =
+  Hedis.get (makeMerchantIdVehVarKmHoursKey merchantId vehVar kms hours) >>= \case
     Nothing -> findAndCache
     Just id ->
       Hedis.get (makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy a
         Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheRentalFarePolicy /=<< Queries.findByOffer orgId vehVar kms hours
+    findAndCache = flip whenJust cacheRentalFarePolicy /=<< Queries.findByOffer merchantId vehVar kms hours
 
-findAllByOrgId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Organization -> m [RentalFarePolicy]
-findAllByOrgId orgId =
-  Hedis.get (makeAllOrgIdKey orgId) >>= \case
+findAllByMerchantId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m [RentalFarePolicy]
+findAllByMerchantId merchantId =
+  Hedis.get (makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy) a
-    Nothing -> cacheRes /=<< Queries.findAllByOrgId orgId
+    Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
   where
     cacheRes rFPs = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      Hedis.setExp (makeAllOrgIdKey orgId) (coerce @[RentalFarePolicy] @[RentalFarePolicyD 'Unsafe] rFPs) expTime
+      Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[RentalFarePolicy] @[RentalFarePolicyD 'Unsafe] rFPs) expTime
 
 cacheRentalFarePolicy :: (HasCacheConfig r, HedisFlow m r) => RentalFarePolicy -> m ()
 cacheRentalFarePolicy rFP = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey rFP.id
   Hedis.setExp idKey (coerce @RentalFarePolicy @(RentalFarePolicyD 'Unsafe) rFP) expTime
-  Hedis.setExp (makeOrgIdVehVarKmHoursKey rFP.organizationId rFP.vehicleVariant rFP.baseDistance rFP.baseDuration) idKey expTime
+  Hedis.setExp (makeMerchantIdVehVarKmHoursKey rFP.merchantId rFP.vehicleVariant rFP.baseDistance rFP.baseDuration) idKey expTime
 
 baseKey :: Text
 baseKey = "CachedQueries:RentalFarePolicy"
@@ -72,9 +72,9 @@ baseKey = "CachedQueries:RentalFarePolicy"
 makeIdKey :: Id RentalFarePolicy -> Text
 makeIdKey id = baseKey <> ":Id-" <> id.getId
 
-makeOrgIdVehVarKmHoursKey :: Id Organization -> Vehicle.Variant -> Kilometers -> Hours -> Text
-makeOrgIdVehVarKmHoursKey orgId vehVar kms hrs =
-  baseKey <> ":OrgId-" <> orgId.getId
+makeMerchantIdVehVarKmHoursKey :: Id Merchant -> Vehicle.Variant -> Kilometers -> Hours -> Text
+makeMerchantIdVehVarKmHoursKey merchantId vehVar kms hrs =
+  baseKey <> ":MerchantId-" <> merchantId.getId
     <> ":VehVar-"
     <> show vehVar
     <> ":Killometers-"
@@ -82,20 +82,20 @@ makeOrgIdVehVarKmHoursKey orgId vehVar kms hrs =
     <> ":Hours-"
     <> show hrs
 
-makeAllOrgIdKey :: Id Organization -> Text
-makeAllOrgIdKey orgId = baseKey <> ":OrgId-" <> orgId.getId <> ":All"
+makeAllMerchantIdKey :: Id Merchant -> Text
+makeAllMerchantIdKey merchantId = baseKey <> ":MerchantId-" <> merchantId.getId <> ":All"
 
 -- Call it after any update
 clearCache :: HedisFlow m r => RentalFarePolicy -> m ()
 clearCache rFP = do
   Hedis.del (makeIdKey rFP.id)
-  Hedis.del (makeOrgIdVehVarKmHoursKey rFP.organizationId rFP.vehicleVariant rFP.baseDistance rFP.baseDuration)
-  Hedis.del (makeAllOrgIdKey rFP.organizationId)
+  Hedis.del (makeMerchantIdVehVarKmHoursKey rFP.merchantId rFP.vehicleVariant rFP.baseDistance rFP.baseDuration)
+  Hedis.del (makeAllMerchantIdKey rFP.merchantId)
 
 -- Call it after any mass delete
-clearAllCacheByOrgId :: HedisFlow m r => Id Organization -> m ()
-clearAllCacheByOrgId orgId =
-  Hedis.delByPattern (makeAllOrgIdKey orgId <> "*")
+clearAllCacheByMerchantId :: HedisFlow m r => Id Merchant -> m ()
+clearAllCacheByMerchantId merchantId =
+  Hedis.delByPattern (makeAllMerchantIdKey merchantId <> "*")
 
 create ::
   RentalFarePolicy ->
@@ -103,6 +103,6 @@ create ::
 create = Queries.create
 
 markAllAsDeleted ::
-  Id Organization ->
+  Id Merchant ->
   Esq.SqlDB ()
 markAllAsDeleted = Queries.markAllAsDeleted

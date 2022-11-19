@@ -13,7 +13,7 @@ import Beckn.Types.Id
 import qualified Domain.Types.Person as DPers
 import qualified Domain.Types.Vehicle as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
-import qualified Storage.Tabular.Organization as TOrg
+import qualified Storage.Tabular.Merchant as TM
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.Category"
@@ -25,7 +25,7 @@ mkPersist
   [defaultQQ|
     VehicleT sql=vehicle
       driverId PersonTId
-      organizationId TOrg.OrganizationTId
+      merchantId TM.MerchantTId
       variant Variant.Variant
       model Text
       color Text
@@ -54,12 +54,12 @@ instance TType VehicleT Domain.Vehicle where
     return $
       Domain.Vehicle
         { driverId = fromKey driverId,
-          organizationId = fromKey organizationId,
+          merchantId = fromKey merchantId,
           ..
         }
   toTType Domain.Vehicle {..} =
     VehicleT
       { driverId = toKey driverId,
-        organizationId = toKey organizationId,
+        merchantId = toKey merchantId,
         ..
       }

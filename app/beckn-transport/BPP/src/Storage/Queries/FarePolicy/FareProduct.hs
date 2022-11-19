@@ -12,34 +12,34 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Types.FarePolicy.FareProduct
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import Storage.Tabular.FarePolicy.FareProduct
 
-findEnabledByOrgId ::
+findEnabledByMerchantId ::
   Transactionable m =>
-  Id Organization ->
+  Id Merchant ->
   m [FareProduct]
-findEnabledByOrgId = findEnabledByOrgIdAndType Nothing
+findEnabledByMerchantId = findEnabledByMerchantIdAndType Nothing
 
-findEnabledByOrgIdAndType ::
+findEnabledByMerchantIdAndType ::
   Transactionable m =>
   Maybe FareProductType ->
-  Id Organization ->
+  Id Merchant ->
   m [FareProduct]
-findEnabledByOrgIdAndType mbType orgId =
+findEnabledByMerchantIdAndType mbType merchantId =
   Esq.findAll $ do
     fareProduct <- from $ table @FareProductT
     where_ $
-      fareProduct ^. FareProductOrganizationId ==. val (toKey orgId)
+      fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
         &&. whenJust_ mbType (\typ -> fareProduct ^. FareProductProductType ==. val typ)
     pure fareProduct
 
 insertIfNotExist ::
-  Id Organization ->
+  Id Merchant ->
   FareProductType ->
   SqlDB ()
-insertIfNotExist orgId typ = do
-  mbFp <- listToMaybe <$> findEnabledByOrgIdAndType (Just typ) orgId
+insertIfNotExist merchantId typ = do
+  mbFp <- listToMaybe <$> findEnabledByMerchantIdAndType (Just typ) merchantId
   case mbFp of
     Nothing -> insertFareProduct
     Just _ -> pure ()
@@ -51,17 +51,17 @@ insertIfNotExist orgId typ = do
       Esq.create @_ @FareProduct $
         FareProduct
           { id = guid,
-            organizationId = orgId,
+            merchantId = merchantId,
             _type = typ,
             createdAt = now
           }
 
 delete ::
-  Id Organization ->
+  Id Merchant ->
   FareProductType ->
   SqlDB ()
-delete orgId fpType = Esq.delete $ do
+delete merchantId fpType = Esq.delete $ do
   fareProduct <- from $ table @FareProductT
   where_ $
-    fareProduct ^. FareProductOrganizationId ==. val (toKey orgId)
+    fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
       &&. fareProduct ^. FareProductProductType ==. val fpType

@@ -5,13 +5,13 @@ import Beckn.Types.Id (Id)
 import Beckn.Utils.JSON
 import Data.OpenApi
 import Domain.Types.Common
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 
 data FareProductType = ONE_WAY | RENTAL deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
 data FareProductD s = FareProduct
   { id :: Id FareProduct,
-    organizationId :: Id DOrg.Organization,
+    merchantId :: Id DM.Merchant,
     _type :: FareProductType,
     createdAt :: UTCTime
   }

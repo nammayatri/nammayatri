@@ -3,7 +3,7 @@
 
 module Storage.CachedQueries.FarePolicy.Discount
   ( findById,
-    findAllByOrgIdAndVariant,
+    findAllByMerchantIdAndVariant,
     create,
     update,
     deleteById,
@@ -20,7 +20,7 @@ import Beckn.Utils.Common
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.Discount
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.OneWayFarePolicy as OWFP
@@ -32,15 +32,15 @@ findById id =
     Just a -> return . Just $ coerce @(DiscountD 'Unsafe) @Discount a
     Nothing -> flip whenJust cacheDiscount /=<< Queries.findById id
 
-findAllByOrgIdAndVariant :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Organization -> Vehicle.Variant -> m [Discount]
-findAllByOrgIdAndVariant orgId vehVar =
-  Hedis.get (makeAllOrgIdVehVarKey orgId vehVar) >>= \case
+findAllByMerchantIdAndVariant :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> Vehicle.Variant -> m [Discount]
+findAllByMerchantIdAndVariant merchantId vehVar =
+  Hedis.get (makeAllMerchantIdVehVarKey merchantId vehVar) >>= \case
     Just a -> return $ fmap (coerce @(DiscountD 'Unsafe) @Discount) a
-    Nothing -> cacheRes /=<< Queries.findAllByOrgIdAndVariant orgId vehVar
+    Nothing -> cacheRes /=<< Queries.findAllByMerchantIdAndVariant merchantId vehVar
   where
     cacheRes discounts = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      Hedis.setExp (makeAllOrgIdVehVarKey orgId vehVar) (coerce @[Discount] @[DiscountD 'Unsafe] discounts) expTime
+      Hedis.setExp (makeAllMerchantIdVehVarKey merchantId vehVar) (coerce @[Discount] @[DiscountD 'Unsafe] discounts) expTime
 
 cacheDiscount :: (HasCacheConfig r, HedisFlow m r) => Discount -> m ()
 cacheDiscount discount = do
@@ -54,15 +54,15 @@ baseKey = "CachedQueries:Discount"
 makeIdKey :: Id Discount -> Text
 makeIdKey id = baseKey <> ":Id-" <> id.getId
 
-makeAllOrgIdVehVarKey :: Id Organization -> Vehicle.Variant -> Text
-makeAllOrgIdVehVarKey orgId vehVar = baseKey <> ":OrgId-" <> orgId.getId <> ":VehVar-" <> show vehVar <> ":All"
+makeAllMerchantIdVehVarKey :: Id Merchant -> Vehicle.Variant -> Text
+makeAllMerchantIdVehVarKey merchantId vehVar = baseKey <> ":MerchantId-" <> merchantId.getId <> ":VehVar-" <> show vehVar <> ":All"
 
 -- Call it after any update
 clearCache :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Discount -> m ()
 clearCache discount = do
   Hedis.del (makeIdKey discount.id)
-  Hedis.del (makeAllOrgIdVehVarKey discount.organizationId discount.vehicleVariant)
-  owFP <- OWFP.findByOrgIdAndVariant discount.organizationId discount.vehicleVariant
+  Hedis.del (makeAllMerchantIdVehVarKey discount.merchantId discount.vehicleVariant)
+  owFP <- OWFP.findByMerchantIdAndVariant discount.merchantId discount.vehicleVariant
   whenJust owFP OWFP.clearCache
 
 create ::

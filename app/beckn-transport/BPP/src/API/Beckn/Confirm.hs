@@ -12,14 +12,14 @@ import qualified Core.ACL.Confirm as ACL
 import qualified Core.ACL.OnConfirm as ACL
 import Core.Beckn (withCallback)
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import Domain.Types.Organization (Organization)
-import qualified Domain.Types.Organization as Org
+import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
 import Servant
 
 type API =
-  Capture "orgId" (Id Organization)
+  Capture "merchantId" (Id Merchant)
     :> SignatureAuth "Authorization"
     :> API.ConfirmAPI
 
@@ -27,7 +27,7 @@ handler :: FlowServer API
 handler = confirm
 
 confirm ::
-  Id Org.Organization ->
+  Id DM.Merchant ->
   SignatureAuthResult ->
   Confirm.ConfirmReq ->
   FlowHandler AckResponse

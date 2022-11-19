@@ -129,7 +129,7 @@ buildBookingAPIEntity booking = do
           identifier = Nothing,
           rating = Nothing,
           isNew = False,
-          organizationId = Nothing,
+          merchantId = Nothing,
           deviceToken = Nothing,
           description = Nothing,
           createdAt = now,
@@ -138,7 +138,7 @@ buildBookingAPIEntity booking = do
     vehicleDefault now =
       DVeh.Vehicle
         { driverId = Id "[Vehicle deleted]",
-          organizationId = Id "N/A",
+          merchantId = Id "N/A",
           variant = DVeh.SEDAN,
           model = "N/A",
           color = "N/A",

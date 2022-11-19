@@ -23,7 +23,7 @@ data BookingCancellationReason = BookingCancellationReason
 data CancellationSource
   = ByUser
   | ByDriver
-  | ByOrganization
+  | ByMerchant
   | ByAllocator
   | ByApplication
   deriving (Show, Eq, Ord, Read, Generic)

@@ -16,7 +16,7 @@ import qualified Domain.Types.FarePolicy.FareProduct as Domain
 import qualified Domain.Types.Vehicle as Veh
 import Storage.Tabular.Booking.BookingLocation (BookingLocationTId)
 import Storage.Tabular.FarePolicy.FareProduct ()
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()
 
@@ -29,7 +29,7 @@ mkPersist
       id Text
       fareProductType Domain.FareProductType
       status Domain.BookingStatus
-      providerId OrganizationTId
+      providerId MerchantTId
       bapId Text
       bapUri Text
       startTime UTCTime

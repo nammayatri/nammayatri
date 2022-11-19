@@ -3,8 +3,8 @@
 
 module Storage.CachedQueries.FarePolicy
   ( findById,
-    findByOrgIdAndVariant,
-    findAllByOrgId,
+    findByMerchantIdAndVariant,
+    findAllByMerchantId,
     clearCache,
     update,
   )
@@ -19,7 +19,7 @@ import Beckn.Utils.Common
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.FarePolicy
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy as Queries
@@ -30,53 +30,53 @@ findById id =
     Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
     Nothing -> flip whenJust cacheFarePolicy /=<< Queries.findById id
 
-findByOrgIdAndVariant ::
+findByMerchantIdAndVariant ::
   (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
-  Id Organization ->
+  Id Merchant ->
   Vehicle.Variant ->
   m (Maybe FarePolicy)
-findByOrgIdAndVariant orgId vehVar =
-  Hedis.get (makeOrgIdVehVarKey orgId vehVar) >>= \case
+findByMerchantIdAndVariant merchantId vehVar =
+  Hedis.get (makeMerchantIdVehVarKey merchantId vehVar) >>= \case
     Nothing -> findAndCache
     Just id ->
       Hedis.get (makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
         Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheFarePolicy /=<< Queries.findByOrgIdAndVariant orgId vehVar
+    findAndCache = flip whenJust cacheFarePolicy /=<< Queries.findByMerchantIdAndVariant merchantId vehVar
 
-findAllByOrgId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Organization -> m [FarePolicy]
-findAllByOrgId orgId =
-  Hedis.get (makeAllOrgIdKey orgId) >>= \case
+findAllByMerchantId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m [FarePolicy]
+findAllByMerchantId merchantId =
+  Hedis.get (makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(FarePolicyD 'Unsafe) @FarePolicy) a
-    Nothing -> cacheRes /=<< Queries.findAllByOrgId orgId
+    Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
   where
     cacheRes fps = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      Hedis.setExp (makeAllOrgIdKey orgId) (coerce @[FarePolicy] @[FarePolicyD 'Unsafe] fps) expTime
+      Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[FarePolicy] @[FarePolicyD 'Unsafe] fps) expTime
 
 cacheFarePolicy :: (HasCacheConfig r, HedisFlow m r) => FarePolicy -> m ()
 cacheFarePolicy fp = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey fp.id
   Hedis.setExp idKey (coerce @FarePolicy @(FarePolicyD 'Unsafe) fp) expTime
-  Hedis.setExp (makeOrgIdVehVarKey fp.organizationId fp.vehicleVariant) idKey expTime
+  Hedis.setExp (makeMerchantIdVehVarKey fp.merchantId fp.vehicleVariant) idKey expTime
 
 makeIdKey :: Id FarePolicy -> Text
 makeIdKey id = "CachedQueries:FarePolicy:Id-" <> id.getId
 
-makeOrgIdVehVarKey :: Id Organization -> Vehicle.Variant -> Text
-makeOrgIdVehVarKey orgId vehVar = "CachedQueries:FarePolicy:OrgId-" <> orgId.getId <> ":VehVar-" <> show vehVar
+makeMerchantIdVehVarKey :: Id Merchant -> Vehicle.Variant -> Text
+makeMerchantIdVehVarKey merchantId vehVar = "CachedQueries:FarePolicy:MerchantId-" <> merchantId.getId <> ":VehVar-" <> show vehVar
 
-makeAllOrgIdKey :: Id Organization -> Text
-makeAllOrgIdKey orgId = "CachedQueries:FarePolicy:OrgId-" <> orgId.getId <> ":All"
+makeAllMerchantIdKey :: Id Merchant -> Text
+makeAllMerchantIdKey merchantId = "CachedQueries:FarePolicy:MerchantId-" <> merchantId.getId <> ":All"
 
 -- Call it after any update
 clearCache :: HedisFlow m r => FarePolicy -> m ()
 clearCache fp = do
   Hedis.del (makeIdKey fp.id)
-  Hedis.del (makeOrgIdVehVarKey fp.organizationId fp.vehicleVariant)
-  Hedis.del (makeAllOrgIdKey fp.organizationId)
+  Hedis.del (makeMerchantIdVehVarKey fp.merchantId fp.vehicleVariant)
+  Hedis.del (makeAllMerchantIdKey fp.merchantId)
 
 update :: FarePolicy -> Esq.SqlDB ()
 update = Queries.update

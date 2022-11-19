@@ -185,7 +185,7 @@ token: {{driverOfferCustomerToken}}
 
 # @name driverList
 
-GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/list
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/list
   ?limit=10
   &offset=0
 content-type: application/json

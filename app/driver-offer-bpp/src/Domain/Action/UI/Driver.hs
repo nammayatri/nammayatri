@@ -51,8 +51,7 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.FareParams as Fare
 import Domain.Types.FarePolicy (ExtraFee)
-import qualified Domain.Types.Organization as Org
-import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Person, PersonAPIEntity)
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.SearchRequest as DSReq
@@ -66,8 +65,8 @@ import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
-import Storage.CachedQueries.FarePolicy (findByOrgIdAndVariant)
-import qualified Storage.CachedQueries.Organization as QOrg
+import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt
@@ -95,7 +94,7 @@ data DriverInformationRes = DriverInformationRes
     onRide :: Bool,
     verified :: Bool,
     enabled :: Bool,
-    organization :: Organization.OrganizationAPIEntity,
+    organization :: DM.MerchantAPIEntity,
     language :: Maybe GoogleMaps.Language
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -230,7 +229,7 @@ createDriver ::
   OnboardDriverReq ->
   m OnboardDriverRes
 createDriver admin req = do
-  let Just orgId = admin.organizationId
+  let Just merchantId = admin.merchantId
   runRequestValidation validateOnboardDriverReq req
   let personEntity = req.person
   duplicateCheck
@@ -239,16 +238,16 @@ createDriver admin req = do
   duplicateCheck
     (QPerson.findByMobileNumber personEntity.mobileCountryCode personEntity.mobileNumber)
     "Person with this mobile number already exists"
-  person <- buildDriver req.person orgId
-  vehicle <- buildVehicle req.vehicle person.id orgId
+  person <- buildDriver req.person merchantId
+  vehicle <- buildVehicle req.vehicle person.id merchantId
   Esq.runTransaction $ do
     QPerson.create person
     createDriverDetails person.id admin.id
     QVehicle.create vehicle
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
-    QOrg.findById orgId
-      >>= fromMaybeM (OrgNotFound orgId.getId)
+    CQM.findById merchantId
+      >>= fromMaybeM (MerchantNotFound merchantId.getId)
   decPerson <- decrypt person
   let mobNum = personEntity.mobileNumber
       mobCounCode = personEntity.mobileCountryCode
@@ -294,10 +293,10 @@ getInformation personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (person, driverInfo)
-  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
+  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
   organization <-
-    QOrg.findById orgId
-      >>= fromMaybeM (OrgNotFound orgId.getId)
+    CQM.findById merchantId
+      >>= fromMaybeM (MerchantNotFound merchantId.getId)
   pure $ makeDriverInformationRes driverEntity organization
 
 setActivity :: (EsqDBFlow m r) => Id SP.Person -> Bool -> m APISuccess.APISuccess
@@ -313,8 +312,8 @@ setActivity personId isActive = do
 
 listDriver :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
-  let Just orgId = admin.organizationId
-  personList <- QDriverInformation.findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId
+  let Just merchantId = admin.merchantId
+  personList <- QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbLimit mbOffset merchantId
   respPersonList <- traverse buildDriverEntityRes personList
   return $ ListDriverRes respPersonList
 
@@ -350,11 +349,11 @@ changeDriverEnableState ::
   Bool ->
   m APISuccess
 changeDriverEnableState admin personId isEnabled = do
-  let Just orgId = admin.organizationId
+  let Just merchantId = admin.merchantId
   person <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  unless (person.organizationId == Just orgId) $ throwError Unauthorized
+  unless (person.merchantId == Just merchantId) $ throwError Unauthorized
   Esq.runTransaction $ do
     QDriverInformation.updateEnabledState driverId isEnabled
     unless isEnabled $ QDriverInformation.updateActivity driverId False
@@ -369,11 +368,11 @@ changeDriverEnableState admin personId isEnabled = do
 
 deleteDriver :: (EsqDBFlow m r, Redis.HedisFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
-  let Just orgId = admin.organizationId
+  let Just merchantId = admin.merchantId
   driver <-
     QPerson.findById driverId
       >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  unless (driver.organizationId == Just orgId || driver.role == SP.DRIVER) $ throwError Unauthorized
+  unless (driver.merchantId == Just merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
   clearDriverSession driverId
   Esq.runTransaction $ do
     QDriverInformation.deleteById (cast driverId)
@@ -414,10 +413,10 @@ updateDriver personId req = do
   Esq.runTransaction $
     QPerson.updatePersonRec personId updPerson
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
-  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
+  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
   org <-
-    QOrg.findById orgId
-      >>= fromMaybeM (OrgNotFound orgId.getId)
+    CQM.findById merchantId
+      >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return $ makeDriverInformationRes driverEntity org
 
 sendInviteSms ::
@@ -444,8 +443,8 @@ sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
         SMS.text = SF.constructInviteSms orgName inviteTemplate
       }
 
-buildDriver :: (EncFlow m r) => CreatePerson -> Id Org.Organization -> m SP.Person
-buildDriver req orgId = do
+buildDriver :: (EncFlow m r) => CreatePerson -> Id DM.Merchant -> m SP.Person
+buildDriver req merchantId = do
   pid <- generateGUID
   now <- getCurrentTime
   mobileNumber <- Just <$> encrypt req.mobileNumber
@@ -468,14 +467,14 @@ buildDriver req orgId = do
         SP.rating = Nothing,
         SP.deviceToken = Nothing,
         SP.language = Nothing,
-        SP.organizationId = Just orgId,
+        SP.merchantId = Just merchantId,
         SP.description = Nothing,
         SP.createdAt = now,
         SP.updatedAt = now
       }
 
-buildVehicle :: MonadFlow m => CreateVehicle -> Id SP.Person -> Id Org.Organization -> m SV.Vehicle
-buildVehicle req personId orgId = do
+buildVehicle :: MonadFlow m => CreateVehicle -> Id SP.Person -> Id DM.Merchant -> m SV.Vehicle
+buildVehicle req personId merchantId = do
   now <- getCurrentTime
   return $
     SV.Vehicle
@@ -485,7 +484,7 @@ buildVehicle req personId orgId = do
         SV.make = Nothing,
         SV.model = req.model,
         SV.size = Nothing,
-        SV.organizationId = orgId,
+        SV.merchantId = merchantId,
         SV.variant = req.variant,
         SV.color = req.color,
         SV.energyType = Nothing,
@@ -495,17 +494,17 @@ buildVehicle req personId orgId = do
         SV.updatedAt = now
       }
 
-makeDriverInformationRes :: DriverEntityRes -> Org.Organization -> DriverInformationRes
+makeDriverInformationRes :: DriverEntityRes -> DM.Merchant -> DriverInformationRes
 makeDriverInformationRes DriverEntityRes {..} org =
   DriverInformationRes
-    { organization = Org.makeOrganizationAPIEntity org,
+    { organization = DM.makeMerchantAPIEntity org,
       ..
     }
 
 getNearbySearchRequests :: (EsqDBFlow m r) => Id SP.Person -> m GetNearbySearchRequestsRes
 getNearbySearchRequests driverId = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  _ <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
+  _ <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
   nearbyReqs <- QSRD.findByDriver driverId
   searchRequestForDriverAPIEntity <- mapM buildSearchRequestForDriverAPIEntity nearbyReqs
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
@@ -541,7 +540,7 @@ offerQuote driverId req = do
   now <- getCurrentTime
   when (sReq.validTill < now) $ throwError SearchRequestExpired
   let mbOfferedFare = req.offeredFare
-  organization <- QOrg.findById sReq.providerId >>= fromMaybeM (OrgDoesNotExist sReq.providerId.getId)
+  organization <- CQM.findById sReq.providerId >>= fromMaybeM (MerchantDoesNotExist sReq.providerId.getId)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
   driverInfo <- QDrInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
@@ -549,7 +548,7 @@ offerQuote driverId req = do
   sReqFD <-
     QSRD.findByDriverAndSearchReq driverId sReq.id
       >>= fromMaybeM NoSearchRequestForDriver
-  farePolicy <- findByOrgIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
+  farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
   whenJust mbOfferedFare $ \off ->
     unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
       throwError $ NotAllowedExtraFee $ show off

@@ -11,14 +11,14 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.DriverOnboarding.OperatingCity as Domain
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     OperatingCityT sql=operating_city
       id Text
-      organizationId OrganizationTId
+      merchantId MerchantTId
       cityName Text
       enabled Bool
       createdAt UTCTime
@@ -37,13 +37,13 @@ instance TType OperatingCityT Domain.OperatingCity where
     return $
       Domain.OperatingCity
         { id = Id id,
-          organizationId = fromKey organizationId,
+          merchantId = fromKey merchantId,
           ..
         }
 
   toTType Domain.OperatingCity {..} =
     OperatingCityT
       { id = getId id,
-        organizationId = toKey organizationId,
+        merchantId = toKey merchantId,
         ..
       }

@@ -41,7 +41,7 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
           }
   let providerSpec =
         OS.Provider
-          { id = provider.shortId.getShortId,
+          { id = provider.subscriberId.getShortId,
             descriptor = OS.Descriptor {name = provider.name},
             locations = [],
             categories = [autoOneWayCategory],
@@ -56,7 +56,7 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   OS.OnSearchMessage $
     OS.Catalog
       { bpp_providers = [providerSpec],
-        bpp_descriptor = OS.Descriptor provider.shortId.getShortId
+        bpp_descriptor = OS.Descriptor provider.subscriberId.getShortId
       }
 
 mkStartInfo :: DSearch.DSearchRes -> OS.StartInfo

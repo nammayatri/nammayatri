@@ -8,7 +8,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate
 
@@ -18,22 +18,22 @@ findAll' ::
     MonadThrow m,
     Log m
   ) =>
-  Id Organization ->
+  Id Merchant ->
   Vehicle.Variant ->
   DTypeBuilder m [PerExtraKmRateT]
-findAll' orgId vehicleVariant = do
+findAll' merchantId vehicleVariant = do
   Esq.findAll' $ do
     perExtraKmRate <- from $ table @PerExtraKmRateT
     where_ $
-      perExtraKmRate ^. PerExtraKmRateOrganizationId ==. val (toKey orgId)
+      perExtraKmRate ^. PerExtraKmRateMerchantId ==. val (toKey merchantId)
         &&. perExtraKmRate ^. PerExtraKmRateVehicleVariant ==. val vehicleVariant
     orderBy [asc $ perExtraKmRate ^. PerExtraKmRateDistanceRangeStart]
     return perExtraKmRate
 
-deleteAll' :: Id Organization -> Vehicle.Variant -> FullEntitySqlDB ()
-deleteAll' orgId var =
+deleteAll' :: Id Merchant -> Vehicle.Variant -> FullEntitySqlDB ()
+deleteAll' merchantId var =
   Esq.delete' $ do
     perExtraKmRate <- from $ table @PerExtraKmRateT
     where_ $
-      perExtraKmRate ^. PerExtraKmRateOrganizationId ==. val (toKey orgId)
+      perExtraKmRate ^. PerExtraKmRateMerchantId ==. val (toKey merchantId)
         &&. perExtraKmRate ^. PerExtraKmRateVehicleVariant ==. val var

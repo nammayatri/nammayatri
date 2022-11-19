@@ -10,7 +10,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.List.NonEmpty as NE
-import qualified Domain.Types.Organization as SOrg
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
 import GHC.Float (double2Int)
@@ -27,11 +27,11 @@ calculateDriverPool ::
   ) =>
   Maybe Variant ->
   a ->
-  Id SOrg.Organization ->
+  Id DM.Merchant ->
   Bool ->
   Bool ->
   m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
-calculateDriverPool variant pickup orgId onlyNotOnRide shouldFilterByActualDistance = do
+calculateDriverPool variant pickup merchantId onlyNotOnRide shouldFilterByActualDistance = do
   radius <- fromIntegral <$> asks (.defaultRadiusOfSearch)
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   approxDriverPool <-
@@ -41,7 +41,7 @@ calculateDriverPool variant pickup orgId onlyNotOnRide shouldFilterByActualDista
           variant
           pickupLatLong
           radius
-          orgId
+          merchantId
           onlyNotOnRide
           mbDriverPositionInfoExpiry
   logPretty DEBUG "approxDriverPool" approxDriverPool

@@ -19,7 +19,7 @@ import Beckn.Types.Predicate
 import Beckn.Utils.Common
 import Beckn.Utils.Validation
 import Domain.Types.FarePolicy.RentalFarePolicy as Domain
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Vehicle
 import Storage.CachedQueries.CacheConfig
@@ -63,23 +63,23 @@ validateCreateRentalsFarePolicyRequest CreateRentalFarePolicyItem {..} =
 
 createRentalFarePolicy :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> CreateRentalFarePolicyReq -> m APISuccess
 createRentalFarePolicy admin req = do
-  orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
+  merchantId <- admin.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
   mapM_ (runRequestValidation validateCreateRentalsFarePolicyRequest) req.createList
   newRentalFarePolicyItems <- forM req.createList $ \createItemReq -> do
     guid <- Id <$> generateGUID
-    pure $ toDomainType orgId guid createItemReq
+    pure $ toDomainType merchantId guid createItemReq
   Esq.runTransaction $ do
-    SRentalFarePolicy.markAllAsDeleted orgId
+    SRentalFarePolicy.markAllAsDeleted merchantId
     forM_ newRentalFarePolicyItems SRentalFarePolicy.create
-  SRentalFarePolicy.clearAllCacheByOrgId orgId
+  SRentalFarePolicy.clearAllCacheByMerchantId merchantId
   pure Success
   where
-    toDomainType :: Id Organization -> Id RentalFarePolicy -> CreateRentalFarePolicyItem -> RentalFarePolicy
-    toDomainType orgId guid CreateRentalFarePolicyItem {..} = do
+    toDomainType :: Id Merchant -> Id RentalFarePolicy -> CreateRentalFarePolicyItem -> RentalFarePolicy
+    toDomainType merchantId guid CreateRentalFarePolicyItem {..} = do
       let driverAllowanceForDay' = driverAllowanceForDay
       RentalFarePolicy
         { id = guid,
-          organizationId = orgId,
+          merchantId = merchantId,
           baseFare = baseFare,
           driverAllowanceForDay = driverAllowanceForDay',
           descriptions = mkDescriptions extraKmFare extraMinuteFare driverAllowanceForDay',
@@ -88,8 +88,8 @@ createRentalFarePolicy admin req = do
 
 listRentalFarePolicies :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListRentalFarePoliciesRes
 listRentalFarePolicies person = do
-  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
-  rentalFarePolicies <- SRentalFarePolicy.findAllByOrgId orgId
+  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
+  rentalFarePolicies <- SRentalFarePolicy.findAllByMerchantId merchantId
   pure $
     ListRentalFarePoliciesRes
       { rentalFarePolicies = map makeRentalFarePolicyAPIEntity rentalFarePolicies

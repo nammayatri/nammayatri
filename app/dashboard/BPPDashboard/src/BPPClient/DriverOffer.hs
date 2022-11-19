@@ -7,16 +7,18 @@ module BPPClient.DriverOffer
   )
 where
 
-import "driver-offer-bpp" API.Dashboard as Dashboard
+import "driver-offer-bpp" API.Dashboard as BPP
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Dashboard.Common.Driver as Common
 import qualified Dashboard.Common.Driver.Registration as Common
+import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Servant
+import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 import "lib-dashboard" Tools.Metrics
 
@@ -40,8 +42,8 @@ data DriversAPIs = DriversAPIs
     registerRC :: Id Common.Driver -> Common.RegisterRCReq -> Euler.EulerClient APISuccess
   }
 
-mkDriverOfferAPIs :: Text -> DriverOfferAPIs
-mkDriverOfferAPIs token = do
+mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
+mkDriverOfferAPIs merchantId token = do
   let drivers = DriversAPIs {..}
   DriverOfferAPIs {..}
   where
@@ -59,7 +61,7 @@ mkDriverOfferAPIs token = do
                :<|> registerDL
                :<|> registerRC
              ) =
-        Euler.client (Proxy :: Proxy Dashboard.API) token
+        clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
 callDriverOfferBPP ::
   forall m r b c.
@@ -67,6 +69,7 @@ callDriverOfferBPP ::
     HasFlowEnv m r '["dataServers" ::: [DataServer]],
     CallServerAPI DriverOfferAPIs m r b c
   ) =>
+  CheckedShortId DM.Merchant ->
   (DriverOfferAPIs -> b) ->
   c
-callDriverOfferBPP = callServerAPI @_ @m @r DRIVER_OFFER_BPP mkDriverOfferAPIs "callDriverOfferBPP"
+callDriverOfferBPP merchantId = callServerAPI @_ @m @r DRIVER_OFFER_BPP (mkDriverOfferAPIs merchantId) "callDriverOfferBPP"

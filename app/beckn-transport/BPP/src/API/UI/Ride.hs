@@ -114,7 +114,7 @@ endRide personId rideId req = withFlowHandlerAPI $ do
           getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
           getDefaultRideTravelledDistanceThreshold = asks (.defaultRideTravelledDistanceThreshold),
           getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
-          findConfigByOrgIdAndKey = QTConf.findValueByOrgIdAndKey
+          findConfigByMerchantIdAndKey = QTConf.findValueByMerchantIdAndKey
         }
 
 cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess

@@ -10,7 +10,7 @@ import Beckn.Types.Id
 import qualified Data.Time as DT
 import Domain.Types.DriverOnboarding.Error
 import Domain.Types.DriverOnboarding.Image
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import Environment
 import Storage.Tabular.DriverOnboarding.Image
@@ -26,15 +26,17 @@ findById = Esq.findById
 
 findImagesByPersonAndType ::
   (Transactionable m) =>
+  Id Merchant ->
   Id Person ->
   ImageType ->
   m [Image]
-findImagesByPersonAndType personId imgType = do
+findImagesByPersonAndType merchantId personId imgType = do
   findAll $ do
     images <- from $ table @ImageT
     where_ $
       images ^. ImagePersonId ==. val (toKey personId)
         &&. images ^. ImageImageType ==. val imgType
+        &&. images ^. ImageMerchantId ==. val (toKey merchantId)
     return images
 
 findRecentByPersonIdAndImageType ::
@@ -67,14 +69,14 @@ updateToValid id = do
       [ImageIsValid =. val True]
     where_ $ tbl ^. ImageTId ==. val (toKey id)
 
-findByorgId ::
+findByMerchantId ::
   Transactionable m =>
-  Id Organization ->
+  Id Merchant ->
   m [Image]
-findByorgId orgId = do
+findByMerchantId merchantId = do
   findAll $ do
     images <- from $ table @ImageT
-    where_ $ images ^. ImageOrganizationId ==. val (toKey orgId)
+    where_ $ images ^. ImageMerchantId ==. val (toKey merchantId)
     return images
 
 addFailureReason :: Id Image -> DriverOnboardingError -> SqlDB ()

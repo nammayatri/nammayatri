@@ -6,7 +6,7 @@ import qualified Data.List as List
 import qualified Domain.Action.Beckn.OnSearch.OneWay as OneWay
 import qualified Domain.Action.Beckn.OnSearch.Rental as Rental
 import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -18,7 +18,7 @@ import qualified Tools.Metrics as Metrics
 
 data DOnSearchReq = DOnSearchReq
   { searchRequest :: DSR.SearchRequest,
-    transporter :: DOrg.Organization,
+    transporter :: DM.Merchant,
     fromLocation :: DLoc.SearchReqLocation,
     mbToLocation :: Maybe DLoc.SearchReqLocation,
     searchMetricsMVar :: Metrics.SearchMetricsMVar
@@ -31,7 +31,7 @@ data DOnSearchRes = DOnSearchRes
   }
 
 data TransporterInfo = TransporterInfo
-  { shortId :: ShortId DOrg.Organization,
+  { subscriberId :: ShortId DM.Subscriber,
     name :: Text,
     contacts :: Text,
     ridesInProgress :: Int,
@@ -44,7 +44,7 @@ data QuoteInfos = OneWayQuoteInfo [OneWay.QuoteInfo] | RentalQuoteInfo [Rental.Q
 onSearch :: DOnSearchReq -> Flow DOnSearchRes
 onSearch DOnSearchReq {..} = do
   now <- getCurrentTime
-  fareProducts <- QFareProduct.findEnabledByOrgId transporter.id
+  fareProducts <- QFareProduct.findEnabledByMerchantId transporter.id
   let isRentalProduct = any (\fareProduct -> fareProduct._type == DFareProduct.RENTAL) fareProducts
   let isOneWayProduct = any (\fareProduct -> fareProduct._type == DFareProduct.ONE_WAY) fareProducts
   onSearchReq <-
@@ -66,7 +66,7 @@ onSearch DOnSearchReq {..} = do
 
 buildDOnSearchRes ::
   EsqDBFlow m r =>
-  DOrg.Organization ->
+  DM.Merchant ->
   QuoteInfos ->
   DFareProduct.FareProductType ->
   m DOnSearchRes
@@ -74,7 +74,7 @@ buildDOnSearchRes org quoteInfos fareProductType = do
   count <- QRide.getCountByStatus org.id
   let transporterInfo =
         TransporterInfo
-          { shortId = org.shortId,
+          { subscriberId = org.subscriberId,
             name = org.name,
             contacts = fromMaybe "" org.mobileNumber,
             ridesInProgress = fromMaybe 0 $ List.lookup DRide.INPROGRESS count,

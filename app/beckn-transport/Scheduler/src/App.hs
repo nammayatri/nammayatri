@@ -54,7 +54,7 @@ allocateRentalRide job = C.handleAll (const $ pure Retry) $
             { id = guid,
               createdAt = now,
               bookingId = job.jobData.bookingId,
-              shortOrgId = job.jobData.shortOrgId,
+              subscriberId = job.jobData.shortOrgId,
               _type = RideRequest.ALLOCATION,
               info = Nothing
             }

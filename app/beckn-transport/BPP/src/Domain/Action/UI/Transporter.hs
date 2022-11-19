@@ -15,16 +15,16 @@ import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
-import qualified Domain.Types.Organization as SO
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as QO
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 
 newtype TransporterRec = TransporterRec
-  { organization :: SO.OrganizationAPIEntity
+  { organization :: DM.MerchantAPIEntity
   }
   deriving (Generic, ToJSON, ToSchema)
 
@@ -35,7 +35,7 @@ data UpdateTransporterReq = UpdateTransporterReq
   }
   deriving (Generic, Show, FromJSON, ToSchema)
 
-type UpdateTransporterRes = SO.OrganizationAPIEntity
+type UpdateTransporterRes = DM.MerchantAPIEntity
 
 validateUpdateTransporterReq :: Validate UpdateTransporterReq
 validateUpdateTransporterReq UpdateTransporterReq {..} =
@@ -44,28 +44,28 @@ validateUpdateTransporterReq UpdateTransporterReq {..} =
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name
     ]
 
-updateTransporter :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => SP.Person -> Id SO.Organization -> UpdateTransporterReq -> m UpdateTransporterRes
-updateTransporter admin orgId req = do
-  unless (Just orgId == admin.organizationId) $ throwError AccessDenied
+updateTransporter :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
+updateTransporter admin merchantId req = do
+  unless (Just merchantId == admin.merchantId) $ throwError AccessDenied
   runRequestValidation validateUpdateTransporterReq req
-  org <-
-    QO.findById orgId
-      >>= fromMaybeM (OrgDoesNotExist orgId.getId)
-  let updOrg =
-        org{SO.name = fromMaybe (org.name) (req.name),
-            SO.description = (req.description) <|> (org.description),
-            SO.enabled = fromMaybe (org.enabled) (req.enabled)
-           }
-  Esq.runTransaction $ QO.update updOrg
-  QO.clearCache updOrg
-  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updOrg)
-  return $ SO.makeOrganizationAPIEntity updOrg
+  merchant <-
+    CQM.findById merchantId
+      >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+  let updMerchant =
+        merchant{DM.name = fromMaybe (merchant.name) (req.name),
+                 DM.description = (req.description) <|> (merchant.description),
+                 DM.enabled = fromMaybe (merchant.enabled) (req.enabled)
+                }
+  Esq.runTransaction $ CQM.update updMerchant
+  CQM.clearCache updMerchant
+  logTagInfo ("merchantAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updMerchant)
+  return $ DM.makeMerchantAPIEntity updMerchant
 
 getTransporter :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id SP.Person -> m TransporterRec
 getTransporter personId = do
   person <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
-  case person.organizationId of
-    Just orgId -> TransporterRec . SO.makeOrganizationAPIEntity <$> (QO.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId))
-    Nothing -> throwError (PersonFieldNotPresent "organization_id")
+  case person.merchantId of
+    Just merchantId -> TransporterRec . DM.makeMerchantAPIEntity <$> (CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId))
+    Nothing -> throwError (PersonFieldNotPresent "merchant_id")

@@ -32,13 +32,12 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.FareParams as Fare
-import Domain.Types.Organization as Org
-import qualified Domain.Types.Organization as SOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
@@ -48,18 +47,18 @@ callOnSelect ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  Org.Organization ->
+  DM.Merchant ->
   DSR.SearchRequest ->
   OnSelect.OnSelectMessage ->
   m ()
 callOnSelect transporter searchRequest content = do
   let bapId = searchRequest.bapId
       bapUri = searchRequest.bapUri
-  let bppShortId = getShortId $ transporter.shortId
-      authKey = getHttpManagerKey bppShortId
+  let bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   let msgId = searchRequest.messageId
-  context <- buildTaxiContext Context.ON_SELECT msgId Nothing bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
+  context <- buildTaxiContext Context.ON_SELECT msgId Nothing bapId bapUri (Just bppSubscriberId) (Just bppUri)
   logDebug $ "on_select request bpp: " <> show content
   void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
 
@@ -67,25 +66,25 @@ callOnUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  Org.Organization ->
+  DM.Merchant ->
   DRB.Booking ->
   OnUpdate.OnUpdateMessage ->
   m ()
 callOnUpdate transporter booking content = do
   let bapId = booking.bapId
       bapUri = booking.bapUri
-  let bppShortId = getShortId $ transporter.shortId
-      authKey = getHttpManagerKey bppShortId
+  let bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   msgId <- generateGUID
-  context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
+  context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just bppSubscriberId) (Just bppUri)
   void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 callOnConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  Org.Organization ->
+  DM.Merchant ->
   Context.Context ->
   OnConfirm.OnConfirmMessage ->
   m ()
@@ -93,16 +92,16 @@ callOnConfirm transporter contextFromConfirm content = do
   let bapUri = contextFromConfirm.bap_uri
       bapId = contextFromConfirm.bap_id
       msgId = contextFromConfirm.message_id
-      bppShortId = getShortId $ transporter.shortId
-      authKey = getHttpManagerKey bppShortId
+      bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl transporter.id
-  context_ <- buildTaxiContext Context.ON_CONFIRM msgId Nothing bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
+  context_ <- buildTaxiContext Context.ON_CONFIRM msgId Nothing bapId bapUri (Just bppSubscriberId) (Just bppUri)
   void $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
-  Id Org.Organization ->
+  Id DM.Merchant ->
   m BaseUrl
 buildBppUrl (Id transporterId) =
   asks (.nwAddress)
@@ -121,8 +120,8 @@ sendRideAssignedUpdateToBAP ::
   m ()
 sendRideAssignedUpdateToBAP booking ride = do
   transporter <-
-    QOrg.findById booking.providerId
-      >>= fromMaybeM (OrgNotFound booking.providerId.getId)
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
@@ -142,8 +141,8 @@ sendRideStartedUpdateToBAP ::
   m ()
 sendRideStartedUpdateToBAP booking ride = do
   transporter <-
-    QOrg.findById booking.providerId
-      >>= fromMaybeM (OrgNotFound booking.providerId.getId)
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   let rideStartedBuildReq = ACL.RideStartedBuildReq {..}
   rideStartedMsg <- ACL.buildOnUpdateMessage rideStartedBuildReq
   void $ callOnUpdate transporter booking rideStartedMsg
@@ -163,8 +162,8 @@ sendRideCompletedUpdateToBAP ::
   m ()
 sendRideCompletedUpdateToBAP booking ride fareParams finalFare = do
   transporter <-
-    QOrg.findById booking.providerId
-      >>= fromMaybeM (OrgNotFound booking.providerId.getId)
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, finalFare}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
   void $ callOnUpdate transporter booking rideCompletedMsg
@@ -176,7 +175,7 @@ sendBookingCancelledUpdateToBAP ::
     CoreMetrics m
   ) =>
   DRB.Booking ->
-  SOrg.Organization ->
+  DM.Merchant ->
   SRBCR.CancellationSource ->
   m ()
 sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
@@ -189,7 +188,7 @@ sendDriverOffer ::
     CoreMetrics m,
     HasPrettyLogger m r
   ) =>
-  SOrg.Organization ->
+  DM.Merchant ->
   DSR.SearchRequest ->
   DDQ.DriverQuote ->
   m ()
@@ -198,7 +197,7 @@ sendDriverOffer transporter searchReq driverQuote = do
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>
-      SOrg.Organization ->
+      DM.Merchant ->
       DSR.SearchRequest ->
       [DDQ.DriverQuote] ->
       m ACL.DOnSelectReq
@@ -208,7 +207,7 @@ sendDriverOffer transporter searchReq driverQuote = do
       logPretty DEBUG "on_select: quotes" quotes
       let transporterInfo =
             ACL.TransporterInfo
-              { shortId = org.shortId,
+              { subscriberId = org.subscriberId,
                 name = org.name,
                 contacts = fromMaybe "" org.mobileNumber,
                 ridesInProgress = 0, -- FIXME

@@ -57,16 +57,16 @@ handler =
     :<|> getDocs
 
 verifyDL :: Id DP.Person -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
-verifyDL personId = withFlowHandlerAPI . DriverOnboarding.verifyDL False personId
+verifyDL personId = withFlowHandlerAPI . DriverOnboarding.verifyDL False Nothing personId
 
 verifyRC :: Id DP.Person -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
-verifyRC personId = withFlowHandlerAPI . DriverOnboarding.verifyRC False personId
+verifyRC personId = withFlowHandlerAPI . DriverOnboarding.verifyRC False Nothing personId
 
 statusHandler :: Id DP.Person -> FlowHandler DriverOnboarding.StatusRes
 statusHandler = withFlowHandlerAPI . DriverOnboarding.statusHandler
 
 validateImage :: Id DP.Person -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
-validateImage personId = withFlowHandlerAPI . Image.validateImage False personId
+validateImage personId = withFlowHandlerAPI . Image.validateImage False Nothing personId
 
 validateImageFile :: Id DP.Person -> Image.ImageValidateFileRequest -> FlowHandler Image.ImageValidateResponse
 validateImageFile personId = withFlowHandlerAPI . Image.validateImageFile False personId

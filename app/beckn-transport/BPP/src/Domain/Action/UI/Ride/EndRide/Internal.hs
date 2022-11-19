@@ -8,11 +8,11 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Ride as SRide
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as CQOrg
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as DriverStats
@@ -30,7 +30,7 @@ endRideTransaction bookingId ride driverId fareBreakups = Esq.runTransaction $ d
   DriverStats.updateIdleTime driverId
   traverse_ QFareBreakup.create fareBreakups
 
-putDiffMetric :: (Metrics.HasBPPMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Organization -> Money -> Meters -> m ()
-putDiffMetric orgId money mtrs = do
-  org <- CQOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
+putDiffMetric :: (Metrics.HasBPPMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
+putDiffMetric merchantId money mtrs = do
+  org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   Metrics.putFareAndDistanceDeviations org.name money mtrs

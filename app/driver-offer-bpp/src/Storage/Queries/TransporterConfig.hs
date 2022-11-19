@@ -8,14 +8,14 @@ where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.TransporterConfig
 import Storage.Tabular.TransporterConfig
 
-findByOrgId :: Transactionable m => Id Organization -> m (Maybe TransporterConfig)
-findByOrgId orgId =
+findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe TransporterConfig)
+findByMerchantId merchantId =
   Esq.findOne $ do
     config <- from $ table @TransporterConfigT
     where_ $
-      config ^. TransporterConfigOrganizationId ==. val (toKey orgId)
+      config ^. TransporterConfigMerchantId ==. val (toKey merchantId)
     return config

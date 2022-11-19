@@ -12,8 +12,8 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
-import Domain.Types.Organization (Organization)
-import qualified Domain.Types.Organization as DOrg
+import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.TransporterConfig as DTConf
@@ -30,7 +30,7 @@ data ServiceHandle m = ServiceHandle
     endRideTransaction :: Id SRB.Booking -> Ride.Ride -> Id Person.Driver -> [DFareBreakup.FareBreakup] -> m (),
     notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> [DFareBreakup.FareBreakup] -> m (),
     calculateFare ::
-      Id Organization ->
+      Id Merchant ->
       Vehicle.Variant ->
       Meters ->
       UTCTime ->
@@ -47,7 +47,7 @@ data ServiceHandle m = ServiceHandle
     buildOneWayFareBreakups :: Fare.OneWayFareParameters -> Id SRB.Booking -> m [DFareBreakup.FareBreakup],
     buildRentalFareBreakups :: RentalFare.RentalFareParameters -> Id SRB.Booking -> m [DFareBreakup.FareBreakup],
     recalculateFareEnabled :: m Bool,
-    putDiffMetric :: Id Organization -> Money -> Meters -> m (),
+    putDiffMetric :: Id Merchant -> Money -> Meters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     finalDistanceCalculation :: Id Person.Person -> LatLong -> m (),
     isDistanceCalculationFailed :: Id Person.Person -> m Bool,
@@ -55,7 +55,7 @@ data ServiceHandle m = ServiceHandle
     getDefaultDropLocThreshold :: m Meters,
     getDefaultRideTravelledDistanceThreshold :: m Meters,
     getDefaultRideTimeEstimatedThreshold :: m Seconds,
-    findConfigByOrgIdAndKey :: Id Organization -> DTConf.ConfigKey -> m (Maybe DTConf.TransporterConfig)
+    findConfigByMerchantIdAndKey :: Id Merchant -> DTConf.ConfigKey -> m (Maybe DTConf.TransporterConfig)
   }
 
 newtype EndRideReq = EndRideReq
@@ -224,14 +224,14 @@ data Stop = PICKUP | DROP
 getLocThreshold ::
   (MonadThrow m, Log m) =>
   ServiceHandle m ->
-  Id DOrg.Organization ->
+  Id DM.Merchant ->
   Stop ->
   m Meters
-getLocThreshold ServiceHandle {..} orgId stop = do
+getLocThreshold ServiceHandle {..} merchantId stop = do
   (paramName, defaultThreshold) <- case stop of
     PICKUP -> (DTConf.ConfigKey "pickup_loc_threshold",) <$> getDefaultPickupLocThreshold
     DROP -> (DTConf.ConfigKey "drop_loc_threshold",) <$> getDefaultDropLocThreshold
-  mbThresholdConfig <- findConfigByOrgIdAndKey orgId paramName
+  mbThresholdConfig <- findConfigByMerchantIdAndKey merchantId paramName
   mbThreshold <- thresholdFromConfig paramName `mapM` mbThresholdConfig
   pure $ fromMaybe defaultThreshold mbThreshold
   where
@@ -246,11 +246,11 @@ getLocThreshold ServiceHandle {..} orgId stop = do
 getRideDistanceThreshold ::
   (MonadThrow m, Log m) =>
   ServiceHandle m ->
-  Id DOrg.Organization ->
+  Id DM.Merchant ->
   m Meters
 getRideDistanceThreshold ServiceHandle {..} orgId = do
   (paramName, defaultThreshold) <- (DTConf.ConfigKey "ride_travelled_distance",) <$> getDefaultRideTravelledDistanceThreshold
-  mbThresholdConfig <- findConfigByOrgIdAndKey orgId paramName
+  mbThresholdConfig <- findConfigByMerchantIdAndKey orgId paramName
   mbThreshold <- thresholdFromConfigMeter paramName `mapM` mbThresholdConfig
   pure $ fromMaybe defaultThreshold mbThreshold
   where
@@ -265,11 +265,11 @@ getRideDistanceThreshold ServiceHandle {..} orgId = do
 getRideTimeThreshold ::
   (MonadThrow m, Log m) =>
   ServiceHandle m ->
-  Id DOrg.Organization ->
+  Id DM.Merchant ->
   m Seconds
 getRideTimeThreshold ServiceHandle {..} orgId = do
   (paramName, defaultThreshold) <- (DTConf.ConfigKey "ride_estimated_time",) <$> getDefaultRideTimeEstimatedThreshold
-  mbThresholdConfig <- findConfigByOrgIdAndKey orgId paramName
+  mbThresholdConfig <- findConfigByMerchantIdAndKey orgId paramName
   mbThreshold <- thresholdFromConfigSeconds paramName `mapM` mbThresholdConfig
   pure $ fromMaybe defaultThreshold mbThreshold
   where

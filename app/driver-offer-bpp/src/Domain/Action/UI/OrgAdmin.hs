@@ -15,10 +15,10 @@ import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Control.Applicative
-import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
@@ -29,7 +29,7 @@ data OrgAdminProfileRes = OrgAdminProfileRes
     lastName :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe FCMRecipientToken,
-    organization :: Org.OrganizationAPIEntity
+    organization :: DM.MerchantAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -45,15 +45,15 @@ type UpdateOrgAdminProfileRes = OrgAdminProfileRes
 
 getProfile :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
 getProfile admin = do
-  let Just orgId = admin.organizationId
-  org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
+  let Just merchantId = admin.merchantId
+  org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   decAdmin <- decrypt admin
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
-  return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
+  return $ makeOrgAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
 updateProfile :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
 updateProfile admin req = do
-  let Just orgId = admin.organizationId
+  let Just merchantId = admin.merchantId
       updAdmin =
         admin{firstName = fromMaybe admin.firstName req.firstName,
               middleName = req.middleName <|> admin.middleName,
@@ -62,12 +62,12 @@ updateProfile admin req = do
              }
   Esq.runTransaction $
     QPerson.updatePersonRec updAdmin.id updAdmin
-  org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
+  org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   decUpdAdmin <- decrypt updAdmin
   let personAPIEntity = SP.makePersonAPIEntity decUpdAdmin
-  return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
+  return $ makeOrgAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
-makeOrgAdminProfileRes :: SP.PersonAPIEntity -> Org.OrganizationAPIEntity -> OrgAdminProfileRes
+makeOrgAdminProfileRes :: SP.PersonAPIEntity -> DM.MerchantAPIEntity -> OrgAdminProfileRes
 makeOrgAdminProfileRes SP.PersonAPIEntity {..} org =
   OrgAdminProfileRes
     { organization = org,

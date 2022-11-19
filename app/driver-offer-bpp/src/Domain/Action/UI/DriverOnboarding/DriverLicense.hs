@@ -30,6 +30,7 @@ import qualified Domain.Types.DriverOnboarding.DriverLicense as Domain
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment
 import qualified Idfy.Flow as Idfy
@@ -66,13 +67,19 @@ validateDriverDLReq now DriverDLReq {..} =
 
 verifyDL ::
   Bool ->
+  Maybe DM.Merchant ->
   Id Person.Person ->
   DriverDLReq ->
   Flow DriverDLRes
-verifyDL isDashboard personId req@DriverDLReq {..} = do
+verifyDL isDashboard mbMerchant personId req@DriverDLReq {..} = do
   now <- getCurrentTime
   runRequestValidation (validateDriverDLReq now) req
-  _ <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+
+  whenJust mbMerchant $ \merchant -> do
+    -- merchant access checking
+    merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+    unless (merchant.id == merchantId) $ throwError (PersonNotFound personId.getId)
 
   image1Metadata <- verifyImage imageId1
   image2Metadata <- verifyImage `mapM` imageId2

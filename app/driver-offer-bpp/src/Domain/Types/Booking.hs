@@ -11,7 +11,7 @@ import Data.Time
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import Domain.Types.DriverQuote
 import Domain.Types.FareParams (FareParameters)
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
@@ -38,7 +38,7 @@ data Booking = Booking
   { id :: Id Booking,
     quoteId :: Id DriverQuote,
     status :: BookingStatus,
-    providerId :: Id DOrg.Organization,
+    providerId :: Id DM.Merchant,
     bapId :: Text,
     bapUri :: BaseUrl,
     startTime :: UTCTime,

@@ -6,14 +6,14 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Dhall (FromDhall)
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 
 data JobType = AllocateRental | FakeType
   deriving (Generic, FromDhall, Eq, Ord, Show, FromJSON, ToJSON)
 
 data AllocateRentalJobData = AllocateRentalJobData
   { bookingId :: Id DRB.Booking,
-    shortOrgId :: ShortId DOrg.Organization
+    shortOrgId :: ShortId DM.Subscriber
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

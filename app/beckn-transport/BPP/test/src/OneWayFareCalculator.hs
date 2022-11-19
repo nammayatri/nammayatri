@@ -8,7 +8,7 @@ import Domain.Types.FarePolicy.Discount
 import Domain.Types.FarePolicy.FareProduct
 import Domain.Types.FarePolicy.OneWayFarePolicy
 import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate
-import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude
 import SharedLogic.FareCalculator.OneWayFareCalculator
@@ -28,7 +28,7 @@ defaultOneWayFarePolicy =
   OneWayFarePolicy
     { id = "fare_config_id",
       vehicleVariant = Vehicle.HATCHBACK,
-      organizationId = orgID,
+      merchantId = merchId,
       baseFare = Just 120,
       perExtraKmRateList = defaultPerExtraKmRate :| [],
       discountList = [],
@@ -45,13 +45,13 @@ mkDiscount vehVar from to disc isOn = Discount (Id "") vehVar (Id "") ONE_WAY fr
 mockTime :: Int -> UTCTime
 mockTime hour = parseTime ("2018-12-06T" <> (if hour <= 9 then "0" else "") <> show hour <> ":00:00.000Z")
 
-orgID :: Id Organization.Organization
-orgID = "organization_id"
+merchId :: Id DM.Merchant
+merchId = "merchant_id"
 
 handle :: ServiceHandle IO
 handle =
   ServiceHandle
-    { getFarePolicy = \_orgId _vehicleVariant -> pure $ Just defaultOneWayFarePolicy
+    { getFarePolicy = \_merchId _vehicleVariant -> pure $ Just defaultOneWayFarePolicy
     }
 
 -- Calculation tests
@@ -61,7 +61,7 @@ hatchback20km = testCase "Calculate fare for 20km for Hatchback" $ do
   fareParams <-
     doCalculateFare
       handle
-      orgID
+      merchId
       Vehicle.HATCHBACK
       distance
       startTime
@@ -76,7 +76,7 @@ sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
   fareParams <-
     doCalculateFare
       handle'
-      orgID
+      merchId
       Vehicle.SEDAN
       distance
       startTime
@@ -87,7 +87,7 @@ sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
     distance = Meters 10000
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_merchId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
@@ -104,7 +104,7 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
   fareParams <-
     doCalculateFare
       handle'
-      orgID
+      merchId
       Vehicle.SEDAN
       distance
       startTime
@@ -115,7 +115,7 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
     distance = Meters 20000
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_merchId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
@@ -132,7 +132,7 @@ sedan30km = testCase "Calculate fare for 30km for Sedan" $ do
   fareParams <-
     doCalculateFare
       handle'
-      orgID
+      merchId
       Vehicle.SEDAN
       distance
       startTime
@@ -143,7 +143,7 @@ sedan30km = testCase "Calculate fare for 30km for Sedan" $ do
     distance = Meters 30000
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_merchId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
@@ -160,7 +160,7 @@ suv20km = testCase "Calculate fare for 20km for SUV" $ do
   fareParams <-
     doCalculateFare
       handle'
-      orgID
+      merchId
       Vehicle.SUV
       distance
       startTime
@@ -171,7 +171,7 @@ suv20km = testCase "Calculate fare for 20km for SUV" $ do
     distance = Meters 20000
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_merchId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
@@ -191,7 +191,7 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km for Hatchback
   fareParams <-
     doCalculateFare
       handle'
-      orgID
+      merchId
       Vehicle.HATCHBACK
       distance
       startTime
@@ -202,7 +202,7 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km for Hatchback
     distance = Meters 20000
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_merchId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.HATCHBACK,
@@ -223,7 +223,7 @@ nightSedan20km = testCase "Calculate night shift fare for 20km for Sedan" $ do
   fareParams <-
     doCalculateFare
       handle'
-      orgID
+      merchId
       Vehicle.SEDAN
       distance
       startTime
@@ -234,7 +234,7 @@ nightSedan20km = testCase "Calculate night shift fare for 20km for Sedan" $ do
     distance = Meters 20000
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_merchId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
@@ -255,7 +255,7 @@ nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
   fareParams <-
     doCalculateFare
       handle'
-      orgID
+      merchId
       Vehicle.SUV
       distance
       startTime
@@ -266,7 +266,7 @@ nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
     distance = Meters 20000
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_merchId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
@@ -287,7 +287,7 @@ nightSuv20kmWithDiscount = testCase "Calculate night shift fare for 20km for SUV
   fareParams <-
     doCalculateFare
       handle'
-      orgID
+      merchId
       Vehicle.SUV
       distance
       startTime
@@ -298,7 +298,7 @@ nightSuv20kmWithDiscount = testCase "Calculate night shift fare for 20km for SUV
     distance = Meters 20000
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_merchId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
@@ -323,7 +323,7 @@ nightSuv20kmWithDiscountOff = testCase "Calculate night shift fare for 20km for 
   fareParams <-
     doCalculateFare
       handle'
-      orgID
+      merchId
       Vehicle.SUV
       distance
       startTime
@@ -334,7 +334,7 @@ nightSuv20kmWithDiscountOff = testCase "Calculate night shift fare for 20km for 
     distance = Meters 20000
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_merchId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
@@ -356,7 +356,7 @@ nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km
   fareParams <-
     doCalculateFare
       handle'
-      orgID
+      merchId
       Vehicle.SUV
       distance
       startTime
@@ -367,7 +367,7 @@ nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km
     distance = Meters 20000
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_merchId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
@@ -392,7 +392,7 @@ fareBreakupSum = testCase "Sum of fare breakup should be equal to total fare" $ 
   fareParams <-
     doCalculateFare
       handle'
-      orgID
+      merchId
       Vehicle.SUV
       distance
       startTime
@@ -404,7 +404,7 @@ fareBreakupSum = testCase "Sum of fare breakup should be equal to total fare" $ 
     distance = Meters 18000
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_merchId _vehicleVariant ->
             pure $
               Just
                 defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
@@ -430,7 +430,7 @@ failOnMissingFareConfig :: TestTree
 failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
   doCalculateFare
     handle'
-    orgID
+    merchId
     Vehicle.SEDAN
     distance
     startTime
@@ -440,7 +440,7 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
     distance = Meters 0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant -> pure Nothing
+        { getFarePolicy = \_merchId _vehicleVariant -> pure Nothing
         }
 
 fareCalculator :: TestTree

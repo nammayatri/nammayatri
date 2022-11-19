@@ -20,8 +20,10 @@ import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.DriverOnboarding.DriverRCAssociation (DriverRCAssociation)
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
 import Environment
+import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
@@ -40,11 +42,14 @@ import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 
 -- FIXME: not tested yet because of no onboarding test data
-driverDocumentsInfo :: FlowHandler Common.DriverDocumentsInfoRes
-driverDocumentsInfo = withFlowHandlerAPI $ do
+driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
+driverDocumentsInfo merchantShortId = withFlowHandlerAPI $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   now <- getCurrentTime
   onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
-  drivers <- QDocStatus.fetchDriverDocsInfo Nothing
+  drivers <- QDocStatus.fetchDriverDocsInfo merchant.id Nothing
   pure $ foldl' (func onboardingTryLimit now) Common.emptyInfo drivers
   where
     oneMonth :: NominalDiffTime
@@ -141,9 +146,13 @@ limitOffset :: Maybe Int -> Maybe Int -> [a] -> [a]
 limitOffset mbLimit mbOffset =
   maybe identity take mbLimit . maybe identity drop mbOffset
 
-listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
-listDrivers mbLimit mbOffset mbVerified mbEnabled mbPendingdoc mbSearchPhone = withFlowHandlerAPI $ do
-  driverDocsInfo <- QDocStatus.fetchFullDriversInfoWithDocsFirstNameAsc Nothing
+---------------------------------------------------------------------
+listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
+listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbPendingdoc mbSearchPhone = withFlowHandlerAPI $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  driverDocsInfo <- QDocStatus.fetchFullDriverInfoWithDocsFirstNameAsc merchant.id Nothing
   items <- catMaybes <$> mapM buildDriverListItem driverDocsInfo
   let limitedItems = limitOffset mbLimit mbOffset items
   pure $ Common.DriverListRes (length limitedItems) limitedItems
@@ -187,9 +196,12 @@ listDrivers mbLimit mbOffset mbVerified mbEnabled mbPendingdoc mbSearchPhone = w
                     }
 
 ---------------------------------------------------------------------
-driverActivity :: FlowHandler Common.DriverActivityRes
-driverActivity = withFlowHandlerAPI $ do
-  foldl' func Common.emptyDriverActivityRes <$> QPerson.findAllDrivers
+driverActivity :: ShortId DM.Merchant -> FlowHandler Common.DriverActivityRes
+driverActivity merchantShortId = withFlowHandlerAPI $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  foldl' func Common.emptyDriverActivityRes <$> QPerson.findAllDrivers merchant.id
   where
     func :: Common.DriverActivityRes -> QPerson.FullDriver -> Common.DriverActivityRes
     func acc x =
@@ -198,10 +210,13 @@ driverActivity = withFlowHandlerAPI $ do
         else acc {Common.inactiveDrivers = acc.inactiveDrivers + 1}
 
 ---------------------------------------------------------------------
-enableDrivers :: Common.DriverIds -> FlowHandler Common.EnableDriversRes
-enableDrivers req = withFlowHandlerAPI $ do
+enableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> FlowHandler Common.EnableDriversRes
+enableDrivers merchantShortId req = withFlowHandlerAPI $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let enable = True
-  updatedDrivers <- QDriverInfo.updateEnabledStateReturningIds (coerce req.driverIds) enable
+  updatedDrivers <- QDriverInfo.updateEnabledStateReturningIds merchant.id (coerce req.driverIds) enable
   let driversNotFound = filter (not . (`elem` coerce @[Id Driver] @[Id Common.Driver] updatedDrivers)) req.driverIds
   let numDriversEnabled = length updatedDrivers
   pure $
@@ -212,10 +227,13 @@ enableDrivers req = withFlowHandlerAPI $ do
       }
 
 ---------------------------------------------------------------------
-disableDrivers :: Common.DriverIds -> FlowHandler Common.DisableDriversRes
-disableDrivers req = withFlowHandlerAPI $ do
+disableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> FlowHandler Common.DisableDriversRes
+disableDrivers merchantShortId req = withFlowHandlerAPI $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let enable = False
-  updatedDrivers <- QDriverInfo.updateEnabledStateReturningIds (coerce req.driverIds) enable
+  updatedDrivers <- QDriverInfo.updateEnabledStateReturningIds merchant.id (coerce req.driverIds) enable
   let driversNotFound = filter (not . (`elem` coerce @[Id Driver] @[Id Common.Driver] updatedDrivers)) req.driverIds
   let numDriversDisabled = length updatedDrivers
   pure $
@@ -226,10 +244,13 @@ disableDrivers req = withFlowHandlerAPI $ do
       }
 
 ---------------------------------------------------------------------
-driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
-driverLocation mbLimit mbOffset req = withFlowHandler $ do
+driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
+driverLocation merchantShortId mbLimit mbOffset req = withFlowHandler $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let driverIds = coerce req.driverIds
-  allDrivers <- QPerson.findAllDriversByIdsFirstnameAsc driverIds
+  allDrivers <- QPerson.findAllDriversByIdsFirstNameAsc merchant.id driverIds
   let driversNotFound =
         filter (not . (`elem` map ((.id) . (.person)) allDrivers)) driverIds
       limitedDrivers = limitOffset mbLimit mbOffset allDrivers
@@ -260,14 +281,17 @@ buildDriverLocationListItem f = do
 mobileIndianCode :: Text
 mobileIndianCode = "+91"
 
-driverInfo :: Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
-driverInfo mbMobileNumber mbVehicleNumber = withFlowHandler $ do
+driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
+driverInfo merchantShortId mbMobileNumber mbVehicleNumber = withFlowHandler $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   driverDocsInfo <- case (mbMobileNumber, mbVehicleNumber) of
     (Just mobileNumber, Nothing) ->
-      QDocStatus.fetchFullDriverInfoWithDocsByMobileNumber mobileNumber mobileIndianCode
+      QDocStatus.fetchFullDriverInfoWithDocsByMobileNumber merchant.id mobileNumber mobileIndianCode
         >>= fromMaybeM (PersonDoesNotExist $ mobileIndianCode <> mobileNumber)
     (Nothing, Just vehicleNumber) ->
-      QDocStatus.fetchFullDriverInfoWithDocsByVehNumber vehicleNumber
+      QDocStatus.fetchFullDriverInfoWithDocsByVehNumber merchant.id vehicleNumber
         >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
   buildDriverInfoRes driverDocsInfo
@@ -303,13 +327,21 @@ driverInfo mbMobileNumber mbVehicleNumber = withFlowHandler $ do
         }
 
 ---------------------------------------------------------------------
-deleteDriver :: Id Common.Driver -> FlowHandler APISuccess
-deleteDriver reqDriverId = withFlowHandler $ do
+deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+deleteDriver merchantShortId reqDriverId = withFlowHandler $ do
+  merchant <-
+    QM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let driverId = cast @Common.Driver @Driver reqDriverId
   let personId = cast @Common.Driver @Person reqDriverId
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  
   unless (driver.role == DRIVER) $ throwError Unauthorized
 
   ride <- QRide.findOneByDriverId personId

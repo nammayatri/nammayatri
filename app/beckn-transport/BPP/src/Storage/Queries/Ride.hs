@@ -8,7 +8,7 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.Booking.Type as Booking
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle
@@ -230,8 +230,8 @@ updateAll rideId ride = do
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 
-getCountByStatus :: Transactionable m => Id Organization -> m [(RideStatus, Int)]
-getCountByStatus orgId = do
+getCountByStatus :: Transactionable m => Id Merchant -> m [(RideStatus, Int)]
+getCountByStatus merchantId = do
   Esq.findAll $ do
     (ride :& booking) <-
       from $
@@ -240,6 +240,6 @@ getCountByStatus orgId = do
             `Esq.on` ( \(ride :& booking) ->
                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
                      )
-    where_ $ booking ^. BookingProviderId ==. val (toKey orgId)
+    where_ $ booking ^. BookingProviderId ==. val (toKey merchantId)
     groupBy $ ride ^. RideStatus
     return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))

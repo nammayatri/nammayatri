@@ -13,7 +13,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.SearchRequest as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
 
@@ -26,7 +26,7 @@ mkPersist
       messageId Text
       startTime UTCTime
       validTill UTCTime
-      providerId OrganizationTId
+      providerId MerchantTId
       fromLocationId SearchReqLocationTId
       toLocationId SearchReqLocationTId
       bapId Text

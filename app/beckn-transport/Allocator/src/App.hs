@@ -19,7 +19,7 @@ import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
 import Servant
 import qualified Service.Runner as Allocator
-import qualified Storage.CachedQueries.Organization as Storage
+import qualified Storage.CachedQueries.Merchant as Storage
 
 runAllocator :: (AppCfg -> AppCfg) -> IO ()
 runAllocator configModifier = do
@@ -35,10 +35,10 @@ runAllocator configModifier = do
       allProviders <-
         try Storage.loadAllProviders
           >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
-      let allShortIds = map ((.shortId.getShortId) &&& (.uniqueKeyId)) allProviders
+      let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
       let shardMap = config.shards
       logInfo $ "Shard config: " <> show shardMap <> " | Shard count: " <> show (Map.size shardMap)
-      modFlowRtWithAuthManagers flowRt appEnv allShortIds
+      modFlowRtWithAuthManagers flowRt appEnv allSubscriberIds
 
     let settings =
           defaultSettings

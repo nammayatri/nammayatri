@@ -14,8 +14,8 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.DriverInformation as SDriverInfo
 import Domain.Types.DriverPool
+import Domain.Types.Merchant
 import qualified Domain.Types.NotificationStatus as SNS
-import Domain.Types.Organization
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRequest as SRR
@@ -25,8 +25,7 @@ import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DrPool
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as CQOrg
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.AllocationEvent (logAllocationEvent)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -62,9 +61,9 @@ getDriverPool = DrPool.getDriverPool
 getDriverBatchSize :: Flow Int
 getDriverBatchSize = asks (.driverBatchSize)
 
-getRequests :: ShortId Organization -> Integer -> Flow [RideRequest]
-getRequests shortOrgId numRequests = do
-  allRequests <- QRR.fetchOldest shortOrgId numRequests
+getRequests :: ShortId Subscriber -> Integer -> Flow [RideRequest]
+getRequests subscriberId numRequests = do
+  allRequests <- QRR.fetchOldest subscriberId numRequests
   let (errors, requests) =
         partitionEithers $ map toRideRequest allRequests
   traverse_ logError errors
@@ -242,8 +241,8 @@ cancelBooking bookingId reason = do
   mbRide <- QRide.findActiveByRBId bookingId
   let transporterId = booking.providerId
   transporter <-
-    QOrg.findById transporterId
-      >>= fromMaybeM (OrgNotFound transporterId.getId)
+    CQM.findById transporterId
+      >>= fromMaybeM (MerchantNotFound transporterId.getId)
   Esq.runTransaction $ do
     QRB.updateStatus booking.id SRB.CANCELLED
     QBCR.create reason
@@ -272,15 +271,15 @@ allocNotifStatusToStorageStatus = \case
   Alloc.Rejected -> SNS.REJECTED
   Alloc.Ignored -> SNS.IGNORED
 
-addAllocationRequest :: EsqDBFlow m r => ShortId Organization -> Id Booking -> m ()
-addAllocationRequest shortOrgId bookingId = do
+addAllocationRequest :: EsqDBFlow m r => ShortId Subscriber -> Id Booking -> m ()
+addAllocationRequest subscriberId bookingId = do
   guid <- generateGUID
   currTime <- getCurrentTime
   let rideRequest =
         SRR.RideRequest
           { id = Id guid,
             bookingId = bookingId,
-            shortOrgId = shortOrgId,
+            subscriberId = subscriberId,
             createdAt = currTime,
             _type = SRR.ALLOCATION,
             info = Nothing
@@ -343,17 +342,17 @@ getRideInfo bookingId = do
       SRB.COMPLETED -> Completed
       SRB.CANCELLED -> Cancelled
 
-incrementTaskCounter :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Organization -> m ()
-incrementTaskCounter orgShortId = do
-  org <- CQOrg.findByShortId orgShortId >>= fromMaybeM (OrgNotFound ("shortId-" <> orgShortId.getShortId))
+incrementTaskCounter :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m ()
+incrementTaskCounter subscriberId = do
+  org <- CQM.findBySubscriberId subscriberId >>= fromMaybeM (MerchantNotFound ("subscriberId-" <> subscriberId.getShortId))
   TMetrics.incrementTaskCounter org.name
 
-incrementFailedTaskCounter :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Organization -> m ()
-incrementFailedTaskCounter orgShortId = do
-  org <- CQOrg.findByShortId orgShortId >>= fromMaybeM (OrgNotFound ("shortId-" <> orgShortId.getShortId))
+incrementFailedTaskCounter :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m ()
+incrementFailedTaskCounter subscriberId = do
+  org <- CQM.findBySubscriberId subscriberId >>= fromMaybeM (MerchantNotFound ("subscriberId-" <> subscriberId.getShortId))
   TMetrics.incrementFailedTaskCounter org.name
 
-putTaskDuration :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Organization -> Milliseconds -> m ()
-putTaskDuration orgShortId ms = do
-  org <- CQOrg.findByShortId orgShortId >>= fromMaybeM (OrgNotFound ("shortId-" <> orgShortId.getShortId))
+putTaskDuration :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Milliseconds -> m ()
+putTaskDuration subscriberId ms = do
+  org <- CQM.findBySubscriberId subscriberId >>= fromMaybeM (MerchantNotFound ("subscriberId-" <> subscriberId.getShortId))
   TMetrics.putTaskDuration org.name ms

@@ -10,10 +10,10 @@ import Beckn.Utils.Error.Throwing
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.DriverQuote as DQuote
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.SearchRequest as QSR
@@ -26,7 +26,7 @@ data InitReq = InitReq
 
 data InitRes = InitRes
   { booking :: DRB.Booking,
-    transporter :: DOrg.Organization
+    transporter :: DM.Merchant
   }
 
 buildBookingLocation :: (MonadGuid m) => DLoc.SearchReqLocation -> m DLoc.BookingLocation
@@ -39,9 +39,9 @@ buildBookingLocation DLoc.SearchReqLocation {..} = do
         ..
       }
 
-handler :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id DOrg.Organization -> InitReq -> m InitRes
-handler orgId req = do
-  transporter <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
+handler :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
+handler merchantId req = do
+  transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
   driverQuote <- QDQuote.findById req.driverQuoteId >>= fromMaybeM (QuoteNotFound req.driverQuoteId.getId)
   when (driverQuote.validTill < now) $
@@ -61,7 +61,7 @@ handler orgId req = do
         DRB.Booking
           { quoteId = req.driverQuoteId,
             status = DRB.NEW,
-            providerId = orgId,
+            providerId = merchantId,
             bapId = req.bapId,
             bapUri = req.bapUri,
             startTime = searchRequest.startTime,

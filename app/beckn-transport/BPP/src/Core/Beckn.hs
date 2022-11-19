@@ -17,7 +17,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import Control.Lens.Operators ((?~))
 import Data.List (lookup)
 import qualified Data.Text.Encoding as T
-import Domain.Types.Organization as Org
+import Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
 import qualified Network.Wai.Internal as Wai
@@ -26,23 +26,23 @@ import SharedLogic.CallBAP (buildBppUrl)
 
 withCallback ::
   HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>
-  Org.Organization ->
+  DM.Merchant ->
   WithBecknCallbackMig api callback_success m
 withCallback = withCallback' identity
 
 withCallback' ::
   (m () -> m ()) ->
   HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>
-  Org.Organization ->
+  DM.Merchant ->
   WithBecknCallbackMig api callback_success m
 withCallback' doWithCallback transporter action api context cbUrl f = do
-  let bppShortId = getShortId $ transporter.shortId
-      authKey = getHttpManagerKey bppShortId
+  let bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   let context' =
         context
           & #bpp_uri ?~ bppUri
-          & #bpp_id ?~ transporter.shortId.getShortId
+          & #bpp_id ?~ bppSubscriberId
   withBecknCallbackMig doWithCallback (Just authKey) action api context' cbUrl f
 
 logBecknRequest :: AppEnv -> Application -> Application

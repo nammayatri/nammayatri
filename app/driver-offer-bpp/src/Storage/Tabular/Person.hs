@@ -15,7 +15,7 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Common (Centesimal)
 import Beckn.Types.Id
 import qualified Domain.Types.Person as Domain
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 
 derivePersistField "Domain.Role"
 derivePersistField "Domain.Gender"
@@ -41,7 +41,7 @@ mkPersist
       identifier Text Maybe
       rating Centesimal Maybe
       isNew Bool
-      organizationId OrganizationTId Maybe
+      merchantId MerchantTId Maybe
       deviceToken FCMRecipientToken Maybe
       language Language Maybe
       description Text Maybe
@@ -62,7 +62,7 @@ instance TType PersonT Domain.Person where
       Domain.Person
         { id = Id id,
           mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
-          organizationId = fromKey <$> organizationId,
+          merchantId = fromKey <$> merchantId,
           ..
         }
   toTType Domain.Person {..} =
@@ -70,6 +70,6 @@ instance TType PersonT Domain.Person where
       { id = getId id,
         mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber <&> (.hash),
-        organizationId = toKey <$> organizationId,
+        merchantId = toKey <$> merchantId,
         ..
       }

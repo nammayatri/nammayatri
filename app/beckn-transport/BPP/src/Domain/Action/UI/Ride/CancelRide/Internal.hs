@@ -10,14 +10,14 @@ import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BusinessEvent as SB
-import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as Organization
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -49,13 +49,13 @@ cancelRide rideId bookingCReason = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let transporterId = booking.providerId
   transporter <-
-    Organization.findById transporterId
-      >>= fromMaybeM (OrgNotFound transporterId.getId)
+    CQM.findById transporterId
+      >>= fromMaybeM (MerchantNotFound transporterId.getId)
   if isCancelledByDriver
     then do
       driverPool <- recalculateDriverPool booking
       Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_REALLOCATION (Just booking.id)) driverPool
-      reallocateRideTransaction transporter.shortId booking.id ride bookingCReason
+      reallocateRideTransaction transporter.subscriberId booking.id ride bookingCReason
     else cancelRideTransaction booking.id ride bookingCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   fork "cancelRide - Notify BAP" $ do
@@ -87,13 +87,13 @@ cancelRideTransaction bookingId ride bookingCReason = Esq.runTransaction $ do
 
 reallocateRideTransaction ::
   EsqDBFlow m r =>
-  ShortId Organization.Organization ->
+  ShortId DM.Subscriber ->
   Id SRB.Booking ->
   SRide.Ride ->
   SBCR.BookingCancellationReason ->
   m ()
-reallocateRideTransaction orgShortId bookingId ride bookingCReason = do
-  rideRequest <- buildRideReq orgShortId
+reallocateRideTransaction subscriberId bookingId ride bookingCReason = do
+  rideRequest <- buildRideReq
   Esq.runTransaction $ do
     QRB.updateStatus bookingId SRB.AWAITING_REASSIGNMENT
     QRB.increaseReallocationsCounter bookingId
@@ -106,14 +106,14 @@ reallocateRideTransaction orgShortId bookingId ride bookingCReason = do
       let driverId = cast ride.driverId
       DriverInformation.updateOnRide driverId False
       QDriverStats.updateIdleTime driverId
-    buildRideReq shortOrgId = do
+    buildRideReq = do
       guid <- generateGUID
       now <- getCurrentTime
       pure
         SRideRequest.RideRequest
           { id = Id guid,
             bookingId = bookingId,
-            shortOrgId = shortOrgId,
+            subscriberId = subscriberId,
             createdAt = now,
             _type = SRideRequest.ALLOCATION,
             info = Nothing

@@ -4,12 +4,12 @@ import Beckn.Prelude
 import Beckn.Types.Common (Centesimal, HighPrecMoney, Meters, Money)
 import Beckn.Types.Id (Id)
 import Domain.Types.Common
-import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle.Variant as Variant
 
 data FarePolicyD s = FarePolicy
   { id :: Id FarePolicy,
-    organizationId :: Id Organization.Organization,
+    merchantId :: Id DM.Merchant,
     vehicleVariant :: Variant.Variant,
     baseDistanceFare :: HighPrecMoney,
     baseDistanceMeters :: Meters,

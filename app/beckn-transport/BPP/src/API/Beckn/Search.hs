@@ -12,14 +12,14 @@ import qualified Core.ACL.Search as ACL
 import Core.Beckn (withCallback')
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.Search as DSearch
-import Domain.Types.Organization (Organization)
-import qualified Domain.Types.Organization as Org
+import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
 import Servant
 
 type API =
-  Capture "orgId" (Id Organization)
+  Capture "merchantId" (Id Merchant)
     :> SignatureAuth "Authorization"
     :> SignatureAuth "X-Gateway-Authorization"
     :> API.SearchAPI
@@ -28,7 +28,7 @@ handler :: FlowServer API
 handler = search
 
 search ::
-  Id Org.Organization ->
+  Id DM.Merchant ->
   SignatureAuthResult ->
   SignatureAuthResult ->
   Search.SearchReq ->

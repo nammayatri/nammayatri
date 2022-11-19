@@ -22,7 +22,7 @@ import Network.Wai.Handler.Warp
     setInstallShutdownHandler,
     setPort,
   )
-import qualified Storage.CachedQueries.Organization as Storage
+import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
 
 runTransporterBackendApp :: (AppCfg -> AppCfg) -> IO ()
@@ -53,8 +53,8 @@ runTransporterBackendApp' appCfg = do
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
-        let allShortIds = map ((.shortId.getShortId) &&& (.uniqueKeyId)) allProviders
-        flowRt' <- modFlowRtWithAuthManagers flowRt appEnv allShortIds
+        let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
+        flowRt' <- modFlowRtWithAuthManagers flowRt appEnv allSubscriberIds
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'

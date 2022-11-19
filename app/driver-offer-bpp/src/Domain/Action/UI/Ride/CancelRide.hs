@@ -38,7 +38,7 @@ cancelRideHandler ServiceHandle {..} personId rideId req = do
       >>= fromMaybeM (PersonNotFound personId.getId)
   rideCancelationReason <- case authPerson.role of
     Person.ADMIN -> do
-      buildRideCancelationReason Nothing SBCR.ByOrganization ride
+      buildRideCancelationReason Nothing SBCR.ByMerchant ride
     Person.DRIVER -> do
       let driverId = ride.driverId
       unless (authPerson.id == driverId) $ throwError NotAnExecutor

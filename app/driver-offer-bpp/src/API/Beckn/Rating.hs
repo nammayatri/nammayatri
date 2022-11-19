@@ -7,13 +7,13 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Rating as ACL
 import qualified Domain.Action.Beckn.Rating as DRating
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
 
 type API =
-  Capture "orgId" (Id Organization)
+  Capture "merchantId" (Id Merchant)
     :> SignatureAuth "Authorization"
     :> Rating.RatingAPI
 
@@ -21,7 +21,7 @@ handler :: FlowServer API
 handler = rating
 
 rating ::
-  Id Organization ->
+  Id Merchant ->
   SignatureAuthResult ->
   Rating.RatingReq ->
   FlowHandler AckResponse

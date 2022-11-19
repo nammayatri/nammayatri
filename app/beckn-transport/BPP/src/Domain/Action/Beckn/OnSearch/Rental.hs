@@ -10,7 +10,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Traversable
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -44,12 +44,12 @@ onSearchCallback ::
     CoreMetrics m
   ) =>
   DSearchRequest.SearchRequest ->
-  Id DOrg.Organization ->
+  Id DM.Merchant ->
   DLoc.SearchReqLocation ->
   UTCTime ->
   m [QuoteInfo]
 onSearchCallback searchRequest transporterId fromLocation now = do
-  rentalFarePolicies <- QRentalFarePolicy.findAllByOrgId transporterId
+  rentalFarePolicies <- QRentalFarePolicy.findAllByMerchantId transporterId
 
   let fromLoc = getCoordinates fromLocation
   (listOfQuotes, quoteInfos) <- fmap unzip $
@@ -79,7 +79,7 @@ buildRentalQuote searchRequestId now rentalFarePolicy@DRentalFP.RentalFarePolicy
     DQuote.Quote
       { id = quoteId,
         requestId = searchRequestId,
-        providerId = organizationId,
+        providerId = merchantId,
         createdAt = now,
         quoteDetails = DQuote.RentalDetails rentalFarePolicy,
         ..

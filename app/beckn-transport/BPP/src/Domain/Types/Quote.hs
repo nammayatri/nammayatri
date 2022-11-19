@@ -5,7 +5,7 @@ import Beckn.Types.Id
 import Data.Time
 import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
@@ -17,7 +17,7 @@ data Quote = Quote
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
-    providerId :: Id DOrg.Organization,
+    providerId :: Id DM.Merchant,
     vehicleVariant :: DVeh.Variant,
     createdAt :: UTCTime,
     quoteDetails :: QuoteDetails

@@ -4,7 +4,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Vehicle
 import Storage.Tabular.Vehicle
@@ -50,21 +50,21 @@ findByAnyOf registrationNoM vehicleIdM =
         &&. whenJust_ registrationNoM (\regNum -> vehicle ^. VehicleRegistrationNo ==. val regNum)
     return vehicle
 
-findAllByVariantRegNumOrgId ::
+findAllByVariantRegNumMerchantId ::
   Transactionable m =>
   Maybe Variant ->
   Maybe Text ->
   Integer ->
   Integer ->
-  Id Organization ->
+  Id Merchant ->
   m [Vehicle]
-findAllByVariantRegNumOrgId variantM mbRegNum limit' offset' orgId = do
+findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' merchantId = do
   let limitVal = fromIntegral limit'
       offsetVal = fromIntegral offset'
   Esq.findAll $ do
     vehicle <- from $ table @VehicleT
     where_ $
-      vehicle ^. VehicleOrganizationId ==. val (toKey orgId)
+      vehicle ^. VehicleMerchantId ==. val (toKey merchantId)
         &&. whenJust_ variantM (\variant -> vehicle ^. VehicleVariant ==. val variant)
         &&. whenJust_ mbRegNum (\regNum -> vehicle ^. VehicleRegistrationNo `ilike` (%) ++. val regNum ++. (%))
     orderBy [desc $ vehicle ^. VehicleCreatedAt]

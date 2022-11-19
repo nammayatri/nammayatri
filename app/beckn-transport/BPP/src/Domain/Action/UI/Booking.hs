@@ -32,7 +32,7 @@ import Domain.Types.RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude hiding (id)
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as QDrLoc
@@ -86,8 +86,8 @@ bookingList ::
   Maybe SRB.BookingStatus ->
   m BookingListRes
 bookingList person mbLimit mbOffset mbOnlyActive mbBookingStatus = do
-  let Just orgId = person.organizationId
-  rbList <- QRB.findAllByOrg orgId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  let Just merchantId = person.merchantId
+  rbList <- QRB.findAllByMerchant merchantId mbLimit mbOffset mbOnlyActive mbBookingStatus
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList
 
 bookingCancel ::
@@ -96,23 +96,23 @@ bookingCancel ::
   SP.Person ->
   m APISuccess
 bookingCancel bookingId admin = do
-  let Just orgId = admin.organizationId
+  let Just merchantId = admin.merchantId
   org <-
-    QOrg.findById orgId
-      >>= fromMaybeM (OrgNotFound orgId.getId)
-  rideReq <- buildRideReq (org.shortId)
+    QM.findById merchantId
+      >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  rideReq <- buildRideReq (org.subscriberId)
   Esq.runTransaction $ RideRequest.create rideReq
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> bookingCancel : ") (show rideReq)
   return Success
   where
-    buildRideReq shortOrgId = do
+    buildRideReq subscriberId = do
       guid <- generateGUID
       now <- getCurrentTime
       pure
         SRideRequest.RideRequest
           { id = Id guid,
             bookingId = bookingId,
-            shortOrgId = shortOrgId,
+            subscriberId = subscriberId,
             createdAt = now,
             _type = SRideRequest.CANCELLATION,
             info = Nothing
@@ -167,9 +167,9 @@ setDriverAcceptance bookingId personId req = do
   booking <-
     QRB.findById bookingId
       >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  transporterOrg <-
-    QOrg.findById booking.providerId
-      >>= fromMaybeM (OrgDoesNotExist booking.providerId.getId)
+  merchant <-
+    QM.findById booking.providerId
+      >>= fromMaybeM (MerchantDoesNotExist booking.providerId.getId)
   guid <- generateGUID
   let driverResponse =
         DriverResponse {driverId = driverId, status = req.response}
@@ -177,7 +177,7 @@ setDriverAcceptance bookingId personId req = do
         RideRequest
           { id = Id guid,
             bookingId = bookingId,
-            shortOrgId = transporterOrg.shortId,
+            subscriberId = merchant.subscriberId,
             createdAt = currentTime,
             _type = DRIVER_RESPONSE,
             info = Just driverResponse

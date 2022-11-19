@@ -13,7 +13,7 @@ import Beckn.Types.Common (HighPrecMoney, Hours (..), Kilometers (..))
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import qualified Domain.Types.Vehicle as Vehicle
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 
 mkPersist
@@ -21,7 +21,7 @@ mkPersist
   [defaultQQ|
     RentalFarePolicyT sql=rental_fare_policy
       id Text
-      organizationId OrganizationTId
+      merchantId MerchantTId
       vehicleVariant Vehicle.Variant
       baseFare HighPrecMoney
       baseDistance Int
@@ -45,7 +45,7 @@ instance TType RentalFarePolicyT Domain.RentalFarePolicy where
     return $
       Domain.RentalFarePolicy
         { id = Id id,
-          organizationId = fromKey organizationId,
+          merchantId = fromKey merchantId,
           baseDistance = Kilometers baseDistance,
           baseDuration = Hours baseDuration,
           baseFare = roundToIntegral baseFare,
@@ -55,7 +55,7 @@ instance TType RentalFarePolicyT Domain.RentalFarePolicy where
   toTType Domain.RentalFarePolicy {..} =
     RentalFarePolicyT
       { id = getId id,
-        organizationId = toKey organizationId,
+        merchantId = toKey merchantId,
         deleted = False,
         baseDistance = getKilometers baseDistance,
         baseDuration = getHours baseDuration,

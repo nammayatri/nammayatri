@@ -18,7 +18,7 @@ import qualified Domain.Types.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as RC
-import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Vehicle
 import Domain.Types.Vehicle.Variant
@@ -49,13 +49,13 @@ data StatusRes = StatusRes
 statusHandler :: Id SP.Person -> Flow StatusRes
 statusHandler personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
+  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
 
   (dlStatus, mDL) <- getDLAndStatus personId
   (rcStatus, mRC) <- getRCAndStatus personId
 
   when (dlStatus == VALID && rcStatus == VALID) $
-    enableDriver personId orgId mRC mDL
+    enableDriver personId merchantId mRC mDL
   return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus}
 
 getDLAndStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe DL.DriverLicense)
@@ -104,19 +104,19 @@ verificationStatus onboardingTryLimit imagesNum verificationReq =
         then LIMIT_EXCEED
         else NO_DOC_AVAILABLE
 
-enableDriver :: Id SP.Person -> Id Org.Organization -> Maybe RC.VehicleRegistrationCertificate -> Maybe DL.DriverLicense -> Flow ()
+enableDriver :: Id SP.Person -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Maybe DL.DriverLicense -> Flow ()
 enableDriver _ _ Nothing Nothing = return ()
-enableDriver personId orgId (Just rc) (Just dl) = do
+enableDriver personId merchantId (Just rc) (Just dl) = do
   DB.runTransaction $ DIQuery.verifyAndEnableDriver personId
   rcNumber <- decrypt rc.certificateNumber
   now <- getCurrentTime
-  let vehicle = buildVehicle now personId orgId rcNumber
+  let vehicle = buildVehicle now personId merchantId rcNumber
   DB.runTransaction $ VQuery.upsert vehicle
   case dl.driverName of
     Just name -> DB.runTransaction $ Person.updateName personId name
     Nothing -> return ()
   where
-    buildVehicle now personId_ orgId_ certificateNumber =
+    buildVehicle now personId_ merchantId_ certificateNumber =
       Vehicle.Vehicle
         { Vehicle.driverId = personId_,
           Vehicle.capacity = rc.vehicleCapacity,
@@ -124,7 +124,7 @@ enableDriver personId orgId (Just rc) (Just dl) = do
           Vehicle.make = rc.vehicleManufacturer,
           Vehicle.model = fromMaybe "" rc.vehicleModel,
           Vehicle.size = Nothing,
-          Vehicle.organizationId = orgId_,
+          Vehicle.merchantId = merchantId_,
           Vehicle.variant = AUTO_RICKSHAW,
           Vehicle.color = fromMaybe "Yellow" rc.vehicleColor,
           Vehicle.energyType = rc.vehicleEnergyType,

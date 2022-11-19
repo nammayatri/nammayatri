@@ -11,7 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as Domain
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationTId)
 import qualified Storage.Tabular.SearchRequest.SearchReqLocation as SLoc
 
@@ -25,7 +25,7 @@ mkPersist
       messageId Text
       startTime UTCTime
       validTill UTCTime
-      providerId OrganizationTId
+      providerId MerchantTId
       fromLocationId SearchReqLocationTId
       toLocationId SearchReqLocationTId Maybe
       bapId Text

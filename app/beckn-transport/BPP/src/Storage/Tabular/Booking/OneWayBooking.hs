@@ -16,6 +16,7 @@ import qualified Domain.Types.Booking.Type as Domain
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.Booking.Table
 
+-- FIXME estimated_finish_time should be not null in DB
 mkPersist
   defaultSqlSettings
   [defaultQQ|

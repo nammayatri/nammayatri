@@ -12,7 +12,7 @@ import Data.List
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Domain.Types.FarePolicy (FarePolicy)
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
 import Environment
@@ -21,7 +21,7 @@ import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
-import qualified Storage.CachedQueries.Organization as CQOrg
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Geometry as QGeometry
 import Storage.Queries.Person (DriverPoolResult)
 import qualified Storage.Queries.Person as QP
@@ -40,7 +40,7 @@ data DSearchReq = DSearchReq
   }
 
 data DSearchRes = DSearchRes
-  { provider :: DOrg.Organization,
+  { provider :: DM.Merchant,
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: DLoc.SearchReqLocation,
     now :: UTCTime,
@@ -55,7 +55,7 @@ data EstimateItem = EstimateItem
   }
 
 data TransporterInfo = TransporterInfo
-  { shortId :: ShortId DOrg.Organization,
+  { shortId :: ShortId DM.Merchant,
     name :: Text,
     contacts :: Text,
     ridesInProgress :: Int,
@@ -63,9 +63,9 @@ data TransporterInfo = TransporterInfo
     ridesConfirmed :: Int
   }
 
-handler :: Id DOrg.Organization -> DSearchReq -> Flow DSearchRes
-handler orgId sReq = do
-  org <- CQOrg.findById orgId >>= fromMaybeM (OrgDoesNotExist orgId.getId)
+handler :: Id DM.Merchant -> DSearchReq -> Flow DSearchRes
+handler merchantId sReq = do
+  org <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   unless org.enabled $ throwError AgencyDisabled
   searchMetricsMVar <- Metrics.startSearchMetrics org.name
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
@@ -79,7 +79,7 @@ handler orgId sReq = do
   let distance = distRes.distance
   logDebug $ "distance: " <> show distance
 
-  allFarePolicies <- FarePolicyS.findAllByOrgId org.id
+  allFarePolicies <- FarePolicyS.findAllByMerchantId org.id
   let farePolicies = filter (checkTripConstraints distance) allFarePolicies
 
   estimates <-
@@ -152,7 +152,7 @@ zipMatched farePolicies driverPool =
 
 mkEstimate ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
-  DOrg.Organization ->
+  DM.Merchant ->
   UTCTime ->
   Meters ->
   (FarePolicy, GoogleMaps.GetDistanceResult DriverPoolResult a) ->
@@ -179,7 +179,7 @@ buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do
 
 buildSearchRes ::
   (MonadTime m) =>
-  DOrg.Organization ->
+  DM.Merchant ->
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
   [EstimateItem] ->

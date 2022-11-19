@@ -11,7 +11,7 @@ import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Organization as QOrg
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as DriverInformation
@@ -41,8 +41,8 @@ cancelRideImpl rideId bookingCReason = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let transporterId = booking.providerId
   transporter <-
-    QOrg.findById transporterId
-      >>= fromMaybeM (OrgNotFound transporterId.getId)
+    CQM.findById transporterId
+      >>= fromMaybeM (MerchantNotFound transporterId.getId)
   cancelRideTransaction booking.id ride bookingCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   fork "cancelRide - Notify BAP" $ do

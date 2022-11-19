@@ -12,7 +12,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import Domain.Types.DriverPool
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude
@@ -92,9 +92,9 @@ type MonadHandler m =
   )
 
 data AllocatorMetricsHandle m = AllocatorMetricsHandle
-  { incrementTaskCounter :: ShortId Organization -> m (),
-    incrementFailedTaskCounter :: ShortId Organization -> m (),
-    putTaskDuration :: ShortId Organization -> Milliseconds -> m (),
+  { incrementTaskCounter :: ShortId Subscriber -> m (),
+    incrementFailedTaskCounter :: ShortId Subscriber -> m (),
+    putTaskDuration :: ShortId Subscriber -> Milliseconds -> m (),
     incrementErrorCounter :: SomeException -> m ()
   }
 
@@ -109,7 +109,7 @@ data ServiceHandle m = ServiceHandle
     getConfiguredAllocationTime :: m Seconds,
     getConfiguredReallocationsLimit :: m Int,
     getDriverBatchSize :: m Int,
-    getRequests :: ShortId Organization -> Integer -> m [RideRequest],
+    getRequests :: ShortId Subscriber -> Integer -> m [RideRequest],
     getDriverPool :: Id SRB.Booking -> m SortedDriverPool,
     getCurrentNotifications :: Id SRB.Booking -> m [CurrentNotification],
     cleanupOldNotifications :: m Int,
@@ -125,7 +125,7 @@ data ServiceHandle m = ServiceHandle
     assignDriver :: Id SRB.Booking -> Id Driver -> m (),
     cancelBooking :: Id SRB.Booking -> SBCR.BookingCancellationReason -> m (),
     cleanupNotifications :: Id SRB.Booking -> m (),
-    addAllocationRequest :: ShortId Organization -> Id SRB.Booking -> m (),
+    addAllocationRequest :: ShortId Subscriber -> Id SRB.Booking -> m (),
     getRideInfo :: Id SRB.Booking -> m RideInfo,
     removeRequest :: Id SRR.RideRequest -> m (),
     logEvent :: AllocationEventType -> Id SRB.Booking -> m (),
@@ -133,21 +133,21 @@ data ServiceHandle m = ServiceHandle
     metrics :: AllocatorMetricsHandle m
   }
 
-process :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Integer -> m Int
-process handle@ServiceHandle {..} shortOrgId requestsNum = do
+process :: MonadHandler m => ServiceHandle m -> ShortId Subscriber -> Integer -> m Int
+process handle@ServiceHandle {..} subscriberId requestsNum = do
   cleanedNotificationsCount <- cleanupOldNotifications
   when (cleanedNotificationsCount > 0) $ logInfo $ "Cleaned notifications count: " <> show cleanedNotificationsCount
-  rideRequests <- getRequests shortOrgId requestsNum
+  rideRequests <- getRequests subscriberId requestsNum
   let rideRequestsNum = length rideRequests
   unless (rideRequestsNum == 0)
     . measuringDurationToLog INFO ("processing " <> show rideRequestsNum <> " ride requests")
-    $ traverse_ (processRequest handle shortOrgId) rideRequests
+    $ traverse_ (processRequest handle subscriberId) rideRequests
   pure rideRequestsNum
 
-processRequest :: MonadHandler m => ServiceHandle m -> ShortId Organization -> RideRequest -> m ()
-processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
-  metrics.incrementTaskCounter shortOrgId
-  measuringDuration (\dur _ -> metrics.putTaskDuration shortOrgId dur) $ do
+processRequest :: MonadHandler m => ServiceHandle m -> ShortId Subscriber -> RideRequest -> m ()
+processRequest handle@ServiceHandle {..} subscriberId rideRequest = do
+  metrics.incrementTaskCounter subscriberId
+  measuringDuration (\dur _ -> metrics.putTaskDuration subscriberId dur) $ do
     let requestId = rideRequest.requestId
     let bookingId = rideRequest.bookingId
     rideInfo <- getRideInfo bookingId
@@ -158,8 +158,8 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
         case rideRequest.requestData of
           Allocation ->
             case rideStatus of
-              Confirmed -> processAllocation handle shortOrgId rideInfo
-              AwaitingReassignment -> processAllocation handle shortOrgId rideInfo
+              Confirmed -> processAllocation handle subscriberId rideInfo
+              AwaitingReassignment -> processAllocation handle subscriberId rideInfo
               Cancelled -> logInfo "Ride is cancelled, allocation request skipped"
               _ ->
                 logWarning $ "Ride status is " <> show rideStatus <> ", allocation request skipped"
@@ -187,7 +187,7 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
         let message = "Error processing request " <> show requestId <> ": " <> makeLogSomeException exc
         logError message
         metrics.incrementErrorCounter exc
-        metrics.incrementFailedTaskCounter shortOrgId
+        metrics.incrementFailedTaskCounter subscriberId
     removeRequest requestId
 
 processDriverResponse :: MonadHandler m => ServiceHandle m -> DriverResponseType -> Id SRB.Booking -> m ()
@@ -208,10 +208,10 @@ processDriverResponse handle@ServiceHandle {..} response bookingId = do
 processAllocation ::
   MonadHandler m =>
   ServiceHandle m ->
-  ShortId Organization ->
+  ShortId Subscriber ->
   RideInfo ->
   m ()
-processAllocation handle@ServiceHandle {..} shortOrgId rideInfo = do
+processAllocation handle@ServiceHandle {..} subscriberId rideInfo = do
   let bookingId = rideInfo.bookingId
   let orderTime = rideInfo.orderTime
   currentTime <- getCurrentTime
@@ -232,10 +232,10 @@ processAllocation handle@ServiceHandle {..} shortOrgId rideInfo = do
           if notificationTimeFinished
             then do
               processExpiration handle bookingId $ fmap (.driverId) $ notification :| notifications
-              proceedToNewDrivers handle bookingId shortOrgId
-            else checkRideLater handle shortOrgId bookingId
+              proceedToNewDrivers handle bookingId subscriberId
+            else checkRideLater handle subscriberId bookingId
         [] ->
-          proceedToNewDrivers handle bookingId shortOrgId
+          proceedToNewDrivers handle bookingId subscriberId
 
 processRejection ::
   MonadHandler m =>
@@ -260,9 +260,9 @@ proceedToNewDrivers ::
   MonadHandler m =>
   ServiceHandle m ->
   Id SRB.Booking ->
-  ShortId Organization ->
+  ShortId Subscriber ->
   m ()
-proceedToNewDrivers handle@ServiceHandle {..} bookingId shortOrgId = do
+proceedToNewDrivers handle@ServiceHandle {..} bookingId subscriberId = do
   logInfo "Proceed to new drivers"
   driverPool <- getDriverPool bookingId
   logInfo $ "DriverPool " <> T.intercalate ", " (getDriverPoolDescs driverPool)
@@ -274,7 +274,7 @@ proceedToNewDrivers handle@ServiceHandle {..} bookingId shortOrgId = do
       driversWithNotification <- getDriversWithNotification
       let filteredPool = filterDriverPool (`notElem` driversWithNotification) availableDriversPool
       logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getDriverPoolDescs filteredPool)
-      processFilteredPool handle bookingId filteredPool shortOrgId
+      processFilteredPool handle bookingId filteredPool subscriberId
     else do
       cancel handle bookingId SBCR.ByAllocator $ Just NoDriversInRange
       logEvent EmptyDriverPool bookingId
@@ -289,9 +289,9 @@ processFilteredPool ::
   ServiceHandle m ->
   Id SRB.Booking ->
   SortedDriverPool ->
-  ShortId Organization ->
+  ShortId Subscriber ->
   m ()
-processFilteredPool handle@ServiceHandle {..} bookingId filteredPool shortOrgId = do
+processFilteredPool handle@ServiceHandle {..} bookingId filteredPool subscriberId = do
   sortMode <- getDriverSortMode
   batchSize <- getDriverBatchSize
   topDrivers <-
@@ -310,11 +310,11 @@ processFilteredPool handle@ServiceHandle {..} bookingId filteredPool shortOrgId 
       logDriverEvents NotificationSent bookingId drivers
     [] -> do
       logInfo "All new drivers are unavailable or already have notifications. Waiting."
-  checkRideLater handle shortOrgId bookingId
+  checkRideLater handle subscriberId bookingId
 
-checkRideLater :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Id SRB.Booking -> m ()
-checkRideLater ServiceHandle {..} shortOrgId bookingId = do
-  addAllocationRequest shortOrgId bookingId
+checkRideLater :: MonadHandler m => ServiceHandle m -> ShortId Subscriber -> Id SRB.Booking -> m ()
+checkRideLater ServiceHandle {..} subscriberId bookingId = do
+  addAllocationRequest subscriberId bookingId
   logInfo "Check ride later"
 
 cancel :: MonadHandler m => ServiceHandle m -> Id SRB.Booking -> SBCR.CancellationSource -> Maybe AllocatorCancellationReason -> m ()

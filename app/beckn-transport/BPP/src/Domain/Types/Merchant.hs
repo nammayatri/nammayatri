@@ -1,10 +1,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module Domain.Types.Organization where
+module Domain.Types.Merchant where
 
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
-import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -25,47 +24,18 @@ instance FromHttpApiData Status where
 
 --------------------------------------------------------------------------------------
 
-data OrganizationType
-  = PROVIDER
-  | APP
-  | GATEWAY
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+data Subscriber
 
-instance FromHttpApiData OrganizationType where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
-
-data OrganizationDomain
-  = MOBILITY
-  | LOGISTICS
-  | LOCAL_RETAIL
-  | FOOD_AND_BEVERAGE
-  | HEALTHCARE
-  deriving (Show, Eq, Read, Generic)
-
-instance ToJSON OrganizationDomain where
-  toJSON = genericToJSON constructorsWithHyphens
-
-instance FromJSON OrganizationDomain where
-  parseJSON = genericParseJSON constructorsWithHyphens
-
-instance FromHttpApiData OrganizationDomain where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
-
-data OrganizationD s = Organization
-  { id :: Id Organization,
+data MerchantD s = Merchant
+  { id :: Id Merchant,
     name :: Text,
     description :: Maybe Text,
-    shortId :: ShortId Organization,
+    subscriberId :: ShortId Subscriber,
     uniqueKeyId :: Text,
+    shortId :: ShortId Merchant,
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,
     gstin :: Maybe Text,
-    _type :: OrganizationType,
-    domain :: Maybe OrganizationDomain,
     fromTime :: Maybe UTCTime,
     toTime :: Maybe UTCTime,
     headCount :: Maybe Int,
@@ -79,14 +49,14 @@ data OrganizationD s = Organization
   }
   deriving (Generic, Show)
 
-type Organization = OrganizationD 'Safe
+type Merchant = MerchantD 'Safe
 
-instance FromJSON (OrganizationD 'Unsafe)
+instance FromJSON (MerchantD 'Unsafe)
 
-instance ToJSON (OrganizationD 'Unsafe)
+instance ToJSON (MerchantD 'Unsafe)
 
-data OrganizationAPIEntity = OrganizationAPIEntity
-  { id :: Id Organization,
+data MerchantAPIEntity = MerchantAPIEntity
+  { id :: Id Merchant,
     name :: Text,
     description :: Maybe Text,
     contactNumber :: Text,
@@ -95,9 +65,9 @@ data OrganizationAPIEntity = OrganizationAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-makeOrganizationAPIEntity :: Organization -> OrganizationAPIEntity
-makeOrganizationAPIEntity Organization {..} =
-  OrganizationAPIEntity
+makeMerchantAPIEntity :: Merchant -> MerchantAPIEntity
+makeMerchantAPIEntity Merchant {..} =
+  MerchantAPIEntity
     { contactNumber = fromMaybe "Unknown" $ mobileCountryCode <> mobileNumber,
       ..
     }

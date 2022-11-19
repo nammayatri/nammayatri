@@ -8,7 +8,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import EulerHS.Prelude hiding (id)
 import Servant
@@ -32,7 +32,7 @@ data SearchRequest = SearchRequest
     messageId :: Text,
     startTime :: UTCTime,
     validTill :: UTCTime,
-    providerId :: Id DOrg.Organization,
+    providerId :: Id DM.Merchant,
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: Maybe DLoc.SearchReqLocation,
     bapId :: Text,

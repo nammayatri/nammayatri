@@ -9,7 +9,7 @@ defaultFarePolicy =
   DRentalFP.RentalFarePolicy
     { id = "rentalFarePolicyId",
       vehicleVariant = Veh.HATCHBACK,
-      organizationId = "organization_id",
+      merchantId = "merchant_id",
       baseFare = 120,
       baseDistance = 100,
       baseDuration = 3,

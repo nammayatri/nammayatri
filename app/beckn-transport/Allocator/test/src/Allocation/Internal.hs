@@ -9,7 +9,7 @@ import qualified Data.Time as Time
 import Domain.Action.Allocation as Alloc
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.DriverPool
-import Domain.Types.Organization
+import Domain.Types.Merchant
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude hiding (id)
@@ -19,7 +19,7 @@ import Utils.SilentLogger ()
 
 type NotificationStatusMap = (Map (Id SRB.Booking, Id Driver) (NotificationStatus, UTCTime))
 
-org1 :: ShortId Organization
+org1 :: ShortId Subscriber
 org1 = ShortId "Org1"
 
 numRequestsToProcess :: Integer

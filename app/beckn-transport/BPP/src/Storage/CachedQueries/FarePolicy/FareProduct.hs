@@ -2,8 +2,8 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.FarePolicy.FareProduct
-  ( findEnabledByOrgId,
-    findEnabledByOrgIdAndType,
+  ( findEnabledByMerchantId,
+    findEnabledByMerchantIdAndType,
     insertIfNotExist,
     delete,
     clearCache,
@@ -19,63 +19,63 @@ import Beckn.Utils.Common
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FareProduct
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.FareProduct as Queries
 
-findEnabledByOrgId ::
+findEnabledByMerchantId ::
   (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
-  Id Organization ->
+  Id Merchant ->
   m [FareProduct]
-findEnabledByOrgId id =
-  Hedis.get (makeAllOrgIdKey id) >>= \case
+findEnabledByMerchantId id =
+  Hedis.get (makeAllMerchantIdKey id) >>= \case
     Just a -> return $ coerce @(FareProductD 'Unsafe) @FareProduct <$> a
-    Nothing -> cacheRes /=<< Queries.findEnabledByOrgId id
+    Nothing -> cacheRes /=<< Queries.findEnabledByMerchantId id
   where
     cacheRes fareProds = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      Hedis.setExp (makeAllOrgIdKey id) (coerce @[FareProduct] @[FareProductD 'Unsafe] fareProds) expTime
+      Hedis.setExp (makeAllMerchantIdKey id) (coerce @[FareProduct] @[FareProductD 'Unsafe] fareProds) expTime
 
-findEnabledByOrgIdAndType ::
+findEnabledByMerchantIdAndType ::
   (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
   Maybe FareProductType ->
-  Id Organization ->
+  Id Merchant ->
   m [FareProduct]
-findEnabledByOrgIdAndType mbFPType orgId =
-  Hedis.get (makeAllOrgIdTypeKey orgId mbFPType) >>= \case
+findEnabledByMerchantIdAndType mbFPType merchantId =
+  Hedis.get (makeAllMerchantIdTypeKey merchantId mbFPType) >>= \case
     Just a -> return $ fmap (coerce @(FareProductD 'Unsafe) @FareProduct) a
-    Nothing -> cacheRes /=<< Queries.findEnabledByOrgIdAndType mbFPType orgId
+    Nothing -> cacheRes /=<< Queries.findEnabledByMerchantIdAndType mbFPType merchantId
   where
     cacheRes fareProds = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      Hedis.setExp (makeAllOrgIdTypeKey orgId mbFPType) (coerce @[FareProduct] @[FareProductD 'Unsafe] fareProds) expTime
+      Hedis.setExp (makeAllMerchantIdTypeKey merchantId mbFPType) (coerce @[FareProduct] @[FareProductD 'Unsafe] fareProds) expTime
 
 baseKey :: Text
 baseKey = "CachedQueries:FareProduct"
 
-makeAllOrgIdKey :: Id Organization -> Text
-makeAllOrgIdKey id = baseKey <> ":OrgId-" <> id.getId
+makeAllMerchantIdKey :: Id Merchant -> Text
+makeAllMerchantIdKey id = baseKey <> ":MerchantId-" <> id.getId
 
-makeAllOrgIdTypeKey :: Id Organization -> Maybe FareProductType -> Text
-makeAllOrgIdTypeKey orgId mbFPType = baseKey <> ":OrgId-" <> orgId.getId <> ":Type-" <> fpTypeStr <> ":All"
+makeAllMerchantIdTypeKey :: Id Merchant -> Maybe FareProductType -> Text
+makeAllMerchantIdTypeKey merchantId mbFPType = baseKey <> ":MerchantId-" <> merchantId.getId <> ":Type-" <> fpTypeStr <> ":All"
   where
     fpTypeStr = maybe "None" show mbFPType
 
 -- Call it after any update
-clearCache :: HedisFlow m r => Id Organization -> FareProductType -> m ()
-clearCache orgId fpType = do
-  Hedis.del (makeAllOrgIdKey orgId)
-  Hedis.del (makeAllOrgIdTypeKey orgId (Just fpType))
-  Hedis.del (makeAllOrgIdTypeKey orgId Nothing)
+clearCache :: HedisFlow m r => Id Merchant -> FareProductType -> m ()
+clearCache merchantId fpType = do
+  Hedis.del (makeAllMerchantIdKey merchantId)
+  Hedis.del (makeAllMerchantIdTypeKey merchantId (Just fpType))
+  Hedis.del (makeAllMerchantIdTypeKey merchantId Nothing)
 
 insertIfNotExist ::
-  Id Organization ->
+  Id Merchant ->
   FareProductType ->
   Esq.SqlDB ()
 insertIfNotExist = Queries.insertIfNotExist
 
 delete ::
-  Id Organization ->
+  Id Merchant ->
   FareProductType ->
   Esq.SqlDB ()
 delete = Queries.delete

@@ -7,7 +7,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Control.Applicative (liftA2)
 import Domain.Types.DriverInformation
-import Domain.Types.Organization (Organization)
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
@@ -19,11 +19,18 @@ create = Esq.create
 findById :: Transactionable m => Id Driver -> m (Maybe DriverInformation)
 findById = Esq.findById . cast
 
-fetchAllByIds :: Transactionable m => [Id Driver] -> m [DriverInformation]
-fetchAllByIds driversIds = Esq.findAll $ do
-  driverInformation <- from $ table @DriverInformationT
+fetchAllByIds :: Transactionable m => Id Merchant -> [Id Driver] -> m [DriverInformation]
+fetchAllByIds merchantId driversIds = Esq.findAll $ do
+  (driverInformation :& person) <-
+    from $
+      table @DriverInformationT
+        `innerJoin` table @PersonT
+          `Esq.on` ( \(driverInformation :& person) ->
+                       driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
+                   )
   where_ $
     driverInformation ^. DriverInformationDriverId `in_` valList personsKeys
+      &&. (person ^. PersonMerchantId ==. (just . val . toKey $ merchantId))
   return driverInformation
   where
     personsKeys = toKey . cast <$> driversIds
@@ -61,15 +68,15 @@ updateEnabledState driverId isEnabled = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-updateEnabledStateReturningIds :: EsqDBFlow m r => [Id Driver] -> Bool -> m [Id Driver]
-updateEnabledStateReturningIds driverIds isEnabled = do
+updateEnabledStateReturningIds :: EsqDBFlow m r => Id Merchant -> [Id Driver] -> Bool -> m [Id Driver]
+updateEnabledStateReturningIds merchantId driverIds isEnabled = do
   Esq.runTransaction $ do
-    present <- fmap (cast . (.driverId)) <$> fetchAllByIds driverIds
-    updateEnabledStateForIds
+    present <- fmap (cast . (.driverId)) <$> fetchAllByIds merchantId driverIds
+    updateEnabledStateForIds present
     pure present
   where
-    updateEnabledStateForIds :: SqlDB ()
-    updateEnabledStateForIds = do
+    updateEnabledStateForIds :: [Id Driver] -> SqlDB ()
+    updateEnabledStateForIds present = do
       now <- getCurrentTime
       Esq.update $ \tbl -> do
         set
@@ -77,7 +84,7 @@ updateEnabledStateReturningIds driverIds isEnabled = do
           [ DriverInformationEnabled =. val isEnabled,
             DriverInformationUpdatedAt =. val now
           ]
-        where_ $ tbl ^. DriverInformationDriverId `in_` valList (map (toKey . cast) driverIds)
+        where_ $ tbl ^. DriverInformationDriverId `in_` valList (map (toKey . cast) present)
 
 updateRental :: Id Driver -> Bool -> SqlDB ()
 updateRental driverId isRental = do
@@ -122,7 +129,7 @@ resetDowngradingOptions driverId = updateDowngradingOptions driverId False False
 deleteById :: Id Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverInformationT . cast
 
-findAllWithLimitOffsetByOrgId ::
+findAllWithLimitOffsetByMerchantId ::
   ( MonadThrow m,
     Log m,
     Transactionable m,
@@ -131,9 +138,9 @@ findAllWithLimitOffsetByOrgId ::
   Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
-  Id Organization ->
+  Id Merchant ->
   m [(Person, DriverInformation)]
-findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId = do
+findAllWithLimitOffsetByMerchantId mbSearchString mbLimit mbOffset merchantId = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
   findAll $ do
     (person :& driverInformation) <-
@@ -145,7 +152,7 @@ findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId = do
                      )
     where_ $
       person ^. PersonRole ==. val Person.DRIVER
-        &&. person ^. PersonOrganizationId ==. val (Just $ toKey orgId)
+        &&. person ^. PersonMerchantId ==. val (Just $ toKey merchantId)
         &&. Esq.whenJust_ (liftA2 (,) mbSearchString mbSearchStrDBHash) (filterBySearchString person)
     orderBy [desc $ driverInformation ^. DriverInformationCreatedAt]
     limit limitVal

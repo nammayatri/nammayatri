@@ -14,14 +14,14 @@ import Beckn.Types.Id
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.DiscountTransaction as Domain
 import Storage.Tabular.Booking (BookingTId)
-import Storage.Tabular.Organization (OrganizationTId)
+import Storage.Tabular.Merchant (MerchantTId)
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     DiscountTransactionT sql=discount_transaction
       bookingId BookingTId sql=booking_id
-      organizationId OrganizationTId
+      merchantId MerchantTId
       discount HighPrecMoney
       createdAt UTCTime
       Primary bookingId
@@ -38,14 +38,14 @@ instance TType DiscountTransactionT Domain.DiscountTransaction where
     return $
       Domain.DiscountTransaction
         { bookingId = fromKey bookingId,
-          organizationId = fromKey organizationId,
+          merchantId = fromKey merchantId,
           discount = roundToIntegral discount,
           ..
         }
   toTType Domain.DiscountTransaction {..} =
     DiscountTransactionT
       { bookingId = toKey bookingId,
-        organizationId = toKey organizationId,
+        merchantId = toKey merchantId,
         discount = fromIntegral discount,
         ..
       }
