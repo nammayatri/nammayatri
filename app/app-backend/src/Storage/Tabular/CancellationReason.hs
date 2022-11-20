@@ -23,6 +23,7 @@ mkPersist
       onSearch Bool
       onConfirm Bool
       onAssign Bool
+      priority Int
       Primary reasonCode
       deriving Generic
     |]

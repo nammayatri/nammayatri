@@ -11,7 +11,8 @@ newtype CancellationReasonCode = CancellationReasonCode Text
 data CancellationReason = CancellationReason
   { reasonCode :: CancellationReasonCode,
     description :: Text,
-    enabled :: Bool
+    enabled :: Bool,
+    priority :: Int
   }
   deriving (Generic)
 

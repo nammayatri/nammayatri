@@ -18,6 +18,7 @@ mkPersist
       reasonCode Text
       description Text
       enabled Bool
+      priority Int
       Primary reasonCode
       deriving Generic
     |]

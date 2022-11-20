@@ -23,7 +23,8 @@ data CancellationReason = CancellationReason
     enabled :: Bool,
     onSearch :: Bool,
     onConfirm :: Bool,
-    onAssign :: Bool
+    onAssign :: Bool,
+    priority :: Int
   }
   deriving (Generic, Show)
 

@@ -15,4 +15,5 @@ findAll cancStage =
           OnSearch -> cancellationReason ^. CancellationReasonOnSearch
           OnConfirm -> cancellationReason ^. CancellationReasonOnConfirm
           OnAssign -> cancellationReason ^. CancellationReasonOnAssign
+    orderBy [desc $ cancellationReason ^. CancellationReasonPriority]
     return cancellationReason

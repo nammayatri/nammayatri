@@ -20,6 +20,7 @@ mkPersist
       enabled Bool
       Primary reasonCode
       deriving Generic
+      priority Int
     |]
 
 instance TEntityKey CancellationReasonT where
