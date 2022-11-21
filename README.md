@@ -37,6 +37,20 @@ For Mac
 
 2. [Home brew](https://brew.sh)
 
+### M1 Mac setup (using rosetta)
+
+Brew setup:
+
+1. In Finder, Right click on Terminal application and click on GetInfo, enable open using Rosetta.
+2. Open Finder.
+3. Run the following commands :
+  - softwareupdate --install-rosetta
+  - arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+
+Haskell:
+
+1. arch -x86_64 /usr/local/bin/brew install haskell-stack
+
 ### Installation
 
 To set up your development environment, from project root run
@@ -45,10 +59,17 @@ To set up your development environment, from project root run
 $ ./dev/setup.sh
 ```
 
-Install haskell linter and formatter by running this command in home directory
+Install haskell linter and formatter by running this command in home directory [intel machine]
 
 ```
 $ stack install hlint-3.2.7 ormolu-0.1.4.1
+```
+
+Note :- For M1 Machine Setup, add the installation path `/Users/{username}/.local/bin` in the  environment variable with the following command:-
+
+```
+$ echo 'export PATH="/Users/shailesh.gahlawat/.local/bin:$PATH"' >> ~/.zshrc
+$ source ~/.zshrc
 ```
 
 Mac (other dependencies)
@@ -60,6 +81,17 @@ $ brew install postgres
 $ brew install dhall
 $ brew install jq
 $ brew install parallel
+```
+
+M1 - Mac (other dependencies)
+
+```
+arch -x86_64 /usr/local/bin/brew install libpq
+arch -x86_64 /usr/local/bin/brew install librdkafka
+arch -x86_64 /usr/local/bin/brew install postgres
+arch -x86_64 /usr/local/bin/brew install dhall
+arch -x86_64 /usr/local/bin/brew install jq
+arch -x86_64 /usr/local/bin/brew install parallel
 ```
 
 Linux (other dependencies)
