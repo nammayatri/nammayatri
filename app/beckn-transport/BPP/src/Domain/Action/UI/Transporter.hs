@@ -8,6 +8,7 @@ module Domain.Action.UI.Transporter
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
 import Beckn.Utils.Common
@@ -43,7 +44,7 @@ validateUpdateTransporterReq UpdateTransporterReq {..} =
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name
     ]
 
-updateTransporter :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
+updateTransporter :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
 updateTransporter admin merchantId req = do
   unless (Just merchantId == admin.merchantId) $ throwError AccessDenied
   runRequestValidation validateUpdateTransporterReq req
@@ -60,7 +61,7 @@ updateTransporter admin merchantId req = do
   logTagInfo ("merchantAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updMerchant)
   return $ DM.makeMerchantAPIEntity updMerchant
 
-getTransporter :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> m TransporterRec
+getTransporter :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id SP.Person -> m TransporterRec
 getTransporter personId = do
   person <-
     QP.findById personId

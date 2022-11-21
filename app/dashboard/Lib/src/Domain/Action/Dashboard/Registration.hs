@@ -2,6 +2,7 @@ module Domain.Action.Dashboard.Registration where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
@@ -36,6 +37,7 @@ newtype LogoutRes = LogoutRes {message :: Text}
 
 login ::
   ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
@@ -55,6 +57,7 @@ login LoginReq {..} = do
 
 generateToken ::
   ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
@@ -72,6 +75,7 @@ generateToken personId merchantId = do
 
 logout ::
   ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
@@ -87,6 +91,7 @@ logout tokenInfo = do
 
 logoutAllMerchants ::
   ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>

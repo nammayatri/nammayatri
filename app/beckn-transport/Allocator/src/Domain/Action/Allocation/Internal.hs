@@ -2,6 +2,7 @@ module Domain.Action.Allocation.Internal where
 
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -205,17 +206,17 @@ updateNotificationStatuses bookingId status driverIds = do
 resetLastRejectionTimes :: EsqDBFlow m r => NonEmpty (Id Driver) -> m ()
 resetLastRejectionTimes driverIds = Esq.runTransaction . QDS.updateIdleTimes $ toList driverIds
 
-getAttemptedDrivers :: EsqDBFlow m r => Id Booking -> m [Id Driver]
+getAttemptedDrivers :: EsqDBReplicaFlow m r => Id Booking -> m [Id Driver]
 getAttemptedDrivers bookingId =
   QNS.fetchAttemptedNotificationsByRBId bookingId <&> map (.driverId)
 
-getDriversWithNotification :: EsqDBFlow m r => m [Id Driver]
+getDriversWithNotification :: EsqDBReplicaFlow m r => m [Id Driver]
 getDriversWithNotification = QNS.fetchActiveNotifications <&> fmap (.driverId)
 
-getTopDriversByIdleTime :: EsqDBFlow m r => Int -> [Id Driver] -> m [Id Driver]
+getTopDriversByIdleTime :: EsqDBReplicaFlow m r => Int -> [Id Driver] -> m [Id Driver]
 getTopDriversByIdleTime = QDS.getTopDriversByIdleTime
 
-checkAvailability :: EsqDBFlow m r => SortedDriverPool -> m SortedDriverPool
+checkAvailability :: EsqDBReplicaFlow m r => SortedDriverPool -> m SortedDriverPool
 checkAvailability driverPool = do
   let driverIds = getDriverIds driverPool
   driversInfo <- QDriverInfo.fetchAllAvailableByIds driverIds
@@ -227,6 +228,7 @@ checkAvailability driverPool = do
 cancelBooking ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -322,7 +324,7 @@ logDriverEvents eventType bookingId driverList = Esq.runTransaction $ traverse_ 
     logDriverEvent driver = logAllocationEvent eventType bookingId $ Just driver
 
 -- TODO: We don't need RideInfo anymore, we can just use Booking directly. Remove this.
-getRideInfo :: EsqDBFlow m r => Id Booking -> m RideInfo
+getRideInfo :: EsqDBReplicaFlow m r => Id Booking -> m RideInfo
 getRideInfo bookingId = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
   let rideStatus = castToRideStatus $ booking.status
@@ -342,17 +344,17 @@ getRideInfo bookingId = do
       SRB.COMPLETED -> Completed
       SRB.CANCELLED -> Cancelled
 
-incrementTaskCounter :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m ()
+incrementTaskCounter :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBReplicaFlow m r) => ShortId Subscriber -> m ()
 incrementTaskCounter subscriberId = do
   org <- CQM.findBySubscriberId subscriberId >>= fromMaybeM (MerchantNotFound ("subscriberId-" <> subscriberId.getShortId))
   TMetrics.incrementTaskCounter org.name
 
-incrementFailedTaskCounter :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m ()
+incrementFailedTaskCounter :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBReplicaFlow m r) => ShortId Subscriber -> m ()
 incrementFailedTaskCounter subscriberId = do
   org <- CQM.findBySubscriberId subscriberId >>= fromMaybeM (MerchantNotFound ("subscriberId-" <> subscriberId.getShortId))
   TMetrics.incrementFailedTaskCounter org.name
 
-putTaskDuration :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Milliseconds -> m ()
+putTaskDuration :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBReplicaFlow m r) => ShortId Subscriber -> Milliseconds -> m ()
 putTaskDuration subscriberId ms = do
   org <- CQM.findBySubscriberId subscriberId >>= fromMaybeM (MerchantNotFound ("subscriberId-" <> subscriberId.getShortId))
   TMetrics.putTaskDuration org.name ms

@@ -13,7 +13,7 @@ let rcfg =
 
 in
 
-{ redisCfg = rcfg
+{ hedisCfg = rcfg
 , port = +8015
 , metricsPort = +9998
 , selfId = "JUSPAY.BG.1"

@@ -1,5 +1,6 @@
 module Domain.Action.Beckn.OnSearch where
 
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Data.List as List
@@ -65,7 +66,7 @@ onSearch DOnSearchReq {..} = do
   pure onSearchReq
 
 buildDOnSearchRes ::
-  EsqDBFlow m r =>
+  EsqDBReplicaFlow m r =>
   DM.Merchant ->
   QuoteInfos ->
   DFareProduct.FareProductType ->

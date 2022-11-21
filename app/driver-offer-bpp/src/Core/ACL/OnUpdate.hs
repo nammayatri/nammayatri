@@ -5,6 +5,7 @@ module Core.ACL.OnUpdate
 where
 
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
@@ -42,7 +43,7 @@ data OnUpdateBuildReq
       }
 
 buildOnUpdateMessage ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r) =>
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage RideAssignedBuildReq {..} = do

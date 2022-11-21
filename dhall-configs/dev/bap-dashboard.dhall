@@ -10,6 +10,15 @@ let esqDBCfg =
   , connectSchemaName = "atlas_bap_dashboard"
   }
 
+let esqDBReplicaCfg =
+  { connectHost = esqDBCfg.connectHost
+  , connectPort = 5435
+  , connectUser = esqDBCfg.connectUser
+  , connectPassword = esqDBCfg.connectPassword
+  , connectDatabase = esqDBCfg.connectDatabase
+  , connectSchemaName = esqDBCfg.connectSchemaName
+  }
+
 let rcfg =
   { connectHost = "localhost"
   , connectPort = 6379
@@ -39,6 +48,7 @@ let appBackend =
 in
 
 { esqDBCfg = esqDBCfg
+, esqDBReplicaCfg = esqDBReplicaCfg
 , hedisCfg = rcfg
 , port = +8017
 , migrationPath = Some (env:BAP_DASHBOARD_MIGRATION_PATH as Text ? "dev/migrations/bap-dashboard")

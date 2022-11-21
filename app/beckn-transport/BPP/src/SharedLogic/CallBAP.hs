@@ -10,6 +10,7 @@ module SharedLogic.CallBAP
   )
 where
 
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Context as Context
@@ -37,7 +38,7 @@ import Tools.Metrics (CoreMetrics)
 
 sendRideAssignedUpdateToBAP ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -58,7 +59,7 @@ sendRideAssignedUpdateToBAP booking ride = do
 
 sendRideStartedUpdateToBAP ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -77,7 +78,7 @@ sendRideStartedUpdateToBAP booking ride = do
 
 sendRideCompletedUpdateToBAP ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -96,7 +97,7 @@ sendRideCompletedUpdateToBAP booking ride fareBreakups = do
   void $ callOnUpdate transporter booking rideCompletedMsg
 
 sendBookingCancelledUpdateToBAP ::
-  ( EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -111,7 +112,7 @@ sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
   void $ callOnUpdate transporter booking bookingCancelledMsg
 
 sendBookingReallocationUpdateToBAP ::
-  ( EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -126,7 +127,7 @@ sendBookingReallocationUpdateToBAP booking rideId transporter = do
   void $ callOnUpdate transporter booking bookingReallocationMsg
 
 callOnUpdate ::
-  ( EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>

@@ -1,5 +1,6 @@
 module Domain.Types.Booking.API where
 
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
@@ -59,7 +60,7 @@ newtype OneWayBookingAPIDetails = OneWayBookingAPIDetails
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-buildBookingAPIEntity :: EsqDBFlow m r => Booking -> m BookingAPIEntity
+buildBookingAPIEntity :: EsqDBReplicaFlow m r => Booking -> m BookingAPIEntity
 buildBookingAPIEntity booking = do
   mbRide <- QRide.findActiveByRBId booking.id
 

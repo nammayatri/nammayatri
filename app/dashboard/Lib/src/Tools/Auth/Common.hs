@@ -4,6 +4,7 @@ module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMe
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.App
 import Beckn.Types.Error
@@ -23,7 +24,7 @@ type AuthFlow m r =
   )
 
 verifyPerson ::
-  (AuthFlow m r, Redis.HedisFlow m r) =>
+  (AuthFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r) =>
   RegToken ->
   m (Id DP.Person, Id DMerchant.Merchant)
 verifyPerson token = do
@@ -56,6 +57,7 @@ authTokenCacheKey regToken = do
 
 verifyToken ::
   ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HasFlowEnv m r '["registrationTokenExpiry" ::: Days]
   ) =>
   RegToken ->
@@ -67,6 +69,7 @@ verifyToken regToken = do
 
 validateToken ::
   ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HasFlowEnv m r '["registrationTokenExpiry" ::: Days]
   ) =>
   DR.RegistrationToken ->
@@ -87,7 +90,7 @@ validateToken sr = do
   return sr
 
 cleanCachedTokens ::
-  ( EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
@@ -100,7 +103,7 @@ cleanCachedTokens personId = do
     void $ Redis.del key
 
 cleanCachedTokensByMerchantId ::
-  ( EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>

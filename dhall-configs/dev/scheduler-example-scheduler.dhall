@@ -12,6 +12,15 @@ let esqDBCfg =
   , connectSchemaName = "atlas_scheduler_example"
   }
 
+let esqDBReplicaCfg =
+  { connectHost = esqDBCfg.connectHost
+  , connectPort = 5435
+  , connectUser = esqDBCfg.connectUser
+  , connectPassword = esqDBCfg.connectPassword
+  , connectDatabase = esqDBCfg.connectDatabase
+  , connectSchemaName = esqDBCfg.connectSchemaName
+  }
+
 let rcfg =
   { connectHost = "localhost"
   , connectPort = 6379
@@ -26,6 +35,7 @@ in
 {
 loggerConfig = common.loggerConfig // { logRawSql = False, logFilePath = "/tmp/scheduler-example-scheduler.log", prettyPrinting = True } ,
 esqDBCfg = esqDBCfg,
+esqDBReplicaCfg = esqDBReplicaCfg,
 metricsPort = +8052,
 hedisCfg = rcfg,
 hedisPrefix = "example-scheduler",

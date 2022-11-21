@@ -7,6 +7,7 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
@@ -33,7 +34,7 @@ data CancelRes = CancelRes
     cancellationSource :: SBCR.CancellationSource
   }
 
-cancel :: (EncFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id Person.Person -> CancelReq -> m CancelRes
+cancel :: (EncFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> Id Person.Person -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   canCancelBooking <- isBookingCancellable booking
@@ -71,7 +72,7 @@ cancel bookingId _ req = do
             ..
           }
 
-isBookingCancellable :: EsqDBFlow m r => SRB.Booking -> m Bool
+isBookingCancellable :: EsqDBReplicaFlow m r => SRB.Booking -> m Bool
 isBookingCancellable booking
   | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT] = pure True
   | booking.status == SRB.TRIP_ASSIGNED = do

@@ -12,10 +12,10 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.OneWayFarePolicy
@@ -24,14 +24,14 @@ import qualified Domain.Types.Vehicle as Vehicle
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy as Queries
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
+findById :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy a
     Nothing -> flip whenJust cacheOneWayFarePolicy /=<< Queries.findById id
 
 findByMerchantIdAndVariant ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBReplicaFlow m r) =>
   Id Merchant ->
   Vehicle.Variant ->
   m (Maybe OneWayFarePolicy)
@@ -45,7 +45,7 @@ findByMerchantIdAndVariant merchantId vehVar =
   where
     findAndCache = flip whenJust cacheOneWayFarePolicy /=<< Queries.findByMerchantIdAndVariant merchantId vehVar
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [OneWayFarePolicy]
+findAllByMerchantId :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> m [OneWayFarePolicy]
 findAllByMerchantId merchantId =
   Hedis.get (makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy) a

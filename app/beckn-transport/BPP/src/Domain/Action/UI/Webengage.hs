@@ -4,6 +4,7 @@ import Beckn.External.Encryption (decrypt)
 import qualified Beckn.External.Infobip.Flow as IF
 import Beckn.External.Infobip.Types hiding (id)
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Person as Person hiding (id)
@@ -56,7 +57,7 @@ data WebengageRes = WebengageRes
 callInfobip ::
   ( HasFlowEnv m r '["infoBIPCfg" ::: InfoBIPConfig],
     EncFlow m r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     CoreMetrics m,
     Log m
   ) =>

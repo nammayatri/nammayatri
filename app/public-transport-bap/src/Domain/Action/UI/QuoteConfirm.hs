@@ -2,6 +2,7 @@ module Domain.Action.UI.QuoteConfirm where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -36,7 +37,7 @@ validateConfirmReq :: EsqDBFlow m r => QConfirmReq -> m ()
 validateConfirmReq confirmReq = do
   when (confirmReq.quantity <= 0) $ throwError $ InvalidRequest "invalid quantity value"
 
-quoteConfirm :: EsqDBFlow m r => PersonId -> Id DQuote.Quote -> QConfirmReq -> m (QConfirmRes, ConfirmMessageD)
+quoteConfirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => PersonId -> Id DQuote.Quote -> QConfirmReq -> m (QConfirmRes, ConfirmMessageD)
 quoteConfirm personId quoteId confirmReq = do
   validateConfirmReq confirmReq
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)

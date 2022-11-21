@@ -6,6 +6,7 @@ module Domain.Action.UI.Route
 where
 
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Person as DP
@@ -15,7 +16,7 @@ import Tools.Error
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 
-getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
+getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getRoutes personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   orgId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")

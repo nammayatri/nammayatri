@@ -1,5 +1,6 @@
 module Tools.Auth where
 
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -33,7 +34,7 @@ instance VerificationMethod VerifyToken where
     \If you don't have a token, use registration endpoints."
 
 verifyPerson ::
-  ( EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasField "authTokenCacheExpiry" r Seconds
   ) =>
@@ -57,20 +58,20 @@ authTokenCacheKey regToken =
   "BAP:authTokenCacheKey:" <> regToken
 
 verifyPersonAction ::
-  ( EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasField "authTokenCacheExpiry" r Seconds
   ) =>
   VerificationAction VerifyToken m
 verifyPersonAction = VerificationAction verifyPerson
 
-verifyToken :: EsqDBFlow m r => RegToken -> m SR.RegistrationToken
+verifyToken :: EsqDBReplicaFlow m r => RegToken -> m SR.RegistrationToken
 verifyToken token =
   RegistrationToken.findByToken token
     >>= Utils.fromMaybeM (InvalidToken token)
     >>= validateToken
 
-validateToken :: EsqDBFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
+validateToken :: EsqDBReplicaFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60
   expired <- Utils.isExpired nominal updatedAt

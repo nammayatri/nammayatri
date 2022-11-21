@@ -5,6 +5,7 @@ module Domain.Action.Beckn.Track
   )
 where
 
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -27,7 +28,7 @@ data DTrackRes = TrackRes
   }
 
 track ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBReplicaFlow m r) =>
   Id DM.Merchant ->
   DTrackReq ->
   m DTrackRes

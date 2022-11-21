@@ -5,6 +5,7 @@ where
 
 import Beckn.External.Maps.Types
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
@@ -19,7 +20,7 @@ import Tools.Error
 checkServiceability ::
   ( HasCacheConfig r,
     HedisFlow m r,
-    EsqDBFlow m r
+    EsqDBReplicaFlow m r
   ) =>
   (GeofencingConfig -> GeoRestriction) ->
   Id Person.Person ->

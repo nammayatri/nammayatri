@@ -2,6 +2,7 @@ module Domain.Action.Beckn.OnConfirm where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto (runTransaction)
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as Domain
@@ -20,7 +21,7 @@ data OnConfirmMessageD = OnConfirmMessageD
     paymentUrl :: BaseUrl
   }
 
-handleOnConfirm :: EsqDBFlow m r => OnConfirmMessageD -> m ()
+handleOnConfirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmMessageD -> m ()
 handleOnConfirm msg = do
   booking <- QBooking.findById msg.bookingId >>= fromMaybeM (BookingDoesNotExist msg.bookingId.getId)
   now <- getCurrentTime

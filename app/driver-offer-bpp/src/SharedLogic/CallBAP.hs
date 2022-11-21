@@ -11,6 +11,7 @@ module SharedLogic.CallBAP
   )
 where
 
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Context as Context
@@ -109,7 +110,7 @@ buildBppUrl (Id transporterId) =
 
 sendRideAssignedUpdateToBAP ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     EncFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -130,7 +131,7 @@ sendRideAssignedUpdateToBAP booking ride = do
 
 sendRideStartedUpdateToBAP ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     EncFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -149,7 +150,7 @@ sendRideStartedUpdateToBAP booking ride = do
 
 sendRideCompletedUpdateToBAP ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     EncFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -169,7 +170,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams finalFare = do
   void $ callOnUpdate transporter booking rideCompletedMsg
 
 sendBookingCancelledUpdateToBAP ::
-  ( EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m

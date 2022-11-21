@@ -2,6 +2,7 @@ module Domain.Action.Beckn.OnSearch where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList as Kafka
 import Beckn.Streaming.MonadProducer
 import Beckn.Types.Id
@@ -43,7 +44,7 @@ data OnSearchStationReq = OnSearchStationReq
   }
   deriving (Generic)
 
-handler :: (EsqDBFlow m r, MonadProducer Kafka.PublicTransportQuoteList m) => OnSearchReq -> m ()
+handler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, MonadProducer Kafka.PublicTransportQuoteList m) => OnSearchReq -> m ()
 handler (OnSearchReq searchId quotes transportLocations) = do
   searchRequest <- QSearch.findById searchId >>= fromMaybeM (SearchRequestDoesNotExist searchId.getId)
   publicTransportStations <- forM transportLocations $ \publicTransportStation -> do

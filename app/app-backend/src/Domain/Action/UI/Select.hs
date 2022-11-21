@@ -9,6 +9,7 @@ module Domain.Action.UI.Select
 where
 
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -54,7 +55,7 @@ select personId estimateId = do
         ..
       }
 
-selectList :: EsqDBFlow m r => Id DEstimate.Estimate -> m SelectListRes
+selectList :: EsqDBReplicaFlow m r => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
   selectedQuotes <- QQuote.findAllByEstimateId estimateId
   pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes

@@ -19,7 +19,7 @@ data OnStatusReq = OnStatusReq
   }
   deriving (Show, Generic, PrettyShow)
 
-handler :: EsqDBFlow m r => OnStatusReq -> m ()
+handler :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => OnStatusReq -> m ()
 handler OnStatusReq {..} = do
   booking <- QBooking.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
   paymentDetails <- QPaymentTransaction.findByBookingId booking.id >>= fromMaybeM (PaymentDetailsNotFound booking.id.getId)

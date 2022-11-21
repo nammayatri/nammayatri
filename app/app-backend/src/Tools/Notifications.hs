@@ -26,7 +26,7 @@ import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Metrics
 
 getFCMConfig ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBReplicaFlow m r) =>
   Id Merchant ->
   m FCM.FCMConfig
 getFCMConfig merchId = do
@@ -34,7 +34,7 @@ getFCMConfig merchId = do
 
 notifyOnDriverOfferIncoming ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -65,7 +65,7 @@ notifyOnDriverOfferIncoming estimateId quotes person = do
 
 notifyOnRideAssigned ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -98,7 +98,7 @@ notifyOnRideAssigned booking ride = do
 
 notifyOnRideStarted ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -131,7 +131,7 @@ notifyOnRideStarted booking ride = do
 
 notifyOnRideCompleted ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -164,7 +164,7 @@ notifyOnRideCompleted booking ride = do
 
 notifyOnExpiration ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -200,7 +200,7 @@ notifyOnRegistration ::
   ( HasCacheConfig r,
     CoreMetrics m,
     HedisFlow m r,
-    EsqDBFlow m r
+    EsqDBReplicaFlow m r
   ) =>
   RegistrationToken ->
   Person ->
@@ -231,7 +231,7 @@ notifyOnBookingCancelled ::
   ( HasCacheConfig r,
     CoreMetrics m,
     HedisFlow m r,
-    EsqDBFlow m r
+    EsqDBReplicaFlow m r
   ) =>
   SRB.Booking ->
   SBCR.CancellationSource ->
@@ -291,7 +291,7 @@ notifyOnBookingReallocated ::
   ( HasCacheConfig r,
     CoreMetrics m,
     HedisFlow m r,
-    EsqDBFlow m r
+    EsqDBReplicaFlow m r
   ) =>
   SRB.Booking ->
   m ()
@@ -327,7 +327,7 @@ notifyOnQuoteReceived ::
   ( HasCacheConfig r,
     CoreMetrics m,
     HedisFlow m r,
-    EsqDBFlow m r
+    EsqDBReplicaFlow m r
   ) =>
   DQuote.Quote ->
   m ()
@@ -357,7 +357,7 @@ notifyOnQuoteReceived quote = do
 
 notifyDriverOnTheWay ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
@@ -385,7 +385,7 @@ notifyDriverOnTheWay personId = do
 
 notifyDriverHasReached ::
   ( HasCacheConfig r,
-    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>

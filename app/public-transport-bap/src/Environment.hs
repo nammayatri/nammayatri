@@ -20,6 +20,7 @@ import Tools.Streaming.Kafka.Environment
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
+    esqDBReplicaCfg :: EsqDBConfig,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     hedisCfg :: HedisCfg,
@@ -53,6 +54,7 @@ data AppEnv = AppEnv
     disableSignatureAuth :: Bool,
     hostName :: Text,
     esqDBEnv :: EsqDBEnv,
+    esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
@@ -67,6 +69,7 @@ buildAppEnv AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg

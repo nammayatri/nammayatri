@@ -13,7 +13,7 @@ let rcfg =
 
 in
 
-{ redisCfg = rcfg
+{ hedisCfg = rcfg
 , port = +8015
 , metricsPort = +9999
 , selfId = "api.sandbox.beckn.juspay.in/dev/gateway/v1"

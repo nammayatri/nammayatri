@@ -10,6 +10,15 @@ let esqDBCfg =
   , connectSchemaName = "atlas_bpp_dashboard"
   }
 
+let esqDBReplicaCfg =
+  { connectHost = esqDBCfg.connectHost
+  , connectPort = 5435
+  , connectUser = esqDBCfg.connectUser
+  , connectPassword = esqDBCfg.connectPassword
+  , connectDatabase = esqDBCfg.connectDatabase
+  , connectSchemaName = esqDBCfg.connectSchemaName
+  }
+
 let rcfg =
   { connectHost = "localhost"
   , connectPort = 6379
@@ -45,6 +54,7 @@ let driverOfferBpp =
 in
 
 { esqDBCfg = esqDBCfg
+, esqDBReplicaCfg = esqDBReplicaCfg
 , hedisCfg = rcfg
 , port = +8018
 , migrationPath = Some (env:BPP_DASHBOARD_MIGRATION_PATH as Text ? "dev/migrations/bpp-dashboard")

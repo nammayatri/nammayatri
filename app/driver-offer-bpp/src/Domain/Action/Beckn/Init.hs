@@ -38,7 +38,7 @@ buildBookingLocation DLoc.SearchReqLocation {..} = do
         ..
       }
 
-handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
+handler :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
 handler merchantId req = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime

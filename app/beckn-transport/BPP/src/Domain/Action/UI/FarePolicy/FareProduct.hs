@@ -10,6 +10,7 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import Beckn.Types.APISuccess
 import Beckn.Utils.Common
@@ -32,7 +33,7 @@ data UpdateFareProductReq = UpdateFareProductReq
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-listFareProducts :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> m ListFareProductsRes
+listFareProducts :: (CacheFlow m r, EsqDBReplicaFlow m r) => SP.Person -> m ListFareProductsRes
 listFareProducts person = do
   merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
   fareProducts <- SFareProduct.findEnabledByMerchantId merchantId

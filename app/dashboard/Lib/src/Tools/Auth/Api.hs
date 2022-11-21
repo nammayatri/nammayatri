@@ -3,6 +3,7 @@
 module Tools.Auth.Api (module Tools.Auth.Api, module Reexport) where
 
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -46,12 +47,12 @@ instance VerificationMethodWithPayload VerifyApi where
   type VerificationPayloadType VerifyApi = DMatrix.ApiAccessLevel
 
 verifyApiAction ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  (Common.AuthFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r) =>
   VerificationActionWithPayload VerifyApi m
 verifyApiAction = VerificationActionWithPayload verifyApi
 
 verifyApi ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  (Common.AuthFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r) =>
   DMatrix.ApiAccessLevel ->
   RegToken ->
   m (ShortId DMerchant.Merchant)
@@ -72,7 +73,7 @@ instance
         apiEntity = fromSing (sing @ae)
       }
 
-verifyAccessLevel :: EsqDBFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
+verifyAccessLevel :: EsqDBReplicaFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
 verifyAccessLevel requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntity person.roleId requiredApiAccessLevel.apiEntity
@@ -88,7 +89,7 @@ checkUserAccess DMatrix.USER_WRITE_ACCESS WRITE_ACCESS = True
 checkUserAccess _ _ = False
 
 verifyServer ::
-  EsqDBFlow m r =>
+  EsqDBReplicaFlow m r =>
   DSN.ServerName ->
   Id DMerchant.Merchant ->
   m (ShortId DMerchant.Merchant)

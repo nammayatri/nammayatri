@@ -9,6 +9,7 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
@@ -60,7 +61,7 @@ validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
     ]
 
-listFarePolicies :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListFarePolicyRes
+listFarePolicies :: (HasCacheConfig r, EsqDBReplicaFlow m r, HedisFlow m r) => SP.Person -> m ListFarePolicyRes
 listFarePolicies person = do
   merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
   oneWayFarePolicies <- SFarePolicy.findAllByMerchantId merchantId
@@ -69,7 +70,7 @@ listFarePolicies person = do
       { oneWayFarePolicies = map makeFarePolicyAPIEntity oneWayFarePolicies
       }
 
-updateFarePolicy :: (HasCacheConfig r, EsqDBFlow m r, FCMFlow m r, CoreMetrics m, HedisFlow m r) => SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyReq -> m UpdateFarePolicyRes
+updateFarePolicy :: (HasCacheConfig r, EsqDBFlow m r, EsqDBReplicaFlow m r, FCMFlow m r, CoreMetrics m, HedisFlow m r) => SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyReq -> m UpdateFarePolicyRes
 updateFarePolicy admin fpId req = do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy

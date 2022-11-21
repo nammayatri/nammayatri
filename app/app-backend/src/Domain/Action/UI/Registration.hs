@@ -16,6 +16,7 @@ import Beckn.External.FCM.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Esqueleto as DB
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
@@ -94,6 +95,7 @@ auth ::
     HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
@@ -198,6 +200,7 @@ verify ::
   ( HasCacheConfig r,
     HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
@@ -233,7 +236,7 @@ verify tokenId req = do
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
 
-getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
+getRegistrationTokenE :: EsqDBReplicaFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
@@ -243,7 +246,7 @@ createPerson req merchantId = do
   DB.runTransaction $ Person.create person
   pure person
 
-checkPersonExists :: EsqDBFlow m r => Text -> m SP.Person
+checkPersonExists :: EsqDBReplicaFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
   Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
 
@@ -251,6 +254,7 @@ resend ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>
@@ -270,7 +274,7 @@ resend tokenId = do
   DB.runTransaction $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
+cleanCachedTokens :: (EsqDBReplicaFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
   regTokens <- RegistrationToken.findAllByPersonId personId
   for_ regTokens $ \regToken -> do
@@ -279,6 +283,7 @@ cleanCachedTokens personId = do
 
 logout ::
   ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r
   ) =>
   Id SP.Person ->

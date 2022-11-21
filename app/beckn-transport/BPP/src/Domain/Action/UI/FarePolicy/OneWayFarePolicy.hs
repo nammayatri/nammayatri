@@ -8,6 +8,7 @@ module Domain.Action.UI.FarePolicy.OneWayFarePolicy
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
@@ -56,7 +57,7 @@ validateUpdateFarePolicyRequest UpdateOneWayFarePolicyReq {..} =
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
     ]
 
-listOneWayFarePolicies :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> m ListOneWayFarePolicyRes
+listOneWayFarePolicies :: (CacheFlow m r, EsqDBReplicaFlow m r) => SP.Person -> m ListOneWayFarePolicyRes
 listOneWayFarePolicies person = do
   merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
   oneWayFarePolicies <- SFarePolicy.findAllByMerchantId merchantId
@@ -68,6 +69,7 @@ listOneWayFarePolicies person = do
 updateOneWayFarePolicy ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HedisFlow m r,
     FCMFlow m r,
     CoreMetrics m

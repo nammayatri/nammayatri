@@ -1,7 +1,7 @@
 module Domain.Action.Dashboard.AccessMatrix where
 
 import Beckn.Prelude
-import Beckn.Types.Common
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common (fromMaybeM)
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -12,7 +12,7 @@ import Tools.Auth
 import Tools.Error
 
 getAccessMatrix ::
-  EsqDBFlow m r =>
+  EsqDBReplicaFlow m r =>
   TokenInfo ->
   Maybe Integer ->
   Maybe Integer ->
@@ -23,7 +23,7 @@ getAccessMatrix _ mbLimit mbOffset = do
   pure $ DMatrix.mkAccessMatrixAPIEntity roles accessMatrixItems
 
 getAccessMatrixByRole ::
-  EsqDBFlow m r =>
+  EsqDBReplicaFlow m r =>
   TokenInfo ->
   Id DRole.Role ->
   m DMatrix.AccessMatrixRowAPIEntity

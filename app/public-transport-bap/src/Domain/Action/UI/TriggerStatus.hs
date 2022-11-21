@@ -1,6 +1,7 @@
 module Domain.Action.UI.TriggerStatus where
 
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking.Type as DBooking
@@ -14,7 +15,7 @@ data StatusRes = StatusRes
     bppUrl :: BaseUrl
   }
 
-triggerStatusUpdate :: EsqDBFlow m r => Id DBooking.Booking -> m StatusRes
+triggerStatusUpdate :: EsqDBReplicaFlow m r => Id DBooking.Booking -> m StatusRes
 triggerStatusUpdate bookingId = do
   booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   ticketId <- booking.ticketId & fromMaybeM BookingBppOrderIdNotFound

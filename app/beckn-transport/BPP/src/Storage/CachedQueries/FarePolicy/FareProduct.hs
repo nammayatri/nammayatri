@@ -12,10 +12,10 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FareProduct
@@ -24,7 +24,7 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.FareProduct as Queries
 
 findEnabledByMerchantId ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBReplicaFlow m r) =>
   Id Merchant ->
   m [FareProduct]
 findEnabledByMerchantId id =
@@ -37,7 +37,7 @@ findEnabledByMerchantId id =
       Hedis.setExp (makeAllMerchantIdKey id) (coerce @[FareProduct] @[FareProductD 'Unsafe] fareProds) expTime
 
 findEnabledByMerchantIdAndType ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBReplicaFlow m r) =>
   Maybe FareProductType ->
   Id Merchant ->
   m [FareProduct]

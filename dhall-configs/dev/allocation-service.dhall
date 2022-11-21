@@ -22,6 +22,7 @@ in  { appCfg = appCfg
     , healthcheckPort = +8114
     , httpClientOptions = appCfg.httpClientOptions
     , esqDBCfg = appCfg.esqDBCfg
+    , esqDBReplicaCfg = appCfg.esqDBReplicaCfg
     , hedisCfg = appCfg.hedisCfg
     , loggerConfig = appCfg.loggerConfig
               //  { logFilePath = "/tmp/allocation-service.log", logRawSql = False }

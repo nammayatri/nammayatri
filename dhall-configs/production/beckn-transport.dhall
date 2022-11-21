@@ -12,6 +12,15 @@ let esqDBCfg =
   , connectSchemaName = "atlas_transporter"
   }
 
+let esqDBReplicaCfg =
+  { connectHost = esqDBCfg.connectHost
+  , connectPort = 5435
+  , connectUser = esqDBCfg.connectUser
+  , connectPassword = esqDBCfg.connectPassword
+  , connectDatabase = esqDBCfg.connectDatabase
+  , connectSchemaName = esqDBCfg.connectSchemaName
+  }
+
 let rcfg =
   { connectHost = "cache.primary.beckn.juspay.net"
   , connectPort = 6379
@@ -57,6 +66,7 @@ let cacheConfig =
 in
 
 { esqDBCfg = esqDBCfg
+, esqDBReplicaCfg = esqDBReplicaCfg
 , hedisCfg = rcfg
 , smsCfg = smsConfig
 , infoBIPCfg = InfoBIPConfig

@@ -8,6 +8,7 @@ module Domain.Action.UI.SavedReqLocation
 where
 
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Esqueleto.Transactionable (runTransaction)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Error
@@ -37,7 +38,7 @@ newtype SavedReqLocationsListRes = SavedReqLocationsListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-createSavedReqLocation :: EsqDBFlow m r => Id Person.Person -> CreateSavedReqLocationReq -> m APISuccess.APISuccess
+createSavedReqLocation :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> CreateSavedReqLocationReq -> m APISuccess.APISuccess
 createSavedReqLocation riderId sreq = do
   savedLocations <- QSavedReqLocation.findAllByRiderIdAndTag riderId sreq.tag
   unless (null savedLocations) $ throwError $ InvalidRequest "Location with this tag already exists"
@@ -47,7 +48,7 @@ createSavedReqLocation riderId sreq = do
     QSavedReqLocation.create location
   return APISuccess.Success
 
-getSavedReqLocations :: EsqDBFlow m r => Id Person.Person -> m SavedReqLocationsListRes
+getSavedReqLocations :: EsqDBReplicaFlow m r => Id Person.Person -> m SavedReqLocationsListRes
 getSavedReqLocations riderId = do
   savedLocations <- QSavedReqLocation.findAllByRiderId riderId
   return $ SavedReqLocationsListRes $ SavedReqLocation.makeSavedReqLocationAPIEntity <$> savedLocations
