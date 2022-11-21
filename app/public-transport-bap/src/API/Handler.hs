@@ -13,3 +13,4 @@ handler =
       :<|> UI.handler
   )
     :<|> Swagger.handler
+    :<|> serveDirectoryWebApp "dev/swagger"

@@ -12,7 +12,9 @@ import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI as UI
-import Data.OpenApi (Info (..), OpenApi (..))
+import Beckn.Utils.Servant.HTML
+import qualified Data.ByteString as BS
+import Data.OpenApi
 import Environment
 import EulerHS.Prelude
 import Servant hiding (throwError)
@@ -21,6 +23,8 @@ import Servant.OpenApi
 type API =
   MainAPI
     :<|> SwaggerAPI
+    :<|> OpenAPI
+    :<|> Raw
 
 type MainAPI =
   UI.API
@@ -32,7 +36,9 @@ type MainAPI =
 handler :: FlowServer API
 handler =
   mainServer
-    :<|> writeSwaggerJSONFlow
+    :<|> writeSwaggerHTMLFlow
+    :<|> writeOpenAPIFlow
+    :<|> serveDirectoryWebApp "dev/swagger"
 
 mainServer :: FlowServer MainAPI
 mainServer =
@@ -42,10 +48,12 @@ mainServer =
     :<|> Auth.handler
     :<|> Dashboard.handler
 
-type SwaggerAPI = "swagger" :> Get '[JSON] OpenApi
+type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 
-swagger :: OpenApi
-swagger = do
+type OpenAPI = "openapi" :> Get '[JSON] OpenApi
+
+openAPI :: OpenApi
+openAPI = do
   let openApi = toOpenApi (Proxy :: Proxy MainAPI)
   openApi
     { _openApiInfo =
@@ -55,5 +63,8 @@ swagger = do
           }
     }
 
-writeSwaggerJSONFlow :: FlowServer SwaggerAPI
-writeSwaggerJSONFlow = return swagger
+writeSwaggerHTMLFlow :: FlowServer SwaggerAPI
+writeSwaggerHTMLFlow = lift $ BS.readFile "dev/swagger/index.html"
+
+writeOpenAPIFlow :: FlowServer OpenAPI
+writeOpenAPIFlow = pure openAPI

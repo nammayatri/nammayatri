@@ -67,6 +67,7 @@ dependencies:
   - servant-client
   - servant-client-core
   - servant-server
+  - http-media
   - text
   - wai
   - warp

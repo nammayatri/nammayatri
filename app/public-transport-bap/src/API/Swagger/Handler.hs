@@ -3,12 +3,14 @@ module API.Swagger.Handler where
 import qualified API.Swagger.Types as Swagger
 import API.Types (MainAPI)
 import Beckn.Prelude
+import qualified Data.ByteString as BS
 import Data.OpenApi
 import Environment
+import Servant
 import Servant.OpenApi
 
-swagger :: OpenApi
-swagger = do
+openAPI :: OpenApi
+openAPI = do
   let openApi = toOpenApi (Proxy :: Proxy MainAPI)
   openApi
     { _openApiInfo =
@@ -19,4 +21,12 @@ swagger = do
     }
 
 handler :: FlowServer Swagger.API
-handler = return swagger
+handler =
+  writeSwaggerHTMLFlow
+    :<|> writeOpenAPIFlow
+
+writeSwaggerHTMLFlow :: FlowServer Swagger.SwaggerAPI
+writeSwaggerHTMLFlow = lift $ BS.readFile "dev/swagger/index.html"
+
+writeOpenAPIFlow :: FlowServer Swagger.OpenAPI
+writeOpenAPIFlow = pure openAPI

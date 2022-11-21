@@ -6,6 +6,7 @@ import API
 import Beckn.Tools.Metrics.Init
 import Beckn.Types.Flow
 import Beckn.Utils.App
+import Beckn.Utils.Monitoring.Prometheus.Servant ()
 import qualified Beckn.Utils.Servant.Server as BU
 import Core.Beckn (logBecknRequest)
 import Environment

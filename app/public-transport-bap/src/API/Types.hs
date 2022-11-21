@@ -8,6 +8,7 @@ import Servant
 type API =
   MainAPI
     :<|> Swagger.API
+    :<|> Raw
 
 type MainAPI =
   Beckn.API

@@ -3,9 +3,12 @@ module API where
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
 import qualified API.UI as UI
-import Data.OpenApi
+import Beckn.Utils.Servant.HTML
 -- import Domain.Action.UI.DriverOnboarding.DriverLicense as DriverOnboarding
 -- import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
+
+import qualified Data.ByteString as BS
+import Data.OpenApi
 import Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
 import Environment
 import EulerHS.Prelude
@@ -16,6 +19,8 @@ import Servant.OpenApi
 type DriverOfferAPI =
   MainAPI
     :<|> SwaggerAPI
+    :<|> OpenAPI
+    :<|> Raw
 
 type MainAPI =
   UI.API
@@ -36,12 +41,16 @@ mainServer =
 driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =
   mainServer
-    :<|> writeSwaggerJSONFlow
+    :<|> writeSwaggerHTMLFlow
+    :<|> writeOpenAPIFlow
+    :<|> serveDirectoryWebApp "dev/swagger"
 
-type SwaggerAPI = "swagger" :> Get '[JSON] OpenApi
+type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 
-swagger :: OpenApi
-swagger = do
+type OpenAPI = "openapi" :> Get '[JSON] OpenApi
+
+openAPI :: OpenApi
+openAPI = do
   let openApi = toOpenApi (Proxy :: Proxy MainAPI)
   openApi
     { _openApiInfo =
@@ -51,5 +60,8 @@ swagger = do
           }
     }
 
-writeSwaggerJSONFlow :: FlowServer SwaggerAPI
-writeSwaggerJSONFlow = return swagger
+writeSwaggerHTMLFlow :: FlowServer SwaggerAPI
+writeSwaggerHTMLFlow = lift $ BS.readFile "dev/swagger/index.html"
+
+writeOpenAPIFlow :: FlowServer OpenAPI
+writeOpenAPIFlow = pure openAPI
