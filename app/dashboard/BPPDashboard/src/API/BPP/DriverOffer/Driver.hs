@@ -32,39 +32,31 @@ type API =
        )
 
 type DriverDocumentsInfoAPI =
-  "documents"
-    :> "info"
-    :> ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
     :> Common.DriverDocumentsInfoAPI
 
 type DriverListAPI =
-  "list"
-    :> ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
     :> Common.DriverListAPI
 
 type DriverActivityAPI =
-  "activity"
-    :> ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
     :> Common.DriverActivityAPI
 
 type EnableDriversAPI =
-  "enable"
-    :> ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
     :> Common.EnableDriversAPI
 
 type DisableDriversAPI =
-  "disable"
-    :> ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
     :> Common.DisableDriversAPI
 
 type DriverLocationAPI =
-  "location"
-    :> ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
     :> Common.DriverLocationAPI
 
 type DriverInfoAPI =
-  "info"
-    :> ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
     :> Common.DriverInfoAPI
 
 type DeleteDriverAPI =

@@ -24,7 +24,8 @@ newtype DriverIds = EnableDriversRequest
 ---
 
 type DriverListAPI =
-  QueryParam "limit" Int
+  "list"
+    :> QueryParam "limit" Int
     :> QueryParam "offset" Int
     :> QueryParam "verified" Bool
     :> QueryParam "enabled" Bool
@@ -80,7 +81,10 @@ data RCDetails = RCDetails
 ---------------------------------------------------------
 -- documents info ---------------------------------------
 
-type DriverDocumentsInfoAPI = Get '[JSON] DriverDocumentsInfoRes
+type DriverDocumentsInfoAPI =
+  "documents"
+    :> "info"
+    :> Get '[JSON] DriverDocumentsInfoRes
 
 data DriverDocumentsInfoRes = DriverDocumentsInfoRes
   { registered :: !Int,
@@ -123,7 +127,9 @@ emptyInfo =
 ---------------------------------------------------------
 -- driver activity --------------------------------------
 
-type DriverActivityAPI = Get '[JSON] DriverActivityRes
+type DriverActivityAPI =
+  "activity"
+    :> Get '[JSON] DriverActivityRes
 
 data DriverActivityRes = DriverActivityRes
   { activeDriversInApp :: !Int,
@@ -163,7 +169,8 @@ emptyDriverActivityRes =
 -- enable drivers ---------------------------------------
 
 type EnableDriversAPI =
-  ReqBody '[JSON] DriverIds
+  "enable"
+    :> ReqBody '[JSON] DriverIds
     :> Put '[JSON] EnableDriversRes
 
 data EnableDriversRes = EnableDriversRes
@@ -178,7 +185,8 @@ data EnableDriversRes = EnableDriversRes
 -- disable drivers --------------------------------------
 
 type DisableDriversAPI =
-  ReqBody '[JSON] DriverIds
+  "disable"
+    :> ReqBody '[JSON] DriverIds
     :> Put '[JSON] DisableDriversRes
 
 data DisableDriversRes = DisableDriversRes
@@ -193,7 +201,8 @@ data DisableDriversRes = DisableDriversRes
 -- driver location --------------------------------------
 
 type DriverLocationAPI =
-  QueryParam "limit" Int
+  "location"
+    :> QueryParam "limit" Int
     :> QueryParam "offset" Int
     :> ReqBody '[JSON] DriverIds
     :> Get '[JSON] DriverLocationRes
@@ -224,7 +233,8 @@ data DriverLocationItem = DriverLocationItem
 -- driver info ------------------------------------------
 
 type DriverInfoAPI =
-  QueryParam "mobileNumber" Text
+  "info"
+    :> QueryParam "mobileNumber" Text
     :> QueryParam "vehicleNumber" Text
     :> Get '[JSON] DriverInfoRes
 

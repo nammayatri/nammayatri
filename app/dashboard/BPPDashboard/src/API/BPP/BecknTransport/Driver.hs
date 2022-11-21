@@ -32,33 +32,27 @@ type API =
        )
 
 type DriverListAPI =
-  "list"
-    :> ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
     :> Common.DriverListAPI
 
 type DriverActivityAPI =
-  "activity"
-    :> ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
     :> Common.DriverActivityAPI
 
 type EnableDriversAPI =
-  "enable"
-    :> ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
     :> Common.EnableDriversAPI
 
 type DisableDriversAPI =
-  "disable"
-    :> ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
     :> Common.DisableDriversAPI
 
 type DriverLocationAPI =
-  "location"
-    :> ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
     :> Common.DriverLocationAPI
 
 type DriverInfoAPI =
-  "info"
-    :> ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
     :> Common.DriverInfoAPI
 
 type DeleteDriverAPI =

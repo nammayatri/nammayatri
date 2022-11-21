@@ -33,28 +33,14 @@ import Tools.Error
 
 type API =
   "driver"
-    :> ( DriverListAPI
-           :<|> DriverActivityAPI
-           :<|> EnableDriversAPI
-           :<|> DisableDriversAPI
-           :<|> DriverLocationAPI
-           :<|> DriverInfoAPI
-           :<|> DeleteDriverAPI
+    :> ( Common.DriverListAPI
+           :<|> Common.DriverActivityAPI
+           :<|> Common.EnableDriversAPI
+           :<|> Common.DisableDriversAPI
+           :<|> Common.DriverLocationAPI
+           :<|> Common.DriverInfoAPI
+           :<|> Common.DeleteDriverAPI
        )
-
-type DriverListAPI = "list" :> Common.DriverListAPI
-
-type DriverActivityAPI = "activity" :> Common.DriverActivityAPI
-
-type EnableDriversAPI = "enable" :> Common.EnableDriversAPI
-
-type DisableDriversAPI = "disable" :> Common.DisableDriversAPI
-
-type DriverLocationAPI = "location" :> Common.DriverLocationAPI
-
-type DriverInfoAPI = "info" :> Common.DriverInfoAPI
-
-type DeleteDriverAPI = Common.DeleteDriverAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
