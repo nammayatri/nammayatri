@@ -26,6 +26,6 @@ mkCancelMessage res = Cancel.CancelMessage res.bppBookingId.getId $ castCancella
     castCancellatonSource = \case
       SBCR.ByUser -> Cancel.ByUser
       SBCR.ByDriver -> Cancel.ByDriver
-      SBCR.ByOrganization -> Cancel.ByOrganization
+      SBCR.ByMerchant -> Cancel.ByMerchant
       SBCR.ByAllocator -> Cancel.ByAllocator
       SBCR.ByApplication -> Cancel.ByApplication

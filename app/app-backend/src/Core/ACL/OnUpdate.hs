@@ -90,6 +90,6 @@ castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
 castCancellationSource = \case
   OnUpdate.ByUser -> SBCR.ByUser
   OnUpdate.ByDriver -> SBCR.ByDriver
-  OnUpdate.ByOrganization -> SBCR.ByOrganization
+  OnUpdate.ByMerchant -> SBCR.ByMerchant
   OnUpdate.ByAllocator -> SBCR.ByAllocator
   OnUpdate.ByApplication -> SBCR.ByApplication

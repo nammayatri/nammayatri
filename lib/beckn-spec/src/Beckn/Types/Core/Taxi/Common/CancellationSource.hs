@@ -10,7 +10,7 @@ import EulerHS.Prelude
 data CancellationSource
   = ByUser
   | ByDriver
-  | ByOrganization
+  | ByMerchant
   | ByAllocator
   | ByApplication
   deriving (Show, Eq, Ord, Read, Generic)
@@ -29,7 +29,7 @@ cancellationSourceJSONOptions =
     { constructorTagModifier = \case
         "ByUser" -> "CANCELLED_BY_USER"
         "ByDriver" -> "CANCELLED_BY_DRIVER"
-        "ByOrganization" -> "CANCELLED_BY_ORGANIZATION"
+        "ByMerchant" -> "CANCELLED_BY_MERCHANT"
         "ByAllocator" -> "CANCELLED_BY_ALLOCATOR"
         "ByApplication" -> "CANCELLED_BY_APPLICATION"
         _ -> error "CancellationReason parsing error"

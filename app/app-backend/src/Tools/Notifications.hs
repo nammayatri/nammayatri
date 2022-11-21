@@ -213,7 +213,7 @@ notifyOnRegistration regToken person mbDeviceToken = do
         FCM.FCMData
           { fcmNotificationType = FCM.REGISTRATION_APPROVED,
             fcmShowNotification = FCM.SHOW,
-            fcmEntityType = FCM.Organization,
+            fcmEntityType = FCM.Merchant,
             fcmEntityIds = getId tokenId,
             fcmEntityData = (),
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REGISTRATION_APPROVED
@@ -260,7 +260,7 @@ notifyOnBookingCancelled booking cancellationSource = do
             showTimeIst (booking.startTime) <> ".",
             "Check the app for details."
           ]
-      SBCR.ByOrganization ->
+      SBCR.ByMerchant ->
         unwords
           [ "\"" <> orgName <> "\" agency had to cancel the ride for",
             showTimeIst (booking.startTime) <> ".",
