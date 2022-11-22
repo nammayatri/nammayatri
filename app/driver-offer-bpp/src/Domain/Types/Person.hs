@@ -5,7 +5,7 @@ module Domain.Types.Person where
 
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
-import qualified Beckn.External.Maps.Google as GoogleMaps
+import Beckn.External.Types (Language)
 import Beckn.Types.Id
 import Beckn.Utils.Common (Centesimal, EsqDBFlow, maskText)
 import Data.Aeson
@@ -75,7 +75,7 @@ data PersonE e = Person
     isNew :: Bool,
     merchantId :: Maybe (Id DM.Merchant), -- TODO remove Maybe
     deviceToken :: Maybe FCM.FCMRecipientToken,
-    language :: Maybe GoogleMaps.Language,
+    language :: Maybe Language,
     description :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

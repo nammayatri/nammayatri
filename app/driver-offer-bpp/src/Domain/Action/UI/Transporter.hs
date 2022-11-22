@@ -9,7 +9,6 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
 import Beckn.Utils.Common
@@ -44,7 +43,7 @@ validateUpdateTransporterReq UpdateTransporterReq {..} =
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name
     ]
 
-updateTransporter :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
+updateTransporter :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
 updateTransporter admin merchantId req = do
   unless (Just merchantId == admin.merchantId) $ throwError AccessDenied
   runRequestValidation validateUpdateTransporterReq req
@@ -61,7 +60,7 @@ updateTransporter admin merchantId req = do
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updOrg)
   return $ DM.makeMerchantAPIEntity updOrg
 
-getTransporter :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id SP.Person -> m TransporterRec
+getTransporter :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> m TransporterRec
 getTransporter personId = do
   person <-
     QP.findById personId

@@ -1,6 +1,5 @@
 module Domain.Action.Beckn.OnSearch.OneWay where
 
-import Beckn.External.Maps.Google as Google
 import qualified Beckn.External.Maps.Types as MapSearch
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis
@@ -23,6 +22,8 @@ import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Flow as Fare
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Quote as QQuote
+import Tools.Maps (HasCoordinates (..))
+import qualified Tools.Maps as MapSearch
 import Tools.Metrics (CoreMetrics, HasBPPMetrics)
 
 data QuoteInfo = QuoteInfo
@@ -39,11 +40,11 @@ data QuoteInfo = QuoteInfo
 
 onSearchCallback ::
   ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["driverEstimatedPickupDuration" ::: Seconds],
-    HasGoogleCfg r,
     HasBPPMetrics m r,
     CoreMetrics m
   ) =>
@@ -54,8 +55,7 @@ onSearchCallback ::
   DLoc.SearchReqLocation ->
   m [QuoteInfo]
 onSearchCallback searchRequest transporterId now fromLocation toLocation = do
-  let fromLoc = getCoordinates fromLocation
-  pool <- DrPool.calculateDriverPool fromLoc transporterId Nothing SFP.ONE_WAY
+  pool <- DrPool.calculateDriverPool fromLocation transporterId Nothing SFP.ONE_WAY
 
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId
@@ -69,7 +69,13 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   -- we take nearest one and calculate fare and make PI for him
 
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
-  distRes <- Google.getDistance (Just Google.CAR) fromLocation toLocation
+  distRes <-
+    MapSearch.getDistance transporterId $
+      MapSearch.GetDistanceReq
+        { origin = fromLocation,
+          destination = toLocation,
+          travelMode = Just MapSearch.CAR
+        }
   let distance = distRes.distance
       estimatedRideDuration = distRes.duration
       estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` searchRequest.startTime

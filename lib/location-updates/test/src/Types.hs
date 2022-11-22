@@ -1,6 +1,6 @@
 module Types where
 
-import Beckn.External.Maps.Google.Config
+import Beckn.External.Encryption (EncTools (..))
 import Beckn.Prelude
 import Beckn.Storage.Hedis.Config
 import qualified Beckn.Storage.Hedis.Queries as Hedis
@@ -8,7 +8,6 @@ import qualified Beckn.Tools.Metrics.CoreMetrics.Types as Metrics
 import Beckn.Types.Flow
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Beckn.Utils.Dhall (FromDhall, readDhallConfig)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map as Map
@@ -22,11 +21,12 @@ data Person
 data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
+    encTools :: EncTools,
     hedisEnv :: HedisEnv,
-    googleCfg :: GoogleCfg,
     coreMetrics :: Metrics.CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions
   }
+  deriving (Generic)
 
 type TestM = FlowR AppEnv
 
@@ -51,22 +51,15 @@ wrapTests :: (AppEnv -> IO a) -> IO a
 wrapTests func = do
   withHedisEnv defaultHedisCfg ("locationUpdatesTest:" <>) $ \hedisEnv -> do
     let loggerConfig = defaultLoggerConfig {logToFile = True, prettyPrinting = True}
+    let encTools =
+          EncTools
+            { service = ("localhost", 8021),
+              hashSalt = "How wonderful it is that nobody need wait a single moment before starting to improve the world"
+            }
     withLoggerEnv loggerConfig Nothing $ \loggerEnv -> do
       coreMetrics <- Metrics.registerCoreMetricsContainer
-      googleKey <- (.googleKey) <$> readTopSecrets
-      googleMapsUrl <- parseBaseUrl "https://maps.googleapis.com/maps/api/"
-      googleRoadsUrl <- parseBaseUrl "https://roads.googleapis.com/"
-      let appEnv = AppEnv loggerConfig loggerEnv hedisEnv (GoogleCfg {..}) coreMetrics defaultHttpClientOptions
+      let appEnv = AppEnv loggerConfig loggerEnv encTools hedisEnv coreMetrics defaultHttpClientOptions
       func appEnv
-
-data TopSecrets = TopSecrets
-  { googleKey :: Text,
-    googleTranslateKey :: Text
-  }
-  deriving (Generic, FromDhall, Show)
-
-readTopSecrets :: IO TopSecrets
-readTopSecrets = readDhallConfig "../../dhall-configs/dev/secrets/top-secret.dhall"
 
 ------------------- utility functions ---------------------
 

@@ -1,6 +1,5 @@
 module Domain.Action.Beckn.Init where
 
-import Beckn.External.Maps.Google as MapSearch
 import Beckn.Prelude
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
@@ -19,6 +18,7 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Geometry as QGeometry
 import Tools.Error
+import Tools.Maps as MapSearch
 
 data InitReq = InitReq
   { vehicleVariant :: Veh.Variant,
@@ -47,11 +47,11 @@ data InitRes = InitRes
 
 init ::
   ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     HasField "driverEstimatedPickupDuration" r Seconds,
-    CoreMetrics m,
-    HasGoogleCfg r
+    CoreMetrics m
   ) =>
   Id DM.Merchant ->
   InitReq ->
@@ -73,11 +73,11 @@ init transporterId req = do
 
 initOneWayTrip ::
   ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     HasField "driverEstimatedPickupDuration" r Seconds,
-    CoreMetrics m,
-    HasGoogleCfg r
+    CoreMetrics m
   ) =>
   InitReq ->
   InitOneWayReq ->
@@ -88,7 +88,13 @@ initOneWayTrip req oneWayReq transporter now = do
   unlessM (rideServiceable transporter.geofencingConfig QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
     throwError RideNotServiceable
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
-  distRes <- MapSearch.getDistance (Just MapSearch.CAR) req.fromLocation oneWayReq.toLocation
+  distRes <-
+    MapSearch.getDistance transporter.id $
+      MapSearch.GetDistanceReq
+        { origin = req.fromLocation,
+          destination = oneWayReq.toLocation,
+          travelMode = Just MapSearch.CAR
+        }
   let distance = distRes.distance
       estimatedRideDuration = distRes.duration
       estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` req.startTime
@@ -115,8 +121,7 @@ initRentalTrip ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
-    CoreMetrics m,
-    HasGoogleCfg r
+    CoreMetrics m
   ) =>
   InitReq ->
   InitRentalReq ->

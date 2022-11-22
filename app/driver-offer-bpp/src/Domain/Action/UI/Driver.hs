@@ -29,7 +29,7 @@ where
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.External.FCM.Types as FCM
-import qualified Beckn.External.Maps.Google as GoogleMaps
+import qualified Beckn.External.Maps as Maps
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude (NominalDiffTime)
@@ -95,7 +95,7 @@ data DriverInformationRes = DriverInformationRes
     verified :: Bool,
     enabled :: Bool,
     organization :: DM.MerchantAPIEntity,
-    language :: Maybe GoogleMaps.Language
+    language :: Maybe Maps.Language
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -116,7 +116,7 @@ data DriverEntityRes = DriverEntityRes
     enabled :: Bool,
     verified :: Bool,
     registeredAt :: UTCTime,
-    language :: Maybe GoogleMaps.Language
+    language :: Maybe Maps.Language
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -182,7 +182,7 @@ data UpdateDriverReq = UpdateDriverReq
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     deviceToken :: Maybe FCMRecipientToken,
-    language :: Maybe GoogleMaps.Language,
+    language :: Maybe Maps.Language,
     canDowngradeToSedan :: Maybe Bool,
     canDowngradeToHatchback :: Maybe Bool
   }

@@ -7,7 +7,7 @@ import Domain.Types.Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Vehicle
 
-data RentalFarePolicyD s = RentalFarePolicy
+data RentalFarePolicyD (s :: UsageSafety) = RentalFarePolicy
   { id :: Id RentalFarePolicy,
     merchantId :: Id DM.Merchant,
     vehicleVariant :: Vehicle.Variant,

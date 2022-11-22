@@ -3,7 +3,6 @@
 module Domain.Action.Beckn.Select where
 
 import qualified Beckn.External.GoogleTranslate.Types as GoogleTranslate
-import qualified Beckn.External.Maps.Google as GoogleMaps
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
@@ -19,12 +18,14 @@ import Domain.Types.Vehicle.Variant (Variant)
 import Environment
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
-import SharedLogic.GoogleTranslate
+import SharedLogic.GoogleMaps
+import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import Storage.Queries.Person
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error (FarePolicyError (NoFarePolicy))
+import Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 
@@ -33,22 +34,29 @@ data DSelectReq = DSelectReq
     transactionId :: Maybe Text,
     bapId :: Text,
     bapUri :: BaseUrl,
-    pickupLocation :: DLoc.SearchReqLocationAPIEntity,
+    pickupLocation :: LatLong,
     pickupTime :: UTCTime,
-    dropLocation :: DLoc.SearchReqLocationAPIEntity,
+    dropLocation :: LatLong,
     variant :: Variant
   }
 
-type LanguageDictionary = M.Map GoogleMaps.Language DSearchReq.SearchRequest
+type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 
-handler :: Text -> Id DM.Merchant -> DSelectReq -> Flow ()
-handler sessiontoken merchantId sReq = do
-  fromLocation <- buildSearchReqLocation sReq.pickupLocation
-  toLocation <- buildSearchReqLocation sReq.dropLocation
+handler :: Id DM.Merchant -> DSelectReq -> Flow ()
+handler merchantId sReq = do
+  sessiontoken <- generateGUIDText
+  fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupLocation Nothing
+  toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropLocation Nothing
   farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId sReq.variant >>= fromMaybeM NoFarePolicy
   driverPool <- calculateDriverPool (Just sReq.variant) fromLocation merchantId False True
 
-  distRes <- GoogleMaps.getDistance (Just GoogleMaps.CAR) fromLocation toLocation
+  distRes <-
+    Maps.getDistance merchantId $
+      Maps.GetDistanceReq
+        { origin = fromLocation,
+          destination = toLocation,
+          travelMode = Just Maps.CAR
+        }
   let distance = distRes.distance
   let duration = distRes.duration
   fareParams <- calculateFare merchantId farePolicy distance sReq.pickupTime Nothing
@@ -61,14 +69,14 @@ handler sessiontoken merchantId sReq = do
       <> "; estimated base fare:"
       <> show baseFare
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare) driverPool
-  languageDictionary <- foldM (addLanguageToDictionary sessiontoken searchReq) M.empty driverPool
+  languageDictionary <- foldM (addLanguageToDictionary merchantId sessiontoken searchReq) M.empty driverPool
   Esq.runTransaction $ do
     QSReq.create searchReq
     mapM_ QSRD.create searchRequestsForDrivers
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) ->
     when (not dPoolRes.origin.onRide) $ do
-      let language = fromMaybe GoogleMaps.ENGLISH dPoolRes.origin.language
+      let language = fromMaybe Maps.ENGLISH dPoolRes.origin.language
       let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
       let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq
       Notify.notifyOnNewSearchRequestAvailable sReqFD.driverId dPoolRes.origin.driverDeviceToken entityData
@@ -77,7 +85,7 @@ handler sessiontoken merchantId sReq = do
       (MonadFlow m) =>
       DSearchReq.SearchRequest ->
       Money ->
-      GoogleMaps.GetDistanceResult DriverPoolResult GoogleMaps.LatLong ->
+      Maps.GetDistanceResp DriverPoolResult Maps.LatLong ->
       m SearchRequestForDriver
     buildSearchRequestForDriver searchRequest baseFare_ gdRes = do
       guid <- generateGUID
@@ -135,8 +143,16 @@ buildSearchRequest from to merchantId sReq distance duration = do
         vehicleVariant = sReq.variant
       }
 
-buildSearchReqLocation :: (MonadGuid m, MonadTime m) => DLoc.SearchReqLocationAPIEntity -> m DLoc.SearchReqLocation
-buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do
+buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> Maybe Maps.Language -> m DLoc.SearchReqLocation
+buildSearchReqLocation merchantId sessionToken latLong@Maps.LatLong {..} language = do
+  pickupRes <-
+    Maps.getPlaceName merchantId $
+      Maps.GetPlaceNameReq
+        { getBy = Maps.ByLatLong latLong,
+          sessionToken = Just sessionToken,
+          language = language
+        }
+  Address {..} <- mkLocation pickupRes
   id <- Id <$> generateGUID
   now <- getCurrentTime
   let createdAt = now
@@ -144,17 +160,20 @@ buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do
   pure DLoc.SearchReqLocation {..}
 
 translateSearchReq ::
-  ( MonadFlow m,
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
     GoogleTranslate.HasGoogleTranslate m r,
     CoreMetrics m
   ) =>
+  Id DM.Merchant ->
   Text ->
   DSearchReq.SearchRequest ->
-  GoogleMaps.Language ->
+  Maps.Language ->
   m DSearchReq.SearchRequest
-translateSearchReq sessiontoken defaultSearchReq@DSearchReq.SearchRequest {..} language = do
-  from <- buildLocWithAddr sessiontoken defaultSearchReq.fromLocation language
-  to <- buildLocWithAddr sessiontoken defaultSearchReq.toLocation language
+translateSearchReq orgId sessiontoken defaultSearchReq@DSearchReq.SearchRequest {..} language = do
+  from <- buildSearchReqLocation orgId sessiontoken (getCoordinates fromLocation) (Just language)
+  to <- buildSearchReqLocation orgId sessiontoken (getCoordinates toLocation) (Just language)
   pure
     DSearchReq.SearchRequest
       { fromLocation = from,
@@ -162,38 +181,23 @@ translateSearchReq sessiontoken defaultSearchReq@DSearchReq.SearchRequest {..} l
         ..
       }
 
-buildLocWithAddr ::
-  ( MonadFlow m,
-    GoogleTranslate.HasGoogleTranslate m r,
-    CoreMetrics m
-  ) =>
-  Text ->
-  DLoc.SearchReqLocation ->
-  GoogleMaps.Language ->
-  m DLoc.SearchReqLocation
-buildLocWithAddr sessiontoken searchReqLoc@DLoc.SearchReqLocation {..} language = do
-  mAreaObj <- translate GoogleMaps.ENGLISH language `mapM` searchReqLoc.area
-  let translation = (\areaObj -> listToMaybe areaObj._data.translations) =<< mAreaObj
-  let areaRegional = (.translatedText) <$> translation
-  buildSearchReqLocation (buildSearchReqLocationAPIEntity searchReqLoc areaRegional)
-
-buildSearchReqLocationAPIEntity :: DLoc.SearchReqLocation -> Maybe Text -> DLoc.SearchReqLocationAPIEntity
-buildSearchReqLocationAPIEntity DLoc.SearchReqLocation {..} areaRegional = DLoc.SearchReqLocationAPIEntity {area = areaRegional, ..}
-
 addLanguageToDictionary ::
-  ( MonadFlow m,
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
     GoogleTranslate.HasGoogleTranslate m r,
     CoreMetrics m
   ) =>
+  Id DM.Merchant ->
   Text ->
   DSearchReq.SearchRequest ->
   LanguageDictionary ->
-  GoogleMaps.GetDistanceResult DriverPoolResult GoogleMaps.LatLong ->
+  Maps.GetDistanceResp DriverPoolResult Maps.LatLong ->
   m LanguageDictionary
-addLanguageToDictionary sessiontoken searchReq dict dPoolRes = do
-  let language = fromMaybe GoogleMaps.ENGLISH dPoolRes.origin.language
+addLanguageToDictionary orgId sessiontoken searchReq dict dPoolRes = do
+  let language = fromMaybe Maps.ENGLISH dPoolRes.origin.language
   if isJust $ M.lookup language dict
     then return dict
     else do
-      translatedSearchReq <- translateSearchReq sessiontoken searchReq language
+      translatedSearchReq <- translateSearchReq orgId sessiontoken searchReq language
       pure $ M.insert language translatedSearchReq dict

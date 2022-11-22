@@ -2,7 +2,7 @@
 
 module SharedLogic.GoogleMaps where
 
-import Beckn.External.Maps.Google hiding (Address)
+import Beckn.External.Maps.Interface.Types
 import Beckn.Prelude hiding (const, error, getField, setField)
 import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.App (MonadFlow)
@@ -24,8 +24,8 @@ data Address = Address
 
 mkLocation :: (MonadFlow m, CoreMetrics m) => GetPlaceNameResp -> m Address
 mkLocation placeNameResp = do
-  let resultsResp = head placeNameResp.results
-  let hashMap = iterateAddrResp resultsResp.address_components
+  let resultsResp = head placeNameResp
+  let hashMap = iterateAddrResp resultsResp.addressComponents
   pure
     Address
       { areaCode = getField ["postal_code"] hashMap,
@@ -35,7 +35,7 @@ mkLocation placeNameResp = do
         country = getField ["country"] hashMap,
         building = getField ["premise", "sub_premise"] hashMap,
         area = getField ["sublocality_level_5", "sublocality_level_4", "sublocality_level_3", "sublocality_level_2", "sublocality_level_1"] hashMap <|> getField ["sublocality"] hashMap,
-        full_address = resultsResp.formatted_address,
+        full_address = resultsResp.formattedAddress,
         ..
       }
 
@@ -43,7 +43,7 @@ iterateAddrResp :: [AddressResp] -> HashMap Text Text
 iterateAddrResp = foldl iterateAddrTypes initial
 
 iterateAddrTypes :: HashMap Text Text -> AddressResp -> HashMap Text Text
-iterateAddrTypes prevMap addressObj = foldl (insertTypeName addressObj.long_name) prevMap addressObj.types
+iterateAddrTypes prevMap addressObj = foldl (insertTypeName addressObj.longName) prevMap addressObj.types
 
 insertTypeName :: Text -> HashMap Text Text -> Text -> HashMap Text Text
 insertTypeName long_name prevMap typeName = HashMap.insert typeName long_name prevMap

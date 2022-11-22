@@ -1,6 +1,6 @@
 module Lib.LocationUpdates
   ( I.RideInterpolationHandler,
-    I.mkHandlerWithDefaultRedisFuncs,
+    I.mkRideInterpolationHandler,
     isDistanceCalculationFailed,
     initializeDistanceCalculation,
     finalDistanceCalculation,

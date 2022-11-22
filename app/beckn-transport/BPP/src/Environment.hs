@@ -14,7 +14,6 @@ where
 import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.External.Infobip.Types (InfoBIPConfig)
-import Beckn.External.Maps.Google.Config
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis as Redis
@@ -57,7 +56,6 @@ data AppCfg = AppCfg
     autoMigrate :: Bool,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
-    googleCfg :: GoogleCfg,
     fcmUrl :: BaseUrl,
     fcmJsonPath :: Maybe Text,
     fcmTokenKeyPrefix :: Text,
@@ -101,7 +99,6 @@ data AppEnv = AppEnv
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
-    googleCfg :: GoogleCfg,
     fcmUrl :: BaseUrl,
     fcmJsonPath :: Maybe Text,
     fcmTokenKeyPrefix :: Text,

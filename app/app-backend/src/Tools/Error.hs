@@ -21,7 +21,6 @@ instance IsHTTPError RatingError where
 
 instance IsAPIError RatingError
 
---
 newtype EstimateError = EstimateDoesNotExist Text
   deriving (Eq, Show, IsBecknAPIError)
 

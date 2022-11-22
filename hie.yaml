@@ -177,15 +177,6 @@ cradle:
     - path: "app/mock-public-transport-bpp/server/Paths_mock_public_transport_bpp.hs"
       component: "mock-public-transport-bpp:exe:mock-public-transport-bpp-exe"
 
-    - path: "lib/beckn-core/src"
-      component: "beckn-core:lib"
-
-    - path: "lib/beckn-core/test/app"
-      component: "beckn-core:test:beckn-core-tests"
-
-    - path: "lib/beckn-core/test/src"
-      component: "beckn-core:test:beckn-core-tests"
-
     - path: "test/src"
       component: "beckn-test:lib"
 
@@ -209,6 +200,9 @@ cradle:
 
     - path: "lib/location-updates/src"
       component: "location-updates:lib"
+
+    - path: "lib/location-updates/test/src"
+      component: "location-updates:test:location-updates-tests"
 
     - path: "app/utils/route-extractor/src"
       component: "route-extractor:lib"

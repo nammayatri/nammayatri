@@ -7,7 +7,6 @@ module Domain.Action.Beckn.Confirm
 where
 
 import Beckn.External.Encryption (encrypt)
-import Beckn.External.Maps.Google.Config (HasGoogleCfg)
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis (HedisFlow)
@@ -69,8 +68,7 @@ confirm ::
     HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["schedulingReserveTime" ::: Seconds],
-    CoreMetrics m,
-    HasGoogleCfg r
+    CoreMetrics m
   ) =>
   Id DM.Merchant ->
   Subscriber ->

@@ -6,7 +6,6 @@ module Domain.Action.UI.Search.OneWay
   )
 where
 
-import qualified Beckn.External.Maps.Google as MapSearch
 import Beckn.Prelude
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
@@ -23,6 +22,7 @@ import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
+import qualified Tools.Maps as MapSearch
 import Tools.Metrics
 import qualified Tools.Metrics as Metrics
 
@@ -43,8 +43,8 @@ data OneWaySearchRes = OneWaySearchRes
 
 oneWaySearch ::
   ( HasCacheConfig r,
+    EncFlow m r,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    MapSearch.HasGoogleCfg r,
     HedisFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -61,7 +61,14 @@ oneWaySearch personId req = do
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   toLocation <- DSearch.buildSearchReqLoc req.destination
   now <- getCurrentTime
-  distance <- (\res -> metersToHighPrecMeters res.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.origin.gps req.destination.gps
+  distance <-
+    (\res -> metersToHighPrecMeters res.distance)
+      <$> MapSearch.getDistance merchant.id
+        MapSearch.GetDistanceReq
+          { origin = req.origin.gps,
+            destination = req.destination.gps,
+            travelMode = Just MapSearch.CAR
+          }
   searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (Just distance) now
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)

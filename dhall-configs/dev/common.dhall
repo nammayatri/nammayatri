@@ -5,12 +5,6 @@ let mockRegistryUrl = "http://localhost:8020/"
 let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
 
-let googleCfg = {
-   googleMapsUrl = "https://maps.googleapis.com/maps/api/"
-,  googleRoadsUrl = "https://roads.googleapis.com/"
-,  googleKey = sec.googleKey
-}
-
 in { smsSessionConfig = globalCommon.smsSessionConfig
    , autoMigrate = globalCommon.autoMigrate
    , loggerConfig = globalCommon.loggerConfig // { logToFile = True, logRawSql = True, prettyPrinting = True }
@@ -29,7 +23,6 @@ in { smsSessionConfig = globalCommon.smsSessionConfig
    , InfoBIPConfig = sec.InfoBIPConfig
    , passetto = { _1 = "localhost", _2 = 8021 }
    , fcmJsonPath = Some "dummy-fcm.json"
-   , googleCfg = googleCfg
    , googleTranslateUrl = "https://www.googleapis.com/"
    , googleTranslateKey = sec.googleTranslateKey
    , fcmUrl = "http://localhost:4545/"

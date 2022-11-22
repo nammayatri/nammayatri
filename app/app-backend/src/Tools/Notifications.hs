@@ -26,7 +26,7 @@ import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Metrics
 
 getFCMConfig ::
-  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   m FCM.FCMConfig
 getFCMConfig merchId = do

@@ -3,12 +3,14 @@ module Domain.Action.UI.Location.UpdateLocation
     UpdateLocationReq,
     Waypoint (..),
     UpdateLocationRes,
+    buildUpdateLocationHandle,
     updateLocationHandler,
   )
 where
 
 import Beckn.External.Maps.Types
 import Beckn.Prelude hiding (Handler)
+import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
@@ -22,15 +24,20 @@ import qualified Data.List.NonEmpty as NE
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
+import Environment (Flow)
 import GHC.Records.Extra
+import qualified Lib.LocationUpdates as LocUpd
+import qualified Storage.Queries.DriverLocation as DrLoc
+import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics (CoreMetrics)
 
 data Handler m = Handler
-  { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
-    findDriverLocationById :: Id Person.Person -> m (Maybe DriverLocation),
-    upsertDriverLocation :: Id Person.Person -> LatLong -> UTCTime -> m (),
-    getInProgressByDriverId :: Id Person.Person -> m (Maybe SRide.Ride),
-    addIntermediateRoutePoints :: Id SRide.Ride -> Id Person.Person -> NonEmpty LatLong -> m ()
+  { driver :: Person.Person,
+    findDriverLocation :: m (Maybe DriverLocation),
+    upsertDriverLocation :: LatLong -> UTCTime -> m (),
+    getInProgress :: m (Maybe SRide.Ride),
+    addIntermediateRoutePoints :: Id SRide.Ride -> NonEmpty LatLong -> m ()
   }
 
 type UpdateLocationReq = NonEmpty Waypoint
@@ -45,6 +52,24 @@ data Waypoint = Waypoint
 
 type UpdateLocationRes = APISuccess
 
+buildUpdateLocationHandle :: Id Person.Person -> Flow (Handler Flow)
+buildUpdateLocationHandle driverId = do
+  driver <-
+    QP.findById driverId
+      >>= fromMaybeM (PersonNotFound driverId.getId)
+  orgId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler orgId
+  pure $
+    Handler
+      { driver,
+        findDriverLocation = DrLoc.findById driverId,
+        upsertDriverLocation = \point timestamp ->
+          Esq.runTransaction $ DrLoc.upsertGpsCoord driverId point timestamp,
+        getInProgress = QRide.getInProgressByDriverId driverId,
+        addIntermediateRoutePoints = \rideId ->
+          LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId
+      }
+
 updateLocationHandler ::
   ( Redis.HedisFlow m r,
     CoreMetrics m,
@@ -54,28 +79,24 @@ updateLocationHandler ::
     MonadTime m
   ) =>
   Handler m ->
-  Id Person.Person ->
   UpdateLocationReq ->
   m UpdateLocationRes
-updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocationUpdate" $ do
-  checkLocationUpdatesRateLimit driverId
-  logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
-  driver <-
-    findPersonById driverId
-      >>= fromMaybeM (PersonNotFound driverId.getId)
+updateLocationHandler Handler {..} waypoints = withLogTag "driverLocationUpdate" $ do
+  checkLocationUpdatesRateLimit driver.id
+  logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
   whenM (Redis.tryLockRedis lockKey 60) $ do
-    mbOldLoc <- findDriverLocationById driver.id
+    mbOldLoc <- findDriverLocation
     case filterNewWaypoints mbOldLoc of
       [] -> logWarning "Incoming points are older than current one, ignoring"
       (a : ax) -> do
         let newWaypoints = a :| ax
             currPoint = NE.last newWaypoints
-        upsertDriverLocation driver.id currPoint.pt currPoint.ts
-        getInProgressByDriverId driver.id
+        upsertDriverLocation currPoint.pt currPoint.ts
+        getInProgress
           >>= maybe
             (logInfo "No ride is assigned to driver, ignoring")
-            (\ride -> addIntermediateRoutePoints ride.id driver.id $ NE.map (.pt) newWaypoints)
+            (\ride -> addIntermediateRoutePoints ride.id $ NE.map (.pt) newWaypoints)
 
     Redis.unlockRedis lockKey
   pure Success
@@ -84,7 +105,7 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
       maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
 
-    lockKey = makeLockKey driverId
+    lockKey = makeLockKey driver.id
 
 makeLockKey :: Id Person.Person -> Text
 makeLockKey (Id driverId) = "beckn-transport:driverLocationUpdate:" <> driverId

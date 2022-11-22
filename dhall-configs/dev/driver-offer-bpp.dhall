@@ -105,7 +105,6 @@ in
 , autoMigrate = True
 , coreVersion = "0.9.3"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False}
-, googleCfg = common.googleCfg
 , googleTranslateUrl = common.googleTranslateUrl
 , googleTranslateKey = common.googleTranslateKey
 , graceTerminationPeriod = +90

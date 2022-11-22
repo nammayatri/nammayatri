@@ -28,7 +28,6 @@ select ::
 select transporterId (SignatureAuthResult _ subscriber _) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Select API Flow" "Reached"
-    sessiontoken <- generateGUIDText
-    dSelectReq <- ACL.buildSelectReq sessiontoken subscriber req
-    DSelect.handler sessiontoken transporterId dSelectReq
+    dSelectReq <- ACL.buildSelectReq subscriber req
+    DSelect.handler transporterId dSelectReq
     pure Ack

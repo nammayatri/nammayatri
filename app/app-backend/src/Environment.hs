@@ -16,7 +16,6 @@ where
 import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.External.Infobip.Types (InfoBIPConfig)
-import Beckn.External.Maps.Google.Config (GoogleCfg)
 import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
@@ -60,7 +59,6 @@ data AppCfg = AppCfg
     autoMigrate :: Bool,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
-    googleCfg :: GoogleCfg,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     metricsSearchDurationTimeout :: Seconds,
@@ -97,7 +95,6 @@ data AppEnv = AppEnv
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
-    googleCfg :: GoogleCfg,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     graceTerminationPeriod :: Seconds,

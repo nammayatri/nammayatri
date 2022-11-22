@@ -1,7 +1,5 @@
 module Domain.Action.Beckn.Search where
 
-import Beckn.External.Maps.Google as GoogleMaps
-import qualified Beckn.External.Maps.Types as MapSearch
 import Beckn.Prelude
 import Beckn.Serviceability
 import Beckn.Storage.Hedis
@@ -27,6 +25,7 @@ import Storage.Queries.Person (DriverPoolResult)
 import qualified Storage.Queries.Person as QP
 import System.Random
 import Tools.Error
+import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
 data DSearchReq = DSearchReq
@@ -70,12 +69,18 @@ handler merchantId sReq = do
   searchMetricsMVar <- Metrics.startSearchMetrics org.name
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
-  let pickupLatLong = getCoordinates fromLocation
-  let mbDropoffLatLong = Just $ getCoordinates toLocation
+  let pickupLatLong = Maps.getCoordinates fromLocation
+  let mbDropoffLatLong = Just $ Maps.getCoordinates toLocation
   unlessM (rideServiceableDefault QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
     throwError RideNotServiceable
 
-  distRes <- GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation)
+  distRes <-
+    Maps.getDistance merchantId $
+      Maps.GetDistanceReq
+        { origin = fromLocation,
+          destination = toLocation,
+          travelMode = Just Maps.CAR
+        }
   let distance = distRes.distance
   logDebug $ "distance: " <> show distance
 
@@ -90,7 +95,7 @@ handler merchantId sReq = do
       else do
         mdriverPoolLimitForRandomize <- asks (.driverPoolLimit)
         let shouldFilterByActualDistance = isNothing mdriverPoolLimitForRandomize
-        driverPool' <- calculateDriverPool Nothing (getCoordinates fromLocation) org.id True shouldFilterByActualDistance
+        driverPool' <- calculateDriverPool Nothing fromLocation org.id True shouldFilterByActualDistance
 
         driverPool <-
           maybe
@@ -137,7 +142,7 @@ getRandomNumberList start end count = do
           let (n, gen') = randomR (start, end) gen
            in nextNumber gen' (Set.union (Set.singleton n) acc)
 
-type DriverMetaData = GoogleMaps.GetDistanceResult QP.DriverPoolResult MapSearch.LatLong
+type DriverMetaData = Maps.GetDistanceResp QP.DriverPoolResult Maps.LatLong
 
 zipMatched :: [FarePolicy] -> [DriverMetaData] -> [(FarePolicy, DriverMetaData)]
 zipMatched farePolicies driverPool =
@@ -155,7 +160,7 @@ mkEstimate ::
   DM.Merchant ->
   UTCTime ->
   Meters ->
-  (FarePolicy, GoogleMaps.GetDistanceResult DriverPoolResult a) ->
+  (FarePolicy, Maps.GetDistanceResp DriverPoolResult a) ->
   m EstimateItem
 mkEstimate org startTime dist (farePolicy, driverMetadata) = do
   fareParams <- calculateFare org.id farePolicy dist startTime Nothing

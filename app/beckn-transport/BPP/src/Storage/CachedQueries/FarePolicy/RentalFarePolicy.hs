@@ -26,14 +26,14 @@ import qualified Domain.Types.Vehicle as Vehicle
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as Queries
 
-findById :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
+findById :: (CacheFlow m r, EsqDBFlow m r) => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy a
     Nothing -> flip whenJust cacheRentalFarePolicy /=<< Queries.findById id
 
 findByOffer ::
-  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   Vehicle.Variant ->
   Kilometers ->
@@ -49,7 +49,7 @@ findByOffer merchantId vehVar kms hours =
   where
     findAndCache = flip whenJust cacheRentalFarePolicy /=<< Queries.findByOffer merchantId vehVar kms hours
 
-findAllByMerchantId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m [RentalFarePolicy]
+findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [RentalFarePolicy]
 findAllByMerchantId merchantId =
   Hedis.get (makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy) a
@@ -59,7 +59,7 @@ findAllByMerchantId merchantId =
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[RentalFarePolicy] @[RentalFarePolicyD 'Unsafe] rFPs) expTime
 
-cacheRentalFarePolicy :: (HasCacheConfig r, HedisFlow m r) => RentalFarePolicy -> m ()
+cacheRentalFarePolicy :: (CacheFlow m r) => RentalFarePolicy -> m ()
 cacheRentalFarePolicy rFP = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey rFP.id

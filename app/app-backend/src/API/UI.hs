@@ -11,8 +11,8 @@ import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Feedback as Feedback
-import qualified API.UI.GoogleMaps as GoogleMapsProxy
 import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
+import qualified API.UI.Maps as MapsProxy
 import qualified API.UI.Profile as Profile
 import qualified API.UI.Quote as Quote
 import qualified API.UI.Registration as Registration
@@ -46,7 +46,7 @@ type API =
            :<|> Serviceability.API
            :<|> Feedback.API
            :<|> CustomerSupport.API
-           :<|> GoogleMapsProxy.API
+           :<|> MapsProxy.API
            :<|> GoogleTranslateProxy.API
            :<|> CancellationReason.API
            :<|> SavedReqLocation.API
@@ -71,7 +71,7 @@ handler =
     :<|> Serviceability.handler
     :<|> Feedback.handler
     :<|> CustomerSupport.handler
-    :<|> GoogleMapsProxy.handler
+    :<|> MapsProxy.handler
     :<|> GoogleTranslateProxy.handler
     :<|> CancellationReason.handler
     :<|> SavedReqLocation.handler

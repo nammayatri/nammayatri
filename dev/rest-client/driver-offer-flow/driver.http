@@ -49,7 +49,7 @@ content-type: application/json
 {
   "mobileNumber" : "9000000001",
   "mobileCountryCode": "+7",
-  "organizationId": "7f7896dd-787e-4a0b-8675-e9e6fe93bb8"
+  "merchantId": "7f7896dd-787e-4a0b-8675-e9e6fe93bb8"
 }
 
 ###

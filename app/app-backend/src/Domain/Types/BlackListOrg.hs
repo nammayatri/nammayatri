@@ -20,7 +20,7 @@ instance FromHttpApiData BlackListOrgType where
   parseQueryParam = parseUrlPiece
   parseHeader = left T.pack . eitherDecode . BSL.fromStrict
 
-data BlackListOrgD s = BlackListOrg
+data BlackListOrgD (s :: UsageSafety) = BlackListOrg
   { id :: Id BlackListOrg,
     shortId :: ShortId BlackListOrg,
     _type :: BlackListOrgType

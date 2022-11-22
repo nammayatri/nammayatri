@@ -3,7 +3,6 @@ module Domain.Action.Beckn.OnInit where
 import Beckn.External.Encryption (decrypt)
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.GenericPretty (PrettyShow)
@@ -39,7 +38,7 @@ data OnInitRes = OnInitRes
   }
   deriving (Generic, Show, PrettyShow)
 
-onInit :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => BaseUrl -> OnInitReq -> m OnInitRes
+onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => BaseUrl -> OnInitReq -> m OnInitRes
 onInit registryUrl req = do
   bookingOld <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
 

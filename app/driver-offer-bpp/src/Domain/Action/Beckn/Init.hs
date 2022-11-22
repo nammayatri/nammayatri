@@ -2,7 +2,6 @@ module Domain.Action.Beckn.Init where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -39,7 +38,7 @@ buildBookingLocation DLoc.SearchReqLocation {..} = do
         ..
       }
 
-handler :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
+handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
 handler merchantId req = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime

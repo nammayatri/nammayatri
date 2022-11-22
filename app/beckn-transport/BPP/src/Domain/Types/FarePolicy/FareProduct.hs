@@ -9,7 +9,7 @@ import qualified Domain.Types.Merchant as DM
 
 data FareProductType = ONE_WAY | RENTAL deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
-data FareProductD s = FareProduct
+data FareProductD (s :: UsageSafety) = FareProduct
   { id :: Id FareProduct,
     merchantId :: Id DM.Merchant,
     _type :: FareProductType,

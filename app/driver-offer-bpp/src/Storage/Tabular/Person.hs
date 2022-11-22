@@ -9,7 +9,7 @@ module Storage.Tabular.Person where
 
 import Beckn.External.Encryption (DbHash (..), Encrypted (..), EncryptedHashed (..))
 import Beckn.External.FCM.Types (FCMRecipientToken)
-import Beckn.External.Maps.Google (Language)
+import Beckn.External.Types (Language)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common (Centesimal)

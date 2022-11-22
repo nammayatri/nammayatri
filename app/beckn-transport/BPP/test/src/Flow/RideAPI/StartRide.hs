@@ -19,7 +19,7 @@ import Utils.SilentLogger ()
 handle :: StartRide.ServiceHandle IO
 handle =
   StartRide.ServiceHandle
-    { findById = \_personid -> pure $ Just Fixtures.defaultDriver,
+    { requestor = Fixtures.defaultDriver,
       findBookingById = \rbId ->
         pure $
           if rbId == Id "1"
@@ -30,10 +30,10 @@ handle =
           if rideId == Id "1"
             then Just ride
             else Nothing,
-      startRideAndUpdateLocation = \_rideId _bookingId _driverId _pt -> pure (),
+      startRideAndUpdateLocation = \_rideId _bookingId _pt -> pure (),
       notifyBAPRideStarted = \_booking _ride -> pure (),
-      rateLimitStartRide = \_driverId _rideId -> pure (),
-      initializeDistanceCalculation = \_driverId _pt -> pure ()
+      rateLimitStartRide = \_rideId -> pure (),
+      initializeDistanceCalculation = \_pt -> pure ()
     }
 
 ride :: Ride.Ride
@@ -67,7 +67,7 @@ startRide =
       failedStartWithWrongOTP
     ]
 
-runHandler :: StartRide.ServiceHandle IO -> Id Person.Person -> Id Ride.Ride -> StartRideReq -> IO APISuccess.APISuccess
+runHandler :: StartRide.ServiceHandle IO -> Id Ride.Ride -> StartRideReq -> IO APISuccess.APISuccess
 runHandler = StartRide.startRideHandler
 
 testStartRideReq :: StartRideReq
@@ -80,43 +80,37 @@ testStartRideReq =
 successfulStartByDriver :: TestTree
 successfulStartByDriver =
   testCase "Start successfully if requested by driver executor" $ do
-    runHandler handle "1" "1" testStartRideReq
+    runHandler handle "1" testStartRideReq
       `shouldReturn` APISuccess.Success
 
 failedStartRequestedByDriverNotAnOrderExecutor :: TestTree
 failedStartRequestedByDriverNotAnOrderExecutor = do
   testCase "Fail ride starting if requested by driver not an order executor" $ do
-    runHandler handleCase "2" "1" testStartRideReq
+    runHandler handleCase "1" testStartRideReq
       `shouldThrow` (== NotAnExecutor)
   where
     handleCase =
       handle
-        { StartRide.findById = \_personId ->
-            pure $
-              Just
-                Fixtures.defaultDriver{id = "2"
-                                      }
+        { StartRide.requestor =
+            Fixtures.defaultDriver{id = "2"}
         }
 
 failedStartRequestedNotByDriver :: TestTree
 failedStartRequestedNotByDriver = do
   testCase "Fail ride starting if requested not by driver" $ do
-    runHandler handleCase "1" "1" testStartRideReq
+    runHandler handleCase "1" testStartRideReq
       `shouldThrow` (== AccessDenied)
   where
     handleCase =
       handle
-        { StartRide.findById = \_personId ->
-            pure $
-              Just
-                Fixtures.defaultDriver{role = Person.ADMIN
-                                      }
+        { StartRide.requestor =
+            Fixtures.defaultDriver{role = Person.ADMIN}
         }
 
 failedStartWhenQuoteStatusIsWrong :: TestTree
 failedStartWhenQuoteStatusIsWrong = do
   testCase "Fail ride starting if ride has wrong status" $ do
-    runHandler handleCase "1" "1" testStartRideReq
+    runHandler handleCase "1" testStartRideReq
       `shouldThrow` (\(RideInvalidStatus _) -> True)
   where
     handleCase =
@@ -124,8 +118,7 @@ failedStartWhenQuoteStatusIsWrong = do
         { StartRide.findRideById = \_rideId ->
             pure $
               Just
-                ride{status = Ride.COMPLETED
-                    }
+                ride{status = Ride.COMPLETED}
         }
 
 wrongOtpReq :: StartRideReq
@@ -134,5 +127,5 @@ wrongOtpReq = testStartRideReq {rideOtp = "otp2"}
 failedStartWithWrongOTP :: TestTree
 failedStartWithWrongOTP = do
   testCase "Fail ride starting if OTP is wrong" $ do
-    runHandler handle "1" "1" wrongOtpReq
+    runHandler handle "1" wrongOtpReq
       `shouldThrow` (== IncorrectOTP)

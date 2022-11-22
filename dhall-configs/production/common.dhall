@@ -4,12 +4,6 @@ let globalCommon = ../generic/common.dhall
 -- To be substituted during deployment
 let branchName = "$DEPLOY_VARIANT"
 
-let googleCfg = {
-   googleMapsUrl = "https://maps.googleapis.com/maps/api/"
-,  googleRoadsUrl = "https://roads.googleapis.com/"
-,  googleKey = sec.googleKey
-}
-
 in { smsSessionConfig = globalCommon.smsSessionConfig
    , autoMigrate = globalCommon.autoMigrate
    , loggerConfig = globalCommon.loggerConfig
@@ -28,7 +22,6 @@ in { smsSessionConfig = globalCommon.smsSessionConfig
    , branchName = branchName
    , passetto = { _1 = "passetto-hs.passetto.svc.cluster.local", _2 = 8012 }
    , fcmJsonPath = Some "/var/local/beckn/beckn-fcm.json"
-   , googleCfg = googleCfg
    , googleTranslateUrl = "https://www.googleapis.com/"
    , googleTranslateKey = sec.googleTranslateKey
    , fcmUrl = "https://fcm.googleapis.com/v1/projects/beckn-d4a42/messages:send/"

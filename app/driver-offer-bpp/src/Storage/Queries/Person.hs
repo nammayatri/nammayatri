@@ -5,7 +5,7 @@ module Storage.Queries.Person where
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.External.FCM.Types as FCM
-import Beckn.External.Maps.Google as GoogleMaps
+import Beckn.External.Maps as Maps
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
@@ -250,7 +250,7 @@ updateAverageRating personId newAverageRating = do
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
-    language :: Maybe GoogleMaps.Language,
+    language :: Maybe Maps.Language,
     onRide :: Bool,
     distanceToDriver :: Double,
     vehicle :: Vehicle,

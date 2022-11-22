@@ -1,6 +1,6 @@
 module Storage.Queries.BusinessEvent where
 
-import qualified Beckn.External.Maps.Google as Google
+import qualified Beckn.External.Maps.Interface.Types as Maps
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
@@ -41,7 +41,7 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
       }
 
 -- FIXME we don't use this event
-logDriverInPoolEvent :: WhenPoolWasComputed -> Maybe (Id Booking) -> Google.GetDistanceResult DriverPoolResult a -> SqlDB ()
+logDriverInPoolEvent :: WhenPoolWasComputed -> Maybe (Id Booking) -> Maps.GetDistanceResp DriverPoolResult a -> SqlDB ()
 logDriverInPoolEvent whenPoolWasComputed bookingId getDistanceRes = do
   let driverInPool = getDistanceRes.origin
   logBusinessEvent

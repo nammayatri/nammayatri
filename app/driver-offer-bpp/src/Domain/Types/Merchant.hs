@@ -25,7 +25,7 @@ instance FromHttpApiData Status where
 
 data Subscriber
 
-data MerchantD s = Merchant
+data MerchantD (s :: UsageSafety) = Merchant
   { id :: Id Merchant,
     name :: Text,
     description :: Maybe Text,

@@ -1,12 +1,12 @@
 module Domain.Action.UI.Ride.EndRide
   ( EndRideReq (..),
     ServiceHandle (..),
+    buildEndRideHandle,
     endRideHandler,
   )
 where
 
-import Beckn.External.Maps.HasCoordinates (HasCoordinates (..))
-import Beckn.External.Maps.Types
+import Beckn.External.Maps
 import Beckn.Prelude (roundToIntegral)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
@@ -14,6 +14,7 @@ import Beckn.Types.Id
 import Beckn.Utils.CalculateDistance (distanceBetweenInMeters)
 import Beckn.Utils.Common
 import Data.OpenApi
+import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.FareParams as Fare
@@ -23,8 +24,17 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Vehicle.Variant (Variant)
+import Environment (Flow)
 import EulerHS.Prelude hiding (pi)
+import qualified Lib.LocationUpdates as LocUpd
+import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.FareCalculator as Fare
+import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
+import qualified Storage.CachedQueries.TransporterConfig as QTConf
+import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.DriverLocation as DrLoc
+import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 newtype EndRideReq = EndRideReq
@@ -33,10 +43,10 @@ newtype EndRideReq = EndRideReq
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data ServiceHandle m = ServiceHandle
-  { findById :: Id Person.Person -> m (Maybe Person.Person),
+  { requestor :: Person.Person,
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
-    endRide :: Id SRB.Booking -> Ride.Ride -> Id Person.Driver -> m (),
+    endRideTransaction :: Id SRB.Booking -> Ride.Ride -> m (),
     notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> Money -> m (),
     getFarePolicy :: Id Merchant -> Variant -> m (Maybe FarePolicy),
     calculateFare ::
@@ -47,42 +57,69 @@ data ServiceHandle m = ServiceHandle
       Maybe Money ->
       m Fare.FareParameters,
     putDiffMetric :: Id Merchant -> Money -> Meters -> m (),
-    findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
-    isDistanceCalculationFailed :: Id Person.Person -> m Bool,
-    finalDistanceCalculation :: Id Person.Person -> LatLong -> m (),
+    findDriverLoc :: m (Maybe DrLoc.DriverLocation),
+    isDistanceCalculationFailed :: m Bool,
+    finalDistanceCalculation :: LatLong -> m (),
     getDefaultPickupLocThreshold :: m Meters,
     getDefaultDropLocThreshold :: m Meters,
     getDefaultRideTravelledDistanceThreshold :: m Meters,
     getDefaultRideTimeEstimatedThreshold :: m Seconds,
-    findConfigByMerchantId :: Id Merchant -> m (Maybe DTConf.TransporterConfig)
+    findConfig :: m (Maybe DTConf.TransporterConfig)
   }
+
+buildEndRideHandle ::
+  Id Person.Person ->
+  Id Ride.Ride ->
+  Flow (ServiceHandle Flow)
+buildEndRideHandle requestorId rideId = do
+  requestor <-
+    QP.findById requestorId
+      >>= fromMaybeM (PersonNotFound requestorId.getId)
+  orgId <- requestor.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler orgId
+  return $
+    ServiceHandle
+      { requestor,
+        findBookingById = QRB.findById,
+        findRideById = QRide.findById,
+        getFarePolicy = FarePolicyS.findByMerchantIdAndVariant,
+        notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
+        endRideTransaction = RideEndInt.endRideTransaction (cast requestorId),
+        calculateFare = Fare.calculateFare,
+        putDiffMetric = RideEndInt.putDiffMetric,
+        findDriverLoc = DrLoc.findById requestorId,
+        isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler requestorId,
+        finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler rideId requestorId,
+        getDefaultPickupLocThreshold = asks (.defaultPickupLocThreshold),
+        getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
+        getDefaultRideTravelledDistanceThreshold = asks (.defaultRideTravelledDistanceThreshold),
+        getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
+        findConfig = QTConf.findByMerchantId orgId
+      }
 
 endRideHandler ::
   (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
-  Id Person.Person ->
   Id Ride.Ride ->
   EndRideReq ->
   m APISuccess.APISuccess
-endRideHandler ServiceHandle {..} requestorId rideId req = do
-  requestor <- findById requestorId >>= fromMaybeM (PersonNotFound requestorId.getId)
-
-  finalDistanceCalculation requestorId req.point
+endRideHandler ServiceHandle {..} rideId req = do
+  finalDistanceCalculation req.point
   -- here we update the current ride, so below we fetch the updated version
 
   ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
   case requestor.role of
-    Person.DRIVER -> unless (requestorId == driverId) $ throwError NotAnExecutor
+    Person.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
   unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
+  logTagInfo "endRide" ("DriverId " <> getId requestor.id <> ", RideId " <> getId rideId)
 
   now <- getCurrentTime
 
-  distanceCalculationFailed <- isDistanceCalculationFailed requestorId
+  distanceCalculationFailed <- isDistanceCalculationFailed
   when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
 
   let mbTripStartLoc = ride.tripStartPos
@@ -90,7 +127,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
   pickupDropOutsideOfThreshold <- case mbTripStartLoc of
     Nothing -> pure True
     Just tripStartLoc -> do
-      mbThresholdConfig <- findConfigByMerchantId booking.providerId
+      mbThresholdConfig <- findConfig
       defaultPickupLocThreshold <- getDefaultPickupLocThreshold
       defaultDropLocThreshold <- getDefaultDropLocThreshold
       let pickupLocThreshold = metersToHighPrecMeters . fromMaybe defaultPickupLocThreshold . join $ mbThresholdConfig <&> (.pickupLocThreshold)
@@ -109,7 +146,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
       pure pickupDropOutsideOfThreshold
 
   distanceOutsideOfThreshold <- do
-    mbThresholdConfig <- findConfigByMerchantId booking.providerId
+    mbThresholdConfig <- findConfig
     defaultRideTravelledDistanceThreshold <- getDefaultRideTravelledDistanceThreshold
     let rideTravelledDistanceThreshold = metersToHighPrecMeters . fromMaybe defaultRideTravelledDistanceThreshold . join $ mbThresholdConfig <&> (.rideTravelledDistanceThreshold)
     let rideDistanceDifference = ride.traveledDistance - metersToHighPrecMeters booking.estimatedDistance
@@ -123,7 +160,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
     pure distanceOutsideOfThreshold
 
   timeOutsideOfThreshold <- do
-    mbThresholdConfig <- findConfigByMerchantId booking.providerId
+    mbThresholdConfig <- findConfig
     defaultRideTimeEstimatedThreshold <- getDefaultRideTimeEstimatedThreshold
     let rideTimeEstimatedThreshold = fromMaybe defaultRideTimeEstimatedThreshold . join $ mbThresholdConfig <&> (.rideTimeEstimatedThreshold)
     let tripStartTime = fromJust ride.tripStartTime
@@ -153,7 +190,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
              tripEndPos = Just req.point
             }
 
-  endRide booking.id updRide (cast driverId)
+  endRideTransaction booking.id updRide
 
   notifyCompleteToBAP booking updRide booking.fareParams booking.estimatedFare
 

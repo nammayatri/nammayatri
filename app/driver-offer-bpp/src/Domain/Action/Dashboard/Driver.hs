@@ -341,7 +341,7 @@ deleteDriver merchantShortId reqDriverId = withFlowHandler $ do
   -- merchant access checking
   merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
-  
+
   unless (driver.role == DRIVER) $ throwError Unauthorized
 
   ride <- QRide.findOneByDriverId personId

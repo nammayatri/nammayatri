@@ -6,7 +6,7 @@ import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Domain.Types.Common
 
-data MerchantD s = Merchant
+data MerchantD (s :: UsageSafety) = Merchant
   { id :: Id Merchant,
     shortId :: ShortId Merchant,
     name :: Text,

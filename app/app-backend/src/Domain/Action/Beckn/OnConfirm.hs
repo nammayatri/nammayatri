@@ -5,7 +5,6 @@ module Domain.Action.Beckn.OnConfirm
 where
 
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Hedis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -20,7 +19,7 @@ newtype OnConfirmReq = OnConfirmReq
   { bppBookingId :: Id DRB.BPPBooking
   }
 
-onConfirm :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => BaseUrl -> OnConfirmReq -> m ()
+onConfirm :: (CacheFlow m r, EsqDBFlow m r) => BaseUrl -> OnConfirmReq -> m ()
 onConfirm registryUrl req = do
   booking <- QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> req.bppBookingId.getId)
 

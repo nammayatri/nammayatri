@@ -9,7 +9,7 @@ import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Vehicle
 
-data OneWayFarePolicyD s = OneWayFarePolicy
+data OneWayFarePolicyD (s :: UsageSafety) = OneWayFarePolicy
   { id :: Id OneWayFarePolicy,
     vehicleVariant :: Vehicle.Variant,
     merchantId :: Id DM.Merchant,

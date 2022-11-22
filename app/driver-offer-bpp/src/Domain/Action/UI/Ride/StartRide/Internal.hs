@@ -12,8 +12,8 @@ import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Ride as QRide
 
-startRideTransaction :: EsqDBFlow m r => Id SRide.Ride -> Id SRB.Booking -> Id SP.Person -> LatLong -> m ()
-startRideTransaction rideId bookingId driverId firstPoint = Esq.runTransaction $ do
+startRideTransaction :: EsqDBFlow m r => Id SP.Person -> Id SRide.Ride -> Id SRB.Booking -> LatLong -> m ()
+startRideTransaction driverId rideId bookingId firstPoint = Esq.runTransaction $ do
   QRide.updateStatus rideId SRide.INPROGRESS
   QRide.updateStartTimeAndLoc rideId firstPoint
   QBE.logRideCommencedEvent (cast driverId) bookingId rideId

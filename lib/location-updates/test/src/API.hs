@@ -1,5 +1,7 @@
 module API where
 
+import Beckn.External.Encryption (Encrypted (..))
+import Beckn.External.Maps as Maps
 import Beckn.Prelude
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -29,20 +31,30 @@ apiSpec appEnv =
       it "should handle errors while calculating distance correctly" $
         failFlow appEnv "fail-shortCurvyRoute" shortCurvyRoute
 
-testInterpolationHandler :: RideInterpolationHandler Person TestM
-testInterpolationHandler =
-  RideInterpolationHandler
-    { batchSize = 30,
-      addPoints = addPointsImplementation,
-      clearLocationUpdates = clearLocationUpdatesImplementation,
-      getWaypointsNumber = getWaypointsNumberImplementation,
-      getFirstNwaypoints = getFirstNwaypointsImplementation,
-      deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
-      interpolatePoints = callSnapToRoad,
-      updateDistance = updateDistanceTest,
-      wrapDistanceCalculation = wrapDistanceCalculationImplementation,
-      isDistanceCalculationFailed = isDistanceCalculationFailedImplementation
-    }
+buildTestInterpolationHandler :: TestM (RideInterpolationHandler Person TestM)
+buildTestInterpolationHandler = do
+  googleMapsUrl <- parseBaseUrl "https://maps.googleapis.com/maps/api/"
+  googleRoadsUrl <- parseBaseUrl "https://roads.googleapis.com/"
+  let config =
+        Maps.GoogleConfig $
+          Maps.GoogleCfg
+            { googleMapsUrl,
+              googleRoadsUrl,
+              googleKey = Encrypted "0.1.0|2|S34+Lq69uC/hNeYSXr4YSjwwmaTS0jO/1ZGlAAwl72hBhgD9AAZhgI4o/6x3oi99KyJkQdt5UvgjlHyeEOuf1Z3xzOBqWBYVQM/RBggZ7NggTyIsDgiG5b3p"
+            }
+  return $
+    RideInterpolationHandler
+      { batchSize = 30,
+        addPoints = addPointsImplementation,
+        clearLocationUpdates = clearLocationUpdatesImplementation,
+        getWaypointsNumber = getWaypointsNumberImplementation,
+        getFirstNwaypoints = getFirstNwaypointsImplementation,
+        deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
+        interpolatePoints = callSnapToRoad config,
+        updateDistance = updateDistanceTest,
+        wrapDistanceCalculation = wrapDistanceCalculationImplementation,
+        isDistanceCalculationFailed = isDistanceCalculationFailedImplementation
+      }
 
 testDriverId :: Id Person
 testDriverId = "agent007"
@@ -51,7 +63,7 @@ successFlow :: AppEnv -> Double -> Double -> Id a -> LocationUpdates -> IO ()
 successFlow appEnv eps expectedDistance rideId route = runFlow "" appEnv $ do
   let origin = getFirstPoint route
       destination = getLastPoint route
-      ih = testInterpolationHandler
+  ih <- buildTestInterpolationHandler
   initializeDistanceCalculation ih rideId testDriverId origin
   forM_ (NE.toList route) $ \updatesBatch ->
     addIntermediateRoutePoints ih rideId testDriverId updatesBatch
@@ -61,15 +73,16 @@ successFlow appEnv eps expectedDistance rideId route = runFlow "" appEnv $ do
   totalDistance <- checkTraveledDistance testDriverId
   liftIO $ totalDistance `shouldSatisfy` equalsEps eps expectedDistance
 
-failingInterpolationHandler :: RideInterpolationHandler Person TestM
-failingInterpolationHandler =
-  testInterpolationHandler {getWaypointsNumber = \_ -> throwError (InternalError "test")}
+failingInterpolationHandler :: TestM (RideInterpolationHandler Person TestM)
+failingInterpolationHandler = do
+  ih <- buildTestInterpolationHandler
+  return $ ih {getWaypointsNumber = \_ -> throwError (InternalError "test")}
 
 failFlow :: AppEnv -> Id a -> LocationUpdates -> IO ()
 failFlow appEnv rideId route = runFlow "" appEnv $ do
   let origin = getFirstPoint route
       destination = getLastPoint route
-      ih = failingInterpolationHandler
+  ih <- failingInterpolationHandler
   initializeDistanceCalculation ih rideId testDriverId origin
   failed0 <- API.isDistanceCalculationFailed ih testDriverId
   liftIO $ failed0 `shouldBe` False

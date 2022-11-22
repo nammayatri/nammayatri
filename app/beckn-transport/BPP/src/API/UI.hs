@@ -5,8 +5,8 @@ import qualified API.UI.Call as Call
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Driver as Driver
 import qualified API.UI.FarePolicy as FarePolicy
-import qualified API.UI.GoogleMaps as GoogleMaps
 import qualified API.UI.Location as Location
+import qualified API.UI.Maps as Maps
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
@@ -33,7 +33,7 @@ type API =
            :<|> Route.API
            :<|> Ride.API
            :<|> CancellationReason.API
-           :<|> GoogleMaps.API
+           :<|> Maps.API
        )
 
 handler :: FlowServer API
@@ -52,6 +52,6 @@ handler =
     :<|> Route.handler
     :<|> Ride.handler
     :<|> CancellationReason.handler
-    :<|> GoogleMaps.handler
+    :<|> Maps.handler
 
 type HealthCheckAPI = Get '[JSON] Text

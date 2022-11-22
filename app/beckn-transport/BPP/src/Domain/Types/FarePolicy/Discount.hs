@@ -10,7 +10,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 
-data DiscountD s = Discount
+data DiscountD (s :: UsageSafety) = Discount
   { id :: Id Discount,
     vehicleVariant :: DVeh.Variant,
     merchantId :: Id DM.Merchant,

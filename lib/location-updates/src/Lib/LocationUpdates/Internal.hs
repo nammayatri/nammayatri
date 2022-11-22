@@ -9,12 +9,12 @@ module Lib.LocationUpdates.Internal
     isDistanceCalculationFailedImplementation,
     wrapDistanceCalculationImplementation,
     processWaypoints,
-    mkHandlerWithDefaultRedisFuncs,
+    mkRideInterpolationHandler,
     callSnapToRoad,
   )
 where
 
-import Beckn.External.Maps.Google
+import Beckn.External.Maps as Maps
 import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Tools.Metrics.CoreMetrics as Metrics
@@ -112,19 +112,18 @@ recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   pure distance
 
 -------------------------------------------------------------------------
-mkHandlerWithDefaultRedisFuncs ::
+mkRideInterpolationHandler ::
   ( HedisFlow m env,
     HasPrettyLogger m env,
     HasCallStack,
     Metrics.CoreMetrics m,
-    MonadFlow m,
-    MonadReader env m,
-    HasGoogleCfg env,
+    EncFlow m env,
     EsqDBFlow m env
   ) =>
+  MapsServiceConfig ->
   (Id person -> HighPrecMeters -> m ()) ->
   RideInterpolationHandler person m
-mkHandlerWithDefaultRedisFuncs updateDistance =
+mkRideInterpolationHandler mapsCfg updateDistance =
   RideInterpolationHandler
     { batchSize = 98,
       addPoints = addPointsImplementation,
@@ -132,7 +131,7 @@ mkHandlerWithDefaultRedisFuncs updateDistance =
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
-      interpolatePoints = callSnapToRoad,
+      interpolatePoints = callSnapToRoad mapsCfg,
       updateDistance,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation
@@ -166,13 +165,12 @@ deleteFirstNwaypointsImplementation driverId numToDel = lTrim (makeWaypointsRedi
 
 callSnapToRoad ::
   ( HasCallStack,
-    Metrics.CoreMetrics m,
-    MonadFlow m,
-    MonadReader r m,
-    HasGoogleCfg r
+    EncFlow m r,
+    Metrics.CoreMetrics m
   ) =>
+  MapsServiceConfig ->
   [LatLong] ->
   m [LatLong]
-callSnapToRoad wps = do
-  res <- snapToRoad True wps
-  pure $ map (.location) (res.snappedPoints)
+callSnapToRoad mapsCfg wps = do
+  res <- Maps.snapToRoad mapsCfg $ Maps.SnapToRoadReq {interpolate = True, points = wps}
+  pure $ res.snappedPoints

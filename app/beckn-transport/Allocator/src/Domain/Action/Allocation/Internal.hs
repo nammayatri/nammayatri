@@ -342,17 +342,17 @@ getRideInfo bookingId = do
       SRB.COMPLETED -> Completed
       SRB.CANCELLED -> Cancelled
 
-incrementTaskCounter :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m ()
+incrementTaskCounter :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m ()
 incrementTaskCounter subscriberId = do
   org <- CQM.findBySubscriberId subscriberId >>= fromMaybeM (MerchantNotFound ("subscriberId-" <> subscriberId.getShortId))
   TMetrics.incrementTaskCounter org.name
 
-incrementFailedTaskCounter :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m ()
+incrementFailedTaskCounter :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m ()
 incrementFailedTaskCounter subscriberId = do
   org <- CQM.findBySubscriberId subscriberId >>= fromMaybeM (MerchantNotFound ("subscriberId-" <> subscriberId.getShortId))
   TMetrics.incrementFailedTaskCounter org.name
 
-putTaskDuration :: (TMetrics.HasAllocatorMetrics m r, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Milliseconds -> m ()
+putTaskDuration :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> Milliseconds -> m ()
 putTaskDuration subscriberId ms = do
   org <- CQM.findBySubscriberId subscriberId >>= fromMaybeM (MerchantNotFound ("subscriberId-" <> subscriberId.getShortId))
   TMetrics.putTaskDuration org.name ms

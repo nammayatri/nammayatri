@@ -24,14 +24,14 @@ import qualified Domain.Types.Vehicle as Vehicle
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy as Queries
 
-findById :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
+findById :: (CacheFlow m r, EsqDBFlow m r) => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy a
     Nothing -> flip whenJust cacheOneWayFarePolicy /=<< Queries.findById id
 
 findByMerchantIdAndVariant ::
-  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   Vehicle.Variant ->
   m (Maybe OneWayFarePolicy)
@@ -45,7 +45,7 @@ findByMerchantIdAndVariant merchantId vehVar =
   where
     findAndCache = flip whenJust cacheOneWayFarePolicy /=<< Queries.findByMerchantIdAndVariant merchantId vehVar
 
-findAllByMerchantId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m [OneWayFarePolicy]
+findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [OneWayFarePolicy]
 findAllByMerchantId merchantId =
   Hedis.get (makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy) a
@@ -55,7 +55,7 @@ findAllByMerchantId merchantId =
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[OneWayFarePolicy] @[OneWayFarePolicyD 'Unsafe] owFPs) expTime
 
-cacheOneWayFarePolicy :: (HasCacheConfig r, HedisFlow m r) => OneWayFarePolicy -> m ()
+cacheOneWayFarePolicy :: (CacheFlow m r) => OneWayFarePolicy -> m ()
 cacheOneWayFarePolicy owFP = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey owFP.id

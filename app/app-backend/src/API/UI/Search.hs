@@ -9,7 +9,6 @@ module API.UI.Search
   )
 where
 
-import Beckn.External.Maps.Google.Config (HasGoogleCfg)
 import qualified Beckn.External.Slack.Flow as SF
 import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude
@@ -101,13 +100,13 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
 
 oneWaySearch ::
   ( HasCacheConfig r,
+    EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "gatewayUrl" ::: BaseUrl],
-    HasGoogleCfg r,
     HasBAPMetrics m r,
     MonadProducer PublicTransportSearch m
   ) =>

@@ -9,7 +9,6 @@ module Storage.CachedQueries.Merchant
 where
 
 import Beckn.Prelude
-import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -19,13 +18,13 @@ import Domain.Types.Merchant
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
 
-findById :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
+findById :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
 
-findByShortId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ =
   Hedis.get (makeShortIdKey shortId_) >>= \case
     Nothing -> findAndCache
@@ -36,7 +35,7 @@ findByShortId shortId_ =
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId_
 
-findByExoPhone :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Merchant)
+findByExoPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Merchant)
 findByExoPhone countryCode exoPhone =
   Hedis.get (makeExoPhoneKey countryCode exoPhone) >>= \case
     Nothing -> findAndCache
@@ -47,7 +46,7 @@ findByExoPhone countryCode exoPhone =
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findByExoPhone countryCode exoPhone
 
-cacheMerchant :: (HasCacheConfig r, HedisFlow m r) => Merchant -> m ()
+cacheMerchant :: (CacheFlow m r) => Merchant -> m ()
 cacheMerchant merchant = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey merchant.id

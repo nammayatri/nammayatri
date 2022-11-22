@@ -6,7 +6,6 @@ module SharedLogic.DriverPool
   )
 where
 
-import Beckn.External.Maps.Google as Google
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -26,6 +25,8 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import Tools.Maps as Google
+import qualified Tools.Maps as Maps
 import Tools.Metrics
 
 data DriverPoolResult = DriverPoolResult
@@ -51,12 +52,12 @@ setExRedis :: Redis.HedisFlow m r => Text -> [DriverPoolItem] -> Int -> m ()
 setExRedis = Redis.setExp
 
 getDriverPool ::
-  ( HasCacheConfig r,
+  ( EncFlow m r,
+    HasCacheConfig r,
     CoreMetrics m,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    HasGoogleCfg r
+    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
   ) =>
   Id SRB.Booking ->
   m SortedDriverPool
@@ -74,12 +75,12 @@ getDriverPool bookingId =
       mkSortedDriverPool . map mkDriverPoolItem <$> calculateDriverPool pickupLatLong merchantId (Just vehicleVariant) fareProductType
 
 recalculateDriverPool ::
-  ( HasCacheConfig r,
+  ( EncFlow m r,
+    HasCacheConfig r,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    CoreMetrics m,
-    HasGoogleCfg r
+    CoreMetrics m
   ) =>
   SRB.Booking ->
   m [DriverPoolResult]
@@ -97,19 +98,21 @@ recalculateDriverPool booking = do
   return filteredDriverPoolResults
 
 calculateDriverPool ::
-  ( HasCacheConfig r,
+  ( EncFlow m r,
+    HasCacheConfig r,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
-    HasGoogleCfg r
+    HasCoordinates a
   ) =>
-  LatLong ->
+  a ->
   Id DM.Merchant ->
   Maybe SV.Variant ->
   SFP.FareProductType ->
   m [DriverPoolResult]
-calculateDriverPool pickupLatLong merchantId variant fareProductType = do
+calculateDriverPool pickup merchantId variant fareProductType = do
+  let pickupLatLong = getCoordinates pickup
   radius <- getRadius
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   nearestDriversResult <-
@@ -124,7 +127,7 @@ calculateDriverPool pickupLatLong merchantId variant fareProductType = do
   case nearestDriversResult of
     [] -> pure []
     (a : xs) -> do
-      approxDriverPool' <- buildDriverPoolResults pickupLatLong (a :| xs)
+      approxDriverPool' <- buildDriverPoolResults merchantId pickupLatLong (a :| xs)
       filterOutDriversWithDistanceAboveThreshold radius approxDriverPool'
   where
     getRadius =
@@ -139,15 +142,23 @@ calculateDriverPool pickupLatLong merchantId variant fareProductType = do
         $ conf.value
 
 buildDriverPoolResults ::
-  ( EsqDBFlow m r,
-    CoreMetrics m,
-    HasGoogleCfg r
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m
   ) =>
+  Id DM.Merchant ->
   LatLong ->
   NonEmpty QP.NearestDriversResult ->
   m (NonEmpty DriverPoolResult)
-buildDriverPoolResults pickup ndResults = do
-  distDurs <- Google.getDistances (Just Google.CAR) (pickup :| []) ndResults
+buildDriverPoolResults orgId pickup ndResults = do
+  distDurs <-
+    Maps.getDistances orgId $
+      Maps.GetDistancesReq
+        { origins = pickup :| [],
+          destinations = ndResults,
+          travelMode = Just Maps.CAR
+        }
   return $ mkDriverPoolResult <$> distDurs
   where
     mkDriverPoolResult distDur = do

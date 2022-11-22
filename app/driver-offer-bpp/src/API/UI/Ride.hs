@@ -12,27 +12,16 @@ where
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Beckn.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as RideCancel
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
-import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
-import qualified Domain.Action.UI.Ride.StartRide.Internal as RideStart
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment
 import EulerHS.Prelude hiding (id)
-import qualified Lib.LocationUpdates as LocUpd
 import Servant
-import SharedLogic.CallBAP
-import qualified SharedLogic.CallBAP as CallBAP
-import qualified SharedLogic.FareCalculator as Fare
-import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
-import qualified Storage.CachedQueries.TransporterConfig as QTConf
-import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
@@ -70,45 +59,14 @@ handler =
     :<|> cancelRide
 
 startRide :: Id SP.Person -> Id Ride.Ride -> RideStart.StartRideReq -> FlowHandler APISuccess
-startRide personId rideId req =
-  withFlowHandlerAPI $
-    RideStart.startRideHandler handle personId (cast rideId) req
-  where
-    handle =
-      RideStart.ServiceHandle
-        { findById = QPerson.findById,
-          findBookingById = QRB.findById,
-          findRideById = QRide.findById,
-          startRideAndUpdateLocation = RideStart.startRideTransaction,
-          notifyBAPRideStarted = sendRideStartedUpdateToBAP,
-          rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
-          initializeDistanceCalculation = LocUpd.initializeDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId
-        }
+startRide personId rideId req = withFlowHandlerAPI $ do
+  handle <- RideStart.buildStartRideHandle personId rideId
+  RideStart.startRideHandler handle (cast rideId) req
 
 endRide :: Id SP.Person -> Id Ride.Ride -> RideEnd.EndRideReq -> FlowHandler APISuccess
-endRide personId rideId req =
-  withFlowHandlerAPI $
-    RideEnd.endRideHandler handle personId rideId req
-  where
-    handle =
-      RideEnd.ServiceHandle
-        { findById = QPerson.findById,
-          findBookingById = QRB.findById,
-          findRideById = QRide.findById,
-          notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
-          endRide = RideEndInt.endRideTransaction,
-          getFarePolicy = FarePolicyS.findByMerchantIdAndVariant,
-          calculateFare = Fare.calculateFare,
-          putDiffMetric = RideEndInt.putDiffMetric,
-          findDriverLocById = DrLoc.findById,
-          isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed LocUpd.defaultRideInterpolationHandler,
-          finalDistanceCalculation = LocUpd.finalDistanceCalculation LocUpd.defaultRideInterpolationHandler rideId,
-          getDefaultPickupLocThreshold = asks (.defaultPickupLocThreshold),
-          getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
-          getDefaultRideTravelledDistanceThreshold = asks (.defaultRideTravelledDistanceThreshold),
-          getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
-          findConfigByMerchantId = QTConf.findByMerchantId
-        }
+endRide personId rideId req = withFlowHandlerAPI $ do
+  handle <- RideEnd.buildEndRideHandle personId rideId
+  RideEnd.endRideHandler handle rideId req
 
 cancelRide :: Id SP.Person -> Id Ride.Ride -> RideCancel.CancelRideReq -> FlowHandler APISuccess
 cancelRide personId rideId req =

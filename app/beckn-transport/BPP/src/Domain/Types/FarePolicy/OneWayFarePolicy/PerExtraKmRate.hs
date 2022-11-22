@@ -7,7 +7,7 @@ import Data.OpenApi (ToSchema)
 import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
 
-data PerExtraKmRateD s = PerExtraKmRate
+data PerExtraKmRateD (s :: UsageSafety) = PerExtraKmRate
   { distanceRangeStart :: Meters,
     fare :: HighPrecMoney
   }

@@ -5,7 +5,6 @@ module Domain.Action.Beckn.Track
   )
 where
 
-import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -28,7 +27,7 @@ data DTrackRes = TrackRes
   }
 
 track ::
-  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id DM.Merchant ->
   DTrackReq ->
   m DTrackRes

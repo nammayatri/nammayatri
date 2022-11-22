@@ -9,7 +9,7 @@ import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
 
-data TransporterConfigD u = TransporterConfig
+data TransporterConfigD (s :: UsageSafety) = TransporterConfig
   { id :: Id TransporterParameter,
     transporterId :: Id Merchant,
     key :: ConfigKey,

@@ -5,7 +5,6 @@ module Domain.Action.Beckn.OnTrack
 where
 
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Hedis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -22,7 +21,7 @@ data OnTrackReq = OnTrackReq
     trackUrl :: BaseUrl
   }
 
-onTrack :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => BaseUrl -> OnTrackReq -> m ()
+onTrack :: (CacheFlow m r, EsqDBFlow m r) => BaseUrl -> OnTrackReq -> m ()
 onTrack registryUrl req = do
   ride <- QRide.findByBPPRideId req.bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId:" <> req.bppRideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)

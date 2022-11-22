@@ -11,7 +11,6 @@ import Beckn.External.Encryption (decrypt)
 import Beckn.External.FCM.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Control.Applicative
@@ -43,7 +42,7 @@ data UpdateOrgAdminProfileReq = UpdateOrgAdminProfileReq
 
 type UpdateOrgAdminProfileRes = OrgAdminProfileRes
 
-getProfile :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
+getProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
 getProfile admin = do
   let Just merchantId = admin.merchantId
   org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -51,7 +50,7 @@ getProfile admin = do
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
-updateProfile :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
+updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
 updateProfile admin req = do
   let Just merchantId = admin.merchantId
       updAdmin =

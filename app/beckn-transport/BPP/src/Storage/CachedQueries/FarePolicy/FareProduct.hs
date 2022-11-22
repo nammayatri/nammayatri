@@ -24,7 +24,7 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.FareProduct as Queries
 
 findEnabledByMerchantId ::
-  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   m [FareProduct]
 findEnabledByMerchantId id =
@@ -37,7 +37,7 @@ findEnabledByMerchantId id =
       Hedis.setExp (makeAllMerchantIdKey id) (coerce @[FareProduct] @[FareProductD 'Unsafe] fareProds) expTime
 
 findEnabledByMerchantIdAndType ::
-  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Maybe FareProductType ->
   Id Merchant ->
   m [FareProduct]

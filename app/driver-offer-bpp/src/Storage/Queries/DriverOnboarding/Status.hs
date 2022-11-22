@@ -202,7 +202,7 @@ fetchFullDriverInfoWithDocsByVehNumber merchantId vehicleNumber = fmap (fmap mkF
     person :& license :& assoc :& registration :& info :& mbVeh :& (_, mbRidesCount) <-
       from $ mkFullDriverWithRidesCountQuery ridesCountAggQuery
     where_ $
-      (person ^. PersonRole ==. val DRIVER) 
+      (person ^. PersonRole ==. val DRIVER)
         &&. mbVeh ?. VehicleRegistrationNo ==. val (Just vehicleNumber)
         &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
     pure (person, license, assoc, registration, info, mbVeh, mbRidesCount)

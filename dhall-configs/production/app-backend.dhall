@@ -94,7 +94,6 @@ in
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
-, googleCfg = common.googleCfg
 , googleTranslateUrl = common.googleTranslateUrl
 , googleTranslateKey = common.googleTranslateKey
 , metricsSearchDurationTimeout = +45

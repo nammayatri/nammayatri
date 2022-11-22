@@ -32,7 +32,7 @@ data UpdateFareProductReq = UpdateFareProductReq
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-listFareProducts :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => SP.Person -> m ListFareProductsRes
+listFareProducts :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> m ListFareProductsRes
 listFareProducts person = do
   merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
   fareProducts <- SFareProduct.findEnabledByMerchantId merchantId

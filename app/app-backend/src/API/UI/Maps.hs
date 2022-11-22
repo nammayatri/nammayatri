@@ -1,0 +1,52 @@
+module API.UI.Maps
+  ( API,
+    handler,
+    DMaps.AutoCompleteReq,
+    DMaps.AutoCompleteResp,
+    DMaps.GetPlaceDetailsReq,
+    DMaps.GetPlaceDetailsResp,
+    DMaps.GetPlaceNameReq,
+    DMaps.GetPlaceNameResp,
+  )
+where
+
+import Beckn.Types.Id
+import Beckn.Utils.Common (withFlowHandlerAPI)
+import Beckn.Utils.Logging
+import qualified Domain.Action.UI.Maps as DMaps
+import qualified Domain.Types.Person as Person
+import Environment (FlowHandler, FlowServer)
+import EulerHS.Prelude
+import Servant
+import Tools.Auth
+
+type API =
+  "maps"
+    :> ( "autoComplete"
+           :> TokenAuth
+           :> ReqBody '[JSON] DMaps.AutoCompleteReq
+           :> Get '[JSON] DMaps.AutoCompleteResp
+           :<|> "getPlaceDetails"
+             :> TokenAuth
+             :> ReqBody '[JSON] DMaps.GetPlaceDetailsReq
+             :> Get '[JSON] DMaps.GetPlaceDetailsResp
+           :<|> "getPlaceName"
+             :> TokenAuth
+             :> ReqBody '[JSON] DMaps.GetPlaceNameReq
+             :> Get '[JSON] DMaps.GetPlaceNameResp
+       )
+
+handler :: FlowServer API
+handler =
+  autoComplete
+    :<|> getPlaceDetails
+    :<|> getPlaceName
+
+autoComplete :: Id Person.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
+autoComplete personId = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.autoComplete personId
+
+getPlaceDetails :: Id Person.Person -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
+getPlaceDetails personId = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceDetails personId
+
+getPlaceName :: Id Person.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
+getPlaceName personId = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceName personId

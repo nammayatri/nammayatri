@@ -36,7 +36,7 @@ newtype ServiceHandle m = ServiceHandle
   { getFarePolicy :: Id Merchant -> Vehicle.Variant -> m (Maybe OneWayFarePolicy)
   }
 
-serviceHandle :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ServiceHandle m
+serviceHandle :: (CacheFlow m r, EsqDBFlow m r) => ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getFarePolicy = \merchantId vehicleVariant -> do

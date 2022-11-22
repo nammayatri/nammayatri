@@ -14,10 +14,7 @@ module Domain.Action.UI.Booking
   )
 where
 
-import Beckn.External.Maps.Google as Google
-import qualified Beckn.External.Maps.Types as MapSearch
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -40,6 +37,7 @@ import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RideRequest as RideRequest
 import Tools.Error
+import qualified Tools.Maps as MapSearch
 import Tools.Metrics
 
 newtype BookingListRes = BookingListRes
@@ -72,13 +70,13 @@ newtype SetDriverAcceptanceReq = SetDriverAcceptanceReq
 
 type SetDriverAcceptanceRes = APISuccess
 
-bookingStatus :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
+bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
 bookingStatus bookingId = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   SRB.buildBookingAPIEntity booking
 
 bookingList ::
-  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   SP.Person ->
   Maybe Integer ->
   Maybe Integer ->
@@ -91,7 +89,7 @@ bookingList person mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList
 
 bookingCancel ::
-  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id SRB.Booking ->
   SP.Person ->
   m APISuccess
@@ -119,7 +117,7 @@ bookingCancel bookingId admin = do
           }
 
 getRideInfo ::
-  (EsqDBFlow m r, CoreMetrics m, HasGoogleCfg r) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes
+  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes
 getRideInfo bookingId personId = do
   mbNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId bookingId
   case mbNotification of
@@ -131,13 +129,17 @@ getRideInfo bookingId personId = do
       driverLocation <-
         QDrLoc.findById driver.id
           >>= fromMaybeM LocationNotFound
-      let driverLatLong = getCoordinates driverLocation
       let fromLocation = booking.fromLocation
-      let fromLatLong = getCoordinates fromLocation
       let toLocation = case booking.bookingDetails of
             SRB.OneWayDetails details -> Just details.toLocation
             SRB.RentalDetails _ -> Nothing
-      distanceDuration <- Google.getDistance (Just MapSearch.CAR) driverLatLong fromLatLong
+      distanceDuration <-
+        MapSearch.getDistance booking.providerId $
+          MapSearch.GetDistanceReq
+            { origin = driverLocation,
+              destination = fromLocation,
+              travelMode = Just MapSearch.CAR
+            }
       return $
         GetRideInfoRes $
           Just $
@@ -160,7 +162,7 @@ responseToEventType ACCEPT = AllocationEvent.AcceptedByDriver
 responseToEventType REJECT = AllocationEvent.RejectedByDriver
 
 setDriverAcceptance ::
-  (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id SP.Person -> SetDriverAcceptanceReq -> m SetDriverAcceptanceRes
+  (CacheFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id SP.Person -> SetDriverAcceptanceReq -> m SetDriverAcceptanceRes
 setDriverAcceptance bookingId personId req = do
   currentTime <- getCurrentTime
   logTagInfo "setDriverAcceptance" logMessage

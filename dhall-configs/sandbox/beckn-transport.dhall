@@ -79,7 +79,6 @@ in  { esqDBCfg
     , coreVersion = "0.9.3"
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/beckn-transport.log" }
-    , googleCfg = common.googleCfg
     , fcmUrl = common.fcmUrl
     , fcmJsonPath = common.fcmJsonPath
     , fcmTokenKeyPrefix = "transporter-bpp"

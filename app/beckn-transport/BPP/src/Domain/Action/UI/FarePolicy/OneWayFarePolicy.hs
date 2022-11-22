@@ -56,7 +56,7 @@ validateUpdateFarePolicyRequest UpdateOneWayFarePolicyReq {..} =
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
     ]
 
-listOneWayFarePolicies :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => SP.Person -> m ListOneWayFarePolicyRes
+listOneWayFarePolicies :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> m ListOneWayFarePolicyRes
 listOneWayFarePolicies person = do
   merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
   oneWayFarePolicies <- SFarePolicy.findAllByMerchantId merchantId
