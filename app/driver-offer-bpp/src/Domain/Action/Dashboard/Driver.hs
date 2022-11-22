@@ -1,6 +1,16 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Domain.Action.Dashboard.Driver where
+module Domain.Action.Dashboard.Driver
+  ( driverDocumentsInfo,
+    listDrivers,
+    driverActivity,
+    enableDrivers,
+    disableDrivers,
+    driverLocation,
+    driverInfo,
+    deleteDriver,
+  )
+where
 
 import Beckn.External.Encryption (decrypt)
 import Beckn.External.Maps.Types (LatLong (..))
@@ -42,8 +52,8 @@ import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 
 -- FIXME: not tested yet because of no onboarding test data
-driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
-driverDocumentsInfo merchantShortId = withFlowHandlerAPI $ do
+driverDocumentsInfo :: ShortId DM.Merchant -> Flow Common.DriverDocumentsInfoRes
+driverDocumentsInfo merchantShortId = do
   merchant <-
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -147,8 +157,8 @@ limitOffset mbLimit mbOffset =
   maybe identity take mbLimit . maybe identity drop mbOffset
 
 ---------------------------------------------------------------------
-listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
-listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbPendingdoc mbSearchPhone = withFlowHandlerAPI $ do
+listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.DriverListRes
+listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbPendingdoc mbSearchPhone = do
   merchant <-
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -196,8 +206,8 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbPendingdoc m
                     }
 
 ---------------------------------------------------------------------
-driverActivity :: ShortId DM.Merchant -> FlowHandler Common.DriverActivityRes
-driverActivity merchantShortId = withFlowHandlerAPI $ do
+driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
+driverActivity merchantShortId = do
   merchant <-
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -210,8 +220,8 @@ driverActivity merchantShortId = withFlowHandlerAPI $ do
         else acc {Common.inactiveDrivers = acc.inactiveDrivers + 1}
 
 ---------------------------------------------------------------------
-enableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> FlowHandler Common.EnableDriversRes
-enableDrivers merchantShortId req = withFlowHandlerAPI $ do
+enableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> Flow Common.EnableDriversRes
+enableDrivers merchantShortId req = do
   merchant <-
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -227,8 +237,8 @@ enableDrivers merchantShortId req = withFlowHandlerAPI $ do
       }
 
 ---------------------------------------------------------------------
-disableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> FlowHandler Common.DisableDriversRes
-disableDrivers merchantShortId req = withFlowHandlerAPI $ do
+disableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> Flow Common.DisableDriversRes
+disableDrivers merchantShortId req = do
   merchant <-
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -244,8 +254,8 @@ disableDrivers merchantShortId req = withFlowHandlerAPI $ do
       }
 
 ---------------------------------------------------------------------
-driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
-driverLocation merchantShortId mbLimit mbOffset req = withFlowHandler $ do
+driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> Flow Common.DriverLocationRes
+driverLocation merchantShortId mbLimit mbOffset req = do
   merchant <-
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -257,7 +267,7 @@ driverLocation merchantShortId mbLimit mbOffset req = withFlowHandler $ do
   resultList <- mapM buildDriverLocationListItem limitedDrivers
   pure $ Common.DriverLocationRes (nonEmpty $ coerce driversNotFound) resultList
 
-buildDriverLocationListItem :: (EncFlow m r) => QPerson.FullDriver -> m Common.DriverLocationItem
+buildDriverLocationListItem :: EncFlow m r => QPerson.FullDriver -> m Common.DriverLocationItem
 buildDriverLocationListItem f = do
   let p = f.person
       v = f.vehicle
@@ -281,8 +291,8 @@ buildDriverLocationListItem f = do
 mobileIndianCode :: Text
 mobileIndianCode = "+91"
 
-driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
-driverInfo merchantShortId mbMobileNumber mbVehicleNumber = withFlowHandler $ do
+driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
+driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
   merchant <-
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -327,8 +337,8 @@ driverInfo merchantShortId mbMobileNumber mbVehicleNumber = withFlowHandler $ do
         }
 
 ---------------------------------------------------------------------
-deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
-deleteDriver merchantShortId reqDriverId = withFlowHandler $ do
+deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+deleteDriver merchantShortId reqDriverId = do
   merchant <-
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)

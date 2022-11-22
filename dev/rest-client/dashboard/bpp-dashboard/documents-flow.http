@@ -37,7 +37,7 @@ Content-Type: application/json
 @docType = DriverLicense
 #@docType = VehicleRegistrationCertificate
 
-POST {{bpp-dashboard-host}}/bpp/driver-offer/driver/{{driverId}}/document/upload
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId}}/document/upload
 token: {{juspay_ops}}
 content-type: application/json
 
@@ -50,7 +50,7 @@ content-type: application/json
 
 # @name getDocs
 
-GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/{{driverId}}/documents/list
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId}}/documents/list
 token: {{juspay_admin}}
 
 
@@ -59,7 +59,7 @@ token: {{juspay_admin}}
 #@imageId = {{getDocs.response.body.vehicleRegistrationCertificate[0]}}
 
 # @name fetchImage
-GET {{bpp-dashboard-host}}/bpp/driver-offer/driver/getDocument/{{imageId}}
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/getDocument/{{imageId}}
 token: {{juspay_admin}}
 
 ###
@@ -79,7 +79,7 @@ Content-Type: application/json
 
 # @name registerDL
 
-POST {{bpp-dashboard-host}}/bpp/driver-offer/driver/{{driverId}}/register/dl
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId}}/register/dl
 token: {{juspay_admin}}
 Content-Type: application/json
 
@@ -94,7 +94,7 @@ Content-Type: application/json
 
 # @name registerRC
 
-POST {{bpp-dashboard-host}}/bpp/driver-offer/driver/{{driverId}}/register/rc
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId}}/register/rc
 token: {{juspay_admin}}
 Content-Type: application/json
 
