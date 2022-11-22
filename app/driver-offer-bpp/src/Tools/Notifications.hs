@@ -12,6 +12,7 @@ import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
+import Domain.Types.SearchRequest
 import Domain.Types.SearchRequestForDriver
 import EulerHS.Prelude
 
@@ -286,10 +287,11 @@ notifyDriverClearedFare ::
     CoreMetrics m
   ) =>
   Id Person ->
+  Id SearchRequest ->
   Money ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverClearedFare driverId fare =
+notifyDriverClearedFare driverId sReqId fare =
   FCM.notifyPersonDefault notificationData . FCMNotificationRecipient driverId.getId
   where
     title = FCM.FCMNotificationTitle "Clearing Fare!"
@@ -302,9 +304,9 @@ notifyDriverClearedFare driverId fare =
     notificationData =
       FCM.FCMData
         { fcmNotificationType = FCM.CLEARED_FARE,
-          fcmShowNotification = FCM.SHOW,
-          fcmEntityType = FCM.Person,
-          fcmEntityIds = getId driverId,
+          fcmShowNotification = FCM.DO_NOT_SHOW,
+          fcmEntityType = FCM.SearchRequest,
+          fcmEntityIds = getId sReqId,
           fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CLEARED_FARE
         }

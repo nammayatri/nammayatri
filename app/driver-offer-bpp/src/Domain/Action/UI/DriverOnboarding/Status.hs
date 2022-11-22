@@ -96,9 +96,9 @@ verificationStatus :: Int -> Int -> Maybe IV.IdfyVerification -> ResponseStatus
 verificationStatus onboardingTryLimit imagesNum verificationReq =
   case verificationReq of
     Just req -> do
-      if req.status == "failed"
-        then FAILED
-        else PENDING
+      if req.status == "pending"
+        then PENDING
+        else FAILED
     Nothing -> do
       if imagesNum > onboardingTryLimit
         then LIMIT_EXCEED

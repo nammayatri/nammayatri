@@ -30,7 +30,6 @@ import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
-import Storage.Queries.DriverQuote
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -89,7 +88,7 @@ handler subscriber transporterId req = do
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
   ride <- buildRide driver.id booking
-  quotes <- findAllByRequestId driverQuote.searchRequestId
+  driverSearchReqs <- QSRD.findAllByRequestId driverQuote.searchRequestId
   Esq.runTransaction $ do
     when isNewRider $ QRD.create riderDetails
     QRB.updateRiderId booking.id riderDetails.id
@@ -101,14 +100,16 @@ handler subscriber transporterId req = do
     QRide.create ride
     QBE.logRideConfirmedEvent booking.id
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
-    QSRD.removeAllBySearchId driverQuote.searchRequestId
     QDQ.setInactiveByRequestId driverQuote.searchRequestId
 
-  for_ quotes $ \quote -> do
-    let driverId = quote.driverId
+  for_ driverSearchReqs $ \driverReq -> do
+    let driverId = driverReq.driverId
     unless (driverId == driver.id) $ do
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      Notify.notifyDriverClearedFare driverId driverQuote.estimatedFare driver_.deviceToken
+      Notify.notifyDriverClearedFare driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
+
+  Esq.runTransaction $ do
+    QSRD.removeAllBySearchId driverQuote.searchRequestId
 
   uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
   Notify.notifyDriver notificationType notificationTitle (message uBooking) driver.id driver.deviceToken

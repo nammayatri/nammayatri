@@ -12,6 +12,14 @@ import Storage.Tabular.SearchRequestForDriver
 create :: SearchRequestForDriver -> SqlDB ()
 create = Esq.create
 
+findAllByRequestId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]
+findAllByRequestId searchReqId = do
+  Esq.findAll $ do
+    sReq <- from $ table @SearchRequestForDriverT
+    where_ $
+      sReq ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
+    pure sReq
+
 findByDriverAndSearchReq :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchReq driverId searchReqId = Esq.findOne $ do
   sReq <- from $ table @SearchRequestForDriverT
