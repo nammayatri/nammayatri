@@ -39,34 +39,20 @@ fullEstimateTable =
 
 findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
 findById estimateId = Esq.buildDType $ do
-  mbFullEstimateT <- do
-    runMaybeT $ do
-      estimate <- MaybeT $
-        Esq.findOne' $ do
-          estimate' <- from $ table @EstimateT
-          where_ $ estimate' ^. EstimateTId ==. val (toKey estimateId)
-          pure estimate'
-      mbTripTerms <- MaybeT $
-        Esq.findOne' $ do
-          mbTripTerms' <- toMaybe <$> from (table @TripTermsT)
-          where_ $ mbTripTerms' ?. TripTermsTId ==. val (tripTermsId estimate)
-          pure mbTripTerms'
-      pure (estimate, mbTripTerms)
+  mbFullEstimateT <- Esq.findOne' $ do
+    estimate <- from $ table @EstimateT
+    where_ $ estimate ^. EstimateTId ==. val (toKey estimateId)
+    mbTripTerms <- toMaybe <$> from (table @TripTermsT)
+    where_ $ mbTripTerms ?. TripTermsTId ==. estimate ^. EstimateTripTermsId
+    pure (estimate, mbTripTerms)
   pure $ extractSolidType <$> mbFullEstimateT
 
 findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Estimate]
 findAllByRequestId searchRequestId = Esq.buildDType $ do
-  estimates <- Esq.findAll' $ do
-    estimate <- from (table @EstimateT)
+  fullEstimateTs <- Esq.findAll' $ do
+    estimate <- from $ table @EstimateT
     where_ $ estimate ^. EstimateRequestId ==. val (toKey searchRequestId)
-    pure estimate
-  mbTripTerms <- mapM getTripTerms estimates
-  let fullEstimateTs = zip estimates mbTripTerms
+    mbTripTerms <- toMaybe <$> from (table @TripTermsT)
+    where_ $ mbTripTerms ?. TripTermsTId ==. estimate ^. EstimateTripTermsId
+    pure (estimate, mbTripTerms)
   pure $ extractSolidType <$> fullEstimateTs
-  where
-    getTripTerms :: Transactionable m => EstimateT -> DTypeBuilder m (Maybe TripTermsT)
-    getTripTerms estimate =
-      Esq.findOne' $ do
-        mbTripTerms' <- from (table @TripTermsT)
-        where_ $ just (mbTripTerms' ^. TripTermsTId) ==. val (tripTermsId estimate)
-        pure mbTripTerms'

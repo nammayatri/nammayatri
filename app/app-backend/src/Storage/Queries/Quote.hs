@@ -65,141 +65,37 @@ fullQuoteTable =
                    quote ^. QuoteDriverOfferId ==. mbDriverOffer ?. DriverOfferTId
                )
 
---whereCondition =
-fullQuoteTable' ::
-  Transactionable m =>
-  (Table QuoteT -> SqlExpr (Value Bool)) ->
-  Maybe (SqlExpr (Maybe (Entity DriverOfferT)) -> SqlExpr (Value Bool)) ->
-  DTypeBuilder
-    m
-    ( Maybe
-        ( QuoteT,
-          Maybe TripTermsT,
-          Maybe RentalSlabT,
-          Maybe DriverOfferT
-        )
-    )
-fullQuoteTable' whereQuote whereDriverOffer = do
-  runMaybeT $
-    do
-      quote <-
-        MaybeT $
-          Esq.findOne' $ do
-            quote' <- from (table @QuoteT)
-            where_ $ whereQuote quote'
-            pure quote'
-      mbTripTerms <-
-        MaybeT $
-          Esq.findOne' $ do
-            mbTripTerms' <- toMaybe <$> from (table @TripTermsT)
-            where_ $ mbTripTerms' ?. TripTermsTId ==. val (tripTermsId quote)
-            pure mbTripTerms'
-      mbRentalSlab <-
-        MaybeT $
-          Esq.findOne' $ do
-            mbRentalSlab' <- toMaybe <$> from (table @RentalSlabT)
-            where_ $ val (rentalSlabId quote) ==. mbRentalSlab' ?. RentalSlabTId
-            pure mbRentalSlab'
-      mbDriverOffer <-
-        MaybeT $
-          Esq.findOne' $ do
-            mbDriverOffer' <- toMaybe <$> from (table @DriverOfferT)
-            where_ $
-              val (driverOfferId quote) ==. mbDriverOffer' ?. DriverOfferTId
-                &&. maybe (val True) (\fn -> fn mbDriverOffer') whereDriverOffer
-            pure mbDriverOffer'
-      pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer)
-
 findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById quoteId = Esq.buildDType $ do
-  mbFullQuoteT <-
-    fullQuoteTable'
-      (\quote -> quote ^. QuoteTId ==. val (toKey quoteId))
-      Nothing
+  mbFullQuoteT <- Esq.findOne' $ do
+    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer) <- from fullQuoteTable
+    where_ $ quote ^. QuoteTId ==. val (toKey quoteId)
+    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer)
   join <$> mapM buildFullQuote mbFullQuoteT
 
 findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe Quote)
 findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
-  mbFullQuoteT <-
-    fullQuoteTable'
-      (\quote -> quote ^. QuoteProviderId ==. val bppId)
-      (Just (\mbDriverOffer -> mbDriverOffer ?. DriverOfferBppQuoteId ==. just (val bppQuoteId.getId)))
+  mbFullQuoteT <- Esq.findOne' $ do
+    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer) <- from fullQuoteTable
+    where_ $
+      quote ^. QuoteProviderId ==. val bppId
+        &&. mbDriverOffer ?. DriverOfferBppQuoteId ==. just (val bppQuoteId.getId)
+    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer)
   join <$> mapM buildFullQuote mbFullQuoteT
 
 findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Quote]
 findAllByRequestId searchRequestId = Esq.buildDType $ do
-  quotes <- Esq.findAll' $ do
-    quote <- from (table @QuoteT)
+  fullQuoteTs <- Esq.findAll' $ do
+    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer) <- from fullQuoteTable
     where_ $ quote ^. QuoteRequestId ==. val (toKey searchRequestId)
-    pure quote
-  mbTripTerms <-
-    mapM
-      ( \quote ->
-          Esq.findOne' $ do
-            mbTripTerms' <- from (table @TripTermsT)
-            where_ $ just (mbTripTerms' ^. TripTermsTId) ==. val (tripTermsId quote)
-            pure mbTripTerms'
-      )
-      quotes
-  mbRentalSlabs <-
-    mapM
-      ( \quote ->
-          Esq.findOne' $ do
-            mbRentalSlab' <- from (table @RentalSlabT)
-            where_ $ val (rentalSlabId quote) ==. just (mbRentalSlab' ^. RentalSlabTId)
-            pure mbRentalSlab'
-      )
-      quotes
-  mbDriverOffers <-
-    mapM
-      ( \quote ->
-          Esq.findOne' $ do
-            mbDriverOffer' <- from (table @DriverOfferT)
-            where_ $ val (driverOfferId quote) ==. just (mbDriverOffer' ^. DriverOfferTId)
-            pure mbDriverOffer'
-      )
-      quotes
-  let fullQuoteTs = zip4 quotes mbTripTerms mbRentalSlabs mbDriverOffers
+    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer)
   catMaybes <$> mapM buildFullQuote fullQuoteTs
-  where
-    zip4 (x : xs) (y : yx) (z : zx) (k : kx) = (x, y, z, k) : zip4 xs yx zx kx
-    zip4 _ _ _ _ = []
 
 findAllByEstimateId :: Transactionable m => Id Estimate -> m [Quote]
 findAllByEstimateId estimateId = buildDType $ do
-  quotes <- Esq.findAll' $ from (table @QuoteT)
-  mbTripTerms <-
-    mapM
-      ( \quote ->
-          Esq.findOne' $ do
-            mbTripTerms' <- from (table @TripTermsT)
-            where_ $ just (mbTripTerms' ^. TripTermsTId) ==. val (tripTermsId quote)
-            pure mbTripTerms'
-      )
-      quotes
-  mbRentalSlabs <-
-    mapM
-      ( \quote ->
-          Esq.findOne' $ do
-            mbRentalSlab' <- from (table @RentalSlabT)
-            where_ $ val (rentalSlabId quote) ==. just (mbRentalSlab' ^. RentalSlabTId)
-            pure mbRentalSlab'
-      )
-      quotes
-  mbDriverOffers <-
-    mapM
-      ( \quote ->
-          Esq.findOne' $ do
-            mbDriverOffer' <- from (table @DriverOfferT)
-            where_ $
-              val (driverOfferId quote) ==. just (mbDriverOffer' ^. DriverOfferTId)
-                &&. mbDriverOffer' ^. DriverOfferEstimateId ==. val (toKey estimateId)
-            pure mbDriverOffer'
-      )
-      quotes
-
-  let fullQuoteTs = zip4 quotes mbTripTerms mbRentalSlabs mbDriverOffers
+  fullQuoteTs <- Esq.findAll' $ do
+    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer) <- from fullQuoteTable
+    where_ $
+      mbDriverOffer ?. DriverOfferEstimateId ==. just (val $ toKey estimateId)
+    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer)
   catMaybes <$> mapM buildFullQuote fullQuoteTs
-  where
-    zip4 (x : xs) (y : yx) (z : zx) (k : kx) = (x, y, z, k) : zip4 xs yx zx kx
-    zip4 _ _ _ _ = []
