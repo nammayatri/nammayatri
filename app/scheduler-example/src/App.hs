@@ -36,7 +36,7 @@ defaultConfig =
         EsqDBConfig
           { connectHost = "localhost",
             connectPort = 5434,
-            connectUser = "atlas",
+            connectUser = "atlas_scheduler_example_user",
             connectPassword = "atlas",
             connectDatabase = "atlas_dev",
             connectSchemaName = "atlas_scheduler_example"
