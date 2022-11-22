@@ -47,6 +47,7 @@ import GHC.Records.Extra
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
@@ -379,6 +380,7 @@ deleteDriver admin driverId = do
     QDriverStats.deleteById (cast driverId)
     QR.deleteByPersonId driverId
     QVehicle.deleteById driverId
+    QDriverLocation.deleteById driverId
     QPerson.deleteById driverId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success

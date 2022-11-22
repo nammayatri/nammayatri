@@ -74,6 +74,7 @@ import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
@@ -390,6 +391,7 @@ deleteDriver admin driverId = do
     QDriverStats.deleteById (cast driverId)
     QR.deleteByPersonId driverId
     QVehicle.deleteById driverId
+    QDriverLocation.deleteById driverId
     QPerson.deleteById driverId
 
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
