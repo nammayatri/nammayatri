@@ -40,19 +40,15 @@ fullEstimateTable =
 findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
 findById estimateId = Esq.buildDType $ do
   mbFullEstimateT <- Esq.findOne' $ do
-    estimate <- from $ table @EstimateT
+    (estimate :& mbTripTerms) <- from fullEstimateTable
     where_ $ estimate ^. EstimateTId ==. val (toKey estimateId)
-    mbTripTerms <- toMaybe <$> from (table @TripTermsT)
-    where_ $ mbTripTerms ?. TripTermsTId ==. estimate ^. EstimateTripTermsId
     pure (estimate, mbTripTerms)
   pure $ extractSolidType <$> mbFullEstimateT
 
 findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Estimate]
 findAllByRequestId searchRequestId = Esq.buildDType $ do
   fullEstimateTs <- Esq.findAll' $ do
-    estimate <- from $ table @EstimateT
+    (estimate :& mbTripTerms) <- from fullEstimateTable
     where_ $ estimate ^. EstimateRequestId ==. val (toKey searchRequestId)
-    mbTripTerms <- toMaybe <$> from (table @TripTermsT)
-    where_ $ mbTripTerms ?. TripTermsTId ==. estimate ^. EstimateTripTermsId
     pure (estimate, mbTripTerms)
   pure $ extractSolidType <$> fullEstimateTs
