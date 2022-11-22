@@ -48,8 +48,13 @@ handler merchantId sReq = do
   fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupLocation Nothing
   toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropLocation Nothing
   farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId sReq.variant >>= fromMaybeM NoFarePolicy
-  driverPool <- calculateDriverPool (Just sReq.variant) fromLocation merchantId False True
-
+  driverPool' <- calculateDriverPool (Just sReq.variant) fromLocation merchantId True True
+  mdriverPoolLimitForRandomize <- asks (.driverPoolLimit)
+  driverPool <-
+    maybe
+      (pure driverPool')
+      (randomizeAndLimitSelection driverPool')
+      mdriverPoolLimitForRandomize
   distRes <-
     Maps.getDistance merchantId $
       Maps.GetDistanceReq
@@ -74,12 +79,11 @@ handler merchantId sReq = do
     QSReq.create searchReq
     mapM_ QSRD.create searchRequestsForDrivers
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
-  forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) ->
-    when (not dPoolRes.origin.onRide) $ do
-      let language = fromMaybe Maps.ENGLISH dPoolRes.origin.language
-      let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
-      let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq
-      Notify.notifyOnNewSearchRequestAvailable sReqFD.driverId dPoolRes.origin.driverDeviceToken entityData
+  forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
+    let language = fromMaybe Maps.ENGLISH dPoolRes.origin.language
+    let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq
+    Notify.notifyOnNewSearchRequestAvailable sReqFD.driverId dPoolRes.origin.driverDeviceToken entityData
   where
     buildSearchRequestForDriver ::
       (MonadFlow m) =>

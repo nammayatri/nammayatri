@@ -2,21 +2,52 @@
 
 module SharedLogic.DriverPool
   ( calculateDriverPool,
+    randomizeAndLimitSelection,
   )
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Data.List.NonEmpty as NE
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Set as Set
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Vehicle.Variant (Variant)
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import GHC.Float (double2Int)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Person as QP
 import Tools.Maps as Maps
+import System.Random
 import Tools.Metrics
+
+randomizeAndLimitSelection ::
+  (L.MonadFlow m) =>
+  [Maps.GetDistanceResp QP.DriverPoolResult LatLong] ->
+  Int ->
+  m [Maps.GetDistanceResp QP.DriverPoolResult LatLong]
+randomizeAndLimitSelection driverPool limit = do
+  let poolLen = length driverPool
+      startIdx = 0
+      endIdx = poolLen - 1
+  randomNumList <- getRandomNumberList startIdx endIdx limit
+  return $ fmap (driverPool !!) randomNumList
+
+getRandomNumberList :: (L.MonadFlow m) => Int -> Int -> Int -> m [Int]
+getRandomNumberList start end count = do
+  n <- round <$> L.runIO getPOSIXTime
+  let pureGen = mkStdGen n
+  return $ toList $ nextNumber pureGen Set.empty
+  where
+    nextNumber :: RandomGen g => g -> Set.Set Int -> Set.Set Int
+    nextNumber gen acc =
+      if Set.size acc == min (end - start + 1) count
+        then acc
+        else
+          let (n, gen') = randomR (start, end) gen
+           in nextNumber gen' (Set.union (Set.singleton n) acc)
 
 calculateDriverPool ::
   ( EncFlow m r,

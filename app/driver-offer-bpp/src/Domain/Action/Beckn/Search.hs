@@ -95,13 +95,7 @@ handler merchantId sReq = do
       else do
         mdriverPoolLimitForRandomize <- asks (.driverPoolLimit)
         let shouldFilterByActualDistance = isNothing mdriverPoolLimitForRandomize
-        driverPool' <- calculateDriverPool Nothing fromLocation org.id True shouldFilterByActualDistance
-
-        driverPool <-
-          maybe
-            (return driverPool')
-            (randomizeAndLimitSelection driverPool')
-            mdriverPoolLimitForRandomize
+        driverPool <- calculateDriverPool Nothing pickupLatLong org.id True shouldFilterByActualDistance
 
         logDebug $ "Search handler: driver pool " <> show driverPool
 
@@ -119,13 +113,6 @@ handler merchantId sReq = do
       let cond1 = (<= tripDistance) <$> fp.minAllowedTripDistance
           cond2 = (>= tripDistance) <$> fp.maxAllowedTripDistance
        in and $ catMaybes [cond1, cond2]
-
-    randomizeAndLimitSelection driverPool limit = do
-      let poolLen = length driverPool
-          startIdx = 0
-          endIdx = poolLen - 1
-      randomNumList <- getRandomNumberList startIdx endIdx limit
-      return $ fmap (driverPool !!) randomNumList
 
 -- Generate `count` number of random numbers with bounds `start` and `end`
 getRandomNumberList :: (L.MonadFlow m) => Int -> Int -> Int -> m [Int]
