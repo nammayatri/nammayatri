@@ -31,13 +31,14 @@ buildSelectReq subscriber req = do
   unless (subscriber.subscriber_url == context.bap_uri) $
     throwError (InvalidRequest "Invalid bap_uri")
   let messageId = context.message_id
+  transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing transaction_id")
   item <- case order.items of
     [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
   pure
     DSelect.DSelectReq
       { messageId = messageId,
-        transactionId = context.transaction_id,
+        transactionId = transactionId,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         pickupLocation = Maps.LatLong pickup.location.gps.lat pickup.location.gps.lon,

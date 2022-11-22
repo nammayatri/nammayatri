@@ -14,16 +14,17 @@ import Environment
 
 buildInitReq ::
   (HasBapInfo r m, MonadFlow m) =>
-  DConfirm.ConfirmRes ->
+  DConfirm.DConfirmRes ->
   m (BecknReq Init.InitMessage)
 buildInitReq res = do
+  let transactionId = res.searchRequestId.getId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.INIT res.booking.id.getId Nothing bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl)
+  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl)
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 
-buildInitMessage :: (MonadThrow m, Log m) => DConfirm.ConfirmRes -> m Init.InitMessage
+buildInitMessage :: (MonadThrow m, Log m) => DConfirm.DConfirmRes -> m Init.InitMessage
 buildInitMessage res = do
   let (fareProductType, mbDistance, mbDuration, mbBppItemId) = case res.quoteDetails of
         DConfirm.ConfirmOneWayDetails -> (Init.ONE_WAY_TRIP, Nothing, Nothing, Nothing)

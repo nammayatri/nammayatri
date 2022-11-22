@@ -1,7 +1,7 @@
 module Domain.Action.UI.Confirm
   ( confirm,
     cancelBooking,
-    ConfirmRes (..),
+    DConfirmRes (..),
     ConfirmQuoteDetails (..),
   )
 where
@@ -34,7 +34,7 @@ import qualified Tools.Notifications as Notify
 
 -- domain types
 
-data ConfirmRes = ConfirmRes
+data DConfirmRes = DConfirmRes
   { providerId :: Text,
     providerUrl :: BaseUrl,
     fromLoc :: LatLong,
@@ -42,7 +42,8 @@ data ConfirmRes = ConfirmRes
     vehicleVariant :: VehicleVariant,
     quoteDetails :: ConfirmQuoteDetails,
     startTime :: UTCTime,
-    booking :: DRB.Booking
+    booking :: DRB.Booking,
+    searchRequestId :: Id DSReq.SearchRequest
   }
   deriving (Show, Generic)
 
@@ -52,7 +53,7 @@ data ConfirmQuoteDetails
   | ConfirmAutoDetails (Id DDriverOffer.BPPQuote)
   deriving (Show, Generic)
 
-confirm :: EsqDBFlow m r => Id DP.Person -> Id DQuote.Quote -> m ConfirmRes
+confirm :: EsqDBFlow m r => Id DP.Person -> Id DQuote.Quote -> m DConfirmRes
 confirm personId quoteId = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
@@ -77,7 +78,7 @@ confirm personId quoteId = do
   DB.runTransaction $ do
     QRideB.create booking
   return $
-    ConfirmRes
+    DConfirmRes
       { booking,
         providerId = quote.providerId,
         providerUrl = quote.providerUrl,
@@ -85,7 +86,8 @@ confirm personId quoteId = do
         toLoc = mbToLocation <&> \toLocation -> LatLong {lat = toLocation.lat, lon = toLocation.lon},
         vehicleVariant = quote.vehicleVariant,
         quoteDetails = details,
-        startTime = searchRequest.startTime
+        startTime = searchRequest.startTime,
+        searchRequestId = searchRequest.id
       }
   where
     mkConfirmQuoteDetails :: DQuote.QuoteDetails -> ConfirmQuoteDetails

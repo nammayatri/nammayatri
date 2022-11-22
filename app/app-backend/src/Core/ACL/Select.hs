@@ -17,9 +17,10 @@ buildSelectReq ::
   m (BecknReq Select.SelectMessage)
 buildSelectReq dSelectReq = do
   let messageId = dSelectReq.estimateId.getId
+  let transactionId = dSelectReq.searchRequest.id.getId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.SELECT messageId Nothing bapIDs.cabs bapURIs.cabs (Just dSelectReq.providerId) (Just dSelectReq.providerUrl)
+  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just dSelectReq.providerId) (Just dSelectReq.providerUrl)
   let order = mkOrder dSelectReq
   pure $ BecknReq context $ Select.SelectMessage order
 

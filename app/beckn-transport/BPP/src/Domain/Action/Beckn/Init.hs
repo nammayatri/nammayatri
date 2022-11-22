@@ -11,6 +11,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Veh
+import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.FareCalculator.OneWayFareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
@@ -22,6 +23,7 @@ import Tools.Maps as MapSearch
 
 data InitReq = InitReq
   { vehicleVariant :: Veh.Variant,
+    transactionId :: Text,
     fromLocation :: LatLong,
     startTime :: UTCTime,
     bapId :: Text,
@@ -88,16 +90,22 @@ initOneWayTrip req oneWayReq transporter now = do
   unlessM (rideServiceable transporter.geofencingConfig QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
     throwError RideNotServiceable
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
-  distRes <-
-    MapSearch.getDistance transporter.id $
-      MapSearch.GetDistanceReq
-        { origin = req.fromLocation,
-          destination = oneWayReq.toLocation,
-          travelMode = Just MapSearch.CAR
-        }
-  let distance = distRes.distance
-      estimatedRideDuration = distRes.duration
-      estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` req.startTime
+  mbDistRes <- CD.getCacheDistance req.transactionId
+  logInfo $ "Fetching cached distance and duration" <> show mbDistRes
+  (distance, duration) <-
+    case mbDistRes of
+      Nothing -> do
+        res <-
+          MapSearch.getDistance transporter.id $
+            MapSearch.GetDistanceReq
+              { origin = req.fromLocation,
+                destination = oneWayReq.toLocation,
+                travelMode = Just MapSearch.CAR
+              }
+        pure (res.distance, res.duration)
+      Just distRes -> pure distRes
+  let estimatedRideDuration = duration
+  let estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` req.startTime
   fareParams <- calculateFare transporter.id req.vehicleVariant distance estimatedRideFinishTime
   toLoc <- buildRBLoc oneWayReq.toLocation now
   let estimatedFare = fareSum fareParams

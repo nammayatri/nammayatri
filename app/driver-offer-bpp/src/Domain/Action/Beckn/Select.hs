@@ -7,7 +7,7 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Utils.Common (fromMaybeM, logDebug)
+import Beckn.Utils.Common (fromMaybeM, logDebug, logInfo)
 import qualified Data.Map as M
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Merchant as DM
@@ -16,6 +16,7 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.Vehicle.Variant (Variant)
 import Environment
+import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import SharedLogic.GoogleMaps
@@ -31,7 +32,7 @@ import qualified Tools.Notifications as Notify
 
 data DSelectReq = DSelectReq
   { messageId :: Text,
-    transactionId :: Maybe Text,
+    transactionId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
     pickupLocation :: LatLong,
@@ -55,15 +56,20 @@ handler merchantId sReq = do
       (pure driverPool')
       (randomizeAndLimitSelection driverPool')
       mdriverPoolLimitForRandomize
-  distRes <-
-    Maps.getDistance merchantId $
-      Maps.GetDistanceReq
-        { origin = fromLocation,
-          destination = toLocation,
-          travelMode = Just Maps.CAR
-        }
-  let distance = distRes.distance
-  let duration = distRes.duration
+  mbDistRes <- CD.getCacheDistance sReq.transactionId
+  logInfo $ "Fetching cached distance and duration" <> show mbDistRes
+  (distance, duration) <-
+    case mbDistRes of
+      Nothing -> do
+        res <-
+          Maps.getDistance merchantId $
+            Maps.GetDistanceReq
+              { origin = fromLocation,
+                destination = toLocation,
+                travelMode = Just Maps.CAR
+              }
+        pure (res.distance, res.duration)
+      Just distRes -> pure distRes
   fareParams <- calculateFare merchantId farePolicy distance sReq.pickupTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration
   let baseFare = fareSum fareParams
@@ -135,7 +141,7 @@ buildSearchRequest from to merchantId sReq distance duration = do
   pure
     DSearchReq.SearchRequest
       { id = id_,
-        transactionId = fromMaybe "" sReq.transactionId,
+        transactionId = sReq.transactionId,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,
         validTill = validTill_,

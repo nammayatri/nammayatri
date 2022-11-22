@@ -27,6 +27,7 @@ import qualified Tools.Metrics as Metrics
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
+    transactionId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
     pickupLocation :: LocationReq,

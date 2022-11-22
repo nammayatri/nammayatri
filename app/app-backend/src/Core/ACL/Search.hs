@@ -36,7 +36,7 @@ buildSearchReq origin mbDestination searchId startTime = do
   let messageId = getId searchId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.SEARCH messageId Nothing bapIDs.cabs bapURIs.cabs Nothing Nothing
+  context <- buildTaxiContext Context.SEARCH messageId (Just messageId) bapIDs.cabs bapURIs.cabs Nothing Nothing
   let intent = mkIntent origin mbDestination startTime
   pure $ BecknReq context $ Search.SearchMessage intent
 

@@ -39,6 +39,7 @@ search transporterId (SignatureAuthResult _ subscriber _) (SignatureAuthResult _
     DSearch.DSearchRes {..} <- DSearch.search transporterId dSearchReq
     let context = req.context
     let callbackUrl = gateway.subscriber_url
+    let transactionId = dSearchReq.transactionId
     withCallback' withRetry transporter Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
       dOnSearchRes <- DOnSearch.onSearch (DOnSearch.DOnSearchReq {..})
       pure $ ACL.mkOnSearchMessage dOnSearchRes

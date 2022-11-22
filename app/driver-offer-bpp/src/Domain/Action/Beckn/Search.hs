@@ -15,6 +15,7 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
 import Environment
 import qualified EulerHS.Language as L
+import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
@@ -30,7 +31,7 @@ import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
-    transactionId :: Maybe Text,
+    transactionId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
     pickupLocation :: DLoc.SearchReqLocationAPIEntity,
@@ -83,6 +84,8 @@ handler merchantId sReq = do
           travelMode = Just Maps.CAR
         }
   let distance = distRes.distance
+  let duration = distRes.duration
+  CD.cacheDistance sReq.transactionId (distance, duration)
   logDebug $ "distance: " <> show distance
 
   allFarePolicies <- FarePolicyS.findAllByMerchantId org.id

@@ -16,6 +16,7 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
+import qualified SharedLogic.CacheDistance as CD
 import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.FareCalculator.OneWayFareCalculator
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Flow as Fare
@@ -53,10 +54,10 @@ onSearchCallback ::
   UTCTime ->
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
+  Text ->
   m [QuoteInfo]
-onSearchCallback searchRequest transporterId now fromLocation toLocation = do
+onSearchCallback searchRequest transporterId now fromLocation toLocation transactionId = do
   pool <- DrPool.calculateDriverPool fromLocation transporterId Nothing SFP.ONE_WAY
-
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId
       ||+ " with drivers " +| T.intercalate ", " (getId . (.driverId) <$> pool) |+ ""
@@ -79,6 +80,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   let distance = distRes.distance
       estimatedRideDuration = distRes.duration
       estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` searchRequest.startTime
+  CD.cacheDistance transactionId (distance, estimatedRideDuration)
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance estimatedRideFinishTime

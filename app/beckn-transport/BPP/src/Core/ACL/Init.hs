@@ -27,9 +27,11 @@ buildInitReq subscriber req = do
   let itemCode = item.descriptor.code
   initTypeReq <- buildInitTypeReq item
   vehicleVariant <- fromEitherM InvalidRequest $ castVehicleVariant itemCode.vehicleVariant
+  transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing transaction_id")
   return $
     DInit.InitReq
       { vehicleVariant, -- = castVehicleVariant itemCode.vehicleVariant,
+        transactionId = transactionId,
         fromLocation = LatLong {lat = fulfillment.start.location.gps.lat, lon = fulfillment.start.location.gps.lon},
         -- toLocation = fulfillment.end <&> \end -> LatLong {lat = end.location.gps.lat, lon = end.location.gps.lon},
         bapId = subscriber.subscriber_id,

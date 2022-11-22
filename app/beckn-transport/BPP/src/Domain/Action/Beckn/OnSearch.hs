@@ -21,7 +21,8 @@ data DOnSearchReq = DOnSearchReq
     transporter :: DM.Merchant,
     fromLocation :: DLoc.SearchReqLocation,
     mbToLocation :: Maybe DLoc.SearchReqLocation,
-    searchMetricsMVar :: Metrics.SearchMetricsMVar
+    searchMetricsMVar :: Metrics.SearchMetricsMVar,
+    transactionId :: Text
   }
 
 data DOnSearchRes = DOnSearchRes
@@ -58,7 +59,7 @@ onSearch DOnSearchReq {..} = do
       Just toLocation -> do
         quotesInfos <-
           if isOneWayProduct
-            then OneWayQuoteInfo <$> OneWay.onSearchCallback searchRequest transporter.id now fromLocation toLocation
+            then OneWayQuoteInfo <$> OneWay.onSearchCallback searchRequest transporter.id now fromLocation toLocation transactionId
             else pure (OneWayQuoteInfo [])
         buildDOnSearchRes transporter quotesInfos DFareProduct.ONE_WAY
   Metrics.finishSearchMetrics transporter.name searchMetricsMVar
