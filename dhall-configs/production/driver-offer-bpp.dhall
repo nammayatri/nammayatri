@@ -84,6 +84,8 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let cacheConfig = { configsExpTime = +86400 }
 
+let cacheTranslationConfig = { expTranslationTime = +3600 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -137,4 +139,5 @@ in  { esqDBCfg
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
+    , cacheTranslationConfig
     }

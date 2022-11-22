@@ -36,6 +36,7 @@ import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
+import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.BlackListOrg (findByShortId)
 import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
@@ -80,7 +81,8 @@ data AppCfg = AppCfg
     selfUIUrl :: BaseUrl,
     rideCfg :: RideConfig,
     dashboardToken :: Text,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    cacheTranslationConfig :: CacheTranslationConfig
   }
   deriving (Generic, FromDhall)
 
@@ -123,7 +125,8 @@ data AppEnv = AppEnv
     kafkaEnvs :: BAPKafkaEnvs,
     rideCfg :: RideConfig,
     dashboardToken :: Text,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    cacheTranslationConfig :: CacheTranslationConfig
   }
   deriving (Generic)
 

@@ -44,17 +44,15 @@ let smsConfig =
       }
 
 let InfoBIPConfig =
-  { username = common.InfoBIPConfig.username
-  , password = common.InfoBIPConfig.password
-  , token = common.InfoBIPConfig.token
-  , url = "https://gye1yw.api.infobip.com"
-  , webhookurl = "http://localhost:8013/v2/update/status"
-  , sender = "JUSPAY"
-  }
-
-let WebengageConfig = 
-      {     url = "https://st.in.webengage.com"
+      { username = common.InfoBIPConfig.username
+      , password = common.InfoBIPConfig.password
+      , token = common.InfoBIPConfig.token
+      , url = "https://gye1yw.api.infobip.com"
+      , webhookurl = "http://localhost:8013/v2/update/status"
+      , sender = "JUSPAY"
       }
+
+let WebengageConfig = { url = "https://st.in.webengage.com" }
 
 let gwUri = "http://localhost:8015/v1"
 
@@ -75,6 +73,8 @@ let rideConfig =
       { driverReachedDistance = +100, driverOnTheWayNotifyExpiry = +3600 }
 
 let cacheConfig = { configsExpTime = +86400 }
+
+let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 in  { esqDBCfg
     , hedisCfg = hcfg
@@ -127,4 +127,5 @@ in  { esqDBCfg
     , rideCfg = rideConfig
     , dashboardToken = sec.dashboardToken
     , cacheConfig
+    , cacheTranslationConfig
     }

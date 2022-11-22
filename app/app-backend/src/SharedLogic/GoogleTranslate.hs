@@ -1,8 +1,8 @@
 module SharedLogic.GoogleTranslate
   ( translate,
+    TranslateFlow,
     CacheTranslationConfig (..),
     HasCacheTranslationConfig,
-    TranslateFlow,
   )
 where
 
@@ -12,11 +12,11 @@ import Beckn.External.GoogleTranslate.Types
 import qualified Beckn.External.GoogleTranslate.Types as GoogleTranslate
 import Beckn.Prelude (HasField (..))
 import Beckn.Storage.Hedis as Hedis
-import Beckn.Tools.Metrics.CoreMetrics
+import Beckn.Tools.Metrics.CoreMetrics.Types
 import Beckn.Utils.Common (BaseUrl, MonadFlow, Seconds, logDebug)
 import Beckn.Utils.Dhall
 import EulerHS.Prelude
-import Servant (ToHttpApiData (toUrlPiece))
+import Servant
 import qualified Tools.Maps as Maps
 
 newtype CacheTranslationConfig = CacheTranslationConfig
@@ -32,10 +32,9 @@ translate :: TranslateFlow m r => Maps.Language -> Maps.Language -> Text -> m Go
 translate source target q = do
   url <- asks (.googleTranslateUrl)
   apiKey <- asks (.googleTranslateKey)
-  let srcEnc = toUrlPiece source
   let tgtEnc = toUrlPiece target
   hashMessage <- getHash q
-  if srcEnc == tgtEnc
+  if source == target
     then
       return $
         TranslateResp

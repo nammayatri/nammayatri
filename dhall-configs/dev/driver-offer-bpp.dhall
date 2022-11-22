@@ -86,6 +86,8 @@ let driverLocationUpdateRateLimitOptions =
 
 let cacheConfig = { configsExpTime = +86400 }
 
+let cacheTranslationConfig = { expTranslationTime = +3600 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -103,7 +105,9 @@ in  { esqDBCfg
         )
     , autoMigrate = True
     , coreVersion = "0.9.3"
-    , loggerConfig = common.loggerConfig // { logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False }
+    , loggerConfig =
+            common.loggerConfig
+        //  { logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False }
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , graceTerminationPeriod = +90
@@ -140,4 +144,5 @@ in  { esqDBCfg
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
+    , cacheTranslationConfig
     }

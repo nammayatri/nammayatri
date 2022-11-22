@@ -34,12 +34,12 @@ let smsConfig =
       }
 
 let InfoBIPConfig =
-  { username = common.InfoBIPConfig.username
-  , password = common.InfoBIPConfig.password
-  , token = common.InfoBIPConfig.token
-  , url = "https://gye1yw.api.infobip.com"
-  , sender = "JUSPAY"
-  }
+      { username = common.InfoBIPConfig.username
+      , password = common.InfoBIPConfig.password
+      , token = common.InfoBIPConfig.token
+      , url = "https://gye1yw.api.infobip.com"
+      , sender = "JUSPAY"
+      }
 
 let nsdlGatewayUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/komn"
 
@@ -66,6 +66,8 @@ let rideConfig =
       { driverReachedDistance = +100, driverOnTheWayNotifyExpiry = +3600 }
 
 let cacheConfig = { configsExpTime = +86400 }
+
+let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 in  { esqDBCfg
     , hedisCfg = hcfg
@@ -113,4 +115,5 @@ in  { esqDBCfg
     , rideCfg = rideConfig
     , cacheConfig
     , dashboardToken = sec.dashboardToken
+    , cacheTranslationConfig
     }

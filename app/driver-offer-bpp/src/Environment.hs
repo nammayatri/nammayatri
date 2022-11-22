@@ -25,6 +25,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Idfy.Types.IdfyConfig as Idfy
+import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
 import Tools.Metrics.ARDUBPPMetrics
@@ -78,7 +79,8 @@ data AppCfg = AppCfg
     metricsSearchDurationTimeout :: Seconds,
     driverPoolLimit :: Maybe Int,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
-    driverLocationUpdateNotificationTemplate :: Text
+    driverLocationUpdateNotificationTemplate :: Text,
+    cacheTranslationConfig :: CacheTranslationConfig
   }
   deriving (Generic, FromDhall)
 
@@ -132,7 +134,8 @@ data AppEnv = AppEnv
     driverPoolLimit :: Maybe Int,
     s3Env :: S3Env Flow,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
-    driverLocationUpdateNotificationTemplate :: Text
+    driverLocationUpdateNotificationTemplate :: Text,
+    cacheTranslationConfig :: CacheTranslationConfig
   }
   deriving (Generic)
 

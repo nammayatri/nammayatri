@@ -68,6 +68,8 @@ let rideConfig =
 
 let cacheConfig = { configsExpTime = +86400 }
 
+let cacheTranslationConfig = { expTranslationTime = +3600 }
+
 in  { esqDBCfg
     , hedisCfg = hcfg
     , smsCfg = smsConfig
@@ -115,4 +117,5 @@ in  { esqDBCfg
     , rideCfg = rideConfig
     , cacheConfig
     , dashboardToken = sec.dashboardToken
+    , cacheTranslationConfig
     }
