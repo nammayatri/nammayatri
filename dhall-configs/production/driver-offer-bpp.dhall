@@ -1,83 +1,86 @@
 let common = ./common.dhall
+
 let sec = ./secrets/driver-offer-bpp.dhall
 
-let GeoRestriction = < Unrestricted | Regions : List Text >
-
 let esqDBCfg =
-  { connectHost = "adb.primary.beckn.juspay.net"
-  , connectPort = 5432
-  , connectUser = sec.dbUserId
-  , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_driver_offer_bpp"
-  , connectSchemaName = "atlas_driver_offer_bpp"
-  }
+      { connectHost = "adb.primary.beckn.juspay.net"
+      , connectPort = 5432
+      , connectUser = sec.dbUserId
+      , connectPassword = sec.dbPassword
+      , connectDatabase = "atlas_driver_offer_bpp"
+      , connectSchemaName = "atlas_driver_offer_bpp"
+      }
 
 let esqDBReplicaCfg =
-  { connectHost = esqDBCfg.connectHost
-  , connectPort = esqDBCfg.connectPort
-  , connectUser = esqDBCfg.connectUser
-  , connectPassword = esqDBCfg.connectPassword
-  , connectDatabase = esqDBCfg.connectDatabase
-  , connectSchemaName = esqDBCfg.connectSchemaName
-  }
+      { connectHost = esqDBCfg.connectHost
+      , connectPort = esqDBCfg.connectPort
+      , connectUser = esqDBCfg.connectUser
+      , connectPassword = esqDBCfg.connectPassword
+      , connectDatabase = esqDBCfg.connectDatabase
+      , connectSchemaName = esqDBCfg.connectSchemaName
+      }
 
 let slackCfg =
-  { channelName = "beckn-dashboard-new"
-  , slackToken = common.slackToken
-  }
+      { channelName = "beckn-dashboard-new", slackToken = common.slackToken }
 
 let driverOnboardingConfigs =
-  { onboardingTryLimit = +3
-  , onboardingRetryTimeinHours = +24
-  , onboardSupportSmsTemplate = "Driver Onboarding Alert!!\n Driver is facing following issues while onboarding to ({#org#}).\nReasons:\n {#reasons#}\nPlease contact him +91-{#driver-phone#}."
-  , checkRCInsuranceExpiry = False
-  , checkRCExpiry = False
-  , checkRCVehicleClass = True
-  , checkDLExpiry = True
-  , checkDLVehicleClass = True
-  , checkImageExtraction = True
-  , checkImageExtractionForDashboard = True
-  , validDLVehicleClassInfixes = ["AUTORICKSHAW", "LMV", "3W-NT", "3WT", "3W-T", "LIGHT MOTOR VEHICLE", "3W-CAB"]
-}
+      { onboardingTryLimit = +3
+      , onboardingRetryTimeinHours = +24
+      , onboardSupportSmsTemplate =
+          ''
+          Driver Onboarding Alert!!
+           Driver is facing following issues while onboarding to ({#org#}).
+          Reasons:
+           {#reasons#}
+          Please contact him +91-{#driver-phone#}.''
+      , checkRCInsuranceExpiry = False
+      , checkRCExpiry = False
+      , checkRCVehicleClass = True
+      , checkDLExpiry = True
+      , checkDLVehicleClass = True
+      , checkImageExtraction = True
+      , checkImageExtractionForDashboard = True
+      , validDLVehicleClassInfixes =
+        [ "AUTORICKSHAW"
+        , "LMV"
+        , "3W-NT"
+        , "3WT"
+        , "3W-T"
+        , "LIGHT MOTOR VEHICLE"
+        , "3W-CAB"
+        ]
+      }
 
 let rcfg =
-  { connectHost = "cache.primary.beckn.juspay.net"
-  , connectPort = 6379
-  , connectAuth = None Text
-  , connectDatabase = +1
-  , connectMaxConnections = +50
-  , connectMaxIdleTime = +30
-  , connectTimeout = Some +100
-  }
+      { connectHost = "cache.primary.beckn.juspay.net"
+      , connectPort = 6379
+      , connectAuth = None Text
+      , connectDatabase = +1
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = Some +100
+      }
 
 let smsConfig =
-  { sessionConfig = common.smsSessionConfig
-  , credConfig =
-    { username = common.smsUserName
-    , password = common.smsPassword
-    , otpHash = sec.smsOtpHash
-    }
-  , useFakeSms = None Natural
-  , url = "https://http.myvfirst.com"
-  , sender = "JUSPAY"
-  }
-
-let geofencingConfig =
-{ origin = GeoRestriction.Regions ["Karnataka"]
-, destination = GeoRestriction.Regions ["Karnataka"]
-}
+      { sessionConfig = common.smsSessionConfig
+      , credConfig =
+          { username = common.smsUserName
+          , password = common.smsPassword
+          , otpHash = sec.smsOtpHash
+          }
+      , useFakeSms = None Natural
+      , url = "https://http.myvfirst.com"
+      , sender = "JUSPAY"
+      }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
-let driverLocationUpdateRateLimitOptions = { limit = +4, limitResetTimeInSec = +40 }
+let driverLocationUpdateRateLimitOptions =
+      { limit = +4, limitResetTimeInSec = +40 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
-let cacheConfig =
-  { configsExpTime = +86400
-  }
-
-in
+let cacheConfig = { configsExpTime = +86400 }
 
 { esqDBCfg = esqDBCfg
 , esqDBReplicaCfg = esqDBReplicaCfg
@@ -126,7 +129,6 @@ in
 , metricsSearchDurationTimeout = +45
 , dashboardToken = sec.dashboardToken
 , driverPoolLimit = Some +10
-, driverLocationUpdateRateLimitOptions
+, driverLocationUpdateRateLimitOptions = driverLocationUpdateRateLimitOptions
 , driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
-, geofencingConfig = geofencingConfig
 }

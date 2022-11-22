@@ -9,6 +9,7 @@ module Storage.Tabular.Merchant where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import qualified Domain.Types.Merchant as Domain
 
@@ -35,6 +36,8 @@ mkPersist
       enabled Bool
       createdAt UTCTime
       updatedAt UTCTime
+      originRestriction GeoRestriction
+      destinationRestriction GeoRestriction
       info Text Maybe
       Primary id
       Unique MerchantSubscriberId
@@ -54,6 +57,11 @@ instance TType MerchantT Domain.Merchant where
         { id = Id id,
           subscriberId = ShortId subscriberId,
           shortId = ShortId shortId,
+          geofencingConfig =
+            GeofencingConfig
+              { origin = originRestriction,
+                destination = destinationRestriction
+              },
           ..
         }
   toTType Domain.Merchant {..} =
@@ -61,5 +69,7 @@ instance TType MerchantT Domain.Merchant where
       { id = getId id,
         subscriberId = getShortId subscriberId,
         shortId = getShortId shortId,
+        originRestriction = geofencingConfig.origin,
+        destinationRestriction = geofencingConfig.destination,
         ..
       }

@@ -2,6 +2,7 @@
 
 module Domain.Types.Merchant where
 
+import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -43,9 +44,10 @@ data MerchantD (s :: UsageSafety) = Merchant
     enabled :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
+    geofencingConfig :: GeofencingConfig,
     info :: Maybe Text
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show)
 
 type Merchant = MerchantD 'Safe
 

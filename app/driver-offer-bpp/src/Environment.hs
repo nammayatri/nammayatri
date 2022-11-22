@@ -15,7 +15,6 @@ import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Credentials (PrivateKey)
 import Beckn.Types.Flow (FlowR)
-import Beckn.Types.Geofencing
 import Beckn.Types.Registry
 import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
@@ -79,8 +78,7 @@ data AppCfg = AppCfg
     metricsSearchDurationTimeout :: Seconds,
     driverPoolLimit :: Maybe Int,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
-    driverLocationUpdateNotificationTemplate :: Text,
-    geofencingConfig :: GeofencingConfig
+    driverLocationUpdateNotificationTemplate :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -134,8 +132,7 @@ data AppEnv = AppEnv
     driverPoolLimit :: Maybe Int,
     s3Env :: S3Env Flow,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
-    driverLocationUpdateNotificationTemplate :: Text,
-    geofencingConfig :: GeofencingConfig
+    driverLocationUpdateNotificationTemplate :: Text
   }
   deriving (Generic)
 

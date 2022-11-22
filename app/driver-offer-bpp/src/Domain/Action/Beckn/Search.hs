@@ -71,7 +71,7 @@ handler merchantId sReq = do
   toLocation <- buildSearchReqLocation sReq.dropLocation
   let pickupLatLong = Maps.getCoordinates fromLocation
   let mbDropoffLatLong = Just $ Maps.getCoordinates toLocation
-  unlessM (rideServiceableDefault QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
+  unlessM (rideServiceable org.geofencingConfig QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
     throwError RideNotServiceable
 
   distRes <-

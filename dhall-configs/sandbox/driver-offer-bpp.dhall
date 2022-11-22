@@ -2,8 +2,6 @@ let common = ./common.dhall
 
 let sec = ./secrets/driver-offer-bpp.dhall
 
-let GeoRestriction = < Unrestricted | Regions : List Text >
-
 let esqDBCfg =
       { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
       , connectPort = 5432
@@ -14,13 +12,14 @@ let esqDBCfg =
       }
 
 let esqDBReplicaCfg =
-  { connectHost = "beckn-integ-v2-r1.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
-  , connectPort = esqDBCfg.connectPort
-  , connectUser = esqDBCfg.connectUser
-  , connectPassword = esqDBCfg.connectPassword
-  , connectDatabase = esqDBCfg.connectDatabase
-  , connectSchemaName = esqDBCfg.connectSchemaName
-  }
+      { connectHost =
+          "beckn-integ-v2-r1.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+      , connectPort = esqDBCfg.connectPort
+      , connectUser = esqDBCfg.connectUser
+      , connectPassword = esqDBCfg.connectPassword
+      , connectDatabase = esqDBCfg.connectDatabase
+      , connectSchemaName = esqDBCfg.connectSchemaName
+      }
 
 let rcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
@@ -35,46 +34,56 @@ let rcfg =
 let smsConfig =
       { sessionConfig = common.smsSessionConfig
       , credConfig =
-        { username = common.smsUserName
-        , password = common.smsPassword
-        , otpHash = sec.smsOtpHash
-        }
+          { username = common.smsUserName
+          , password = common.smsPassword
+          , otpHash = sec.smsOtpHash
+          }
       , useFakeSms = Some 7891
       , url = "https://http.myvfirst.com"
       , sender = "JUSPAY"
       }
 
-let geofencingConfig =
-{ origin = GeoRestriction.Regions ["Karnataka"]
-, destination = GeoRestriction.Regions ["Karnataka"]
-}
-
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
-let slackCfg = { channelName = "#beckn-driver-onboard-test", slackToken = common.slackToken }
+let slackCfg =
+      { channelName = "#beckn-driver-onboard-test"
+      , slackToken = common.slackToken
+      }
 
 let driverOnboardingConfigs =
-  { onboardingTryLimit = +3
-  , onboardingRetryTimeinHours = +24
-  , onboardSupportSmsTemplate = "Driver Onboarding Alert!!\n Driver is facing following issues while onboarding to ({#org#}).\nReasons:\n {#reasons#}\nPlease contact him +91-{#driver-phone#}."
-  , checkRCInsuranceExpiry = False
-  , checkRCExpiry = False
-  , checkRCVehicleClass = True
-  , checkDLExpiry = True
-  , checkDLVehicleClass = True
-  , checkImageExtraction = True
-  , checkImageExtractionForDashboard = True
-  , validDLVehicleClassInfixes = ["AUTORICKSHAW", "LMV", "3W-NT", "3WT", "3W-T", "LIGHT MOTOR VEHICLE", "3W-CAB"]
-}
+      { onboardingTryLimit = +3
+      , onboardingRetryTimeinHours = +24
+      , onboardSupportSmsTemplate =
+          ''
+          Driver Onboarding Alert!!
+           Driver is facing following issues while onboarding to ({#org#}).
+          Reasons:
+           {#reasons#}
+          Please contact him +91-{#driver-phone#}.''
+      , checkRCInsuranceExpiry = False
+      , checkRCExpiry = False
+      , checkRCVehicleClass = True
+      , checkDLExpiry = True
+      , checkDLVehicleClass = True
+      , checkImageExtraction = True
+      , checkImageExtractionForDashboard = True
+      , validDLVehicleClassInfixes =
+        [ "AUTORICKSHAW"
+        , "LMV"
+        , "3W-NT"
+        , "3WT"
+        , "3W-T"
+        , "LIGHT MOTOR VEHICLE"
+        , "3W-CAB"
+        ]
+      }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
+let driverLocationUpdateRateLimitOptions =
+      { limit = +10, limitResetTimeInSec = +40 }
 
-let driverLocationUpdateRateLimitOptions = { limit = +10, limitResetTimeInSec = +40 }
-
-let cacheConfig =
-  { configsExpTime = +86400
-  }
+let cacheConfig = { configsExpTime = +86400 }
 
 in  { esqDBCfg = esqDBCfg
     , esqDBReplicaCfg = esqDBReplicaCfg
@@ -121,12 +130,13 @@ in  { esqDBCfg = esqDBCfg
     , defaultPickupLocThreshold = +500
     , defaultDropLocThreshold = +500
     , defaultRideTravelledDistanceThreshold = +700
-    , defaultRideTimeEstimatedThreshold = +900 --seconds
+    , defaultRideTimeEstimatedThreshold = +900
     , cacheConfig = cacheConfig
     , metricsSearchDurationTimeout = +45
     , dashboardToken = sec.dashboardToken
     , driverPoolLimit = Some +10
-    , driverLocationUpdateRateLimitOptions
-    , driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
-    , geofencingConfig = geofencingConfig
+    , driverLocationUpdateRateLimitOptions =
+        driverLocationUpdateRateLimitOptions
+    , driverLocationUpdateNotificationTemplate =
+        "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     }

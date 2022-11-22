@@ -2,25 +2,24 @@ let common = ./common.dhall
 
 let sec = ./secrets/driver-offer-bpp.dhall
 
-let GeoRestriction = < Unrestricted | Regions : List Text >
-
 let esqDBCfg =
-  { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
-  , connectPort = 5432
-  , connectUser = sec.dbUserId
-  , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_driver_offer_bpp_v2"
-  , connectSchemaName = "atlas_driver_offer_bpp"
-  }
+      { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+      , connectPort = 5432
+      , connectUser = sec.dbUserId
+      , connectPassword = sec.dbPassword
+      , connectDatabase = "atlas_driver_offer_bpp_v2"
+      , connectSchemaName = "atlas_driver_offer_bpp"
+      }
 
 let esqDBReplicaCfg =
-  { connectHost = "beckn-integ-v2-r1.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
-  , connectPort = esqDBCfg.connectPort
-  , connectUser = esqDBCfg.connectUser
-  , connectPassword = esqDBCfg.connectPassword
-  , connectDatabase = esqDBCfg.connectDatabase
-  , connectSchemaName = esqDBCfg.connectSchemaName
-  }
+      { connectHost =
+          "beckn-integ-v2-r1.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+      , connectPort = esqDBCfg.connectPort
+      , connectUser = esqDBCfg.connectUser
+      , connectPassword = esqDBCfg.connectPassword
+      , connectDatabase = esqDBCfg.connectDatabase
+      , connectSchemaName = esqDBCfg.connectSchemaName
+      }
 
 let rcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
@@ -35,18 +34,13 @@ let rcfg =
 let smsConfig =
       { sessionConfig = common.smsSessionConfig
       , credConfig =
-        { username = common.smsUserName
-        , password = common.smsPassword
-        , otpHash = sec.smsOtpHash
-        }
+          { username = common.smsUserName
+          , password = common.smsPassword
+          , otpHash = sec.smsOtpHash
+          }
       , useFakeSms = Some 7891
       , url = "https://http.myvfirst.com"
       , sender = "JUSPAY"
-      }
-
-let geofencingConfig =
-      { origin = GeoRestriction.Regions ["Karnataka"]
-      , destination = GeoRestriction.Regions ["Karnataka"]
       }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
@@ -73,18 +67,27 @@ let driverOnboardingConfigs =
       , checkDLVehicleClass = True
       , checkImageExtraction = True
       , checkImageExtractionForDashboard = True
-      , validDLVehicleClassInfixes = ["AUTORICKSHAW", "LMV", "3W-NT", "3WT", "3W-T", "LIGHT MOTOR VEHICLE", "3W-CAB"]
+      , validDLVehicleClassInfixes =
+        [ "AUTORICKSHAW"
+        , "LMV"
+        , "3W-NT"
+        , "3WT"
+        , "3W-T"
+        , "LIGHT MOTOR VEHICLE"
+        , "3W-CAB"
+        ]
       }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
-let driverLocationUpdateRateLimitOptions = { limit = +20, limitResetTimeInSec = +40 }
+let driverLocationUpdateRateLimitOptions =
+      { limit = +20, limitResetTimeInSec = +40 }
 
 let cacheConfig = { configsExpTime = +86400 }
 
-in  { esqDBCfg
+in  { esqDBCfg = esqDBCfg
     , esqDBReplicaCfg = esqDBReplicaCfg
     , hedisCfg = rcfg
     , port = +8016
@@ -105,7 +108,7 @@ in  { esqDBCfg
     , googleTranslateKey = common.googleTranslateKey
     , graceTerminationPeriod = +90
     , registryUrl = common.registryUrl
-    , encTools
+    , encTools = encTools
     , authTokenCacheExpiry = +600
     , minimumDriverRatesCount = +5
     , disableSignatureAuth = False
@@ -113,11 +116,11 @@ in  { esqDBCfg
     , fcmUrl = common.fcmUrl
     , fcmJsonPath = common.fcmJsonPath
     , fcmTokenKeyPrefix = "ardu-bpp"
-    , apiRateLimitOptions
+    , apiRateLimitOptions = apiRateLimitOptions
     , inviteSmsTemplate =
         "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
-    , slackCfg
-    , driverOnboardingConfigs
+    , slackCfg = slackCfg
+    , driverOnboardingConfigs = driverOnboardingConfigs
     , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
     , smsCfg = smsConfig
     , driverPositionInfoExpiry = None Integer
@@ -129,12 +132,13 @@ in  { esqDBCfg
     , defaultPickupLocThreshold = +500
     , defaultDropLocThreshold = +500
     , defaultRideTravelledDistanceThreshold = +700
-    , defaultRideTimeEstimatedThreshold = +900 --seconds
-    , cacheConfig
+    , defaultRideTimeEstimatedThreshold = +900
+    , cacheConfig = cacheConfig
     , metricsSearchDurationTimeout = +45
     , dashboardToken = sec.dashboardToken
     , driverPoolLimit = Some +4
-    , driverLocationUpdateRateLimitOptions
-    , driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
-    , geofencingConfig = geofencingConfig
+    , driverLocationUpdateRateLimitOptions =
+        driverLocationUpdateRateLimitOptions
+    , driverLocationUpdateNotificationTemplate =
+        "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     }
