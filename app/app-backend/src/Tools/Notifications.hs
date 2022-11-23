@@ -30,7 +30,7 @@ getFCMConfig ::
   Id Merchant ->
   m FCM.FCMConfig
 getFCMConfig merchId = do
-  fmap (.fcmConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId . getId)
+  fmap (.fcmConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
 
 notifyOnDriverOfferIncoming ::
   ( HasCacheConfig r,
@@ -412,4 +412,4 @@ notifyDriverHasReached personId ride = do
           unwords
             [ "Vehicle No. " <> ride.vehicleNumber <> " has reached your location. Use OTP " <> ride.otp <> " to verify the ride"
             ]
-  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id. getId person.deviceToken
+  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
