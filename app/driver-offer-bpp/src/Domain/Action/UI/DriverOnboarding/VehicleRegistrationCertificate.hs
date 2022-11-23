@@ -73,19 +73,13 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
     merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
     unless (merchant.id == merchantId) $ throwError (PersonNotFound personId.getId)
 
-  imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
-  unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
-  unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
-  unless (imageMetadata.imageType == Image.VehicleRegistrationCertificate) $
-    throwError (ImageInvalidType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
-
   configs <- asks (.driverOnboardingConfigs)
   when
     ( isNothing dateOfRegistration && configs.checkImageExtraction
         && (not isDashboard || configs.checkImageExtractionForDashboard)
     )
     $ do
-      image <- S3.get (T.unpack imageMetadata.s3Path)
+      image <- getImage imageId
       resp <- Idfy.extractRCImage image Nothing
       case resp.result of
         Just result -> do
@@ -117,6 +111,15 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
           verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration
 
   return Success
+  where
+    getImage :: Id Image.Image -> Flow Text
+    getImage imageId_ = do
+      imageMetadata <- ImageQuery.findById imageId_ >>= fromMaybeM (ImageNotFound imageId_.getId)
+      unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId_.getId)
+      unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_.getId)
+      unless (imageMetadata.imageType == Image.VehicleRegistrationCertificate) $
+        throwError (ImageInvalidType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
+      S3.get $ T.unpack imageMetadata.s3Path
 
 verifyRCFlow :: Id Person.Person -> Text -> Id Image.Image -> Maybe UTCTime -> Flow ()
 verifyRCFlow personId rcNumber imageId dateOfRegistration = do
