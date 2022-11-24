@@ -19,8 +19,8 @@ import EulerHS.Prelude hiding (id)
 import GHC.Float (double2Int)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Person as QP
-import Tools.Maps as Maps
 import System.Random
+import Tools.Maps as Maps
 import Tools.Metrics
 
 randomizeAndLimitSelection ::
