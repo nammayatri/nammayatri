@@ -25,15 +25,15 @@ type API =
     :> ( "autoComplete"
            :> TokenAuth
            :> ReqBody '[JSON] DMaps.AutoCompleteReq
-           :> Get '[JSON] DMaps.AutoCompleteResp
+           :> Post '[JSON] DMaps.AutoCompleteResp
            :<|> "getPlaceDetails"
              :> TokenAuth
              :> ReqBody '[JSON] DMaps.GetPlaceDetailsReq
-             :> Get '[JSON] DMaps.GetPlaceDetailsResp
+             :> Post '[JSON] DMaps.GetPlaceDetailsResp
            :<|> "getPlaceName"
              :> TokenAuth
              :> ReqBody '[JSON] DMaps.GetPlaceNameReq
-             :> Get '[JSON] DMaps.GetPlaceNameResp
+             :> Post '[JSON] DMaps.GetPlaceNameResp
        )
 
 handler :: FlowServer API
