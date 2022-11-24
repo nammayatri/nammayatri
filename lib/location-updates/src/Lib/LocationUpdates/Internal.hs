@@ -117,10 +117,11 @@ mkRideInterpolationHandler ::
     Metrics.CoreMetrics m,
     EncFlow m env
   ) =>
+  Bool ->
   MapsServiceConfig ->
   (Id person -> HighPrecMeters -> m ()) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler mapsCfg updateDistance =
+mkRideInterpolationHandler isEndRide mapsCfg updateDistance =
   RideInterpolationHandler
     { batchSize = 98,
       addPoints = addPointsImplementation,
@@ -128,7 +129,7 @@ mkRideInterpolationHandler mapsCfg updateDistance =
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
-      interpolatePointsAndCalculateDistance = interpolatePointsAndCalculateDistanceImplementation mapsCfg,
+      interpolatePointsAndCalculateDistance = interpolatePointsAndCalculateDistanceImplementation isEndRide mapsCfg,
       updateDistance,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation
@@ -165,9 +166,22 @@ interpolatePointsAndCalculateDistanceImplementation ::
     EncFlow m r,
     Metrics.CoreMetrics m
   ) =>
+  Bool ->
   MapsServiceConfig ->
   [LatLong] ->
   m (HighPrecMeters, [LatLong])
-interpolatePointsAndCalculateDistanceImplementation mapsCfg wps = do
-  res <- Maps.snapToRoad mapsCfg $ Maps.SnapToRoadReq {points = wps}
-  pure (res.distance, res.snappedPoints)
+interpolatePointsAndCalculateDistanceImplementation isEndRide mapsCfg wps = do
+   if isEndRide && isAllPointsEqual wps
+    then pure $ (0,take 1 wps)
+    else do
+      res <- Maps.snapToRoad mapsCfg $ Maps.SnapToRoadReq {points = wps}
+      pure (res.distance, res.snappedPoints)
+
+isAllPointsEqual :: [LatLong] -> Bool
+isAllPointsEqual [] = True
+isAllPointsEqual [_] = True
+isAllPointsEqual (x : xs) = all (\t -> (abs (x.lat - t.lat) <= eps) && (abs (x.lon - t.lon) <= eps)) xs
+
+eps :: Double
+eps = 0.0001
+

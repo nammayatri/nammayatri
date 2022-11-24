@@ -88,7 +88,7 @@ buildEndRideHandle requestorId rideId = do
     QP.findById requestorId
       >>= fromMaybeM (PersonNotFound requestorId.getId)
   orgId <- requestor.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler orgId
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler orgId True
   return $
     ServiceHandle
       { requestor,

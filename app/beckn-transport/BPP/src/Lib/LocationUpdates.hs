@@ -21,8 +21,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QO
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
-buildRideInterpolationHandler :: Id Merchant -> Flow (RideInterpolationHandler Person.Person Flow)
-buildRideInterpolationHandler orgId = do
+buildRideInterpolationHandler :: Id Merchant -> Bool -> Flow (RideInterpolationHandler Person.Person Flow)
+buildRideInterpolationHandler orgId isEndRide = do
   orgMapsConfig <- QOMC.findByMerchantId orgId >>= fromMaybeM (MerchantServiceUsageConfigNotFound orgId.getId)
   orgMapsServiceConfig <-
     QOMSC.findByMerchantIdAndService orgId (DOSC.MapsService $ orgMapsConfig.snapToRoad)
@@ -30,7 +30,7 @@ buildRideInterpolationHandler orgId = do
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig cfg ->
       return $
-        mkRideInterpolationHandler cfg $
+        mkRideInterpolationHandler isEndRide cfg $
           \driverId dist -> Esq.runTransaction $ QRide.updateDistance driverId dist
 
 -- _ -> throwError $ InternalError "Impossible happened"
