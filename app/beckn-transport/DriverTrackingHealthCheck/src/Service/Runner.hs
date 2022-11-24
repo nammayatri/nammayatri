@@ -10,6 +10,7 @@ import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis (lPush, rPop)
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common
 import Beckn.Types.Error (PersonError (PersonFieldNotPresent))
 import Beckn.Types.Id (Id, cast)
@@ -20,7 +21,6 @@ import Data.List.NonEmpty (nonEmpty)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as SP
 import Environment (Flow)
-import Service.Runner.DataLocker
 import qualified Storage.Queries.DriverInformation as DrInfo
 import Tools.Notifications
 
@@ -91,3 +91,9 @@ driverMakingInactiveService = startService "driverMakingInactiveService" $ withR
 
       SF.sendSms smsCfg driverInactiveSmsTemplate (countryCode <> mobileNumber')
         >>= SF.checkSmsResult
+
+withLock :: (Redis.HedisFlow m r, MonadMask m) => Text -> m () -> m ()
+withLock serviceName func =
+  Redis.withLockRedis key 10 (func `catch` (logError . makeLogSomeException))
+  where
+    key = "beckn:" <> serviceName <> ":lock"

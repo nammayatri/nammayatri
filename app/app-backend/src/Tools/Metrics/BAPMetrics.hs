@@ -41,7 +41,7 @@ searchDurationKey txnId = "beckn:" <> txnId <> ":on_search:received"
 searchDurationLockKey :: Text -> Text
 searchDurationLockKey txnId = txnId <> ":on_search"
 
-startSearchMetrics' :: (Redis.HedisFlow m r, MonadFlow m) => BAPMetricsContainer -> Text -> Text -> m ()
+startSearchMetrics' :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => BAPMetricsContainer -> Text -> Text -> m ()
 startSearchMetrics' bmContainer merchantName txnId = do
   let (_, failureCounter) = bmContainer.searchDuration
       searchRedisExTime = getSeconds bmContainer.searchDurationTimeout
@@ -50,23 +50,21 @@ startSearchMetrics' bmContainer merchantName txnId = do
   -- allow forked thread to handle failure
   fork "Gateway Search Metrics" $ do
     liftIO $ threadDelay $ searchRedisExTime * 1000000
-    whenM (Redis.tryLockRedis (searchDurationLockKey txnId) searchRedisExTime) $ do
+    Redis.whenWithLockRedis (searchDurationLockKey txnId) searchRedisExTime $ do
       Redis.get (searchDurationKey txnId) >>= \case
         Just (_ :: UTCTime) -> do
           void $ Redis.del (searchDurationKey txnId)
           liftIO $ P.withLabel failureCounter merchantName P.incCounter
         Nothing -> return ()
-      Redis.unlockRedis $ searchDurationLockKey txnId
 
-finishSearchMetrics' :: (Redis.HedisFlow m r, MonadTime m) => BAPMetricsContainer -> Text -> Text -> m ()
+finishSearchMetrics' :: (Redis.HedisFlow m r, MonadTime m, MonadMask m) => BAPMetricsContainer -> Text -> Text -> m ()
 finishSearchMetrics' bmContainer merchantName txnId = do
   let (searchDurationHistogram, _) = bmContainer.searchDuration
       searchRedisExTime = getSeconds bmContainer.searchDurationTimeout
   endTime <- getCurrentTime
-  whenM (Redis.tryLockRedis (searchDurationLockKey txnId) searchRedisExTime) $ do
+  Redis.whenWithLockRedis (searchDurationLockKey txnId) searchRedisExTime $ do
     Redis.get (searchDurationKey txnId) >>= \case
       Just startTime -> do
         void $ Redis.del (searchDurationKey txnId)
         putSearchDuration searchDurationHistogram merchantName . realToFrac . diffUTCTime endTime $ startTime
       Nothing -> return ()
-    Redis.unlockRedis $ searchDurationLockKey txnId

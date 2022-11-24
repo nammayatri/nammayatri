@@ -536,7 +536,7 @@ offerQuote ::
   DriverOfferReq ->
   m APISuccess
 offerQuote driverId req = do
-  whenM (Redis.tryLockRedis (offerQuoteLockKey driverId) 60) $ do
+  Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
     logDebug $ "offered fare: " <> show req.offeredFare
     sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
     now <- getCurrentTime
@@ -558,7 +558,6 @@ offerQuote driverId req = do
     driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
     Esq.runTransaction $ QDrQt.create driverQuote
     sendDriverOffer organization sReq driverQuote
-    Redis.unlockRedis $ offerQuoteLockKey driverId
   pure Success
   where
     buildDriverQuote ::
