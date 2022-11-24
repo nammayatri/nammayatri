@@ -33,6 +33,18 @@ let smsConfig =
       , sender = "JUSPAY"
       }
 
+let InfoBIPConfig =
+      { username = common.InfoBIPConfig.username
+      , password = common.InfoBIPConfig.password
+      , token = common.InfoBIPConfig.token
+      , url = "https://gye1yw.api.infobip.com"
+      , sender = "JUSPAY"
+      }
+
+let WebengageConfig =
+      { url = "https://st.in.webengage.com"
+      }
+
 let nsdlGatewayUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/komn"
 
 let juspayGatewayUrl = "https://api.sandbox.beckn.juspay.in/gateway/v1"
@@ -56,6 +68,8 @@ let cacheConfig =
 in  { esqDBCfg
     , hedisCfg = hcfg
     , smsCfg = smsConfig
+    , infoBIPCfg = InfoBIPConfig
+    , webengageCfg = WebengageConfig
     , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
     , port = +8013
     , metricsPort = +9999

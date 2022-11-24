@@ -52,6 +52,19 @@ let apiRateLimitOptions =
   , limitResetTimeInSec = +600
   }
 
+let InfoBIPConfig =
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
+  , url = "https://gye1yw.api.infobip.com"
+  , webhookurl = "http://localhost:8014/v2/update/status"
+  , sender = "JUSPAY"
+  }
+
+let WebengageConfig =
+  { url = "https://st.in.webengage.com"
+  }
+
 let encTools =
   { service = common.passetto
   , hashSalt = sec.encHashSalt
@@ -70,8 +83,11 @@ in
 { esqDBCfg = esqDBCfg
 , hedisCfg = rcfg
 , smsCfg = smsConfig
+, infoBIPCfg = InfoBIPConfig
+, webengageCfg = WebengageConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
-, inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
+, inviteSmsTemplate =
+    "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
 , port = +8014
 , metricsPort = +9997
 , hostName = "localhost"
@@ -80,11 +96,15 @@ in
 , signatureExpiry = common.signatureExpiry
 , caseExpiry = Some +7200
 , exotelCfg = Some common.exotelCfg
-, migrationPath = Some (env:BECKN_TRANSPORT_MIGRATION_PATH as Text ? "dev/migrations/beckn-transport")
+, migrationPath = Some
+    (   env:BECKN_TRANSPORT_MIGRATION_PATH as Text
+      ? "dev/migrations/beckn-transport"
+    )
 , autoMigrate = True
 , coreVersion = "0.9.3"
 , geofencingConfig = geofencingConfig
-, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
+, loggerConfig =
+    common.loggerConfig // { logFilePath = "/tmp/beckn-transport.log" }
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl

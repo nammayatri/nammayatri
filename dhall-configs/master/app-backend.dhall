@@ -41,6 +41,22 @@ let apiRateLimitOptions =
   , limitResetTimeInSec = +600
   }
 
+let InfoBIPConfig =
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
+  , url = "https://gye1yw.api.infobip.com"
+  , sender = "JUSPAY"
+  }
+
+let WebengageConfig =
+  { url = "https://st.in.webengage.com"
+  }
+
+let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
+
+let searchRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
+
 let httpClientOptions =
   { timeoutMs = +2000
   , maxRetries = +3
@@ -69,6 +85,8 @@ in
 { esqDBCfg = esqDBCfg
 , hedisCfg = hcfg
 , smsCfg = smsConfig
+, infoBIPCfg = InfoBIPConfig
+, webengageCfg = WebengageConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , port = +8013
 , metricsPort = +9999

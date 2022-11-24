@@ -22,6 +22,11 @@ let idfyCfg =
     secret = "xxxxxxx",
     url = "http://localhost:6235"
   }
+let InfoBIPConfig =
+  { username = "xxxxx",
+    password = "xxxxx",
+    token = "xxxxx"
+  }
 
 in
 
@@ -30,6 +35,7 @@ in
 , exotelCfg = exotelCfg
 , s3Config = s3Config
 , idfyCfg = idfyCfg
+, InfoBIPConfig = InfoBIPConfig
 , googleMapsKey = topSecret.googleMapsKey
 , slackToken = "xxxxxxx"
 }

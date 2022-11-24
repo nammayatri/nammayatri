@@ -22,6 +22,8 @@ import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Support as Support
+import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
+import qualified API.UI.Webengage.Webengage as Webengage
 import Environment
 import EulerHS.Prelude
 import Servant
@@ -47,6 +49,8 @@ type API =
            :<|> GoogleMapsProxy.API
            :<|> CancellationReason.API
            :<|> SavedReqLocation.API
+           :<|> Webengage.API
+           :<|> InfoBIPWebhook.API
        )
 
 handler :: FlowServer API
@@ -70,3 +74,5 @@ handler =
     :<|> GoogleMapsProxy.handler
     :<|> CancellationReason.handler
     :<|> SavedReqLocation.handler
+    :<|> Webengage.handler
+    :<|> InfoBIPWebhook.handler

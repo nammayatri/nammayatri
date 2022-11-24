@@ -34,14 +34,27 @@ let hcfg =
 
 let smsConfig =
   { sessionConfig = common.smsSessionConfig
-  , credConfig = {
-      username = common.smsUserName
+  , credConfig =
+    { username = common.smsUserName
     , password = common.smsPassword
     , otpHash = sec.smsOtpHash
     }
   , useFakeSms = Some 7891
   , url = "http://localhost:4343"
   , sender = "JUSPAY"
+  }
+
+let InfoBIPConfig =
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
+  , url = "https://gye1yw.api.infobip.com"
+  , webhookurl = "http://localhost:8013/v2/update/status"
+  , sender = "JUSPAY"
+  }
+
+let WebengageConfig =
+  { url = "https://st.in.webengage.com"
   }
 
 let gwUri = "http://localhost:8015/v1"
@@ -75,6 +88,8 @@ in
 { esqDBCfg = esqDBCfg
 , hedisCfg = hcfg
 , smsCfg = smsConfig
+, infoBIPCfg = InfoBIPConfig
+, webengageCfg = WebengageConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , port = +8013
 , metricsPort = +9999
@@ -96,7 +111,8 @@ in
 , signatureExpiry = common.signatureExpiry
 , searchRequestExpiry = Some +600
 , exotelCfg = Some common.exotelCfg
-, migrationPath = Some (env:APP_BACKEND_MIGRATION_PATH as Text ? "dev/migrations/app-backend")
+, migrationPath = Some
+    (env:APP_BACKEND_MIGRATION_PATH as Text ? "dev/migrations/app-backend")
 , autoMigrate = True
 , coreVersion = "0.9.3"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}

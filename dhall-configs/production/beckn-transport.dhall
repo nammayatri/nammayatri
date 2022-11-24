@@ -47,6 +47,18 @@ let geofencingConfig =
 , destination = GeoRestriction.Regions [ "Ernakulam", "Kerala" ]
 }
 
+let InfoBIPConfig =
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
+  , url = "https://gye1yw.api.infobip.com"
+  , sender = "JUSPAY"
+  }
+
+let WebengageConfig =
+  { url = "https://st.in.webengage.com"
+  }
+
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
@@ -62,6 +74,8 @@ in
 { esqDBCfg = esqDBCfg
 , hedisCfg = rcfg
 , smsCfg = smsConfig
+, infoBIPCfg = InfoBIPConfig
+, webengageCfg = WebengageConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
 , port = +8014
