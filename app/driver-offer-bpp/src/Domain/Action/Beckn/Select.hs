@@ -106,6 +106,8 @@ handler merchantId sReq = do
                 distanceToPickup = gdRes.distance,
                 durationToPickup = gdRes.duration,
                 status = Active,
+                lat = Just driver.lat,
+                lon = Just driver.lon,
                 baseFare = baseFare_,
                 createdAt = now,
                 ..

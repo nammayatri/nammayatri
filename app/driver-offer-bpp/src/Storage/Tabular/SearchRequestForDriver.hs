@@ -31,6 +31,8 @@ mkPersist
       durationToPickup Seconds
       vehicleVariant Variant.Variant
       baseFare Money
+      lat Double Maybe
+      lon Double Maybe
       searchRequestValidTill UTCTime
       driverId PersonTId
       status Domain.DriverSearchRequestStatus

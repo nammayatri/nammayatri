@@ -2,6 +2,7 @@
 
 module Domain.Types.SearchRequestForDriver where
 
+import Beckn.External.Maps.Google.PolyLinePoints
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -27,6 +28,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     vehicleVariant :: Variant.Variant,
     status :: DriverSearchRequestStatus,
     baseFare :: Money,
+    lat :: Maybe Double,
+    lon :: Maybe Double,
     createdAt :: UTCTime
   }
   deriving (Generic, Show, PrettyShow)
@@ -40,7 +43,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     baseFare :: Money,
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: DLoc.SearchReqLocation,
-    distance :: Meters
+    distance :: Meters,
+    driverLatLong :: LatLong
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
@@ -55,5 +59,10 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest =
       baseFare = nearbyReq.baseFare,
       fromLocation = searchRequest.fromLocation,
       toLocation = searchRequest.toLocation,
-      distance = searchRequest.estimatedDistance
+      distance = searchRequest.estimatedDistance,
+      driverLatLong =
+        LatLong
+          { lat = fromMaybe 0.0 nearbyReq.lat,
+            lon = fromMaybe 0.0 nearbyReq.lon
+          }
     }
