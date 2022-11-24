@@ -34,12 +34,12 @@ let smsConfig =
       }
 
 let InfoBIPConfig =
-      { username = common.InfoBIPConfig.username
-      , password = common.InfoBIPConfig.password
-      , token = common.InfoBIPConfig.token
-      , url = "https://5vmxvj.api.infobip.com"
-      , sender = "JUSPAY"
-      }
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
+  , url = "https://gye1yw.api.infobip.com"
+  , sender = "JUSPAY"
+  }
 
 let nsdlGatewayUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/komn"
 

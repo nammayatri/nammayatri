@@ -36,12 +36,12 @@ let smsConfig =
 let gwUri = "https://api.beckn.juspay.in/gateway/v1"
 
 let InfoBIPConfig =
-      { username = common.InfoBIPConfig.username
-      , password = common.InfoBIPConfig.password
-      , token = common.InfoBIPConfig.token
-      , url = "https://5vmxvj.api.infobip.com"
-      , sender = "JUSPAY"
-      }
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
+  , url = "https://gye1yw.api.infobip.com"
+  , sender = "JUSPAY"
+  }
 
 let nsdlGwUri = "https://gateway-1.beckn.nsdl.co.in"
 

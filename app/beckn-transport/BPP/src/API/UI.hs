@@ -13,6 +13,8 @@ import qualified API.UI.Route as Route
 import qualified API.UI.TranspAdmin as TranspAdmin
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
+import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
+import qualified API.UI.Webengage.Webengage as Webengage
 import Environment
 import EulerHS.Prelude
 import Servant
@@ -34,6 +36,8 @@ type API =
            :<|> Ride.API
            :<|> CancellationReason.API
            :<|> Maps.API
+           :<|> Webengage.API
+           :<|> InfoBIPWebhook.API
        )
 
 handler :: FlowServer API
@@ -53,5 +57,7 @@ handler =
     :<|> Ride.handler
     :<|> CancellationReason.handler
     :<|> Maps.handler
+    :<|> Webengage.handler
+    :<|> InfoBIPWebhook.handler
 
 type HealthCheckAPI = Get '[JSON] Text

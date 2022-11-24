@@ -13,7 +13,7 @@ where
 
 import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
-import Beckn.External.Infobip.Types (InfoBIPConfig)
+import Beckn.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis as Redis
@@ -42,6 +42,7 @@ data AppCfg = AppCfg
     hedisCfg :: HedisCfg,
     smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
+    webengageCfg :: WebengageConfig,
     otpSmsTemplate :: Text,
     inviteSmsTemplate :: Text,
     port :: Int,
@@ -89,6 +90,7 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
+    webengageCfg :: WebengageConfig,
     otpSmsTemplate :: Text,
     inviteSmsTemplate :: Text,
     hostName :: Text,

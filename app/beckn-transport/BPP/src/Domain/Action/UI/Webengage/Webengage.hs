@@ -1,18 +1,21 @@
-module Domain.Action.UI.Webengage where
+module Domain.Action.UI.Webengage.Webengage where
 
 import Beckn.External.Encryption (decrypt)
 import qualified Beckn.External.Infobip.Flow as IF
-import Beckn.External.Infobip.Types hiding (id)
+import qualified Beckn.External.Infobip.Types as EIF hiding (id)
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Person as Person hiding (id)
+import Domain.Types.Webengage
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.Webengage as QWeb
 import Tools.Error
 import Tools.Metrics
 
 data WebengageReq = WebengageReq
-  { version :: Text, --to be confirmed
+  { version :: Text,
     smsData :: SmsData,
     metadata :: MetaData
   }
@@ -30,7 +33,7 @@ data MetaData = MetaData
     custom :: Custom,
     timestamp :: UTCTime, --to be confirmed
     messageId :: Text,
-    indiaDLT :: Maybe IndiaDLT
+    indiaDLT :: IndiaDLT
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -39,22 +42,19 @@ newtype Custom = Custom
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-newtype IndiaDLT = IndiaDLT
-  { principalEntityId :: Text
+data IndiaDLT = IndiaDLT
+  { principalEntityId :: Text,
+    contentTemplateId :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-data WebengageRes = WebengageRes
-  { version :: Text, --to be confirmed
-    messageId :: Text,
-    toNumber :: Id Person.Person,
-    status :: Text, -- to be confirmed
-    statusCode :: Text -- to be confirmed
+newtype WebengageRes = WebengageRes
+  { status :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 callInfobip ::
-  ( HasFlowEnv m r '["infoBIPCfg" ::: InfoBIPConfig],
+  ( HasFlowEnv m r '["infoBIPCfg" ::: EIF.InfoBIPConfig],
     EncFlow m r,
     EsqDBFlow m r,
     CoreMetrics m,
@@ -67,31 +67,34 @@ callInfobip req = withTransactionIdLogTag' req.metadata.messageId $ do
   unless (req.metadata.custom.api_key == infoBIPCfg.token) $ throwError $ InvalidRequest "Invalid Authorization Token"
   let personId = req.smsData.toNumber
   let smsBody = req.smsData.body
+  let entityId = req.metadata.indiaDLT.principalEntityId
+  let templetId = req.metadata.indiaDLT.contentTemplateId
+  let version = req.version
+  let webMsgId = req.metadata.messageId
   person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   decPerson <- decrypt person
   mobileNumber <- fromMaybeM (PersonDoesNotExist personId.getId) decPerson.mobileNumber
   countryCode <- fromMaybeM (PersonDoesNotExist personId.getId) decPerson.mobileCountryCode
-  infobipRes <- IF.sendSms infoBIPCfg smsBody (countryCode <> mobileNumber)
-  buildWebengageRes infobipRes req
-
-buildWebengageRes :: EncFlow m r => SMSRes -> WebengageReq -> m WebengageRes
-buildWebengageRes infobipres req = do
-  if isNothing infobipres.requestError
-    then
+  infoBipRes <- IF.sendSms infoBIPCfg smsBody (countryCode <> mobileNumber) entityId templetId
+  let infoMessage = head infoBipRes.messages
+  let status = Just infoMessage.status.groupName
+  webengage <- buildWebengage version entityId templetId infoMessage.messageId webMsgId personId.getId status
+  runTransaction $ QWeb.create webengage
+  return $
+    WebengageRes
+      { status = "sms_accepted"
+      }
+  where
+    buildWebengage version entityId templetId infoMsgId webMsgId personId status = do
+      id <- generateGUID
       return $
-        WebengageRes
-          { version = req.version,
-            messageId = req.metadata.messageId,
-            toNumber = req.smsData.toNumber,
-            status = "sms_failed",
-            statusCode = "2007"
-          }
-    else
-      return $
-        WebengageRes
-          { version = req.version,
-            messageId = req.metadata.messageId,
-            toNumber = req.smsData.toNumber,
-            status = "sms_sent",
-            statusCode = "0"
+        Webengage
+          { id = id,
+            version = version,
+            contentTemplateId = templetId,
+            principalEntityId = entityId,
+            infoMessageId = infoMsgId,
+            webMessageId = webMsgId,
+            toNumber = personId,
+            status = status
           }

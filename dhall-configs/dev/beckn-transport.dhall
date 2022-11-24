@@ -41,11 +41,16 @@ let geofencingConfig =
       }
 
 let InfoBIPConfig =
-      { username = common.InfoBIPConfig.username
-      , password = common.InfoBIPConfig.password
-      , token = common.InfoBIPConfig.token
-      , url = "https://5vmxvj.api.infobip.com/sms/2/text/advanced"
-      , sender = "JUSPAY"
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
+  , url = "https://gye1yw.api.infobip.com"
+  , webhookurl = "http://localhost:8014/v2/update/status"
+  , sender = "JUSPAY"
+  }
+
+let WebengageConfig = 
+      {     url = "https://st.in.webengage.com"
       }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
@@ -63,6 +68,7 @@ in  { esqDBCfg
     , hedisCfg = rcfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
+    , webengageCfg = WebengageConfig
     , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
     , inviteSmsTemplate =
         "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"

@@ -39,7 +39,7 @@ let InfoBIPConfig =
       { username = common.InfoBIPConfig.username
       , password = common.InfoBIPConfig.password
       , token = common.InfoBIPConfig.token
-      , url = "https://5vmxvj.api.infobip.com/sms/2/text/advanced"
+      , url = "https://gye1yw.api.infobip.com"
       , sender = "JUSPAY"
       }
 

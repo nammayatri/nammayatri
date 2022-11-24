@@ -22,9 +22,9 @@ let idfyCfg =
     url = "http://localhost:6235"
   }
 let InfoBIPConfig =
-  { username = "xxxxxxx",
-    password = "xxxxxxx",
-    token = "xxxxxxx"
+  { username = "xxxxx",
+    password = "xxxxx",
+    token = "xxxxx"
   }
 
 in

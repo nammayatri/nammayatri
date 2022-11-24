@@ -44,11 +44,16 @@ let smsConfig =
       }
 
 let InfoBIPConfig =
-      { username = common.InfoBIPConfig.username
-      , password = common.InfoBIPConfig.password
-      , token = common.InfoBIPConfig.token
-      , url = "https://5vmxvj.api.infobip.com"
-      , sender = "JUSPAY"
+  { username = common.InfoBIPConfig.username
+  , password = common.InfoBIPConfig.password
+  , token = common.InfoBIPConfig.token
+  , url = "https://gye1yw.api.infobip.com"
+  , webhookurl = "http://localhost:8013/v2/update/status"
+  , sender = "JUSPAY"
+  }
+
+let WebengageConfig = 
+      {     url = "https://st.in.webengage.com"
       }
 
 let gwUri = "http://localhost:8015/v1"
@@ -75,6 +80,7 @@ in  { esqDBCfg
     , hedisCfg = hcfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
+    , webengageCfg = WebengageConfig
     , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
     , port = +8013
     , metricsPort = +9999
