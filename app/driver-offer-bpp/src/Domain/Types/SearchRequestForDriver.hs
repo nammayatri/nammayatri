@@ -1,14 +1,20 @@
+{-# LANGUAGE DerivingVia #-}
+
 module Domain.Types.SearchRequestForDriver where
 
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Utils.GenericPretty (PrettyShow)
+import Beckn.Utils.GenericPretty
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Variant
+
+data DriverSearchRequestStatus = Active | Inactive
+  deriving (Show, Read, Eq)
+  deriving (PrettyShow) via Showable DriverSearchRequestStatus
 
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
@@ -19,6 +25,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     vehicleVariant :: Variant.Variant,
+    status :: DriverSearchRequestStatus,
     baseFare :: Money,
     createdAt :: UTCTime
   }

@@ -103,15 +103,13 @@ handler subscriber transporterId req = do
     QBE.logRideConfirmedEvent booking.id
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
     QDQ.setInactiveByRequestId driverQuote.searchRequestId
+    QSRD.setInactiveByRequestId driverQuote.searchRequestId
 
   for_ driverSearchReqs $ \driverReq -> do
     let driverId = driverReq.driverId
     unless (driverId == driver.id) $ do
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
-
-  Esq.runTransaction $ do
-    QSRD.removeAllBySearchId driverQuote.searchRequestId
 
   uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
   Notify.notifyDriver notificationType notificationTitle (message uBooking) driver.id driver.deviceToken

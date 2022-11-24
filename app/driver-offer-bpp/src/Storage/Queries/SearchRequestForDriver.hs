@@ -6,7 +6,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Types.Person
 import Domain.Types.SearchRequest
-import Domain.Types.SearchRequestForDriver
+import Domain.Types.SearchRequestForDriver as Domain
 import Storage.Tabular.SearchRequestForDriver
 
 create :: SearchRequestForDriver -> SqlDB ()
@@ -48,3 +48,8 @@ deleteByDriverId :: Id Person -> SqlDB ()
 deleteByDriverId personId = Esq.delete $ do
   sReqForDriver <- from $ table @SearchRequestForDriverT
   where_ $ sReqForDriver ^. SearchRequestForDriverDriverId ==. val (toKey personId)
+
+setInactiveByRequestId :: Id SearchRequest -> SqlDB ()
+setInactiveByRequestId searchReqId = Esq.update $ \p -> do
+  set p [SearchRequestForDriverStatus =. val Domain.Inactive]
+  where_ $ p ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)

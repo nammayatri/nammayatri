@@ -18,6 +18,8 @@ import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 
+derivePersistField "Domain.DriverSearchRequestStatus"
+
 mkPersist
   defaultSqlSettings
   [defaultQQ|
@@ -31,6 +33,7 @@ mkPersist
       baseFare Money
       searchRequestValidTill UTCTime
       driverId PersonTId
+      status Domain.DriverSearchRequestStatus
       createdAt UTCTime
       Primary id
       deriving Generic

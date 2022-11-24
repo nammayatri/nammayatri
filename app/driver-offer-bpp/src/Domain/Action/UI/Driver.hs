@@ -22,6 +22,7 @@ module Domain.Action.UI.Driver
     updateDriver,
     getNearbySearchRequests,
     offerQuote,
+    offerQuoteLockKey,
     getStats,
   )
 where
@@ -521,6 +522,9 @@ getNearbySearchRequests driverId = do
 isAllowedExtraFee :: ExtraFee -> Money -> Bool
 isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee
 
+offerQuoteLockKey :: Id Person -> Text
+offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
+
 offerQuote ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
@@ -540,27 +544,29 @@ offerQuote ::
   DriverOfferReq ->
   m APISuccess
 offerQuote driverId req = do
-  logDebug $ "offered fare: " <> show req.offeredFare
-  sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
-  now <- getCurrentTime
-  when (sReq.validTill < now) $ throwError SearchRequestExpired
-  let mbOfferedFare = req.offeredFare
-  organization <- CQM.findById sReq.providerId >>= fromMaybeM (MerchantDoesNotExist sReq.providerId.getId)
-  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
-  driverInfo <- QDrInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
-  when driverInfo.onRide $ throwError DriverOnRide
-  sReqFD <-
-    QSRD.findByDriverAndSearchReq driverId sReq.id
-      >>= fromMaybeM NoSearchRequestForDriver
-  farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
-  whenJust mbOfferedFare $ \off ->
-    unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
-      throwError $ NotAllowedExtraFee $ show off
-  fareParams <- calculateFare organization.id farePolicy sReq.estimatedDistance sReqFD.startTime mbOfferedFare
-  driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
-  Esq.runTransaction $ QDrQt.create driverQuote
-  sendDriverOffer organization sReq driverQuote
+  whenM (Redis.tryLockRedis (offerQuoteLockKey driverId) 60) $ do
+    logDebug $ "offered fare: " <> show req.offeredFare
+    sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
+    now <- getCurrentTime
+    when (sReq.validTill < now) $ throwError SearchRequestExpired
+    let mbOfferedFare = req.offeredFare
+    organization <- CQM.findById sReq.providerId >>= fromMaybeM (MerchantDoesNotExist sReq.providerId.getId)
+    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
+    driverInfo <- QDrInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+    when driverInfo.onRide $ throwError DriverOnRide
+    sReqFD <-
+      QSRD.findByDriverAndSearchReq driverId sReq.id
+        >>= fromMaybeM NoSearchRequestForDriver
+    farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
+    whenJust mbOfferedFare $ \off ->
+      unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
+        throwError $ NotAllowedExtraFee $ show off
+    fareParams <- calculateFare organization.id farePolicy sReq.estimatedDistance sReqFD.startTime mbOfferedFare
+    driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
+    Esq.runTransaction $ QDrQt.create driverQuote
+    sendDriverOffer organization sReq driverQuote
+    Redis.unlockRedis $ offerQuoteLockKey driverId
   pure Success
   where
     buildDriverQuote ::

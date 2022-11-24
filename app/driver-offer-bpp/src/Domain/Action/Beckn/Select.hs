@@ -106,6 +106,7 @@ handler merchantId sReq = do
                 vehicleVariant = driver.vehicle.variant,
                 distanceToPickup = gdRes.distance,
                 durationToPickup = gdRes.duration,
+                status = Active,
                 baseFare = baseFare_,
                 createdAt = now,
                 ..
