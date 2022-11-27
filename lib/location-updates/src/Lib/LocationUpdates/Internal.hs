@@ -5,12 +5,12 @@ module Lib.LocationUpdates.Internal
     getWaypointsNumberImplementation,
     getFirstNwaypointsImplementation,
     deleteFirstNwaypointsImplementation,
+    interpolatePointsAndCalculateDistanceImplementation,
     clearLocationUpdatesImplementation,
     isDistanceCalculationFailedImplementation,
     wrapDistanceCalculationImplementation,
     processWaypoints,
     mkRideInterpolationHandler,
-    callSnapToRoad,
   )
 where
 
@@ -20,7 +20,6 @@ import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
-import Beckn.Utils.CalculateDistance
 import Beckn.Utils.Logging
 import qualified Control.Monad.Catch as C
 import EulerHS.Prelude hiding (id, state)
@@ -33,7 +32,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     getWaypointsNumber :: Id person -> m Integer,
     getFirstNwaypoints :: Id person -> Integer -> m [LatLong],
     deleteFirstNwaypoints :: Id person -> Integer -> m (),
-    interpolatePoints :: [LatLong] -> m [LatLong],
+    interpolatePointsAndCalculateDistance :: [LatLong] -> m (HighPrecMeters, [LatLong]),
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> m ()
@@ -104,9 +103,8 @@ recalcDistanceBatchStep ::
   m HighPrecMeters
 recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
-  interpolatedWps <- interpolatePoints batchWaypoints
+  (distance, interpolatedWps) <- interpolatePointsAndCalculateDistance batchWaypoints
   logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
-  let distance = getRouteLinearLength interpolatedWps
   logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
   deleteFirstNwaypoints driverId batchSize
   pure distance
@@ -117,8 +115,7 @@ mkRideInterpolationHandler ::
     HasPrettyLogger m env,
     HasCallStack,
     Metrics.CoreMetrics m,
-    EncFlow m env,
-    EsqDBFlow m env
+    EncFlow m env
   ) =>
   MapsServiceConfig ->
   (Id person -> HighPrecMeters -> m ()) ->
@@ -131,7 +128,7 @@ mkRideInterpolationHandler mapsCfg updateDistance =
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
-      interpolatePoints = callSnapToRoad mapsCfg,
+      interpolatePointsAndCalculateDistance = interpolatePointsAndCalculateDistanceImplementation mapsCfg,
       updateDistance,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation
@@ -163,14 +160,14 @@ getFirstNwaypointsImplementation driverId num = lRange (makeWaypointsRedisKey dr
 deleteFirstNwaypointsImplementation :: (HedisFlow m env) => Id person -> Integer -> m ()
 deleteFirstNwaypointsImplementation driverId numToDel = lTrim (makeWaypointsRedisKey driverId) numToDel (-1)
 
-callSnapToRoad ::
+interpolatePointsAndCalculateDistanceImplementation ::
   ( HasCallStack,
     EncFlow m r,
     Metrics.CoreMetrics m
   ) =>
   MapsServiceConfig ->
   [LatLong] ->
-  m [LatLong]
-callSnapToRoad mapsCfg wps = do
-  res <- Maps.snapToRoad mapsCfg $ Maps.SnapToRoadReq {interpolate = True, points = wps}
-  pure $ res.snappedPoints
+  m (HighPrecMeters, [LatLong])
+interpolatePointsAndCalculateDistanceImplementation mapsCfg wps = do
+  res <- Maps.snapToRoad mapsCfg $ Maps.SnapToRoadReq {points = wps}
+  pure (res.distance, res.snappedPoints)

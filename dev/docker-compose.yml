@@ -154,3 +154,15 @@ services:
 
     profiles:
       - pgadmin
+  osrm-server:
+    image: osrm/osrm-backend
+    container_name: beckn-osrm
+    ports:
+      - 5000:5000
+    volumes:
+      - ./osrm:/data
+    entrypoint:
+      - osrm-routed
+      - --algorithm
+      - mld
+      - /data/southern-zone-latest.osrm

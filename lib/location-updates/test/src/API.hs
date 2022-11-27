@@ -1,6 +1,5 @@
 module API where
 
-import Beckn.External.Encryption (Encrypted (..))
 import Beckn.External.Maps as Maps
 import Beckn.Prelude
 import Beckn.Types.Error
@@ -10,60 +9,58 @@ import qualified Data.List.NonEmpty as NE
 import Lib.LocationUpdates as API
 import Lib.LocationUpdates.Internal as I
 import Routes
+import System.Random
 import Test.Tasty.Hspec
-import Types
+import Utils
 
 resetRedis :: AppEnv -> Id Person -> IO ()
 resetRedis appEnv driverId = runFlow "reset Redis" appEnv $ do
   deleteDistanceKey driverId
   clearLocationUpdatesImplementation driverId
 
-apiSpec :: AppEnv -> Spec
-apiSpec appEnv =
-  afterAll_ (resetRedis appEnv testDriverId) $
+apiSpec :: AppEnv -> MapsServiceConfig -> Spec
+apiSpec appEnv config =
+  after_ (resetRedis appEnv testDriverId) $
     describe "Testing location-updates lib API" $ do
+      randomSuffix <- runIO $ randomRIO (100, 999 :: Int)
+      let typeSuffix =
+            case config of
+              GoogleConfig _ -> "google"
+              OSRMConfig _ -> "osrm"
       it "should calculate correct distance for the short curvy route" $
-        successFlow appEnv 10 680 "shortCurvyRoute" shortCurvyRoute
+        successFlow appEnv config 50 650 (Id $ "shortCurvyRoute" <> typeSuffix <> show randomSuffix) shortCurvyRoute
       it "should calculate correct distance for the route with far isolated point" $
-        successFlow appEnv 50 9050 "farIsolatedPoint" farIsolatedPoint
-      -- what is the precise distance for this route?
-      -- It seemed to be different (about 8350) before (Yuri)
+        successFlow appEnv config 120 8250 (Id $ "farIsolatedPoint" <> typeSuffix <> show randomSuffix) farIsolatedPoint
+      -- 8349 for snap, 8165 for osrm with radius 20
+      -- snap to road adds a little detour at the journey end, it might quite correspond to this difference
       it "should handle errors while calculating distance correctly" $
-        failFlow appEnv "fail-shortCurvyRoute" shortCurvyRoute
+        failFlow appEnv config "fail-shortCurvyRoute" shortCurvyRoute
 
-buildTestInterpolationHandler :: TestM (RideInterpolationHandler Person TestM)
-buildTestInterpolationHandler = do
-  googleMapsUrl <- parseBaseUrl "https://maps.googleapis.com/maps/api/"
-  googleRoadsUrl <- parseBaseUrl "https://roads.googleapis.com/"
-  let config =
-        Maps.GoogleConfig $
-          Maps.GoogleCfg
-            { googleMapsUrl,
-              googleRoadsUrl,
-              googleKey = Encrypted "0.1.0|2|S34+Lq69uC/hNeYSXr4YSjwwmaTS0jO/1ZGlAAwl72hBhgD9AAZhgI4o/6x3oi99KyJkQdt5UvgjlHyeEOuf1Z3xzOBqWBYVQM/RBggZ7NggTyIsDgiG5b3p"
-            }
-  return $
-    RideInterpolationHandler
-      { batchSize = 30,
-        addPoints = addPointsImplementation,
-        clearLocationUpdates = clearLocationUpdatesImplementation,
-        getWaypointsNumber = getWaypointsNumberImplementation,
-        getFirstNwaypoints = getFirstNwaypointsImplementation,
-        deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
-        interpolatePoints = callSnapToRoad config,
-        updateDistance = updateDistanceTest,
-        wrapDistanceCalculation = wrapDistanceCalculationImplementation,
-        isDistanceCalculationFailed = isDistanceCalculationFailedImplementation
-      }
+buildTestInterpolationHandler :: MapsServiceConfig -> RideInterpolationHandler Person TestM
+buildTestInterpolationHandler config = do
+  RideInterpolationHandler
+    { batchSize = 30,
+      addPoints = addPointsImplementation,
+      clearLocationUpdates = clearLocationUpdatesImplementation,
+      getWaypointsNumber = getWaypointsNumberImplementation,
+      getFirstNwaypoints = getFirstNwaypointsImplementation,
+      deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
+      interpolatePointsAndCalculateDistance = \req -> do
+        res <- Maps.snapToRoad config $ SnapToRoadReq req
+        pure (res.distance, res.snappedPoints),
+      updateDistance = updateDistanceTest,
+      wrapDistanceCalculation = wrapDistanceCalculationImplementation,
+      isDistanceCalculationFailed = isDistanceCalculationFailedImplementation
+    }
 
 testDriverId :: Id Person
 testDriverId = "agent007"
 
-successFlow :: AppEnv -> Double -> Double -> Id a -> LocationUpdates -> IO ()
-successFlow appEnv eps expectedDistance rideId route = runFlow "" appEnv $ do
+successFlow :: AppEnv -> MapsServiceConfig -> Double -> Double -> Id a -> LocationUpdates -> IO ()
+successFlow appEnv config eps expectedDistance rideId route = runFlow "" appEnv $ do
   let origin = getFirstPoint route
       destination = getLastPoint route
-  ih <- buildTestInterpolationHandler
+  let ih = buildTestInterpolationHandler config
   initializeDistanceCalculation ih rideId testDriverId origin
   forM_ (NE.toList route) $ \updatesBatch ->
     addIntermediateRoutePoints ih rideId testDriverId updatesBatch
@@ -73,16 +70,16 @@ successFlow appEnv eps expectedDistance rideId route = runFlow "" appEnv $ do
   totalDistance <- checkTraveledDistance testDriverId
   liftIO $ totalDistance `shouldSatisfy` equalsEps eps expectedDistance
 
-failingInterpolationHandler :: TestM (RideInterpolationHandler Person TestM)
-failingInterpolationHandler = do
-  ih <- buildTestInterpolationHandler
-  return $ ih {getWaypointsNumber = \_ -> throwError (InternalError "test")}
+failingInterpolationHandler :: MapsServiceConfig -> RideInterpolationHandler Person TestM
+failingInterpolationHandler config = do
+  let ih = buildTestInterpolationHandler config
+  ih {getWaypointsNumber = \_ -> throwError (InternalError "test")}
 
-failFlow :: AppEnv -> Id a -> LocationUpdates -> IO ()
-failFlow appEnv rideId route = runFlow "" appEnv $ do
+failFlow :: AppEnv -> MapsServiceConfig -> Id a -> LocationUpdates -> IO ()
+failFlow appEnv config rideId route = runFlow "" appEnv $ do
   let origin = getFirstPoint route
       destination = getLastPoint route
-  ih <- failingInterpolationHandler
+  let ih = failingInterpolationHandler config
   initializeDistanceCalculation ih rideId testDriverId origin
   failed0 <- API.isDistanceCalculationFailed ih testDriverId
   liftIO $ failed0 `shouldBe` False

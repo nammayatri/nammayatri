@@ -132,7 +132,7 @@ specs' trees = do
       threadDelaySec 1
       traverse_ forkIO servers
       -- Wait for servers to start up and migrations to run
-      threadDelaySec 1
+      threadDelaySec 4
 
     cleanupServers _ = do
       releaseTestResources

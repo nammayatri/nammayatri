@@ -7,6 +7,7 @@ import Beckn.External.Maps.Types (LatLong (LatLong))
 import Beckn.Prelude
 import Beckn.Types.Id (Id (Id))
 import Beckn.Types.MonadGuid
+import Beckn.Utils.CalculateDistance
 import Beckn.Utils.Common
 import qualified Data.List.NonEmpty as NE
 import Lib.LocationUpdates.Internal
@@ -14,7 +15,7 @@ import Test.QuickCheck
 import Test.QuickCheck.Monadic
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
-import Types
+import Utils
 
 locationUpdatesTree :: AppEnv -> TestTree
 locationUpdatesTree appEnv =
@@ -32,7 +33,7 @@ testInterpolationHandler batchSize =
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
-      interpolatePoints = pure,
+      interpolatePointsAndCalculateDistance = \pts -> pure (getRouteLinearLength pts, pts),
       updateDistance = updateDistanceTest,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation
@@ -114,7 +115,6 @@ qcTest appEnv (BatchSize batchSize) (PointsNum numPoints) (GroupingList grouping
     (div_, mod_) = numPoints `divMod` fromIntegral batchSize
 
     runner :: TestM Property -> Property
-    --    runner = ioProperty . runMock appEnv
     runner = ioProperty . runFlow "" appEnv
 
 qcTest' :: Integer -> Int -> [Int] -> PropertyM TestM ()

@@ -1,6 +1,8 @@
-module Types where
+module Utils where
 
-import Beckn.External.Encryption (EncTools (..))
+import Beckn.External.Encryption (EncTools (..), Encrypted (..))
+import Beckn.External.Maps
+import Beckn.External.Maps.OSRM.Config
 import Beckn.Prelude
 import Beckn.Storage.Hedis.Config
 import qualified Beckn.Storage.Hedis.Queries as Hedis
@@ -77,3 +79,22 @@ deleteDistanceKey driverId = Hedis.del driverId.getId
 
 equalsEps :: Double -> Double -> Double -> Bool
 equalsEps eps x y = abs (x - y) < eps
+
+----------------- fixtures ---------------------------------
+
+googleConfig :: MapsServiceConfig
+googleConfig =
+  GoogleConfig
+    GoogleCfg
+      { googleRoadsUrl = fromJust $ parseBaseUrl "https://roads.googleapis.com/",
+        googleMapsUrl = fromJust $ parseBaseUrl "https://maps.googleapis.com/maps/api/",
+        googleKey = Encrypted "0.1.0|2|S34+Lq69uC/hNeYSXr4YSjwwmaTS0jO/1ZGlAAwl72hBhgD9AAZhgI4o/6x3oi99KyJkQdt5UvgjlHyeEOuf1Z3xzOBqWBYVQM/RBggZ7NggTyIsDgiG5b3p"
+      }
+
+osrmConfig :: MapsServiceConfig
+osrmConfig =
+  OSRMConfig
+    OSRMCfg
+      { osrmUrl = fromJust $ parseBaseUrl "localhost:5000",
+        radiusDeviation = Just 20
+      }

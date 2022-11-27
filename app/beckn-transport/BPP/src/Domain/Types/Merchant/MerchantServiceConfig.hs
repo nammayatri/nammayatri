@@ -57,3 +57,4 @@ getServiceName :: MerchantServiceConfig -> ServiceName
 getServiceName osc = case osc.serviceConfig of
   MapsServiceConfig mapsCfg -> case mapsCfg of
     Maps.GoogleConfig _ -> MapsService Maps.Google
+    Maps.OSRMConfig _ -> MapsService Maps.OSRM

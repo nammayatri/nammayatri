@@ -105,6 +105,7 @@ tests:
       - tasty-hspec
       - QuickCheck
       - tasty-quickcheck
+      - random
     ghc-options:
       - -Wall
       - -Werror

@@ -6,6 +6,7 @@ import qualified Mobility.Transporter.DriverCancelRide as DCR
 import qualified Mobility.Transporter.DriversRejectRide as DRR
 import qualified Mobility.Transporter.HealthCheck as HC
 import qualified Mobility.Transporter.LocationUpdates as LU
+import qualified Mobility.Transporter.MapsConfig as MapsConfig
 import qualified Mobility.Transporter.NearestDrivers as ND
 import qualified Mobility.Transporter.Serviceability as SRV
 import Test.Tasty
@@ -14,6 +15,7 @@ import Test.Tasty.Hspec hiding (after)
 mkTestTree :: IO TestTree
 mkTestTree = do
   hcSpec <- testSpec "HealthCheck" HC.spec
+  mapsCfgSpec <- testSpec "MapsConfig" MapsConfig.spec
   drrSpec <- testSpec "DriversRejectRide" DRR.spec
   crSpec <- testSpec "AppCancelRide" CR.spec
   dcrSpec <- testSpec "DriverCancelRide" DCR.spec
@@ -27,6 +29,10 @@ mkTestTree = do
       "Mobility"
       [ hcSpec,
         after AllSucceed "HealthCheck" $
+          testGroup
+            "Merchant configs"
+            [mapsCfgSpec],
+        after AllSucceed "Merchant configs" $
           testGroup
             "APIs"
             [ ndSpec,

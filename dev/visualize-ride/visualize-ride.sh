@@ -15,7 +15,7 @@ OUTPUT_FILE=$3
 #
 #    hint: xmllint is the part of libxml2-utils package
 
-if [ "o$OUTPUT_FILE_ARG" = "o" ] ;
+if [ "o$OUTPUT_FILE" = "o" ] ;
   then OUTPUT_FILE=output.gpx
 fi
 grep "locupd-rideId-$RIDE_ID" $INPUT_FILE | grep 'points interp' | sed 's/.*points interpolation: input=\(\[.*\]\); output=\(\[.*\]\)/(\1,\2)/' | stack exec route-extractor-exe | xmllint --format - > $OUTPUT_FILE

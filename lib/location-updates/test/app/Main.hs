@@ -5,7 +5,7 @@ import EulerHS.Prelude
 import RedisAlgorithm
 import Test.Tasty
 import Test.Tasty.Hspec
-import Types
+import Utils
 
 main :: IO ()
 main = do
@@ -13,10 +13,12 @@ main = do
 
 specs :: AppEnv -> IO TestTree
 specs appEnv = do
-  apiTree <- testSpec "Testing API" $ apiSpec appEnv
+  apiTreeSnap <- testSpec "Testing API using Snap-to-road" $ apiSpec appEnv googleConfig
+  apiTreeOsrm <- testSpec "Testing API using Osrm" $ apiSpec appEnv osrmConfig
   return $
     testGroup
       "Unit tests"
       [ locationUpdatesTree appEnv,
-        apiTree
+        apiTreeSnap,
+        apiTreeOsrm
       ]
