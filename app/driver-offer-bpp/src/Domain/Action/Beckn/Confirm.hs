@@ -4,7 +4,6 @@ import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Types.Common
@@ -61,7 +60,6 @@ handler ::
     FCMFlow m r,
     HedisFlow m r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasPrettyLogger m r,
     EncFlow m r,
@@ -168,7 +166,7 @@ handler subscriber transporterId req = do
             baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
           }
 
-getRiderDetails :: (EncFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
+getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
 getRiderDetails customerMobileCountryCode customerPhoneNumber now =
   QRD.findByMobileNumber customerPhoneNumber >>= \case
     Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
@@ -188,7 +186,6 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
 cancelBooking ::
   ( FCMFlow m r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],

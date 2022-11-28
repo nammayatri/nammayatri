@@ -7,9 +7,9 @@ module Storage.CachedQueries.TransporterConfig
 where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.TransporterConfig
@@ -17,7 +17,7 @@ import GHC.Base (coerce)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.TransporterConfig as Queries
 
-findValueByMerchantIdAndKey :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> ConfigKey -> m (Maybe TransporterConfig)
+findValueByMerchantIdAndKey :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> ConfigKey -> m (Maybe TransporterConfig)
 findValueByMerchantIdAndKey merchantId key =
   Hedis.get (makeMerchantIdKey merchantId key) >>= \case
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a

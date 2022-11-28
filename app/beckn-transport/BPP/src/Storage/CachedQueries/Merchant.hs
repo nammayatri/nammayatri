@@ -13,23 +13,23 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Common
 import Domain.Types.Merchant
 import GHC.Base (coerce)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
 
-findById :: (HasCacheConfig r, HedisFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> m (Maybe Merchant)
+findById :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
     Just a -> return . Just $ (coerce @(MerchantD 'Unsafe) @Merchant) a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
 
-findBySubscriberId :: (HasCacheConfig r, HedisFlow m r, EsqDBReplicaFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
   Hedis.get (makeSubscriberIdKey subscriberId) >>= \case
     Nothing -> findAndCache
@@ -40,7 +40,7 @@ findBySubscriberId subscriberId =
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findBySubscriberId subscriberId
 
-findByShortId :: (HasCacheConfig r, HedisFlow m r, EsqDBReplicaFlow m r) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId =
   Hedis.get (makeShortIdKey shortId) >>= \case
     Nothing -> findAndCache

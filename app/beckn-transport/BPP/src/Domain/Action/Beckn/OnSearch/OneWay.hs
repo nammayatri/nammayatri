@@ -2,7 +2,6 @@ module Domain.Action.Beckn.OnSearch.OneWay where
 
 import qualified Beckn.External.Maps.Types as MapSearch
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -43,7 +42,6 @@ onSearchCallback ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["driverEstimatedPickupDuration" ::: Seconds],

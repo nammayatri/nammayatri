@@ -7,16 +7,16 @@ module Storage.CachedQueries.BlackListOrg
 where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.Coerce (coerce)
 import Domain.Types.BlackListOrg
 import Domain.Types.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.BlackListOrg as Queries
 
-findByShortId :: (CacheFlow m r, EsqDBReplicaFlow m r) => ShortId BlackListOrg -> m (Maybe BlackListOrg)
+findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId BlackListOrg -> m (Maybe BlackListOrg)
 findByShortId shortId_ =
   Hedis.get (makeShortIdKey shortId_) >>= \case
     Just a -> return . Just $ coerce @(BlackListOrgD 'Unsafe) @BlackListOrg a

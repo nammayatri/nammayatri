@@ -5,7 +5,6 @@ module Domain.Action.Beckn.Track
   )
 where
 
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -28,13 +27,14 @@ data DTrackRes = TrackRes
   }
 
 track ::
-  (CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id DM.Merchant ->
   DTrackReq ->
   m DTrackRes
 track transporterId req = do
   transporter <-
-    QM.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
+    QM.findById transporterId
+      >>= fromMaybeM (MerchantNotFound transporterId.getId)
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let transporterId' = booking.providerId

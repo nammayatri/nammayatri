@@ -11,15 +11,6 @@ let esqDBCfg =
       , connectSchemaName = "atlas_app"
       }
 
-let esqDBReplicaCfg =
-  { connectHost = esqDBCfg.connectHost
-  , connectPort = 5435
-  , connectUser = esqDBCfg.connectUser
-  , connectPassword = esqDBCfg.connectPassword
-  , connectDatabase = esqDBCfg.connectDatabase
-  , connectSchemaName = esqDBCfg.connectSchemaName
-  }
-
 let hcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
       , connectPort = 6379
@@ -45,12 +36,12 @@ let smsConfig =
 let gwUri = "https://api.sandbox.beckn.juspay.in/dev/gateway/v1"
 
 let InfoBIPConfig =
-  { username = common.InfoBIPConfig.username
-  , password = common.InfoBIPConfig.password
-  , token = common.InfoBIPConfig.token
-  , url = "https://5vmxvj.api.infobip.com"
-  , sender = "JUSPAY"
-  }
+      { username = common.InfoBIPConfig.username
+      , password = common.InfoBIPConfig.password
+      , token = common.InfoBIPConfig.token
+      , url = "https://5vmxvj.api.infobip.com"
+      , sender = "JUSPAY"
+      }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
@@ -75,7 +66,6 @@ let rideConfig =
 let cacheConfig = { configsExpTime = +86400 }
 
 in  { esqDBCfg
-    , esqDBReplicaCfg = esqDBReplicaCfg
     , hedisCfg = hcfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig

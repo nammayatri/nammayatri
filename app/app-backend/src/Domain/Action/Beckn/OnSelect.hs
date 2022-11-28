@@ -5,7 +5,6 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -81,7 +80,7 @@ onSelect registryUrl DOnSelectReq {..} = do
   DB.runTransaction $ QQuote.createMany quotes
   Notify.notifyOnDriverOfferIncoming estimateId quotes person
   where
-    duplicateCheckCond :: EsqDBReplicaFlow m r => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
+    duplicateCheckCond :: EsqDBFlow m r => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
       isJust <$> QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_

@@ -22,7 +22,6 @@ in  { loggerConfig =
             , logFilePath = "/tmp/transporter-scheduler.log"
             }
     , esqDBCfg = transporter.esqDBCfg
-    , esqDBReplicaCfg = transporter.esqDBReplicaCfg
     , metricsPort = +8054
     , hedisCfg = rcfg
     , hedisPrefix = "transporter-scheduler"

@@ -11,7 +11,6 @@ module Domain.Action.UI.FarePolicy.Discount
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.APISuccess
 import Beckn.Types.Common
@@ -73,7 +72,6 @@ type DeleteFarePolicyDiscountRes = APISuccess
 createFarePolicyDiscount ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     FCMFlow m r,
     CoreMetrics m
@@ -117,7 +115,6 @@ createFarePolicyDiscount admin req = do
 updateFarePolicyDiscount ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     FCMFlow m r,
     CoreMetrics m
@@ -151,7 +148,6 @@ updateFarePolicyDiscount admin discId req = do
 deleteFarePolicyDiscount ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     FCMFlow m r,
     CoreMetrics m

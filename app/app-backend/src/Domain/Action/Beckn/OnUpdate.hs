@@ -1,7 +1,6 @@
 module Domain.Action.Beckn.OnUpdate (onUpdate, OnUpdateReq (..), OnUpdateFareBreakup (..)) where
 
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis.Config (HedisFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -64,7 +63,6 @@ data OnUpdateFareBreakup = OnUpdateFareBreakup
 onUpdate ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasBapInfo r m,
     HasFlowEnv

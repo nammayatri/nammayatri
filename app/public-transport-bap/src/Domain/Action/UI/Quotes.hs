@@ -14,7 +14,7 @@ newtype GetQuotesRes = GetQuotesRes
   deriving stock (Show, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema, PrettyShow)
 
-getQuotesHandler :: EsqDBReplicaFlow m r => Id DSearch.Search -> m GetQuotesRes
+getQuotesHandler :: EsqDBFlow m r => Id DSearch.Search -> m GetQuotesRes
 getQuotesHandler searchId = do
   quoteAggregates <- QQuote.findAllAggregatesBySearchId searchId
   let quoteAPIEntities = map makeQuoteAPIEntity quoteAggregates

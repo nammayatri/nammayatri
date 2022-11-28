@@ -21,7 +21,6 @@ import Beckn.External.Maps as Reexport hiding
   )
 import qualified Beckn.External.Maps as Maps
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.Merchant
@@ -35,7 +34,7 @@ import Tools.Metrics
 
 getDistance ::
   ( EncFlow m r,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     CacheFlow m r,
     CoreMetrics m,
     HasCoordinates a,
@@ -48,7 +47,7 @@ getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
 
 getDistances ::
   ( EncFlow m r,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     CacheFlow m r,
     CoreMetrics m,
     HasCoordinates a,
@@ -59,23 +58,23 @@ getDistances ::
   m (GetDistancesResp a b)
 getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
 
-getRoutes :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
+getRoutes :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
 getRoutes = runWithServiceConfig Maps.getRoutes (.getRoutes)
 
-snapToRoad :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> SnapToRoadReq -> m SnapToRoadResp
+snapToRoad :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> SnapToRoadReq -> m SnapToRoadResp
 snapToRoad = runWithServiceConfig Maps.snapToRoad (.snapToRoad)
 
-autoComplete :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> AutoCompleteReq -> m AutoCompleteResp
+autoComplete :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> AutoCompleteReq -> m AutoCompleteResp
 autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)
 
-getPlaceName :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceNameReq -> m GetPlaceNameResp
+getPlaceName :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceNameReq -> m GetPlaceNameResp
 getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
 
-getPlaceDetails :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
+getPlaceDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
 
 runWithServiceConfig ::
-  (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m) =>
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) =>
   (MapsServiceConfig -> req -> m resp) ->
   (MerchantServiceUsageConfig -> MapsService) ->
   Id Merchant ->

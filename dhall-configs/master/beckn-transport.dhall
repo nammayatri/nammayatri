@@ -5,22 +5,13 @@ let sec = ./secrets/beckn-transport.dhall
 let GeoRestriction = < Unrestricted | Regions : List Text >
 
 let esqDBCfg =
-  { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
-  , connectPort = 5432
-  , connectUser = sec.dbUserId
-  , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_transporter_v2"
-  , connectSchemaName = "atlas_transporter"
-  }
-
-let esqDBReplicaCfg =
-  { connectHost = esqDBCfg.connectHost
-  , connectPort = 5435
-  , connectUser = esqDBCfg.connectUser
-  , connectPassword = esqDBCfg.connectPassword
-  , connectDatabase = esqDBCfg.connectDatabase
-  , connectSchemaName = esqDBCfg.connectSchemaName
-  }
+      { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+      , connectPort = 5432
+      , connectUser = sec.dbUserId
+      , connectPassword = sec.dbPassword
+      , connectDatabase = "atlas_transporter_v2"
+      , connectSchemaName = "atlas_transporter"
+      }
 
 let rcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
@@ -45,16 +36,17 @@ let smsConfig =
       }
 
 let InfoBIPConfig =
-  { username = common.InfoBIPConfig.username
-  , password = common.InfoBIPConfig.password
-  , token = common.InfoBIPConfig.token
-  , url = "https://5vmxvj.api.infobip.com/sms/2/text/advanced"
-  , sender = "JUSPAY"
-  }
+      { username = common.InfoBIPConfig.username
+      , password = common.InfoBIPConfig.password
+      , token = common.InfoBIPConfig.token
+      , url = "https://5vmxvj.api.infobip.com/sms/2/text/advanced"
+      , sender = "JUSPAY"
+      }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
-let driverLocationUpdateRateLimitOptions = { limit = +20, limitResetTimeInSec = +40 }
+let driverLocationUpdateRateLimitOptions =
+      { limit = +20, limitResetTimeInSec = +40 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
@@ -65,7 +57,6 @@ let kafkaProducerCfg =
 let cacheConfig = { configsExpTime = +86400 }
 
 in  { esqDBCfg
-    , esqDBReplicaCfg = esqDBReplicaCfg
     , hedisCfg = rcfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
@@ -107,9 +98,10 @@ in  { esqDBCfg
     , defaultPickupLocThreshold = +500
     , defaultDropLocThreshold = +500
     , defaultRideTravelledDistanceThreshold = +700
-    , defaultRideTimeEstimatedThreshold = +900 --seconds
+    , defaultRideTimeEstimatedThreshold = +900
     , cacheConfig
     , dashboardToken = sec.dashboardToken
     , driverLocationUpdateRateLimitOptions
-    , driverLocationUpdateNotificationTemplate = "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
+    , driverLocationUpdateNotificationTemplate =
+        "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     }

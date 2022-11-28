@@ -10,7 +10,6 @@ module SharedLogic.FareCalculator.RentalFareCalculator.Flow
 where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -34,7 +33,7 @@ newtype ServiceHandle m = ServiceHandle
   { getRentalFarePolicy :: Id DRentalFP.RentalFarePolicy -> m (Maybe DRentalFP.RentalFarePolicy)
   }
 
-serviceHandle :: (HasCacheConfig r, EsqDBReplicaFlow m r, HedisFlow m r) => ServiceHandle m
+serviceHandle :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getRentalFarePolicy = \rentalFarePolicyId -> do
@@ -42,7 +41,7 @@ serviceHandle =
     }
 
 calculateRentalFare ::
-  (HasCacheConfig r, EsqDBReplicaFlow m r, HedisFlow m r) =>
+  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   Id DRentalFP.RentalFarePolicy ->
   Meters ->
   UTCTime ->

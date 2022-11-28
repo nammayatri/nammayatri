@@ -13,9 +13,9 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.Discount
@@ -25,13 +25,13 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.OneWayFarePolicy as OWFP
 import qualified Storage.Queries.FarePolicy.Discount as Queries
 
-findById :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Discount -> m (Maybe Discount)
+findById :: (CacheFlow m r, EsqDBFlow m r) => Id Discount -> m (Maybe Discount)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(DiscountD 'Unsafe) @Discount a
     Nothing -> flip whenJust cacheDiscount /=<< Queries.findById id
 
-findAllByMerchantIdAndVariant :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Vehicle.Variant -> m [Discount]
+findAllByMerchantIdAndVariant :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Vehicle.Variant -> m [Discount]
 findAllByMerchantIdAndVariant merchantId vehVar =
   Hedis.get (makeAllMerchantIdVehVarKey merchantId vehVar) >>= \case
     Just a -> return $ fmap (coerce @(DiscountD 'Unsafe) @Discount) a
@@ -57,7 +57,7 @@ makeAllMerchantIdVehVarKey :: Id Merchant -> Vehicle.Variant -> Text
 makeAllMerchantIdVehVarKey merchantId vehVar = baseKey <> ":MerchantId-" <> merchantId.getId <> ":VehVar-" <> show vehVar <> ":All"
 
 -- Call it after any update
-clearCache :: (CacheFlow m r, EsqDBReplicaFlow m r) => Discount -> m ()
+clearCache :: (CacheFlow m r, EsqDBFlow m r) => Discount -> m ()
 clearCache discount = do
   Hedis.del (makeIdKey discount.id)
   Hedis.del (makeAllMerchantIdVehVarKey discount.merchantId discount.vehicleVariant)

@@ -9,7 +9,6 @@ where
 import Beckn.External.Encryption (encrypt)
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Id
 import Beckn.Types.Registry (Subscriber (..))
@@ -66,7 +65,6 @@ confirm ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["schedulingReserveTime" ::: Seconds],
@@ -159,7 +157,7 @@ confirm transporterId subscriber req = do
             info = Nothing
           }
 
-getRiderDetails :: (EncFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
+getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
 getRiderDetails customerMobileCountryCode customerPhoneNumber now =
   QRD.findByMobileNumber customerPhoneNumber >>= \case
     Nothing -> fmap (,True) . encrypt =<< buildRiderDetails

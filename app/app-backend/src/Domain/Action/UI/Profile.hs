@@ -10,7 +10,6 @@ import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto (runTransaction)
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -29,13 +28,13 @@ data UpdateProfileReq = UpdateProfileReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> m ProfileRes
+getPersonDetails :: (EsqDBFlow m r, EncFlow m r) => Id Person.Person -> m ProfileRes
 getPersonDetails personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
 
-updatePerson :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
+updatePerson :: (EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
 updatePerson personId req = do
   mPerson <- join <$> QPerson.findByEmail `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)

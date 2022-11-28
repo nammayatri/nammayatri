@@ -5,7 +5,6 @@ module Domain.Action.UI.Quote
   )
 where
 
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis as Hedis
 import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
 import Beckn.Types.Id
@@ -54,7 +53,7 @@ instance FromJSON OfferRes where
 instance ToSchema OfferRes where
   declareNamedSchema = genericDeclareNamedSchema $ S.objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
 
-getQuotes :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
+getQuotes :: (HedisFlow m r, EsqDBFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
   searchRequest <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   offers <- getOffers searchRequest
@@ -67,7 +66,7 @@ getQuotes searchRequestId = do
         estimates
       }
 
-getOffers :: (HedisFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
+getOffers :: (HedisFlow m r, EsqDBFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest =
   case searchRequest.toLocation of
     Just _ -> do
@@ -94,7 +93,7 @@ getOffers searchRequest =
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
-getEstimates :: EsqDBReplicaFlow m r => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
+getEstimates :: EsqDBFlow m r => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
 getEstimates searchRequestId = do
   estimateList <- QEstimate.findAllByRequestId searchRequestId
   let estimates = DEstimate.mkEstimateAPIEntity <$> sortByEstimatedFare estimateList

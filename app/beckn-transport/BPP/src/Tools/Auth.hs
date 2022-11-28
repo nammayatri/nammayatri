@@ -1,6 +1,5 @@
 module Tools.Auth where
 
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -43,7 +42,7 @@ instance VerificationMethod VerifyToken where
     \If you don't have a token, use registration endpoints."
 
 verifyTokenAction ::
-  ( EsqDBReplicaFlow m r,
+  ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasField "authTokenCacheExpiry" r Seconds
   ) =>
@@ -68,13 +67,13 @@ verifyAdmin user = do
     Just _ -> return user
     Nothing -> throwError (PersonFieldNotPresent "merchant_id")
 
-verifyToken :: EsqDBReplicaFlow m r => RegToken -> m SR.RegistrationToken
+verifyToken :: EsqDBFlow m r => RegToken -> m SR.RegistrationToken
 verifyToken regToken = do
   QR.findByToken regToken
     >>= Utils.fromMaybeM (InvalidToken regToken)
     >>= validateToken
 
-validateAdmin :: (EsqDBReplicaFlow m r, EncFlow m r) => RegToken -> m Person.Person
+validateAdmin :: (EsqDBFlow m r, EncFlow m r) => RegToken -> m Person.Person
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- verifyToken regToken
   user <-
@@ -83,7 +82,7 @@ validateAdmin regToken = do
   verifyAdmin user
 
 verifyPerson ::
-  ( EsqDBReplicaFlow m r,
+  ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasField "authTokenCacheExpiry" r Seconds
   ) =>
@@ -106,10 +105,10 @@ authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =
   "BPP:authTokenCacheKey:" <> regToken
 
-validateAdminAction :: (EsqDBReplicaFlow m r, EncFlow m r) => VerificationAction AdminVerifyToken m
+validateAdminAction :: (EsqDBFlow m r, EncFlow m r) => VerificationAction AdminVerifyToken m
 validateAdminAction = VerificationAction validateAdmin
 
-validateToken :: EsqDBReplicaFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
+validateToken :: EsqDBFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60
   expired <- Utils.isExpired nominal updatedAt

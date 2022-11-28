@@ -24,7 +24,6 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Seconds,
     hedisCfg :: Redis.HedisCfg,
     esqDBCfg :: EsqDBConfig,
-    esqDBReplicaCfg :: EsqDBConfig,
     fcmUrl :: BaseUrl,
     fcmJsonPath :: Maybe Text,
     fcmTokenKeyPrefix :: Text,
@@ -51,7 +50,6 @@ data AppEnv = AppEnv
     smsCfg :: SmsConfig,
     driverInactiveSmsTemplate :: Text,
     esqDBEnv :: EsqDBEnv,
-    esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: Redis.HedisEnv,
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
@@ -66,7 +64,6 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   let modifierFunc = ("beckn-transport:" <>)
   hedisEnv <- Redis.connectHedis hedisCfg modifierFunc
   pure AppEnv {..}

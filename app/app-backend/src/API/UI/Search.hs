@@ -12,7 +12,6 @@ where
 import qualified Beckn.External.Slack.Flow as SF
 import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis (HedisFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
@@ -103,7 +102,6 @@ oneWaySearch ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
@@ -129,7 +127,6 @@ oneWaySearch personId req = do
 rentalSearch ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,

@@ -14,7 +14,6 @@ where
 import Beckn.External.Encryption (decrypt)
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -66,7 +65,7 @@ data LoginRes = LoginRes
 newtype LogoutRes = LogoutRes {message :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-login :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => LoginReq -> m LoginRes
+login :: (EsqDBFlow m r, EncFlow m r) => LoginReq -> m LoginRes
 login LoginReq {..} = do
   person <- Person.findByEmailAndPassword email password >>= fromMaybeM (PersonNotFound email)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
@@ -84,7 +83,7 @@ generateToken SP.Person {..} = do
     RegistrationToken.create regToken
   pure $ regToken.token
 
-logout :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SP.Person -> m LogoutRes
+logout :: (EsqDBFlow m r) => Id SP.Person -> m LogoutRes
 logout personId = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
@@ -115,7 +114,7 @@ createSupportRegToken entityId = do
         info = Nothing
       }
 
-listOrder :: (EsqDBReplicaFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
+listOrder :: (EsqDBFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
 listOrder personId mRequestId mMobile mlimit moffset = do
   supportP <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (supportP.role == SP.CUSTOMER_SUPPORT) $
@@ -144,7 +143,7 @@ listOrder personId mRequestId mMobile mlimit moffset = do
           >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
       return $ OrderInfo person [booking]
 
-buildBookingToOrder :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m OrderResp
+buildBookingToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m OrderResp
 buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing

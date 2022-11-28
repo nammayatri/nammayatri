@@ -88,7 +88,7 @@ findActiveByRBId rbId =
         &&. ride ^. RideStatus !=. val CANCELLED
     return ride
 
-findAllByRBId :: EsqDBReplicaFlow m r => Id Booking -> m [Ride]
+findAllByRBId :: EsqDBFlow m r => Id Booking -> m [Ride]
 findAllByRBId bookingId =
   findAll $ do
     ride <- from $ table @RideT

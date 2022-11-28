@@ -3,7 +3,6 @@ module Domain.Action.Dashboard.Person where
 import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
@@ -70,7 +69,7 @@ newtype CreatePersonRes = CreatePersonRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createPerson ::
-  (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r) =>
   TokenInfo ->
   CreatePersonReq ->
   m CreatePersonRes
@@ -89,7 +88,7 @@ createPerson _ personEntity = do
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError (InvalidRequest err)
 
 listPerson ::
-  (EsqDBReplicaFlow m r, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r) =>
   TokenInfo ->
   Maybe Text ->
   Maybe Integer ->
@@ -103,7 +102,7 @@ listPerson _ mbSearchString mbLimit mbOffset = do
   pure $ ListPersonRes res
 
 assignRole ::
-  (EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  EsqDBFlow m r =>
   TokenInfo ->
   Id DP.Person ->
   Id DRole.Role ->
@@ -117,7 +116,6 @@ assignRole _ personId roleId = do
 
 assignMerchantAccess ::
   ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HasFlowEnv m r '["dataServers" ::: [Client.DataServer]]
   ) =>
   TokenInfo ->
@@ -142,7 +140,6 @@ assignMerchantAccess _ personId req = do
 
 resetMerchantAccess ::
   ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
@@ -171,7 +168,7 @@ resetMerchantAccess _ personId req = do
       pure Success
 
 changePassword ::
-  (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r) =>
   TokenInfo ->
   ChangePasswordReq ->
   m APISuccess
@@ -198,7 +195,7 @@ buildMerchantAccess personId merchantId = do
       }
 
 profile ::
-  (EsqDBReplicaFlow m r, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r) =>
   TokenInfo ->
   m DP.PersonAPIEntity
 profile tokenInfo = do
@@ -209,7 +206,7 @@ profile tokenInfo = do
   pure $ DP.makePersonAPIEntity decPerson role (merchantAccessList <&> (.shortId))
 
 getCurrentMerchant ::
-  EsqDBReplicaFlow m r =>
+  EsqDBFlow m r =>
   TokenInfo ->
   m MerchantAccessRes
 getCurrentMerchant tokenInfo = do

@@ -12,7 +12,6 @@ module Domain.Action.UI.Vehicle
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import Beckn.Utils.Common
@@ -77,7 +76,7 @@ data Driver = Driver
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-listVehicles :: (EsqDBReplicaFlow m r) => SP.Person -> Maybe SV.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
+listVehicles :: (EsqDBFlow m r) => SP.Person -> Maybe SV.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
 listVehicles admin variantM mbRegNum limitM offsetM = do
   let Just merchantId = admin.merchantId
   personList <- QP.findAllByMerchantId [SP.DRIVER] merchantId
@@ -88,7 +87,7 @@ listVehicles admin variantM mbRegNum limitM offsetM = do
     limit = toInteger $ fromMaybe 50 limitM
     offset = toInteger $ fromMaybe 0 offsetM
 
-updateVehicle :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => SP.Person -> Id SP.Person -> UpdateVehicleReq -> m UpdateVehicleRes
+updateVehicle :: (EsqDBFlow m r) => SP.Person -> Id SP.Person -> UpdateVehicleReq -> m UpdateVehicleRes
 updateVehicle admin driverId req = do
   let Just merchantId = admin.merchantId
   runRequestValidation validateUpdateVehicleReq req
@@ -116,7 +115,7 @@ updateVehicle admin driverId req = do
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateVehicle : ") (show updatedVehicle)
   return $ SV.makeVehicleAPIEntity updatedVehicle
 
-getVehicle :: (EsqDBReplicaFlow m r) => Id SP.Person -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
+getVehicle :: (EsqDBFlow m r) => Id SP.Person -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
 getVehicle personId registrationNoM vehicleIdM = do
   user <-
     QP.findById personId

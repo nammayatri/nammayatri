@@ -52,7 +52,7 @@ data ConfirmQuoteDetails
   | ConfirmAutoDetails (Id DDriverOffer.BPPQuote)
   deriving (Show, Generic)
 
-confirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DQuote.Quote -> m ConfirmRes
+confirm :: EsqDBFlow m r => Id DP.Person -> Id DQuote.Quote -> m ConfirmRes
 confirm personId quoteId = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
@@ -152,7 +152,7 @@ buildBooking searchRequest quote fromLoc mbToLoc now = do
       pure DRB.OneWayBookingDetails {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
-cancelBooking :: (HasCacheConfig r, EsqDBFlow m r, EsqDBReplicaFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()
+cancelBooking :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()
 cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason booking.id

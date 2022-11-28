@@ -9,7 +9,6 @@ where
 import Beckn.Prelude
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -48,7 +47,6 @@ oneWaySearch ::
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HedisFlow m r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     CoreMetrics m,
     HasBAPMetrics m r

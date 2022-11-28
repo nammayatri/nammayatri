@@ -6,7 +6,6 @@ module SharedLogic.DriverPool
   )
 where
 
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -56,7 +55,7 @@ getDriverPool ::
   ( EncFlow m r,
     HasCacheConfig r,
     CoreMetrics m,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
   ) =>
@@ -78,7 +77,7 @@ getDriverPool bookingId =
 recalculateDriverPool ::
   ( EncFlow m r,
     HasCacheConfig r,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m
@@ -101,7 +100,7 @@ recalculateDriverPool booking = do
 calculateDriverPool ::
   ( EncFlow m r,
     HasCacheConfig r,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
@@ -145,7 +144,7 @@ calculateDriverPool pickup merchantId variant fareProductType = do
 buildDriverPoolResults ::
   ( EncFlow m r,
     CacheFlow m r,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     CoreMetrics m
   ) =>
   Id DM.Merchant ->
@@ -171,7 +170,7 @@ buildDriverPoolResults orgId pickup ndResults = do
         }
 
 filterOutDriversWithDistanceAboveThreshold ::
-  ( EsqDBReplicaFlow m r,
+  ( EsqDBFlow m r,
     CoreMetrics m
   ) =>
   Integer ->

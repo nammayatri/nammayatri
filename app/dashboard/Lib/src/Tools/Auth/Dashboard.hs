@@ -3,7 +3,6 @@
 module Tools.Auth.Dashboard (DashboardAuth, verifyDashboardAction, TokenInfo (..), module Reexport) where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -50,12 +49,12 @@ instance VerificationMethodWithPayload VerifyDashboard where
   type VerificationPayloadType VerifyDashboard = DRole.DashboardAccessType
 
 verifyDashboardAction ::
-  (Common.AuthFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r) =>
+  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
   VerificationActionWithPayload VerifyDashboard m
 verifyDashboardAction = VerificationActionWithPayload verifyDashboard
 
 verifyDashboard ::
-  (Common.AuthFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r) =>
+  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
   DRole.DashboardAccessType ->
   RegToken ->
   m TokenInfo
@@ -71,7 +70,7 @@ instance
   where
   toPayloadType _ = fromSing (sing @at)
 
-verifyDashboardAccess :: EsqDBReplicaFlow m r => DRole.DashboardAccessType -> Id DP.Person -> m (Id DP.Person)
+verifyDashboardAccess :: EsqDBFlow m r => DRole.DashboardAccessType -> Id DP.Person -> m (Id DP.Person)
 verifyDashboardAccess requiredAccessType personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   case requiredAccessType of

@@ -11,7 +11,6 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common
@@ -87,7 +86,7 @@ createRentalFarePolicy admin req = do
           ..
         }
 
-listRentalFarePolicies :: (HasCacheConfig r, EsqDBReplicaFlow m r, HedisFlow m r) => SP.Person -> m ListRentalFarePoliciesRes
+listRentalFarePolicies :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListRentalFarePoliciesRes
 listRentalFarePolicies person = do
   merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
   rentalFarePolicies <- SRentalFarePolicy.findAllByMerchantId merchantId

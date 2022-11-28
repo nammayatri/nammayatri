@@ -5,7 +5,6 @@ module Domain.Action.Beckn.Cancel
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -25,7 +24,7 @@ newtype CancelReq = CancelReq
   }
 
 cancel ::
-  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id DM.Merchant ->
   SignatureAuthResult ->
   CancelReq ->

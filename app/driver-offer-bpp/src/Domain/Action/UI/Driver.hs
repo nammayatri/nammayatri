@@ -36,7 +36,6 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -223,7 +222,6 @@ createDriver ::
   ( HasCacheConfig r,
     HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     EncFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m
@@ -286,7 +284,7 @@ createDriverDetails personId adminId = do
 getInformation ::
   ( HasCacheConfig r,
     Redis.HedisFlow m r,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     EncFlow m r
   ) =>
   Id SP.Person ->
@@ -302,7 +300,7 @@ getInformation personId = do
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   pure $ makeDriverInformationRes driverEntity organization
 
-setActivity :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SP.Person -> Bool -> m APISuccess.APISuccess
+setActivity :: (EsqDBFlow m r) => Id SP.Person -> Bool -> m APISuccess.APISuccess
 setActivity personId isActive = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
@@ -313,7 +311,7 @@ setActivity personId isActive = do
     QDriverInformation.updateActivity driverId isActive
   pure APISuccess.Success
 
-listDriver :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
+listDriver :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
   let Just merchantId = admin.merchantId
   personList <- QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbLimit mbOffset merchantId
@@ -343,7 +341,6 @@ buildDriverEntityRes (person, driverInfo) = do
 
 changeDriverEnableState ::
   ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     FCMFlow m r,
     CoreMetrics m
@@ -370,7 +367,7 @@ changeDriverEnableState admin personId isEnabled = do
     notificationTitle = "Account is disabled."
     notificationMessage = "Your account has been disabled. Contact support for more info."
 
-deleteDriver :: (EsqDBFlow m r, EsqDBReplicaFlow m r, Redis.HedisFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (EsqDBFlow m r, Redis.HedisFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   let Just merchantId = admin.merchantId
   driver <-
@@ -397,7 +394,6 @@ updateDriver ::
   ( HasCacheConfig r,
     Redis.HedisFlow m r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     EncFlow m r
   ) =>
   Id SP.Person ->
@@ -506,7 +502,7 @@ makeDriverInformationRes DriverEntityRes {..} org =
       ..
     }
 
-getNearbySearchRequests :: (EsqDBReplicaFlow m r) => Id SP.Person -> m GetNearbySearchRequestsRes
+getNearbySearchRequests :: (EsqDBFlow m r) => Id SP.Person -> m GetNearbySearchRequestsRes
 getNearbySearchRequests driverId = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   _ <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
@@ -528,7 +524,6 @@ offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 offerQuote ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
@@ -606,7 +601,7 @@ offerQuote driverId req = do
       pure $ not $ null activeQuotes
 
 getStats ::
-  (EsqDBReplicaFlow m r, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r) =>
   Id SP.Person ->
   Day ->
   m DriverStatsRes

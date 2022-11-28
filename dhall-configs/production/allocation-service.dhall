@@ -10,23 +10,22 @@ let shards =
           "api.beckn.juspay.in/bpp/cab/v1/3c5fa6ae-2e90-4bb9-818e-7bb109b4cca3"
       ]
 
-in  { appCfg = appCfg
+in  { appCfg
     , defaultSortMode = SortMode.ETA
     , driverNotificationExpiry = +25
     , rideAllocationExpiry = +120
     , driverBatchSize = +5
     , requestsNumPerIteration = +50
     , processDelay = +1000
-    , shards = shards
+    , shards
     , metricsPort = +9999
     , reallocationsLimit = +5
     , healthcheckPort = +8114
     , httpClientOptions = appCfg.httpClientOptions
     , esqDBCfg = appCfg.esqDBCfg
-    , esqDBReplicaCfg = appCfg.esqDBReplicaCfg
     , hedisCfg = appCfg.hedisCfg
-    , loggerConfig = appCfg.loggerConfig
-              // { logFilePath = "/tmp/allocation-service.log" }
+    , loggerConfig =
+        appCfg.loggerConfig // { logFilePath = "/tmp/allocation-service.log" }
     , kafkaProducerCfg = appCfg.kafkaProducerCfg
     , nwAddress = appCfg.nwAddress
     , fcmUrl = appCfg.fcmUrl

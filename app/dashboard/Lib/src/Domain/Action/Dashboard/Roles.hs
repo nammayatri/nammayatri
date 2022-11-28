@@ -2,7 +2,6 @@ module Domain.Action.Dashboard.Roles where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -33,7 +32,7 @@ newtype ListRoleRes = ListRoleRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createRole ::
-  (EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  EsqDBFlow m r =>
   TokenInfo ->
   CreateRoleReq ->
   m DRole.RoleAPIEntity
@@ -63,7 +62,7 @@ buildRole req = do
       }
 
 assignAccessLevel ::
-  (EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  EsqDBFlow m r =>
   TokenInfo ->
   Id DRole.Role ->
   AssignAccessLevelReq ->
@@ -100,7 +99,7 @@ buildAccessMatrixItem roleId req = do
       }
 
 listRoles ::
-  ( EsqDBReplicaFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r
   ) =>
   TokenInfo ->

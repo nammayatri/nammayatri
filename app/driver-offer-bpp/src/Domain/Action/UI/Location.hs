@@ -8,7 +8,6 @@ where
 import qualified Beckn.External.Maps.HasCoordinates as GoogleMaps
 import Beckn.External.Maps.Types (LatLong)
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common hiding (id)
@@ -29,7 +28,7 @@ data GetLocationRes = GetLocationRes
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-getLocation :: EsqDBReplicaFlow m r => Id SRide.Ride -> m GetLocationRes
+getLocation :: EsqDBFlow m r => Id SRide.Ride -> m GetLocationRes
 getLocation rideId = do
   ride <-
     QRide.findById rideId

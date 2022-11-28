@@ -6,7 +6,6 @@ module SharedLogic.DriverPool
   )
 where
 
-import Beckn.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -103,7 +102,7 @@ calculateDriverPool variant pickup merchantId onlyNotOnRide shouldFilterByActual
 filterOutDriversWithDistanceAboveThreshold ::
   ( CoreMetrics m,
     CacheFlow m r,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     EncFlow m r,
     HasPrettyLogger m r
   ) =>

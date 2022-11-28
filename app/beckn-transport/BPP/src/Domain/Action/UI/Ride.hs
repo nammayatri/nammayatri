@@ -6,7 +6,6 @@ module Domain.Action.UI.Ride
 where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
@@ -53,7 +52,7 @@ newtype DriverRideListRes = DriverRideListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 listDriverRides ::
-  (EsqDBReplicaFlow m r, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r) =>
   Id DP.Person ->
   Maybe Integer ->
   Maybe Integer ->

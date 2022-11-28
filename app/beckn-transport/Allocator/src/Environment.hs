@@ -30,7 +30,6 @@ type Shards = Map Int (ShortId Subscriber)
 data AppCfg = AppCfg
   { appCfg :: App.AppCfg,
     esqDBCfg :: EsqDBConfig,
-    esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: Redis.HedisCfg,
     metricsPort :: Int,
     healthcheckPort :: Int,
@@ -79,7 +78,6 @@ data AppEnv = AppEnv
     graceTerminationPeriod :: Seconds,
     encTools :: EncTools,
     esqDBEnv :: EsqDBEnv,
-    esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: Redis.HedisEnv,
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
@@ -100,7 +98,6 @@ buildAppEnv AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   hedisEnv <- Redis.connectHedis hedisCfg Redis.becknTransportPrefix
   pure AppEnv {..}
 

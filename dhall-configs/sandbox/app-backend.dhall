@@ -11,15 +11,6 @@ let esqDBCfg =
       , connectSchemaName = "atlas_app"
       }
 
-let esqDBReplicaCfg =
-  { connectHost = esqDBCfg.connectHost
-  , connectPort = 5435
-  , connectUser = esqDBCfg.connectUser
-  , connectPassword = esqDBCfg.connectPassword
-  , connectDatabase = esqDBCfg.connectDatabase
-  , connectSchemaName = esqDBCfg.connectSchemaName
-  }
-
 let hcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
       , connectPort = 6379
@@ -43,12 +34,12 @@ let smsConfig =
       }
 
 let InfoBIPConfig =
-  { username = common.InfoBIPConfig.username
-  , password = common.InfoBIPConfig.password
-  , token = common.InfoBIPConfig.token
-  , url = "https://5vmxvj.api.infobip.com"
-  , sender = "JUSPAY"
-  }
+      { username = common.InfoBIPConfig.username
+      , password = common.InfoBIPConfig.password
+      , token = common.InfoBIPConfig.token
+      , url = "https://5vmxvj.api.infobip.com"
+      , sender = "JUSPAY"
+      }
 
 let nsdlGatewayUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/komn"
 
@@ -58,7 +49,10 @@ let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let searchRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
-let slackCfg = { channelName = "#beckn-driver-onboard-test", slackToken = common.slackToken }
+let slackCfg =
+      { channelName = "#beckn-driver-onboard-test"
+      , slackToken = common.slackToken
+      }
 
 let httpClientOptions = { timeoutMs = +2000, maxRetries = +3 }
 
@@ -68,14 +62,12 @@ let kafkaProducerCfg =
       { brokers = [ "alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092" ]
       }
 
-let rideConfig = { driverReachedDistance = +100  , driverOnTheWayNotifyExpiry = +3600 }
+let rideConfig =
+      { driverReachedDistance = +100, driverOnTheWayNotifyExpiry = +3600 }
 
-let cacheConfig =
-  { configsExpTime = +86400
-  }
+let cacheConfig = { configsExpTime = +86400 }
 
 in  { esqDBCfg
-    , esqDBReplicaCfg = esqDBReplicaCfg
     , hedisCfg = hcfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
@@ -109,7 +101,8 @@ in  { esqDBCfg
     , apiRateLimitOptions
     , searchRateLimitOptions
     , slackCfg
-    , searchLimitExceedNotificationTemplate = "Customer with {#cust-id#} is exceeding the search limit."
+    , searchLimitExceedNotificationTemplate =
+        "Customer with {#cust-id#} is exceeding the search limit."
     , httpClientOptions
     , authTokenCacheExpiry = +600
     , registryUrl = common.registryUrl
@@ -118,6 +111,6 @@ in  { esqDBCfg
     , encTools
     , kafkaProducerCfg
     , rideCfg = rideConfig
-    , cacheConfig = cacheConfig
+    , cacheConfig
     , dashboardToken = sec.dashboardToken
     }

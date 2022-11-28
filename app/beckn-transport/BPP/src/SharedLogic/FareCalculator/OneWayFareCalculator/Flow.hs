@@ -10,7 +10,6 @@ module SharedLogic.FareCalculator.OneWayFareCalculator.Flow
 where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -37,7 +36,7 @@ newtype ServiceHandle m = ServiceHandle
   { getFarePolicy :: Id Merchant -> Vehicle.Variant -> m (Maybe OneWayFarePolicy)
   }
 
-serviceHandle :: (CacheFlow m r, EsqDBReplicaFlow m r) => ServiceHandle m
+serviceHandle :: (CacheFlow m r, EsqDBFlow m r) => ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getFarePolicy = \merchantId vehicleVariant -> do
@@ -47,7 +46,7 @@ serviceHandle =
 calculateFare ::
   ( HasCacheConfig r,
     HedisFlow m r,
-    EsqDBReplicaFlow m r
+    EsqDBFlow m r
   ) =>
   Id Merchant ->
   Vehicle.Variant ->

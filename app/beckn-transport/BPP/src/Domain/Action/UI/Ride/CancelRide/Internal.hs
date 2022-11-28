@@ -1,7 +1,6 @@
 module Domain.Action.UI.Ride.CancelRide.Internal (cancelRide) where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -33,7 +32,6 @@ import qualified Tools.Notifications as Notify
 cancelRide ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],

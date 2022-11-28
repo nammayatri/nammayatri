@@ -5,7 +5,6 @@ module Domain.Action.UI.Ride.EndRide.Internal
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -31,7 +30,7 @@ endRideTransaction driverId bookingId ride = Esq.runTransaction $ do
   DriverInformation.updateOnRide driverId False
   DriverStats.updateIdleTime driverId
 
-putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Money -> Meters -> m ()
+putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   Metrics.putFareAndDistanceDeviations org.name money mtrs

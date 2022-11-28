@@ -5,10 +5,9 @@ module Domain.Types.Person where
 
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Centesimal
 import Beckn.Types.Id
-import Beckn.Utils.Common (maskText)
+import Beckn.Utils.Common (EsqDBFlow, maskText)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -119,11 +118,11 @@ makePersonAPIEntity Person {..} =
       ..
     }
 
-getPersonNumber :: (EsqDBReplicaFlow m r, EncFlow m r) => Person -> m (Maybe Text)
+getPersonNumber :: (EsqDBFlow m r, EncFlow m r) => Person -> m (Maybe Text)
 getPersonNumber person = do
   decMobileNumber <- mapM decrypt person.mobileNumber
   return $ person.mobileCountryCode <> decMobileNumber
 
-getPersonFullName :: (EsqDBReplicaFlow m r, EncFlow m r) => Person -> m (Maybe Text)
+getPersonFullName :: (EsqDBFlow m r, EncFlow m r) => Person -> m (Maybe Text)
 getPersonFullName person = do
   return ((\fN -> fN <> maybe "" (" " <>) person.lastName) <$> Just person.firstName)

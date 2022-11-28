@@ -15,7 +15,6 @@ module Domain.Action.UI.Booking
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -71,13 +70,13 @@ newtype SetDriverAcceptanceReq = SetDriverAcceptanceReq
 
 type SetDriverAcceptanceRes = APISuccess
 
-bookingStatus :: (CacheFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
+bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
 bookingStatus bookingId = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   SRB.buildBookingAPIEntity booking
 
 bookingList ::
-  (CacheFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   SP.Person ->
   Maybe Integer ->
   Maybe Integer ->
@@ -90,7 +89,7 @@ bookingList person mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList
 
 bookingCancel ::
-  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id SRB.Booking ->
   SP.Person ->
   m APISuccess
@@ -118,7 +117,7 @@ bookingCancel bookingId admin = do
           }
 
 getRideInfo ::
-  (EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, CoreMetrics m) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes
+  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes
 getRideInfo bookingId personId = do
   mbNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId bookingId
   case mbNotification of
@@ -163,7 +162,7 @@ responseToEventType ACCEPT = AllocationEvent.AcceptedByDriver
 responseToEventType REJECT = AllocationEvent.RejectedByDriver
 
 setDriverAcceptance ::
-  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> Id SP.Person -> SetDriverAcceptanceReq -> m SetDriverAcceptanceRes
+  (CacheFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id SP.Person -> SetDriverAcceptanceReq -> m SetDriverAcceptanceRes
 setDriverAcceptance bookingId personId req = do
   currentTime <- getCurrentTime
   logTagInfo "setDriverAcceptance" logMessage

@@ -3,7 +3,6 @@ module Domain.Action.UI.Location (Status (..), GetLocationRes (..), getLocation)
 import qualified Beckn.External.Maps.HasCoordinates as GoogleMaps
 import Beckn.External.Maps.Types
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -25,7 +24,7 @@ data GetLocationRes = GetLocationRes
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-getLocation :: (EsqDBReplicaFlow m r) => Id SRide.Ride -> m GetLocationRes
+getLocation :: (EsqDBFlow m r) => Id SRide.Ride -> m GetLocationRes
 getLocation rideId = do
   ride <-
     QRide.findById rideId

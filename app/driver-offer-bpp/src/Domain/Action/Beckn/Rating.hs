@@ -3,7 +3,6 @@
 module Domain.Action.Beckn.Rating where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -52,7 +51,7 @@ handler req = do
   calculateAverageRating driverId
 
 calculateAverageRating ::
-  (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasFlowEnv m r '["minimumDriverRatesCount" ::: Int]) =>
+  (EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["minimumDriverRatesCount" ::: Int]) =>
   Id DP.Person ->
   m ()
 calculateAverageRating personId = do

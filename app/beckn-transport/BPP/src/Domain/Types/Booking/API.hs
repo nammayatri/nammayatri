@@ -1,7 +1,6 @@
 module Domain.Types.Booking.API where
 
 import Beckn.External.Encryption
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -66,7 +65,7 @@ data RentalBookingDetailsAPIEntity = RentalBookingDetailsAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-buildBookingAPIEntity :: (CacheFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> m BookingAPIEntity
+buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Booking -> m BookingAPIEntity
 buildBookingAPIEntity booking = do
   let rbStatus = booking.status
   now <- getCurrentTime
@@ -91,13 +90,13 @@ buildBookingAPIEntity booking = do
         updatedAt = booking.updatedAt
       }
   where
-    buildRideAPIEntity :: (EsqDBReplicaFlow m r, EncFlow m r) => UTCTime -> (DRide.Ride, Maybe DVeh.Vehicle, Maybe DP.Person) -> m DRide.RideAPIEntity
+    buildRideAPIEntity :: (EsqDBFlow m r, EncFlow m r) => UTCTime -> (DRide.Ride, Maybe DVeh.Vehicle, Maybe DP.Person) -> m DRide.RideAPIEntity
     buildRideAPIEntity now (ride, mbVehicle, mbDriver) = do
       let vehicle = fromMaybe (vehicleDefault now) mbVehicle
       decDriver <- maybe (return $ driverDefault now) decrypt mbDriver
       return $ DRide.makeRideAPIEntity ride decDriver vehicle
 
-    buildBookingAPIDetails :: (CacheFlow m r, EsqDBReplicaFlow m r) => BookingDetails -> m (BookingDetailsAPIEntity, [Text])
+    buildBookingAPIDetails :: (CacheFlow m r, EsqDBFlow m r) => BookingDetails -> m (BookingDetailsAPIEntity, [Text])
     buildBookingAPIDetails = \case
       OneWayDetails OneWayBookingDetails {..} -> do
         let details =

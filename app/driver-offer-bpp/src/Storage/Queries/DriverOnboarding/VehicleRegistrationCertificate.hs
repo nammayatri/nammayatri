@@ -32,7 +32,7 @@ upsert a@VehicleRegistrationCertificate {..} =
     ]
 
 findById ::
-  EsqDBReplicaFlow m r =>
+  EsqDBFlow m r =>
   Id VehicleRegistrationCertificate ->
   m (Maybe VehicleRegistrationCertificate)
 findById = Esq.findById

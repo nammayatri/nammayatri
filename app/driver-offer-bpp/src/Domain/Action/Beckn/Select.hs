@@ -4,7 +4,6 @@ module Domain.Action.Beckn.Select where
 
 import qualified Beckn.External.GoogleTranslate.Types as GoogleTranslate
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -149,7 +148,7 @@ buildSearchRequest from to merchantId sReq distance duration = do
         vehicleVariant = sReq.variant
       }
 
-buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> Maybe Maps.Language -> m DLoc.SearchReqLocation
+buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> Maybe Maps.Language -> m DLoc.SearchReqLocation
 buildSearchReqLocation merchantId sessionToken latLong@Maps.LatLong {..} language = do
   pickupRes <-
     Maps.getPlaceName merchantId $
@@ -168,7 +167,7 @@ buildSearchReqLocation merchantId sessionToken latLong@Maps.LatLong {..} languag
 translateSearchReq ::
   ( EncFlow m r,
     CacheFlow m r,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     GoogleTranslate.HasGoogleTranslate m r,
     CoreMetrics m
   ) =>
@@ -190,7 +189,7 @@ translateSearchReq orgId sessiontoken defaultSearchReq@DSearchReq.SearchRequest 
 addLanguageToDictionary ::
   ( EncFlow m r,
     CacheFlow m r,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     GoogleTranslate.HasGoogleTranslate m r,
     CoreMetrics m
   ) =>

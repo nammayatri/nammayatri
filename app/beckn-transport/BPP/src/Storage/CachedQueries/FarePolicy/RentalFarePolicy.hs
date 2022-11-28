@@ -14,7 +14,6 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
@@ -27,14 +26,14 @@ import qualified Domain.Types.Vehicle as Vehicle
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as Queries
 
-findById :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
+findById :: (CacheFlow m r, EsqDBFlow m r) => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
 findById id =
   Hedis.get (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy a
     Nothing -> flip whenJust cacheRentalFarePolicy /=<< Queries.findById id
 
 findByOffer ::
-  (CacheFlow m r, EsqDBReplicaFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   Vehicle.Variant ->
   Kilometers ->
@@ -50,7 +49,7 @@ findByOffer merchantId vehVar kms hours =
   where
     findAndCache = flip whenJust cacheRentalFarePolicy /=<< Queries.findByOffer merchantId vehVar kms hours
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> m [RentalFarePolicy]
+findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [RentalFarePolicy]
 findAllByMerchantId merchantId =
   Hedis.get (makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy) a

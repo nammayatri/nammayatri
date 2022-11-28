@@ -9,7 +9,7 @@ let shards =
       , globalCommon.mkShard +1 "another-test-cabs"
       ]
 
-in  { appCfg = appCfg
+in  { appCfg
     , metricsPort = +9996
     , reallocationsLimit = +5
     , defaultSortMode = SortMode.ETA
@@ -18,14 +18,14 @@ in  { appCfg = appCfg
     , driverBatchSize = +5
     , requestsNumPerIteration = +50
     , processDelay = +1000
-    , shards = shards
+    , shards
     , healthcheckPort = +8114
     , httpClientOptions = appCfg.httpClientOptions
     , esqDBCfg = appCfg.esqDBCfg
-    , esqDBReplicaCfg = appCfg.esqDBReplicaCfg
     , hedisCfg = appCfg.hedisCfg
-    , loggerConfig = appCfg.loggerConfig
-              //  { logFilePath = "/tmp/allocation-service.log", logRawSql = False }
+    , loggerConfig =
+            appCfg.loggerConfig
+        //  { logFilePath = "/tmp/allocation-service.log", logRawSql = False }
     , kafkaProducerCfg = appCfg.kafkaProducerCfg
     , nwAddress = appCfg.nwAddress
     , fcmUrl = appCfg.fcmUrl

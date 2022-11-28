@@ -26,7 +26,6 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude
 import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -178,7 +177,6 @@ createDriver ::
   ( HasCacheConfig r,
     HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
@@ -241,7 +239,7 @@ createDriverDetails personId adminId = do
 
 getInformation ::
   ( HasCacheConfig r,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r
   ) =>
@@ -260,8 +258,7 @@ getInformation personId = do
   pure $ makeDriverInformationRes driverEntity organization
 
 setActivity ::
-  ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r
+  ( EsqDBFlow m r
   ) =>
   Id SP.Person ->
   Bool ->
@@ -277,8 +274,7 @@ setActivity personId isActive = do
   pure APISuccess.Success
 
 setRental ::
-  ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r
+  ( EsqDBFlow m r
   ) =>
   Id SP.Person ->
   Bool ->
@@ -291,7 +287,7 @@ setRental personId isRental = do
   pure APISuccess.Success
 
 listDriver ::
-  ( EsqDBReplicaFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r
   ) =>
   SP.Person ->
@@ -305,7 +301,7 @@ listDriver admin mbSearchString mbLimit mbOffset = do
   respPersonList <- traverse buildDriverEntityRes personList
   return $ ListDriverRes respPersonList
 
-buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
+buildDriverEntityRes :: (EsqDBFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
   vehicle <- QVehicle.findById person.id >>= fromMaybeM (VehicleNotFound person.id.getId)
   decMobNum <- mapM decrypt person.mobileNumber
@@ -330,7 +326,6 @@ buildDriverEntityRes (person, driverInfo) = do
 
 changeDriverEnableState ::
   ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     FCMFlow m r,
     CoreMetrics m
@@ -359,7 +354,6 @@ changeDriverEnableState admin personId isEnabled = do
 
 deleteDriver ::
   ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r
   ) =>
   SP.Person ->
@@ -389,7 +383,6 @@ deleteDriver admin driverId = do
 updateDriver ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r
   ) =>

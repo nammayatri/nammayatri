@@ -17,7 +17,6 @@ import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Esqueleto as DB
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common as BC
@@ -90,7 +89,6 @@ auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
@@ -215,7 +213,6 @@ createDriverWhihDetails req = do
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
@@ -260,7 +257,6 @@ checkPersonExists entityId =
 resend ::
   ( HasFlowEnv m r ["otpSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     EncFlow m r,
     CoreMetrics m
   ) =>
@@ -280,7 +276,7 @@ resend tokenId = do
   Esq.runTransaction $ QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-cleanCachedTokens :: (EsqDBReplicaFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
+cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
   regTokens <- QR.findAllByPersonId personId
   for_ regTokens $ \regToken -> do
@@ -289,7 +285,6 @@ cleanCachedTokens personId = do
 
 logout ::
   ( EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r
   ) =>
   Id SP.Person ->

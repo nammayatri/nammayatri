@@ -4,7 +4,6 @@ module Domain.Action.UI.Ride
   )
 where
 
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -27,7 +26,7 @@ type GetDriverLocRes = MapSearch.LatLong
 getDriverLoc ::
   ( HasCacheConfig r,
     EncFlow m r,
-    EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m,
     HasField "rideCfg" r RideConfig

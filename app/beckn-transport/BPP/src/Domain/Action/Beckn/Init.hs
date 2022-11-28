@@ -3,7 +3,6 @@ module Domain.Action.Beckn.Init where
 import Beckn.Prelude
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Types.Id
@@ -50,7 +49,6 @@ init ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m
@@ -77,7 +75,6 @@ initOneWayTrip ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasField "driverEstimatedPickupDuration" r Seconds,
     CoreMetrics m
@@ -123,7 +120,6 @@ initOneWayTrip req oneWayReq transporter now = do
 initRentalTrip ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     CoreMetrics m
   ) =>

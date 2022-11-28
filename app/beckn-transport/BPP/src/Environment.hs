@@ -39,7 +39,6 @@ import Tools.Streaming.Kafka
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
-    esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
@@ -117,7 +116,6 @@ data AppEnv = AppEnv
     kafkaProducerCfg :: KafkaProducerCfg,
     selfUIUrl :: BaseUrl,
     esqDBEnv :: EsqDBEnv,
-    esqDBReplicaEnv :: EsqDBEnv,
     isShuttingDown :: TMVar (),
     bppMetrics :: BPPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
@@ -146,7 +144,6 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  esqDBReplicaEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBPPKafkaEnvs
   hedisEnv <- connectHedis hedisCfg becknTransportPrefix

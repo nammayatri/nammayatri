@@ -7,9 +7,9 @@ module Storage.CachedQueries.Merchant.MerchantServiceConfig
 where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
@@ -17,7 +17,7 @@ import Domain.Types.Merchant.MerchantServiceConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.MerchantServiceConfig as Queries
 
-findByMerchantIdAndService :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
+findByMerchantIdAndService :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
 findByMerchantIdAndService id serviceName =
   Hedis.get (makeMerchantIdAndServiceKey id serviceName) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig a

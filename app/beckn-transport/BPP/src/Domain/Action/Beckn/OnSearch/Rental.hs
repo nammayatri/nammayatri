@@ -1,7 +1,6 @@
 module Domain.Action.Beckn.OnSearch.Rental where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -36,7 +35,6 @@ data QuoteInfo = QuoteInfo
 onSearchCallback ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasBPPMetrics m r,
