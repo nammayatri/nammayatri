@@ -129,9 +129,14 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone 
   merchant <-
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id mbLimit mbOffset mbVerified mbEnabled mbSearchPhone
+  let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
+      offset = fromMaybe 0 mbOffset
+  driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbSearchPhone
   items <- mapM buildDriverListItem driversWithInfo
   pure $ Common.DriverListRes (length items) items
+  where
+    maxLimit = 20
+    defaultLimit = 10
 
 buildDriverListItem :: EncFlow m r => (Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) -> m Common.DriverListItem
 buildDriverListItem (person, driverInformation, mbVehicle) = do

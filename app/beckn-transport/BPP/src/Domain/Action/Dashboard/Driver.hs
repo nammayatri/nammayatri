@@ -63,10 +63,16 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone 
   -- all drivers are considered as verified, because driverInfo.verified is not implemented for this bpp
   driversWithInfo <-
     if mbVerified == Just True || isNothing mbVerified
-      then QPerson.findAllDriversWithInfoAndVehicle merchant.id mbLimit mbOffset mbEnabled mbSearchPhone
+      then do
+        let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
+            offset = fromMaybe 0 mbOffset
+        QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbEnabled mbSearchPhone
       else pure []
   items <- mapM buildDriverListItem driversWithInfo
   pure $ Common.DriverListRes (length items) items
+  where
+    maxLimit = 20
+    defaultLimit = 10
 
 buildDriverListItem :: EncFlow m r => (Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) -> m Common.DriverListItem
 buildDriverListItem (person, driverInformation, mbVehicle) = do

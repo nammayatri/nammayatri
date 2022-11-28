@@ -77,31 +77,20 @@ findAllDrivers merchantId = fmap (map mkFullDriver) $
     orderBy [asc (person ^. PersonFirstName)]
     return (person, driverLocation, driverInfo, vehicle)
 
-maxLimit :: Int
-maxLimit = 20
-
-defaultLimit :: Int
-defaultLimit = 10
-
-calcLimit :: Maybe Int -> Int
-calcLimit = min maxLimit . fromMaybe defaultLimit
-
 findAllDriversWithInfoAndVehicle ::
   ( Transactionable m,
     EncFlow m r
   ) =>
   Id Merchant ->
-  Maybe Int ->
-  Maybe Int ->
+  Int ->
+  Int ->
   Maybe Bool ->
   Maybe Bool ->
   Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchantId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone = do
+findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbSearchPhone = do
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
   Esq.findAll $ do
-    let limitVal = fromIntegral $ calcLimit mbLimit
-        offsetVal = maybe 0 fromIntegral mbOffset
     person :& info :& mbVeh <-
       from $
         table @PersonT
@@ -119,8 +108,8 @@ findAllDriversWithInfoAndVehicle merchantId mbLimit mbOffset mbVerified mbEnable
         &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
         &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
     orderBy [asc (person ^. PersonFirstName)]
-    limit limitVal
-    offset offsetVal
+    limit $ fromIntegral limitVal
+    offset $ fromIntegral offsetVal
     pure (person, info, mbVeh)
 
 findAllDriversByIdsFirstNameAsc ::
