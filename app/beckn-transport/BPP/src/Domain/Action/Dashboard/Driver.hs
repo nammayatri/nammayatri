@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Domain.Action.Dashboard.Driver
   ( listDrivers,
     driverActivity,
@@ -20,10 +22,11 @@ import Beckn.Utils.Common
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
-import qualified Data.Text as T
+import qualified Domain.Types.DriverInformation as DrInfo
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.AllocationEvent as QAllocationEvent
@@ -39,6 +42,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 
+-- FIXME remove this, all entities should be limited on db level
 limitOffset :: Maybe Int -> Maybe Int -> [a] -> [a]
 limitOffset mbLimit mbOffset =
   maybe identity take mbLimit . maybe identity drop mbOffset
@@ -50,37 +54,31 @@ listDrivers ::
   Maybe Int ->
   Maybe Bool ->
   Maybe Bool ->
-  Maybe Bool ->
   Maybe Text ->
   Flow Common.DriverListRes
-listDrivers merchantShortId mbLimit mbOffset _verified _rejected _pendingdoc mbSearchPhone = do
+listDrivers merchantShortId mbLimit mbOffset _mbVerified mbEnabled mbSearchPhone = do
   merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  items <- mapM buildDriverListItem =<< QPerson.findAllDriversFirstNameAsc merchant.id
-  let filteredByPhone = filter (filterPhone . (.phoneNo)) items
-      limitedItems = limitOffset mbLimit mbOffset filteredByPhone
-  pure $ Common.DriverListRes (length limitedItems) limitedItems
-  where
-    filterPhone :: Text -> Bool
-    filterPhone driverPhone = maybe True (`T.isInfixOf` driverPhone) mbSearchPhone
+  driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id mbLimit mbOffset mbEnabled mbSearchPhone
+  items <- mapM buildDriverListItem driversWithInfo
+  pure $ Common.DriverListRes (length items) items
 
-buildDriverListItem :: EncFlow m r => QPerson.FullDriver -> m Common.DriverListItem
-buildDriverListItem f = do
-  let p = f.person; drin = f.info; veh = f.vehicle
-  phoneNo <- maybe (pure "") decrypt p.mobileNumber
-  pure
+buildDriverListItem :: EncFlow m r => (Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) -> m Common.DriverListItem
+buildDriverListItem (person, driverInformation, mbVehicle) = do
+  phoneNo <- mapM decrypt person.mobileNumber
+  pure $
     Common.DriverListItem
-      { driverId = cast p.id,
-        firstName = p.firstName,
-        middleName = p.middleName,
-        lastName = p.lastName,
-        vehicleNo = Just veh.registrationNo,
+      { driverId = cast @Person @Common.Driver person.id,
+        firstName = person.firstName,
+        middleName = person.middleName,
+        lastName = person.lastName,
+        vehicleNo = mbVehicle <&> (.registrationNo),
         phoneNo,
-        enabled = drin.enabled,
-        verified = True,
-        dlStatus = Nothing,
-        rcStatus = Nothing
+        enabled = driverInformation.enabled,
+        verified = True, -- not implemented in this bpp
+        onRide = driverInformation.onRide,
+        active = driverInformation.active
       }
 
 ---------------------------------------------------------------------

@@ -26,7 +26,7 @@ newtype BecknTransportAPIs = BecknTransportAPIs
   }
 
 data DriversAPIs = DriversAPIs
-  { listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient Common.DriverListRes,
+  { listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient Common.DriverListRes,
     driverActivity :: Euler.EulerClient Common.DriverActivityRes,
     enableDrivers :: Common.DriverIds -> Euler.EulerClient Common.EnableDriversRes,
     disableDrivers :: Common.DriverIds -> Euler.EulerClient Common.DisableDriversRes,

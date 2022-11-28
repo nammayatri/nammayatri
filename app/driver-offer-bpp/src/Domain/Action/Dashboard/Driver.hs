@@ -23,15 +23,16 @@ import Beckn.Utils.Common
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
-import qualified Data.Text as T
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
+import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.DriverOnboarding.DriverRCAssociation (DriverRCAssociation)
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
+import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.DriverInformation as QDriverInfo
@@ -119,91 +120,37 @@ getRegCertStatus onboardingTryLimit currentTries mbRegCert mbVehRegReq =
 
 ---------
 
-getDlStatusInfo :: EncFlow m r => DriverLicense -> m (Common.DocumentInfo Common.LicDetails)
-getDlStatusInfo lic = do
-  let licDetails =
-        Just
-          Common.LicDetails
-            { licExpiry = lic.licenseExpiry,
-              vehicleClass = map show lic.classOfVehicles
-            }
-  documentNumber <- decrypt lic.licenseNumber
-  pure
-    Common.DocumentInfo
-      { documentNumber,
-        status = show lic.verificationStatus,
-        details = licDetails
-      }
-
-getRcStatusInfo :: EncFlow m r => VehicleRegistrationCertificate -> m (Common.DocumentInfo Common.RCDetails)
-getRcStatusInfo rc = do
-  let rcDetails =
-        Just
-          Common.RCDetails
-            { vehicleClass = fromMaybe "" rc.vehicleClass,
-              fitnessExpiry = rc.fitnessExpiry,
-              insuranceExpiry = rc.insuranceValidity
-            }
-  documentNumber <- decrypt rc.certificateNumber
-  pure
-    Common.DocumentInfo
-      { documentNumber,
-        status = show rc.verificationStatus,
-        details = rcDetails
-      }
-
+-- FIXME remove this, all entities should be limited on db level
 limitOffset :: Maybe Int -> Maybe Int -> [a] -> [a]
 limitOffset mbLimit mbOffset =
   maybe identity take mbLimit . maybe identity drop mbOffset
 
 ---------------------------------------------------------------------
-listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.DriverListRes
-listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbPendingdoc mbSearchPhone = do
+listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.DriverListRes
+listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone = do
   merchant <-
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  driverDocsInfo <- QDocStatus.fetchFullDriverInfoWithDocsFirstNameAsc merchant.id Nothing
-  items <- catMaybes <$> mapM buildDriverListItem driverDocsInfo
-  let limitedItems = limitOffset mbLimit mbOffset items
-  pure $ Common.DriverListRes (length limitedItems) limitedItems
-  where
-    filterOnStatus :: Maybe Bool -> Bool -> Bool
-    filterOnStatus mbRequestedStatus driverStatus =
-      maybe True (== driverStatus) mbRequestedStatus
+  driversWithInfo <- QDocStatus.findAllDriversWithInfoAndVehicle merchant.id mbLimit mbOffset mbVerified mbEnabled mbSearchPhone
+  items <- mapM buildDriverListItem driversWithInfo
+  pure $ Common.DriverListRes (length items) items
 
-    filterPhone :: Text -> Bool
-    filterPhone driverPhone = maybe True (`T.isInfixOf` driverPhone) mbSearchPhone
-
-    buildDriverListItem :: (EncFlow m r) => QDocStatus.FullDriverWithDocs -> m (Maybe Common.DriverListItem)
-    buildDriverListItem f = do
-      let pendingDocDriver = isNothing f.license || isNothing f.registration
-      if not $
-        filterOnStatus mbVerified f.info.verified
-          && filterOnStatus mbEnabled f.info.enabled
-          && filterOnStatus mbPendingdoc pendingDocDriver
-        then pure Nothing
-        else do
-          let p = f.person; drin = f.info; veh = f.vehicle
-          phoneNo <- maybe (pure "") decrypt p.mobileNumber
-          if not $ filterPhone phoneNo
-            then pure Nothing
-            else do
-              dlStatusInfo <- traverse getDlStatusInfo f.license
-              rcStatusInfo <- traverse getRcStatusInfo (fmap snd f.registration)
-              pure $
-                Just
-                  Common.DriverListItem
-                    { driverId = cast p.id,
-                      firstName = p.firstName,
-                      middleName = p.middleName,
-                      lastName = p.lastName,
-                      vehicleNo = veh <&> (.registrationNo),
-                      phoneNo,
-                      enabled = drin.enabled,
-                      verified = drin.verified,
-                      dlStatus = dlStatusInfo,
-                      rcStatus = rcStatusInfo
-                    }
+buildDriverListItem :: EncFlow m r => (Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) -> m Common.DriverListItem
+buildDriverListItem (person, driverInformation, mbVehicle) = do
+  phoneNo <- mapM decrypt person.mobileNumber
+  pure $
+    Common.DriverListItem
+      { driverId = cast @Person @Common.Driver person.id,
+        firstName = person.firstName,
+        middleName = person.middleName,
+        lastName = person.lastName,
+        vehicleNo = mbVehicle <&> (.registrationNo),
+        phoneNo,
+        enabled = driverInformation.enabled,
+        verified = driverInformation.verified,
+        onRide = driverInformation.onRide,
+        active = driverInformation.active
+      }
 
 ---------------------------------------------------------------------
 driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes

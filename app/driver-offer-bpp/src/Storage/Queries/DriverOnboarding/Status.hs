@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.DriverOnboarding.Status where
 
 import Beckn.External.Encryption
@@ -146,15 +148,54 @@ baseFullDriverWithDocsQuery =
                    just (person ^. PersonTId) ==. vehicle ?. VehicleDriverId
                )
 
-fetchFullDriverInfoWithDocsFirstNameAsc :: (Transactionable m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [FullDriverWithDocs]
-fetchFullDriverInfoWithDocsFirstNameAsc merchantId mbDriverIds = fmap (map mkFullDriverInfoWithDocs) $
+------
+
+maxLimit :: Int
+maxLimit = 20
+
+defaultLimit :: Int
+defaultLimit = 10
+
+calcLimit :: Maybe Int -> Int
+calcLimit = min maxLimit . fromMaybe defaultLimit
+
+-- TODO move it to Person
+findAllDriversWithInfoAndVehicle ::
+  ( Transactionable m,
+    EncFlow m r
+  ) =>
+  Id Merchant ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Text ->
+  m [(Person, DriverInformation, Maybe Vehicle)]
+findAllDriversWithInfoAndVehicle merchantId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone = do
+  mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
   Esq.findAll $ do
-    person :& license :& assoc :& registration :& info :& mbVeh <- from baseFullDriverWithDocsQuery
+    let limitVal = fromIntegral $ calcLimit mbLimit
+        offsetVal = maybe 0 fromIntegral mbOffset
+    person :& info :& mbVeh <-
+      from $
+        table @PersonT
+          `innerJoin` table @DriverInformationT
+            `Esq.on` ( \(person :& driverInfo) ->
+                         person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
+                     )
+          `leftJoin` table @VehicleT
+            `Esq.on` ( \(person :& _ :& mbVehicle) ->
+                         just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
+                     )
     where_ $
-      maybe (val True) (\ids -> person ^. PersonTId `in_` valList (map (toKey . coerce) $ toList ids)) mbDriverIds
-        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
+      person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
+        &&. maybe (val True) (\verified -> info ^. DriverInformationVerified ==. val verified) mbVerified
+        &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
+        &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
     orderBy [asc (person ^. PersonFirstName)]
-    pure (person, license, assoc, registration, info, mbVeh, nothing @Int)
+    limit limitVal
+    offset offsetVal
+    pure (person, info, mbVeh)
 
 ridesCountAggTable :: SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
 ridesCountAggTable = with $ do

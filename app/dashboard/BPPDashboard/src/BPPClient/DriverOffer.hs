@@ -28,7 +28,7 @@ newtype DriverOfferAPIs = DriverOfferAPIs
 
 data DriversAPIs = DriversAPIs
   { driverDocumentsInfo :: Euler.EulerClient Common.DriverDocumentsInfoRes,
-    listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient Common.DriverListRes,
+    listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient Common.DriverListRes,
     driverActivity :: Euler.EulerClient Common.DriverActivityRes,
     enableDrivers :: Common.DriverIds -> Euler.EulerClient Common.EnableDriversRes,
     disableDrivers :: Common.DriverIds -> Euler.EulerClient Common.DisableDriversRes,

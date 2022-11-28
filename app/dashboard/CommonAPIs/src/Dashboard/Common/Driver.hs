@@ -29,7 +29,6 @@ type DriverListAPI =
     :> QueryParam "offset" Int
     :> QueryParam "verified" Bool
     :> QueryParam "enabled" Bool
-    :> QueryParam "pendingdoc" Bool
     :> QueryParam "phone" Text
     :> Get '[JSON] DriverListRes
 
@@ -46,11 +45,11 @@ data DriverListItem = DriverListItem
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     vehicleNo :: Maybe Text,
-    phoneNo :: Text,
+    phoneNo :: Maybe Text,
     enabled :: Bool,
     verified :: Bool,
-    dlStatus :: Maybe (DocumentInfo LicDetails),
-    rcStatus :: Maybe (DocumentInfo RCDetails)
+    onRide :: Bool,
+    active :: Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
