@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Domain.Action.Dashboard.Driver
   ( listDrivers,
     driverActivity,

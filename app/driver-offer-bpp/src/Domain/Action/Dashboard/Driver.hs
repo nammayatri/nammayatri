@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Domain.Action.Dashboard.Driver
   ( driverDocumentsInfo,
     listDrivers,
@@ -131,7 +129,7 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone 
   merchant <-
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  driversWithInfo <- QDocStatus.findAllDriversWithInfoAndVehicle merchant.id mbLimit mbOffset mbVerified mbEnabled mbSearchPhone
+  driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id mbLimit mbOffset mbVerified mbEnabled mbSearchPhone
   items <- mapM buildDriverListItem driversWithInfo
   pure $ Common.DriverListRes (length items) items
 
