@@ -107,10 +107,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
       maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
 
-    lockKey = makeLockKey driver.id
-
-makeLockKey :: Id Person.Person -> Text
-makeLockKey (Id driverId) = "ARDU:driverLocationUpdate:" <> driverId
+    lockKey = LocUpd.makeLockKey driver.id
 
 checkLocationUpdatesRateLimit ::
   ( Redis.HedisFlow m r,

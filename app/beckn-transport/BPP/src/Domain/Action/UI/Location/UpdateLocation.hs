@@ -97,7 +97,6 @@ updateLocationHandler Handler {..} waypoints = withLogTag "driverLocationUpdate"
           >>= maybe
             (logInfo "No ride is assigned to driver, ignoring")
             (\ride -> addIntermediateRoutePoints ride.id $ NE.map (.pt) newWaypoints)
-
     Redis.unlockRedis lockKey
   pure Success
   where
@@ -105,10 +104,7 @@ updateLocationHandler Handler {..} waypoints = withLogTag "driverLocationUpdate"
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
       maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
 
-    lockKey = makeLockKey driver.id
-
-makeLockKey :: Id Person.Person -> Text
-makeLockKey (Id driverId) = "beckn-transport:driverLocationUpdate:" <> driverId
+    lockKey = LocUpd.makeLockKey driver.id
 
 checkLocationUpdatesRateLimit ::
   ( Redis.HedisFlow m r,

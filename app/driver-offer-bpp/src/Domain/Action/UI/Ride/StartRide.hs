@@ -7,6 +7,8 @@ module Domain.Action.UI.Ride.StartRide
 where
 
 import Beckn.External.Maps.Types
+import qualified Beckn.Storage.Hedis as Redis
+import Beckn.Tools.Metrics.CoreMetrics
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -63,23 +65,27 @@ buildStartRideHandle requestorId rideId = do
         initializeDistanceCalculation = LocUpd.initializeDistanceCalculation defaultRideInterpolationHandler rideId requestorId
       }
 
-startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Id SRide.Ride -> StartRideReq -> m APISuccess.APISuccess
+startRideHandler :: (MonadThrow m, Log m, Redis.HedisFlow m r, CoreMetrics m, MonadFlow m, MonadTime m) => ServiceHandle m -> Id SRide.Ride -> StartRideReq -> m APISuccess.APISuccess
 startRideHandler ServiceHandle {..} rideId req = do
   rateLimitStartRide
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  case requestor.role of
-    Person.DRIVER -> do
-      let rideDriver = ride.driverId
-      unless (rideDriver == requestor.id) $ throwError NotAnExecutor
-    _ -> throwError AccessDenied
-  unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
-  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  let inAppOtp = ride.otp
-  when (req.rideOtp /= inAppOtp) $ throwError IncorrectOTP
-  logTagInfo "startRide" ("DriverId " <> getId requestor.id <> ", RideId " <> getId rideId)
-  startRideAndUpdateLocation ride.id booking.id req.point
-  initializeDistanceCalculation req.point
-  notifyBAPRideStarted booking ride
+  let driverId = ride.driverId
+  whenM (Redis.tryLockRedis (lockKey driverId) 60) $ do
+    case requestor.role of
+      Person.DRIVER -> do
+        let rideDriver = ride.driverId
+        unless (rideDriver == requestor.id) $ throwError NotAnExecutor
+      _ -> throwError AccessDenied
+    unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
+    booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    let inAppOtp = ride.otp
+    when (req.rideOtp /= inAppOtp) $ throwError IncorrectOTP
+    logTagInfo "startRide" ("DriverId " <> getId requestor.id <> ", RideId " <> getId rideId)
+    startRideAndUpdateLocation ride.id booking.id req.point
+    initializeDistanceCalculation req.point
+    notifyBAPRideStarted booking ride
+    Redis.unlockRedis (lockKey driverId)
   pure APISuccess.Success
   where
     isValidRideStatus status = status == SRide.NEW
+    lockKey driverId = LocUpd.makeLockKey driverId

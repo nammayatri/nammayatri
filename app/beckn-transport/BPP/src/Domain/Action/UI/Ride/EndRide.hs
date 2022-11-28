@@ -9,6 +9,8 @@ where
 import Beckn.External.Maps.HasCoordinates
 import Beckn.External.Maps.Types
 import Beckn.Prelude (ToSchema, roundToIntegral)
+import qualified Beckn.Storage.Hedis as Redis
+import Beckn.Tools.Metrics.CoreMetrics
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -111,46 +113,49 @@ buildEndRideHandle requestorId rideId = do
       }
 
 endRideHandler ::
-  (MonadThrow m, Log m, MonadTime m) =>
+  (MonadThrow m, Log m, MonadTime m, Redis.HedisFlow m r, CoreMetrics m, MonadFlow m, MonadTime m) =>
   ServiceHandle m ->
   Id Ride.Ride ->
   EndRideReq ->
   m APISuccess.APISuccess
 endRideHandler handle@ServiceHandle {..} rideId req = do
-  finalDistanceCalculation req.point
-  -- here we update the current ride, so below we fetch the updated version
-
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
-  case requestor.role of
-    Person.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
-    _ -> throwError AccessDenied
-  unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
+  whenM (Redis.tryLockRedis (lockKey driverId) 60) $ do
+    finalDistanceCalculation req.point
+    -- here we update the current ride, so below we fetch the updated version
 
-  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  logTagInfo "endRide" ("DriverId " <> getId requestor.id <> ", RideId " <> getId rideId)
+    case requestor.role of
+      Person.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
+      _ -> throwError AccessDenied
+    unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-  now <- getCurrentTime
+    booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    logTagInfo "endRide" ("DriverId " <> getId requestor.id <> ", RideId " <> getId rideId)
 
-  (chargeableDistance, fare, totalFare, fareBreakups) <- do
-    case booking.bookingDetails of
-      SRB.OneWayDetails oneWayDetails -> recalculateFare booking ride oneWayDetails now
-      SRB.RentalDetails rentalDetails -> calcRentalFare booking ride rentalDetails now
+    now <- getCurrentTime
 
-  let updRide =
-        ride{chargeableDistance = Just chargeableDistance,
-             fare = Just fare,
-             totalFare = Just totalFare,
-             tripEndTime = Just now,
-             tripEndPos = Just req.point
-            }
+    (chargeableDistance, fare, totalFare, fareBreakups) <- do
+      case booking.bookingDetails of
+        SRB.OneWayDetails oneWayDetails -> recalculateFare booking ride oneWayDetails now
+        SRB.RentalDetails rentalDetails -> calcRentalFare booking ride rentalDetails now
 
-  endRideTransaction booking.id updRide fareBreakups
+    let updRide =
+          ride{chargeableDistance = Just chargeableDistance,
+               fare = Just fare,
+               totalFare = Just totalFare,
+               tripEndTime = Just now,
+               tripEndPos = Just req.point
+              }
 
-  notifyCompleteToBAP booking updRide fareBreakups
+    endRideTransaction booking.id updRide fareBreakups
+
+    notifyCompleteToBAP booking updRide fareBreakups
+    Redis.unlockRedis (lockKey driverId)
 
   return APISuccess.Success
   where
+    lockKey driverId = LocUpd.makeLockKey driverId
     recalculateFare booking ride oneWayDetails now = do
       let vehicleVariant = booking.vehicleVariant
 

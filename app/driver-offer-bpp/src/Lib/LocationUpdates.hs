@@ -27,3 +27,6 @@ buildRideInterpolationHandler orgId = do
           \driverId dist -> Esq.runTransaction $ QRide.updateDistance driverId dist
 
 -- _ -> throwError $ InternalError "Impossible happened"
+
+makeLockKey :: Id Person.Person -> Text
+makeLockKey (Id driverId) = "ARDU:driverLocationUpdate:" <> driverId
