@@ -14,7 +14,12 @@ GET {{bpp-dashboard-host}}
 
 # @name driverList
 
-GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/list?verified=true&limit=10&offset=0&phone=66
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/list
+?verified=true
+&enabled=true
+&limit=10
+&offset=0
+# &phone=6666666666
 token: {{customer_service}}
 
 ###

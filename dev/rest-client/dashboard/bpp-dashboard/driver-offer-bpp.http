@@ -14,7 +14,12 @@ GET {{bpp-dashboard-host}}
 
 # @name driverList
 
-GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/list?pendingdoc=false&limit=10&offset=0&phone=66
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/list
+?verified=false
+&enabled=true
+&limit=10
+&offset=0
+# &phone=6666666666
 token: {{customer_service}}
 
 ###

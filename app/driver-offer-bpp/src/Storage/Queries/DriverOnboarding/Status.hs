@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Storage.Queries.DriverOnboarding.Status where
 
 import Beckn.External.Encryption

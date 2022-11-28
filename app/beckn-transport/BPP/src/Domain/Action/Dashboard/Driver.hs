@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Domain.Action.Dashboard.Driver
   ( listDrivers,
     driverActivity,
@@ -54,11 +56,15 @@ listDrivers ::
   Maybe Bool ->
   Maybe Text ->
   Flow Common.DriverListRes
-listDrivers merchantShortId mbLimit mbOffset _mbVerified mbEnabled mbSearchPhone = do
+listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone = do
   merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id mbLimit mbOffset mbEnabled mbSearchPhone
+  -- all drivers are considered as verified, because driverInfo.verified is not implemented for this bpp
+  driversWithInfo <-
+    if mbVerified == Just True || isNothing mbVerified
+      then QPerson.findAllDriversWithInfoAndVehicle merchant.id mbLimit mbOffset mbEnabled mbSearchPhone
+      else pure []
   items <- mapM buildDriverListItem driversWithInfo
   pure $ Common.DriverListRes (length items) items
 
@@ -74,7 +80,7 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
         vehicleNo = mbVehicle <&> (.registrationNo),
         phoneNo,
         enabled = driverInformation.enabled,
-        verified = True, -- not implemented in this bpp
+        verified = True,
         onRide = driverInformation.onRide,
         active = driverInformation.active
       }
