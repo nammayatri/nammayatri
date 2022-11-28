@@ -6,6 +6,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Types.Version
+import Beckn.Utils.Version
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
 import Storage.Tabular.Person
@@ -90,7 +92,19 @@ updateMultiple personId person = do
         PersonRole =. val (person.role),
         PersonIdentifier =. val (person.identifier),
         PersonRating =. val (person.rating),
-        PersonDeviceToken =. val (person.deviceToken)
+        PersonDeviceToken =. val (person.deviceToken),
+        PersonClientVersion =. val (versionToText <$> person.clientVersion),
+        PersonBundleVersion =. val (versionToText <$> person.bundleVersion)
+      ]
+    where_ $ tbl ^. PersonId ==. val (getId personId)
+
+updateVersions :: Id Person -> Maybe Version -> Maybe Version -> SqlDB ()
+updateVersions personId newBundleVersion newClientVersion = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonClientVersion =. val (versionToText <$> newClientVersion),
+        PersonBundleVersion =. val (versionToText <$> newBundleVersion)
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)
 

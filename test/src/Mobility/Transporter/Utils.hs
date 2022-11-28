@@ -107,7 +107,7 @@ resetDriver driver = runTransporterFlow "" $
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)
-search token searchReq_ = callBAP $ searchServices token searchReq_ <&> (.searchId)
+search token searchReq_ = callBAP $ searchServices token searchReq_ (Just "0.0.0") (Just "0.0.0") <&> (.searchId)
 
 getOnSearchTaxiQuotesByTransporterName ::
   Text ->

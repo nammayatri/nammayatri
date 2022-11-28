@@ -23,10 +23,12 @@ import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import Beckn.Types.SlidingWindowLimiter (APIRateLimitOptions)
+import Beckn.Types.Version (Version)
 import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation
+import Beckn.Utils.Version
 import Data.OpenApi (ToSchema)
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
@@ -99,18 +101,22 @@ auth ::
     CoreMetrics m
   ) =>
   AuthReq ->
+  Maybe Text ->
+  Maybe Text ->
   m AuthRes
-auth req = do
+auth req mbBundleVersionText mbClientVersionText = do
   runRequestValidation validateAuthReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
+  mbClientVersion <- forM mbClientVersionText readVersion
+  mbBundleVersion <- forM mbBundleVersionText readVersion
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumber merchant.id
-      >>= maybe (createPerson req merchant.id) return
+      >>= maybe (createPerson req mbBundleVersion mbClientVersion merchant.id) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
@@ -120,6 +126,7 @@ auth req = do
 
   if person.enabled
     then do
+      when ((mbBundleVersion > person.bundleVersion || mbClientVersion > person.clientVersion) && (isJust mbClientVersion && isJust mbBundleVersion)) (DB.runTransaction $ Person.updateVersions person.id mbBundleVersion mbClientVersion)
       DB.runTransaction (RegistrationToken.create token)
       whenNothing_ useFakeOtpM $ do
         otpSmsTemplate <- asks (.otpSmsTemplate)
@@ -132,8 +139,8 @@ auth req = do
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-buildPerson :: EncFlow m r => AuthReq -> Id DMerchant.Merchant -> m SP.Person
-buildPerson req merchantId = do
+buildPerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
+buildPerson req bundleVersion clientVersion merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   encMobNum <- encrypt req.mobileNumber
@@ -158,7 +165,9 @@ buildPerson req merchantId = do
         description = Nothing,
         merchantId = merchantId,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        bundleVersion = bundleVersion,
+        clientVersion = clientVersion
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -237,9 +246,9 @@ getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.Regist
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Id DMerchant.Merchant -> m SP.Person
-createPerson req merchantId = do
-  person <- buildPerson req merchantId
+createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
+createPerson req mbBundleVersion mbClientVersion merchantId = do
+  person <- buildPerson req mbBundleVersion mbClientVersion merchantId
   DB.runTransaction $ Person.create person
   pure person
 

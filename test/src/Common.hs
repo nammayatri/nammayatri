@@ -35,6 +35,8 @@ callAppBackend = runClient' appBackendClientEnv
 searchServices ::
   Text ->
   AppBESearch.SearchReq ->
+  Maybe Text ->
+  Maybe Text ->
   ClientM AppBESearch.SearchRes
 searchServices = client (Proxy :: Proxy AppBESearch.API)
 

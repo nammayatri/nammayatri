@@ -12,6 +12,7 @@ where
 import qualified Beckn.External.Slack.Flow as SF
 import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis (HedisFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
@@ -22,6 +23,7 @@ import Beckn.Types.Id
 import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Common
 import Beckn.Utils.SlidingWindowLimiter
+import Beckn.Utils.Version
 import qualified Core.ACL.Metro.Search as MetroACL
 import qualified Core.ACL.Search as TaxiACL
 import Data.Aeson
@@ -38,6 +40,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J
 import Tools.Metrics
@@ -48,6 +51,8 @@ type API =
   "rideSearch"
     :> TokenAuth
     :> ReqBody '[JSON] SearchReq
+    :> Servant.Header "x-bundle-version" Text
+    :> Servant.Header "x-client-version" Text
     :> Post '[JSON] SearchRes
 
 handler :: FlowServer API
@@ -90,9 +95,10 @@ fareProductConstructorModifier = \case
   "RentalSearch" -> "RENTAL"
   x -> x
 
-search :: Id Person.Person -> SearchReq -> FlowHandler SearchRes
-search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+search :: Id Person.Person -> SearchReq -> Maybe Text -> Maybe Text -> FlowHandler SearchRes
+search personId req mbBundleVersionText mbClientVersionText = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
+  updateVersions personId mbBundleVersionText mbClientVersionText
   searchId <- case req of
     OneWaySearch oneWay -> oneWaySearch personId oneWay
     RentalSearch rental -> rentalSearch personId rental
@@ -167,3 +173,12 @@ checkSearchRateLimit personId = do
 
 searchHitsCountKey :: Id Person.Person -> Text
 searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCount"
+
+updateVersions :: EsqDBFlow m r => Id Person.Person -> Maybe Text -> Maybe Text -> m ()
+updateVersions personId mbBundleVersionText mbClientVersionText = do
+  mbClientVersion <- forM mbClientVersionText readVersion
+  mbBundleVersion <- forM mbBundleVersionText readVersion
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
+  when
+    ((mbBundleVersion > person.bundleVersion || mbClientVersion > person.clientVersion) && (isJust mbClientVersion && isJust mbBundleVersion))
+    (DB.runTransaction $ Person.updateVersions person.id mbBundleVersion mbClientVersion)

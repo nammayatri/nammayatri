@@ -8,6 +8,7 @@ import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Prelude
 import Beckn.Types.Id
+import Beckn.Types.Version
 import Beckn.Utils.Common (maskText)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -74,7 +75,9 @@ data PersonE e = Person
     description :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    bundleVersion :: Maybe Version,
+    clientVersion :: Maybe Version
   }
   deriving (Generic)
 

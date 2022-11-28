@@ -12,6 +12,7 @@ import Beckn.External.FCM.Types (FCMRecipientToken)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
+import Beckn.Utils.Version
 import qualified Domain.Types.Person as Domain
 import qualified Storage.Tabular.Merchant as SMerchant
 
@@ -45,6 +46,8 @@ mkPersist
       merchantId SMerchant.MerchantTId
       createdAt UTCTime
       updatedAt UTCTime
+      bundleVersion Text Maybe
+      clientVersion Text Maybe
       Primary id
       deriving Generic
     |]
@@ -56,12 +59,16 @@ instance TEntityKey PersonT where
 
 instance TType PersonT Domain.Person where
   fromTType PersonT {..} = do
+    bundleVersion' <- forM bundleVersion readVersion
+    clientVersion' <- forM clientVersion readVersion
     return $
       Domain.Person
         { id = Id id,
           email = EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash,
           mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
           merchantId = fromKey merchantId,
+          bundleVersion = bundleVersion',
+          clientVersion = clientVersion',
           ..
         }
   toTType Domain.Person {..} =
@@ -72,5 +79,7 @@ instance TType PersonT Domain.Person where
         mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber <&> (.hash),
         merchantId = toKey merchantId,
+        bundleVersion = versionToText <$> bundleVersion,
+        clientVersion = versionToText <$> clientVersion,
         ..
       }

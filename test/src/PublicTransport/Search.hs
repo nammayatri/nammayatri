@@ -78,7 +78,7 @@ assertFailedBooking = assertBooking TB.CANCELLED FAILED
 
 testSearch :: IO (PublicTransportQuote, PublicTransportQuote)
 testSearch = do
-  searchId <- (.searchId) <$> callAppBackend (searchServices userToken defaultSearchReq)
+  searchId <- (.searchId) <$> callAppBackend (searchServices userToken defaultSearchReq (Just "0.0.0") (Just "0.0.0"))
   searchId `shouldSatisfy` (\s -> T.length s.getId == 36)
   searchRequest <- pollDesc "Expected search request in the app backend database" $ findSearchBAP searchId
   searchRequest.id `shouldBe` searchId
