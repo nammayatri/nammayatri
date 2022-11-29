@@ -26,7 +26,7 @@ handler =
     :<|> writeOpenAPIFlow
 
 writeSwaggerHTMLFlow :: FlowServer Swagger.SwaggerAPI
-writeSwaggerHTMLFlow = lift $ BS.readFile "dev/swagger/index.html"
+writeSwaggerHTMLFlow = lift $ BS.readFile "swagger/index.html"
 
 writeOpenAPIFlow :: FlowServer Swagger.OpenAPI
 writeOpenAPIFlow = pure openAPI

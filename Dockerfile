@@ -51,5 +51,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y awscli
 
+COPY --from=build /opt/build/swagger .
 COPY --from=build /opt/build/bin .
+COPY --from=build /opt/build/swagger ./swagger
 CMD ["/opt/app/app-backend-exe"]

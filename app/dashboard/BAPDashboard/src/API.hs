@@ -29,7 +29,7 @@ handler =
   mainServer
     :<|> writeSwaggerHTMLFlow
     :<|> writeOpenAPIFlow
-    :<|> serveDirectoryWebApp "dev/swagger"
+    :<|> serveDirectoryWebApp "swagger"
 
 mainServer :: FlowServer MainAPI
 mainServer =
@@ -52,7 +52,7 @@ openAPI = do
     }
 
 writeSwaggerHTMLFlow :: FlowServer SwaggerAPI
-writeSwaggerHTMLFlow = lift $ BS.readFile "dev/swagger/index.html"
+writeSwaggerHTMLFlow = lift $ BS.readFile "swagger/index.html"
 
 writeOpenAPIFlow :: FlowServer OpenAPI
 writeOpenAPIFlow = pure openAPI
