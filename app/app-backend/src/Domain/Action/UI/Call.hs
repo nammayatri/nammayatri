@@ -17,8 +17,8 @@ import Beckn.External.Exotel.Flow
 import Beckn.External.Exotel.Types
 import qualified Beckn.External.Exotel.Types as Call
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto (runTransaction)
-import Beckn.Storage.Hedis
+import Beckn.Storage.Esqueleto (runInReplica, runTransaction)
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
@@ -109,18 +109,19 @@ directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
   runTransaction $ QCallStatus.updateCallStatus callStatus.id dialCallStatus (fromMaybe 0 callDuration) recordingUrl
   return Ack
 
-getDriverMobileNumber :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
+getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ callStatus_ = do
   let callStatus = fromText callStatus_ :: ExotelCallStatus
   let callFrom = dropFirstZero callFrom_
   let callTo = dropFirstZero callTo_
   merchant <- Merchant.findByExoPhone "+91" callTo >>= fromMaybeM (MerchantWithExoPhoneNotFound callTo)
+  mobileNumberHash <- getDbHash callFrom
   person <-
-    Person.findByRoleAndMobileNumberAndMerchantId USER "+91" callFrom merchant.id
+    runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchant.id)
       >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
-  bookings <- QRB.findByRiderIdAndStatus person.id [DRB.TRIP_ASSIGNED]
+  bookings <- runInReplica $ QRB.findByRiderIdAndStatus person.id [DRB.TRIP_ASSIGNED]
   booking <- fromMaybeM (BookingForRiderNotFound $ getId person.id) (listToMaybe bookings)
-  ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
+  ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
   callId <- generateGUID
   callStatusObj <- buildCallStatus ride.id callId callSid callStatus
   runTransaction $ QCallStatus.create callStatusObj
@@ -140,9 +141,9 @@ getDriverMobileNumber callSid callFrom_ callTo_ callStatus_ = do
             createdAt = now
           }
 
-getCallStatus :: EsqDBFlow m r => Id CallStatus -> m GetCallStatusRes
+getCallStatus :: EsqDBReplicaFlow m r => Id CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
-  QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
+  runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> makeCallStatusAPIEntity
 
 getPerson :: (EsqDBFlow m r, EncFlow m r) => SRide.Ride -> m Person
 getPerson ride = do

@@ -12,12 +12,14 @@ module Domain.Action.UI.Call
   )
 where
 
-import Beckn.External.Encryption (decrypt)
+import Beckn.External.Encryption (decrypt, getDbHash)
 import Beckn.External.Exotel.Flow (initiateCall)
 import Beckn.External.Exotel.Types
 import qualified Beckn.External.Exotel.Types as Call
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto (runTransaction)
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -51,6 +53,7 @@ type GetCallStatusRes = SCS.CallStatusAPIEntity
 
 initiateCallToCustomer ::
   ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     EncFlow m r,
     CoreMetrics m,
     HasFlowEnv m r ["exotelCfg" ::: Maybe ExotelCfg, "selfUIUrl" ::: BaseUrl]
@@ -109,7 +112,7 @@ callStatusCallback req = do
   runTransaction $ QCallStatus.updateCallStatus callId req.status req.conversationDuration req.recordingUrl
   return Ack
 
-directCallStatusCallback :: (EsqDBFlow m r) => Text -> Text -> Text -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback :: EsqDBFlow m r => Text -> Text -> Text -> Maybe Int -> m CallCallbackRes
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
   let dialCallStatus = fromText dialCallStatus_ :: ExotelCallStatus
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
@@ -117,19 +120,21 @@ directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
   runTransaction $ QCallStatus.updateCallStatus callStatus.id dialCallStatus (fromMaybe 0 callDuration) recordingUrl
   return Ack
 
-getCustomerMobileNumber :: (EsqDBFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
+getCustomerMobileNumber :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
 getCustomerMobileNumber callSid callFrom_ _ callStatus_ = do
   let callStatus = fromText callStatus_ :: ExotelCallStatus
   let callFrom = dropFirstZero callFrom_
-  driver <- QPerson.findByMobileNumber "+91" callFrom >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
-  activeRide <- QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
-  activeBooking <- QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
+  mobileNumberHash <- getDbHash callFrom
+  driver <- runInReplica $ QPerson.findByMobileNumber "+91" mobileNumberHash >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
+  activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
+  activeBooking <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   riderId <-
     activeBooking.riderId
       & fromMaybeM (BookingFieldNotPresent "riderId")
   riderDetails <-
-    QRD.findById riderId
-      >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+    runInReplica $
+      QRD.findById riderId
+        >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   requestorPhone <- decrypt riderDetails.mobileNumber
   callId <- generateGUID
   callStatusObj <- buildCallStatus activeRide.id callId callSid callStatus
@@ -150,13 +155,13 @@ getCustomerMobileNumber callSid callFrom_ _ callStatus_ = do
             createdAt = now
           }
 
-getCallStatus :: (EsqDBFlow m r) => Id SCS.CallStatus -> m GetCallStatusRes
+getCallStatus :: (EsqDBReplicaFlow m r) => Id SCS.CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
-  QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity
+  runInReplica $ QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity
 
-getDriverPhone :: (EsqDBFlow m r, EncFlow m r) => SRide.Ride -> m Text
+getDriverPhone :: (EsqDBReplicaFlow m r, EncFlow m r) => SRide.Ride -> m Text
 getDriverPhone ride = do
   let driverId = ride.driverId
-  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driver <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   phonenum <- SP.getPersonNumber driver
   phonenum & fromMaybeM (InternalError "Driver has no phone number.")

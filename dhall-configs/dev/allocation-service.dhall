@@ -13,7 +13,7 @@ in  { appCfg
     , metricsPort = +9996
     , reallocationsLimit = +5
     , defaultSortMode = SortMode.ETA
-    , driverNotificationExpiry = +25
+    , driverNotificationExpiry = +2500
     , rideAllocationExpiry = +180
     , driverBatchSize = +5
     , requestsNumPerIteration = +50
@@ -22,6 +22,7 @@ in  { appCfg
     , healthcheckPort = +8114
     , httpClientOptions = appCfg.httpClientOptions
     , esqDBCfg = appCfg.esqDBCfg
+    , esqDBReplicaCfg = appCfg.esqDBReplicaCfg
     , hedisCfg = appCfg.hedisCfg
     , loggerConfig =
             appCfg.loggerConfig

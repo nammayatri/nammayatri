@@ -11,6 +11,15 @@ let esqDBCfg =
       , connectSchemaName = "atlas_app"
       }
 
+let esqDBReplicaCfg =
+      { connectHost = esqDBCfg.connectHost
+      , connectPort = 5435
+      , connectUser = esqDBCfg.connectUser
+      , connectPassword = esqDBCfg.connectPassword
+      , connectDatabase = esqDBCfg.connectDatabase
+      , connectSchemaName = esqDBCfg.connectSchemaName
+      }
+
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379
@@ -77,6 +86,7 @@ let cacheConfig = { configsExpTime = +86400 }
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 in  { esqDBCfg
+    , esqDBReplicaCfg
     , hedisCfg = hcfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig

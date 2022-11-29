@@ -13,6 +13,15 @@ let esqDBCfg =
       , connectSchemaName = "atlas_transporter"
       }
 
+let esqDBReplicaCfg =
+      { connectHost = esqDBCfg.connectHost
+      , connectPort = 5435
+      , connectUser = esqDBCfg.connectUser
+      , connectPassword = esqDBCfg.connectPassword
+      , connectDatabase = esqDBCfg.connectDatabase
+      , connectSchemaName = esqDBCfg.connectSchemaName
+      }
+
 let rcfg =
       { connectHost = "cache.primary.beckn.juspay.net"
       , connectPort = 6379
@@ -36,12 +45,12 @@ let smsConfig =
       }
 
 let InfoBIPConfig =
-  { username = common.InfoBIPConfig.username
-  , password = common.InfoBIPConfig.password
-  , token = common.InfoBIPConfig.token
-  , url = "https://gye1yw.api.infobip.com"
-  , sender = "JUSPAY"
-  }
+      { username = common.InfoBIPConfig.username
+      , password = common.InfoBIPConfig.password
+      , token = common.InfoBIPConfig.token
+      , url = "https://gye1yw.api.infobip.com"
+      , sender = "JUSPAY"
+      }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
@@ -55,6 +64,7 @@ let kafkaProducerCfg = { brokers = [] : List Text }
 let cacheConfig = { configsExpTime = +86400 }
 
 in  { esqDBCfg
+    , esqDBReplicaCfg
     , hedisCfg = rcfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig

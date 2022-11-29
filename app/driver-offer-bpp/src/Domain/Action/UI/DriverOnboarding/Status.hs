@@ -10,6 +10,7 @@ where
 import Beckn.External.Encryption
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
+import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id (Id)
@@ -48,7 +49,7 @@ data StatusRes = StatusRes
 
 statusHandler :: Id SP.Person -> Flow StatusRes
 statusHandler personId = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
 
   (dlStatus, mDL) <- getDLAndStatus personId

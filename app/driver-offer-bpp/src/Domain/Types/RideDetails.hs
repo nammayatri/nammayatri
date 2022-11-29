@@ -4,7 +4,6 @@
 module Domain.Types.RideDetails where
 
 import Beckn.External.Encryption
-import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Domain.Types.Ride as SR
 import qualified Domain.Types.Vehicle as SV
@@ -41,7 +40,7 @@ instance EncryptedItem' RideDetails where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted a = fst a
 
-getDriverNumber :: (EsqDBFlow m r, EncFlow m r) => RideDetails -> m (Maybe Text)
+getDriverNumber :: EncFlow m r => RideDetails -> m (Maybe Text)
 getDriverNumber rideDetails = do
   decMobileNumber <- mapM decrypt rideDetails.driverNumber
   return $ rideDetails.driverCountryCode <> decMobileNumber

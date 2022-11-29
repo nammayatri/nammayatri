@@ -13,7 +13,7 @@ module Domain.Action.Dashboard.Driver
   )
 where
 
-import Beckn.External.Encryption (decrypt, encrypt)
+import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
 import Beckn.External.Maps.Types (LatLong (..))
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
@@ -385,8 +385,8 @@ updatePhoneNumber merchantShortId reqDriverId req = do
   -- merchant access checking
   merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
-
-  mbLinkedPerson <- QPerson.findByMobileNumber req.newCountryCode req.newPhoneNumber
+  phoneNumberHash <- getDbHash req.newPhoneNumber
+  mbLinkedPerson <- QPerson.findByMobileNumber req.newCountryCode phoneNumberHash
   whenJust mbLinkedPerson $ \linkedPerson -> do
     if linkedPerson.id == driver.id
       then throwError $ InvalidRequest "Person already have the same mobile number"

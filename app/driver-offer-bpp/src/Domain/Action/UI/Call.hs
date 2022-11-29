@@ -8,10 +8,10 @@ module Domain.Action.UI.Call
   )
 where
 
-import Beckn.External.Encryption (decrypt)
+import Beckn.External.Encryption (decrypt, getDbHash)
 import Beckn.External.Exotel.Types
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto (runTransaction)
+import Beckn.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica, runTransaction)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -39,19 +39,21 @@ directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
   runTransaction $ QCallStatus.updateCallStatus callStatus.id dialCallStatus (fromMaybe 0 callDuration) recordingUrl
   return Ack
 
-getCustomerMobileNumber :: (EsqDBFlow m r, EncFlow m r) => Text -> Text -> Text -> m MobileNumberResp
+getCustomerMobileNumber :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> m MobileNumberResp
 getCustomerMobileNumber callSid callFrom_ callStatus_ = do
   let callStatus = fromText callStatus_ :: ExotelCallStatus
   let callFrom = dropFirstZero callFrom_
-  driver <- QPerson.findByMobileNumber "+91" callFrom >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
-  activeRide <- QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
-  activeBooking <- QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
+  mobileNumberHash <- getDbHash callFrom
+  driver <- runInReplica $ QPerson.findByMobileNumber "+91" mobileNumberHash >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
+  activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
+  activeBooking <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   riderId <-
     activeBooking.riderId
       & fromMaybeM (BookingFieldNotPresent "riderId")
   riderDetails <-
-    QRD.findById riderId
-      >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
+    runInReplica $
+      QRD.findById riderId
+        >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   requestorPhone <- decrypt riderDetails.mobileNumber
   callId <- generateGUID
   callStatusObj <- buildCallStatus activeRide.id callId callSid callStatus

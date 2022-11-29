@@ -4,7 +4,7 @@
 module Domain.Action.UI.DriverOnboarding.Image where
 
 import AWS.S3 as S3
-import Beckn.External.Encryption (decrypt)
+import Beckn.External.Encryption (decrypt, getDbHash)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (isNothing)
 import Beckn.Types.Common
@@ -172,17 +172,17 @@ mkImage personId_ merchantId s3Path imageType_ isValid = do
 -- FIXME: Temporary API will move to dashboard later
 getDocs :: Person.Person -> Text -> Flow GetDocsResponse
 getDocs _admin mobileNumber = do
-  driver <- Person.findByMobileNumber "+91" mobileNumber >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+  mobileNumberHash <- getDbHash mobileNumber
+  driver <- runInReplica $ Person.findByMobileNumber "+91" mobileNumberHash >>= fromMaybeM (PersonDoesNotExist mobileNumber)
   merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
-
-  dl <- DLQuery.findByDriverId driver.id
+  dl <- runInReplica $ DLQuery.findByDriverId driver.id
   let dlImageId = (.documentImageId1) <$> dl
 
   association <- DRAQuery.getActiveAssociationByDriver driver.id
   rc <-
     maybe
       (pure Nothing)
-      (\assoc_ -> RCQuery.findById assoc_.rcId)
+      (\assoc_ -> runInReplica $ RCQuery.findById assoc_.rcId)
       association
   let rcImageId = (.documentImageId) <$> rc
 

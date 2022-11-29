@@ -8,7 +8,8 @@ module Domain.Action.UI.SavedReqLocation
 where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Transactionable (runTransaction)
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Beckn.Storage.Esqueleto.Transactionable (runInReplica, runTransaction)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Error
 import Beckn.Types.Id (Id)
@@ -47,9 +48,9 @@ createSavedReqLocation riderId sreq = do
     QSavedReqLocation.create location
   return APISuccess.Success
 
-getSavedReqLocations :: EsqDBFlow m r => Id Person.Person -> m SavedReqLocationsListRes
+getSavedReqLocations :: EsqDBReplicaFlow m r => Id Person.Person -> m SavedReqLocationsListRes
 getSavedReqLocations riderId = do
-  savedLocations <- QSavedReqLocation.findAllByRiderId riderId
+  savedLocations <- runInReplica $ QSavedReqLocation.findAllByRiderId riderId
   return $ SavedReqLocationsListRes $ SavedReqLocation.makeSavedReqLocationAPIEntity <$> savedLocations
 
 deleteSavedReqLocation :: EsqDBFlow m r => Id Person.Person -> Text -> m APISuccess.APISuccess

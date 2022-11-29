@@ -15,7 +15,7 @@ findById paymentTransactionId =
     where_ $ paymentTransaction ^. PaymentTransactionId ==. val (getId paymentTransactionId)
     return paymentTransaction
 
-findByBookingId :: EsqDBFlow m r => Id Booking -> m (Maybe PaymentTransaction)
+findByBookingId :: Transactionable m => Id Booking -> m (Maybe PaymentTransaction)
 findByBookingId bookingId =
   findOne $ do
     parkingSearch <- from $ table @PaymentTransactionT

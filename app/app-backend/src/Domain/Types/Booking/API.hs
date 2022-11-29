@@ -1,5 +1,7 @@
 module Domain.Types.Booking.API where
 
+import Beckn.Storage.Esqueleto (runInReplica)
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
@@ -9,7 +11,7 @@ import Domain.Types.Booking.Type
 import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.RentalSlab as DRentalSlab
-import Domain.Types.Ride (RideAPIEntity)
+import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.FareBreakup as QFareBreakup
@@ -59,35 +61,28 @@ newtype OneWayBookingAPIDetails = OneWayBookingAPIDetails
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-buildBookingAPIEntity :: EsqDBFlow m r => Booking -> m BookingAPIEntity
-buildBookingAPIEntity booking = do
-  mbRide <- QRide.findActiveByRBId booking.id
-
-  rideAPIEntityList <-
-    QRide.findAllByRBId booking.id
-      <&> fmap DRide.makeRideAPIEntity
-  fareBreakups <- QFareBreakup.findAllByBookingId booking.id
+makeBookingAPIEntity :: Booking -> Maybe Ride -> [Ride] -> [FareBreakup] -> BookingAPIEntity
+makeBookingAPIEntity booking activeRide allRides fareBreakups = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
-  return $
-    BookingAPIEntity
-      { id = booking.id,
-        status = booking.status,
-        agencyName = booking.providerName,
-        agencyNumber = booking.providerMobileNumber,
-        estimatedFare = booking.estimatedFare,
-        discount = booking.discount,
-        estimatedTotalFare = booking.estimatedTotalFare,
-        fromLocation = SLoc.makeBookingLocationAPIEntity booking.fromLocation,
-        rideList = rideAPIEntityList,
-        tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
-        fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
-        bookingDetails,
-        rideStartTime = mbRide >>= (.rideStartTime),
-        rideEndTime = mbRide >>= (.rideEndTime),
-        duration = getRideDuration mbRide,
-        createdAt = booking.createdAt,
-        updatedAt = booking.updatedAt
-      }
+  BookingAPIEntity
+    { id = booking.id,
+      status = booking.status,
+      agencyName = booking.providerName,
+      agencyNumber = booking.providerMobileNumber,
+      estimatedFare = booking.estimatedFare,
+      discount = booking.discount,
+      estimatedTotalFare = booking.estimatedTotalFare,
+      fromLocation = SLoc.makeBookingLocationAPIEntity booking.fromLocation,
+      rideList = allRides <&> makeRideAPIEntity,
+      tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
+      fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
+      bookingDetails,
+      rideStartTime = activeRide >>= (.rideStartTime),
+      rideEndTime = activeRide >>= (.rideEndTime),
+      duration = getRideDuration activeRide,
+      createdAt = booking.createdAt,
+      updatedAt = booking.updatedAt
+    }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
     getRideDuration mbRide = do
@@ -106,3 +101,10 @@ buildBookingAPIEntity booking = do
           OneWayBookingAPIDetails
             { toLocation = SLoc.makeBookingLocationAPIEntity toLocation
             }
+
+buildBookingAPIEntity :: EsqDBReplicaFlow m r => Booking -> m BookingAPIEntity
+buildBookingAPIEntity booking = do
+  mbRide <- runInReplica $ QRide.findActiveByRBId booking.id
+  rideList <- runInReplica $ QRide.findAllByRBId booking.id
+  fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
+  return $ makeBookingAPIEntity booking mbRide rideList fareBreakups

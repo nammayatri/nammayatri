@@ -8,6 +8,7 @@ module Domain.Action.UI.Transporter
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
 import Beckn.Utils.Common
@@ -60,10 +61,10 @@ updateTransporter admin merchantId req = do
   logTagInfo ("merchantAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updMerchant)
   return $ DM.makeMerchantAPIEntity updMerchant
 
-getTransporter :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> m TransporterRec
+getTransporter :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SP.Person -> m TransporterRec
 getTransporter personId = do
   person <-
-    QP.findById personId
+    Esq.runInReplica (QP.findById personId)
       >>= fromMaybeM (PersonNotFound personId.getId)
   case person.merchantId of
     Just merchantId -> TransporterRec . DM.makeMerchantAPIEntity <$> (CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId))

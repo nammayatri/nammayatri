@@ -10,6 +10,7 @@ where
 import Beckn.External.Encryption (decrypt)
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Maybe
@@ -44,7 +45,7 @@ data UpdateTranspAdminProfileReq = UpdateTranspAdminProfileReq
 
 type UpdateTranspAdminProfileRes = TranspAdminProfileRes
 
-getProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> m TranspAdminProfileRes
+getProfile :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> m TranspAdminProfileRes
 getProfile admin = do
   let Just merchantId = admin.merchantId
   org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)

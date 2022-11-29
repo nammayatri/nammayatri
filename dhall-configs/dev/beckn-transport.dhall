@@ -13,6 +13,15 @@ let esqDBCfg =
       , connectSchemaName = "atlas_transporter"
       }
 
+let esqDBReplicaCfg =
+      { connectHost = esqDBCfg.connectHost
+      , connectPort = 5435
+      , connectUser = esqDBCfg.connectUser
+      , connectPassword = esqDBCfg.connectPassword
+      , connectDatabase = esqDBCfg.connectDatabase
+      , connectSchemaName = esqDBCfg.connectSchemaName
+      }
+
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379
@@ -41,17 +50,15 @@ let geofencingConfig =
       }
 
 let InfoBIPConfig =
-  { username = common.InfoBIPConfig.username
-  , password = common.InfoBIPConfig.password
-  , token = common.InfoBIPConfig.token
-  , url = "https://gye1yw.api.infobip.com"
-  , webhookurl = "http://localhost:8014/v2/update/status"
-  , sender = "JUSPAY"
-  }
-
-let WebengageConfig = 
-      {     url = "https://st.in.webengage.com"
+      { username = common.InfoBIPConfig.username
+      , password = common.InfoBIPConfig.password
+      , token = common.InfoBIPConfig.token
+      , url = "https://gye1yw.api.infobip.com"
+      , webhookurl = "http://localhost:8014/v2/update/status"
+      , sender = "JUSPAY"
       }
+
+let WebengageConfig = { url = "https://st.in.webengage.com" }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
@@ -65,6 +72,7 @@ let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 let cacheConfig = { configsExpTime = +86400 }
 
 in  { esqDBCfg
+    , esqDBReplicaCfg
     , hedisCfg = rcfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig

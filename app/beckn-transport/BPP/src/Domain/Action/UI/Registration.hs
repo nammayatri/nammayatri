@@ -100,7 +100,8 @@ auth req mbBundleVersion mbClientVersion = do
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
-  person <- QP.findByMobileNumber countryCode mobileNumber >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+  mobileNumberHash <- getDbHash mobileNumber
+  person <- QP.findByMobileNumber countryCode mobileNumberHash >>= fromMaybeM (PersonDoesNotExist mobileNumber)
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg

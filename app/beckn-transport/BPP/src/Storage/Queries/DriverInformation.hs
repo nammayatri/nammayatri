@@ -132,16 +132,15 @@ deleteById = Esq.deleteByKey @DriverInformationT . cast
 findAllWithLimitOffsetByMerchantId ::
   ( MonadThrow m,
     Log m,
-    Transactionable m,
-    EncFlow m r
+    Transactionable m
   ) =>
   Maybe Text ->
+  Maybe DbHash ->
   Maybe Integer ->
   Maybe Integer ->
   Id Merchant ->
   m [(Person, DriverInformation)]
-findAllWithLimitOffsetByMerchantId mbSearchString mbLimit mbOffset merchantId = do
-  mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
+findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId = do
   findAll $ do
     (person :& driverInformation) <-
       from $

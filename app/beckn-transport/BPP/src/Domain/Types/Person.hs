@@ -121,7 +121,7 @@ makePersonAPIEntity Person {..} =
       ..
     }
 
-getPersonNumber :: (EsqDBFlow m r, EncFlow m r) => Person -> m (Maybe Text)
+getPersonNumber :: EncFlow m r => Person -> m (Maybe Text)
 getPersonNumber person = do
   decMobileNumber <- mapM decrypt person.mobileNumber
   return $ person.mobileCountryCode <> decMobileNumber

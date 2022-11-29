@@ -11,9 +11,9 @@ module Domain.Action.UI.CustomerSupport
   )
 where
 
-import Beckn.External.Encryption (decrypt)
+import Beckn.External.Encryption (decrypt, getDbHash)
 import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as DB
+import Beckn.Storage.Esqueleto
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -78,7 +78,7 @@ generateToken SP.Person {..} = do
   regToken <- createSupportRegToken $ getId personId
   -- Clean Old Login Session
   -- FIXME We should also cleanup old token from Redis
-  DB.runTransaction $ do
+  runTransaction $ do
     RegistrationToken.deleteByPersonId personId
     RegistrationToken.create regToken
   pure $ regToken.token
@@ -88,7 +88,7 @@ logout personId = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
   -- FIXME We should also cleanup old token from Redis
-  DB.runTransaction (RegistrationToken.deleteByPersonId person.id)
+  runTransaction (RegistrationToken.deleteByPersonId person.id)
   pure $ LogoutRes "Logged out successfully"
 
 createSupportRegToken :: MonadFlow m => Text -> m SR.RegistrationToken
@@ -114,9 +114,9 @@ createSupportRegToken entityId = do
         info = Nothing
       }
 
-listOrder :: (EsqDBFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
+listOrder :: (EsqDBReplicaFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
 listOrder personId mRequestId mMobile mlimit moffset = do
-  supportP <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  supportP <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (supportP.role == SP.CUSTOMER_SUPPORT) $
     throwError AccessDenied
   OrderInfo {person, bookings} <- case (mRequestId, mMobile) of
@@ -126,24 +126,28 @@ listOrder personId mRequestId mMobile mlimit moffset = do
   traverse (buildBookingToOrder person) bookings
   where
     getByMobileNumber number merchantId = do
-      let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
+      let limit_ = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
+      mobileNumberHash <- getDbHash number
       person <-
-        Person.findByRoleAndMobileNumberAndMerchantIdWithoutCC SP.USER number merchantId
-          >>= fromMaybeM (PersonDoesNotExist number)
+        runInReplica $
+          Person.findByRoleAndMobileNumberAndMerchantIdWithoutCC SP.USER mobileNumberHash merchantId
+            >>= fromMaybeM (PersonDoesNotExist number)
       bookings <-
-        QRB.findAllByPersonIdLimitOffset (person.id) (Just limit) moffset
+        runInReplica $ QRB.findAllByPersonIdLimitOffset (person.id) (Just limit_) moffset
       return $ OrderInfo person bookings
     getByRequestId bookingId merchantId = do
       (booking :: DRB.Booking) <-
-        QRB.findByIdAndMerchantId (Id bookingId) merchantId
-          >>= fromMaybeM (BookingDoesNotExist bookingId)
+        runInReplica $
+          QRB.findByIdAndMerchantId (Id bookingId) merchantId
+            >>= fromMaybeM (BookingDoesNotExist bookingId)
       let requestorId = booking.riderId
       person <-
-        Person.findById requestorId
-          >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
+        runInReplica $
+          Person.findById requestorId
+            >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
       return $ OrderInfo person [booking]
 
-buildBookingToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m OrderResp
+buildBookingToOrder :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m OrderResp
 buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing

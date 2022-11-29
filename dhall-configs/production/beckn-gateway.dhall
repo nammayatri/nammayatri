@@ -12,7 +12,7 @@ let rcfg =
       , connectTimeout = Some +100
       }
 
-in  { redisCfg = rcfg
+in  { hedisCfg = rcfg
     , port = +8015
     , metricsPort = +9999
     , selfId = "api.beckn.juspay.in/gateway/v1"

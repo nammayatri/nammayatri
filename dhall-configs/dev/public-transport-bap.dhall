@@ -11,6 +11,15 @@ let esqDBCfg =
       , connectSchemaName = "atlas_public_transport"
       }
 
+let esqDBReplicaCfg =
+      { connectHost = esqDBCfg.connectHost
+      , connectPort = 5435
+      , connectUser = esqDBCfg.connectUser
+      , connectPassword = esqDBCfg.connectPassword
+      , connectDatabase = esqDBCfg.connectDatabase
+      , connectSchemaName = esqDBCfg.connectSchemaName
+      }
+
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379
@@ -24,6 +33,7 @@ let rcfg =
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
 in  { esqDBCfg
+    , esqDBReplicaCfg
     , migrationPath = Some
         (   env:PUBLIC_TRANSPORT_BAP_MIGRATION_PATH as Text
           ? "dev/migrations/public-transport-bap"

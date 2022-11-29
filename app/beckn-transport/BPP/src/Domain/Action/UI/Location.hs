@@ -3,6 +3,8 @@ module Domain.Action.UI.Location (Status (..), GetLocationRes (..), getLocation)
 import qualified Beckn.External.Maps.HasCoordinates as GoogleMaps
 import Beckn.External.Maps.Types
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto (runInReplica)
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -24,23 +26,19 @@ data GetLocationRes = GetLocationRes
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-getLocation :: (EsqDBFlow m r) => Id SRide.Ride -> m GetLocationRes
+getLocation :: (EsqDBReplicaFlow m r) => Id SRide.Ride -> m GetLocationRes
 getLocation rideId = do
   ride <-
-    QRide.findById rideId
-      >>= fromMaybeM (RideDoesNotExist rideId.getId)
+    runInReplica $
+      QRide.findById rideId
+        >>= fromMaybeM (RideDoesNotExist rideId.getId)
   status <-
     case ride.status of
       SRide.NEW -> pure PreRide
       SRide.INPROGRESS -> pure ActualRide
       _ -> throwError $ RideInvalidStatus "Cannot track this ride"
-  driver <-
-    ride.driverId
-      & Person.findById
-      >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  currLocation <-
-    DrLoc.findById driver.id
-      >>= fromMaybeM LocationNotFound
+  driver <- runInReplica $ Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  currLocation <- runInReplica $ DrLoc.findById driver.id >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
   let totalDistance = roundToIntegral ride.traveledDistance.getHighPrecMeters
       currPoint = GoogleMaps.getCoordinates currLocation

@@ -49,31 +49,29 @@ findByEmail email_ = do
     return person
 
 findByRoleAndMobileNumberAndMerchantId ::
-  (Transactionable m, EncFlow m r) =>
+  Transactionable m =>
   Role ->
   Text ->
-  Text ->
+  DbHash ->
   Id Merchant ->
   m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ merchantId = do
-  mobileNumberDbHash <- getDbHash mobileNumber_
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash merchantId = do
   findOne $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonRole ==. val role_
         &&. person ^. PersonMobileCountryCode ==. val (Just countryCode)
-        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
-findByRoleAndMobileNumberAndMerchantIdWithoutCC :: (Transactionable m, EncFlow m r) => Role -> Text -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumber_ merchantId = do
-  mobileNumberDbHash <- getDbHash mobileNumber_
+findByRoleAndMobileNumberAndMerchantIdWithoutCC :: Transactionable m => Role -> DbHash -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash merchantId = do
   findOne $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonRole ==. val role_
-        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 

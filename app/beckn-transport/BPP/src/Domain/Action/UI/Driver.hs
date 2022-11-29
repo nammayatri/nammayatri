@@ -19,13 +19,15 @@ module Domain.Action.UI.Driver
   )
 where
 
-import Beckn.External.Encryption (decrypt, encrypt)
+import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude
 import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -188,11 +190,12 @@ createDriver admin req = do
   let Just merchantId = admin.merchantId
   runRequestValidation validateOnboardDriverReq req
   let personEntity = req.person
+  mobileNumberHash <- getDbHash personEntity.mobileNumber
   duplicateCheck
     (QVehicle.findByRegistrationNo req.vehicle.registrationNo)
     "Vehicle with this registration number already exists."
   duplicateCheck
-    (QPerson.findByMobileNumber personEntity.mobileCountryCode personEntity.mobileNumber)
+    (QPerson.findByMobileNumber personEntity.mobileCountryCode mobileNumberHash)
     "Person with this mobile number already exists"
   person <- buildDriver req.person merchantId
   vehicle <- buildVehicle req.vehicle person.id merchantId
@@ -240,16 +243,17 @@ createDriverDetails personId adminId = do
 getInformation ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r
   ) =>
   Id SP.Person ->
   m DriverInformationRes
 getInformation personId = do
-  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  _ <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverInfo <- runInReplica $ QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
   organization <-
@@ -287,7 +291,7 @@ setRental personId isRental = do
   pure APISuccess.Success
 
 listDriver ::
-  ( EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
     EncFlow m r
   ) =>
   SP.Person ->
@@ -297,13 +301,14 @@ listDriver ::
   m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
   let Just merchantId = admin.merchantId
-  personList <- QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbLimit mbOffset merchantId
+  mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
+  personList <- runInReplica $ QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId
   respPersonList <- traverse buildDriverEntityRes personList
   return $ ListDriverRes respPersonList
 
-buildDriverEntityRes :: (EsqDBFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
+buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
-  vehicle <- QVehicle.findById person.id >>= fromMaybeM (VehicleNotFound person.id.getId)
+  vehicle <- runInReplica $ QVehicle.findById person.id >>= fromMaybeM (VehicleNotFound person.id.getId)
   decMobNum <- mapM decrypt person.mobileNumber
   return $
     DriverEntityRes
@@ -379,6 +384,7 @@ deleteDriver admin driverId = do
 updateDriver ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r
   ) =>

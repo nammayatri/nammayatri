@@ -106,7 +106,7 @@ findOneByDriverId driverId = Esq.buildDType $ do
     pure (ride, mbRating)
   pure $ extractSolidType <$> mbFullRideT
 
-findAllRideAPIEntityDataByRBId :: (Transactionable m, EncFlow m r) => Id Booking -> m [(Ride, RideDetails)]
+findAllRideAPIEntityDataByRBId :: Transactionable m => Id Booking -> m [(Ride, RideDetails)]
 findAllRideAPIEntityDataByRBId rbId = Esq.buildDType $ do
   res <- Esq.findAll' $ do
     ((ride :& mbRating) :& rideDetails) <-

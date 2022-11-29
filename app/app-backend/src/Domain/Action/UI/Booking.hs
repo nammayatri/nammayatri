@@ -5,6 +5,8 @@ module Domain.Action.UI.Booking
   )
 where
 
+import Beckn.Storage.Esqueleto (runInReplica)
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.OpenApi (ToSchema (..))
@@ -19,13 +21,13 @@ newtype BookingListRes = BookingListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-bookingStatus :: EsqDBFlow m r => Id SRB.Booking -> Id Person.Person -> m SRB.BookingAPIEntity
+bookingStatus :: EsqDBReplicaFlow m r => Id SRB.Booking -> Id Person.Person -> m SRB.BookingAPIEntity
 bookingStatus bookingId personId = do
-  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   unless (booking.riderId == personId) $ throwError AccessDenied
   SRB.buildBookingAPIEntity booking
 
-bookingList :: EsqDBFlow m r => Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
+bookingList :: EsqDBReplicaFlow m r => Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
 bookingList personId mbLimit mbOffset mbOnlyActive mbBookingStatus = do
-  rbList <- QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  rbList <- runInReplica $ QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus
   BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList

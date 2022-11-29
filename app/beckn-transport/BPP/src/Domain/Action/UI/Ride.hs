@@ -6,6 +6,8 @@ module Domain.Action.UI.Ride
 where
 
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
@@ -51,16 +53,16 @@ newtype DriverRideListRes = DriverRideListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 listDriverRides ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r) =>
   Id DP.Person ->
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
   m DriverRideListRes
 listDriverRides driverId mbLimit mbOffset mbOnlyActive = do
-  rides <- QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive
+  rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive
   driverRideLis <- forM rides $ \(ride, booking) -> do
-    rideDetail <- QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
+    rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     driverNumber <- RD.getDriverNumber rideDetail
     pure $ mkDriverRideRes rideDetail driverNumber (ride, booking)
   pure . DriverRideListRes $ driverRideLis

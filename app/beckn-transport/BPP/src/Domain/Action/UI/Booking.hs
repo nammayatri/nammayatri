@@ -14,7 +14,10 @@ module Domain.Action.UI.Booking
   )
 where
 
+import Beckn.External.Encryption
+import Beckn.Prelude (roundToIntegral)
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -22,19 +25,27 @@ import Beckn.Utils.Common
 import Data.OpenApi (ToSchema (..))
 import Domain.Types.AllocationEvent
 import qualified Domain.Types.AllocationEvent as AllocationEvent
+import Domain.Types.Booking
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.Booking.BookingLocation as DBLoc
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Ride as DRide
+import Domain.Types.RideDetails (RideDetails, getDriverNumber)
 import Domain.Types.RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
+import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as QDrLoc
+import qualified Storage.Queries.FarePolicy.FareBreakup as QFareBreakup
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideRequest as RideRequest
 import Tools.Error
 import qualified Tools.Maps as MapSearch
@@ -70,13 +81,13 @@ newtype SetDriverAcceptanceReq = SetDriverAcceptanceReq
 
 type SetDriverAcceptanceRes = APISuccess
 
-bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
+bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
 bookingStatus bookingId = do
-  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  SRB.buildBookingAPIEntity booking
+  booking <- Esq.runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  buildBookingAPIEntity booking
 
 bookingList ::
-  (CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
   SP.Person ->
   Maybe Integer ->
   Maybe Integer ->
@@ -85,11 +96,11 @@ bookingList ::
   m BookingListRes
 bookingList person mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   let Just merchantId = person.merchantId
-  rbList <- QRB.findAllByMerchant merchantId mbLimit mbOffset mbOnlyActive mbBookingStatus
-  BookingListRes <$> traverse SRB.buildBookingAPIEntity rbList
+  rbList <- Esq.runInReplica $ QRB.findAllByMerchant merchantId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  BookingListRes <$> traverse buildBookingAPIEntity rbList
 
 bookingCancel ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
   Id SRB.Booking ->
   SP.Person ->
   m APISuccess
@@ -117,18 +128,19 @@ bookingCancel bookingId admin = do
           }
 
 getRideInfo ::
-  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes
+  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes
 getRideInfo bookingId personId = do
-  mbNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId bookingId
+  mbNotification <- Esq.runInReplica $ QNotificationStatus.findActiveNotificationByDriverId driverId bookingId
   case mbNotification of
     Nothing -> return $ GetRideInfoRes Nothing
     Just notification -> do
       let notificationExpiryTime = notification.expiresAt
-      booking <- QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
-      driver <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      booking <- Esq.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+      driver <- Esq.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       driverLocation <-
-        QDrLoc.findById driver.id
-          >>= fromMaybeM LocationNotFound
+        Esq.runInReplica $
+          QDrLoc.findById driver.id
+            >>= fromMaybeM LocationNotFound
       let fromLocation = booking.fromLocation
       let toLocation = case booking.bookingDetails of
             SRB.OneWayDetails details -> Just details.toLocation
@@ -162,7 +174,7 @@ responseToEventType ACCEPT = AllocationEvent.AcceptedByDriver
 responseToEventType REJECT = AllocationEvent.RejectedByDriver
 
 setDriverAcceptance ::
-  (CacheFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id SP.Person -> SetDriverAcceptanceReq -> m SetDriverAcceptanceRes
+  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> Id SP.Person -> SetDriverAcceptanceReq -> m SetDriverAcceptanceRes
 setDriverAcceptance bookingId personId req = do
   currentTime <- getCurrentTime
   logTagInfo "setDriverAcceptance" logMessage
@@ -200,3 +212,50 @@ setDriverAcceptance bookingId personId req = do
         <> ":response"
         <> " "
         <> show response
+
+buildRideAPIEntity :: EncFlow m r => (DRide.Ride, RideDetails) -> m DRide.RideAPIEntity
+buildRideAPIEntity (ride, rideDetails) = do
+  driverNumber <- getDriverNumber rideDetails
+  return $
+    DRide.RideAPIEntity
+      { id = ride.id,
+        shortRideId = ride.shortId,
+        status = ride.status,
+        driverName = rideDetails.driverName,
+        driverNumber = driverNumber,
+        vehicleNumber = rideDetails.vehicleNumber,
+        vehicleColor = fromMaybe "N/A" rideDetails.vehicleColor,
+        vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
+        vehicleModel = fromMaybe "N/A" rideDetails.vehicleModel,
+        computedFare = ride.fare,
+        computedTotalFare = ride.totalFare,
+        actualRideDistance = roundToIntegral ride.traveledDistance,
+        rideRating = ride.rideRating <&> (.ratingValue),
+        createdAt = ride.createdAt,
+        updatedAt = ride.updatedAt,
+        chargeableDistance = ride.chargeableDistance
+      }
+
+buildBookingAPIDetails :: (CacheFlow m r, EsqDBFlow m r) => BookingDetails -> m (BookingDetailsAPIEntity, [Text])
+buildBookingAPIDetails = \case
+  OneWayDetails OneWayBookingDetails {..} -> do
+    let details =
+          OneWayDetailsAPIEntity
+            OneWayBookingDetailsAPIEntity
+              { toLocation = makeBookingLocationAPIEntity toLocation
+              }
+    pure (details, [])
+  RentalDetails (RentalBookingDetails rentalFarePolicyId) -> do
+    DRentalFP.RentalFarePolicy {..} <-
+      QRentalFP.findById rentalFarePolicyId
+        >>= fromMaybeM NoRentalFarePolicy
+    let details = RentalDetailsAPIEntity RentalBookingDetailsAPIEntity {..}
+    pure (details, descriptions)
+
+buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> m BookingAPIEntity
+buildBookingAPIEntity booking = do
+  let rbStatus = booking.status
+  rideList <- mapM buildRideAPIEntity =<< Esq.runInReplica (QRide.findAllRideAPIEntityDataByRBId booking.id)
+  fareBreakups <- Esq.runInReplica $ QFareBreakup.findAllByBookingId booking.id
+  (bookingDetails, tripTerms) <- buildBookingAPIDetails booking.bookingDetails
+  return $ makeBookingAPIEntity booking rbStatus rideList fareBreakups bookingDetails tripTerms

@@ -9,7 +9,8 @@ where
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto (runTransaction)
+import Beckn.Storage.Esqueleto (runInReplica, runTransaction)
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -28,9 +29,9 @@ data UpdateProfileReq = UpdateProfileReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonDetails :: (EsqDBFlow m r, EncFlow m r) => Id Person.Person -> m ProfileRes
+getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> m ProfileRes
 getPersonDetails personId = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
 

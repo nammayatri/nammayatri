@@ -221,17 +221,16 @@ findAdminsByMerchantId merchantId =
     return person
 
 findByMobileNumber ::
-  (Transactionable m, EncFlow m r) =>
+  (Transactionable m) =>
   Text ->
-  Text ->
+  DbHash ->
   m (Maybe Person)
-findByMobileNumber countryCode mobileNumber_ = do
-  mobileNumberDbHash <- getDbHash mobileNumber_
+findByMobileNumber countryCode mobileNumberHash = do
   findOne $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonMobileCountryCode ==. val (Just countryCode)
-        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
     return person
 
 findByIdentifier ::

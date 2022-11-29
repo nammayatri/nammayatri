@@ -106,12 +106,13 @@ auth req mbBundleVersion mbClientVersion = do
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
+  mobileNumberHash <- getDbHash mobileNumber
   let merchantId = Id req.merchantId :: Id DO.Merchant
   merchant <-
     QMerchant.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   person <-
-    QP.findByMobileNumber countryCode mobileNumber
+    QP.findByMobileNumber countryCode mobileNumberHash
       >>= maybe (createDriverWhihDetails req mbBundleVersion mbClientVersion merchant.id) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id

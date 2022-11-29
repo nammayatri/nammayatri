@@ -11,7 +11,7 @@ module Domain.Action.UI.Registration
   )
 where
 
-import Beckn.External.Encryption (decrypt, encrypt)
+import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
 import Beckn.External.FCM.Types
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
@@ -111,8 +111,9 @@ auth req mbBundleVersion mbClientVersion = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
+  mobileNumberHash <- getDbHash mobileNumber
   person <-
-    Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumber merchant.id
+    Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
       >>= maybe (createPerson req mbBundleVersion mbClientVersion merchant.id) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id

@@ -13,6 +13,15 @@ let esqDBCfg =
       , connectSchemaName = "atlas_transporter"
       }
 
+let esqDBReplicaCfg =
+      { connectHost = esqDBCfg.connectHost
+      , connectPort = 5435
+      , connectUser = esqDBCfg.connectUser
+      , connectPassword = esqDBCfg.connectPassword
+      , connectDatabase = esqDBCfg.connectDatabase
+      , connectSchemaName = esqDBCfg.connectSchemaName
+      }
+
 let rcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
       , connectPort = 6379
@@ -60,6 +69,7 @@ let kafkaProducerCfg =
 let cacheConfig = { configsExpTime = +86400 }
 
 in  { esqDBCfg
+    , esqDBReplicaCfg
     , hedisCfg = rcfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig

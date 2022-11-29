@@ -36,6 +36,8 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -233,11 +235,12 @@ createDriver admin req = do
   let Just merchantId = admin.merchantId
   runRequestValidation validateOnboardDriverReq req
   let personEntity = req.person
+  mobileNumberHash <- getDbHash personEntity.mobileNumber
   duplicateCheck
     (QVehicle.findByRegistrationNo req.vehicle.registrationNo)
     "Vehicle with this registration number already exists."
   duplicateCheck
-    (QPerson.findByMobileNumber personEntity.mobileCountryCode personEntity.mobileNumber)
+    (QPerson.findByMobileNumber personEntity.mobileCountryCode mobileNumberHash)
     "Person with this mobile number already exists"
   person <- buildDriver req.person merchantId
   vehicle <- buildVehicle req.vehicle person.id merchantId
@@ -285,14 +288,15 @@ getInformation ::
   ( HasCacheConfig r,
     Redis.HedisFlow m r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     EncFlow m r
   ) =>
   Id SP.Person ->
   m DriverInformationRes
 getInformation personId = do
   let driverId = cast personId
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverInfo <- runInReplica $ QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
   organization <-
@@ -311,16 +315,17 @@ setActivity personId isActive = do
     QDriverInformation.updateActivity driverId isActive
   pure APISuccess.Success
 
-listDriver :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
+listDriver :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
   let Just merchantId = admin.merchantId
-  personList <- QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbLimit mbOffset merchantId
+  mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
+  personList <- Esq.runInReplica $ QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId
   respPersonList <- traverse buildDriverEntityRes personList
   return $ ListDriverRes respPersonList
 
-buildDriverEntityRes :: (Esq.Transactionable m, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
+buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
-  vehicleMB <- QVehicle.findById person.id
+  vehicleMB <- Esq.runInReplica $ QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
   return $
     DriverEntityRes
@@ -390,6 +395,7 @@ updateDriver ::
   ( HasCacheConfig r,
     Redis.HedisFlow m r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     EncFlow m r
   ) =>
   Id SP.Person ->
@@ -501,17 +507,17 @@ makeDriverInformationRes DriverEntityRes {..} org =
       ..
     }
 
-getNearbySearchRequests :: (EsqDBFlow m r) => Id SP.Person -> m GetNearbySearchRequestsRes
+getNearbySearchRequests :: (EsqDBReplicaFlow m r) => Id SP.Person -> m GetNearbySearchRequestsRes
 getNearbySearchRequests driverId = do
-  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   _ <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
-  nearbyReqs <- QSRD.findByDriver driverId
+  nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
   searchRequestForDriverAPIEntity <- mapM buildSearchRequestForDriverAPIEntity nearbyReqs
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
     buildSearchRequestForDriverAPIEntity nearbyReq = do
       let sId = nearbyReq.searchRequestId
-      searchRequest <- QSReq.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
+      searchRequest <- runInReplica $ QSReq.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest
 
 isAllowedExtraFee :: ExtraFee -> Money -> Bool
@@ -523,6 +529,7 @@ offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 offerQuote ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
@@ -599,12 +606,12 @@ offerQuote driverId req = do
       pure $ not $ null activeQuotes
 
 getStats ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r) =>
   Id SP.Person ->
   Day ->
   m DriverStatsRes
 getStats driverId date = do
-  rides <- QRide.getRidesForDate driverId date
+  rides <- runInReplica $ QRide.getRidesForDate driverId date
   return $
     DriverStatsRes
       { totalRidesOfDay = length rides,

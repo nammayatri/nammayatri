@@ -12,6 +12,7 @@ module Domain.Action.UI.Vehicle
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import Beckn.Utils.Common
@@ -76,11 +77,11 @@ data Driver = Driver
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-listVehicles :: (EsqDBFlow m r) => SP.Person -> Maybe SV.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
+listVehicles :: EsqDBReplicaFlow m r => SP.Person -> Maybe SV.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
 listVehicles admin variantM mbRegNum limitM offsetM = do
   let Just merchantId = admin.merchantId
-  personList <- QP.findAllByMerchantId [SP.DRIVER] merchantId
-  vehicleList <- QV.findAllByVariantRegNumMerchantId variantM mbRegNum limit offset merchantId
+  personList <- Esq.runInReplica $ QP.findAllByMerchantId [SP.DRIVER] merchantId
+  vehicleList <- Esq.runInReplica $ QV.findAllByVariantRegNumMerchantId variantM mbRegNum limit offset merchantId
   respList <- buildVehicleRes personList `traverse` vehicleList
   return $ ListVehicleRes respList
   where
@@ -115,16 +116,18 @@ updateVehicle admin driverId req = do
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateVehicle : ") (show updatedVehicle)
   return $ SV.makeVehicleAPIEntity updatedVehicle
 
-getVehicle :: (EsqDBFlow m r) => Id SP.Person -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
+getVehicle :: EsqDBReplicaFlow m r => Id SP.Person -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
 getVehicle personId registrationNoM vehicleIdM = do
   user <-
-    QP.findById personId
-      >>= fromMaybeM (PersonNotFound personId.getId)
+    Esq.runInReplica $
+      QP.findById personId
+        >>= fromMaybeM (PersonNotFound personId.getId)
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError $ InvalidRequest "You should pass registration number and vehicle id."
     _ ->
-      QV.findByAnyOf registrationNoM vehicleIdM
-        >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+      Esq.runInReplica $
+        QV.findByAnyOf registrationNoM vehicleIdM
+          >>= fromMaybeM (VehicleDoesNotExist personId.getId)
   hasAccess user vehicle
   return . GetVehicleRes $ SV.makeVehicleAPIEntity vehicle
   where
