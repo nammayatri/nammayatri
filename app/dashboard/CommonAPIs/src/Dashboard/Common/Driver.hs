@@ -155,12 +155,12 @@ oneHour :: Seconds
 oneHour = 3600
 -}
 
-emptyDriverActivityRes :: DriverActivityRes
-emptyDriverActivityRes =
+mkDriverActivityRes :: (Int, Int) -> DriverActivityRes
+mkDriverActivityRes (active, inactive) =
   DriverActivityRes
-    { activeDriversInApp = 0,
+    { activeDriversInApp = active,
       --      activeDriversInLastHour = 0,
-      inactiveDrivers = 0
+      inactiveDrivers = inactive
       --      inactiveDriversSinceTwoDays = 0,
       --      trendFrequency = oneHour,
       --      trend = []

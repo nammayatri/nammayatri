@@ -63,20 +63,6 @@ data FullDriver = FullDriver
 mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriver
 mkFullDriver (p, l, i, v) = FullDriver p l i v
 
-findAllDrivers ::
-  (Transactionable m, Functor m) =>
-  Id Merchant ->
-  m [FullDriver]
-findAllDrivers merchantId = fmap (map mkFullDriver) $
-  Esq.findAll $ do
-    (person :& driverLocation :& driverInfo :& vehicle) <-
-      from baseFullPersonQuery
-    where_ $
-      person ^. PersonRole ==. val Person.DRIVER
-        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
-    orderBy [asc (person ^. PersonFirstName)]
-    return (person, driverLocation, driverInfo, vehicle)
-
 findAllDriversWithInfoAndVehicle ::
   ( Transactionable m,
     EncFlow m r

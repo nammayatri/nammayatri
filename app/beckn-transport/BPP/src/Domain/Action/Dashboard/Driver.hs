@@ -97,13 +97,7 @@ driverActivity merchantShortId = do
   merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  foldl' func Common.emptyDriverActivityRes <$> QPerson.findAllDriversFirstNameAsc merchant.id
-  where
-    func :: Common.DriverActivityRes -> QPerson.FullDriver -> Common.DriverActivityRes
-    func acc x =
-      if x.info.active
-        then acc {Common.activeDriversInApp = acc.activeDriversInApp + 1}
-        else acc {Common.inactiveDrivers = acc.inactiveDrivers + 1}
+  Common.mkDriverActivityRes <$> QDriverInfo.countDrivers merchant.id
 
 ---------------------------------------------------------------------
 enableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> Flow Common.EnableDriversRes

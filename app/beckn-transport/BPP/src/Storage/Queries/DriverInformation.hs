@@ -188,3 +188,25 @@ getDriversWithOutdatedLocationsToMakeInactive before = do
     where_ $ driverInformation ^. DriverInformationActive
     orderBy [asc $ driverInformation ^. DriverInformationUpdatedAt]
     pure person
+
+countDrivers :: Transactionable m => Id Merchant -> m (Int, Int)
+countDrivers merchantId =
+  getResults <$> do
+    findAll $ do
+      (driverInformation :& person) <-
+        from $
+          table @DriverInformationT
+            `innerJoin` table @PersonT
+              `Esq.on` ( \(driverInformation :& person) ->
+                           driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
+                       )
+      where_ $
+        person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
+      groupBy (driverInformation ^. DriverInformationActive)
+      pure (driverInformation ^. DriverInformationActive, count @Int $ person ^. PersonId)
+  where
+    getResults :: [(Bool, Int)] -> (Int, Int)
+    getResults = foldl func (0, 0)
+
+    func (active, inactive) (activity, counter) =
+      if activity then (active + counter, inactive) else (active, inactive + counter)
