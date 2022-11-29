@@ -38,7 +38,7 @@ let driverOfferBpp =
       }
 
 in  { esqDBCfg
-    , redisCfg = rcfg
+    , hedisCfg = rcfg
     , port = +8018
     , migrationPath = None Text
     , autoMigrate = common.autoMigrate

@@ -39,7 +39,7 @@ let appBackend =
       }
 
 in  { esqDBCfg
-    , redisCfg = rcfg
+    , hedisCfg = rcfg
     , port = +8017
     , migrationPath = None Text
     , autoMigrate = common.autoMigrate
