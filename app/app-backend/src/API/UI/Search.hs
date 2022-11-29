@@ -21,9 +21,9 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.SlidingWindowLimiter
+import Beckn.Types.Version
 import Beckn.Utils.Common
 import Beckn.Utils.SlidingWindowLimiter
-import Beckn.Utils.Version
 import qualified Core.ACL.Metro.Search as MetroACL
 import qualified Core.ACL.Search as TaxiACL
 import Data.Aeson
@@ -51,8 +51,8 @@ type API =
   "rideSearch"
     :> TokenAuth
     :> ReqBody '[JSON] SearchReq
-    :> Servant.Header "x-bundle-version" Text
-    :> Servant.Header "x-client-version" Text
+    :> Servant.Header "x-bundle-version" Version
+    :> Servant.Header "x-client-version" Version
     :> Post '[JSON] SearchRes
 
 handler :: FlowServer API
@@ -95,10 +95,10 @@ fareProductConstructorModifier = \case
   "RentalSearch" -> "RENTAL"
   x -> x
 
-search :: Id Person.Person -> SearchReq -> Maybe Text -> Maybe Text -> FlowHandler SearchRes
-search personId req mbBundleVersionText mbClientVersionText = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+search :: Id Person.Person -> SearchReq -> Maybe Version -> Maybe Version -> FlowHandler SearchRes
+search personId req mbBundleVersion mbClientVersion = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
-  updateVersions personId mbBundleVersionText mbClientVersionText
+  updateVersions personId mbBundleVersion mbClientVersion
   searchId <- case req of
     OneWaySearch oneWay -> oneWaySearch personId oneWay
     RentalSearch rental -> rentalSearch personId rental
@@ -174,11 +174,7 @@ checkSearchRateLimit personId = do
 searchHitsCountKey :: Id Person.Person -> Text
 searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCount"
 
-updateVersions :: EsqDBFlow m r => Id Person.Person -> Maybe Text -> Maybe Text -> m ()
-updateVersions personId mbBundleVersionText mbClientVersionText = do
-  mbClientVersion <- forM mbClientVersionText readVersion
-  mbBundleVersion <- forM mbBundleVersionText readVersion
+updateVersions :: EsqDBFlow m r => Id Person.Person -> Maybe Version -> Maybe Version -> m ()
+updateVersions personId mbBundleVersion mbClientVersion = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
-  when
-    ((mbBundleVersion > person.bundleVersion || mbClientVersion > person.clientVersion) && (isJust mbClientVersion && isJust mbBundleVersion))
-    (DB.runTransaction $ Person.updateVersions person.id mbBundleVersion mbClientVersion)
+  DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion

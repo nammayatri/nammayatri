@@ -24,11 +24,11 @@ import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import Beckn.Types.SlidingWindowLimiter (APIRateLimitOptions)
+import Beckn.Types.Version
 import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation
-import Beckn.Utils.Version
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
@@ -92,10 +92,10 @@ auth ::
     CoreMetrics m
   ) =>
   AuthReq ->
-  Maybe Text ->
-  Maybe Text ->
+  Maybe Version ->
+  Maybe Version ->
   m AuthRes
-auth req mbBundleVersionText mbClientVersionText = do
+auth req mbBundleVersion mbClientVersion = do
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
@@ -106,8 +106,6 @@ auth req mbBundleVersionText mbClientVersionText = do
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   token <- makeSession scfg entityId SR.USER (show <$> useFakeOtpM)
-  mbBundleVersion <- forM mbBundleVersionText readVersion
-  mbClientVersion <- forM mbClientVersionText readVersion
   Esq.runTransaction $ do
     QR.create token
     QP.updatePersonVersions person mbBundleVersion mbClientVersion

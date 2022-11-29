@@ -2,6 +2,7 @@ module API.UI.Registration (module Reexport, API, handler) where
 
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
+import Beckn.Types.Version
 import Beckn.Utils.Common
 import Domain.Action.UI.Registration as Reexport
   ( AuthReq (..),
@@ -22,8 +23,8 @@ import Tools.Auth (TokenAuth)
 type API =
   "auth"
     :> ( ReqBody '[JSON] AuthReq
-           :> Header "x-bundle-version" Text
-           :> Header "x-client-version" Text
+           :> Header "x-bundle-version" Version
+           :> Header "x-client-version" Version
            :> Post '[JSON] AuthRes
            :<|> Capture "authId" (Id SRT.RegistrationToken)
              :> "verify"
@@ -45,7 +46,7 @@ handler =
     :<|> resend
     :<|> logout
 
-auth :: AuthReq -> Maybe Text -> Maybe Text -> FlowHandler AuthRes
+auth :: AuthReq -> Maybe Version -> Maybe Version -> FlowHandler AuthRes
 auth req mbBundleVersion = withFlowHandlerAPI . DReg.auth req mbBundleVersion
 
 verify :: Id SR.RegistrationToken -> AuthVerifyReq -> FlowHandler AuthVerifyRes

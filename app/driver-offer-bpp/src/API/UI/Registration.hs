@@ -11,6 +11,7 @@ where
 
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
+import Beckn.Types.Version
 import Beckn.Utils.Common
 import qualified Domain.Action.UI.Registration as DRegistration
 import qualified Domain.Types.Person as SP
@@ -23,8 +24,8 @@ import Tools.Auth
 type API =
   "auth"
     :> ( ReqBody '[JSON] DRegistration.AuthReq
-           :> Header "x-bundle-version" Text
-           :> Header "x-client-version" Text
+           :> Header "x-bundle-version" Version
+           :> Header "x-client-version" Version
            :> Post '[JSON] DRegistration.AuthRes
            :<|> Capture "authId" (Id SR.RegistrationToken)
              :> "verify"
@@ -46,7 +47,7 @@ handler =
     :<|> resend
     :<|> logout
 
-auth :: DRegistration.AuthReq -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
+auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> FlowHandler DRegistration.AuthRes
 auth req mbBundleVersionText = withFlowHandlerAPI . DRegistration.auth req mbBundleVersionText
 
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes

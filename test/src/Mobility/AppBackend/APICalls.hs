@@ -11,6 +11,7 @@ import Beckn.External.FCM.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Id
+import Beckn.Types.Version
 import qualified "app-backend" Domain.Action.UI.Cancel as CancelAPI
 import qualified "app-backend" Domain.Types.Booking as AbeBooking
 import qualified "app-backend" Domain.Types.Booking as BRB
@@ -65,7 +66,7 @@ destinationServiceability regToken = destination
   where
     _ :<|> destination = client (Proxy :: Proxy AppServ.API) regToken
 
-appAuth :: Reg.AuthReq -> Maybe Text -> Maybe Text -> ClientM Reg.AuthRes
+appAuth :: Reg.AuthReq -> Maybe Version -> Maybe Version -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> ClientM Reg.ResendAuthRes
 logout :: RegToken -> ClientM APISuccess
@@ -91,7 +92,7 @@ mkAuthVerifyReq =
     }
 
 initiateAuth :: ClientM Reg.AuthRes
-initiateAuth = appAuth mkAuthReq (Just "0.0.0") (Just "0.0.0")
+initiateAuth = appAuth mkAuthReq (Just defaultVersion) (Just defaultVersion)
 
 verifyAuth :: Id AppSRT.RegistrationToken -> ClientM Reg.AuthVerifyRes
 verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq

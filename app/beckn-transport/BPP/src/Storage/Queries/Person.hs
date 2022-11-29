@@ -10,7 +10,9 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Centesimal
 import Beckn.Types.Id
+import Beckn.Types.Version
 import Beckn.Utils.Common hiding (Value)
+import Control.Applicative ((<|>))
 import qualified Data.Maybe as Mb
 import Domain.Types.DriverInformation
 import Domain.Types.DriverLocation
@@ -283,9 +285,29 @@ updatePersonRec personId person = do
         PersonDeviceToken =. val (person.deviceToken),
         PersonMerchantId =. val (toKey <$> person.merchantId),
         PersonDescription =. val (person.description),
-        PersonUpdatedAt =. val now
+        PersonUpdatedAt =. val now,
+        PersonClientVersion =. val (versionToText <$> person.clientVersion),
+        PersonBundleVersion =. val (versionToText <$> person.bundleVersion)
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
+updatePersonVersions person mbBundleVersion mbClientVersion =
+  when
+    ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
+    do
+      now <- getCurrentTime
+      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
+          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
+      Esq.update $ \tbl -> do
+        set
+          tbl
+          [ PersonUpdatedAt =. val now,
+            PersonClientVersion =. val mbBundleVersionText,
+            PersonBundleVersion =. val mbClientVersionText
+          ]
+        where_ $
+          tbl ^. PersonTId ==. val (toKey person.id)
 
 updateMobileNumberAndCode :: Person -> SqlDB ()
 updateMobileNumberAndCode person = do

@@ -4,6 +4,7 @@ import qualified API.UI.Quote as AbeQuoteAPI
 import qualified "app-backend" API.UI.Search as AppBESearch
 import Beckn.Types.Base64
 import Beckn.Types.Id
+import Beckn.Types.Version
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified Data.Aeson as J
 import qualified Data.ByteString as B
@@ -35,8 +36,8 @@ callAppBackend = runClient' appBackendClientEnv
 searchServices ::
   Text ->
   AppBESearch.SearchReq ->
-  Maybe Text ->
-  Maybe Text ->
+  Maybe Version ->
+  Maybe Version ->
   ClientM AppBESearch.SearchRes
 searchServices = client (Proxy :: Proxy AppBESearch.API)
 

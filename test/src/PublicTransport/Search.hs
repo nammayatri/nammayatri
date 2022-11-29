@@ -14,6 +14,7 @@ import Domain.Types.PaymentTransaction (PaymentStatus (FAILED, PENDING, SUCCESS)
 import qualified "app-backend" Domain.Types.SearchRequest as AppBE
 import qualified "public-transport-bap" Environment as Bap
 import HSpec
+import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Routes
 import PublicTransport.API
 import PublicTransport.Common
@@ -78,7 +79,7 @@ assertFailedBooking = assertBooking TB.CANCELLED FAILED
 
 testSearch :: IO (PublicTransportQuote, PublicTransportQuote)
 testSearch = do
-  searchId <- (.searchId) <$> callAppBackend (searchServices userToken defaultSearchReq (Just "0.0.0") (Just "0.0.0"))
+  searchId <- (.searchId) <$> callAppBackend (searchServices userToken defaultSearchReq (Just defaultVersion) (Just defaultVersion))
   searchId `shouldSatisfy` (\s -> T.length s.getId == 36)
   searchRequest <- pollDesc "Expected search request in the app backend database" $ findSearchBAP searchId
   searchRequest.id `shouldBe` searchId

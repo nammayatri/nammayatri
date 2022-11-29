@@ -7,7 +7,7 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Version
-import Beckn.Utils.Version
+import Control.Applicative ((<|>))
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
 import Storage.Tabular.Person
@@ -98,15 +98,23 @@ updateMultiple personId person = do
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateVersions :: Id Person -> Maybe Version -> Maybe Version -> SqlDB ()
-updateVersions personId newBundleVersion newClientVersion = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonClientVersion =. val (versionToText <$> newClientVersion),
-        PersonBundleVersion =. val (versionToText <$> newBundleVersion)
-      ]
-    where_ $ tbl ^. PersonId ==. val (getId personId)
+updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
+updatePersonVersions person mbBundleVersion mbClientVersion =
+  when
+    ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
+    do
+      now <- getCurrentTime
+      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
+          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
+      Esq.update $ \tbl -> do
+        set
+          tbl
+          [ PersonUpdatedAt =. val now,
+            PersonClientVersion =. val mbBundleVersionText,
+            PersonBundleVersion =. val mbClientVersionText
+          ]
+        where_ $
+          tbl ^. PersonTId ==. val (toKey person.id)
 
 updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
 updateDeviceToken personId mbDeviceToken = do

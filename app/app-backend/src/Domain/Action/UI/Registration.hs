@@ -28,7 +28,6 @@ import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation
-import Beckn.Utils.Version
 import Data.OpenApi (ToSchema)
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
@@ -101,16 +100,14 @@ auth ::
     CoreMetrics m
   ) =>
   AuthReq ->
-  Maybe Text ->
-  Maybe Text ->
+  Maybe Version ->
+  Maybe Version ->
   m AuthRes
-auth req mbBundleVersionText mbClientVersionText = do
+auth req mbBundleVersion mbClientVersion = do
   runRequestValidation validateAuthReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
-  mbClientVersion <- forM mbClientVersionText readVersion
-  mbBundleVersion <- forM mbBundleVersionText readVersion
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
@@ -126,7 +123,7 @@ auth req mbBundleVersionText mbClientVersionText = do
 
   if person.enabled
     then do
-      when ((mbBundleVersion > person.bundleVersion || mbClientVersion > person.clientVersion) && (isJust mbClientVersion && isJust mbBundleVersion)) (DB.runTransaction $ Person.updateVersions person.id mbBundleVersion mbClientVersion)
+      DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
       DB.runTransaction (RegistrationToken.create token)
       whenNothing_ useFakeOtpM $ do
         otpSmsTemplate <- asks (.otpSmsTemplate)

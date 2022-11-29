@@ -70,7 +70,7 @@ nonServiceableSearchRequest appClientEnv = do
           AppBESearch.RentalSearch $
             req
               & #origin . #gps .~ keralaLocation
-  result <- runClient appClientEnv (searchServices appRegistrationToken updatedSearchReq (Just "0.0.0") (Just "0.0.0"))
+  result <- runClient appClientEnv (searchServices appRegistrationToken updatedSearchReq (Just defaultVersion) (Just defaultVersion))
   verifyError 400 "RIDE_NOT_SERVICEABLE" result
 
 spec :: Spec

@@ -28,7 +28,6 @@ import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation
-import Beckn.Utils.Version
 import Data.OpenApi hiding (info)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
@@ -99,10 +98,10 @@ auth ::
     CacheFlow m r
   ) =>
   AuthReq ->
-  Maybe Text ->
-  Maybe Text ->
+  Maybe Version ->
+  Maybe Version ->
   m AuthRes
-auth req mbBundleVersionText mbBClientVersionText = do
+auth req mbBundleVersion mbClientVersion = do
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
@@ -113,13 +112,13 @@ auth req mbBundleVersionText mbBClientVersionText = do
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   person <-
     QP.findByMobileNumber countryCode mobileNumber
-      >>= maybe (createDriverWhihDetails req merchant.id) return
+      >>= maybe (createDriverWhihDetails req mbBundleVersion mbClientVersion merchant.id) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   token <- makeSession scfg entityId SR.USER (show <$> useFakeOtpM)
-  Esq.runTransaction $ do
+  Esq.runTransaction do
     QR.create token
     QP.updatePersonVersions person mbBundleVersion mbClientVersion
   whenNothing_ useFakeOtpM $ do
@@ -151,8 +150,8 @@ createDriverDetails personId = do
   where
     driverId = cast personId
 
-makePerson :: EncFlow m r => AuthReq -> Id DO.Merchant -> m SP.Person
-makePerson req merchantId = do
+makePerson :: EncFlow m r => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
+makePerson req mbBundleVersion mbClientVersion merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   encMobNum <- encrypt req.mobileNumber
@@ -215,9 +214,9 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWhihDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Id DO.Merchant -> m SP.Person
-createDriverWhihDetails req mercahntId = do
-  person <- makePerson req mercahntId
+createDriverWhihDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
+createDriverWhihDetails req mbBundleVersion mbClientVersion mercahntId = do
+  person <- makePerson req mbBundleVersion mbClientVersion mercahntId
   DB.runTransaction $ do
     QP.create person
     createDriverDetails (person.id)

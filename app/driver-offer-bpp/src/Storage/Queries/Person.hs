@@ -12,7 +12,7 @@ import Beckn.Types.Id
 import Beckn.Types.Version
 import Beckn.Utils.Common
 import Beckn.Utils.GenericPretty
-import Beckn.Utils.Version
+import Control.Applicative ((<|>))
 import qualified Data.Maybe as Mb
 import Domain.Types.DriverInformation
 import Domain.Types.DriverLocation
@@ -239,11 +239,11 @@ updatePersonRec personId person = do
 updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
 updatePersonVersions person mbBundleVersion mbClientVersion =
   when
-    (person.bundleVersion < mbBundleVersion || person.clientVersion < mbClientVersion)
+    ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
     do
       now <- getCurrentTime
-      let mbBundleVersionText = versionToText <$> mbBundleVersion
-          mbClientVersionText = versionToText <$> mbClientVersion
+      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.bundleVersion)
+          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientVersion)
       Esq.update $ \tbl -> do
         set
           tbl

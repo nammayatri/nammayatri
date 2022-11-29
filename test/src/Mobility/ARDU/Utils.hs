@@ -117,7 +117,7 @@ resetDriver driver = runARDUFlow "" $ do
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)
-search token searchReq_ = callBAP $ searchServices token searchReq_ (Just "0.0.0") (Just "0.0.0") <&> (.searchId)
+search token searchReq_ = callBAP $ searchServices token searchReq_ (Just defaultVersion) (Just defaultVersion) <&> (.searchId)
 
 getOnSearchTaxiEstimatesByTransporterName ::
   Text ->
