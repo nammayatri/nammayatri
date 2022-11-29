@@ -39,7 +39,9 @@ data DriversAPIs = DriversAPIs
     getDocument :: Id Common.Image -> Euler.EulerClient Common.GetDocumentResponse,
     uploadDocument :: Id Common.Driver -> Common.UploadDocumentReq -> Euler.EulerClient Common.UploadDocumentResp,
     registerDL :: Id Common.Driver -> Common.RegisterDLReq -> Euler.EulerClient APISuccess,
-    registerRC :: Id Common.Driver -> Common.RegisterRCReq -> Euler.EulerClient APISuccess
+    registerRC :: Id Common.Driver -> Common.RegisterRCReq -> Euler.EulerClient APISuccess,
+    unlinkVehicle :: Id Common.Driver -> Euler.EulerClient APISuccess,
+    updatePhoneNumber :: Id Common.Driver -> Common.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess
   }
 
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
@@ -55,6 +57,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> driverLocation
       :<|> driverInfo
       :<|> deleteDriver
+      :<|> unlinkVehicle
+      :<|> updatePhoneNumber
       :<|> ( documentsList
                :<|> getDocument
                :<|> uploadDocument

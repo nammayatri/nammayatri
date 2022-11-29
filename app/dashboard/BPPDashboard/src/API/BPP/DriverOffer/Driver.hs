@@ -28,6 +28,8 @@ type API =
            :<|> DriverLocationAPI
            :<|> DriverInfoAPI
            :<|> DeleteDriverAPI
+           :<|> UnlinkVehicleAPI
+           :<|> UpdatePhoneNumberAPI
            :<|> Reg.API
        )
 
@@ -63,6 +65,14 @@ type DeleteDriverAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
     :> Common.DeleteDriverAPI
 
+type UnlinkVehicleAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+    :> Common.UnlinkVehicleAPI
+
+type UpdatePhoneNumberAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+    :> Common.UpdatePhoneNumberAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocuments merchantId
@@ -73,6 +83,8 @@ handler merchantId =
     :<|> driverLocation merchantId
     :<|> driverInfo merchantId
     :<|> deleteDriver merchantId
+    :<|> unlinkVehicle merchantId
+    :<|> updatePhoneNumber merchantId
     :<|> Reg.handler merchantId
 
 driverDocuments :: ShortId DM.Merchant -> ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
@@ -116,3 +128,13 @@ deleteDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -
 deleteDriver userMerchantId merchantId driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.deleteDriver) driverId
+
+unlinkVehicle :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+unlinkVehicle userMerchantId merchantId driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.unlinkVehicle) driverId
+
+updatePhoneNumber :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> FlowHandler APISuccess
+updatePhoneNumber userMerchantId merchantId driverId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.updatePhoneNumber) driverId req

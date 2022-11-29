@@ -29,6 +29,8 @@ type API =
            :<|> DriverLocationAPI
            :<|> DriverInfoAPI
            :<|> DeleteDriverAPI
+           :<|> UnlinkVehicleAPI
+           :<|> UpdatePhoneNumberAPI
        )
 
 type DriverListAPI =
@@ -59,6 +61,14 @@ type DeleteDriverAPI =
   ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
     :> Common.DeleteDriverAPI
 
+type UnlinkVehicleAPI =
+  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+    :> Common.UnlinkVehicleAPI
+
+type UpdatePhoneNumberAPI =
+  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+    :> Common.UpdatePhoneNumberAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   listDriver merchantId
@@ -68,6 +78,8 @@ handler merchantId =
     :<|> driverLocation merchantId
     :<|> driverInfo merchantId
     :<|> deleteDriver merchantId
+    :<|> unlinkVehicle merchantId
+    :<|> updatePhoneNumber merchantId
 
 listDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
 listDriver userMerchantId merchantId mbLimit mbOffset verified enabled phone = withFlowHandlerAPI $ do
@@ -105,3 +117,13 @@ deleteDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -
 deleteDriver userMerchantId merchantId driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.deleteDriver) driverId
+
+unlinkVehicle :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+unlinkVehicle userMerchantId merchantId driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+  Client.callBecknTransportBPP checkedMerchantId (.drivers.unlinkVehicle) driverId
+
+updatePhoneNumber :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> FlowHandler APISuccess
+updatePhoneNumber userMerchantId merchantId driverId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+  Client.callBecknTransportBPP checkedMerchantId (.drivers.updatePhoneNumber) driverId req

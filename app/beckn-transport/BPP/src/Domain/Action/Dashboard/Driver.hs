@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Domain.Action.Dashboard.Driver
   ( listDrivers,
     driverActivity,
@@ -8,6 +6,8 @@ module Domain.Action.Dashboard.Driver
     driverLocation,
     driverInfo,
     deleteDriver,
+    unlinkVehicle,
+    updatePhoneNumber,
   )
 where
 
@@ -273,3 +273,19 @@ deleteDriver merchantShortId reqDriverId = do
       regTokens <- QR.findAllByPersonId personId
       for_ regTokens $ \regToken -> do
         void $ Redis.del $ authTokenCacheKey regToken.token
+
+---------------------------------------------------------------------
+unlinkVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+unlinkVehicle merchantShortId _reqDriverId = do
+  _merchant <-
+    CQM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  error "TODO"
+
+---------------------------------------------------------------------
+updatePhoneNumber :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> Flow APISuccess
+updatePhoneNumber merchantShortId _reqDriverId _req = do
+  _merchant <-
+    CQM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  error "TODO"

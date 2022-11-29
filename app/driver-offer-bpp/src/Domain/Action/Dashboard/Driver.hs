@@ -7,6 +7,8 @@ module Domain.Action.Dashboard.Driver
     driverLocation,
     driverInfo,
     deleteDriver,
+    unlinkVehicle,
+    updatePhoneNumber,
   )
 where
 
@@ -32,7 +34,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
-import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
@@ -54,7 +56,7 @@ import Tools.Error
 driverDocumentsInfo :: ShortId DM.Merchant -> Flow Common.DriverDocumentsInfoRes
 driverDocumentsInfo merchantShortId = do
   merchant <-
-    QM.findByShortId merchantShortId
+    CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   now <- getCurrentTime
   onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
@@ -127,7 +129,7 @@ limitOffset mbLimit mbOffset =
 listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.DriverListRes
 listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone = do
   merchant <-
-    QM.findByShortId merchantShortId
+    CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
@@ -159,7 +161,7 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
 driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
 driverActivity merchantShortId = do
   merchant <-
-    QM.findByShortId merchantShortId
+    CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   foldl' func Common.emptyDriverActivityRes <$> QPerson.findAllDrivers merchant.id
   where
@@ -173,7 +175,7 @@ driverActivity merchantShortId = do
 enableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> Flow Common.EnableDriversRes
 enableDrivers merchantShortId req = do
   merchant <-
-    QM.findByShortId merchantShortId
+    CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let enable = True
   updatedDrivers <- QDriverInfo.updateEnabledStateReturningIds merchant.id (coerce req.driverIds) enable
@@ -190,7 +192,7 @@ enableDrivers merchantShortId req = do
 disableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> Flow Common.DisableDriversRes
 disableDrivers merchantShortId req = do
   merchant <-
-    QM.findByShortId merchantShortId
+    CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let enable = False
   updatedDrivers <- QDriverInfo.updateEnabledStateReturningIds merchant.id (coerce req.driverIds) enable
@@ -207,7 +209,7 @@ disableDrivers merchantShortId req = do
 driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> Flow Common.DriverLocationRes
 driverLocation merchantShortId mbLimit mbOffset req = do
   merchant <-
-    QM.findByShortId merchantShortId
+    CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let driverIds = coerce req.driverIds
   allDrivers <- QPerson.findAllDriversByIdsFirstNameAsc merchant.id driverIds
@@ -244,7 +246,7 @@ mobileIndianCode = "+91"
 driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
 driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
   merchant <-
-    QM.findByShortId merchantShortId
+    CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   driverDocsInfo <- case (mbMobileNumber, mbVehicleNumber) of
     (Just mobileNumber, Nothing) ->
@@ -290,7 +292,7 @@ driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
 deleteDriver merchantShortId reqDriverId = do
   merchant <-
-    QM.findByShortId merchantShortId
+    CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let driverId = cast @Common.Driver @Driver reqDriverId
   let personId = cast @Common.Driver @Person reqDriverId
@@ -339,3 +341,19 @@ deleteDriver merchantShortId reqDriverId = do
       regTokens <- QR.findAllByPersonId personId
       for_ regTokens $ \regToken -> do
         void $ Redis.del $ authTokenCacheKey regToken.token
+
+---------------------------------------------------------------------
+unlinkVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+unlinkVehicle merchantShortId _reqDriverId = do
+  _merchant <-
+    CQM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  error "TODO"
+
+---------------------------------------------------------------------
+updatePhoneNumber :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> Flow APISuccess
+updatePhoneNumber merchantShortId _reqDriverId _req = do
+  _merchant <-
+    CQM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  error "TODO"

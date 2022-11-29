@@ -32,7 +32,9 @@ data DriversAPIs = DriversAPIs
     disableDrivers :: Common.DriverIds -> Euler.EulerClient Common.DisableDriversRes,
     driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> Euler.EulerClient Common.DriverLocationRes,
     driverInfo :: Maybe Text -> Maybe Text -> Euler.EulerClient Common.DriverInfoRes,
-    deleteDriver :: Id Common.Driver -> Euler.EulerClient APISuccess
+    deleteDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
+    unlinkVehicle :: Id Common.Driver -> Euler.EulerClient APISuccess,
+    updatePhoneNumber :: Id Common.Driver -> Common.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess
   }
 
 mkBecknTransportAPIs :: CheckedShortId DM.Merchant -> Text -> BecknTransportAPIs
@@ -46,7 +48,9 @@ mkBecknTransportAPIs merchantId token = do
       :<|> disableDrivers
       :<|> driverLocation
       :<|> driverInfo
-      :<|> deleteDriver = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+      :<|> deleteDriver
+      :<|> unlinkVehicle
+      :<|> updatePhoneNumber = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
 callBecknTransportBPP ::
   forall m r b c.

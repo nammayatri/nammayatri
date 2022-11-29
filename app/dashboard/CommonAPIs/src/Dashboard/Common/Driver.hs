@@ -268,3 +268,26 @@ type DeleteDriverAPI =
   Capture "driverId" (Id Driver)
     :> "permanentlyDelete"
     :> Delete '[JSON] APISuccess
+
+---------------------------------------------------------
+-- unlink vehicle ---------------------------------------
+
+type UnlinkVehicleAPI =
+  Capture "driverId" (Id Driver)
+    :> "unlinkVehicle"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- update phone number ----------------------------------
+
+type UpdatePhoneNumberAPI =
+  Capture "driverId" (Id Driver)
+    :> "updatePhoneNumber"
+    :> ReqBody '[JSON] UpdatePhoneNumberReq
+    :> Post '[JSON] APISuccess
+
+newtype UpdatePhoneNumberReq = UpdatePhoneNumberReq
+  { newPhoneNumber :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
