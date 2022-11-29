@@ -16,6 +16,7 @@ import Beckn.Types.Common
 import Beckn.Types.Credentials (PrivateKey)
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Registry
+import Beckn.Types.SlidingWindowCounters
 import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
@@ -78,6 +79,8 @@ data AppCfg = AppCfg
     cacheConfig :: CacheConfig,
     metricsSearchDurationTimeout :: Seconds,
     driverPoolLimit :: Maybe Int,
+    acceptanceWindowOptions :: SlidingWindowOptions,
+    useIntelligentAllocation :: Bool,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
     cacheTranslationConfig :: CacheTranslationConfig
@@ -133,6 +136,8 @@ data AppEnv = AppEnv
     cacheConfig :: CacheConfig,
     driverPoolLimit :: Maybe Int,
     s3Env :: S3Env Flow,
+    acceptanceWindowOptions :: SlidingWindowOptions,
+    useIntelligentAllocation :: Bool,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
     cacheTranslationConfig :: CacheTranslationConfig

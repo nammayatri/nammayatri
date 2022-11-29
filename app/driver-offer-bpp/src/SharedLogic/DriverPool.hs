@@ -3,12 +3,18 @@
 module SharedLogic.DriverPool
   ( calculateDriverPool,
     randomizeAndLimitSelection,
+    intelligentPoolSelection,
+    incrementAcceptanceCount,
+    incrementTotalCount,
   )
 where
 
 import qualified Beckn.Storage.Esqueleto as Esq
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
+import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Common
+import qualified Beckn.Utils.SlidingWindowCounters as SWC
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (getPOSIXTime)
@@ -22,6 +28,53 @@ import qualified Storage.Queries.Person as QP
 import System.Random
 import Tools.Maps as Maps
 import Tools.Metrics
+
+mkAcceptanceKey :: Text -> Text
+mkAcceptanceKey = (<> "-quote-accepted")
+
+withWindowOptions ::
+  ( Redis.HedisFlow m r,
+    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
+    L.MonadFlow m
+  ) =>
+  (SWC.SlidingWindowOptions -> m a) ->
+  m a
+withWindowOptions fn = do
+  asks (.acceptanceWindowOptions) >>= fn
+
+incrementTotalCount ::
+  ( Redis.HedisFlow m r,
+    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
+    L.MonadFlow m
+  ) =>
+  Id a ->
+  m ()
+incrementTotalCount driverId = withWindowOptions $ SWC.incrementTotalCount (getId driverId)
+
+incrementAcceptanceCount ::
+  ( Redis.HedisFlow m r,
+    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
+    L.MonadFlow m
+  ) =>
+  Id a ->
+  m ()
+incrementAcceptanceCount driverId = withWindowOptions $ SWC.incrementWindowCount (mkAcceptanceKey $ getId driverId)
+
+intelligentPoolSelection ::
+  ( Redis.HedisFlow m r,
+    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
+    L.MonadFlow m
+  ) =>
+  [Maps.GetDistanceResp QP.DriverPoolResult LatLong] ->
+  Int ->
+  m [Maps.GetDistanceResp QP.DriverPoolResult LatLong]
+intelligentPoolSelection dp n =
+  withWindowOptions $
+    \wo ->
+      map snd
+        . take n
+        . sortOn (Down . fst)
+        <$> mapM (\dPoolRes -> (,dPoolRes) <$> SWC.getLatestRatio (getId dPoolRes.origin.driverId) mkAcceptanceKey wo) dp
 
 randomizeAndLimitSelection ::
   (L.MonadFlow m) =>

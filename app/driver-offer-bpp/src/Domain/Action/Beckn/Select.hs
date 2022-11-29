@@ -49,13 +49,7 @@ handler merchantId sReq = do
   fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupLocation Nothing
   toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropLocation Nothing
   farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId sReq.variant >>= fromMaybeM NoFarePolicy
-  driverPool' <- calculateDriverPool (Just sReq.variant) fromLocation merchantId True True
-  mdriverPoolLimitForRandomize <- asks (.driverPoolLimit)
-  driverPool <-
-    maybe
-      (pure driverPool')
-      (randomizeAndLimitSelection driverPool')
-      mdriverPoolLimitForRandomize
+  driverPool <- calculateDriverPool' (Just sReq.variant) fromLocation
   mbDistRes <- CD.getCacheDistance sReq.transactionId
   logInfo $ "Fetching cached distance and duration" <> show mbDistRes
   (distance, duration) <-
@@ -86,11 +80,24 @@ handler merchantId sReq = do
     mapM_ QSRD.create searchRequestsForDrivers
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
+    incrementTotalCount sReqFD.driverId
     let language = fromMaybe Maps.ENGLISH dPoolRes.origin.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq
     Notify.notifyOnNewSearchRequestAvailable sReqFD.driverId dPoolRes.origin.driverDeviceToken entityData
   where
+    calculateDriverPool' :: Maybe Variant -> DLoc.SearchReqLocation -> Flow [Maps.GetDistanceResp DriverPoolResult Maps.LatLong]
+    calculateDriverPool' mbVariant fromLocation = do
+      driverPool' <- calculateDriverPool mbVariant fromLocation merchantId True True
+      mdriverPoolLimit <- asks (.driverPoolLimit)
+      useIntelligentAllocation <- asks (.useIntelligentAllocation)
+      case mdriverPoolLimit of
+        Just n ->
+          if useIntelligentAllocation
+            then intelligentPoolSelection driverPool' n
+            else randomizeAndLimitSelection driverPool' n
+        Nothing -> pure driverPool'
+
     buildSearchRequestForDriver ::
       (MonadFlow m) =>
       DSearchReq.SearchRequest ->

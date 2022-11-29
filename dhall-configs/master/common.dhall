@@ -20,6 +20,7 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , smsPassword = sec.smsPassword
     , InfoBIPConfig = sec.InfoBIPConfig
     , branchName
+    , periodType = globalCommon.periodType
     , passetto = { _1 = "passetto-hs.atlas", _2 = 8012 }
     , fcmJsonPath = Some "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
     , googleTranslateUrl = "https://www.googleapis.com/"

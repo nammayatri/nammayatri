@@ -2,7 +2,7 @@ let sec = ./secrets/common.dhall
 
 let globalCommon = ../generic/common.dhall
 
-let branchName = "$DEPLOY_VARIANT"
+let branchName = "\$DEPLOY_VARIANT"
 
 in  { smsSessionConfig = globalCommon.smsSessionConfig
     , autoMigrate = globalCommon.autoMigrate
@@ -19,7 +19,8 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , smsUserName = sec.smsUserName
     , smsPassword = sec.smsPassword
     , InfoBIPConfig = sec.InfoBIPConfig
-    , branchName = branchName
+    , branchName
+    , periodType = globalCommon.periodType
     , passetto = { _1 = "passetto-hs.atlas", _2 = 8012 }
     , fcmJsonPath = Some "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
     , googleTranslateUrl = "https://www.googleapis.com/"

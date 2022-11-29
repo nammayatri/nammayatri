@@ -43,6 +43,7 @@ import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Beckn.Types.Predicate
+import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Common
 import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Beckn.Utils.Predicates as P
@@ -66,6 +67,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
+import SharedLogic.DriverPool (incrementAcceptanceCount)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
@@ -534,6 +536,7 @@ offerQuote ::
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
+    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -553,6 +556,7 @@ offerQuote driverId req = do
     let mbOfferedFare = req.offeredFare
     organization <- CQM.findById sReq.providerId >>= fromMaybeM (MerchantDoesNotExist sReq.providerId.getId)
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    incrementAcceptanceCount driverId
     whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
     driverInfo <- QDrInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
     when driverInfo.onRide $ throwError DriverOnRide

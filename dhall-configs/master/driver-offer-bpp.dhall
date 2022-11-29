@@ -89,6 +89,9 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
+let acceptanceWindowOptions =
+      { period = +7, periodType = common.periodType.Days }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -136,6 +139,8 @@ in  { esqDBCfg
     , defaultRideTravelledDistanceThreshold = +700
     , defaultRideTimeEstimatedThreshold = +900
     , cacheConfig
+    , acceptanceWindowOptions
+    , useIntelligentAllocation = True
     , metricsSearchDurationTimeout = +45
     , dashboardToken = sec.dashboardToken
     , driverPoolLimit = Some +3

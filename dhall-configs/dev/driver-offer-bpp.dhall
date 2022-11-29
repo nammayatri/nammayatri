@@ -44,6 +44,9 @@ let smsConfig =
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
+let acceptanceWindowOptions =
+      { period = +7, periodType = common.periodType.Days }
+
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let slackCfg =
@@ -141,6 +144,8 @@ in  { esqDBCfg
     , cacheConfig
     , metricsSearchDurationTimeout = +45
     , driverPoolLimit = Some +10
+    , acceptanceWindowOptions
+    , useIntelligentAllocation = True
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
