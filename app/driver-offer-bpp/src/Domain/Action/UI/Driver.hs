@@ -467,7 +467,9 @@ buildDriver req merchantId = do
         SP.merchantId = Just merchantId,
         SP.description = Nothing,
         SP.createdAt = now,
-        SP.updatedAt = now
+        SP.updatedAt = now,
+        SP.clientVersion = Nothing,
+        SP.bundleVersion = Nothing
       }
 
 buildVehicle :: MonadFlow m => CreateVehicle -> Id SP.Person -> Id DM.Merchant -> m SV.Vehicle

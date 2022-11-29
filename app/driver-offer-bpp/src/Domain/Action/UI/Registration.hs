@@ -23,10 +23,12 @@ import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import qualified Beckn.Types.Predicate as P
 import Beckn.Types.SlidingWindowLimiter
+import Beckn.Types.Version
 import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation
+import Beckn.Utils.Version
 import Data.OpenApi hiding (info)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
@@ -97,8 +99,10 @@ auth ::
     CacheFlow m r
   ) =>
   AuthReq ->
+  Maybe Text ->
+  Maybe Text ->
   m AuthRes
-auth req = do
+auth req mbBundleVersionText mbBClientVersionText = do
   runRequestValidation validateInitiateLoginReq req
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
@@ -115,7 +119,9 @@ auth req = do
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   token <- makeSession scfg entityId SR.USER (show <$> useFakeOtpM)
-  Esq.runTransaction $ QR.create token
+  Esq.runTransaction $ do
+    QR.create token
+    QP.updatePersonVersions person mbBundleVersion mbClientVersion
   whenNothing_ useFakeOtpM $ do
     otpSmsTemplate <- asks (.otpSmsTemplate)
     withLogTag ("personId_" <> getId person.id) $
@@ -171,7 +177,9 @@ makePerson req merchantId = do
         language = Nothing,
         description = Nothing,
         createdAt = now,
-        updatedAt = now
+        updatedAt = now,
+        bundleVersion = mbBundleVersion,
+        clientVersion = mbClientVersion
       }
 
 makeSession ::

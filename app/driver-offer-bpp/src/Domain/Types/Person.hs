@@ -7,6 +7,7 @@ import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.External.Types (Language)
 import Beckn.Types.Id
+import Beckn.Types.Version
 import Beckn.Utils.Common (Centesimal, EsqDBFlow, maskText)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -78,7 +79,9 @@ data PersonE e = Person
     language :: Maybe Language,
     description :: Maybe Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    bundleVersion :: Maybe Version,
+    clientVersion :: Maybe Version
   }
   deriving (Generic)
 
