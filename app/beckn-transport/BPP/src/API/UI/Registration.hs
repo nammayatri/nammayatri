@@ -22,6 +22,8 @@ import Tools.Auth (TokenAuth)
 type API =
   "auth"
     :> ( ReqBody '[JSON] AuthReq
+           :> Header "x-bundle-version" Text
+           :> Header "x-client-version" Text
            :> Post '[JSON] AuthRes
            :<|> Capture "authId" (Id SRT.RegistrationToken)
              :> "verify"
@@ -43,8 +45,8 @@ handler =
     :<|> resend
     :<|> logout
 
-auth :: AuthReq -> FlowHandler AuthRes
-auth = withFlowHandlerAPI . DReg.auth
+auth :: AuthReq -> Maybe Text -> Maybe Text -> FlowHandler AuthRes
+auth req mbBundleVersion = withFlowHandlerAPI . DReg.auth req mbBundleVersion
 
 verify :: Id SR.RegistrationToken -> AuthVerifyReq -> FlowHandler AuthVerifyRes
 verify tokenId = withFlowHandlerAPI . DReg.verify tokenId

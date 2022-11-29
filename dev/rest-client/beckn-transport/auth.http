@@ -1,10 +1,12 @@
 # @name login
 POST {{transporter-host}}/auth
 content-type: application/json
+x-bundle-version: 1.0.0
+x-client-version: 1.0.0
 
 {
   "mobileCountryCode": "+91",
-  "mobileNumber": "5555555555"
+  "mobileNumber": "6666666666"
 }
 
 ###

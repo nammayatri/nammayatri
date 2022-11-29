@@ -1,9 +1,13 @@
 module Fixtures.Person where
 
 import Beckn.Types.Id
+import Beckn.Types.Version
 import qualified Domain.Types.Person as Person
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
+
+defaultVersion :: Version
+defaultVersion = Version 0 0 0
 
 defaultDriver :: Person.Person
 defaultDriver =
@@ -26,7 +30,9 @@ defaultDriver =
       deviceToken = Nothing,
       description = Nothing,
       createdAt = Fixtures.defaultTime,
-      updatedAt = Fixtures.defaultTime
+      updatedAt = Fixtures.defaultTime,
+      bundleVersion = Just defaultVersion,
+      clientVersion = Just defaultVersion
     }
 
 defaultAdmin :: Person.Person

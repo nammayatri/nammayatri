@@ -13,6 +13,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Centesimal
 import Beckn.Types.Id
+import Beckn.Utils.Version
 import qualified Domain.Types.Person as Domain
 import Storage.Tabular.Merchant (MerchantTId)
 
@@ -44,6 +45,8 @@ mkPersist
       description Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
+      bundleVersion Text Maybe
+      clientVersion Text Maybe
       Primary id
       deriving Generic
     |]
@@ -55,11 +58,15 @@ instance TEntityKey PersonT where
 
 instance TType PersonT Domain.Person where
   fromTType PersonT {..} = do
+    bundleVersion' <- forM bundleVersion readVersion
+    clientVersion' <- forM clientVersion readVersion
     return $
       Domain.Person
         { id = Id id,
           mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
           merchantId = fromKey <$> merchantId,
+          bundleVersion = bundleVersion',
+          clientVersion = clientVersion',
           ..
         }
   toTType Domain.Person {..} =
@@ -68,5 +75,7 @@ instance TType PersonT Domain.Person where
         mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber <&> (.hash),
         merchantId = toKey <$> merchantId,
+        bundleVersion = versionToText <$> bundleVersion,
+        clientVersion = versionToText <$> clientVersion,
         ..
       }
