@@ -277,6 +277,7 @@ unlinkVehicle merchantShortId reqDriverId = do
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
 
+  let driverId = cast @Common.Driver @Driver reqDriverId
   let personId = cast @Common.Driver @Person reqDriverId
   driver <-
     QPerson.findById personId
@@ -288,6 +289,7 @@ unlinkVehicle merchantShortId reqDriverId = do
 
   Esq.runTransaction $ do
     QVehicle.deleteById personId
+    QDriverInfo.updateEnabledState driverId False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   return Success
 
