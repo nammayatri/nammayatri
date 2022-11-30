@@ -199,7 +199,7 @@ endRideHandler ServiceHandle {..} rideId req = do
       notifyCompleteToBAP booking updRide booking.fareParams booking.estimatedFare
       Redis.unlockRedis (lockKey driverId)
       logDebug $ "DriverId: " <> show driverId <> " Unlocked"
-    else logDebug $ "DriverId: " <> getId driver.id <> " unable to get lock"
+    else logDebug $ "DriverId: " <> getId driverId <> " unable to get lock"
 
   return APISuccess.Success
   where

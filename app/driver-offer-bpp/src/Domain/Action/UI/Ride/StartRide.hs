@@ -89,7 +89,7 @@ startRideHandler ServiceHandle {..} rideId req = do
       notifyBAPRideStarted booking ride
       Redis.unlockRedis (lockKey driverId)
       logDebug $ "DriverId: " <> show driverId <> " Unlocked"
-    else logDebug $ "DriverId: " <> getId driver.id <> " unable to get lock"
+    else logDebug $ "DriverId: " <> getId driverId <> " unable to get lock"
   pure APISuccess.Success
   where
     isValidRideStatus status = status == SRide.NEW
