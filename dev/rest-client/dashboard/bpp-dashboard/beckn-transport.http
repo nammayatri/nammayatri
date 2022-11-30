@@ -92,3 +92,20 @@ content-type: application/json
 DELETE {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId2e}}/permanentlyDelete
 token: {{juspay_admin}}
 content-type: application/json
+
+###
+
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1e}}/unlinkVehicle
+token: {{juspay_admin}}
+content-type: application/json
+
+###
+
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1e}}/updatePhoneNumber
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "newPhoneNumber": "7777777777",
+    "newCountryCode": "+91"
+}

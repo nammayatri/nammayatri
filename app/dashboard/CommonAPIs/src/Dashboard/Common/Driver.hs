@@ -10,6 +10,8 @@ import Beckn.External.Maps.Types
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
+import qualified Beckn.Utils.Predicates as P
+import Beckn.Utils.Validation
 import Dashboard.Common as Reexport
 import Servant
 
@@ -280,14 +282,22 @@ type UnlinkVehicleAPI =
 ---------------------------------------------------------
 -- update phone number ----------------------------------
 
+validateUpdatePhoneNumberReq :: Validate UpdatePhoneNumberReq
+validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
+  sequenceA_
+    [ validateField "newPhoneNumber" newPhoneNumber P.mobileNumber,
+      validateField "newCountryCode" newCountryCode P.mobileIndianCode
+    ]
+
 type UpdatePhoneNumberAPI =
   Capture "driverId" (Id Driver)
     :> "updatePhoneNumber"
     :> ReqBody '[JSON] UpdatePhoneNumberReq
     :> Post '[JSON] APISuccess
 
-newtype UpdatePhoneNumberReq = UpdatePhoneNumberReq
-  { newPhoneNumber :: Text
+data UpdatePhoneNumberReq = UpdatePhoneNumberReq
+  { newPhoneNumber :: Text,
+    newCountryCode :: Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

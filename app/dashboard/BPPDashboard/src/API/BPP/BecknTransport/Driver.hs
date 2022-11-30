@@ -13,6 +13,7 @@ import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common (throwError, withFlowHandlerAPI)
+import Beckn.Utils.Validation (runRequestValidation)
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
@@ -125,5 +126,6 @@ unlinkVehicle userMerchantId merchantId driverId = withFlowHandlerAPI $ do
 
 updatePhoneNumber :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> FlowHandler APISuccess
 updatePhoneNumber userMerchantId merchantId driverId req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateUpdatePhoneNumberReq req
   checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.updatePhoneNumber) driverId req

@@ -18,6 +18,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Beckn.Utils.Validation (runRequestValidation)
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
@@ -291,14 +292,13 @@ unlinkVehicle merchantShortId reqDriverId = do
   return Success
 
 ---------------------------------------------------------------------
--- FIXME Do we need to include mobileCountryCode into request?
 updatePhoneNumber :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> Flow APISuccess
 updatePhoneNumber merchantShortId reqDriverId req = do
+  runRequestValidation Common.validateUpdatePhoneNumberReq req
   merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
 
-  let newPhoneNumber = req.newPhoneNumber
   let personId = cast @Common.Driver @Person reqDriverId
   driver <-
     QPerson.findById personId
@@ -308,13 +308,16 @@ updatePhoneNumber merchantShortId reqDriverId req = do
   merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  mbLinkedPerson <- QPerson.findByMobileNumber mobileIndianCode newPhoneNumber
-  whenJust mbLinkedPerson $ \_ -> throwError $ InvalidRequest "Person with this mobile number already exists"
+  mbLinkedPerson <- QPerson.findByMobileNumber req.newCountryCode req.newPhoneNumber
+  whenJust mbLinkedPerson $ \linkedPerson -> do
+    if linkedPerson.id == driver.id
+      then throwError $ InvalidRequest "Person already have the same mobile number"
+      else throwError $ InvalidRequest "Person with this mobile number already exists"
 
-  encNewPhoneNumber <- encrypt newPhoneNumber
+  encNewPhoneNumber <- encrypt req.newPhoneNumber
   let updDriver =
         driver
-          { mobileCountryCode = Just mobileIndianCode,
+          { mobileCountryCode = Just req.newCountryCode,
             mobileNumber = Just encNewPhoneNumber
           }
   -- this function uses tokens from db, so should be called before transaction
