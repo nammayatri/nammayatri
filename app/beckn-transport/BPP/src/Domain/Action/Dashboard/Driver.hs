@@ -25,7 +25,6 @@ import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Types.DriverInformation as DrInfo
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
@@ -75,12 +74,12 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone 
     maxLimit = 20
     defaultLimit = 10
 
-buildDriverListItem :: EncFlow m r => (Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) -> m Common.DriverListItem
+buildDriverListItem :: EncFlow m r => (DP.Person, DrInfo.DriverInformation, Maybe DVeh.Vehicle) -> m Common.DriverListItem
 buildDriverListItem (person, driverInformation, mbVehicle) = do
   phoneNo <- mapM decrypt person.mobileNumber
   pure $
     Common.DriverListItem
-      { driverId = cast @Person @Common.Driver person.id,
+      { driverId = cast @DP.Person @Common.Driver person.id,
         firstName = person.firstName,
         middleName = person.middleName,
         lastName = person.lastName,
@@ -107,8 +106,8 @@ enableDriver merchantShortId reqDriverId = do
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
 
-  let driverId = cast @Common.Driver @Driver reqDriverId
-  let personId = cast @Common.Driver @Person reqDriverId
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -130,8 +129,8 @@ disableDriver merchantShortId reqDriverId = do
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
 
-  let driverId = cast @Common.Driver @Driver reqDriverId
-  let personId = cast @Common.Driver @Person reqDriverId
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -210,7 +209,7 @@ driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
       let vehicleDetails = mkVehicleAPIEntity vehicle.registrationNo
       pure
         Common.DriverInfoRes
-          { driverId = cast @Person @Common.Driver person.id,
+          { driverId = cast @DP.Person @Common.Driver person.id,
             firstName = person.firstName,
             middleName = person.middleName,
             lastName = person.lastName,
@@ -279,8 +278,8 @@ unlinkVehicle merchantShortId reqDriverId = do
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
 
-  let driverId = cast @Common.Driver @Driver reqDriverId
-  let personId = cast @Common.Driver @Person reqDriverId
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -303,7 +302,7 @@ updatePhoneNumber merchantShortId reqDriverId req = do
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
 
-  let personId = cast @Common.Driver @Person reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -321,8 +320,8 @@ updatePhoneNumber merchantShortId reqDriverId req = do
   encNewPhoneNumber <- encrypt req.newPhoneNumber
   let updDriver =
         driver
-          { mobileCountryCode = Just req.newCountryCode,
-            mobileNumber = Just encNewPhoneNumber
+          { DP.mobileCountryCode = Just req.newCountryCode,
+            DP.mobileNumber = Just encNewPhoneNumber
           }
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
@@ -334,5 +333,60 @@ updatePhoneNumber merchantShortId reqDriverId req = do
 
 ---------------------------------------------------------------------
 addVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> Flow APISuccess
-addVehicle _merchantShortId _reqDriverId _req = do
-  error "TODO"
+addVehicle merchantShortId reqDriverId req = do
+  runRequestValidation Common.validateAddVehicleReq req
+  merchant <-
+    CQM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  mbLinkedVehicle <- QVehicle.findById personId
+  whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
+  vehicle <- buildVehicle merchantId personId req
+  let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
+  Esq.runTransaction $ do
+    QVehicle.create vehicle
+    QPerson.updatePersonRec personId updDriver
+  logTagInfo "dashboard -> addVehicle : " (show personId)
+  pure Success
+
+-- TODO add vehicleClass
+buildVehicle :: MonadFlow m => Id DM.Merchant -> Id DP.Person -> Common.AddVehicleReq -> m DVeh.Vehicle
+buildVehicle merchantId personId req = do
+  now <- getCurrentTime
+  variant <- fromEitherM InvalidRequest $ castVehicleVariant req.variant
+  mbEnergyType <- forM req.energyType $ fromEitherM InvalidRequest . castEnergyType
+  return $
+    DVeh.Vehicle
+      { driverId = personId,
+        merchantId = merchantId,
+        variant,
+        model = req.model,
+        color = req.colour,
+        registrationNo = req.registrationNo,
+        capacity = req.capacity,
+        category = Nothing,
+        make = req.make,
+        size = Nothing,
+        energyType = mbEnergyType,
+        registrationCategory = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }
+  where
+    castVehicleVariant = \case
+      Common.SUV -> Right DVeh.SUV
+      Common.HATCHBACK -> Right DVeh.HATCHBACK
+      Common.SEDAN -> Right DVeh.SEDAN
+      Common.AUTO_RICKSHAW -> Left "Auto-rickshaw vehicles are not supported by this BPP"
+
+    castEnergyType :: Text -> Either Text DVeh.EnergyType
+    castEnergyType = readEither

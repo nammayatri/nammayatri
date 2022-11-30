@@ -10,6 +10,7 @@ import Beckn.External.Maps.Types
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
+import Beckn.Types.Predicate
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Dashboard.Common as Reexport
@@ -266,13 +267,6 @@ type UnlinkVehicleAPI =
 ---------------------------------------------------------
 -- update phone number ----------------------------------
 
-validateUpdatePhoneNumberReq :: Validate UpdatePhoneNumberReq
-validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
-  sequenceA_
-    [ validateField "newPhoneNumber" newPhoneNumber P.mobileNumber,
-      validateField "newCountryCode" newCountryCode P.mobileIndianCode
-    ]
-
 type UpdatePhoneNumberAPI =
   Capture "driverId" (Id Driver)
     :> "updatePhoneNumber"
@@ -286,6 +280,13 @@ data UpdatePhoneNumberReq = UpdatePhoneNumberReq
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+validateUpdatePhoneNumberReq :: Validate UpdatePhoneNumberReq
+validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
+  sequenceA_
+    [ validateField "newPhoneNumber" newPhoneNumber P.mobileNumber,
+      validateField "newCountryCode" newCountryCode P.mobileIndianCode
+    ]
+
 ---------------------------------------------------------
 -- add vehicle ------------------------------------------
 
@@ -296,14 +297,29 @@ type AddVehicleAPI =
     :> Post '[JSON] APISuccess
 
 data AddVehicleReq = AddVehicleReq
-  { registrationNo :: Text,
+  { variant :: Variant,
+    registrationNo :: Text,
     vehicleClass :: Text,
     capacity :: Maybe Int,
-    colour :: Maybe Text,
+    colour :: Text,
     energyType :: Maybe Text,
-    model :: Maybe Text,
+    model :: Text,
     make :: Maybe Text,
     driverName :: Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+validateAddVehicleReq :: Validate AddVehicleReq
+validateAddVehicleReq AddVehicleReq {..} =
+  sequenceA_
+    [ validateField "model" model $
+        NotEmpty `And` star P.latinOrSpace,
+      validateField "color" colour $ NotEmpty `And` P.name,
+      validateField "registrationNo" registrationNo $
+        LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
+    ]
