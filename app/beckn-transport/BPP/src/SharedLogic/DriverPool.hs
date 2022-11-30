@@ -155,14 +155,14 @@ buildDriverPoolResults orgId pickup ndResults = do
   distDurs <-
     Maps.getDistances orgId $
       Maps.GetDistancesReq
-        { origins = pickup :| [],
-          destinations = ndResults,
+        { origins = ndResults,
+          destinations = pickup :| [],
           travelMode = Just Maps.CAR
         }
   return $ mkDriverPoolResult <$> distDurs
   where
     mkDriverPoolResult distDur = do
-      let QP.NearestDriversResult {..} = distDur.destination
+      let QP.NearestDriversResult {..} = distDur.origin
       DriverPoolResult
         { distanceToPickup = distDur.distance,
           durationToPickup = distDur.duration,
