@@ -1,8 +1,8 @@
 module Domain.Action.Dashboard.Driver
   ( listDrivers,
     driverActivity,
-    enableDrivers,
-    disableDrivers,
+    enableDriver,
+    disableDriver,
     driverLocation,
     driverInfo,
     deleteDriver,
@@ -100,43 +100,50 @@ driverActivity merchantShortId = do
   Common.mkDriverActivityRes <$> QDriverInfo.countDrivers merchant.id
 
 ---------------------------------------------------------------------
-enableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> Flow Common.EnableDriversRes
-enableDrivers merchantShortId req = do
+enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+enableDriver merchantShortId reqDriverId = do
   merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  let enable = True
-  updatedDrivers <- QDriverInfo.updateEnabledStateReturningIds merchant.id (coerce req.driverIds) enable
-  let driversNotFound = filter (not . (`elem` coerce @[Id Driver] @[Id Common.Driver] updatedDrivers)) req.driverIds
-  let numDriversEnabled = length updatedDrivers
-  pure $
-    Common.EnableDriversRes
-      { numDriversEnabled,
-        driversEnabled = coerce updatedDrivers,
-        message = mconcat [show numDriversEnabled, " drivers enabled, following drivers not found: ", show $ coerce @_ @[Text] driversNotFound]
-      }
+
+  let driverId = cast @Common.Driver @Driver reqDriverId
+  let personId = cast @Common.Driver @Person reqDriverId
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  _vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+  Esq.runTransaction $ do
+    QDriverInfo.updateEnabledState driverId True
+  logTagInfo "dashboard -> enableDriver : " (show personId)
+  pure Success
 
 ---------------------------------------------------------------------
-disableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> Flow Common.DisableDriversRes
-disableDrivers merchantShortId req = do
+disableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+disableDriver merchantShortId reqDriverId = do
   merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  let enable = False
-  updatedDrivers <- QDriverInfo.updateEnabledStateReturningIds merchant.id (coerce req.driverIds) enable
-  let driversNotFound = filter (not . (`elem` coerce @_ @[Id Common.Driver] updatedDrivers)) req.driverIds
-  let numDriversDisabled = length updatedDrivers
-  pure $
-    Common.DisableDriversRes
-      { numDriversDisabled,
-        driversDisabled = coerce updatedDrivers,
-        message =
-          mconcat
-            [ show numDriversDisabled,
-              " drivers disabled, following drivers not found: ",
-              show $ coerce @_ @[Text] driversNotFound
-            ]
-      }
+
+  let driverId = cast @Common.Driver @Driver reqDriverId
+  let personId = cast @Common.Driver @Person reqDriverId
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  Esq.runTransaction $ do
+    QVehicle.deleteById personId
+    QDriverInfo.updateEnabledState driverId False
+  logTagInfo "dashboard -> disableDriver : " (show personId)
+  pure Success
 
 ---------------------------------------------------------------------
 driverLocation ::

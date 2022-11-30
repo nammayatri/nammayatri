@@ -14,8 +14,8 @@ type API =
   "driver"
     :> ( Common.DriverListAPI
            :<|> Common.DriverActivityAPI
-           :<|> Common.EnableDriversAPI
-           :<|> Common.DisableDriversAPI
+           :<|> Common.EnableDriverAPI
+           :<|> Common.DisableDriverAPI
            :<|> Common.DriverLocationAPI
            :<|> Common.DriverInfoAPI
            :<|> Common.DeleteDriverAPI
@@ -27,8 +27,8 @@ handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   listDrivers merchantId
     :<|> driverActivity merchantId
-    :<|> enableDrivers merchantId
-    :<|> disableDrivers merchantId
+    :<|> enableDriver merchantId
+    :<|> disableDriver merchantId
     :<|> driverLocation merchantId
     :<|> driverInfo merchantId
     :<|> deleteDriver merchantId
@@ -42,11 +42,11 @@ listDrivers merchantShortId mbLimit mbOffset verified enabled =
 driverActivity :: ShortId DM.Merchant -> FlowHandler Common.DriverActivityRes
 driverActivity = withFlowHandlerAPI . DDriver.driverActivity
 
-enableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> FlowHandler Common.EnableDriversRes
-enableDrivers merchantShortId = withFlowHandlerAPI . DDriver.enableDrivers merchantShortId
+enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+enableDriver merchantShortId = withFlowHandlerAPI . DDriver.enableDriver merchantShortId
 
-disableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> FlowHandler Common.DisableDriversRes
-disableDrivers merchantShortId = withFlowHandlerAPI . DDriver.disableDrivers merchantShortId
+disableDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+disableDriver merchantShortId = withFlowHandlerAPI . DDriver.disableDriver merchantShortId
 
 driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
 driverLocation merchantShortId mbLimit mbOffset = withFlowHandlerAPI . DDriver.driverLocation merchantShortId mbLimit mbOffset

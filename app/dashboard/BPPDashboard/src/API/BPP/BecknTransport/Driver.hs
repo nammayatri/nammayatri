@@ -25,8 +25,8 @@ type API =
   "driver"
     :> ( DriverListAPI
            :<|> DriverActivityAPI
-           :<|> EnableDriversAPI
-           :<|> DisableDriversAPI
+           :<|> EnableDriverAPI
+           :<|> DisableDriverAPI
            :<|> DriverLocationAPI
            :<|> DriverInfoAPI
            :<|> DeleteDriverAPI
@@ -42,13 +42,13 @@ type DriverActivityAPI =
   ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
     :> Common.DriverActivityAPI
 
-type EnableDriversAPI =
+type EnableDriverAPI =
   ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
-    :> Common.EnableDriversAPI
+    :> Common.EnableDriverAPI
 
-type DisableDriversAPI =
+type DisableDriverAPI =
   ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
-    :> Common.DisableDriversAPI
+    :> Common.DisableDriverAPI
 
 type DriverLocationAPI =
   ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
@@ -74,8 +74,8 @@ handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   listDriver merchantId
     :<|> driverActivity merchantId
-    :<|> enableDrivers merchantId
-    :<|> disableDrivers merchantId
+    :<|> enableDriver merchantId
+    :<|> disableDriver merchantId
     :<|> driverLocation merchantId
     :<|> driverInfo merchantId
     :<|> deleteDriver merchantId
@@ -92,15 +92,15 @@ driverActivity userMerchantId merchantId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.driverActivity)
 
-enableDrivers :: ShortId DM.Merchant -> ShortId DM.Merchant -> Common.DriverIds -> FlowHandler Common.EnableDriversRes
-enableDrivers userMerchantId merchantId req = withFlowHandlerAPI $ do
+enableDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+enableDriver userMerchantId merchantId driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
-  Client.callBecknTransportBPP checkedMerchantId (.drivers.enableDrivers) req
+  Client.callBecknTransportBPP checkedMerchantId (.drivers.enableDriver) driverId
 
-disableDrivers :: ShortId DM.Merchant -> ShortId DM.Merchant -> Common.DriverIds -> FlowHandler Common.DisableDriversRes
-disableDrivers userMerchantId merchantId req = withFlowHandlerAPI $ do
+disableDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+disableDriver userMerchantId merchantId driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
-  Client.callBecknTransportBPP checkedMerchantId (.drivers.disableDrivers) req
+  Client.callBecknTransportBPP checkedMerchantId (.drivers.disableDriver) driverId
 
 driverLocation :: ShortId DM.Merchant -> ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
 driverLocation userMerchantId merchantId mbLimit mbOffset req = withFlowHandlerAPI $ do

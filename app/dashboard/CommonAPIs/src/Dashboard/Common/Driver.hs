@@ -167,36 +167,20 @@ mkDriverActivityRes (active, inactive) =
     }
 
 ---------------------------------------------------------
--- enable drivers ---------------------------------------
+-- enable driver ----------------------------------------
 
-type EnableDriversAPI =
-  "enable"
-    :> ReqBody '[JSON] DriverIds
-    :> Put '[JSON] EnableDriversRes
-
-data EnableDriversRes = EnableDriversRes
-  { numDriversEnabled :: Int,
-    driversEnabled :: [Id Driver],
-    message :: Text
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+type EnableDriverAPI =
+  Capture "driverId" (Id Driver)
+    :> "enable"
+    :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
--- disable drivers --------------------------------------
+-- disable driver ---------------------------------------
 
-type DisableDriversAPI =
-  "disable"
-    :> ReqBody '[JSON] DriverIds
-    :> Put '[JSON] DisableDriversRes
-
-data DisableDriversRes = DisableDriversRes
-  { numDriversDisabled :: Int,
-    driversDisabled :: [Id Driver],
-    message :: Text
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+type DisableDriverAPI =
+  Capture "driverId" (Id Driver)
+    :> "disable"
+    :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
 -- driver location --------------------------------------

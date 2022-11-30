@@ -30,8 +30,8 @@ data DriversAPIs = DriversAPIs
   { driverDocumentsInfo :: Euler.EulerClient Common.DriverDocumentsInfoRes,
     listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient Common.DriverListRes,
     driverActivity :: Euler.EulerClient Common.DriverActivityRes,
-    enableDrivers :: Common.DriverIds -> Euler.EulerClient Common.EnableDriversRes,
-    disableDrivers :: Common.DriverIds -> Euler.EulerClient Common.DisableDriversRes,
+    enableDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
+    disableDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
     driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> Euler.EulerClient Common.DriverLocationRes,
     driverInfo :: Maybe Text -> Maybe Text -> Euler.EulerClient Common.DriverInfoRes,
     deleteDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
@@ -52,8 +52,8 @@ mkDriverOfferAPIs merchantId token = do
     driverDocumentsInfo
       :<|> listDrivers
       :<|> driverActivity
-      :<|> enableDrivers
-      :<|> disableDrivers
+      :<|> enableDriver
+      :<|> disableDriver
       :<|> driverLocation
       :<|> driverInfo
       :<|> deleteDriver
