@@ -285,3 +285,25 @@ data UpdatePhoneNumberReq = UpdatePhoneNumberReq
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---------------------------------------------------------
+-- add vehicle ------------------------------------------
+
+type AddVehicleAPI =
+  Capture "driverId" (Id Driver)
+    :> "addVehicle"
+    :> ReqBody '[JSON] AddVehicleReq
+    :> Post '[JSON] APISuccess
+
+data AddVehicleReq = AddVehicleReq
+  { registrationNo :: Text,
+    vehicleClass :: Text,
+    capacity :: Maybe Int,
+    colour :: Maybe Text,
+    energyType :: Maybe Text,
+    model :: Maybe Text,
+    make :: Maybe Text,
+    driverName :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -9,6 +9,7 @@ module Domain.Action.Dashboard.Driver
     deleteDriver,
     unlinkVehicle,
     updatePhoneNumber,
+    addVehicle,
   )
 where
 
@@ -404,3 +405,8 @@ updatePhoneNumber merchantShortId reqDriverId req = do
     QR.deleteByPersonId personId
   logTagInfo "dashboard -> updatePhoneNumber : " (show personId)
   pure Success
+
+---------------------------------------------------------------------
+addVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> Flow APISuccess
+addVehicle _merchantShortId _reqDriverId _req = do
+  error "TODO"

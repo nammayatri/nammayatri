@@ -31,6 +31,7 @@ type API =
            :<|> DeleteDriverAPI
            :<|> UnlinkVehicleAPI
            :<|> UpdatePhoneNumberAPI
+           :<|> AddVehicleAPI
            :<|> Reg.API
        )
 
@@ -74,6 +75,10 @@ type UpdatePhoneNumberAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
     :> Common.UpdatePhoneNumberAPI
 
+type AddVehicleAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+    :> Common.AddVehicleAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocuments merchantId
@@ -86,6 +91,7 @@ handler merchantId =
     :<|> deleteDriver merchantId
     :<|> unlinkVehicle merchantId
     :<|> updatePhoneNumber merchantId
+    :<|> addVehicle merchantId
     :<|> Reg.handler merchantId
 
 driverDocuments :: ShortId DM.Merchant -> ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
@@ -140,3 +146,8 @@ updatePhoneNumber userMerchantId merchantId driverId req = withFlowHandlerAPI $ 
   runRequestValidation Common.validateUpdatePhoneNumberReq req
   checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.updatePhoneNumber) driverId req
+
+addVehicle :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
+addVehicle userMerchantId merchantId driverId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.addVehicle) driverId req

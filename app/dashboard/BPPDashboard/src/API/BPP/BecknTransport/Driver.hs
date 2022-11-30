@@ -32,6 +32,7 @@ type API =
            :<|> DeleteDriverAPI
            :<|> UnlinkVehicleAPI
            :<|> UpdatePhoneNumberAPI
+           :<|> AddVehicleAPI
        )
 
 type DriverListAPI =
@@ -70,6 +71,10 @@ type UpdatePhoneNumberAPI =
   ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
     :> Common.UpdatePhoneNumberAPI
 
+type AddVehicleAPI =
+  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+    :> Common.AddVehicleAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   listDriver merchantId
@@ -81,6 +86,7 @@ handler merchantId =
     :<|> deleteDriver merchantId
     :<|> unlinkVehicle merchantId
     :<|> updatePhoneNumber merchantId
+    :<|> addVehicle merchantId
 
 listDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
 listDriver userMerchantId merchantId mbLimit mbOffset verified enabled phone = withFlowHandlerAPI $ do
@@ -129,3 +135,8 @@ updatePhoneNumber userMerchantId merchantId driverId req = withFlowHandlerAPI $ 
   runRequestValidation Common.validateUpdatePhoneNumberReq req
   checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.updatePhoneNumber) driverId req
+
+addVehicle :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
+addVehicle userMerchantId merchantId driverId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+  Client.callBecknTransportBPP checkedMerchantId (.drivers.addVehicle) driverId req
