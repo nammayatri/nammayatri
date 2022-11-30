@@ -138,3 +138,9 @@ verifyDashboard incomingToken = do
   if incomingToken == dashboardToken
     then pure Dashboard
     else throwError (InvalidToken incomingToken)
+
+clearDriverSession :: (HasEsqEnv m r, Redis.HedisFlow m r) => Id Person.Person -> m ()
+clearDriverSession personId = do
+  regTokens <- QR.findAllByPersonId personId
+  for_ regTokens $ \regToken -> do
+    void $ Redis.del $ authTokenCacheKey regToken.token

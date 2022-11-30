@@ -21,7 +21,7 @@ import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
-import Storage.Tabular.Person
+import Storage.Tabular.Person as TPerson
 import Storage.Tabular.Ride
 import Storage.Tabular.Vehicle
 
@@ -299,6 +299,20 @@ updatePersonRec personId person = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updateMobileNumberAndCode :: Person -> SqlDB ()
+updateMobileNumberAndCode person = do
+  let personT = toTType person
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonMobileCountryCode =. val (TPerson.mobileCountryCode personT),
+        PersonMobileNumberEncrypted =. val (TPerson.mobileNumberEncrypted personT),
+        PersonMobileNumberHash =. val (TPerson.mobileNumberHash personT),
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey person.id)
 
 updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
 updateDeviceToken personId mbDeviceToken = do

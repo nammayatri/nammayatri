@@ -12,11 +12,10 @@ module Domain.Action.Dashboard.Driver
   )
 where
 
-import Beckn.External.Encryption (decrypt)
+import Beckn.External.Encryption (decrypt, encrypt)
 import Beckn.External.Maps.Types (LatLong (..))
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -49,7 +48,7 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequestForDriver as QSearchReqForDriver
 import qualified Storage.Queries.Vehicle as QVehicle
-import Tools.Auth (authTokenCacheKey)
+import qualified Tools.Auth as Auth
 import Tools.Error
 
 -- FIXME: not tested yet because of no onboarding test data
@@ -322,7 +321,8 @@ deleteDriver merchantShortId reqDriverId = do
   when driverInformation.enabled $
     throwError $ InvalidRequest "Driver should be disabled before deletion"
 
-  clearDriverSession personId
+  -- this function uses tokens from db, so should be called before transaction
+  Auth.clearDriverSession personId
   Esq.runTransaction $ do
     QIV.deleteByPersonId personId
     QImage.deleteByPersonId personId
@@ -336,24 +336,60 @@ deleteDriver merchantShortId reqDriverId = do
     QPerson.deleteById personId
   logTagInfo "dashboard -> deleteDriver : " (show driverId)
   return Success
-  where
-    clearDriverSession personId = do
-      regTokens <- QR.findAllByPersonId personId
-      for_ regTokens $ \regToken -> do
-        void $ Redis.del $ authTokenCacheKey regToken.token
 
 ---------------------------------------------------------------------
 unlinkVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-unlinkVehicle merchantShortId _reqDriverId = do
-  _merchant <-
+unlinkVehicle merchantShortId reqDriverId = do
+  merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  error "TODO"
+
+  let personId = cast @Common.Driver @Person reqDriverId
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  Esq.runTransaction $ do
+    QVehicle.deleteById personId
+    QRCAssociation.endAssociation personId
+  logTagInfo "dashboard -> unlinkVehicle : " (show personId)
+  pure Success
 
 ---------------------------------------------------------------------
+-- FIXME Do we need to include mobileCountryCode into request?
 updatePhoneNumber :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> Flow APISuccess
-updatePhoneNumber merchantShortId _reqDriverId _req = do
-  _merchant <-
+updatePhoneNumber merchantShortId reqDriverId req = do
+  merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  error "TODO"
+
+  let newPhoneNumber = req.newPhoneNumber
+  let personId = cast @Common.Driver @Person reqDriverId
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  mbLinkedPerson <- QPerson.findByMobileNumber mobileIndianCode newPhoneNumber
+  whenJust mbLinkedPerson $ \_ -> throwError $ InvalidRequest "Person with this mobile number already exists"
+
+  encNewPhoneNumber <- encrypt newPhoneNumber
+  let updDriver =
+        driver
+          { mobileCountryCode = Just mobileIndianCode,
+            mobileNumber = Just encNewPhoneNumber
+          }
+  -- this function uses tokens from db, so should be called before transaction
+  Auth.clearDriverSession personId
+  Esq.runTransaction $ do
+    QPerson.updateMobileNumberAndCode updDriver
+    QR.deleteByPersonId personId
+  logTagInfo "dashboard -> updatePhoneNumber : " (show personId)
+  pure Success

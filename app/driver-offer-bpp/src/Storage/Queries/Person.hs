@@ -19,7 +19,7 @@ import Domain.Types.Person as Person
 import Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
-import Storage.Tabular.Person
+import Storage.Tabular.Person as TPerson
 import Storage.Tabular.Vehicle as Vehicle
 
 baseFullPersonQuery ::
@@ -256,6 +256,20 @@ updateDeviceToken personId mbDeviceToken = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updateMobileNumberAndCode :: Person -> SqlDB ()
+updateMobileNumberAndCode person = do
+  let personT = toTType person
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonMobileCountryCode =. val (TPerson.mobileCountryCode personT),
+        PersonMobileNumberEncrypted =. val (TPerson.mobileNumberEncrypted personT),
+        PersonMobileNumberHash =. val (TPerson.mobileNumberHash personT),
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey person.id)
 
 setIsNewFalse :: Id Person -> SqlDB ()
 setIsNewFalse personId = do

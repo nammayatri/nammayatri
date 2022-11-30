@@ -49,7 +49,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
-import Tools.Auth (authTokenCacheKey)
+import qualified Tools.Auth as Auth
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
@@ -365,7 +365,8 @@ deleteDriver admin driverId = do
     QPerson.findById driverId
       >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   unless (driver.merchantId == Just merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
-  clearDriverSession driverId
+  -- this function uses tokens from db, so should be called before transaction
+  Auth.clearDriverSession driverId
   Esq.runTransaction $ do
     QDriverInformation.deleteById (cast driverId)
     QDriverStats.deleteById (cast driverId)
@@ -374,11 +375,6 @@ deleteDriver admin driverId = do
     QPerson.deleteById driverId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
-  where
-    clearDriverSession personId = do
-      regTokens <- QR.findAllByPersonId personId
-      for_ regTokens $ \regToken -> do
-        void $ Redis.del $ authTokenCacheKey regToken.token
 
 updateDriver ::
   ( HasCacheConfig r,
