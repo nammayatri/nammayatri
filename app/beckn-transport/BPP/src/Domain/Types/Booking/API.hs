@@ -1,10 +1,10 @@
 module Domain.Types.Booking.API where
 
 import Beckn.External.Encryption
+import Beckn.Prelude
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Data.Aeson
 import Data.OpenApi
 import Domain.Types.Booking.BookingLocation
 import qualified Domain.Types.Booking.BookingLocation as DLoc
@@ -12,10 +12,9 @@ import Domain.Types.Booking.Type
 import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
-import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.Vehicle as DVeh
-import EulerHS.Prelude hiding (id)
+import qualified Domain.Types.RideDetails as RD
+import Domain.Types.Vehicle
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.Queries.FarePolicy.FareBreakup as QFareBreakup
@@ -68,11 +67,9 @@ data RentalBookingDetailsAPIEntity = RentalBookingDetailsAPIEntity
 buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Booking -> m BookingAPIEntity
 buildBookingAPIEntity booking = do
   let rbStatus = booking.status
-  now <- getCurrentTime
-  rideAPIEntityList <- mapM (buildRideAPIEntity now) =<< QRide.findAllRideAPIEntityDataByRBId booking.id
+  rideAPIEntityList <- mapM buildRideAPIEntity =<< QRide.findAllRideAPIEntityDataByRBId booking.id
   fareBreakups <- QFareBreakup.findAllByBookingId booking.id
   (bookingDetails, tripTerms) <- buildBookingAPIDetails booking.bookingDetails
-
   return $
     BookingAPIEntity
       { id = booking.id,
@@ -90,11 +87,31 @@ buildBookingAPIEntity booking = do
         updatedAt = booking.updatedAt
       }
   where
-    buildRideAPIEntity :: (EsqDBFlow m r, EncFlow m r) => UTCTime -> (DRide.Ride, Maybe DVeh.Vehicle, Maybe DP.Person) -> m DRide.RideAPIEntity
-    buildRideAPIEntity now (ride, mbVehicle, mbDriver) = do
-      let vehicle = fromMaybe (vehicleDefault now) mbVehicle
-      decDriver <- maybe (return $ driverDefault now) decrypt mbDriver
-      return $ DRide.makeRideAPIEntity ride decDriver vehicle
+    makeRideAPIEntity :: DRide.Ride -> RD.RideDetails -> Maybe Text -> DRide.RideAPIEntity
+    makeRideAPIEntity ride rideDetails driverNumber = do
+      let initial = "" :: Text
+      DRide.RideAPIEntity
+        { id = ride.id,
+          shortRideId = ride.shortId,
+          status = ride.status,
+          driverName = rideDetails.driverName,
+          driverNumber,
+          vehicleNumber = rideDetails.vehicleNumber,
+          vehicleColor = fromMaybe initial rideDetails.vehicleColor,
+          vehicleVariant = fromMaybe SEDAN rideDetails.vehicleVariant,
+          vehicleModel = fromMaybe initial rideDetails.vehicleModel,
+          computedFare = ride.fare,
+          computedTotalFare = ride.totalFare,
+          actualRideDistance = roundToIntegral ride.traveledDistance,
+          rideRating = ride.rideRating <&> (.ratingValue),
+          createdAt = ride.createdAt,
+          updatedAt = ride.updatedAt,
+          chargeableDistance = ride.chargeableDistance
+        }
+    buildRideAPIEntity :: (EsqDBFlow m r, EncFlow m r) => (DRide.Ride, RD.RideDetails) -> m DRide.RideAPIEntity
+    buildRideAPIEntity (ride, rideDetails) = do
+      driverNumber <- RD.getDriverNumber rideDetails
+      return $ makeRideAPIEntity ride rideDetails driverNumber
 
     buildBookingAPIDetails :: (CacheFlow m r, EsqDBFlow m r) => BookingDetails -> m (BookingDetailsAPIEntity, [Text])
     buildBookingAPIDetails = \case
@@ -111,44 +128,3 @@ buildBookingAPIEntity booking = do
             >>= fromMaybeM NoRentalFarePolicy
         let details = RentalDetailsAPIEntity RentalBookingDetailsAPIEntity {..}
         pure (details, descriptions)
-
-    driverDefault now =
-      DP.Person
-        { id = Id "[Driver deleted]",
-          firstName = "[Driver deleted]",
-          middleName = Nothing,
-          lastName = Nothing,
-          role = DP.DRIVER,
-          gender = DP.FEMALE,
-          identifierType = DP.EMAIL,
-          email = Nothing,
-          mobileNumber = Just "N/A",
-          mobileCountryCode = Nothing,
-          passwordHash = Nothing,
-          identifier = Nothing,
-          rating = Nothing,
-          isNew = False,
-          merchantId = Nothing,
-          deviceToken = Nothing,
-          description = Nothing,
-          createdAt = now,
-          updatedAt = now
-        }
-    vehicleDefault now =
-      DVeh.Vehicle
-        { driverId = Id "[Vehicle deleted]",
-          merchantId = Id "N/A",
-          variant = DVeh.SEDAN,
-          model = "N/A",
-          color = "N/A",
-          registrationNo = "N/A",
-          capacity = Nothing,
-          category = Nothing,
-          make = Nothing,
-          size = Nothing,
-          energyType = Nothing,
-          registrationCategory = Nothing,
-          vehicleClass = "3WT",
-          createdAt = now,
-          updatedAt = now
-        }

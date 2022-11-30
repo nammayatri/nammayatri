@@ -20,6 +20,7 @@ import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as SRD
 import qualified Domain.Types.RiderDetails as DRD
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
@@ -33,8 +34,10 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRideD
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import Storage.Queries.Vehicle as QVeh
 import qualified Tools.Notifications as Notify
 
 data DConfirmReq = DConfirmReq
@@ -88,6 +91,7 @@ handler subscriber transporterId req = do
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
   ride <- buildRide driver.id booking
+  rideDetails <- buildRideDetails ride driver
   driverSearchReqs <- QSRD.findAllByRequestId driverQuote.searchRequestId
   Esq.runTransaction $ do
     when isNewRider $ QRD.create riderDetails
@@ -98,6 +102,7 @@ handler subscriber transporterId req = do
     whenJust req.mbRiderName $ QRB.updateRiderName booking.id
     QDI.updateOnRide (cast driver.id) True
     QRide.create ride
+    QRideD.create rideDetails
     QBE.logRideConfirmedEvent booking.id
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
     QDQ.setInactiveByRequestId driverQuote.searchRequestId
@@ -157,6 +162,7 @@ handler subscriber transporterId req = do
             createdAt = now,
             updatedAt = now
           }
+
     buildTrackingUrl rideId = do
       bppUIUrl <- asks (.selfUIUrl)
       let rideid = T.unpack (getId rideId)
@@ -182,6 +188,38 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
             createdAt = now,
             updatedAt = now
           }
+
+buildRideDetails ::
+  ( HasCacheConfig r,
+    FCMFlow m r,
+    HedisFlow m r,
+    EsqDBFlow m r,
+    HedisFlow m r,
+    HasPrettyLogger m r,
+    EncFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  DRide.Ride ->
+  DPerson.Person ->
+  m SRD.RideDetails
+buildRideDetails ride driver = do
+  vehicle <-
+    QVeh.findById ride.driverId
+      >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  return
+    SRD.RideDetails
+      { id = ride.id,
+        driverName = driver.firstName,
+        driverNumber = driver.mobileNumber,
+        driverCountryCode = driver.mobileCountryCode,
+        vehicleNumber = vehicle.registrationNo,
+        vehicleColor = Just vehicle.color,
+        vehicleVariant = Just vehicle.variant,
+        vehicleModel = Just vehicle.model,
+        vehicleClass = Nothing
+      }
 
 cancelBooking ::
   ( FCMFlow m r,

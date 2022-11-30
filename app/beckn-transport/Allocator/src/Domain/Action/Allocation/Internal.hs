@@ -1,5 +1,6 @@
 module Domain.Action.Allocation.Internal where
 
+import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis (HedisFlow)
@@ -18,6 +19,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.NotificationStatus as SNS
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideDetails as SRD
 import qualified Domain.Types.RideRequest as SRR
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
@@ -36,7 +38,9 @@ import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.RideRequest as QRR
+import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Metrics.AllocatorMetrics as TMetrics
@@ -79,10 +83,12 @@ assignDriver bookingId driverId = do
     QP.findById (cast driverId)
       >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   ride <- buildRide booking
+  rideDetails <- buildRideDetails ride driver
   Esq.runTransaction $ do
     QDI.updateOnRide (cast driver.id) True
     QRB.updateStatus bookingId SRB.TRIP_ASSIGNED
     QRide.create ride
+    QRD.create rideDetails
     QBE.logDriverAssignetEvent driverId bookingId ride.id
   fork "assignDriver - Notify BAP" $ do
     uBooking <- QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
@@ -124,6 +130,24 @@ assignDriver bookingId driverId = do
             createdAt = now,
             updatedAt = now
           }
+
+    buildRideDetails ride driver = do
+      vehicle <-
+        QV.findById ride.driverId
+          >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+      return
+        SRD.RideDetails
+          { id = ride.id,
+            driverName = driver.firstName,
+            driverNumber = driver.mobileNumber,
+            driverCountryCode = driver.mobileCountryCode,
+            vehicleNumber = vehicle.registrationNo,
+            vehicleColor = Just vehicle.color,
+            vehicleVariant = Just vehicle.variant,
+            vehicleModel = Just vehicle.model,
+            vehicleClass = Nothing
+          }
+
     buildTrackingUrl rideId = do
       bppUIUrl <- asks (.selfUIUrl)
       let rideid = T.unpack (getId rideId)

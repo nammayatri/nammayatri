@@ -11,14 +11,13 @@ import Domain.Types.Booking.Type as Booking
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
-import Domain.Types.Vehicle
+import Domain.Types.RideDetails
 import Storage.Queries.Booking
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking as Booking
-import Storage.Tabular.Person as Person
 import Storage.Tabular.Rating as Rating
 import Storage.Tabular.Ride as Ride
-import Storage.Tabular.Vehicle as Vehicle
+import Storage.Tabular.RideDetails as RideDetails
 
 create :: Ride -> SqlDB ()
 create dRide = Esq.runTransaction $
@@ -107,27 +106,23 @@ findOneByDriverId driverId = Esq.buildDType $ do
     pure (ride, mbRating)
   pure $ extractSolidType <$> mbFullRideT
 
-findAllRideAPIEntityDataByRBId :: Transactionable m => Id Booking -> m [(Ride, Maybe Vehicle, Maybe Person)]
+findAllRideAPIEntityDataByRBId :: (Transactionable m, EncFlow m r) => Id Booking -> m [(Ride, RideDetails)]
 findAllRideAPIEntityDataByRBId rbId = Esq.buildDType $ do
   res <- Esq.findAll' $ do
-    ((ride :& mbRating) :& mbVehicle :& mbPerson) <-
+    ((ride :& mbRating) :& rideDetails) <-
       from $
         fullRideTable
-          `leftJoin` table @VehicleT
-            `Esq.on` ( \((ride :& _) :& mbVehicle) ->
-                         just (ride ^. Ride.RideDriverId) ==. mbVehicle ?. Vehicle.VehicleDriverId
-                     )
-          `leftJoin` table @PersonT
-            `Esq.on` ( \((ride :& _) :& _ :& mbPerson) ->
-                         just (ride ^. Ride.RideDriverId) ==. mbPerson ?. Person.PersonTId
+          `innerJoin` table @RideDetailsT
+            `Esq.on` ( \((ride :& _) :& rideDetails) ->
+                         (ride ^. Ride.RideId) ==. rideDetails ^. RideDetails.RideDetailsId
                      )
     where_ $
       ride ^. Ride.RideBookingId ==. val (toKey rbId)
     orderBy [desc $ ride ^. RideCreatedAt]
-    return ((ride, mbRating), mbVehicle, mbPerson)
+    return ((ride, mbRating), rideDetails)
   return $
-    res <&> \(fullRideT, mbVehicleT :: Maybe VehicleT, mbPersonT :: Maybe PersonT) ->
-      (extractSolidType fullRideT, extractSolidType <$> mbVehicleT, extractSolidType <$> mbPersonT)
+    res <&> \(fullRideT, rideDetails :: RideDetailsT) ->
+      (extractSolidType fullRideT, extractSolidType rideDetails)
 
 getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getInProgressByDriverId driverId = Esq.buildDType $ do

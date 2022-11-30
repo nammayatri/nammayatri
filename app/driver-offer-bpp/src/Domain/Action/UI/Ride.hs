@@ -13,11 +13,11 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
 import SharedLogic.FareCalculator
-import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.Vehicle as QVeh
+import qualified Storage.Queries.RideDetails as QRD
 import Tools.Error
 
 data DriverRideRes = DriverRideRes
@@ -59,32 +59,33 @@ listDriverRides ::
   Maybe Bool ->
   m DriverRideListRes
 listDriverRides driverId mbLimit mbOffset mbOnlyActive = do
-  rideData <- QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive
-  vehicle <- QVeh.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
-  driver <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  driverNumber <- DP.getPersonNumber driver
-  pure . DriverRideListRes $ mkDriverRideRes vehicle driver driverNumber <$> rideData
+  rides <- QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive
+  driverRideLis <- forM rides $ \(ride, booking) -> do
+    rideDetail <- QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
+    driverNumber <- RD.getDriverNumber rideDetail
+    pure $ mkDriverRideRes rideDetail driverNumber (ride, booking)
+  pure . DriverRideListRes $ driverRideLis
 
 mkDriverRideRes ::
-  DVeh.Vehicle ->
-  DP.Person ->
+  RD.RideDetails ->
   Maybe Text ->
   (DRide.Ride, DRB.Booking) ->
   DriverRideRes
-mkDriverRideRes vehicle driver driverNumber (ride, booking) = do
+mkDriverRideRes rideDetails driverNumber (ride, booking) = do
   let fareParams = booking.fareParams
+  let initial = "" :: Text
   DriverRideRes
     { id = ride.id,
       shortRideId = ride.shortId,
       status = ride.status,
       fromLocation = DBLoc.makeBookingLocationAPIEntity booking.fromLocation,
       toLocation = DBLoc.makeBookingLocationAPIEntity booking.toLocation,
-      driverName = driver.firstName,
-      driverNumber = driverNumber,
-      vehicleNumber = vehicle.registrationNo,
-      vehicleColor = vehicle.color,
-      vehicleVariant = vehicle.variant,
-      vehicleModel = vehicle.model,
+      driverName = rideDetails.driverName,
+      driverNumber,
+      vehicleNumber = rideDetails.vehicleNumber,
+      vehicleColor = fromMaybe initial rideDetails.vehicleColor,
+      vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
+      vehicleModel = fromMaybe initial rideDetails.vehicleModel,
       computedFare = ride.fare,
       estimatedBaseFare = baseFareSum fareParams,
       driverSelectedFare = fromMaybe 0 fareParams.driverSelectedFare,

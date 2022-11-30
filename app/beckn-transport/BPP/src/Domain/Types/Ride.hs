@@ -3,7 +3,6 @@
 module Domain.Types.Ride where
 
 import Beckn.External.Maps.Types (LatLong)
-import Beckn.Prelude (roundToIntegral)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Aeson
@@ -85,23 +84,3 @@ data RideAPIEntity = RideAPIEntity
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
 
-makeRideAPIEntity :: Ride -> DPers.DecryptedPerson -> DVeh.Vehicle -> RideAPIEntity
-makeRideAPIEntity ride driver vehicle =
-  RideAPIEntity
-    { id = ride.id,
-      shortRideId = ride.shortId,
-      status = ride.status,
-      driverName = driver.firstName,
-      driverNumber = driver.mobileCountryCode <> driver.mobileNumber,
-      vehicleNumber = vehicle.registrationNo,
-      vehicleColor = vehicle.color,
-      vehicleVariant = vehicle.variant,
-      vehicleModel = vehicle.model,
-      computedFare = ride.fare,
-      computedTotalFare = ride.totalFare,
-      actualRideDistance = roundToIntegral ride.traveledDistance,
-      rideRating = ride.rideRating <&> (.ratingValue),
-      createdAt = ride.createdAt,
-      updatedAt = ride.updatedAt,
-      chargeableDistance = ride.chargeableDistance
-    }
