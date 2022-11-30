@@ -3,7 +3,7 @@ module API.Dashboard.Driver where
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Id
-import Beckn.Utils.Common
+import Beckn.Utils.Common (withFlowHandlerAPI)
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Types.Merchant as DM
@@ -49,16 +49,16 @@ disableDrivers :: ShortId DM.Merchant -> Common.DriverIds -> FlowHandler Common.
 disableDrivers merchantShortId = withFlowHandlerAPI . DDriver.disableDrivers merchantShortId
 
 driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
-driverLocation merchantShortId mbLimit mbOffset = withFlowHandler . DDriver.driverLocation merchantShortId mbLimit mbOffset
+driverLocation merchantShortId mbLimit mbOffset = withFlowHandlerAPI . DDriver.driverLocation merchantShortId mbLimit mbOffset
 
 driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
-driverInfo merchantShortId mbMobileNumber = withFlowHandler . DDriver.driverInfo merchantShortId mbMobileNumber
+driverInfo merchantShortId mbMobileNumber = withFlowHandlerAPI . DDriver.driverInfo merchantShortId mbMobileNumber
 
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
-deleteDriver merchantShortId = withFlowHandler . DDriver.deleteDriver merchantShortId
+deleteDriver merchantShortId = withFlowHandlerAPI . DDriver.deleteDriver merchantShortId
 
 unlinkVehicle :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
-unlinkVehicle merchantShortId = withFlowHandler . DDriver.unlinkVehicle merchantShortId
+unlinkVehicle merchantShortId = withFlowHandlerAPI . DDriver.unlinkVehicle merchantShortId
 
 updatePhoneNumber :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> FlowHandler APISuccess
-updatePhoneNumber merchantShortId driverId = withFlowHandler . DDriver.updatePhoneNumber merchantShortId driverId
+updatePhoneNumber merchantShortId driverId = withFlowHandlerAPI . DDriver.updatePhoneNumber merchantShortId driverId
