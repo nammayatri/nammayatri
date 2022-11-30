@@ -10,13 +10,13 @@ import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Fixtures
+import Fixtures.TestRedis
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Tools.Error
-import Utils.SilentLogger ()
 
-handle :: StartRide.ServiceHandle IO
+handle :: StartRide.ServiceHandle WithRedisMonad
 handle =
   StartRide.ServiceHandle
     { requestor = Fixtures.defaultDriver,
@@ -67,8 +67,8 @@ startRide =
       failedStartWithWrongOTP
     ]
 
-runHandler :: StartRide.ServiceHandle IO -> Id Ride.Ride -> StartRideReq -> IO APISuccess.APISuccess
-runHandler = StartRide.startRideHandler
+runHandler :: StartRide.ServiceHandle WithRedisMonad -> Id Ride.Ride -> StartRideReq -> IO APISuccess.APISuccess
+runHandler a b c = runWithMockHedis $ startRideHandler a b c
 
 testStartRideReq :: StartRideReq
 testStartRideReq =

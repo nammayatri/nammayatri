@@ -11,6 +11,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures
+import Fixtures.TestRedis
 import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
 import SharedLogic.FareCalculator.RentalFareCalculator.Calculator
 import Test.Hspec
@@ -39,7 +40,7 @@ endRideTests =
         ]
     ]
 
-handle :: Handle.ServiceHandle IO
+handle :: Handle.ServiceHandle WithRedisMonad
 handle =
   Handle.ServiceHandle
     { requestor = Fixtures.defaultDriver,
@@ -129,36 +130,36 @@ rentalBooking = do
 successfulEndByDriver :: TestTree
 successfulEndByDriver =
   testCase "Requested by correct driver" $
-    Handle.endRideHandler handle "ride" testEndRideReq `shouldReturn` APISuccess.Success
+    runWithMockHedis (Handle.endRideHandler handle "ride" testEndRideReq) `shouldReturn` APISuccess.Success
 
 successfulEndRental :: TestTree
 successfulEndRental =
   testCase "Requested for rentals by correct driver" $
-    Handle.endRideHandler handle "rentalRide" testEndRideReq `shouldReturn` APISuccess.Success
+    runWithMockHedis (Handle.endRideHandler handle "rentalRide" testEndRideReq) `shouldReturn` APISuccess.Success
 
 failedEndRequestedByWrongDriver :: TestTree
 failedEndRequestedByWrongDriver =
   testCase "Requested by wrong driver" $
-    Handle.endRideHandler modHandle "ride" testEndRideReq `shouldThrow` (== NotAnExecutor)
+    runWithMockHedis (Handle.endRideHandler modHandle "ride" testEndRideReq) `shouldThrow` (== NotAnExecutor)
   where
     modHandle = handle{requestor = Fixtures.defaultDriver{id = "2"}}
 
 failedEndRequestedNotByDriver :: TestTree
 failedEndRequestedNotByDriver =
   testCase "Requested not by driver" $
-    Handle.endRideHandler modHandle "ride" testEndRideReq `shouldThrow` (== AccessDenied)
+    runWithMockHedis (Handle.endRideHandler modHandle "ride" testEndRideReq) `shouldThrow` (== AccessDenied)
   where
     modHandle = handle{requestor = Fixtures.defaultAdmin}
 
 failedEndWhenRideStatusIsWrong :: TestTree
 failedEndWhenRideStatusIsWrong =
   testCase "A ride has wrong status" $
-    Handle.endRideHandler handle "completed_ride" testEndRideReq `shouldThrow` (\(RideInvalidStatus _) -> True)
+    runWithMockHedis (Handle.endRideHandler handle "completed_ride" testEndRideReq) `shouldThrow` (\(RideInvalidStatus _) -> True)
 
 failedEndNonexistentRide :: TestTree
 failedEndNonexistentRide =
   testCase "A ride does not even exist" $
-    Handle.endRideHandler handle rideId testEndRideReq `shouldThrow` (== RideDoesNotExist rideId.getId)
+    runWithMockHedis (Handle.endRideHandler handle rideId testEndRideReq) `shouldThrow` (== RideDoesNotExist rideId.getId)
   where
     rideId = "nonexistent_ride"
 
@@ -173,7 +174,7 @@ lufActTotalFare = 500
 lufBooking :: SRB.Booking
 lufBooking = booking {SRB.estimatedFare = lufEstFare, SRB.estimatedTotalFare = lufEstTotalFare}
 
-locationUpdatesFailureHandle :: Handle.ServiceHandle IO
+locationUpdatesFailureHandle :: Handle.ServiceHandle WithRedisMonad
 locationUpdatesFailureHandle =
   handle
     { findBookingById = \rbId -> pure $ case rbId of
@@ -196,12 +197,12 @@ locationUpdatesFailureHandle =
             }
     }
   where
-    checkRide :: Ride.Ride -> IO ()
+    checkRide :: Ride.Ride -> WithRedisMonad ()
     checkRide rd =
       when (rd.fare /= Just lufEstFare || rd.totalFare /= Just lufEstTotalFare) $
         throwError $ InternalError "expected estimated fares as final fares"
 
-locationUpdatesSuccessHandle :: Handle.ServiceHandle IO
+locationUpdatesSuccessHandle :: Handle.ServiceHandle WithRedisMonad
 locationUpdatesSuccessHandle =
   locationUpdatesFailureHandle
     { isDistanceCalculationFailed = pure False,
@@ -209,7 +210,7 @@ locationUpdatesSuccessHandle =
       endRideTransaction = \_ rd _ -> checkRide rd
     }
   where
-    checkRide :: Ride.Ride -> IO ()
+    checkRide :: Ride.Ride -> WithRedisMonad ()
     checkRide rd =
       when (rd.fare /= Just lufActFare || rd.totalFare /= Just lufActTotalFare) $
         throwError $ InternalError $ "expected actual fares as final fares; fare = " <> show rd.fare <> ", totalFare = " <> show rd.totalFare
@@ -217,13 +218,13 @@ locationUpdatesSuccessHandle =
 locationUpdatesFailure :: TestTree
 locationUpdatesFailure =
   testCase "Return estimated fare when failed to calculate actual distance" $
-    void $ Handle.endRideHandler locationUpdatesFailureHandle rideId testEndRideReq
+    void . runWithMockHedis $ Handle.endRideHandler locationUpdatesFailureHandle rideId testEndRideReq
   where
     rideId = "ride"
 
 locationUpdatesSuccess :: TestTree
 locationUpdatesSuccess =
   testCase "Return actual fare when succeeded to calculate actual distance" $
-    void $ Handle.endRideHandler locationUpdatesSuccessHandle rideId testEndRideReq
+    void . runWithMockHedis $ Handle.endRideHandler locationUpdatesSuccessHandle rideId testEndRideReq
   where
     rideId = "ride"
