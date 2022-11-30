@@ -70,20 +70,26 @@ startRideHandler ServiceHandle {..} rideId req = do
   rateLimitStartRide rideId
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
-  whenM (Redis.tryLockRedis (lockKey driverId) 60) $ do
-    case requestor.role of
-      Person.DRIVER -> do
-        unless (driverId == requestor.id) $ throwError NotAnExecutor
-      _ -> throwError AccessDenied
-    unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
-    booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-    let inAppOtp = ride.otp
-    when (req.rideOtp /= inAppOtp) $ throwError IncorrectOTP
-    logTagInfo "startRide" ("DriverId " <> getId driverId <> ", RideId " <> getId rideId)
-    startRideAndUpdateLocation ride.id booking.id req.point
-    initializeDistanceCalculation req.point
-    notifyBAPRideStarted booking ride
-    Redis.unlockRedis (lockKey driverId)
+  case requestor.role of
+    Person.DRIVER -> do
+      unless (driverId == requestor.id) $ throwError NotAnExecutor
+    _ -> throwError AccessDenied
+  unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
+  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  let inAppOtp = ride.otp
+  when (req.rideOtp /= inAppOtp) $ throwError IncorrectOTP
+  logTagInfo "startRide" ("DriverId " <> getId driverId <> ", RideId " <> getId rideId)
+  redisLockDriverId <- Redis.tryLockRedis (lockKey driverId) 60
+  if redisLockDriverId
+    then do
+      logDebug $ "DriverId: " <> show driverId <> "Locked"
+      startRideAndUpdateLocation ride.id booking.id req.point
+      initializeDistanceCalculation req.point
+      notifyBAPRideStarted booking ride
+      Redis.unlockRedis (lockKey driverId)
+      logDebug $ "DriverId: " <> show driverId <> " Unlocked"
+    else logDebug $ "DriverId: " <> getId driverId <> " unable to get lock"
+
   pure APISuccess.Success
   where
     isValidRideStatus status = status == SRide.NEW

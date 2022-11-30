@@ -85,19 +85,24 @@ updateLocationHandler Handler {..} waypoints = withLogTag "driverLocationUpdate"
   checkLocationUpdatesRateLimit driver.id
   logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
-  whenM (Redis.tryLockRedis lockKey 60) $ do
-    mbOldLoc <- findDriverLocation
-    case filterNewWaypoints mbOldLoc of
-      [] -> logWarning "Incoming points are older than current one, ignoring"
-      (a : ax) -> do
-        let newWaypoints = a :| ax
-            currPoint = NE.last newWaypoints
-        upsertDriverLocation currPoint.pt currPoint.ts
-        getInProgress
-          >>= maybe
-            (logInfo "No ride is assigned to driver, ignoring")
-            (\ride -> addIntermediateRoutePoints ride.id $ NE.map (.pt) newWaypoints)
-    Redis.unlockRedis lockKey
+  redisLockDriverId <- Redis.tryLockRedis lockKey 60
+  if redisLockDriverId
+    then do
+      logDebug $ "DriverId: " <> getId driver.id <> " Locked"
+      mbOldLoc <- findDriverLocation
+      case filterNewWaypoints mbOldLoc of
+        [] -> logWarning "Incoming points are older than current one, ignoring"
+        (a : ax) -> do
+          let newWaypoints = a :| ax
+              currPoint = NE.last newWaypoints
+          upsertDriverLocation currPoint.pt currPoint.ts
+          getInProgress
+            >>= maybe
+              (logInfo "No ride is assigned to driver, ignoring")
+              (\ride -> addIntermediateRoutePoints ride.id $ NE.map (.pt) newWaypoints)
+      Redis.unlockRedis lockKey
+      logDebug $ "DriverId: " <> getId driver.id <> " Unlocked"
+    else logDebug $ "DriverId: " <> getId driver.id <> " unable to get lock"
   pure Success
   where
     filterNewWaypoints mbOldLoc = do

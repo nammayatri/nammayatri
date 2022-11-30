@@ -12,7 +12,7 @@ let rcfg =
       , connectTimeout = None Integer
       }
 
-in  { redisCfg = rcfg
+in  { hedisCfg = rcfg
     , port = +8015
     , metricsPort = +9998
     , selfId = "JUSPAY.BG.1"
