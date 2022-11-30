@@ -225,7 +225,7 @@ convertTextToUTC a = do
   DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
 isValidCOVDL :: [Text] -> Text -> Bool
-isValidCOVDL validCOVs cov = foldr' (\x acc -> T.isInfixOf x cov || acc) False validCOVs
+isValidCOVDL validCOVs cov = foldr' (\x acc -> T.isInfixOf (T.toUpper x) (T.toUpper cov) || acc) False validCOVs
 
 removeSpaceAndDash :: Text -> Text
 removeSpaceAndDash = T.replace "-" "" . T.replace " " ""
