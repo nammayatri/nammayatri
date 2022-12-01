@@ -84,6 +84,8 @@ dependencies:
   - text-conversions
   - beckn-services
   - xml-conduit
+  - cassava
+  - vector
 
 ghc-options:
   - -fwrite-ide-info

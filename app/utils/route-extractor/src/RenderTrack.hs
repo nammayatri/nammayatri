@@ -1,9 +1,14 @@
-module RenderXml where
+{-# OPTIONS_GHC -Wno-orphans #-}
+
+module RenderTrack where
 
 import Beckn.External.Maps.Types (LatLong (..))
 import Beckn.Prelude
 import Beckn.Utils.GenericPretty
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.Csv as Csv
 import qualified Data.Map.Strict as Map
+import qualified Data.Vector as Vector
 import Text.XML
 
 type LocationUpdates = [[LatLong]]
@@ -125,3 +130,24 @@ renderTrackPoint :: GpxTrackPoint -> Element
 renderTrackPoint tp = Element "trkpt" (renderGpsAttrs tp.lat tp.lon) $ map NodeElement tags
   where
     tags = catMaybes [dataElement "time" . show <$> tp.time]
+
+data CsvWaypoint = CsvWaypoint
+  { timestamp :: Maybe UTCTime,
+    lat :: Double,
+    lon :: Double
+  }
+  deriving (Generic, Show)
+
+instance Csv.ToField UTCTime where
+  toField a = Csv.toField string
+    where
+      string :: String
+      string = show a
+
+instance Csv.ToNamedRecord CsvWaypoint
+
+encodeCsvBS :: [CsvWaypoint] -> BL.ByteString
+encodeCsvBS = Csv.encodeByName (Vector.fromList ["timestamp", "lat", "lon"])
+
+latLongToCsvWaypoint :: LatLong -> CsvWaypoint
+latLongToCsvWaypoint (LatLong lat' lon') = CsvWaypoint Nothing lat' lon'

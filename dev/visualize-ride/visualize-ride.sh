@@ -2,6 +2,8 @@
 RIDE_ID=$1
 INPUT_FILE=$2
 OUTPUT_FILE=$3
+FILE_TYPE=$4
+TEMP_FILE=temp
 
 # usage:
 # 1) obtain file that contains logs of location updates in the accepted format (see the code below)
@@ -18,4 +20,11 @@ OUTPUT_FILE=$3
 if [ "o$OUTPUT_FILE" = "o" ] ;
   then OUTPUT_FILE=output.gpx
 fi
-grep "locupd-rideId-$RIDE_ID" $INPUT_FILE | grep 'points interp' | sed 's/.*points interpolation: input=\(\[.*\]\); output=\(\[.*\]\)/(\1,\2)/' | stack exec route-extractor-exe | xmllint --format - > $OUTPUT_FILE
+grep "locupd-rideId-$RIDE_ID" $INPUT_FILE | grep 'points interp' | sed 's/.*points interpolation: input=\(\[.*\]\); output=\(\[.*\]\)/(\1,\2)/' | stack exec -- route-extractor-exe $FILE_TYPE > $TEMP_FILE
+if [[ $OUTPUT_FILE == *.gpx ]] ;
+  then xmllint --format $TEMP_FILE > $OUTPUT_FILE
+  else cat $TEMP_FILE > $OUTPUT_FILE
+fi
+
+rm $TEMP_FILE
+
