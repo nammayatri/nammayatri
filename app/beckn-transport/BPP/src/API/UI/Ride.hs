@@ -65,12 +65,12 @@ handler =
 startRide :: Id SP.Person -> Id SRide.Ride -> SHandler.StartRideReq -> FlowHandler APISuccess.APISuccess
 startRide personId rideId req = withFlowHandlerAPI $ do
   shandle <- SHandler.buildStartRideHandle personId rideId
-  SHandler.startRideHandler shandle (cast rideId) req
+  SHandler.startRide shandle (cast rideId) req
 
 endRide :: Id SP.Person -> Id SRide.Ride -> EHandler.EndRideReq -> FlowHandler APISuccess.APISuccess
 endRide personId rideId req = withFlowHandlerAPI $ do
   shandle <- EHandler.buildEndRideHandle personId rideId
-  EHandler.endRideHandler shandle rideId req
+  EHandler.endRide shandle rideId req
 
 cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess
 cancelRide personId rideId req = withFlowHandlerAPI $ do
