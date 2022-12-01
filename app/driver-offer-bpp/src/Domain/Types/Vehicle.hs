@@ -49,6 +49,7 @@ data Vehicle = Vehicle
     size :: Maybe Text,
     energyType :: Maybe Text,
     registrationCategory :: Maybe RegistrationCategory,
+    vehicleClass :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

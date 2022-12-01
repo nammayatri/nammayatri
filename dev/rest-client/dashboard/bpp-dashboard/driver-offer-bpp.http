@@ -33,42 +33,28 @@ token: {{customer_service}}
 
 # @name driverActivity
 
-@driverId = favorit-auto1-0000000000000000000000
-
 GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/activity
 token: {{customer_service}}
 
 ###
 
-# @name enableDrivers
+# @name enableDriver
 
-@driverId1e = favorit-auto1-0000000000000000000000
-@driverId2e = favorit-auto2-0000000000000000000000
-@driverId3e = favorit-suv-000000000000000000000001
+@driverId1 = favorit-auto1-0000000000000000000000
+@driverId2 = favorit-auto2-0000000000000000000000
+@driverId3 = favorit-suv-000000000000000000000001
 
-PUT {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/enable
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1}}/enable
 token: {{juspay_ops}}
 content-type: application/json
-
-{
-    "driverIds": ["{{driverId1e}}", "{{driverId2e}}", "{{driverId3e}}"]
-}
 
 ###
 
-# @name disableDrivers
+# @name disableDriver
 
-@driverId1d = favorit-auto1-0000000000000000000000
-@driverId2d = favorit-auto2-0000000000000000000000
-@driverId3d = favorit-suv-000000000000000000000000
-
-PUT {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/disable
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1}}/disable
 token: {{juspay_ops}}
 content-type: application/json
-
-{
-    "driverIds": ["{{driverId1d}}", "{{driverId2d}}", "{{driverId3d}}"]
-}
 
 ###
 
@@ -77,7 +63,7 @@ token: {{customer_service}}
 content-type: application/json
 
 {
-    "driverIds": ["{{driverId1e}}", "{{driverId2e}}", "{{driverId3e}}"]
+    "driverIds": ["{{driverId1}}", "{{driverId2}}", "{{driverId3}}"]
 }
 
 ###
@@ -94,23 +80,40 @@ content-type: application/json
 
 ###
 
-DELETE {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId2e}}/permanentlyDelete
+DELETE {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId2}}/permanentlyDelete
 token: {{juspay_admin}}
 content-type: application/json
 
 ###
 
-POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1e}}/unlinkVehicle
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1}}/unlinkVehicle
 token: {{juspay_admin}}
 content-type: application/json
 
 ###
 
-POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1e}}/updatePhoneNumber
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1}}/updatePhoneNumber
 token: {{juspay_admin}}
 content-type: application/json
 
 {
     "newPhoneNumber": "7777777777",
     "newCountryCode": "+91"
+}
+###
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1}}/addVehicle
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "variant" : "AUTO_RICKSHAW",
+    "registrationNo" : "777IN",
+    "vehicleClass" : "vehicleClass",
+    "capacity" : 5,
+    "colour" : "Red",
+    "energyType" : "PETROL",
+    "model" : "VAZ",
+    "make" : "make",
+    "driverName" : "Krishna"
 }

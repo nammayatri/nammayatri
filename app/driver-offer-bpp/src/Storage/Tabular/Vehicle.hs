@@ -36,6 +36,7 @@ mkPersist
       size Text Maybe
       energyType Text Maybe
       registrationCategory Domain.RegistrationCategory Maybe
+      vehicleClass Text
       createdAt UTCTime
       updatedAt UTCTime
       Primary driverId

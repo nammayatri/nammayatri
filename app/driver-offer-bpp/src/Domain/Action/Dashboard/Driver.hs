@@ -451,6 +451,7 @@ buildVehicle merchantId personId req = do
         size = Nothing,
         energyType = req.energyType,
         registrationCategory = Nothing,
+        vehicleClass = req.vehicleClass,
         createdAt = now,
         updatedAt = now
       }

@@ -21,7 +21,9 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Validation (runRequestValidation)
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
+import Data.Aeson (eitherDecode)
 import Data.Coerce
+import Data.Either.Combinators (mapLeft)
 import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Types.DriverInformation as DrInfo
 import qualified Domain.Types.Merchant as DM
@@ -378,6 +380,7 @@ buildVehicle merchantId personId req = do
         size = Nothing,
         energyType = mbEnergyType,
         registrationCategory = Nothing,
+        vehicleClass = req.vehicleClass,
         createdAt = now,
         updatedAt = now
       }
@@ -389,4 +392,4 @@ buildVehicle merchantId personId req = do
       Common.AUTO_RICKSHAW -> Left "Auto-rickshaw vehicles are not supported by this BPP"
 
     castEnergyType :: Text -> Either Text DVeh.EnergyType
-    castEnergyType = readEither
+    castEnergyType = mapLeft show . eitherDecode . show

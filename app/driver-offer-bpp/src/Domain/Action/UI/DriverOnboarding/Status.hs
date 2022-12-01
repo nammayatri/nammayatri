@@ -130,6 +130,7 @@ enableDriver personId merchantId (Just rc) (Just dl) = do
           Vehicle.energyType = rc.vehicleEnergyType,
           Vehicle.registrationNo = certificateNumber,
           Vehicle.registrationCategory = Nothing,
+          Vehicle.vehicleClass = "3WT",
           Vehicle.createdAt = now,
           Vehicle.updatedAt = now
         }

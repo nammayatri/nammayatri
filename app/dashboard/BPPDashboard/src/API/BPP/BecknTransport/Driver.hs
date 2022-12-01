@@ -138,5 +138,6 @@ updatePhoneNumber userMerchantId merchantId driverId req = withFlowHandlerAPI $ 
 
 addVehicle :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicle userMerchantId merchantId driverId req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.addVehicle) driverId req

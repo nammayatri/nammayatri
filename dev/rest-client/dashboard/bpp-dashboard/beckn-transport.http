@@ -26,44 +26,27 @@ token: {{customer_service}}
 
 # @name driverActivity
 
-@driverId = 001b93df-4f7c-440f-bada-4d46c396d7d0
-
 GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/activity
 token: {{customer_service}}
 
 ###
 
-# @name enableDrivers
+# @name enableDriver
 
-@driverId1e = 001b93df-4f7c-440f-bada-4d46c396d7d0
-@driverId2e = 002b93df-4f7c-440f-bada-4d46c396d7d0
+@driverId1 = 001b93df-4f7c-440f-bada-4d46c396d7d0
+@driverId2 = 002b93df-4f7c-440f-bada-4d46c396d7d0
+@driverId3 = driver-not-found-0000000000000000000
 
-@driverId3e = driver-not-found-0000000000000000000
-
-PUT {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/enable
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1}}/enable
 token: {{juspay_ops}}
 content-type: application/json
-
-
-{
-    "driverIds": ["{{driverId1e}}", "{{driverId2e}}", "{{driverId3e}}"]
-}
 
 ###
-# @name disableDrivers
+# @name disableDriver
 
-@driverId1d = 001b93df-4f7c-440f-bada-4d46c396d7d0
-@driverId2d = 002b93df-4f7c-440f-bada-4d46c396d7d0
-
-@driverId3d = driver-not-found-0000000000000000000
-
-PUT {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/disable
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1}}/disable
 token: {{juspay_ops}}
 content-type: application/json
-
-{
-    "driverIds": ["{{driverId1d}}", "{{driverId2d}}", "{{driverId3d}}"]
-}
 
 ###
 
@@ -72,7 +55,7 @@ token: {{customer_service}}
 content-type: application/json
 
 {
-    "driverIds": ["{{driverId1e}}", "{{driverId2e}}", "{{driverId3e}}"]
+    "driverIds": ["{{driverId1}}", "{{driverId2}}", "{{driverId3}}"]
 }
 
 ###
@@ -89,23 +72,41 @@ content-type: application/json
 
 ###
 
-DELETE {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId2e}}/permanentlyDelete
+DELETE {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId2}}/permanentlyDelete
 token: {{juspay_admin}}
 content-type: application/json
 
 ###
 
-POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1e}}/unlinkVehicle
-token: {{juspay_admin}}
-content-type: application/json
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1}}/unlinkVehicle
+ token: {{juspay_admin}}
+ content-type: application/json
 
 ###
 
-POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1e}}/updatePhoneNumber
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1}}/updatePhoneNumber
 token: {{juspay_admin}}
 content-type: application/json
 
 {
     "newPhoneNumber": "7777777777",
     "newCountryCode": "+91"
+}
+
+###
+
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1}}/addVehicle
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "variant" : "SEDAN",
+    "registrationNo" : "777IN",
+    "vehicleClass" : "vehicleClass",
+    "capacity" : 5,
+    "colour" : "Red",
+    "energyType" : "PETROL",
+    "model" : "VAZ",
+    "make" : "make",
+    "driverName" : "Krishna"
 }

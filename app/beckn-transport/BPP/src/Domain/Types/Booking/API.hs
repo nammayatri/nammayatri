@@ -148,6 +148,7 @@ buildBookingAPIEntity booking = do
           size = Nothing,
           energyType = Nothing,
           registrationCategory = Nothing,
+          vehicleClass = "3WT",
           createdAt = now,
           updatedAt = now
         }
