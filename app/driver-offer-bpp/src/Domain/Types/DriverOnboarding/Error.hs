@@ -21,6 +21,7 @@ data DriverOnboardingError
   | DLAlreadyUpdated
   | RCAlreadyLinked
   | RCAlreadyUpdated
+  | InvalidOperatingCity Text
   deriving (Generic, Eq, Show, Read, IsBecknAPIError, ToSchema, ToJSON, FromJSON)
 
 instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
@@ -41,6 +42,7 @@ instance IsBaseError DriverOnboardingError where
     DLAlreadyUpdated -> Just "No action required. Driver license is already linked to driver."
     RCAlreadyLinked -> Just "Vehicle RC not available."
     RCAlreadyUpdated -> Just "No action required. Vehicle RC is already linked to driver."
+    InvalidOperatingCity city -> Just $ "Operating city \"" <> city <> "\" is invalid."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -58,6 +60,7 @@ instance IsHTTPError DriverOnboardingError where
     DLAlreadyUpdated -> "DL_ALREADY_UPDATED"
     RCAlreadyLinked -> "RC_ALREADY_LINKED"
     RCAlreadyUpdated -> "RC_ALREADY_UPDATED"
+    InvalidOperatingCity _ -> "OPERATING_CITY_INVALID"
 
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
@@ -74,5 +77,6 @@ instance IsHTTPError DriverOnboardingError where
     DLAlreadyUpdated -> E400
     RCAlreadyLinked -> E400
     RCAlreadyUpdated -> E400
+    InvalidOperatingCity _ -> E400
 
 instance IsAPIError DriverOnboardingError

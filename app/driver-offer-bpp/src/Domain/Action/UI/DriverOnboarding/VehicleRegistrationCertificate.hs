@@ -22,7 +22,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
 import Control.Applicative ((<|>))
-import Data.Text as T
+import Data.Text as T hiding (null)
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverOnboarding.DriverRCAssociation as Domain
 import Domain.Types.DriverOnboarding.Error
@@ -38,6 +38,7 @@ import SharedLogic.DriverOnboarding
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
+import qualified Storage.Queries.DriverOnboarding.OperatingCity as QCity
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.Person as Person
 
@@ -72,7 +73,11 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
     -- merchant access checking
     merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
     unless (merchant.id == merchantId) $ throwError (PersonNotFound personId.getId)
-
+  operatingCity' <- case mbMerchant of
+    Just merchant -> QCity.findEnabledCityByMerchantIdAndName merchant.id $ T.toLower req.operatingCity
+    Nothing -> QCity.findEnabledCityByName $ T.toLower req.operatingCity
+  when (null operatingCity') $
+    throwError $ InvalidOperatingCity req.operatingCity
   configs <- asks (.driverOnboardingConfigs)
   when
     ( isNothing dateOfRegistration && configs.checkImageExtraction

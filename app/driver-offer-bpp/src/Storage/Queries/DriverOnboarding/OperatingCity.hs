@@ -27,3 +27,29 @@ findByMerchantId personid = do
     vechileRegCert <- from $ table @OperatingCityT
     where_ $ vechileRegCert ^. OperatingCityMerchantId ==. val (toKey personid)
     return vechileRegCert
+
+findEnabledCityByName ::
+  Transactionable m =>
+  Text ->
+  m [OperatingCity]
+findEnabledCityByName city =
+  Esq.findAll $ do
+    operatingCity <- from $ table @OperatingCityT
+    where_ $
+      lower_ (operatingCity ^. OperatingCityCityName) ==. val city
+        &&. operatingCity ^. OperatingCityEnabled
+    return operatingCity
+
+findEnabledCityByMerchantIdAndName ::
+  Transactionable m =>
+  Id Merchant ->
+  Text ->
+  m [OperatingCity]
+findEnabledCityByMerchantIdAndName merchantId city =
+  Esq.findAll $ do
+    operatingCity <- from $ table @OperatingCityT
+    where_ $
+      lower_ (operatingCity ^. OperatingCityCityName) ==. val city
+        &&. operatingCity ^. OperatingCityMerchantId ==. val (toKey merchantId)
+        &&. operatingCity ^. OperatingCityEnabled
+    return operatingCity
