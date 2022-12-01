@@ -33,6 +33,8 @@ import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
+import Storage.CachedQueries.CacheConfig
+import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.DriverInformation as QD
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
@@ -91,7 +93,8 @@ auth ::
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    CacheFlow m r
   ) =>
   AuthReq ->
   m AuthRes
@@ -100,9 +103,13 @@ auth req = do
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
+  let merchantId = Id req.merchantId :: Id DO.Merchant
+  merchant <-
+    QMerchant.findById merchantId
+      >>= fromMaybeM (MerchantNotFound merchantId.getId)
   person <-
     QP.findByMobileNumber countryCode mobileNumber
-      >>= maybe (createDriverWhihDetails req) return
+      >>= maybe (createDriverWhihDetails req merchant.id) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
@@ -138,12 +145,11 @@ createDriverDetails personId = do
   where
     driverId = cast personId
 
-makePerson :: EncFlow m r => AuthReq -> m SP.Person
-makePerson req = do
+makePerson :: EncFlow m r => AuthReq -> Id DO.Merchant -> m SP.Person
+makePerson req merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   encMobNum <- encrypt req.mobileNumber
-  let merchantId = Just (Id req.merchantId :: Id DO.Merchant)
   return $
     SP.Person
       { id = pid,
@@ -159,7 +165,7 @@ makePerson req = do
         mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,
         rating = Nothing,
-        merchantId = merchantId,
+        merchantId = Just merchantId,
         isNew = True,
         deviceToken = Nothing,
         language = Nothing,
@@ -201,9 +207,9 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWhihDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> m SP.Person
-createDriverWhihDetails req = do
-  person <- makePerson req
+createDriverWhihDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Id DO.Merchant -> m SP.Person
+createDriverWhihDetails req mercahntId = do
+  person <- makePerson req mercahntId
   DB.runTransaction $ do
     QP.create person
     createDriverDetails (person.id)
