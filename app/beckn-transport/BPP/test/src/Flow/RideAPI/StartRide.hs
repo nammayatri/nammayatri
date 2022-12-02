@@ -1,7 +1,6 @@
 module Flow.RideAPI.StartRide where
 
 import Beckn.External.Maps.Types
-import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Domain.Action.UI.Ride.StartRide as StartRide
 import qualified Domain.Types.Booking as SRB
@@ -62,7 +61,7 @@ startRide =
       failedStartWithWrongOTP
     ]
 
-runHandler :: StartRide.ServiceHandle IO -> Ride.Ride -> StartRideReq -> IO APISuccess.APISuccess
+runHandler :: StartRide.ServiceHandle IO -> Ride.Ride -> StartRideReq -> IO ()
 runHandler = StartRide.startRideHandler
 
 testStartRideReq :: StartRideReq
@@ -76,7 +75,7 @@ successfulStartByDriver :: TestTree
 successfulStartByDriver =
   testCase "Start successfully if requested by driver executor" $ do
     runHandler handle ride testStartRideReq
-      `shouldReturn` APISuccess.Success
+      `shouldReturn` ()
 
 failedStartRequestedByDriverNotAnOrderExecutor :: TestTree
 failedStartRequestedByDriverNotAnOrderExecutor = do

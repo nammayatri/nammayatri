@@ -70,7 +70,7 @@ startRide personId rideId req = withFlowHandlerAPI $ do
 endRide :: Id SP.Person -> Id SRide.Ride -> EHandler.EndRideReq -> FlowHandler APISuccess.APISuccess
 endRide personId rideId req = withFlowHandlerAPI $ do
   shandle <- EHandler.buildEndRideHandle personId rideId
-  EHandler.endRide shandle rideId req
+  EHandler.endRide shandle personId req
 
 cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess
 cancelRide personId rideId req = withFlowHandlerAPI $ do

@@ -88,31 +88,23 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
   checkLocationUpdatesRateLimit driver.id
   logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
-  redisLockDriverId <- Redis.tryLockRedis lockKey 60
-  if redisLockDriverId
-    then do
-      logDebug $ "DriverId: " <> getId driver.id <> " Locked"
-      mbOldLoc <- findDriverLocation
-      case filterNewWaypoints mbOldLoc of
-        [] -> logWarning "Incoming points are older than current one, ignoring"
-        (a : ax) -> do
-          let newWaypoints = a :| ax
-              currPoint = NE.last newWaypoints
-          upsertDriverLocation currPoint.pt currPoint.ts
-          getInProgress
-            >>= maybe
-              (logInfo "No ride is assigned to driver, ignoring")
-              (\ride -> addIntermediateRoutePoints ride.id $ NE.map (.pt) newWaypoints)
-      Redis.unlockRedis lockKey
-      logDebug $ "DriverId: " <> getId driver.id <> " Unlocked"
-    else logDebug $ "DriverId: " <> getId driver.id <> " unable to get lock"
+  LocUpd.whenWithLocationUpdatesLock driver.id $ do
+    mbOldLoc <- findDriverLocation
+    case filterNewWaypoints mbOldLoc of
+      [] -> logWarning "Incoming points are older than current one, ignoring"
+      (a : ax) -> do
+        let newWaypoints = a :| ax
+            currPoint = NE.last newWaypoints
+        upsertDriverLocation currPoint.pt currPoint.ts
+        getInProgress
+          >>= maybe
+            (logInfo "No ride is assigned to driver, ignoring")
+            (\ride -> addIntermediateRoutePoints ride.id $ NE.map (.pt) newWaypoints)
   pure Success
   where
     filterNewWaypoints mbOldLoc = do
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
       maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
-
-    lockKey = LocUpd.makeLockKey driver.id
 
 checkLocationUpdatesRateLimit ::
   ( Redis.HedisFlow m r,

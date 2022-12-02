@@ -42,6 +42,7 @@ import Tools.Error
 
 data ServiceHandle m = ServiceHandle
   { requestor :: Person.Person,
+    fetchRide :: m Ride.Ride,
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     endRideTransaction :: Id SRB.Booking -> Ride.Ride -> [DFareBreakup.FareBreakup] -> m (),
     notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> [DFareBreakup.FareBreakup] -> m (),
@@ -91,6 +92,7 @@ buildEndRideHandle requestorId rideId = do
   return $
     ServiceHandle
       { requestor,
+        fetchRide = QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId),
         findBookingById = QRB.findById,
         notifyCompleteToBAP = sendRideCompletedUpdateToBAP,
         endRideTransaction = EInternal.endRideTransaction (cast requestorId),
@@ -114,35 +116,20 @@ buildEndRideHandle requestorId rideId = do
 endRide ::
   (MonadThrow m, Log m, MonadTime m, Redis.HedisFlow m r, CoreMetrics m, MonadFlow m, MonadTime m, EsqDBFlow m r) =>
   ServiceHandle m ->
-  Id Ride.Ride ->
+  Id Person.Person ->
   EndRideReq ->
   m APISuccess.APISuccess
-endRide handle@ServiceHandle {..} rideId req = do
-  rideOld <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  let driverId = rideOld.driverId
-  redisLockDriverId <- Redis.tryLockRedis (lockKey driverId) 60
-  if redisLockDriverId
-    then do
-      logDebug $ "DriverId: " <> show driverId <> "Locked"
-      finally
-        (endRideHandler handle rideOld req)
-        ( do
-            Redis.unlockRedis (lockKey driverId)
-            logDebug $ "DriverId: " <> show driverId <> " Unlocked"
-        )
-    else do
-      logDebug $ "DriverId: " <> getId driverId <> " unable to get lock"
-      throwError (InternalError "Driver can't be locked")
-  where
-    lockKey driverId = LocUpd.makeLockKey driverId
+endRide handle@ServiceHandle {..} driverId req = do
+  LocUpd.whenWithLocationUpdatesLock driverId $ endRideHandler handle req
+  return APISuccess.Success
 
 endRideHandler ::
-  (MonadThrow m, Log m, MonadTime m, EsqDBFlow m r) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
-  Ride.Ride ->
   EndRideReq ->
-  m APISuccess.APISuccess
-endRideHandler handle@ServiceHandle {..} rideOld req = do
+  m ()
+endRideHandler handle@ServiceHandle {..} req = do
+  rideOld <- fetchRide
   let driverId = rideOld.driverId
   booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
   case requestor.role of
@@ -152,7 +139,7 @@ endRideHandler handle@ServiceHandle {..} rideOld req = do
   logTagInfo "endRide" ("DriverId " <> getId requestor.id <> ", RideId " <> getId rideOld.id)
   finalDistanceCalculation req.point
   -- here we update the current ride, so below we fetch the updated version
-  ride <- QRide.findById rideOld.id >>= fromMaybeM (RideDoesNotExist rideOld.id.getId)
+  ride <- fetchRide
 
   now <- getCurrentTime
 
@@ -171,7 +158,6 @@ endRideHandler handle@ServiceHandle {..} rideOld req = do
   endRideTransaction booking.id updRide fareBreakups
 
   notifyCompleteToBAP booking updRide fareBreakups
-  return APISuccess.Success
   where
     recalculateFare booking oneWayDetails now ride = do
       let vehicleVariant = booking.vehicleVariant

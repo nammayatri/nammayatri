@@ -3,7 +3,6 @@
 module Flow.RideAPI.EndRide (endRideTests) where
 
 import Beckn.External.Maps.Types
-import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Action.UI.Ride.EndRide as Handle
@@ -42,6 +41,7 @@ handle :: Handle.ServiceHandle IO
 handle =
   Handle.ServiceHandle
     { requestor = Fixtures.defaultDriver,
+      fetchRide = return ride,
       findBookingById = \rbId -> pure $ case rbId of
         Id "booking" -> Just booking
         Id "rentalBooking" -> Just rentalBooking
@@ -123,32 +123,35 @@ rentalBooking = do
 successfulEndByDriver :: TestTree
 successfulEndByDriver =
   testCase "Requested by correct driver" $
-    Handle.endRideHandler handle ride testEndRideReq `shouldReturn` APISuccess.Success
+    Handle.endRideHandler handle testEndRideReq `shouldReturn` ()
 
 successfulEndRental :: TestTree
 successfulEndRental =
   testCase "Requested for rentals by correct driver" $
-    Handle.endRideHandler handle rentalRide testEndRideReq `shouldReturn` APISuccess.Success
+    Handle.endRideHandler modHandle testEndRideReq `shouldReturn` ()
+  where
+    modHandle = handle{fetchRide = return rentalRide}
 
 failedEndRequestedByWrongDriver :: TestTree
 failedEndRequestedByWrongDriver =
   testCase "Requested by wrong driver" $
-    Handle.endRideHandler modHandle ride testEndRideReq `shouldThrow` (== NotAnExecutor)
+    Handle.endRideHandler modHandle testEndRideReq `shouldThrow` (== NotAnExecutor)
   where
     modHandle = handle{requestor = Fixtures.defaultDriver{id = "2"}}
 
 failedEndRequestedNotByDriver :: TestTree
 failedEndRequestedNotByDriver =
   testCase "Requested not by driver" $
-    Handle.endRideHandler modHandle ride testEndRideReq `shouldThrow` (== AccessDenied)
+    Handle.endRideHandler modHandle testEndRideReq `shouldThrow` (== AccessDenied)
   where
     modHandle = handle{requestor = Fixtures.defaultAdmin}
 
 failedEndWhenRideStatusIsWrong :: TestTree
 failedEndWhenRideStatusIsWrong =
   testCase "A ride has wrong status" $
-    Handle.endRideHandler handle completeRide testEndRideReq `shouldThrow` (\(RideInvalidStatus _) -> True)
+    Handle.endRideHandler modHandle testEndRideReq `shouldThrow` (\(RideInvalidStatus _) -> True)
   where
+    modHandle = handle{fetchRide = return completeRide}
     completeRide = ride{Ride.id = "ride", Ride.status = Ride.COMPLETED}
 
 -----
@@ -203,15 +206,9 @@ locationUpdatesSuccessHandle =
 locationUpdatesFailure :: TestTree
 locationUpdatesFailure =
   testCase "Return estimated fare when failed to calculate actual distance" $
-    void $ Handle.endRideHandler locationUpdatesFailureHandle ride testEndRideReq
-
---where
--- rideId = "ride"
+    void $ Handle.endRideHandler locationUpdatesFailureHandle testEndRideReq
 
 locationUpdatesSuccess :: TestTree
 locationUpdatesSuccess =
   testCase "Return actual fare when succeeded to calculate actual distance" $
-    void $ Handle.endRideHandler locationUpdatesSuccessHandle ride testEndRideReq
-
---where
---  rideId = "ride"
+    void $ Handle.endRideHandler locationUpdatesSuccessHandle testEndRideReq

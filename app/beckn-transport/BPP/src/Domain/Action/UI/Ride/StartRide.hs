@@ -68,23 +68,10 @@ startRide :: (EsqDBFlow m r, MonadThrow m, Log m, Redis.HedisFlow m r, CoreMetri
 startRide handle@ServiceHandle {..} rideId req = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
-  redisLockDriverId <- Redis.tryLockRedis (lockKey driverId) 60
-  if redisLockDriverId
-    then do
-      logDebug $ "DriverId: " <> show driverId <> "Locked"
-      finally
-        (startRideHandler handle ride req)
-        ( do
-            Redis.unlockRedis (lockKey driverId)
-            logDebug $ "DriverId: " <> show driverId <> " Unlocked"
-        )
-    else do
-      logDebug $ "DriverId: " <> getId driverId <> " unable to get lock"
-      throwError (InternalError "Driver can't be locked")
-  where
-    lockKey driverId = LocUpd.makeLockKey driverId
+  LocUpd.whenWithLocationUpdatesLock driverId $ startRideHandler handle ride req
+  pure APISuccess.Success
 
-startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> SRide.Ride -> StartRideReq -> m APISuccess.APISuccess
+startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> SRide.Ride -> StartRideReq -> m ()
 startRideHandler ServiceHandle {..} ride req = do
   rateLimitStartRide ride.id
   let driverId = ride.driverId
@@ -100,6 +87,5 @@ startRideHandler ServiceHandle {..} ride req = do
   startRideAndUpdateLocation ride.id booking.id req.point
   initializeDistanceCalculation req.point
   notifyBAPRideStarted booking ride
-  pure APISuccess.Success
   where
     isValidRideStatus status = status == SRide.NEW

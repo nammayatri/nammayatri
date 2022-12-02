@@ -69,7 +69,6 @@ startRideHandler :: (MonadThrow m, Log m, Redis.HedisFlow m r, CoreMetrics m, Mo
 startRideHandler ServiceHandle {..} rideId req = do
   rateLimitStartRide
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  let driverId = ride.driverId
   let inAppOtp = ride.otp
   when (req.rideOtp /= inAppOtp) $ throwError IncorrectOTP
   logTagInfo "startRide" ("DriverId " <> getId requestor.id <> ", RideId " <> getId rideId)
@@ -80,17 +79,10 @@ startRideHandler ServiceHandle {..} rideId req = do
     _ -> throwError AccessDenied
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  redisLockDriverId <- Redis.tryLockRedis (lockKey driverId) 60
-  if redisLockDriverId
-    then do
-      logDebug $ "DriverId: " <> show driverId <> " Locked"
-      startRideAndUpdateLocation ride.id booking.id req.point
-      initializeDistanceCalculation req.point
-      notifyBAPRideStarted booking ride
-      Redis.unlockRedis (lockKey driverId)
-      logDebug $ "DriverId: " <> show driverId <> " Unlocked"
-    else logDebug $ "DriverId: " <> getId driverId <> " unable to get lock"
+  LocUpd.whenWithLocationUpdatesLock ride.driverId $ do
+    startRideAndUpdateLocation ride.id booking.id req.point
+    initializeDistanceCalculation req.point
+    notifyBAPRideStarted booking ride
   pure APISuccess.Success
   where
     isValidRideStatus status = status == SRide.NEW
-    lockKey driverId = LocUpd.makeLockKey driverId
