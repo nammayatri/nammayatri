@@ -83,4 +83,3 @@ data RideAPIEntity = RideAPIEntity
     chargeableDistance :: Maybe Meters
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
-

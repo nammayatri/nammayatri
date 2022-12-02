@@ -70,7 +70,7 @@ mkDriverRideRes ::
   Maybe Text ->
   (DRide.Ride, DRB.Booking) ->
   DriverRideRes
-mkDriverRideRes rideDetails  driverNumber (ride, booking) = do
+mkDriverRideRes rideDetails driverNumber (ride, booking) = do
   let mbToLocation = case booking.bookingDetails of
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.RentalDetails _ -> Nothing

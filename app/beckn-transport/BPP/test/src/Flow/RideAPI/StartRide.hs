@@ -63,7 +63,7 @@ startRide =
     ]
 
 runHandler :: StartRide.ServiceHandle IO -> Ride.Ride -> StartRideReq -> IO APISuccess.APISuccess
-runHandler sHandle sRide req = StartRide.startRideHandler sHandle sRide req
+runHandler = StartRide.startRideHandler
 
 testStartRideReq :: StartRideReq
 testStartRideReq =
