@@ -118,14 +118,14 @@ endRide ::
   EndRideReq ->
   m APISuccess.APISuccess
 endRide handle@ServiceHandle {..} rideId req = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  let driverId = ride.driverId
+  rideOld <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  let driverId = rideOld.driverId
   redisLockDriverId <- Redis.tryLockRedis (lockKey driverId) 60
   if redisLockDriverId
     then do
       logDebug $ "DriverId: " <> show driverId <> "Locked"
       finally
-        (endRideHandler handle ride req)
+        (endRideHandler handle rideOld req)
         ( do
             Redis.unlockRedis (lockKey driverId)
             logDebug $ "DriverId: " <> show driverId <> " Unlocked"
@@ -137,28 +137,29 @@ endRide handle@ServiceHandle {..} rideId req = do
     lockKey driverId = LocUpd.makeLockKey driverId
 
 endRideHandler ::
-  (MonadThrow m, Log m, MonadTime m) =>
+  (MonadThrow m, Log m, MonadTime m, EsqDBFlow m r) =>
   ServiceHandle m ->
   Ride.Ride ->
   EndRideReq ->
   m APISuccess.APISuccess
-endRideHandler handle@ServiceHandle {..} ride req = do
-  let driverId = ride.driverId
-  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+endRideHandler handle@ServiceHandle {..} rideOld req = do
+  let driverId = rideOld.driverId
+  booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
   case requestor.role of
     Person.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
-  unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
-  logTagInfo "endRide" ("DriverId " <> getId requestor.id <> ", RideId " <> getId ride.id)
+  unless (rideOld.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
+  logTagInfo "endRide" ("DriverId " <> getId requestor.id <> ", RideId " <> getId rideOld.id)
   finalDistanceCalculation req.point
   -- here we update the current ride, so below we fetch the updated version
+  ride <- QRide.findById rideOld.id >>= fromMaybeM (RideDoesNotExist rideOld.id.getId)
 
   now <- getCurrentTime
 
   (chargeableDistance, fare, totalFare, fareBreakups) <- do
     case booking.bookingDetails of
-      SRB.OneWayDetails oneWayDetails -> recalculateFare booking oneWayDetails now
-      SRB.RentalDetails rentalDetails -> calcRentalFare booking rentalDetails now
+      SRB.OneWayDetails oneWayDetails -> recalculateFare booking oneWayDetails now ride
+      SRB.RentalDetails rentalDetails -> calcRentalFare booking rentalDetails now ride
   let updRide =
         ride{chargeableDistance = Just chargeableDistance,
              fare = Just fare,
@@ -172,7 +173,7 @@ endRideHandler handle@ServiceHandle {..} ride req = do
   notifyCompleteToBAP booking updRide fareBreakups
   return APISuccess.Success
   where
-    recalculateFare booking oneWayDetails now = do
+    recalculateFare booking oneWayDetails now ride = do
       let vehicleVariant = booking.vehicleVariant
 
           actualDistance = roundToIntegral ride.traveledDistance.getHighPrecMeters
@@ -254,7 +255,7 @@ endRideHandler handle@ServiceHandle {..} ride req = do
           fareBreakups <- buildOneWayFareBreakups fareParams booking.id
           pure (oldDistance, estimatedFare, booking.estimatedTotalFare, fareBreakups)
 
-    calcRentalFare booking rentalDetails now = do
+    calcRentalFare booking rentalDetails now ride = do
       distanceCalculationFailed <- isDistanceCalculationFailed
       actualDistance <-
         if not distanceCalculationFailed

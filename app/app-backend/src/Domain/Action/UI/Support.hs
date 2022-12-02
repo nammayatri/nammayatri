@@ -30,8 +30,8 @@ data Issue = Issue
 validateIssue :: Validate Issue
 validateIssue Issue {..} =
   sequenceA_
-    [ validateField "reason" reason $ LengthInRange 2 255 `And` text,
-      validateField "description" description $ LengthInRange 2 255 `And` text
+    [ validateField "reason" reason $ LengthInRange 2 500 `And` text,
+      validateField "description" description $ LengthInRange 2 1000 `And` text
     ]
   where
     text = star $ alphanum \/ " " \/ ","

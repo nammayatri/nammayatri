@@ -106,19 +106,21 @@ endRideHandler ::
   EndRideReq ->
   m APISuccess.APISuccess
 endRideHandler ServiceHandle {..} rideId req = do
-  ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  let driverId = ride.driverId
+  rideOld <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  let driverId = rideOld.driverId
   case requestor.role of
     Person.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
-  unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
-  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  unless (rideOld.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
+  booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
   redisLockDriverId <- Redis.tryLockRedis (lockKey driverId) 60
   if redisLockDriverId
     then do
       logDebug $ "DriverId: " <> show driverId <> " Locked"
       finalDistanceCalculation req.point
       -- here we update the current ride, so below we fetch the updated version
+
+      ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
       logTagInfo "endRide" ("DriverId " <> getId requestor.id <> ", RideId " <> getId rideId)
 
