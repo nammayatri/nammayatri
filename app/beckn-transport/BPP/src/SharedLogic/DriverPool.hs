@@ -45,12 +45,6 @@ mkDriverPoolItem DriverPoolResult {..} = DriverPoolItem {..}
 driverPoolKey :: Id SRB.Booking -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId
 
-getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe [DriverPoolItem])
-getKeyRedis = Redis.get
-
-setExRedis :: Redis.HedisFlow m r => Text -> [DriverPoolItem] -> Int -> m ()
-setExRedis = Redis.setExp
-
 getDriverPool ::
   ( EncFlow m r,
     HasCacheConfig r,
@@ -74,6 +68,9 @@ getDriverPool bookingId =
           fareProductType = SRB.getFareProductType booking.bookingDetails
       mkSortedDriverPool . map mkDriverPoolItem <$> calculateDriverPool pickupLatLong merchantId (Just vehicleVariant) fareProductType
 
+    getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe [DriverPoolItem])
+    getKeyRedis = Redis.get
+
 recalculateDriverPool ::
   ( EncFlow m r,
     HasCacheConfig r,
@@ -96,6 +93,9 @@ recalculateDriverPool booking = do
       filteredDriverPool = map mkDriverPoolItem filteredDriverPoolResults
   setExRedis (driverPoolKey booking.id) filteredDriverPool (60 * 10)
   return filteredDriverPoolResults
+  where
+    setExRedis :: Redis.HedisFlow m r => Text -> [DriverPoolItem] -> Int -> m ()
+    setExRedis = Redis.setExp
 
 calculateDriverPool ::
   ( EncFlow m r,

@@ -1,12 +1,12 @@
 module SharedLogic.Schedule where
 
 import Beckn.Prelude
-import Beckn.Scheduler
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Dhall (FromDhall)
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
+import Lib.Scheduler
 
 data JobType = AllocateRental | FakeType
   deriving (Generic, FromDhall, Eq, Ord, Show, FromJSON, ToJSON)

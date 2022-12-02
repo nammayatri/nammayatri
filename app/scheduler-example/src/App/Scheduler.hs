@@ -7,7 +7,6 @@ module App.Scheduler where
 
 import Beckn.Mock.App (MockM, runMock)
 import Beckn.Prelude
-import Beckn.Scheduler
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.Id
@@ -17,6 +16,7 @@ import Beckn.Utils.GenericPretty (PrettyShow, Showable (..))
 import Beckn.Utils.IOLogging (LoggerEnv, prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
 import Environment (Flow)
+import Lib.Scheduler
 import System.Random
 
 runExampleScheduler :: (SchedulerConfig JobType -> SchedulerConfig JobType) -> IO ()

@@ -39,12 +39,12 @@ verifyPerson token = do
       setExRedis key (personId, merchantId) authTokenCacheExpiry
       return (personId, merchantId)
   return (personId, merchantId)
+  where
+    getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe (Id DP.Person, Id DMerchant.Merchant))
+    getKeyRedis = Redis.get
 
-getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe (Id DP.Person, Id DMerchant.Merchant))
-getKeyRedis = Redis.get
-
-setExRedis :: Redis.HedisFlow m r => Text -> (Id DP.Person, Id DMerchant.Merchant) -> Int -> m ()
-setExRedis = Redis.setExp
+    setExRedis :: Redis.HedisFlow m r => Text -> (Id DP.Person, Id DMerchant.Merchant) -> Int -> m ()
+    setExRedis = Redis.setExp
 
 authTokenCacheKey ::
   HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text] =>

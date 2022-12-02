@@ -204,6 +204,12 @@ cradle:
     - path: "lib/location-updates/test/src"
       component: "location-updates:test:location-updates-tests"
 
+    - path: "lib/scheduler/src"
+      component: "scheduler:lib"
+
+    - path: "lib/scheduler/test/src"
+      component: "scheduler:test:scheduler-tests"
+
     - path: "app/utils/route-extractor/src"
       component: "route-extractor:lib"
 

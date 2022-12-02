@@ -2,7 +2,6 @@ module App where
 
 import Beckn.Mock.App (runMock)
 import Beckn.Prelude
-import Beckn.Scheduler
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Esqueleto.Config (EsqDBEnv, HasEsqEnv, prepareEsqDBEnv)
 import Beckn.Types.Id (Id (Id))
@@ -12,6 +11,7 @@ import Beckn.Utils.IOLogging (LoggerEnv, prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
 import Data.String.Conversions (cs)
 import qualified Domain.Types.RideRequest as RideRequest
+import Lib.Scheduler
 import SharedLogic.Schedule
 import qualified Storage.Queries.RideRequest as RideRequest
 import System.Environment (lookupEnv)

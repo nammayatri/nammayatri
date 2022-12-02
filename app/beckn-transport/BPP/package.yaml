@@ -81,6 +81,7 @@ dependencies:
   - either
   - text-conversions
   - dashboard-bpp-helper-api
+  - scheduler
 
 ghc-options:
   - -fwrite-ide-info
