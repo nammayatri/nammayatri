@@ -5,7 +5,8 @@ module RouteExtractor where
 import Beckn.External.Maps.Types (LatLong (LatLong))
 import Beckn.Prelude
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import RenderXml
+import RenderTrack
+import System.Environment
 import qualified Text.XML as XML
 
 deriving instance Read LatLong
@@ -16,14 +17,28 @@ deriving instance Read LatLong
 main :: IO ()
 main = do
   s <- getContents
+  typeResult <- getArgs
   let input = map (read @([LatLong], [LatLong])) $ lines s
-      doc = process input
-      output = XML.renderLBS XML.def doc
-  LBS.putStrLn output
+      arg = saveHead typeResult
+  if arg == "csv"
+    then LBS.putStrLn $ encodeCsvBS $ processCSV input
+    else LBS.putStrLn $ XML.renderLBS XML.def $ processGpx input
 
-process :: [([LatLong], [LatLong])] -> XML.Document
-process inp = do
-  let (beforeList, afterList) = unzip inp
-      docBefore = batchesToGpxDoc "before" beforeList
-      docAfter = batchesToGpxDoc "after" afterList
-  elementToDocument $ renderDoc $ mergeWithPointsOfFirst docBefore docAfter
+saveHead :: [String] -> String
+saveHead [] = ""
+saveHead (a : _) = a
+
+processGpx :: [([LatLong], [LatLong])] -> XML.Document
+processGpx inp = doc
+  where
+    (beforeList, afterList) = unzip inp
+    docBefore = batchesToGpxDoc "before" beforeList
+    docAfter = batchesToGpxDoc "after" afterList
+    mergedPoints = mergeWithPointsOfFirst docBefore docAfter
+    doc = elementToDocument $ renderDoc mergedPoints
+
+processCSV :: [([LatLong], [LatLong])] -> [CsvWaypoint]
+processCSV inp = latLongToCsvWaypoint <$> fullList
+  where
+    (beforeList, afterList) = unzip inp
+    fullList = concat (beforeList <> afterList)

@@ -29,6 +29,7 @@ cabal.project.local~
 *.log
 dhall-configs/dev/secrets/top-secret.dhall
 *.gpx
+*.csv
 other
 s3
 /dev/osrm/*
