@@ -3,31 +3,31 @@ cradle:
     stackYaml: "./stack-hie.yaml"
 
     components:
-    - path: "app/app-backend/src"
+    - path: "app/bap/app-backend/Main/src"
       component: "app-backend:lib"
 
-    - path: "app/app-backend/server/Main.hs"
+    - path: "app/bap/app-backend/Main/server/Main.hs"
       component: "app-backend:exe:app-backend-exe"
 
-    - path: "app/app-backend/server/Paths_app_backend.hs"
+    - path: "app/bap/app-backend/Main/server/Paths_app_backend.hs"
       component: "app-backend:exe:app-backend-exe"
 
-    - path: "app/search-result-aggregator/src"
+    - path: "app/bap/app-backend/search-result-aggregator/src"
       component: "search-result-aggregator:lib"
 
-    - path: "app/search-result-aggregator/server/Main.hs"
+    - path: "app/bap/app-backend/search-result-aggregator/server/Main.hs"
       component: "search-result-aggregator:exe:search-result-aggregator-exe"
 
-    - path: "app/search-result-aggregator/server/Paths_search_result_aggregator.hs"
+    - path: "app/bap/app-backend/search-result-aggregator/server/Paths_search_result_aggregator.hs"
       component: "search-result-aggregator:exe:search-result-aggregator-exe"
 
-    - path: "app/public-transport-search-consumer/src"
+    - path: "app/bap/public-transport-bap/search-consumer/src"
       component: "public-transport-search-consumer:lib"
 
-    - path: "app/public-transport-search-consumer/server/Main.hs"
+    - path: "app/bap/public-transport-bap/search-consumer/server/Main.hs"
       component: "public-transport-search-consumer:exe:public-transport-search-consumer-exe"
 
-    - path: "app/public-transport-search-consumer/server/Paths_public_transport_search_consumer.hs"
+    - path: "app/bap/public-transport-bap/search-consumer/server/Paths_public_transport_search_consumer.hs"
       component: "public-transport-search-consumer:exe:public-transport-search-consumer-exe"
 
     - path: "app/beckn-cli/src"
@@ -39,10 +39,10 @@ cradle:
     - path: "app/beckn-cli/app/Paths_beckn_cli.hs"
       component: "beckn-cli:exe:beckn-cli-exe"
 
-    - path: "app/driver-offer-bpp/src"
+    - path: "app/bpp/driver-offer-bpp/Main/src"
       component: "driver-offer-bpp:lib"
 
-    - path: "app/driver-offer-bpp/server/Main.hs"
+    - path: "app/bpp/driver-offer-bpp/Main/server/Main.hs"
       component: "driver-offer-bpp:exe:driver-offer-bpp-exe"
 
     - path: "app/bpp/driver-offer-bpp/Allocator/src"
@@ -51,40 +51,40 @@ cradle:
     - path: "app/bpp/driver-offer-bpp/Allocator/server/Main.hs"
       component: "driver-offer-allocator:exe:driver-offer-allocator-exe"
 
-    - path: "app/beckn-transport/Allocator/src"
+    - path: "app/bpp/beckn-transport/Allocator/src"
       component: "beckn-transport-allocator:lib"
 
-    - path: "app/beckn-transport/Allocator/server/Main.hs"
-      component: "beckn-transport-allocator:exe:beckn-transport-allocator-exe"
+    - path: "app/bpp/beckn-transport/Allocator/server/Main.hs"
+      component: "beckn-transport-allocator:exe:beckn-transport-btm-exe"
 
-    - path: "app/beckn-transport/Allocator/test/src"
+    - path: "app/bpp/beckn-transport/Allocator/test/src"
       component: "beckn-transport-allocator:test:beckn-transport-allocator-tests"
 
-    - path: "app/beckn-transport/Scheduler/src"
+    - path: "app/bpp/beckn-transport/Scheduler/src"
       component: "beckn-transport-scheduler:lib"
 
-    - path: "app/beckn-transport/Scheduler/server/Main.hs"
+    - path: "app/bpp/beckn-transport/Scheduler/server/Main.hs"
       component: "beckn-transport-scheduler:exe:transporter-scheduler-exe"
 
-    - path: "app/driver-tracking-health-check/src"
+    - path: "app/bpp/driver-tracking-health-check/src"
       component: "beckn-transport-driver-tracking-health-check:lib"
 
-    - path: "app/driver-tracking-health-check/server/Main.hs"
+    - path: "app/bpp/driver-tracking-health-check/server/Main.hs"
       component: "beckn-transport-driver-tracking-health-check:exe:driver-tracking-healthcheck-exe"
 
-    - path: "app/beckn-transport/BPP/src"
+    - path: "app/bpp/beckn-transport/Main/src"
       component: "beckn-transport:lib"
 
-    - path: "app/beckn-transport/BPP/server/Main.hs"
+    - path: "app/bpp/beckn-transport/Main/server/Main.hs"
       component: "beckn-transport:exe:beckn-transport-exe"
 
-    - path: "app/beckn-transport/server/Main.hs"
+    - path: "app/bpp/beckn-transport/server/Main.hs"
       component: "beckn-transport:exe:transporter-scheduler-exe"
 
-    - path: "app/beckn-transport/BPP/test/app"
+    - path: "app/bpp/beckn-transport/Main/test/app"
       component: "beckn-transport:test:beckn-transport-tests"
 
-    - path: "app/beckn-transport/BPP/test/src"
+    - path: "app/bpp/beckn-transport/Main/test/src"
       component: "beckn-transport:test:beckn-transport-tests"
 
     - path: "app/gateway/src"
@@ -123,13 +123,13 @@ cradle:
     - path: "app/example-service/server/Paths_example_service.hs"
       component: "example-service:exe:example-service-exe"
 
-    - path: "app/mock-bap/src"
+    - path: "app/mocks/bap/src"
       component: "mock-bap:lib"
 
-    - path: "app/mock-bap/server/Main.hs"
+    - path: "app/mocks/bap/server/Main.hs"
       component: "mock-bap:exe:mock-bap-exe"
 
-    - path: "app/mock-bap/server/Paths_mock_bap.hs"
+    - path: "app/mocks/bap/server/Paths_mock_bap.hs"
       component: "mock-bap:exe:mock-bap-exe"
 
     - path: "app/kafka-consumers/src"
@@ -141,40 +141,40 @@ cradle:
     - path: "app/kafka-consumers/app/Paths_kafka_consumers.hs"
       component: "kafka-consumers:exe:kafka-consumers-exe"
 
-    - path: "app/public-transport-bap/src"
+    - path: "app/bap/public-transport-bap/Main/src"
       component: "public-transport-bap:lib"
 
-    - path: "app/public-transport-bap/server/Main.hs"
+    - path: "app/bap/public-transport-bap/Main/server/Main.hs"
       component: "public-transport-bap:exe:public-transport-bap-exe"
 
-    - path: "app/public-transport-bap/server/Paths_public_transport_bap.hs"
+    - path: "app/bap/public-transport-bap/Main/server/Paths_public_transport_bap.hs"
       component: "public-transport-bap:exe:public-transport-bap-exe"
 
-    - path: "app/mock-sms/src"
+    - path: "app/mocks/sms/src"
       component: "mock-sms:lib"
 
-    - path: "app/mock-sms/server/Main.hs"
+    - path: "app/mocks/sms/server/Main.hs"
       component: "mock-sms:exe:mock-fcm-exe"
 
-    - path: "app/mock-sms/server/Paths_mock_sms.hs"
+    - path: "app/mocks/sms/server/Paths_mock_sms.hs"
       component: "mock-sms:exe:mock-fcm-exe"
 
-    - path: "app/mock-idfy/src"
+    - path: "app/mocks/idfy/src"
       component: "mock-idfy:lib"
 
-    - path: "app/mock-idfy/server/Main.hs"
+    - path: "app/mocks/idfy/server/Main.hs"
       component: "mock-idfy:exe:mock-fcm-exe"
 
-    - path: "app/mock-idfy/server/Paths_mock_idfy.hs"
+    - path: "app/mocks/idfy/server/Paths_mock_idfy.hs"
       component: "mock-idfy:exe:mock-fcm-exe"
 
-    - path: "app/mock-fcm/src"
+    - path: "app/mocks/fcm/src"
       component: "mock-fcm:lib"
 
-    - path: "app/mock-fcm/server/Main.hs"
+    - path: "app/mocks/fcm/server/Main.hs"
       component: "mock-fcm:exe:mock-fcm-exe"
 
-    - path: "app/mock-fcm/server/Paths_mock_fcm.hs"
+    - path: "app/mocks/fcm/server/Paths_mock_fcm.hs"
       component: "mock-fcm:exe:mock-fcm-exe"
 
     - path: "app/mock-registry/src"
@@ -186,13 +186,13 @@ cradle:
     - path: "app/mock-registry/server/Paths_mock_registry.hs"
       component: "mock-registry:exe:mock-registry-exe"
 
-    - path: "app/mock-public-transport-bpp/src"
+    - path: "app/mocks/public-transport-bpp/src"
       component: "mock-public-transport-bpp:lib"
 
-    - path: "app/mock-public-transport-bpp/server/Main.hs"
+    - path: "app/mocks/public-transport-bpp/server/Main.hs"
       component: "mock-public-transport-bpp:exe:mock-public-transport-bpp-exe"
 
-    - path: "app/mock-public-transport-bpp/server/Paths_mock_public_transport_bpp.hs"
+    - path: "app/mocks/public-transport-bpp/server/Paths_mock_public_transport_bpp.hs"
       component: "mock-public-transport-bpp:exe:mock-public-transport-bpp-exe"
 
     - path: "test/src"

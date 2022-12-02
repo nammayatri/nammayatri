@@ -23,7 +23,7 @@ import Utils
 
 {-
  - WARNING! This test is highly dependent on how the public transport bpp mock is working.
- - See app/mock-public-transport-bpp/src/MockData/* for details
+ - See app/mocks/public-transport-bpp/src/MockData/* for details
  -}
 
 waitABit :: MonadIO m => m ()

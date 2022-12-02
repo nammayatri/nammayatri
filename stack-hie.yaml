@@ -34,27 +34,27 @@ ghc-options:
 
 packages:
   - app/beckn-cli
-  - app/beckn-transport/BPP
-  - app/beckn-transport/Allocator
-  - app/driver-tracking-health-check
-  - app/beckn-transport/Scheduler
-  - app/driver-offer-bpp
+  - app/bpp/beckn-transport/Main
+  - app/bpp/beckn-transport/Allocator
+  - app/bpp/driver-tracking-health-check
+  - app/bpp/beckn-transport/Scheduler
+  - app/bpp/driver-offer-bpp/Main
   - app/bpp/driver-offer-bpp/Allocator
-  - app/app-backend
-  - app/search-result-aggregator
-  - app/mock-sms
-  - app/mock-fcm
+  - app/bap/app-backend/Main
+  - app/bap/app-backend/search-result-aggregator
+  - app/mocks/sms
+  - app/mocks/fcm
   - app/dashboard/BAPDashboard
   - app/dashboard/BPPDashboard
   - app/dashboard/Lib
   - app/dashboard/CommonAPIs
   - app/example-service
-  - app/mock-bap
+  - app/mocks/bap
   - app/kafka-consumers
-  - app/mock-idfy
-  - app/public-transport-bap
-  - app/public-transport-search-consumer
-  - app/mock-public-transport-bpp
+  - app/mocks/idfy
+  - app/bap/public-transport-bap/Main
+  - app/bap/public-transport-bap/search-consumer
+  - app/mocks/public-transport-bpp
   - app/scheduler-example
   - app/utils/route-extractor
   - app/utils/image-api-helper
