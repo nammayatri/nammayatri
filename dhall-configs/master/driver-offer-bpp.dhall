@@ -34,10 +34,10 @@ let rcfg =
 let smsConfig =
       { sessionConfig = common.smsSessionConfig
       , credConfig =
-          { username = common.smsUserName
-          , password = common.smsPassword
-          , otpHash = sec.smsOtpHash
-          }
+        { username = common.smsUserName
+        , password = common.smsPassword
+        , otpHash = sec.smsOtpHash
+        }
       , useFakeSms = Some 7891
       , url = "https://http.myvfirst.com"
       , sender = "JUSPAY"
@@ -87,8 +87,8 @@ let driverLocationUpdateRateLimitOptions =
 
 let cacheConfig = { configsExpTime = +86400 }
 
-in  { esqDBCfg = esqDBCfg
-    , esqDBReplicaCfg = esqDBReplicaCfg
+in  { esqDBCfg
+    , esqDBReplicaCfg
     , hedisCfg = rcfg
     , port = +8016
     , metricsPort = +9997
@@ -108,7 +108,7 @@ in  { esqDBCfg = esqDBCfg
     , googleTranslateKey = common.googleTranslateKey
     , graceTerminationPeriod = +90
     , registryUrl = common.registryUrl
-    , encTools = encTools
+    , encTools
     , authTokenCacheExpiry = +600
     , minimumDriverRatesCount = +5
     , disableSignatureAuth = False
@@ -116,11 +116,11 @@ in  { esqDBCfg = esqDBCfg
     , fcmUrl = common.fcmUrl
     , fcmJsonPath = common.fcmJsonPath
     , fcmTokenKeyPrefix = "ardu-bpp"
-    , apiRateLimitOptions = apiRateLimitOptions
+    , apiRateLimitOptions
     , inviteSmsTemplate =
         "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
-    , slackCfg = slackCfg
-    , driverOnboardingConfigs = driverOnboardingConfigs
+    , slackCfg
+    , driverOnboardingConfigs
     , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
     , smsCfg = smsConfig
     , driverPositionInfoExpiry = None Integer
@@ -133,12 +133,11 @@ in  { esqDBCfg = esqDBCfg
     , defaultDropLocThreshold = +500
     , defaultRideTravelledDistanceThreshold = +700
     , defaultRideTimeEstimatedThreshold = +900
-    , cacheConfig = cacheConfig
+    , cacheConfig
     , metricsSearchDurationTimeout = +45
     , dashboardToken = sec.dashboardToken
-    , driverPoolLimit = Some +4
-    , driverLocationUpdateRateLimitOptions =
-        driverLocationUpdateRateLimitOptions
+    , driverPoolLimit = Some +3
+    , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     }

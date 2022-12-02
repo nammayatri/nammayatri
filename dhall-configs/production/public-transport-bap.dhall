@@ -21,12 +21,12 @@ let rcfg =
       , connectTimeout = None Integer
       }
 
-let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
+let kafkaProducerCfg = { brokers = [] : List Text }
 
 in  { esqDBCfg
     , migrationPath = None Text
     , autoMigrate = common.autoMigrate
-    , hedisCfg = rcfg
+    , redisCfg = rcfg
     , port = +8023
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/public-transport-bap.log" }
@@ -40,6 +40,7 @@ in  { esqDBCfg
       , signatureExpiry = common.signatureExpiry
       }
     , disableSignatureAuth = False
+    , metricsSearchDurationTimeout = +45
     , hostName = "localhost"
     , httpClientOptions = common.httpClientOptions
     , registryUrl = common.registryUrl

@@ -7,7 +7,7 @@ let esqDBCfg =
       , connectPort = 5432
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
-      , connectDatabase = "atlas_bap_dashboard"
+      , connectDatabase = "atlas_bap_dashboard_v2"
       , connectSchemaName = "atlas_bap_dashboard"
       }
 
@@ -27,12 +27,12 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let appBackend =
       { name = common.ServerName.APP_BACKEND
-      , url = "http://beckn-app-backend-master.atlas:8013/dashboard/"
+      , url = "http://beckn-app-backend-master.atlas:8013/"
       , token = sec.appBackendToken
       }
 
 in  { esqDBCfg
-    , redisCfg = rcfg
+    , hedisCfg = rcfg
     , port = +8017
     , migrationPath = None Text
     , autoMigrate = common.autoMigrate

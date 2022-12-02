@@ -7,7 +7,7 @@ let esqDBCfg =
       , connectPort = 5432
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
-      , connectDatabase = "atlas_bpp_dashboard"
+      , connectDatabase = "atlas_bpp_dashboard_v2"
       , connectSchemaName = "atlas_bpp_dashboard"
       }
 
@@ -27,18 +27,18 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let becknTransport =
       { name = common.ServerName.BECKN_TRANSPORT
-      , url = "http://beckn-transport-master.atlas:8014/dashboard/"
+      , url = "http://beckn-transport-master.atlas:8014/"
       , token = sec.becknTransportToken
       }
 
 let driverOfferBpp =
       { name = common.ServerName.DRIVER_OFFER_BPP
-      , url = "http://beckn-driver-offer-bpp-master.atlas:8016/dashboard/"
+      , url = "http://beckn-driver-offer-bpp-master.atlas:8016/"
       , token = sec.driverOfferBppToken
       }
 
 in  { esqDBCfg
-    , redisCfg = rcfg
+    , hedisCfg = rcfg
     , port = +8018
     , migrationPath = None Text
     , autoMigrate = common.autoMigrate
