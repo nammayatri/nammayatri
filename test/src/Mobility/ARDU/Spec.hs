@@ -33,9 +33,9 @@ mkTestTree = do
           testGroup
             "APIs"
             [ ndSpec,
+              nqSpec,
               otSpec,
               dcSpec,
-              sfSpec,
-              nqSpec
+              sfSpec
             ]
       ]

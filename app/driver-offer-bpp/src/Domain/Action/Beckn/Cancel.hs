@@ -33,7 +33,6 @@ newtype CancelReq = CancelReq
 
 cancel ::
   ( HasCacheConfig r,
-    FCMFlow m r,
     HedisFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -66,7 +65,7 @@ cancel transporterId _ req = do
   whenJust mbRide $ \ride ->
     fork "cancelRide - Notify driver" $ do
       driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      Notify.notifyOnCancel booking driver.id driver.deviceToken bookingCR.source
+      Notify.notifyOnCancel transporter.id booking driver.id driver.deviceToken bookingCR.source
   where
     buildBookingCancellationReason = do
       guid <- generateGUID

@@ -12,7 +12,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis (lPush, rPop)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common
-import Beckn.Types.Error (PersonError (PersonFieldNotPresent))
+import Beckn.Types.Error (PersonError (PersonFieldNotPresent, PersonNotFound))
 import Beckn.Types.Id (Id, cast)
 import Beckn.Utils.Common
 import Beckn.Utils.Service
@@ -21,7 +21,9 @@ import Data.List.NonEmpty (nonEmpty)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as SP
 import Environment (Flow)
+import SharedLogic.TransporterConfig
 import qualified Storage.Queries.DriverInformation as DrInfo
+import qualified Storage.Queries.Person as SQP
 import Tools.Notifications
 
 driverTrackingHealthcheckService :: Flow ()
@@ -63,7 +65,9 @@ driverDevicePingService = startService "driverDevicePingService" do
   rPop redisKey >>= flip whenJust \(driverId, token) ->
     withLogTag driverId.getId do
       log INFO "Ping driver"
-      notifyDevice TRIGGER_SERVICE "You were inactive" "Please check the app" driverId (Just token)
+      driver <- SQP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      fcmConfig <- findFCMConfigByMerchantId driver.merchantId
+      notifyDevice fcmConfig{FCM.fcmTokenKeyPrefix = "transporter-healthcheck"} TRIGGER_SERVICE "You were inactive" "Please check the app" driverId (Just token)
   asks (.notificationMinDelay)
     >>= threadDelay . (.getMicroseconds)
 

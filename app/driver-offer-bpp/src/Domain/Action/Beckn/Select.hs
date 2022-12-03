@@ -85,7 +85,7 @@ handler merchantId sReq = do
     let language = fromMaybe Maps.ENGLISH dPoolRes.origin.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq
-    Notify.notifyOnNewSearchRequestAvailable sReqFD.driverId dPoolRes.origin.driverDeviceToken entityData
+    Notify.notifyOnNewSearchRequestAvailable merchantId sReqFD.driverId dPoolRes.origin.driverDeviceToken entityData
   where
     calculateDriverPool' :: Maybe Variant -> LatLong -> Flow [Maps.GetDistanceResp DriverPoolResult Maps.LatLong]
     calculateDriverPool' mbVariant fromLocation = do

@@ -10,23 +10,30 @@ import Beckn.Utils.Common
 import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import Domain.Types.SearchRequest
 import Domain.Types.SearchRequestForDriver
 import EulerHS.Prelude
+import Storage.CachedQueries.CacheConfig (HasCacheConfig)
+import Storage.CachedQueries.TransporterConfig
 
 notifyOnNewSearchRequestAvailable ::
-  ( FCMFlow m r,
+  ( MonadFlow m,
     HedisFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
   ) =>
+  Id Merchant ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   SearchRequestForDriverAPIEntity ->
   m ()
-notifyOnNewSearchRequestAvailable personId mbDeviceToken entityData = do
-  FCM.notifyPersonWithPriorityDefault (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+notifyOnNewSearchRequestAvailable merchantId personId mbDeviceToken entityData = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.NEW_RIDE_AVAILABLE
     notificationData =
@@ -54,18 +61,22 @@ notifyOnNewSearchRequestAvailable personId mbDeviceToken entityData = do
 
 -- | Send FCM "cancel" notification to driver
 notifyOnCancel ::
-  ( FCMFlow m r,
+  ( MonadFlow m,
     HedisFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
   ) =>
+  Id Merchant ->
   Booking ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   SBCR.CancellationSource ->
   m ()
-notifyOnCancel booking personId mbDeviceToken cancellationSource = do
+notifyOnCancel merchantId booking personId mbDeviceToken cancellationSource = do
   cancellationText <- getCancellationText
-  FCM.notifyPersonDefault (notificationData cancellationText) $ FCMNotificationRecipient personId.getId mbDeviceToken
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPerson transporterConfig.fcmConfig (notificationData cancellationText) $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notificationData cancellationText =
       FCM.FCMData
@@ -112,16 +123,20 @@ notifyOnCancel booking personId mbDeviceToken cancellationSource = do
       _ -> throwError (InternalError "Unexpected cancellation reason.")
 
 notifyOnRegistration ::
-  ( FCMFlow m r,
+  ( MonadFlow m,
     HedisFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
   ) =>
+  Id Merchant ->
   RegistrationToken ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyOnRegistration regToken personId =
-  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient personId.getId
+notifyOnRegistration merchantId regToken personId mbToken = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPerson transporterConfig.fcmConfig notificationData $ FCMNotificationRecipient personId.getId mbToken
   where
     tokenId = RegToken.id regToken
     notificationData =
@@ -142,38 +157,47 @@ notifyOnRegistration regToken personId =
           ]
 
 notifyDriver ::
-  ( FCMFlow m r,
+  ( MonadFlow m,
     HedisFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
   ) =>
+  Id Merchant ->
   FCM.FCMNotificationType ->
   Text ->
   Text ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriver = sendNotificationToDriver FCM.SHOW Nothing
+notifyDriver merchantId = sendNotificationToDriver merchantId FCM.SHOW Nothing
 
 -- Send notification to device, i.e. notifications that should not be shown to the user,
 -- but contains payload used by the app
 notifyDevice ::
-  ( FCMFlow m r,
+  ( MonadFlow m,
     HedisFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
   ) =>
+  Id Merchant ->
   FCM.FCMNotificationType ->
   Text ->
   Text ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDevice = sendNotificationToDriver FCM.DO_NOT_SHOW (Just FCM.HIGH)
+notifyDevice merchantId = sendNotificationToDriver merchantId FCM.DO_NOT_SHOW (Just FCM.HIGH)
 
 sendNotificationToDriver ::
-  ( FCMFlow m r,
+  ( MonadFlow m,
     HedisFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
   ) =>
+  Id Merchant ->
   FCM.FCMShowNotification ->
   Maybe FCM.FCMAndroidMessagePriority ->
   FCM.FCMNotificationType ->
@@ -182,8 +206,9 @@ sendNotificationToDriver ::
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-sendNotificationToDriver displayOption priority notificationType notificationTitle message driverId =
-  FCM.notifyPersonWithPriorityDefault priority notificationData . FCMNotificationRecipient driverId.getId
+sendNotificationToDriver merchantId displayOption priority notificationType notificationTitle message driverId mbToken = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority notificationData $ FCMNotificationRecipient driverId.getId mbToken
   where
     notificationData =
       FCM.FCMData
@@ -199,16 +224,20 @@ sendNotificationToDriver displayOption priority notificationType notificationTit
       FCMNotificationBody message
 
 notifyDriverNewAllocation ::
-  ( FCMFlow m r,
+  ( MonadFlow m,
     HedisFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
   ) =>
+  Id Merchant ->
   Id bookingId ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverNewAllocation bookingId personId =
-  FCM.notifyPersonWithPriorityDefault (Just FCM.HIGH) notificationData . FCMNotificationRecipient personId.getId
+notifyDriverNewAllocation merchantId bookingId personId mbToken = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbToken
   where
     title = FCM.FCMNotificationTitle "New allocation request."
     body =
@@ -228,15 +257,19 @@ notifyDriverNewAllocation bookingId personId =
         }
 
 notifyFarePolicyChange ::
-  ( FCMFlow m r,
+  ( MonadFlow m,
     HedisFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
   ) =>
+  Id Merchant ->
   Id coordinatorId ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyFarePolicyChange coordinatorId =
-  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient coordinatorId.getId
+notifyFarePolicyChange merchantId coordinatorId mbToken = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPerson transporterConfig.fcmConfig notificationData $ FCMNotificationRecipient coordinatorId.getId mbToken
   where
     title = FCM.FCMNotificationTitle "Fare policy changed."
     body =
@@ -255,15 +288,19 @@ notifyFarePolicyChange coordinatorId =
         }
 
 notifyDiscountChange ::
-  ( FCMFlow m r,
+  ( MonadFlow m,
     HedisFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
   ) =>
+  Id Merchant ->
   Id coordinatorId ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDiscountChange coordinatorId =
-  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient coordinatorId.getId
+notifyDiscountChange merchantId coordinatorId mbToken = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPerson transporterConfig.fcmConfig notificationData $ FCMNotificationRecipient coordinatorId.getId mbToken
   where
     title = FCM.FCMNotificationTitle "Discount updated."
     body =
@@ -282,17 +319,21 @@ notifyDiscountChange coordinatorId =
         }
 
 notifyDriverClearedFare ::
-  ( FCMFlow m r,
+  ( MonadFlow m,
     HedisFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
   ) =>
+  Id Merchant ->
   Id Person ->
   Id SearchRequest ->
   Money ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverClearedFare driverId sReqId fare =
-  FCM.notifyPersonWithPriorityDefault (Just FCM.HIGH) notificationData . FCMNotificationRecipient driverId.getId
+notifyDriverClearedFare merchantId driverId sReqId fare mbToken = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient driverId.getId mbToken
   where
     title = FCM.FCMNotificationTitle "Clearing Fare!"
     body =

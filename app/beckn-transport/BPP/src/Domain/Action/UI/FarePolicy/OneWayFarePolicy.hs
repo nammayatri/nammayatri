@@ -22,6 +22,7 @@ import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateAP
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate as DPerExtraKmRate
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
+import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.OneWayFarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
@@ -68,7 +69,6 @@ updateOneWayFarePolicy ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
-    FCMFlow m r,
     CoreMetrics m
   ) =>
   SP.Person ->
@@ -92,7 +92,8 @@ updateOneWayFarePolicy admin fpId req = do
     SFarePolicy.update updatedFarePolicy
   SFarePolicy.clearCache updatedFarePolicy
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
+  fcmConfig <- findFCMConfigByMerchantId admin.merchantId
   for_ otherCoordinators $ \cooridinator -> do
-    Notify.notifyFarePolicyChange cooridinator.id cooridinator.deviceToken
+    Notify.notifyFarePolicyChange fcmConfig cooridinator.id cooridinator.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateOneWayFarePolicy : ") (show updatedFarePolicy)
   pure Success

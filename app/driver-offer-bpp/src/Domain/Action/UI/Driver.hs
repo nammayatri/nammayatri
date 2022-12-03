@@ -354,8 +354,8 @@ buildDriverEntityRes (person, driverInfo) = do
 changeDriverEnableState ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
-    FCMFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r
   ) =>
   SP.Person ->
   Id SP.Person ->
@@ -369,8 +369,8 @@ changeDriverEnableState admin personId isEnabled = do
   Esq.runTransaction $ do
     QDriverInformation.updateEnabledState driverId isEnabled
     unless isEnabled $ QDriverInformation.updateActivity driverId False
-  unless isEnabled $
-    Notify.notifyDriver FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
+  unless isEnabled $ do
+    Notify.notifyDriver person.merchantId FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> changeDriverEnableState : ") (show (driverId, isEnabled))
   return Success
   where

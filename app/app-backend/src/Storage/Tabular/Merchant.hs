@@ -25,7 +25,7 @@ mkPersist
       exoPhone Text Maybe
       exoPhoneCountryCode Text Maybe
       fcmUrl Text
-      fcmJsonPath Text Maybe
+      fcmServiceAccount Text
       fcmRedisTokenKeyPrefix Text
       originRestriction GeoRestriction
       destinationRestriction GeoRestriction

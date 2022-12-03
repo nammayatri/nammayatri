@@ -28,7 +28,6 @@ cancelRideImpl ::
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["defaultStraightLineRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    FCMFlow m r,
     CoreMetrics m
   ) =>
   Id SRide.Ride ->
@@ -47,7 +46,7 @@ cancelRideImpl rideId bookingCReason = do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCReason.source
   fork "cancelRide - Notify driver" $ do
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    Notify.notifyOnCancel booking driver.id driver.deviceToken bookingCReason.source
+    Notify.notifyOnCancel transporterId booking driver.id driver.deviceToken bookingCReason.source
 
 cancelRideTransaction ::
   EsqDBFlow m r =>

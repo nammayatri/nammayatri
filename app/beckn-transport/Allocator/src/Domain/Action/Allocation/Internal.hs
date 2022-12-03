@@ -26,6 +26,7 @@ import EulerHS.Prelude hiding (id)
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DrPool
+import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.AllocationEvent (logAllocationEvent)
@@ -93,7 +94,8 @@ assignDriver bookingId driverId = do
   fork "assignDriver - Notify BAP" $ do
     uBooking <- QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
     BP.sendRideAssignedUpdateToBAP uBooking ride
-    Notify.notifyDriver notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
+    fcmConfig <- findAllocatorFCMConfigByMerchantId booking.providerId
+    Notify.notifyDriver fcmConfig notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -208,7 +210,8 @@ sendNewRideNotifications bookingId = traverse_ sendNewRideNotification
       person <-
         QP.findById (cast driverId)
           >>= fromMaybeM (PersonNotFound driverId.getId)
-      notifyDriverNewAllocation booking.id person.id person.deviceToken
+      fcmConfig <- findAllocatorFCMConfigByMerchantId person.merchantId
+      notifyDriverNewAllocation fcmConfig booking.id person.id person.deviceToken
 
 sendRideNotAssignedNotification ::
   Id Booking ->
@@ -219,7 +222,8 @@ sendRideNotAssignedNotification bookingId driverId = do
   person <-
     QP.findById (cast driverId)
       >>= fromMaybeM (PersonNotFound driverId.getId)
-  notifyRideNotAssigned booking.id person.id person.deviceToken
+  fcmConfig <- findAllocatorFCMConfigByMerchantId person.merchantId
+  notifyRideNotAssigned fcmConfig booking.id person.id person.deviceToken
 
 updateNotificationStatuses :: EsqDBFlow m r => Id Booking -> NotificationStatus -> NonEmpty (Id Driver) -> m ()
 updateNotificationStatuses bookingId status driverIds = do
@@ -254,7 +258,6 @@ cancelBooking ::
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    FCMFlow m r,
     CoreMetrics m
   ) =>
   Id SRB.Booking ->
@@ -279,7 +282,8 @@ cancelBooking bookingId reason = do
   whenJust mbRide $ \ride ->
     fork "cancelRide - Notify driver" $ do
       driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      Notify.notifyOnCancel booking driver.id driver.deviceToken reason.source
+      fcmConfig <- findAllocatorFCMConfigByMerchantId driver.merchantId
+      Notify.notifyOnCancel fcmConfig booking driver.id driver.deviceToken reason.source
 
 cleanupNotifications :: EsqDBFlow m r => Id Booking -> m ()
 cleanupNotifications = Esq.runTransaction . QNS.cleanupNotifications
@@ -362,3 +366,8 @@ putTaskDuration :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBFlow m
 putTaskDuration subscriberId ms = do
   org <- CQM.findBySubscriberId subscriberId >>= fromMaybeM (MerchantNotFound ("subscriberId-" <> subscriberId.getShortId))
   TMetrics.putTaskDuration org.name ms
+
+findAllocatorFCMConfigByMerchantId :: (MonadFlow m, HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m FCM.FCMConfig
+findAllocatorFCMConfigByMerchantId merchantId = do
+  fcmConfig <- findFCMConfigByMerchantId merchantId
+  pure fcmConfig{FCM.fcmTokenKeyPrefix = "transporter-allocator"}

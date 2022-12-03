@@ -12,6 +12,7 @@ import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Shutdown
 import EulerHS.Prelude
+import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
 
 type Flow = FlowR AppEnv
@@ -24,15 +25,13 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Seconds,
     hedisCfg :: Redis.HedisCfg,
     esqDBCfg :: EsqDBConfig,
-    fcmUrl :: BaseUrl,
-    fcmJsonPath :: Maybe Text,
-    fcmTokenKeyPrefix :: Text,
     encTools :: EncTools,
     driverAllowedDelay :: Seconds,
     notificationMinDelay :: Microseconds,
     driverInactiveDelay :: Seconds,
     smsCfg :: SmsConfig,
-    driverInactiveSmsTemplate :: Text
+    driverInactiveSmsTemplate :: Text,
+    cacheConfig :: CacheConfig
   }
   deriving (Generic, FromDhall)
 
@@ -40,9 +39,6 @@ data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,
     httpClientOptions :: HttpClientOptions,
     graceTerminationPeriod :: Seconds,
-    fcmUrl :: BaseUrl,
-    fcmJsonPath :: Maybe Text,
-    fcmTokenKeyPrefix :: Text,
     encTools :: EncTools,
     driverAllowedDelay :: Seconds,
     notificationMinDelay :: Microseconds,
@@ -53,7 +49,8 @@ data AppEnv = AppEnv
     hedisEnv :: Redis.HedisEnv,
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
-    loggerEnv :: LoggerEnv
+    loggerEnv :: LoggerEnv,
+    cacheConfig :: CacheConfig
   }
   deriving (Generic)
 

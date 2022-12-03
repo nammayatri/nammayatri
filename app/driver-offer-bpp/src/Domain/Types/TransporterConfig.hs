@@ -1,5 +1,6 @@
 module Domain.Types.TransporterConfig where
 
+import Beckn.External.FCM.Types (FCMConfig)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time (UTCTime)
@@ -15,7 +16,8 @@ data TransporterConfigD u = TransporterConfig
     rideTravelledDistanceThreshold :: Maybe Meters,
     rideTimeEstimatedThreshold :: Maybe Seconds,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    fcmConfig :: FCMConfig
   }
   deriving (Generic)
 

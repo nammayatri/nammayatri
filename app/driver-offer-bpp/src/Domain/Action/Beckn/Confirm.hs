@@ -60,7 +60,6 @@ data DConfirmRes = DConfirmRes
 
 handler ::
   ( HasCacheConfig r,
-    FCMFlow m r,
     HedisFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -112,10 +111,10 @@ handler subscriber transporterId req = do
     let driverId = driverReq.driverId
     unless (driverId == driver.id) $ do
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      Notify.notifyDriverClearedFare driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
+      Notify.notifyDriverClearedFare transporter.id driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
 
   uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-  Notify.notifyDriver notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
+  Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
 
   pure
     DConfirmRes
@@ -191,7 +190,6 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
 
 buildRideDetails ::
   ( HasCacheConfig r,
-    FCMFlow m r,
     HedisFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -222,12 +220,12 @@ buildRideDetails ride driver = do
       }
 
 cancelBooking ::
-  ( FCMFlow m r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r
   ) =>
   DRB.Booking ->
   DPerson.Person ->
@@ -242,7 +240,7 @@ cancelBooking booking driver transporter = do
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter DBCR.ByApplication
   fork "cancelRide - Notify driver" $ do
-    Notify.notifyOnCancel booking driver.id driver.deviceToken DBCR.ByApplication
+    Notify.notifyOnCancel transporter.id booking driver.id driver.deviceToken DBCR.ByApplication
 
 buildBookingCancellationReason ::
   MonadFlow m =>

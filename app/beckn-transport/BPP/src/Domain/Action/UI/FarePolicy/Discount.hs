@@ -25,6 +25,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Veh
 import EulerHS.Prelude hiding (id)
+import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.Discount as QDisc
 import qualified Storage.Queries.Person as QP
@@ -73,7 +74,6 @@ createFarePolicyDiscount ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
-    FCMFlow m r,
     CoreMetrics m
   ) =>
   SP.Person ->
@@ -89,8 +89,9 @@ createFarePolicyDiscount admin req = do
   Esq.runTransaction $ QDisc.create disc
   QDisc.clearCache disc
   let otherCoordinators = filter ((/= admin.id) . (.id)) cooridinators
+  fcmConfig <- findFCMConfigByMerchantId merchantId
   for_ otherCoordinators $ \cooridinator ->
-    Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
+    Notify.notifyDiscountChange fcmConfig cooridinator.id cooridinator.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createFarePolicyDiscount : ") (show disc)
   pure Success
   where
@@ -116,7 +117,6 @@ updateFarePolicyDiscount ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
-    FCMFlow m r,
     CoreMetrics m
   ) =>
   SP.Person ->
@@ -140,8 +140,9 @@ updateFarePolicyDiscount admin discId req = do
   Esq.runTransaction $ QDisc.update updatedFarePolicy
   QDisc.clearCache updatedFarePolicy
   let otherCoordinators = filter ((/= admin.id) . (.id)) cooridinators
+  fcmConfig <- findFCMConfigByMerchantId merchantId
   for_ otherCoordinators $ \cooridinator ->
-    Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
+    Notify.notifyDiscountChange fcmConfig cooridinator.id cooridinator.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateFarePolicyDiscount : ") (show updatedFarePolicy)
   pure Success
 
@@ -149,7 +150,6 @@ deleteFarePolicyDiscount ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
-    FCMFlow m r,
     CoreMetrics m
   ) =>
   SP.Person ->
@@ -163,7 +163,8 @@ deleteFarePolicyDiscount admin discId = do
   Esq.runTransaction $ QDisc.deleteById discId
   QDisc.clearCache discount
   let otherCoordinators = filter ((/= admin.id) . (.id)) cooridinators
+  fcmConfig <- findFCMConfigByMerchantId merchantId
   for_ otherCoordinators $ \cooridinator ->
-    Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
+    Notify.notifyDiscountChange fcmConfig cooridinator.id cooridinator.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteFarePolicyDiscount : ") (show discount)
   pure Success

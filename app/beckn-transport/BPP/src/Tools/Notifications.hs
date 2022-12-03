@@ -16,18 +16,19 @@ import EulerHS.Prelude
 
 -- | Send FCM "cancel" notification to driver
 notifyOnCancel ::
-  ( FCMFlow m r,
-    HedisFlow m r,
-    CoreMetrics m
+  ( HedisFlow m r,
+    CoreMetrics m,
+    MonadFlow m
   ) =>
+  FCMConfig ->
   Booking ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   SBCR.CancellationSource ->
   m ()
-notifyOnCancel booking personId mbDeviceToken cancellationSource = do
+notifyOnCancel fcmConfig booking personId mbDeviceToken cancellationSource = do
   cancellationText <- getCancellationText
-  FCM.notifyPersonDefault (notificationData cancellationText) $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPerson fcmConfig (notificationData cancellationText) $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notificationData cancellationText =
       FCM.FCMData
@@ -66,16 +67,17 @@ notifyOnCancel booking personId mbDeviceToken cancellationSource = do
       _ -> throwError (InternalError "Unexpected cancellation reason.")
 
 notifyOnRegistration ::
-  ( FCMFlow m r,
-    HedisFlow m r,
-    CoreMetrics m
+  ( HedisFlow m r,
+    CoreMetrics m,
+    MonadFlow m
   ) =>
+  FCMConfig ->
   RegistrationToken ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyOnRegistration regToken personId =
-  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient personId.getId
+notifyOnRegistration fcmConfig regToken personId =
+  FCM.notifyPerson fcmConfig notificationData . FCMNotificationRecipient personId.getId
   where
     tokenId = RegToken.id regToken
     notificationData =
@@ -96,38 +98,41 @@ notifyOnRegistration regToken personId =
           ]
 
 notifyDriver ::
-  ( FCMFlow m r,
-    HedisFlow m r,
-    CoreMetrics m
+  ( HedisFlow m r,
+    CoreMetrics m,
+    MonadFlow m
   ) =>
+  FCMConfig ->
   FCM.FCMNotificationType ->
   Text ->
   Text ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriver = sendNotificationToDriver FCM.SHOW Nothing
+notifyDriver fcmConfig = sendNotificationToDriver fcmConfig FCM.SHOW Nothing
 
 -- Send notification to device, i.e. notifications that should not be shown to the user,
 -- but contains payload used by the app
 notifyDevice ::
-  ( FCMFlow m r,
-    HedisFlow m r,
-    CoreMetrics m
+  ( HedisFlow m r,
+    CoreMetrics m,
+    MonadFlow m
   ) =>
+  FCMConfig ->
   FCM.FCMNotificationType ->
   Text ->
   Text ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDevice = sendNotificationToDriver FCM.DO_NOT_SHOW (Just FCM.HIGH)
+notifyDevice fcmConfig = sendNotificationToDriver fcmConfig FCM.DO_NOT_SHOW (Just FCM.HIGH)
 
 sendNotificationToDriver ::
-  ( FCMFlow m r,
-    HedisFlow m r,
-    CoreMetrics m
+  ( HedisFlow m r,
+    CoreMetrics m,
+    MonadFlow m
   ) =>
+  FCMConfig ->
   FCM.FCMShowNotification ->
   Maybe FCM.FCMAndroidMessagePriority ->
   FCM.FCMNotificationType ->
@@ -136,8 +141,8 @@ sendNotificationToDriver ::
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-sendNotificationToDriver displayOption priority notificationType notificationTitle message driverId =
-  FCM.notifyPersonWithPriorityDefault priority notificationData . FCMNotificationRecipient driverId.getId
+sendNotificationToDriver fcmConfig displayOption priority notificationType notificationTitle message driverId =
+  FCM.notifyPersonWithPriority fcmConfig priority notificationData . FCMNotificationRecipient driverId.getId
   where
     notificationData =
       FCM.FCMData
@@ -153,16 +158,17 @@ sendNotificationToDriver displayOption priority notificationType notificationTit
       FCMNotificationBody message
 
 notifyDriverNewAllocation ::
-  ( FCMFlow m r,
-    HedisFlow m r,
-    CoreMetrics m
+  ( HedisFlow m r,
+    CoreMetrics m,
+    MonadFlow m
   ) =>
+  FCMConfig ->
   Id bookingId ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverNewAllocation bookingId personId =
-  FCM.notifyPersonWithPriorityDefault (Just FCM.HIGH) notificationData . FCMNotificationRecipient personId.getId
+notifyDriverNewAllocation fcmConfig bookingId personId =
+  FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "New allocation request."
     body =
@@ -182,16 +188,17 @@ notifyDriverNewAllocation bookingId personId =
         }
 
 notifyRideNotAssigned ::
-  ( FCMFlow m r,
-    HedisFlow m r,
-    CoreMetrics m
+  ( HedisFlow m r,
+    CoreMetrics m,
+    MonadFlow m
   ) =>
+  FCMConfig ->
   Id Booking ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyRideNotAssigned bookingId personId =
-  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient personId.getId
+notifyRideNotAssigned fcmConfig bookingId personId =
+  FCM.notifyPerson fcmConfig notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "Ride not assigned."
     body =
@@ -211,15 +218,16 @@ notifyRideNotAssigned bookingId personId =
         }
 
 notifyFarePolicyChange ::
-  ( FCMFlow m r,
-    HedisFlow m r,
-    CoreMetrics m
+  ( HedisFlow m r,
+    CoreMetrics m,
+    MonadFlow m
   ) =>
+  FCMConfig ->
   Id coordinatorId ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyFarePolicyChange coordinatorId =
-  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient coordinatorId.getId
+notifyFarePolicyChange fcmConfig coordinatorId =
+  FCM.notifyPerson fcmConfig notificationData . FCMNotificationRecipient coordinatorId.getId
   where
     title = FCM.FCMNotificationTitle "Fare policy changed."
     body =
@@ -238,15 +246,16 @@ notifyFarePolicyChange coordinatorId =
         }
 
 notifyDiscountChange ::
-  ( FCMFlow m r,
-    HedisFlow m r,
-    CoreMetrics m
+  ( HedisFlow m r,
+    CoreMetrics m,
+    MonadFlow m
   ) =>
+  FCMConfig ->
   Id coordinatorId ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDiscountChange coordinatorId =
-  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient coordinatorId.getId
+notifyDiscountChange fcmConfig coordinatorId =
+  FCM.notifyPerson fcmConfig notificationData . FCMNotificationRecipient coordinatorId.getId
   where
     title = FCM.FCMNotificationTitle "Discount updated."
     body =

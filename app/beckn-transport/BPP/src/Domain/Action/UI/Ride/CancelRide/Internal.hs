@@ -15,6 +15,7 @@ import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
+import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
@@ -36,7 +37,6 @@ cancelRide ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    FCMFlow m r,
     CoreMetrics m
   ) =>
   Id SRide.Ride ->
@@ -62,7 +62,8 @@ cancelRide rideId bookingCReason = do
       else BP.sendBookingCancelledUpdateToBAP booking transporter bookingCReason.source
   fork "cancelRide - Notify driver" $ do
     driver <- Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    Notify.notifyOnCancel booking driver.id driver.deviceToken bookingCReason.source
+    fcmConfig <- findFCMConfigByMerchantId transporterId
+    Notify.notifyOnCancel fcmConfig booking driver.id driver.deviceToken bookingCReason.source
   where
     isCancelledByDriver = bookingCReason.source == SBCR.ByDriver
 

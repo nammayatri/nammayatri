@@ -116,9 +116,6 @@ in  { esqDBCfg
     , minimumDriverRatesCount = +5
     , disableSignatureAuth = False
     , httpClientOptions = common.httpClientOptions
-    , fcmUrl = common.fcmUrl
-    , fcmJsonPath = common.fcmJsonPath
-    , fcmTokenKeyPrefix = "driver-offer-bpp"
     , apiRateLimitOptions
     , inviteSmsTemplate =
         "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"

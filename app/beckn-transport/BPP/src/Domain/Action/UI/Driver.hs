@@ -44,6 +44,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as SV
 import GHC.Records.Extra
+import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.DriverInformation as QDriverInformation
@@ -337,8 +338,8 @@ buildDriverEntityRes (person, driverInfo) = do
 changeDriverEnableState ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
-    FCMFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r
   ) =>
   SP.Person ->
   Id SP.Person ->
@@ -352,8 +353,9 @@ changeDriverEnableState admin personId isEnabled = do
   Esq.runTransaction $ do
     QDriverInformation.updateEnabledState driverId isEnabled
     unless isEnabled $ QDriverInformation.updateActivity driverId False
-  unless isEnabled $
-    Notify.notifyDriver FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
+  unless isEnabled $ do
+    fcmConfig <- findFCMConfigByMerchantId person.merchantId
+    Notify.notifyDriver fcmConfig FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> changeDriverEnableState : ") (show (driverId, isEnabled))
   return Success
   where

@@ -34,6 +34,8 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import SharedLogic.TransporterConfig
+import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
@@ -157,8 +159,8 @@ verify ::
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
-    FCMFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasCacheConfig r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -180,8 +182,10 @@ verify tokenId req = do
     QP.updateDeviceToken person.id deviceToken
     when isNewPerson $
       QP.setIsNewFalse person.id
-  when isNewPerson $
-    Notify.notifyOnRegistration regToken person.id deviceToken
+  when isNewPerson $ do
+    let merchantId = person.merchantId
+    fcmConfig <- findFCMConfigByMerchantId merchantId
+    Notify.notifyOnRegistration fcmConfig regToken person.id deviceToken
   updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
   let personAPIEntity = SP.makePersonAPIEntity decPerson

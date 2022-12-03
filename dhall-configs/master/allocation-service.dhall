@@ -46,9 +46,6 @@ in  { appCfg
         appCfg.loggerConfig // { logFilePath = "/tmp/allocation-service.log" }
     , kafkaProducerCfg = appCfg.kafkaProducerCfg
     , nwAddress = appCfg.nwAddress
-    , fcmUrl = appCfg.fcmUrl
-    , fcmJsonPath = appCfg.fcmJsonPath
-    , fcmTokenKeyPrefix = "transporter-allocator"
     , defaultRadiusOfSearch = appCfg.defaultRadiusOfSearch
     , driverPositionInfoExpiry = appCfg.driverPositionInfoExpiry
     , graceTerminationPeriod = appCfg.graceTerminationPeriod

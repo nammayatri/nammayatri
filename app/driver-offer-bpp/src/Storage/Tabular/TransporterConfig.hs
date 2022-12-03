@@ -7,6 +7,7 @@
 
 module Storage.Tabular.TransporterConfig where
 
+import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common (Meters)
@@ -27,6 +28,9 @@ mkPersist
       rideTimeEstimatedThreshold Seconds Maybe
       createdAt UTCTime
       updatedAt UTCTime
+      fcmUrl Text
+      fcmServiceAccount Text
+      fcmTokenKeyPrefix Text
       Primary merchantId
       deriving Generic
     |]
@@ -38,13 +42,22 @@ instance TEntityKey TransporterConfigT where
 
 instance TType TransporterConfigT Domain.TransporterConfig where
   fromTType TransporterConfigT {..} = do
+    fcmUrl' <- parseBaseUrl fcmUrl
     return $
       Domain.TransporterConfig
         { merchantId = fromKey merchantId,
+          fcmConfig =
+            FCM.FCMConfig
+              { fcmUrl = fcmUrl',
+                ..
+              },
           ..
         }
   toTType Domain.TransporterConfig {..} =
     TransporterConfigT
       { merchantId = toKey merchantId,
+        fcmUrl = showBaseUrl fcmConfig.fcmUrl,
+        fcmServiceAccount = fcmConfig.fcmServiceAccount,
+        fcmTokenKeyPrefix = fcmConfig.fcmTokenKeyPrefix,
         ..
       }

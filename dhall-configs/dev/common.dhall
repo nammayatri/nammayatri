@@ -27,10 +27,8 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , smsPassword = sec.smsPassword
     , InfoBIPConfig = sec.InfoBIPConfig
     , passetto = { _1 = "localhost", _2 = 8021 }
-    , fcmJsonPath = Some "dummy-fcm.json"
     , googleTranslateUrl = "https://www.googleapis.com/"
     , googleTranslateKey = sec.googleTranslateKey
-    , fcmUrl = "http://localhost:4545/"
     , registryUrl = mockRegistryUrl
     , authServiceUrl = "http://localhost:8013/"
     }
