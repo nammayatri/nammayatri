@@ -74,7 +74,9 @@ intelligentPoolSelection dp n =
       map snd
         . take n
         . sortOn (Down . fst)
-        <$> mapM (\dPoolRes -> (,dPoolRes) <$> SWC.getLatestRatio (getId dPoolRes.origin.driverId) mkAcceptanceKey wo) dp
+        <$> ( (\poolWithRatio -> logInfo ("Drivers in Pool with acceptance ratios " <> show poolWithRatio) $> poolWithRatio)
+                =<< mapM (\dPoolRes -> (,dPoolRes) <$> SWC.getLatestRatio (getId dPoolRes.origin.driverId) mkAcceptanceKey wo) dp
+            )
 
 randomizeAndLimitSelection ::
   (L.MonadFlow m) =>

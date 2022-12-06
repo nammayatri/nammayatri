@@ -50,6 +50,7 @@ handler merchantId sReq = do
   toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropLocation Nothing
   farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId sReq.variant >>= fromMaybeM NoFarePolicy
   driverPool <- calculateDriverPool' (Just sReq.variant) fromLocation
+  logInfo $ "Final Driver Pool " <> show driverPool
   mbDistRes <- CD.getCacheDistance sReq.transactionId
   logInfo $ "Fetching cached distance and duration" <> show mbDistRes
   (distance, duration) <-
@@ -89,6 +90,7 @@ handler merchantId sReq = do
     calculateDriverPool' :: Maybe Variant -> DLoc.SearchReqLocation -> Flow [Maps.GetDistanceResp DriverPoolResult Maps.LatLong]
     calculateDriverPool' mbVariant fromLocation = do
       driverPool' <- calculateDriverPool mbVariant fromLocation merchantId True True
+      logInfo $ "All nearby available drivers " <> show driverPool'
       mdriverPoolLimit <- asks (.driverPoolLimit)
       useIntelligentAllocation <- asks (.useIntelligentAllocation)
       case mdriverPoolLimit of
