@@ -44,6 +44,7 @@ instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
     serviceConfig <- maybe (throwError $ InternalError "Unable to decode MerchantServiceConfigT.configJSON") return $ case serviceName of
       Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> decodeFromText configJSON
       Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> decodeFromText configJSON
+      Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> decodeFromText configJSON
     return $
       Domain.MerchantServiceConfig
         { merchantId = fromKey merchantId,
@@ -60,3 +61,4 @@ instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
         Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
           Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, encodeToText cfg)
           Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, encodeToText cfg)
+          Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, encodeToText cfg)
