@@ -36,7 +36,7 @@ reassignmentRide = testCase "Reassignment booking after cancellation" $ do
   void $ process (handle r) org1 numRequestsToProcess
   addRequest Cancellation r booking01Id
   void $ process (handle r) org1 numRequestsToProcess
-  updateBooking r booking01Id AwaitingReassignment
+  updateBooking r booking01Id SRB.AWAITING_REASSIGNMENT
   addRequest Allocation r booking01Id
   void $ process (handle r) org1 numRequestsToProcess
   checkNotificationStatus r booking01Id (Id "driver02") Notified
@@ -44,7 +44,7 @@ reassignmentRide = testCase "Reassignment booking after cancellation" $ do
   void $ process (handle r) org1 numRequestsToProcess
   assignments <- readIORef assignmentsVar
   assignments @?= [(booking01Id, Id "driver02"), (booking01Id, Id "driver01")]
-  checkRideStatus r booking01Id Assigned
+  checkRideStatus r booking01Id SRB.TRIP_ASSIGNED
   onRide <- readIORef onRideVar
   onRide @?= [Id "driver02"]
 
@@ -66,7 +66,7 @@ reassignmentDriver = testCase "Reassignment driver after cancellation" $ do
   void $ process (handle r) org1 numRequestsToProcess
   assignments <- readIORef assignmentsVar
   assignments @?= [(booking02Id, Id "driver01"), (booking01Id, Id "driver01")]
-  checkRideStatus r booking02Id Assigned
+  checkRideStatus r booking02Id SRB.TRIP_ASSIGNED
   onRide <- readIORef onRideVar
   onRide @?= [Id "driver01"]
 

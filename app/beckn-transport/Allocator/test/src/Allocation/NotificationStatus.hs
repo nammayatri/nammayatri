@@ -44,5 +44,5 @@ checkNotificationStatuses = testCaseSteps "Check NotificationStatus" $ \step -> 
   void $ process (handle r) org1 numRequestsToProcess
   assignments2 <- readIORef assignmentsVar
   assignments2 @?= [(booking01Id, Id "driver03")]
-  checkRideStatus r booking01Id Assigned
+  checkRideStatus r booking01Id SRB.TRIP_ASSIGNED
   checkFreeNotificationStatus r booking01Id (Id "driver03")

@@ -17,11 +17,6 @@ import Domain.Types.Person (Driver)
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude
 
-newtype OrderTime = OrderTime
-  { utcTime :: UTCTime
-  }
-  deriving (Generic, Show)
-
 data RequestData
   = Allocation
   | Cancellation
@@ -57,23 +52,6 @@ data CurrentNotification = CurrentNotification
     expiryTime :: UTCTime
   }
   deriving (Show)
-
-data RideStatus
-  = New
-  | Confirmed
-  | AwaitingReassignment
-  | Assigned
-  | Completed
-  | Cancelled
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON)
-
-data RideInfo = RideInfo
-  { bookingId :: Id SRB.Booking,
-    rideStatus :: RideStatus,
-    orderTime :: OrderTime,
-    reallocationsCount :: Int
-  }
-  deriving (Generic)
 
 data AllocatorCancellationReason = AllocationTimeExpired | NoDriversInRange | ReallocationLimitExceed
 
@@ -126,7 +104,7 @@ data ServiceHandle m = ServiceHandle
     cancelBooking :: Id SRB.Booking -> SBCR.BookingCancellationReason -> m (),
     cleanupNotifications :: Id SRB.Booking -> m (),
     addAllocationRequest :: ShortId Subscriber -> Id SRB.Booking -> m (),
-    getRideInfo :: Id SRB.Booking -> m RideInfo,
+    getBooking :: Id SRB.Booking -> m SRB.Booking,
     removeRequest :: Id SRR.RideRequest -> m (),
     logEvent :: AllocationEventType -> Id SRB.Booking -> m (),
     logDriverEvents :: AllocationEventType -> Id SRB.Booking -> NonEmpty (Id Driver) -> m (),
@@ -150,37 +128,36 @@ processRequest handle@ServiceHandle {..} subscriberId rideRequest = do
   measuringDuration (\dur _ -> metrics.putTaskDuration subscriberId dur) $ do
     let requestId = rideRequest.requestId
     let bookingId = rideRequest.bookingId
-    rideInfo <- getRideInfo bookingId
-    let rideStatus = rideInfo.rideStatus
+    booking <- getBooking bookingId
     eres <- try $
       withLogTag ("RideRequest_" <> bookingId.getId) $ do
         logInfo "Start processing request"
         case rideRequest.requestData of
           Allocation ->
-            case rideStatus of
-              Confirmed -> processAllocation handle subscriberId rideInfo
-              AwaitingReassignment -> processAllocation handle subscriberId rideInfo
-              Cancelled -> logInfo "Ride is cancelled, allocation request skipped"
+            case booking.status of
+              SRB.CONFIRMED -> processAllocation handle subscriberId booking
+              SRB.AWAITING_REASSIGNMENT -> processAllocation handle subscriberId booking
+              SRB.CANCELLED -> logInfo "Ride is cancelled, allocation request skipped"
               _ ->
-                logWarning $ "Ride status is " <> show rideStatus <> ", allocation request skipped"
+                logWarning $ "Ride status is " <> show booking.status <> ", allocation request skipped"
           DriverResponse response ->
-            case rideStatus of
-              Confirmed -> processDriverResponse handle response bookingId
-              AwaitingReassignment -> processDriverResponse handle response bookingId
-              Assigned -> do
+            case booking.status of
+              SRB.CONFIRMED -> processDriverResponse handle response bookingId
+              SRB.AWAITING_REASSIGNMENT -> processDriverResponse handle response bookingId
+              SRB.TRIP_ASSIGNED -> do
                 logInfo "Ride is assigned, response request skipped"
                 sendRideNotAssignedNotification bookingId response.driverId
-              Cancelled -> do
+              SRB.CANCELLED -> do
                 logInfo "Ride is cancelled, response request skipped"
                 sendRideNotAssignedNotification bookingId response.driverId
-              _ -> logWarning $ "Ride status is " <> show rideStatus <> ", response request skipped"
+              _ -> logWarning $ "Ride status is " <> show booking.status <> ", response request skipped"
           Cancellation ->
-            case rideStatus of
-              status | status == Confirmed || status == Assigned -> do
+            case booking.status of
+              status | status == SRB.CONFIRMED || status == SRB.TRIP_ASSIGNED -> do
                 cancel handle bookingId SBCR.ByUser Nothing
                 logEvent ConsumerCancelled bookingId
               _ ->
-                logWarning $ "Ride status is " <> show rideStatus <> ", cancellation request skipped"
+                logWarning $ "Ride status is " <> show booking.status <> ", cancellation request skipped"
         logInfo "End processing request"
     whenLeft eres $
       \(exc :: SomeException) -> do
@@ -209,14 +186,14 @@ processAllocation ::
   MonadHandler m =>
   ServiceHandle m ->
   ShortId Subscriber ->
-  RideInfo ->
+  SRB.Booking ->
   m ()
-processAllocation handle@ServiceHandle {..} subscriberId rideInfo = do
-  let bookingId = rideInfo.bookingId
-  let orderTime = rideInfo.orderTime
+processAllocation handle@ServiceHandle {..} subscriberId booking = do
+  let bookingId = booking.id
+  let orderTime = booking.createdAt
   currentTime <- getCurrentTime
   allocationTimeFinished <- isAllocationTimeFinished handle currentTime orderTime
-  allocationLimitExceed <- isReallocationLimitExceed handle rideInfo.reallocationsCount
+  allocationLimitExceed <- isReallocationLimitExceed handle booking.reallocationsCount
   logInfo $ "isAllocationTimeFinished " <> show allocationTimeFinished
   if allocationTimeFinished || allocationLimitExceed
     then do
@@ -337,10 +314,10 @@ cancel ServiceHandle {..} bookingId cancellationSource mbReasonCode = do
             additionalInfo = Nothing
           }
 
-isAllocationTimeFinished :: MonadHandler m => ServiceHandle m -> UTCTime -> OrderTime -> m Bool
+isAllocationTimeFinished :: MonadHandler m => ServiceHandle m -> UTCTime -> UTCTime -> m Bool
 isAllocationTimeFinished ServiceHandle {..} currentTime orderTime = do
   configuredAllocationTime <- fromIntegral <$> getConfiguredAllocationTime
-  let elapsedSearchTime = diffUTCTime currentTime (orderTime.utcTime)
+  let elapsedSearchTime = diffUTCTime currentTime orderTime
   pure $ elapsedSearchTime > configuredAllocationTime
 
 isReallocationLimitExceed :: MonadHandler m => ServiceHandle m -> Int -> m Bool

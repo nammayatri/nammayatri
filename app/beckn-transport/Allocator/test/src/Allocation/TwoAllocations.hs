@@ -40,5 +40,5 @@ twoAllocations = testCase "Two allocations" $ do
   void $ process (handle r) org1 numRequestsToProcess
   assignments <- readIORef assignmentsVar
   assignments @?= [(booking02Id, Id "driver08"), (booking01Id, Id "driver03")]
-  checkRideStatus r booking01Id Assigned
-  checkRideStatus r booking02Id Assigned
+  checkRideStatus r booking01Id SRB.TRIP_ASSIGNED
+  checkRideStatus r booking02Id SRB.TRIP_ASSIGNED

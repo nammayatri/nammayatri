@@ -28,4 +28,4 @@ allocationTimeFinished = testCase "AllocationTimeFinished" $ do
   void $ process (handle r) org1 numRequestsToProcess
   threadDelay 3400000
   void $ process (handle r) org1 numRequestsToProcess
-  checkRideStatus r booking01Id Cancelled
+  checkRideStatus r booking01Id SRB.CANCELLED

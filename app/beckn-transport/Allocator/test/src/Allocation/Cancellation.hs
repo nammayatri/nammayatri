@@ -45,7 +45,7 @@ cancellationBeforeAssignment = testCase "Cancellation before assignment" $ do
   void $ process (handle r) org1 numRequestsToProcess
   assignments <- readIORef assignmentsVar
   assignments @?= []
-  checkRideStatus r booking01Id Cancelled
+  checkRideStatus r booking01Id SRB.CANCELLED
 
 cancellationAfterAssignment :: TestTree
 cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
@@ -58,19 +58,19 @@ cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
   void $ process (handle r) org1 numRequestsToProcess
   onRide1 <- readIORef onRideVar
   onRide1 @?= [Id "driver01"]
-  checkRideStatus r booking01Id Assigned
+  checkRideStatus r booking01Id SRB.TRIP_ASSIGNED
   addRequest Cancellation r booking01Id
   void $ process (handle r) org1 numRequestsToProcess
   onRide2 <- readIORef onRideVar
   onRide2 @?= []
-  checkRideStatus r booking01Id Cancelled
+  checkRideStatus r booking01Id SRB.CANCELLED
   assignments <- readIORef assignmentsVar
   assignments @?= [(Id {getId = "booking01"}, Id {getId = "driver01"})]
   checkFreeNotificationStatus r booking01Id (Id "driver01")
   checkFreeNotificationStatus r booking01Id (Id "driver02")
   checkFreeNotificationStatus r booking01Id (Id "driver03")
-  updateBooking r booking01Id AwaitingReassignment
-  checkRideStatus r booking01Id AwaitingReassignment
+  updateBooking r booking01Id SRB.AWAITING_REASSIGNMENT
+  checkRideStatus r booking01Id SRB.AWAITING_REASSIGNMENT
 
 cancellationOnReallocationsCountExceedLimit :: TestTree
 cancellationOnReallocationsCountExceedLimit = testCase "Cancellation on reallocations count exceed limit" $ do
@@ -83,9 +83,9 @@ cancellationOnReallocationsCountExceedLimit = testCase "Cancellation on realloca
   addRequest Allocation r booking02Id
   addRequest Allocation r booking03Id
   void $ process (handle r) org1 numRequestsToProcess
-  checkRideStatus r booking01Id Confirmed
-  checkRideStatus r booking02Id Cancelled
-  checkRideStatus r booking03Id Cancelled
+  checkRideStatus r booking01Id SRB.CONFIRMED
+  checkRideStatus r booking02Id SRB.CANCELLED
+  checkRideStatus r booking03Id SRB.CANCELLED
 
 cancellation :: TestTree
 cancellation =

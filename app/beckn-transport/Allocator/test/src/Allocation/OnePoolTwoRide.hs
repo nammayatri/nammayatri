@@ -56,8 +56,8 @@ allocationDriverResponseAllocationDriverResponse = testCaseSteps "Allocation - D
   assignments2 <- readIORef assignmentsVar
   assignments2 @?= [(booking02Id, Id "driver02"), (booking01Id, Id "driver01")]
   step "Both bookings are assigned"
-  checkRideStatus r booking01Id Assigned
-  checkRideStatus r booking02Id Assigned
+  checkRideStatus r booking01Id SRB.TRIP_ASSIGNED
+  checkRideStatus r booking02Id SRB.TRIP_ASSIGNED
 
 allocationDriverResponseCancellationAllocationDriverResponse :: TestTree
 allocationDriverResponseCancellationAllocationDriverResponse = testCaseSteps "Allocation - DriverResponse - Cancellation - Allocation - DriverResponse" $ \step -> do
@@ -86,7 +86,7 @@ allocationDriverResponseCancellationAllocationDriverResponse = testCaseSteps "Al
   void $ process (handle r) org1 numRequestsToProcess
   onRide2 <- readIORef onRideVar
   onRide2 @?= []
-  checkRideStatus r booking01Id Cancelled
+  checkRideStatus r booking01Id SRB.CANCELLED
   step "Request for allocation of the second booking - notified both"
   addRequest Allocation r booking02Id
   void $ process (handle r) org1 numRequestsToProcess
@@ -102,8 +102,8 @@ allocationDriverResponseCancellationAllocationDriverResponse = testCaseSteps "Al
   assignments3 <- readIORef assignmentsVar
   assignments3 @?= [(booking02Id, Id "driver01"), (booking01Id, Id "driver01")]
   step "First booking - cancelled, second - assigned"
-  checkRideStatus r booking01Id Cancelled
-  checkRideStatus r booking02Id Assigned
+  checkRideStatus r booking01Id SRB.CANCELLED
+  checkRideStatus r booking02Id SRB.TRIP_ASSIGNED
 
 twoAllocationTwoDriverResponse :: TestTree
 twoAllocationTwoDriverResponse = testCaseSteps "Allocation - Allocation - DriverResponse - DriverResponse" $ \step -> do
@@ -141,8 +141,8 @@ twoAllocationTwoDriverResponse = testCaseSteps "Allocation - Allocation - Driver
   assignments2 <- readIORef assignmentsVar
   assignments2 @?= [(booking02Id, Id "driver02"), (booking01Id, Id "driver01")]
   step "Both bookings are assigned"
-  checkRideStatus r booking01Id Assigned
-  checkRideStatus r booking02Id Assigned
+  checkRideStatus r booking01Id SRB.TRIP_ASSIGNED
+  checkRideStatus r booking02Id SRB.TRIP_ASSIGNED
 
 onePoolTwoRide :: TestTree
 onePoolTwoRide =

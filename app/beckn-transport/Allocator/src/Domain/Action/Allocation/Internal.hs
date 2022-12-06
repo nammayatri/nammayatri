@@ -345,26 +345,8 @@ logDriverEvents eventType bookingId driverList = Esq.runTransaction $ traverse_ 
   where
     logDriverEvent driver = logAllocationEvent eventType bookingId $ Just driver
 
--- TODO: We don't need RideInfo anymore, we can just use Booking directly. Remove this.
-getRideInfo :: EsqDBFlow m r => Id Booking -> m RideInfo
-getRideInfo bookingId = do
-  booking <- QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
-  let rideStatus = castToRideStatus $ booking.status
-  pure
-    RideInfo
-      { bookingId = bookingId,
-        rideStatus = rideStatus,
-        orderTime = OrderTime $ booking.createdAt,
-        reallocationsCount = booking.reallocationsCount
-      }
-  where
-    castToRideStatus = \case
-      SRB.NEW -> New
-      SRB.CONFIRMED -> Confirmed
-      SRB.AWAITING_REASSIGNMENT -> AwaitingReassignment
-      SRB.TRIP_ASSIGNED -> Assigned
-      SRB.COMPLETED -> Completed
-      SRB.CANCELLED -> Cancelled
+getBooking :: EsqDBFlow m r => Id Booking -> m Booking
+getBooking bookingId = QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
 
 incrementTaskCounter :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m ()
 incrementTaskCounter subscriberId = do

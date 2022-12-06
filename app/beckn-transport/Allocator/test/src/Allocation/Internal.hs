@@ -6,13 +6,17 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Data.Map as Map
 import qualified Data.Time as Time
+import qualified Data.Time.Calendar.OrdinalDate as Time
 import Domain.Action.Allocation as Alloc
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Booking.BookingLocation as Loc
 import Domain.Types.DriverPool
 import Domain.Types.Merchant
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.RideRequest as SRR
+import qualified Domain.Types.Vehicle as Veh
 import EulerHS.Prelude hiding (id)
+import Servant.Client
 import Test.Tasty.HUnit
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
@@ -46,21 +50,98 @@ attemptedNotification ::
 attemptedNotification bookingId (id, _) (status, _) =
   id == bookingId && status `elem` [Rejected, Ignored]
 
+details :: SRB.OneWayBookingDetails
+details =
+  SRB.OneWayBookingDetails
+    { toLocation = bookingStopLocation,
+      estimatedDistance = 20000,
+      estimatedFinishTime = defaultTime,
+      estimatedDuration = 1200
+    }
+
+defaultLocationAddress :: Loc.LocationAddress
+defaultLocationAddress =
+  Loc.LocationAddress
+    { street = Nothing,
+      city = Nothing,
+      state = Nothing,
+      country = Nothing,
+      building = Nothing,
+      areaCode = Nothing,
+      area = Nothing
+    }
+
+defaultTime :: Time.UTCTime
+defaultTime =
+  Time.UTCTime
+    { utctDay = Time.fromOrdinalDate 2020 120,
+      utctDayTime = Time.secondsToDiffTime 40000
+    }
+
+defaultUrl :: BaseUrl
+defaultUrl =
+  BaseUrl
+    { baseUrlScheme = Http,
+      baseUrlHost = "api.example.com",
+      baseUrlPort = 80,
+      baseUrlPath = ""
+    }
+
+defaultBookingLocation :: Loc.BookingLocation
+defaultBookingLocation =
+  Loc.BookingLocation
+    { id = "1",
+      lat = 9.96,
+      lon = 9.96,
+      address = defaultLocationAddress,
+      createdAt = defaultTime,
+      updatedAt = defaultTime
+    }
+
+bookingStopLocation :: Loc.BookingLocation
+bookingStopLocation =
+  defaultBookingLocation
+    { Loc.lat = 10.02,
+      Loc.lon = 10.02
+    }
+
+defaultBooking :: SRB.Booking
+defaultBooking =
+  SRB.Booking
+    { id = Id "1",
+      status = SRB.CONFIRMED,
+      providerId = Id "",
+      bapId = "",
+      bapUri = defaultUrl,
+      startTime = defaultTime,
+      riderId = Just $ Id "",
+      fromLocation = defaultBookingLocation,
+      vehicleVariant = Veh.SUV,
+      estimatedFare = 0,
+      discount = Nothing,
+      estimatedTotalFare = 0,
+      reallocationsCount = 0,
+      bookingDetails = SRB.OneWayDetails details,
+      riderName = Just "John",
+      createdAt = defaultTime,
+      updatedAt = defaultTime
+    }
+
 addBooking :: Repository -> Id SRB.Booking -> Int -> IO ()
 addBooking Repository {..} bookingId reallocationsCount = do
   currTime <- Time.getCurrentTime
-  let rideInfo =
-        RideInfo
-          { bookingId = bookingId,
-            rideStatus = Confirmed,
-            orderTime = OrderTime currTime,
-            reallocationsCount = reallocationsCount
+  let booking =
+        defaultBooking
+          { SRB.id = bookingId,
+            SRB.status = SRB.CONFIRMED,
+            SRB.createdAt = currTime,
+            SRB.reallocationsCount = reallocationsCount
           }
-  modifyIORef bookingsVar $ Map.insert bookingId rideInfo
+  modifyIORef bookingsVar $ Map.insert bookingId booking
 
-updateBooking :: Repository -> Id SRB.Booking -> RideStatus -> IO ()
+updateBooking :: Repository -> Id SRB.Booking -> SRB.BookingStatus -> IO ()
 updateBooking Repository {..} bookingId status = do
-  modifyIORef bookingsVar $ Map.adjust (\rideInfo -> rideInfo {rideStatus = status}) bookingId
+  modifyIORef bookingsVar $ Map.adjust (\booking -> booking{status = status}) bookingId
 
 addRequest :: RequestData -> Repository -> Id SRB.Booking -> IO ()
 addRequest requestData Repository {..} bookingId = do
@@ -105,12 +186,12 @@ addDriverInPool Repository {..} bookingId driverId = do
   let newDriversPool = Map.adjust (addItemToPool $ mkDefaultDriverPoolItem driverId) bookingId driversPool
   writeIORef driverPoolVar newDriversPool
 
-checkRideStatus :: Repository -> Id SRB.Booking -> RideStatus -> IO ()
+checkRideStatus :: Repository -> Id SRB.Booking -> SRB.BookingStatus -> IO ()
 checkRideStatus Repository {..} bookingId expectedStatus = do
   bookings <- readIORef bookingsVar
   case Map.lookup bookingId bookings of
     Nothing -> assertFailure $ "Booking " <> show (bookingId.getId) <> " not found"
-    Just rideInfo -> rideInfo.rideStatus @?= expectedStatus
+    Just booking -> booking.status @?= expectedStatus
 
 checkNotificationStatus :: Repository -> Id SRB.Booking -> Id Driver -> NotificationStatus -> IO ()
 checkNotificationStatus Repository {..} bookingId driverId expectedStatus = do
@@ -206,10 +287,10 @@ handle repository@Repository {..} =
         pure filtered,
       assignDriver = \bookingId driverId -> do
         modifyIORef assignmentsVar $ (:) (bookingId, driverId)
-        modifyIORef bookingsVar $ Map.adjust (#rideStatus .~ Assigned) bookingId
+        modifyIORef bookingsVar $ Map.adjust (#status .~ SRB.TRIP_ASSIGNED) bookingId
         modifyIORef onRideVar $ (:) driverId,
       cancelBooking = \bookingId _ -> do
-        modifyIORef bookingsVar $ Map.adjust (#rideStatus .~ Cancelled) bookingId
+        modifyIORef bookingsVar $ Map.adjust (#status .~ SRB.CANCELLED) bookingId
         assignments <- readIORef assignmentsVar
         let driversForBookingId = map snd $ filter (\(rbId, _) -> bookingId == rbId) assignments
         modifyIORef onRideVar $ filter (`notElem` driversForBookingId),
@@ -223,10 +304,10 @@ handle repository@Repository {..} =
       sendRideNotAssignedNotification = \_ _ -> pure (),
       removeRequest = modifyIORef rideRequestsVar . Map.delete,
       addAllocationRequest = \_ -> addRequest Allocation repository,
-      getRideInfo = \bookingId -> do
+      getBooking = \bookingId -> do
         bookings <- readIORef bookingsVar
         case Map.lookup bookingId bookings of
-          Just rideInfo -> pure rideInfo
+          Just booking -> pure booking
           Nothing -> assertFailure $ "Booking " <> show bookingId <> " not found in the map.",
       logEvent = \_ _ -> pure (),
       logDriverEvents = \_ _ _ -> pure (),
@@ -242,7 +323,7 @@ handle repository@Repository {..} =
 data Repository = Repository
   { currentIdVar :: IORef Int,
     driverPoolVar :: IORef (Map (Id SRB.Booking) SortedDriverPool),
-    bookingsVar :: IORef (Map (Id SRB.Booking) RideInfo),
+    bookingsVar :: IORef (Map (Id SRB.Booking) SRB.Booking),
     rideRequestsVar :: IORef (Map (Id SRR.RideRequest) RideRequest),
     notificationStatusVar :: IORef NotificationStatusMap,
     assignmentsVar :: IORef [(Id SRB.Booking, Id Driver)],
