@@ -16,7 +16,7 @@ create dsReq = Esq.runTransaction $
 
 findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
 findById searchRequestId = buildDType $
-  fmap (fmap extractSolidType) $
+  fmap (fmap $ extractSolidType @Domain.SearchRequest) $
     Esq.findOne' $ do
       (sReq :& sFromLoc :& sToLoc) <-
         from

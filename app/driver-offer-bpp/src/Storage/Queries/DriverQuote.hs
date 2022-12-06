@@ -31,7 +31,7 @@ baseDriverQuoteQuery =
 
 findById :: (Transactionable m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
 findById dQuoteId = buildDType $
-  fmap (fmap extractSolidType) $
+  fmap (fmap $ extractSolidType @Domain.DriverQuote) $
     Esq.findOne' $ do
       (dQuote :& farePars) <-
         from baseDriverQuoteQuery
@@ -48,7 +48,7 @@ findActiveQuotesByDriverId driverId driverUnlockDelay = do
   now <- getCurrentTime
   buildDType $ do
     let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
-    fmap (fmap extractSolidType) $
+    fmap (fmap $ extractSolidType @Domain.DriverQuote) $
       Esq.findAll' $ do
         (dQuote :& farePars) <-
           from baseDriverQuoteQuery
@@ -61,7 +61,7 @@ findActiveQuotesByDriverId driverId driverUnlockDelay = do
 findAllByRequestId :: Transactionable m => Id DSReq.SearchRequest -> m [Domain.DriverQuote]
 findAllByRequestId searchReqId = do
   buildDType $ do
-    fmap (fmap extractSolidType) $
+    fmap (fmap $ extractSolidType @Domain.DriverQuote) $
       Esq.findAll' $ do
         (dQuote :& farePars) <-
           from baseDriverQuoteQuery

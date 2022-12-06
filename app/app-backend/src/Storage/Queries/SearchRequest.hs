@@ -40,7 +40,7 @@ findById searchRequestId = Esq.buildDType $ do
     (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
     pure (sReq, sFromLoc, mbSToLoc)
-  pure $ extractSolidType <$> mbFullSearchReqT
+  pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
 
 findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
 findByPersonId personId searchRequestId = Esq.buildDType $ do
@@ -50,7 +50,7 @@ findByPersonId personId searchRequestId = Esq.buildDType $ do
       searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
         &&. searchRequest ^. SearchRequestId ==. val (getId searchRequestId)
     return (searchRequest, sFromLoc, mbSToLoc)
-  pure $ extractSolidType <$> mbFullSearchReqT
+  pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
 
 findAllByPerson :: Transactionable m => Id Person -> m [SearchRequest]
 findAllByPerson perId = Esq.buildDType $ do
@@ -59,4 +59,4 @@ findAllByPerson perId = Esq.buildDType $ do
     where_ $
       searchRequest ^. SearchRequestRiderId ==. val (toKey perId)
     return (searchRequest, sFromLoc, mbSToLoc)
-  pure $ extractSolidType <$> fullSearchRequestsT
+  pure $ extractSolidType @SearchRequest <$> fullSearchRequestsT

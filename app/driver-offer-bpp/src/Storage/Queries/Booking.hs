@@ -38,7 +38,7 @@ baseBookingTable =
 
 findById :: Transactionable m => Id Booking -> m (Maybe Booking)
 findById bookingId = buildDType $
-  fmap (fmap extractSolidType) $
+  fmap (fmap $ extractSolidType @Booking) $
     Esq.findOne' $ do
       (rb :& bFromLoc :& bToLoc :& farePars) <-
         from baseBookingTable

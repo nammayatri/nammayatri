@@ -42,7 +42,7 @@ findById rideId = Esq.buildDType $ do
     (ride :& mbRating) <- from fullRideTable
     where_ $ ride ^. RideTId ==. val (toKey rideId)
     pure (ride, mbRating)
-  pure $ extractSolidType <$> mbFullRideT
+  pure $ extractSolidType @Ride <$> mbFullRideT
 
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 findActiveByRBId rbId = Esq.buildDType $ do
@@ -52,7 +52,7 @@ findActiveByRBId rbId = Esq.buildDType $ do
       ride ^. Ride.RideBookingId ==. val (toKey rbId)
         &&. ride ^. RideStatus !=. val Ride.CANCELLED
     pure (ride, mbRating)
-  pure $ extractSolidType <$> mbFullRideT
+  pure $ extractSolidType @Ride <$> mbFullRideT
 
 findAllCancelledByRBId :: Transactionable m => Id Booking -> m [Ride]
 findAllCancelledByRBId bookingId = Esq.buildDType $ do
@@ -62,7 +62,7 @@ findAllCancelledByRBId bookingId = Esq.buildDType $ do
       ride ^. Ride.RideBookingId ==. val (toKey bookingId)
         &&. ride ^. RideStatus ==. val Ride.CANCELLED
     pure (ride, mbRating)
-  pure $ extractSolidType <$> fullRidesT
+  pure $ extractSolidType @Ride <$> fullRidesT
 
 findAllByDriverId ::
   Transactionable m =>
@@ -93,7 +93,7 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
   fmap catMaybes $
     for res $ \(fullRideT, fullBookingT) -> do
       mbFullBooking <- buildFullBooking fullBookingT
-      let ride = extractSolidType fullRideT
+      let ride = extractSolidType @Ride fullRideT
       return $ mbFullBooking <&> (ride,)
 
 findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
@@ -104,7 +104,7 @@ findOneByDriverId driverId = Esq.buildDType $ do
       ride ^. RideDriverId ==. val (toKey driverId)
     limit 1
     pure (ride, mbRating)
-  pure $ extractSolidType <$> mbFullRideT
+  pure $ extractSolidType @Ride <$> mbFullRideT
 
 findAllRideAPIEntityDataByRBId :: Transactionable m => Id Booking -> m [(Ride, RideDetails)]
 findAllRideAPIEntityDataByRBId rbId = Esq.buildDType $ do
@@ -122,7 +122,7 @@ findAllRideAPIEntityDataByRBId rbId = Esq.buildDType $ do
     return ((ride, mbRating), rideDetails)
   return $
     res <&> \(fullRideT, rideDetails :: RideDetailsT) ->
-      (extractSolidType fullRideT, extractSolidType rideDetails)
+      (extractSolidType @Ride fullRideT, extractSolidType @RideDetails rideDetails)
 
 getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getInProgressByDriverId driverId = Esq.buildDType $ do
@@ -132,7 +132,7 @@ getInProgressByDriverId driverId = Esq.buildDType $ do
       ride ^. RideDriverId ==. val (toKey driverId)
         &&. ride ^. RideStatus ==. val Ride.INPROGRESS
     pure (ride, mbRating)
-  pure $ extractSolidType <$> mbFullRideT
+  pure $ extractSolidType @Ride <$> mbFullRideT
 
 getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getActiveByDriverId driverId = Esq.buildDType $ do
@@ -144,7 +144,7 @@ getActiveByDriverId driverId = Esq.buildDType $ do
                 ||. ride ^. RideStatus ==. val Ride.NEW
             )
     pure (ride, mbRating)
-  pure $ extractSolidType <$> mbFullRideT
+  pure $ extractSolidType @Ride <$> mbFullRideT
 
 updateStatus ::
   Id Ride ->

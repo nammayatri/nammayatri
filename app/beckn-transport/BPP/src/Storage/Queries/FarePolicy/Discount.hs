@@ -30,7 +30,7 @@ findAllByMerchantIdAndVariant ::
   m [Discount]
 findAllByMerchantIdAndVariant merchantId vehicleVariant =
   Esq.buildDType $
-    fmap extractSolidType
+    fmap (extractSolidType @Discount)
       <$> Storage.Queries.FarePolicy.Discount.findAllByMerchantIdAndVariant' merchantId vehicleVariant
 
 findAllByMerchantIdAndVariant' ::

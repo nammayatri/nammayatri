@@ -40,7 +40,7 @@ findById rideId = Esq.buildDType $ do
     (ride :& mbRating) <- from fullRideTable
     where_ $ ride ^. RideTId ==. val (toKey rideId)
     pure (ride, mbRating)
-  pure $ extractSolidType <$> mbFullRideT
+  pure $ extractSolidType @Ride <$> mbFullRideT
 
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 findActiveByRBId rbId = Esq.buildDType $ do
@@ -50,7 +50,7 @@ findActiveByRBId rbId = Esq.buildDType $ do
       ride ^. Ride.RideBookingId ==. val (toKey rbId)
         &&. ride ^. RideStatus !=. val Ride.CANCELLED
     pure (ride, mbRating)
-  pure $ extractSolidType <$> mbFullRideT
+  pure $ extractSolidType @Ride <$> mbFullRideT
 
 findAllByDriverId ::
   Transactionable m =>
@@ -81,7 +81,7 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
 
   pure $
     res <&> \(fullBookingT, fullRideT) -> do
-      (extractSolidType fullRideT, extractSolidType fullBookingT)
+      (extractSolidType @Ride fullRideT, extractSolidType @Booking fullBookingT)
 
 findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 findOneByDriverId driverId = Esq.buildDType $ do
@@ -91,7 +91,7 @@ findOneByDriverId driverId = Esq.buildDType $ do
       ride ^. RideDriverId ==. val (toKey driverId)
     limit 1
     pure (ride, mbRating)
-  pure $ extractSolidType <$> mbFullRideT
+  pure $ extractSolidType @Ride <$> mbFullRideT
 
 getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getInProgressByDriverId driverId = Esq.buildDType $ do
@@ -101,7 +101,7 @@ getInProgressByDriverId driverId = Esq.buildDType $ do
       ride ^. RideDriverId ==. val (toKey driverId)
         &&. ride ^. RideStatus ==. val Ride.INPROGRESS
     pure (ride, mbRating)
-  pure $ extractSolidType <$> mbFullRideT
+  pure $ extractSolidType @Ride <$> mbFullRideT
 
 getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getActiveByDriverId driverId = Esq.buildDType $ do
@@ -113,7 +113,7 @@ getActiveByDriverId driverId = Esq.buildDType $ do
                 ||. ride ^. RideStatus ==. val Ride.NEW
             )
     pure (ride, mbRating)
-  pure $ extractSolidType <$> mbFullRideT
+  pure $ extractSolidType @Ride <$> mbFullRideT
 
 updateStatus ::
   Id Ride ->
@@ -217,7 +217,7 @@ getRidesForDate driverId date = Esq.buildDType $ do
         &&. ride ^. RideTripEndTime <. val (Just maxDayTime)
         &&. ride ^. RideStatus ==. val Ride.COMPLETED
     return (ride, rating)
-  return $ extractSolidType <$> fullRideType
+  return $ extractSolidType @Ride <$> fullRideType
   where
     minDayTime = UTCTime (addDays (-1) date) 66600
     maxDayTime = UTCTime date 66600

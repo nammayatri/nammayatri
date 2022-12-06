@@ -40,7 +40,7 @@ findById searchRequestId = Esq.buildDType $ do
     (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
     pure (sReq, sFromLoc, mbSToLoc)
-  pure $ extractSolidType <$> mbFullSearchReqT
+  pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
 
 findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequest)
 findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
@@ -51,4 +51,4 @@ findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
         &&. sReq ^. SearchRequestProviderId ==. val (toKey merchantId)
         &&. sReq ^. SearchRequestBapId ==. val bapId
     pure (sReq, sFromLoc, mbSToLoc)
-  pure $ extractSolidType <$> mbFullSearchReqT
+  pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
