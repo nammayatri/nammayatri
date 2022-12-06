@@ -89,8 +89,9 @@ driverMakingInactiveService = startService "driverMakingInactiveService" $ withR
       smsCfg <- asks (.smsCfg)
       driverInactiveSmsTemplate <- asks (.driverInactiveSmsTemplate)
 
-      SF.sendSms smsCfg driverInactiveSmsTemplate (countryCode <> mobileNumber')
-        >>= SF.checkSmsResult
+      fork "smsServiceToMarkDriverInactive" $
+        SF.sendSms smsCfg driverInactiveSmsTemplate (countryCode <> mobileNumber')
+          >>= SF.checkSmsResult
 
 withLock :: (Redis.HedisFlow m r, MonadMask m) => Text -> m () -> m ()
 withLock serviceName func =
