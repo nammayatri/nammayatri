@@ -1,5 +1,11 @@
 {-# LANGUAGE DerivingVia #-}
 
+-- {-# LANGUAGE TemplateHaskell #-}
+-- {-# LANGUAGE DerivingStrategies #-}
+-- {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+-- {-# LANGUAGE QuasiQuotes #-}
+-- {-# LANGUAGE StandaloneDeriving #-}
+
 module Domain.Types.SearchRequestForDriver where
 
 import Beckn.External.Maps.Google.PolyLinePoints
@@ -17,6 +23,12 @@ data DriverSearchRequestStatus = Active | Inactive
   deriving (Show, Read, Eq)
   deriving (PrettyShow) via Showable DriverSearchRequestStatus
 
+data Response
+  = Accept
+  | Reject
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema, Read)
+  deriving (PrettyShow) via Showable Response
+
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
     searchRequestId :: Id SearchRequest,
@@ -31,7 +43,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     baseFare :: Money,
     lat :: Maybe Double,
     lon :: Maybe Double,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    response :: Maybe Response
   }
   deriving (Generic, Show, PrettyShow)
 

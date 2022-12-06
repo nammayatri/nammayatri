@@ -19,6 +19,7 @@ import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.DriverSearchRequestStatus"
+derivePersistField "Domain.Response"
 
 mkPersist
   defaultSqlSettings
@@ -38,6 +39,7 @@ mkPersist
       driverId PersonTId
       status Domain.DriverSearchRequestStatus
       createdAt UTCTime
+      response Domain.Response Maybe
       Primary id
       deriving Generic
     |]

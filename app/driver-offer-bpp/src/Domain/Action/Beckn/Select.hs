@@ -126,6 +126,7 @@ handler merchantId sReq = do
                 lon = Just driver.lon,
                 baseFare = baseFare_,
                 createdAt = now,
+                response = Nothing,
                 ..
               }
       pure searchRequestForDriver

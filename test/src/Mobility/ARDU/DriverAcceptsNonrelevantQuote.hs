@@ -1,6 +1,7 @@
 module Mobility.ARDU.DriverAcceptsNonrelevantQuote where
 
 import Common
+import Domain.Types.SearchRequestForDriver as SearchReqInfo
 import EulerHS.Prelude
 import HSpec
 import qualified Mobility.ARDU.APICalls as API
@@ -36,7 +37,7 @@ driverOffersOnAnIrrelevantSearchRequest clients = withBecknClients clients $ do
   -- first driver gets nearby requests
   (searchReqForDriver :| _) <- Utils.getNearbySearchRequestForDriver arduDriver1 quoteId
 
-  Utils.offerQuote arduDriver1 defaultAllowedDriverFee searchReqForDriver.searchRequestId
+  Utils.offerQuote arduDriver1 defaultAllowedDriverFee searchReqForDriver.searchRequestId SearchReqInfo.Accept
 
   (selectedQuoteAPIEntity :| _) <- Utils.getQuotesByEstimateId appRegistrationToken quoteId
   let selectedQuoteId = selectedQuoteAPIEntity.id
@@ -46,7 +47,7 @@ driverOffersOnAnIrrelevantSearchRequest clients = withBecknClients clients $ do
 
   (bapBookingId, _, bppRide) <- Utils.confirmWithCheck appRegistrationToken selectedQuoteId
   --
-  eithRes <- Utils.offerQuoteEither arduDriver2 defaultAllowedDriverFee searchReqForSecondDriver.searchRequestId
+  eithRes <- Utils.offerQuoteEither arduDriver2 defaultAllowedDriverFee searchReqForSecondDriver.searchRequestId SearchReqInfo.Accept
   shouldReturnErrorCode "error on nonrelevant search request" "NO_SEARCH_REQUEST_FOR_DRIVER" eithRes
 
   Utils.cancelRideByDriver arduDriver1 bapBookingId bppRide
