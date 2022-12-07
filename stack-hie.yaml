@@ -36,7 +36,7 @@ packages:
   - app/beckn-cli
   - app/beckn-transport/BPP
   - app/beckn-transport/Allocator
-  - app/beckn-transport/DriverTrackingHealthCheck
+  - app/driver-tracking-health-check
   - app/beckn-transport/Scheduler
   - app/driver-offer-bpp
   - app/app-backend

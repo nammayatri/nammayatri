@@ -57,10 +57,10 @@ cradle:
     - path: "app/beckn-transport/Scheduler/server/Main.hs"
       component: "beckn-transport-scheduler:exe:transporter-scheduler-exe"
 
-    - path: "app/beckn-transport/DriverTrackingHealthCheck/src"
+    - path: "app/driver-tracking-health-check/src"
       component: "beckn-transport-driver-tracking-health-check:lib"
 
-    - path: "app/beckn-transport/DriverTrackingHealthCheck/server/Main.hs"
+    - path: "app/driver-tracking-health-check/server/Main.hs"
       component: "beckn-transport-driver-tracking-health-check:exe:driver-tracking-healthcheck-exe"
 
     - path: "app/beckn-transport/BPP/src"
