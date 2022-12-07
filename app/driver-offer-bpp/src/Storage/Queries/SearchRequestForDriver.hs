@@ -26,6 +26,7 @@ findByDriverAndSearchReq driverId searchReqId = Esq.findOne $ do
   where_ $
     sReq ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
       &&. sReq ^. SearchRequestForDriverDriverId ==. val (toKey driverId)
+      &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
   pure sReq
 
 findByDriver :: (Transactionable m, MonadTime m) => Id Person -> m [SearchRequestForDriver]
