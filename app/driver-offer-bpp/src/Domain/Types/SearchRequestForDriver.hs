@@ -1,11 +1,5 @@
 {-# LANGUAGE DerivingVia #-}
 
--- {-# LANGUAGE TemplateHaskell #-}
--- {-# LANGUAGE DerivingStrategies #-}
--- {-# LANGUAGE GeneralizedNewtypeDeriving #-}
--- {-# LANGUAGE QuasiQuotes #-}
--- {-# LANGUAGE StandaloneDeriving #-}
-
 module Domain.Types.SearchRequestForDriver where
 
 import Beckn.External.Maps.Google.PolyLinePoints

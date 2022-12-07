@@ -35,7 +35,6 @@ import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config (SmsConfig)
-import qualified Beckn.Storage.Esqueleto as DB
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
@@ -556,7 +555,7 @@ offerQuote driverId req = do
   case req.response of
     Accept -> do
       Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
-        DB.runTransaction $ do
+        Esq.runTransaction $ do
           QSRD.updateDriverResponse req.searchRequestId req.response
         logDebug $ "offered fare: " <> show req.offeredFare
         sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
@@ -581,7 +580,7 @@ offerQuote driverId req = do
         Esq.runTransaction $ QDrQt.create driverQuote
         sendDriverOffer organization sReq driverQuote
     Reject -> do
-      DB.runTransaction $ do
+      Esq.runTransaction $ do
         QSRD.updateDriverResponse req.searchRequestId req.response
   pure Success
   where
