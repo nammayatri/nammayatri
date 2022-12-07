@@ -69,7 +69,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
-import SharedLogic.DriverPool (incrementAcceptanceCount)
+import SharedLogic.DriverPool (incrementAcceptanceCount, incrementRejectionCount)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
@@ -612,6 +612,7 @@ respondQuote driverId req = do
         Esq.runTransaction $ do
           QSRD.updateDriverResponse req.searchRequestId req.response
       Reject -> do
+        incrementRejectionCount driverId
         Esq.runTransaction $ do
           QSRD.updateDriverResponse req.searchRequestId req.response
   pure Success
