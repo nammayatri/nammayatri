@@ -57,6 +57,7 @@ handle =
             { baseFare = 100,
               distanceFare = 0,
               nightShiftRate = 0,
+              waitingChargePerMin = Just 1,
               discount = Nothing
             },
       calculateRentalFare = \_ _ _ _ ->
@@ -81,6 +82,7 @@ handle =
       getDefaultDropLocThreshold = pure 500,
       getDefaultRideTravelledDistanceThreshold = pure 700,
       getDefaultRideTimeEstimatedThreshold = pure 900,
+      getDefaultWaitingTimeEstimatedThreshold = pure 3,
       findConfigByKey = \_ -> pure Nothing,
       whenWithLocationUpdatesLock = \_driverId action -> action
     }
@@ -213,6 +215,7 @@ locationUpdatesFailureHandle =
             { baseFare = lufActFare,
               distanceFare = 0,
               nightShiftRate = 1,
+              waitingChargePerMin = Just 1,
               discount = Just $ lufActFare - lufActTotalFare
             }
     }

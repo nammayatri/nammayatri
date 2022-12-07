@@ -21,6 +21,7 @@ data FarePolicyD (s :: UsageSafety) = FarePolicy
     nightShiftEnd :: Maybe TimeOfDay,
     maxAllowedTripDistance :: Maybe Meters,
     minAllowedTripDistance :: Maybe Meters,
+    waitingChargePerMin :: Maybe Money,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

@@ -19,6 +19,7 @@ data OneWayFarePolicyD (s :: UsageSafety) = OneWayFarePolicy
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Centesimal,
+    waitingChargePerMin :: Maybe Money,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

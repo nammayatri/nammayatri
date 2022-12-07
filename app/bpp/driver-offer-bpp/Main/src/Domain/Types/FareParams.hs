@@ -9,6 +9,7 @@ data FareParameters = FareParameters
     extraKmFare :: Maybe Money,
     driverSelectedFare :: Maybe Money,
     nightShiftRate :: Maybe Centesimal,
-    nightCoefIncluded :: Bool
+    nightCoefIncluded :: Bool,
+    waitingChargePerMin :: Maybe Money
   }
   deriving (Generic, Show, Eq, PrettyShow)

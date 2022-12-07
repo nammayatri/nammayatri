@@ -2,14 +2,21 @@ module Domain.Action.UI.Ride
   ( DriverRideRes (..),
     DriverRideListRes (..),
     listDriverRides,
+    arrivedAtPickup,
   )
 where
 
+import Beckn.External.Maps (HasCoordinates (getCoordinates))
+import Beckn.External.Maps.Types
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
+import Beckn.Tools.Metrics.CoreMetrics.Types
+import Beckn.Types.APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Utils.CalculateDistance (distanceBetweenInMeters)
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
@@ -18,6 +25,8 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
 import SharedLogic.FareCalculator
+import Storage.CachedQueries.CacheConfig
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
 import Tools.Error
@@ -100,3 +109,19 @@ mkDriverRideRes rideDetails driverNumber (ride, booking) = do
       rideRating = ride.rideRating <&> (.ratingValue),
       chargeableDistance = ride.chargeableDistance
     }
+
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup rideId req = do
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  let pickupLoc = getCoordinates booking.fromLocation
+  let distance = distanceBetweenInMeters req pickupLoc
+  driverReachedDistance <- asks (.driverReachedDistance)
+  unless (distance < driverReachedDistance) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
+  unless (isJust ride.driverArrivalTime) $
+    Esq.runTransaction $ do
+      QRide.updateArrival rideId
+  pure Success
+  where
+    isValidRideStatus status = status == DRide.NEW

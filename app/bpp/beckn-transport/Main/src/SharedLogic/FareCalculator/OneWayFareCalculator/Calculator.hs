@@ -5,6 +5,7 @@ module SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
     TripEndTime,
     fareSum,
     fareSumWithDiscount,
+    getWaitingFare,
     calculateFareParameters,
   )
 where
@@ -29,6 +30,7 @@ data OneWayFareParameters = OneWayFareParameters
   { baseFare :: Money,
     distanceFare :: Money,
     nightShiftRate :: Centesimal,
+    waitingChargePerMin :: Maybe Money,
     discount :: Maybe Money
   }
   deriving stock (Show, Eq)
@@ -36,6 +38,10 @@ data OneWayFareParameters = OneWayFareParameters
 fareSum :: OneWayFareParameters -> Money
 fareSum OneWayFareParameters {..} =
   roundToIntegral $ nightShiftRate * fromIntegral (baseFare + distanceFare)
+
+getWaitingFare :: NominalDiffTime -> Maybe Money -> Money
+getWaitingFare fareableWaitingTime waitingChargePerMin = do
+  roundToIntegral fareableWaitingTime * fromMaybe 0 waitingChargePerMin
 
 fareSumWithDiscount :: OneWayFareParameters -> Money
 fareSumWithDiscount fp@OneWayFareParameters {..} = do
@@ -51,8 +57,9 @@ calculateFareParameters farePolicy distance endTime = do
   let baseFare = calculateBaseFare farePolicy
   let distanceFare = calculateDistanceFare farePolicy distance
   let nightShiftRate = calculateNightShiftRate farePolicy endTime
+  let waitingChargePerMin = farePolicy.waitingChargePerMin
   let discount = calculateDiscount farePolicy endTime
-  OneWayFareParameters baseFare distanceFare nightShiftRate discount
+  OneWayFareParameters baseFare distanceFare nightShiftRate waitingChargePerMin discount
 
 calculateBaseFare ::
   OneWayFarePolicy ->

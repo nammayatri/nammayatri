@@ -35,6 +35,7 @@ defaultOneWayFarePolicy =
       nightShiftStart = Just midnight,
       nightShiftEnd = Just midnight,
       nightShiftRate = Just 1.0,
+      waitingChargePerMin = Just 1,
       createdAt = mockTime 0,
       updatedAt = mockTime 0
     }

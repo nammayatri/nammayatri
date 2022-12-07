@@ -18,6 +18,7 @@ data TransporterConfigD u = TransporterConfig
     availabilityTimeWeightage :: Int,
     acceptanceRatioWeightage :: Int,
     cancellationRatioWeightage :: Int,
+    waitingTimeEstimatedThreshold :: Maybe Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     fcmConfig :: FCMConfig

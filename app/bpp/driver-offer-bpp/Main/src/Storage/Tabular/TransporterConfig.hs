@@ -29,6 +29,7 @@ mkPersist
       availabilityTimeWeightage Int
       acceptanceRatioWeightage Int
       cancellationRatioWeightage Int
+      waitingTimeEstimatedThreshold Seconds Maybe
       createdAt UTCTime
       updatedAt UTCTime
       fcmUrl Text

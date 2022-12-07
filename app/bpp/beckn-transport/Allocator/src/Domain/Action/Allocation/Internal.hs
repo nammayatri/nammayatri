@@ -151,6 +151,7 @@ assignDriver bookingId driverId = do
             totalFare = Nothing,
             traveledDistance = 0,
             chargeableDistance = Nothing,
+            driverArrivalTime = Nothing,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
             tripStartPos = Nothing,

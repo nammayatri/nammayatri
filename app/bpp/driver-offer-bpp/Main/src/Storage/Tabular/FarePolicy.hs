@@ -38,6 +38,8 @@ mkPersist
       maxAllowedTripDistance Meters Maybe
       minAllowedTripDistance Meters Maybe
 
+      waitingChargePerMin Money Maybe
+
       createdAt UTCTime
       updatedAt UTCTime
       UniqueFarePolicyId id

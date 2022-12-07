@@ -78,9 +78,11 @@ data AppCfg = AppCfg
     defaultDropLocThreshold :: Meters,
     defaultRideTravelledDistanceThreshold :: Meters,
     defaultRideTimeEstimatedThreshold :: Seconds,
+    defaultWaitingTimeEstimatedThreshold :: Seconds,
     cacheConfig :: CacheConfig,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
+    driverReachedDistance :: HighPrecMeters,
     driverPoolCfg :: DriverPoolConfig,
     driverLocationUpdateTopic :: Text
   }
@@ -127,9 +129,11 @@ data AppEnv = AppEnv
     defaultDropLocThreshold :: Meters,
     defaultRideTravelledDistanceThreshold :: Meters,
     defaultRideTimeEstimatedThreshold :: Seconds,
+    defaultWaitingTimeEstimatedThreshold :: Seconds,
     cacheConfig :: CacheConfig,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
+    driverReachedDistance :: HighPrecMeters,
     driverPoolCfg :: DriverPoolConfig,
     driverLocationUpdateTopic :: Text
   }

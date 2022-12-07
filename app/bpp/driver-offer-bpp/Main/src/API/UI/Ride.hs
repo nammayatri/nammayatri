@@ -36,6 +36,12 @@ type API =
            :> Get '[JSON] DRide.DriverRideListRes
            :<|> TokenAuth
            :> Capture "rideId" (Id Ride.Ride)
+           :> "arrived"
+           :> "pickup"
+           :> ReqBody '[JSON] LatLong
+           :> Post '[JSON] APISuccess
+           :<|> TokenAuth
+           :> Capture "rideId" (Id Ride.Ride)
            :> "start"
            :> ReqBody '[JSON] StartRideReq
            :> Post '[JSON] APISuccess
@@ -71,6 +77,7 @@ data CancelRideReq = CancelRideReq
 handler :: FlowServer API
 handler =
   listDriverRides
+    :<|> arrivedAtPickup
     :<|> startRide
     :<|> endRide
     :<|> cancelRide
@@ -101,3 +108,6 @@ listDriverRides ::
   Maybe Bool ->
   FlowHandler DRide.DriverRideListRes
 listDriverRides driverId mbLimit mbOffset = withFlowHandlerAPI . DRide.listDriverRides driverId mbLimit mbOffset
+
+arrivedAtPickup :: Id SP.Person -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
+arrivedAtPickup _ rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req

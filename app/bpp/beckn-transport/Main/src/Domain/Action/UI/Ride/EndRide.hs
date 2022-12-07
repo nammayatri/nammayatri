@@ -31,6 +31,7 @@ import EulerHS.Prelude
 import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideCompletedUpdateToBAP)
 import qualified SharedLogic.DriverLocation as DrLoc
+import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Calculator as Fare
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Flow as Fare
 import qualified SharedLogic.FareCalculator.RentalFareCalculator.Flow as RentalFare
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFP
@@ -67,6 +68,7 @@ data ServiceHandle m = ServiceHandle
     getDefaultDropLocThreshold :: m Meters,
     getDefaultRideTravelledDistanceThreshold :: m Meters,
     getDefaultRideTimeEstimatedThreshold :: m Seconds,
+    getDefaultWaitingTimeEstimatedThreshold :: m Seconds,
     findConfigByKey :: DTConf.ConfigKey -> m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
@@ -106,6 +108,7 @@ buildEndRideHandle merchantId rideId = do
         getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
         getDefaultRideTravelledDistanceThreshold = asks (.defaultRideTravelledDistanceThreshold),
         getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
+        getDefaultWaitingTimeEstimatedThreshold = asks (.defaultWaitingTimeEstimatedThreshold),
         findConfigByKey = QTConf.findValueByMerchantIdAndKey merchantId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
@@ -226,29 +229,46 @@ endRide handle@ServiceHandle {..} rideId req = do
         pure distanceOutsideOfThreshold
 
       timeOutsideOfThreshold <- do
-        rideTimeEstimatedThreshold <- getRideTimeThreshold handle
-        let tripStartTime = fromJust ride.tripStartTime
-        let actualRideDuration = nominalDiffTimeToSeconds $ tripStartTime `diffUTCTime` now
-        let estimatedRideDuration = oneWayDetails.estimatedDuration
-        let rideTimeDifference = actualRideDuration - estimatedRideDuration
-        let timeOutsideOfThreshold = (rideTimeDifference >= rideTimeEstimatedThreshold) && (ride.traveledDistance > metersToHighPrecMeters oneWayDetails.estimatedDistance)
-        logTagInfo "endRide" ("timeOutsideOfThreshold: " <> " " <> show timeOutsideOfThreshold)
-        logTagInfo "RideTime differences" $
-          "Time Difference: "
-            <> show rideTimeDifference
-            <> ", estimatedRideDuration: "
-            <> show estimatedRideDuration
-            <> ", actualRideDuration: "
-            <> show actualRideDuration
-        pure timeOutsideOfThreshold
+        case ride.tripStartTime of
+          Nothing -> pure False
+          Just tripStartTime -> do
+            rideTimeEstimatedThreshold <- getRideTimeThreshold handle
+            let actualRideDuration = nominalDiffTimeToSeconds $ tripStartTime `diffUTCTime` now
+            let estimatedRideDuration = oneWayDetails.estimatedDuration
+            let rideTimeDifference = actualRideDuration - estimatedRideDuration
+            let timeOutsideOfThreshold = (rideTimeDifference >= rideTimeEstimatedThreshold) && (ride.traveledDistance > metersToHighPrecMeters oneWayDetails.estimatedDistance)
+            logTagInfo "endRide" ("timeOutsideOfThreshold: " <> " " <> show timeOutsideOfThreshold)
+            logTagInfo "RideTime differences" $
+              "Time Difference: "
+                <> show rideTimeDifference
+                <> ", estimatedRideDuration: "
+                <> show estimatedRideDuration
+                <> ", actualRideDuration: "
+                <> show actualRideDuration
+            pure timeOutsideOfThreshold
 
-      if shouldRecalculateFare && not distanceCalculationFailed && (pickupDropOutsideOfThreshold || distanceOutsideOfThreshold || timeOutsideOfThreshold)
+      waitingTimeOutsideOfThreshold <- do
+        case ride.tripStartTime of
+          Nothing -> pure False
+          Just tripStartTime -> do
+            waitingOutsideOfThreshold <- getWaitingTimeOutsideThreshold ride.tripStartTime ride.driverArrivalTime
+            logTagInfo "endRide" ("waitingOutsideOfThreshold: " <> show waitingOutsideOfThreshold)
+            logTagInfo "RideTime differences" $
+              " Driver arrival time: "
+                <> show ride.driverArrivalTime
+                <> ", Trip Start Time: "
+                <> show tripStartTime
+            pure (waitingOutsideOfThreshold > 0)
+
+      if shouldRecalculateFare && not distanceCalculationFailed && (pickupDropOutsideOfThreshold || distanceOutsideOfThreshold || timeOutsideOfThreshold || waitingTimeOutsideOfThreshold)
         then do
           fareParams <- calculateFare vehicleVariant actualDistance oneWayDetails.estimatedFinishTime
+          fareableWaitingTime <- getWaitingTimeOutsideThreshold ride.tripStartTime ride.driverArrivalTime
           let updatedFare = Fare.fareSum fareParams
-              totalFare = Fare.fareSumWithDiscount fareParams
-          let distanceDiff = actualDistance - oldDistance
-          let fareDiff = updatedFare - estimatedFare
+              fareWithDiscount = Fare.fareSumWithDiscount fareParams
+              totalFare = (Fare.getWaitingFare fareableWaitingTime fareParams.waitingChargePerMin) + fareWithDiscount
+              distanceDiff = actualDistance - oldDistance
+              fareDiff = updatedFare - estimatedFare
           logTagInfo "Fare recalculation" $
             "Fare difference: "
               <> show fareDiff
@@ -293,6 +313,11 @@ endRide handle@ServiceHandle {..} rideId req = do
       -- putDiffMetric fareDiff distanceDiff
       fareBreakups <- buildRentalFareBreakups fareParams booking.id
       pure (actualDistance, fare, totalFare, fareBreakups)
+
+    getWaitingTimeOutsideThreshold mbTripStartTime mbDriverArrivalTime = do
+      waitingThreshold <- getWaitingTimeThreshold handle
+      let driverWaitingTime = fromMaybe 0 (diffUTCTime <$> mbTripStartTime <*> mbDriverArrivalTime)
+      pure $ max 0 (driverWaitingTime / 60 - fromIntegral waitingThreshold)
 
 data Stop = PICKUP | DROP
 
@@ -341,6 +366,23 @@ getRideTimeThreshold ::
   m Seconds
 getRideTimeThreshold ServiceHandle {..} = do
   (paramName, defaultThreshold) <- (DTConf.ConfigKey "ride_estimated_time",) <$> getDefaultRideTimeEstimatedThreshold
+  mbThresholdConfig <- findConfigByKey paramName
+  mbThreshold <- thresholdFromConfigSeconds paramName `mapM` mbThresholdConfig
+  pure $ fromMaybe defaultThreshold mbThreshold
+  where
+    thresholdFromConfigSeconds paramName conf =
+      fromMaybeM (InternalError $ show paramName <> " is not a number.")
+        . (Seconds <$>)
+        . (readMaybe @Int)
+        . toString
+        $ conf.value
+
+getWaitingTimeThreshold ::
+  (MonadThrow m, Log m) =>
+  ServiceHandle m ->
+  m Seconds
+getWaitingTimeThreshold ServiceHandle {..} = do
+  (paramName, defaultThreshold) <- (DTConf.ConfigKey "driver_waiting_threshold",) <$> getDefaultWaitingTimeEstimatedThreshold
   mbThresholdConfig <- findConfigByKey paramName
   mbThreshold <- thresholdFromConfigSeconds paramName `mapM` mbThresholdConfig
   pure $ fromMaybe defaultThreshold mbThreshold

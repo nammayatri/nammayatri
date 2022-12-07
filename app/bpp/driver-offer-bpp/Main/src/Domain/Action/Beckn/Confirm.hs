@@ -156,6 +156,7 @@ handler subscriber transporterId req = do
             fare = Nothing,
             traveledDistance = 0,
             chargeableDistance = Nothing,
+            driverArrivalTime = Nothing,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
             rideRating = Nothing,

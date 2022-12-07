@@ -1,6 +1,7 @@
 module SharedLogic.FareCalculator.Calculator
   ( mkBreakupList,
     fareSum,
+    getWaitingFare,
     baseFareSum,
     calculateFareParameters,
   )
@@ -48,6 +49,10 @@ fareSum :: FareParameters -> Money
 fareSum fareParams = do
   baseFareSum fareParams + fromMaybe 0 fareParams.driverSelectedFare
 
+getWaitingFare :: NominalDiffTime -> Maybe Money -> Money
+getWaitingFare fareableWaitingTime waitingChargePerMin = do
+  roundToIntegral fareableWaitingTime * fromMaybe 0 waitingChargePerMin
+
 baseFareSum :: FareParameters -> Money
 baseFareSum fareParams = roundToIntegral $ do
   let dayPartCoef = calculateDayPartRate fareParams
@@ -85,7 +90,8 @@ calculateFareParameters fp distance time mbExtraFare = do
       extraKmFare = mbExtraKmFare,
       driverSelectedFare = mbExtraFare,
       nightShiftRate = fp.nightShiftRate,
-      nightCoefIncluded
+      nightCoefIncluded,
+      waitingChargePerMin = fp.waitingChargePerMin
     }
 
 distanceToKm :: Meters -> Rational

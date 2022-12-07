@@ -118,6 +118,8 @@ in  { esqDBCfg
     , defaultDropLocThreshold = +500
     , defaultRideTravelledDistanceThreshold = +700
     , defaultRideTimeEstimatedThreshold = +900
+    , defaultWaitingTimeEstimatedThreshold = +3
+    , driverReachedDistance = +100
     , cacheConfig
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate =

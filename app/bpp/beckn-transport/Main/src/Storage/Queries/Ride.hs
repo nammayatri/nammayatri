@@ -253,6 +253,16 @@ getCountByStatus merchantId = do
     groupBy $ ride ^. RideStatus
     return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))
 
+updateArrival :: Id Ride -> SqlDB ()
+updateArrival rideId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RideDriverArrivalTime =. val (Just now),
+        RideUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RideTId ==. val (toKey rideId)
 data RideItem = RideItem
   { rideShortId :: ShortId Ride,
     rideDetails :: RideDetails,

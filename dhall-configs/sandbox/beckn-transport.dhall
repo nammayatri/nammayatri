@@ -108,9 +108,11 @@ in  { esqDBCfg
     , defaultDropLocThreshold = +500
     , defaultRideTravelledDistanceThreshold = +700
     , defaultRideTimeEstimatedThreshold = +900
+    , defaultWaitingTimeEstimatedThreshold = +3
     , cacheConfig
     , dashboardToken = sec.dashboardToken
     , driverLocationUpdateRateLimitOptions
+    , driverReachedDistance = +100
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , driverPoolCfg

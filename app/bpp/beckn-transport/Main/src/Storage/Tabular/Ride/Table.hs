@@ -32,6 +32,7 @@ mkPersist
       totalFare HighPrecMoney Maybe
       traveledDistance HighPrecMeters
       chargeableDistance HighPrecMeters Maybe
+      driverArrivalTime UTCTime Maybe
       tripStartTime UTCTime Maybe
       tripEndTime UTCTime Maybe
       tripStartLat Double Maybe

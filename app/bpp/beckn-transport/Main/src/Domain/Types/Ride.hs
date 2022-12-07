@@ -45,6 +45,7 @@ data Ride = Ride
     totalFare :: Maybe Money,
     traveledDistance :: HighPrecMeters,
     chargeableDistance :: Maybe Meters,
+    driverArrivalTime :: Maybe UTCTime,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
     tripStartPos :: Maybe LatLong,

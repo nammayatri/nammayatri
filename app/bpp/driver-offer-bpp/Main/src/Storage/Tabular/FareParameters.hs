@@ -24,6 +24,7 @@ mkPersist
       driverSelectedFare Money Maybe
       nightShiftRate Centesimal Maybe
       nightCoefIncluded Bool
+      waitingChargePerMin Money Maybe
 
       Primary id
       deriving Generic

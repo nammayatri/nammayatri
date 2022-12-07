@@ -16,7 +16,7 @@ import Servant.Client
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TRide.Ride -> RideAPI.EndRideReq -> ClientM APISuccess
 rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM APISuccess
-_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy RideAPI.API)
+_ :<|> _ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy RideAPI.API)
 
 getDriverInfo :: Text -> ClientM DriverAPI.DriverInformationRes
 getNearbySearchRequests :: RegToken -> ClientM DriverAPI.GetNearbySearchRequestsRes
