@@ -321,7 +321,7 @@ deleteDriver merchantShortId reqDriverId = do
   unless (isNothing dl) $
     throwError $ InvalidRequest "Unable to delete driver, which have driver license"
 
-  rcAssociation <- QRCAssociation.findOneByDriverId personId
+  rcAssociation <- QRCAssociation.getActiveAssociationByDriver personId
   unless (isNothing rcAssociation) $
     throwError $ InvalidRequest "Unable to delete driver, which have registration certificate associated"
 
