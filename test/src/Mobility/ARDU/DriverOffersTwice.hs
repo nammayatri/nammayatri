@@ -2,7 +2,6 @@ module Mobility.ARDU.DriverOffersTwice where
 
 import qualified Beckn.Storage.Esqueleto as Esq
 import Common
-import Domain.Types.SearchRequestForDriver as SearchReqInfo
 import EulerHS.Prelude
 import HSpec
 import qualified Mobility.ARDU.APICalls as API
@@ -39,9 +38,9 @@ driverOffersTwice clients = withBecknClients clients $ do
   (searchReqForDriver1 :| _) <- Utils.getNearbySearchRequestForDriver arduDriver1 quoteId1
   (searchReqForDriver2 :| _) <- Utils.getNearbySearchRequestForDriver arduDriver1 quoteId2
 
-  Utils.offerQuote arduDriver1 defaultAllowedDriverFee searchReqForDriver1.searchRequestId SearchReqInfo.Accept
+  Utils.offerQuote arduDriver1 defaultAllowedDriverFee searchReqForDriver1.searchRequestId
 
-  eithRes <- Utils.offerQuoteEither arduDriver1 defaultAllowedDriverFee searchReqForDriver2.searchRequestId SearchReqInfo.Accept
+  eithRes <- Utils.offerQuoteEither arduDriver1 defaultAllowedDriverFee searchReqForDriver2.searchRequestId
   shouldReturnErrorCode "error on active quotes found" "FOUND_ACTIVE_QUOTES" eithRes
 
   liftIO $ runARDUFlow "" $ Esq.runTransaction $ QDrQuote.setInactiveByRequestId searchReqForDriver1.searchRequestId
@@ -62,7 +61,7 @@ driverOffersOnRide clients = withBecknClients clients $ do
 
   (searchReqForDriver1 :| _) <- Utils.getNearbySearchRequestForDriver arduDriver1 quoteId2
 
-  eithRes <- Utils.offerQuoteEither arduDriver1 defaultAllowedDriverFee searchReqForDriver1.searchRequestId SearchReqInfo.Accept
+  eithRes <- Utils.offerQuoteEither arduDriver1 defaultAllowedDriverFee searchReqForDriver1.searchRequestId
   shouldReturnErrorCode "error: driver is on ride" "DRIVER_ON_RIDE" eithRes
 
   liftIO $ runARDUFlow "" $ Esq.runTransaction $ QDrQuote.setInactiveByRequestId searchReqForDriver1.searchRequestId

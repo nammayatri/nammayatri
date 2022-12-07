@@ -21,6 +21,7 @@ _ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy RideAPI.A
 getDriverInfo :: Text -> ClientM DriverAPI.DriverInformationRes
 getNearbySearchRequests :: RegToken -> ClientM DriverAPI.GetNearbySearchRequestsRes
 offerQuote :: RegToken -> DriverAPI.DriverOfferReq -> ClientM APISuccess
+respondQuote :: RegToken -> DriverAPI.DriverRespondReq -> ClientM APISuccess
 setDriverOnline :: Text -> Bool -> ClientM APISuccess
 ( _
     :<|> _
@@ -30,6 +31,7 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
   :<|> ( setDriverOnline
            :<|> getNearbySearchRequests
            :<|> offerQuote
+           :<|> respondQuote
            :<|> ( getDriverInfo
                     :<|> _
                     :<|> _

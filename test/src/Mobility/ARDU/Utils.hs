@@ -144,13 +144,21 @@ getNearbySearchRequestForDriver driver estimateId =
     )
     ((.searchRequestsForDriver) <$> callBPP (API.getNearbySearchRequests driver.token))
 
-offerQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.Response -> ClientsM ()
-offerQuote driver fare bppSearchRequestId response =
-  void $ callBPP $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId response
+respondQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.Response -> ClientsM ()
+respondQuote driver fare bppSearchRequestId response =
+  void $ callBPP $ API.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
 
-offerQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.Response -> ClientsM (Either ClientError APISuccess)
-offerQuoteEither driver fare bppSearchRequestId response =
-  callBppEither $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId response
+offerQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM ()
+offerQuote driver fare bppSearchRequestId =
+  void $ callBPP $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
+
+respondQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.Response -> ClientsM (Either ClientError APISuccess)
+respondQuoteEither driver fare bppSearchRequestId response =
+  callBppEither $ API.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
+
+offerQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM (Either ClientError APISuccess)
+offerQuoteEither driver fare bppSearchRequestId =
+  callBppEither $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
 getQuotesByEstimateId :: Text -> Id AppEstimate.Estimate -> ClientsM (NonEmpty AppQuote.QuoteAPIEntity)
 getQuotesByEstimateId appToken estimateId =
@@ -271,7 +279,7 @@ search'Confirm appToken driver searchReq' = do
 
   (searchReqForDriver :| _) <- getNearbySearchRequestForDriver driver estimateId
 
-  offerQuote driver defaultAllowedDriverFee searchReqForDriver.searchRequestId SearchReqInfo.Accept
+  offerQuote driver defaultAllowedDriverFee searchReqForDriver.searchRequestId
 
   (quoteAPIEntity :| _) <- getQuotesByEstimateId appToken estimateId
   let quoteId = quoteAPIEntity.id

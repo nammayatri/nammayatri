@@ -10,6 +10,7 @@ module API.UI.Driver
     DDriver.UpdateDriverRes,
     DDriver.GetNearbySearchRequestsRes (..),
     DDriver.DriverOfferReq (..),
+    DDriver.DriverRespondReq (..),
     DDriver.DriverStatsRes (..),
     API,
     handler,
@@ -61,6 +62,12 @@ type API =
                :> "offer"
                :> ReqBody '[JSON] DDriver.DriverOfferReq
                :> Post '[JSON] APISuccess
+             :<|> "searchRequest"
+               :> TokenAuth
+               :> "quote"
+               :> "respond"
+               :> ReqBody '[JSON] DDriver.DriverRespondReq
+               :> Post '[JSON] APISuccess
              :<|> "profile"
                :> ( TokenAuth
                       :> Get '[JSON] DDriver.DriverInformationRes
@@ -84,6 +91,7 @@ handler =
     :<|> ( setActivity
              :<|> getNearbySearchRequests
              :<|> offerQuote
+             :<|> respondQuote
              :<|> ( getInformation
                       :<|> updateDriver
                       :<|> getStats
@@ -121,6 +129,12 @@ offerQuote ::
   DDriver.DriverOfferReq ->
   FlowHandler APISuccess
 offerQuote driverId = withFlowHandlerAPI . DDriver.offerQuote driverId
+
+respondQuote ::
+  Id SP.Person ->
+  DDriver.DriverRespondReq ->
+  FlowHandler APISuccess
+respondQuote driverId = withFlowHandlerAPI . DDriver.respondQuote driverId
 
 getStats :: Id SP.Person -> Day -> FlowHandler DDriver.DriverStatsRes
 getStats day = withFlowHandlerAPI . DDriver.getStats day

@@ -12,6 +12,7 @@ module Domain.Action.UI.Driver
     UpdateDriverRes,
     GetNearbySearchRequestsRes (..),
     DriverOfferReq (..),
+    DriverRespondReq (..),
     DriverStatsRes (..),
     getInformation,
     setActivity,
@@ -22,6 +23,7 @@ module Domain.Action.UI.Driver
     updateDriver,
     getNearbySearchRequests,
     offerQuote,
+    respondQuote,
     offerQuoteLockKey,
     getStats,
   )
@@ -213,6 +215,13 @@ newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
   deriving anyclass (ToJSON, FromJSON, ToSchema, PrettyShow)
 
 data DriverOfferReq = DriverOfferReq
+  { offeredFare :: Maybe Money,
+    searchRequestId :: Id DSReq.SearchRequest
+  }
+  deriving stock (Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data DriverRespondReq = DriverRespondReq
   { offeredFare :: Maybe Money,
     searchRequestId :: Id DSReq.SearchRequest,
     response :: Response
@@ -551,12 +560,33 @@ offerQuote ::
   Id SP.Person ->
   DriverOfferReq ->
   m APISuccess
-offerQuote driverId req = do
-  case req.response of
-    Accept -> do
-      Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
-        Esq.runTransaction $ do
-          QSRD.updateDriverResponse req.searchRequestId req.response
+offerQuote driverId DriverOfferReq {..} = do
+  let response = Accept
+  respondQuote driverId DriverRespondReq {..}
+
+respondQuote ::
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    Redis.HedisFlow m r,
+    HasPrettyLogger m r,
+    HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
+    HasField "coreVersion" r Text,
+    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
+    HasField "nwAddress" r BaseUrl,
+    HasField "driverUnlockDelay" r Seconds,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
+    CoreMetrics m,
+    HasPrettyLogger m r
+  ) =>
+  Id SP.Person ->
+  DriverRespondReq ->
+  m APISuccess
+respondQuote driverId req = do
+  Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
+    case req.response of
+      Accept -> do
         logDebug $ "offered fare: " <> show req.offeredFare
         sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
         now <- getCurrentTime
@@ -579,9 +609,11 @@ offerQuote driverId req = do
         driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
         Esq.runTransaction $ QDrQt.create driverQuote
         sendDriverOffer organization sReq driverQuote
-    Reject -> do
-      Esq.runTransaction $ do
-        QSRD.updateDriverResponse req.searchRequestId req.response
+        Esq.runTransaction $ do
+          QSRD.updateDriverResponse req.searchRequestId req.response
+      Reject -> do
+        Esq.runTransaction $ do
+          QSRD.updateDriverResponse req.searchRequestId req.response
   pure Success
   where
     buildDriverQuote ::
