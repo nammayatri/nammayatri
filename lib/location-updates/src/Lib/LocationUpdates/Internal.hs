@@ -171,8 +171,8 @@ interpolatePointsAndCalculateDistanceImplementation ::
   [LatLong] ->
   m (HighPrecMeters, [LatLong])
 interpolatePointsAndCalculateDistanceImplementation isEndRide mapsCfg wps = do
-   if isEndRide && isAllPointsEqual wps
-    then pure $ (0,take 1 wps)
+  if isEndRide && isAllPointsEqual wps
+    then pure (0, take 1 wps)
     else do
       res <- Maps.snapToRoad mapsCfg $ Maps.SnapToRoadReq {points = wps}
       pure (res.distance, res.snappedPoints)
@@ -184,4 +184,3 @@ isAllPointsEqual (x : xs) = all (\t -> (abs (x.lat - t.lat) <= eps) && (abs (x.l
 
 eps :: Double
 eps = 0.0001
-
