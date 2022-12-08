@@ -12,7 +12,7 @@ module Domain.Action.UI.Maps
 where
 
 import Beckn.Prelude
-import Beckn.Types.Error (PersonError (PersonFieldNotPresent, PersonNotFound))
+import Beckn.Types.Error (PersonError (PersonNotFound))
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Person as DP
@@ -24,17 +24,14 @@ import Tools.Metrics (CoreMetrics)
 autoComplete :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DP.Person -> Maps.AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  orgId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
-  Maps.autoComplete orgId req
+  Maps.autoComplete person.merchantId req
 
 getPlaceDetails :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
 getPlaceDetails personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  orgId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
-  Maps.getPlaceDetails orgId req
+  Maps.getPlaceDetails person.merchantId req
 
 getPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
 getPlaceName personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  orgId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
-  Maps.getPlaceName orgId req
+  Maps.getPlaceName person.merchantId req

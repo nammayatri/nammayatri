@@ -187,7 +187,7 @@ createDriver ::
   OnboardDriverReq ->
   m OnboardDriverRes
 createDriver admin req = do
-  let Just merchantId = admin.merchantId
+  let merchantId = admin.merchantId
   runRequestValidation validateOnboardDriverReq req
   let personEntity = req.person
   mobileNumberHash <- getDbHash personEntity.mobileNumber
@@ -255,7 +255,7 @@ getInformation personId = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- runInReplica $ QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (person, driverInfo)
-  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+  let merchantId = person.merchantId
   organization <-
     QMerchant.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -300,9 +300,8 @@ listDriver ::
   Maybe Integer ->
   m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
-  let Just merchantId = admin.merchantId
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  personList <- runInReplica $ QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId
+  personList <- runInReplica $ QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
   respPersonList <- traverse buildDriverEntityRes personList
   return $ ListDriverRes respPersonList
 
@@ -340,11 +339,10 @@ changeDriverEnableState ::
   Bool ->
   m APISuccess
 changeDriverEnableState admin personId isEnabled = do
-  let Just merchantId = admin.merchantId
   person <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  unless (person.merchantId == Just merchantId) $ throwError Unauthorized
+  unless (person.merchantId == admin.merchantId) $ throwError Unauthorized
   Esq.runTransaction $ do
     QDriverInformation.updateEnabledState driverId isEnabled
     unless isEnabled $ QDriverInformation.updateActivity driverId False
@@ -365,11 +363,10 @@ deleteDriver ::
   Id SP.Person ->
   m APISuccess
 deleteDriver admin driverId = do
-  let Just merchantId = admin.merchantId
   driver <-
     QPerson.findById driverId
       >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  unless (driver.merchantId == Just merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
+  unless (driver.merchantId == admin.merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession driverId
   Esq.runTransaction $ do
@@ -415,7 +412,7 @@ updateDriver personId req = do
     QPerson.updatePersonRec personId updPerson
     QDriverInformation.updateDowngradingOptions (cast person.id) updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback
   driverEntity <- buildDriverEntityRes (updPerson, updDriverInfo)
-  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+  let merchantId = person.merchantId
   org <-
     QMerchant.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -467,7 +464,7 @@ buildDriver req merchantId = do
         SP.isNew = True,
         SP.rating = Nothing,
         SP.deviceToken = Nothing,
-        SP.merchantId = Just merchantId,
+        SP.merchantId = merchantId,
         SP.description = Nothing,
         SP.createdAt = now,
         SP.updatedAt = now,

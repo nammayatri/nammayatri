@@ -80,7 +80,7 @@ createFarePolicyDiscount ::
   CreateFarePolicyDiscountReq ->
   m CreateFarePolicyDiscountRes
 createFarePolicyDiscount admin req = do
-  merchantId <- admin.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
+  let merchantId = admin.merchantId
   runRequestValidation validateCreateFarePolicyDiscountReq req
   discounts <- QDisc.findAllByMerchantIdAndVariant merchantId req.vehicleVariant
   when (req.enabled && any (.enabled) discounts) $ throwError FPDiscountAlreadyEnabled
@@ -124,7 +124,7 @@ updateFarePolicyDiscount ::
   UpdateFarePolicyDiscountReq ->
   m UpdateFarePolicyDiscountRes
 updateFarePolicyDiscount admin discId req = do
-  merchantId <- admin.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
+  let merchantId = admin.merchantId
   runRequestValidation validateUpdateFarePolicyDiscountReq req
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist
   unless (discount.merchantId == merchantId) $ throwError AccessDenied
@@ -156,7 +156,7 @@ deleteFarePolicyDiscount ::
   Id DFPDiscount.Discount ->
   m UpdateFarePolicyDiscountRes
 deleteFarePolicyDiscount admin discId = do
-  merchantId <- admin.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
+  let merchantId = admin.merchantId
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist
   unless (discount.merchantId == merchantId) $ throwError AccessDenied
   cooridinators <- QP.findAdminsByMerchantId merchantId

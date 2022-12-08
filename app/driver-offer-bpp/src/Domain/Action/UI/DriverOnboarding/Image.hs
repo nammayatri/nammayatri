@@ -96,7 +96,7 @@ validateImage ::
   Flow ImageValidateResponse
 validateImage isDashboard mbMerchant personId ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+  let merchantId = person.merchantId
 
   org <- case mbMerchant of
     Nothing -> do
@@ -174,7 +174,7 @@ getDocs :: Person.Person -> Text -> Flow GetDocsResponse
 getDocs _admin mobileNumber = do
   mobileNumberHash <- getDbHash mobileNumber
   driver <- runInReplica $ Person.findByMobileNumber "+91" mobileNumberHash >>= fromMaybeM (PersonDoesNotExist mobileNumber)
-  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+  let merchantId = driver.merchantId
   dl <- runInReplica $ DLQuery.findByDriverId driver.id
   let dlImageId = (.documentImageId1) <$> dl
 

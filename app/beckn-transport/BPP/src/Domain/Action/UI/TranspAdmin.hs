@@ -47,7 +47,7 @@ type UpdateTranspAdminProfileRes = TranspAdminProfileRes
 
 getProfile :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> m TranspAdminProfileRes
 getProfile admin = do
-  let Just merchantId = admin.merchantId
+  let merchantId = admin.merchantId
   org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   decAdmin <- decrypt admin
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
@@ -55,7 +55,7 @@ getProfile admin = do
 
 updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateTranspAdminProfileReq -> m UpdateTranspAdminProfileRes
 updateProfile admin req = do
-  let Just merchantId = admin.merchantId
+  let merchantId = admin.merchantId
       updAdmin =
         admin{firstName = fromMaybe admin.firstName req.firstName,
               middleName = req.middleName <|> admin.middleName,

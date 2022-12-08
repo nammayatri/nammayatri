@@ -18,5 +18,4 @@ import Tools.Metrics (CoreMetrics)
 getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getRoutes personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  orgId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
-  Maps.getRoutes orgId req
+  Maps.getRoutes person.merchantId req

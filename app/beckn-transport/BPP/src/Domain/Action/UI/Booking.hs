@@ -95,8 +95,7 @@ bookingList ::
   Maybe SRB.BookingStatus ->
   m BookingListRes
 bookingList person mbLimit mbOffset mbOnlyActive mbBookingStatus = do
-  let Just merchantId = person.merchantId
-  rbList <- Esq.runInReplica $ QRB.findAllByMerchant merchantId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  rbList <- Esq.runInReplica $ QRB.findAllByMerchant person.merchantId mbLimit mbOffset mbOnlyActive mbBookingStatus
   BookingListRes <$> traverse buildBookingAPIEntity rbList
 
 bookingCancel ::
@@ -105,7 +104,7 @@ bookingCancel ::
   SP.Person ->
   m APISuccess
 bookingCancel bookingId admin = do
-  let Just merchantId = admin.merchantId
+  let merchantId = admin.merchantId
   org <-
     QM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)

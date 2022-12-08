@@ -74,7 +74,7 @@ data PersonE e = Person
     identifier :: Maybe Text,
     rating :: Maybe Centesimal,
     isNew :: Bool,
-    merchantId :: Maybe (Id DM.Merchant), -- TODO remove Maybe
+    merchantId :: Id DM.Merchant,
     deviceToken :: Maybe FCM.FCMRecipientToken,
     language :: Maybe Language,
     description :: Maybe Text,

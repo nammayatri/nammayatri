@@ -40,7 +40,7 @@ mkPersist
       identifier Text Maybe
       rating Centesimal Maybe
       isNew Bool
-      merchantId MerchantTId Maybe
+      merchantId MerchantTId
       deviceToken FCMRecipientToken Maybe
       description Text Maybe
       createdAt UTCTime
@@ -64,7 +64,7 @@ instance TType PersonT Domain.Person where
       Domain.Person
         { id = Id id,
           mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
-          merchantId = fromKey <$> merchantId,
+          merchantId = fromKey merchantId,
           bundleVersion = bundleVersion',
           clientVersion = clientVersion',
           ..
@@ -74,7 +74,7 @@ instance TType PersonT Domain.Person where
       { id = getId id,
         mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber <&> (.hash),
-        merchantId = toKey <$> merchantId,
+        merchantId = toKey merchantId,
         bundleVersion = versionToText <$> bundleVersion,
         clientVersion = versionToText <$> clientVersion,
         ..

@@ -50,13 +50,12 @@ data StatusRes = StatusRes
 statusHandler :: Id SP.Person -> Flow StatusRes
 statusHandler personId = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
 
   (dlStatus, mDL) <- getDLAndStatus personId
   (rcStatus, mRC) <- getRCAndStatus personId
 
   when (dlStatus == VALID && rcStatus == VALID) $
-    enableDriver personId merchantId mRC mDL
+    enableDriver personId person.merchantId mRC mDL
   return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus}
 
 getDLAndStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe DL.DriverLicense)

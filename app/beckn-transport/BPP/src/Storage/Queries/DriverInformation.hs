@@ -30,7 +30,7 @@ fetchAllByIds merchantId driversIds = Esq.findAll $ do
                    )
   where_ $
     driverInformation ^. DriverInformationDriverId `in_` valList personsKeys
-      &&. (person ^. PersonMerchantId ==. (just . val . toKey $ merchantId))
+      &&. (person ^. PersonMerchantId ==. (val . toKey $ merchantId))
   return driverInformation
   where
     personsKeys = toKey . cast <$> driversIds
@@ -151,7 +151,7 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
                      )
     where_ $
       person ^. PersonRole ==. val Person.DRIVER
-        &&. person ^. PersonMerchantId ==. val (Just $ toKey merchantId)
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
         &&. Esq.whenJust_ (liftA2 (,) mbSearchString mbSearchStrDBHash) (filterBySearchString person)
     orderBy [desc $ driverInformation ^. DriverInformationCreatedAt]
     limit limitVal
@@ -200,7 +200,7 @@ countDrivers merchantId =
                            driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
                        )
       where_ $
-        person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
+        person ^. PersonMerchantId ==. (val . toKey $ merchantId)
       groupBy (driverInformation ^. DriverInformationActive)
       pure (driverInformation ^. DriverInformationActive, count @Int $ person ^. PersonId)
   where

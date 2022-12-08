@@ -92,7 +92,7 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnab
                          just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
                      )
     where_ $
-      person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
+      person ^. PersonMerchantId ==. (val . toKey $ merchantId)
         &&. maybe (val True) (\verified -> info ^. DriverInformationVerified ==. val verified) mbVerified
         &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
         &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
@@ -113,7 +113,7 @@ findAllDriversByIdsFirstNameAsc merchantId driverIds = fmap (map mkFullDriver) $
     where_ $
       person ^. PersonRole ==. val Person.DRIVER
         &&. person ^. PersonTId `in_` valList (map toKey driverIds)
-        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
+        &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
     orderBy [asc (person ^. PersonFirstName)]
     return (person, driverLocation, driverInfo, vehicle)
 
@@ -129,7 +129,7 @@ findByIdAndRoleAndMerchantId pid role_ merchantId =
     where_ $
       person ^. PersonTId ==. val (toKey pid)
         &&. person ^. PersonRole ==. val role_
-        &&. person ^. PersonMerchantId ==. val (Just $ toKey merchantId)
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
 findAllByMerchantId ::
@@ -142,7 +142,7 @@ findAllByMerchantId roles merchantId =
     person <- from $ table @PersonT
     where_ $
       (person ^. PersonRole `in_` valList roles ||. val (null roles))
-        &&. person ^. PersonMerchantId ==. val (Just $ toKey merchantId)
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
 findAdminsByMerchantId :: Transactionable m => Id Merchant -> m [Person]
@@ -150,7 +150,7 @@ findAdminsByMerchantId merchantId =
   Esq.findAll $ do
     person <- from $ table @PersonT
     where_ $
-      person ^. PersonMerchantId ==. val (Just (toKey merchantId))
+      person ^. PersonMerchantId ==. val (toKey merchantId)
         &&. person ^. PersonRole ==. val Person.ADMIN
     return person
 
@@ -195,7 +195,7 @@ updateMerchantIdAndMakeAdmin personId merchantId = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ PersonMerchantId =. val (Just $ toKey merchantId),
+      [ PersonMerchantId =. val (toKey merchantId),
         PersonRole =. val Person.ADMIN,
         PersonUpdatedAt =. val now
       ]
@@ -228,7 +228,7 @@ updatePersonRec personId person = do
         PersonRating =. val (person.rating),
         PersonLanguage =. val (person.language),
         PersonDeviceToken =. val (person.deviceToken),
-        PersonMerchantId =. val (toKey <$> person.merchantId),
+        PersonMerchantId =. val (toKey person.merchantId),
         PersonDescription =. val (person.description),
         PersonUpdatedAt =. val now,
         PersonClientVersion =. val (versionToText <$> person.clientVersion),
@@ -333,7 +333,7 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
         from baseFullPersonQuery
       where_ $
         person ^. PersonRole ==. val Person.DRIVER
-          &&. person ^. PersonMerchantId ==. val (Just $ toKey merchantId)
+          &&. person ^. PersonMerchantId ==. val (toKey merchantId)
           &&. driverInfo ^. DriverInformationActive
           &&. (if onlyNotOnRide then not_ (driverInfo ^. DriverInformationOnRide) else val True)
           &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)

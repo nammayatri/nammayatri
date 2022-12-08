@@ -16,7 +16,6 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
-import Beckn.Utils.Common
 import Beckn.Utils.Validation
 import Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import Domain.Types.Merchant
@@ -24,7 +23,6 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Vehicle
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as SRentalFarePolicy
-import Tools.Error
 
 newtype ListRentalFarePoliciesRes = ListRentalFarePoliciesRes
   { rentalFarePolicies :: [RentalFarePolicyAPIEntity]
@@ -63,7 +61,7 @@ validateCreateRentalsFarePolicyRequest CreateRentalFarePolicyItem {..} =
 
 createRentalFarePolicy :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> CreateRentalFarePolicyReq -> m APISuccess
 createRentalFarePolicy admin req = do
-  merchantId <- admin.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
+  let merchantId = admin.merchantId
   mapM_ (runRequestValidation validateCreateRentalsFarePolicyRequest) req.createList
   newRentalFarePolicyItems <- forM req.createList $ \createItemReq -> do
     guid <- Id <$> generateGUID
@@ -88,8 +86,7 @@ createRentalFarePolicy admin req = do
 
 listRentalFarePolicies :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListRentalFarePoliciesRes
 listRentalFarePolicies person = do
-  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
-  rentalFarePolicies <- SRentalFarePolicy.findAllByMerchantId merchantId
+  rentalFarePolicies <- SRentalFarePolicy.findAllByMerchantId person.merchantId
   pure $
     ListRentalFarePoliciesRes
       { rentalFarePolicies = map makeRentalFarePolicyAPIEntity rentalFarePolicies

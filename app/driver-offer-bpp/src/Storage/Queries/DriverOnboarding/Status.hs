@@ -91,7 +91,7 @@ fetchDriverDocsInfo merchantId mbDriverIds = fmap (map mkDriverDocsInfo) $
 
     where_ $
       maybe (val True) (\ids -> person ^. PersonTId `in_` valList (map (toKey . coerce) $ toList ids)) mbDriverIds
-        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
+        &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
     pure (person, license, licReq, assoc, registration, regReq, driverInfo, snd licImages, snd vehRegImages)
 
 mkDriverDocsInfo ::
@@ -182,7 +182,7 @@ fetchFullDriverInfoWithDocsByMobileNumber merchantId mobileNumber mobileCountryC
       (person ^. PersonRole ==. val DRIVER)
         &&. person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
-        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
+        &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
     pure (person, license, assoc, registration, info, mbVeh, mbRidesCount)
 
 fetchFullDriverInfoWithDocsByVehNumber :: Transactionable m => Id Merchant -> Text -> m (Maybe FullDriverWithDocs)
@@ -194,7 +194,7 @@ fetchFullDriverInfoWithDocsByVehNumber merchantId vehicleNumber = fmap (fmap mkF
     where_ $
       (person ^. PersonRole ==. val DRIVER)
         &&. mbVeh ?. VehicleRegistrationNo ==. val (Just vehicleNumber)
-        &&. person ^. PersonMerchantId ==. (just . val . toKey $ merchantId)
+        &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
     pure (person, license, assoc, registration, info, mbVeh, mbRidesCount)
 
 mkFullDriverInfoWithDocs ::

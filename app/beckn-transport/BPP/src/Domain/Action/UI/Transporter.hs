@@ -46,7 +46,7 @@ validateUpdateTransporterReq UpdateTransporterReq {..} =
 
 updateTransporter :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
 updateTransporter admin merchantId req = do
-  unless (Just merchantId == admin.merchantId) $ throwError AccessDenied
+  unless (merchantId == admin.merchantId) $ throwError AccessDenied
   runRequestValidation validateUpdateTransporterReq req
   merchant <-
     CQM.findById merchantId
@@ -66,6 +66,5 @@ getTransporter personId = do
   person <-
     Esq.runInReplica (QP.findById personId)
       >>= fromMaybeM (PersonNotFound personId.getId)
-  case person.merchantId of
-    Just merchantId -> TransporterRec . DM.makeMerchantAPIEntity <$> (CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId))
-    Nothing -> throwError (PersonFieldNotPresent "merchant_id")
+  let merchantId = person.merchantId
+  TransporterRec . DM.makeMerchantAPIEntity <$> (CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId))

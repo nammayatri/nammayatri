@@ -59,8 +59,7 @@ buildUpdateLocationHandle driverId = do
   driver <-
     QP.findById driverId
       >>= fromMaybeM (PersonNotFound driverId.getId)
-  orgId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler orgId False
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
   pure $
     UpdateLocationHandle
       { driver,

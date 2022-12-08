@@ -62,9 +62,7 @@ verifyAdmin :: MonadFlow m => SP.Person -> m Person.Person
 verifyAdmin user = do
   when (user.role /= SP.ADMIN) $
     throwError AccessDenied
-  case user.merchantId of
-    Just _ -> return user
-    Nothing -> throwError (PersonFieldNotPresent "merchant_id")
+  return user
 
 verifyToken :: (HasEsqEnv m r, MonadThrow m, Log m) => RegToken -> m SR.RegistrationToken
 verifyToken regToken = do

@@ -62,8 +62,7 @@ validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
 
 listFarePolicies :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListFarePolicyRes
 listFarePolicies person = do
-  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
-  oneWayFarePolicies <- SFarePolicy.findAllByMerchantId merchantId
+  oneWayFarePolicies <- SFarePolicy.findAllByMerchantId person.merchantId
   pure $
     ListFarePolicyRes
       { oneWayFarePolicies = map makeFarePolicyAPIEntity oneWayFarePolicies
@@ -73,7 +72,7 @@ updateFarePolicy :: (HasCacheConfig r, EsqDBFlow m r, FCMFlow m r, CoreMetrics m
 updateFarePolicy admin fpId req = do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy
-  unless (admin.merchantId == Just farePolicy.merchantId) $ throwError AccessDenied
+  unless (admin.merchantId == farePolicy.merchantId) $ throwError AccessDenied
   let updatedFarePolicy =
         farePolicy
           { baseDistanceFare = req.baseDistanceFare,
@@ -90,13 +89,12 @@ updateFarePolicy admin fpId req = do
             nightShiftRate = req.nightShiftRate
           } ::
           DFarePolicy.FarePolicy
-  let Just merchantId = admin.merchantId
-  coordinators <- QP.findAdminsByMerchantId merchantId
+  coordinators <- QP.findAdminsByMerchantId admin.merchantId
   Esq.runTransaction $
     SFarePolicy.update updatedFarePolicy
   SFarePolicy.clearCache updatedFarePolicy
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
-  for_ otherCoordinators $ \cooridinator -> do
-    Notify.notifyFarePolicyChange cooridinator.id cooridinator.deviceToken
+  for_ otherCoordinators $ \coordinator -> do
+    Notify.notifyFarePolicyChange coordinator.id coordinator.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateFarePolicy : ") (show updatedFarePolicy)
   pure Success

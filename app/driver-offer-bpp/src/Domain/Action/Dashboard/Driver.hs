@@ -180,8 +180,7 @@ enableDriver merchantShortId reqDriverId = do
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
-  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   _vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
   Esq.runTransaction $ do
@@ -203,8 +202,7 @@ disableDriver merchantShortId reqDriverId = do
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
-  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   Esq.runTransaction $ do
     QVehicle.deleteById personId
@@ -308,8 +306,7 @@ deleteDriver merchantShortId reqDriverId = do
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
-  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   unless (driver.role == DP.DRIVER) $ throwError Unauthorized
 
@@ -359,8 +356,7 @@ unlinkVehicle merchantShortId reqDriverId = do
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
-  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   Esq.runTransaction $ do
     QVehicle.deleteById personId
@@ -383,8 +379,7 @@ updatePhoneNumber merchantShortId reqDriverId req = do
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
-  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
-  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
   phoneNumberHash <- getDbHash req.newPhoneNumber
   mbLinkedPerson <- QPerson.findByMobileNumber req.newCountryCode phoneNumberHash
   whenJust mbLinkedPerson $ \linkedPerson -> do
@@ -420,7 +415,7 @@ addVehicle merchantShortId reqDriverId req = do
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
-  merchantId <- driver.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
+  let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   mbLinkedVehicle <- QVehicle.findById personId

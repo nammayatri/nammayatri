@@ -71,8 +71,7 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
 
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking
-    merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchant_id")
-    unless (merchant.id == merchantId) $ throwError (PersonNotFound personId.getId)
+    unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   operatingCity' <- case mbMerchant of
     Just merchant -> QCity.findEnabledCityByMerchantIdAndName merchant.id $ T.toLower req.operatingCity
     Nothing -> QCity.findEnabledCityByName $ T.toLower req.operatingCity

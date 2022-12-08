@@ -17,7 +17,6 @@ import Domain.Types.FarePolicy.FareProduct
 import qualified Domain.Types.Person as SP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.FareProduct as SFareProduct
-import Tools.Error
 
 newtype ListFareProductsRes = ListFareProductsRes
   { list :: [FareProductAPIEntity]
@@ -34,13 +33,12 @@ data UpdateFareProductReq = UpdateFareProductReq
 
 listFareProducts :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> m ListFareProductsRes
 listFareProducts person = do
-  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
-  fareProducts <- SFareProduct.findEnabledByMerchantId merchantId
+  fareProducts <- SFareProduct.findEnabledByMerchantId person.merchantId
   pure $ ListFareProductsRes $ makeFareProductAPIEntity <$> fareProducts
 
 updateFareProduct :: (HedisFlow m r, EsqDBFlow m r) => SP.Person -> UpdateFareProductReq -> m APISuccess
 updateFareProduct person updReq = do
-  merchantId <- person.merchantId & fromMaybeM (PersonFieldNotPresent "merchantId")
+  let merchantId = person.merchantId
   Esq.runTransaction $
     if updReq.enabled
       then SFareProduct.insertIfNotExist merchantId updReq.fareProductType
