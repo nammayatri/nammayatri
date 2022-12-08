@@ -38,7 +38,8 @@ data OneWaySearchRes = OneWaySearchRes
     searchId :: Id DSearchReq.SearchRequest,
     now :: UTCTime,
     --TODO: This supposed to be temporary solution. Check if we still need it
-    gatewayUrl :: BaseUrl
+    gatewayUrl :: BaseUrl,
+    searchRequestExpiry :: UTCTime
   }
 
 oneWaySearch ::
@@ -81,7 +82,8 @@ oneWaySearch personId req = do
             destination = req.destination,
             searchId = searchRequest.id,
             now = now,
-            gatewayUrl = merchant.gatewayUrl
+            gatewayUrl = merchant.gatewayUrl,
+            searchRequestExpiry = searchRequest.validTill
           }
   return dSearchRes
   where

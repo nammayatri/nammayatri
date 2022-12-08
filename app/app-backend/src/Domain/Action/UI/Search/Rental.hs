@@ -36,7 +36,8 @@ data RentalSearchRes = RentalSearchRes
     searchId :: Id DSearchReq.SearchRequest,
     startTime :: UTCTime,
     --TODO: This supposed to be temporary solution. Check if we still need it
-    gatewayUrl :: BaseUrl
+    gatewayUrl :: BaseUrl,
+    searchRequestExpiry :: UTCTime
   }
 
 rentalSearch ::
@@ -69,7 +70,8 @@ rentalSearch personId req = do
           { origin = req.origin,
             searchId = searchRequest.id,
             startTime = req.startTime,
-            gatewayUrl = merchant.gatewayUrl
+            gatewayUrl = merchant.gatewayUrl,
+            searchRequestExpiry = searchRequest.validTill
           }
   return dSearchRes
   where

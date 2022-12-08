@@ -84,8 +84,9 @@ fareProductSchemaOptions =
       OpenApi.constructorTagModifier = fareProductConstructorModifier
     }
 
-newtype SearchRes = SearchRes
-  { searchId :: Id SearchRequest
+data SearchRes = SearchRes
+  { searchId :: Id SearchRequest,
+    searchExpiry :: UTCTime
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -99,10 +100,10 @@ search :: Id Person.Person -> SearchReq -> Maybe Version -> Maybe Version -> Flo
 search personId req mbBundleVersion mbClientVersion = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion
-  searchId <- case req of
+  (searchId, searchExpiry) <- case req of
     OneWaySearch oneWay -> oneWaySearch personId oneWay
     RentalSearch rental -> rentalSearch personId rental
-  return $ SearchRes searchId
+  return $ SearchRes searchId searchExpiry
 
 oneWaySearch ::
   ( HasCacheConfig r,
@@ -118,7 +119,7 @@ oneWaySearch ::
   ) =>
   Id Person.Person ->
   DOneWaySearch.OneWaySearchReq ->
-  m (Id SearchRequest)
+  m (Id SearchRequest, UTCTime)
 oneWaySearch personId req = do
   dSearchRes <- DOneWaySearch.oneWaySearch personId req
   fork "search cabs" . withRetry $ do
@@ -128,7 +129,7 @@ oneWaySearch personId req = do
     becknMetroReq <- MetroACL.buildSearchReq dSearchRes
     CallBPP.searchMetro becknMetroReq
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
-  return dSearchRes.searchId
+  return (dSearchRes.searchId, dSearchRes.searchRequestExpiry)
 
 rentalSearch ::
   ( HasCacheConfig r,
@@ -142,14 +143,14 @@ rentalSearch ::
   ) =>
   Id Person.Person ->
   DRentalSearch.RentalSearchReq ->
-  m (Id SearchRequest)
+  m (Id SearchRequest, UTCTime)
 rentalSearch personId req = do
   dSearchRes <- DRentalSearch.rentalSearch personId req
   fork "search rental" . withRetry $ do
     -- do we need fork here?
     becknReq <- TaxiACL.buildRentalSearchReq dSearchRes
     void $ CallBPP.search dSearchRes.gatewayUrl becknReq
-  pure $ dSearchRes.searchId
+  pure (dSearchRes.searchId, dSearchRes.searchRequestExpiry)
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,
