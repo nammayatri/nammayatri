@@ -292,7 +292,7 @@ notifyDriverClearedFare ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyDriverClearedFare driverId sReqId fare =
-  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient driverId.getId
+  FCM.notifyPersonWithPriorityDefault (Just FCM.HIGH) notificationData . FCMNotificationRecipient driverId.getId
   where
     title = FCM.FCMNotificationTitle "Clearing Fare!"
     body =
