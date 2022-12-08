@@ -601,6 +601,7 @@ respondQuote driverId req = do
         sReqFD <-
           QSRD.findByDriverAndSearchReq driverId sReq.id
             >>= fromMaybeM NoSearchRequestForDriver
+        when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
         farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
         whenJust mbOfferedFare $ \off ->
           unless (isAllowedExtraFee farePolicy.driverExtraFee off) $

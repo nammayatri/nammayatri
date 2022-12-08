@@ -180,6 +180,7 @@ data DriverQuoteError
   | DriverOnRide
   | DriverQuoteExpired
   | NoSearchRequestForDriver
+  | QuoteAlreadyRejected
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverQuoteError
@@ -189,6 +190,7 @@ instance IsBaseError DriverQuoteError where
   toMessage DriverOnRide = Just "Unable to offer a quote while being on ride"
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
+  toMessage QuoteAlreadyRejected = Just "Quote Aready Rejected"
 
 instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
@@ -196,10 +198,12 @@ instance IsHTTPError DriverQuoteError where
     DriverOnRide -> "DRIVER_ON_RIDE"
     DriverQuoteExpired -> "QUOTE_EXPIRED"
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
+    QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
   toHttpCode = \case
     FoundActiveQuotes -> E400
     DriverOnRide -> E400
     DriverQuoteExpired -> E400
     NoSearchRequestForDriver -> E400
+    QuoteAlreadyRejected -> E400
 
 instance IsAPIError DriverQuoteError
