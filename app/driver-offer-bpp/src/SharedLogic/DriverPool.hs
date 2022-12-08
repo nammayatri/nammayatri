@@ -5,7 +5,6 @@ module SharedLogic.DriverPool
     randomizeAndLimitSelection,
     intelligentPoolSelection,
     incrementAcceptanceCount,
-    incrementRejectionCount,
     incrementTotalCount,
   )
 where
@@ -32,9 +31,6 @@ import Tools.Metrics
 
 mkAcceptanceKey :: Text -> Text
 mkAcceptanceKey = (<> "-quote-accepted")
-
-mkRejectionKey :: Text -> Text
-mkRejectionKey = ((<> "-quote-rejected"))
 
 withWindowOptions ::
   ( Redis.HedisFlow m r,
@@ -63,15 +59,6 @@ incrementAcceptanceCount ::
   Id a ->
   m ()
 incrementAcceptanceCount driverId = withWindowOptions $ SWC.incrementWindowCount (mkAcceptanceKey $ getId driverId)
-
-incrementRejectionCount ::
-  ( Redis.HedisFlow m r,
-    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
-    L.MonadFlow m
-  ) =>
-  Id a ->
-  m ()
-incrementRejectionCount driverId = withWindowOptions $ SWC.incrementWindowCount (mkRejectionKey $ getId driverId)
 
 intelligentPoolSelection ::
   ( Redis.HedisFlow m r,
