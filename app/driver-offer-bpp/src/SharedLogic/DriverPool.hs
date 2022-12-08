@@ -111,11 +111,10 @@ calculateDriverPool ::
     Esq.EsqDBReplicaFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
-    HasPrettyLogger m r,
-    HasCoordinates a
+    HasPrettyLogger m r
   ) =>
   Maybe Variant ->
-  a ->
+  LatLong ->
   Id DM.Merchant ->
   Bool ->
   Bool ->
@@ -128,7 +127,7 @@ calculateDriverPool variant pickup merchantId onlyNotOnRide shouldFilterByActual
       Esq.runInReplica $
         QP.getNearestDrivers
           variant
-          pickupLatLong
+          pickup
           radius
           merchantId
           onlyNotOnRide
@@ -138,17 +137,16 @@ calculateDriverPool variant pickup merchantId onlyNotOnRide shouldFilterByActual
     [] -> pure []
     (a : pprox) ->
       if shouldFilterByActualDistance
-        then filterOutDriversWithDistanceAboveThreshold merchantId radius pickupLatLong (a :| pprox)
+        then filterOutDriversWithDistanceAboveThreshold merchantId radius pickup (a :| pprox)
         else return $ buildGetDistanceResult <$> approxDriverPool
   where
-    pickupLatLong = getCoordinates pickup
     buildGetDistanceResult :: QP.DriverPoolResult -> Maps.GetDistanceResp QP.DriverPoolResult LatLong
     buildGetDistanceResult driverMetadata =
       let distance = driverMetadata.distanceToDriver
           duration = distance / 30000 * 3600 -- Average speed of 30km/hr
        in Maps.GetDistanceResp
             { origin = driverMetadata,
-              destination = pickupLatLong,
+              destination = pickup,
               distance = Meters . double2Int $ distance,
               duration = Seconds . double2Int $ duration,
               status = "OK"
