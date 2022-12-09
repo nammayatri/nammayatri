@@ -22,7 +22,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import GHC.Float (double2Int)
+import GHC.Float (double2Int, int2Double)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Person as QP
 import System.Random
@@ -119,7 +119,7 @@ calculateDriverPool ::
   Bool ->
   Bool ->
   m [Maps.GetDistanceResp QP.DriverPoolResult LatLong]
-calculateDriverPool variant pickup merchantId onlyNotOnRide shouldFilterByActualDistance = do
+calculateDriverPool variant pickup merchantId onlyNotOnRide shouldComputeActualDistance = do
   radius <- fromIntegral <$> asks (.defaultRadiusOfSearch)
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   approxDriverPool <-
@@ -136,23 +136,23 @@ calculateDriverPool variant pickup merchantId onlyNotOnRide shouldFilterByActual
   case approxDriverPool of
     [] -> pure []
     (a : pprox) ->
-      if shouldFilterByActualDistance
-        then filterOutDriversWithDistanceAboveThreshold merchantId radius pickup (a :| pprox)
+      if shouldComputeActualDistance
+        then computeActualDistance merchantId pickup (a :| pprox)
         else return $ buildGetDistanceResult <$> approxDriverPool
   where
     buildGetDistanceResult :: QP.DriverPoolResult -> Maps.GetDistanceResp QP.DriverPoolResult LatLong
     buildGetDistanceResult driverMetadata =
       let distance = driverMetadata.distanceToDriver
-          duration = distance / 30000 * 3600 -- Average speed of 30km/hr
+          duration = int2Double distance / 30000 * 3600 -- Average speed of 30km/hr
        in Maps.GetDistanceResp
             { origin = driverMetadata,
               destination = pickup,
-              distance = Meters . double2Int $ distance,
+              distance = Meters distance,
               duration = Seconds . double2Int $ duration,
               status = "OK"
             }
 
-filterOutDriversWithDistanceAboveThreshold ::
+computeActualDistance ::
   ( CoreMetrics m,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -160,11 +160,10 @@ filterOutDriversWithDistanceAboveThreshold ::
     HasPrettyLogger m r
   ) =>
   Id DM.Merchant ->
-  Integer ->
   LatLong ->
   NonEmpty QP.DriverPoolResult ->
   m [Maps.GetDistanceResp QP.DriverPoolResult LatLong]
-filterOutDriversWithDistanceAboveThreshold orgId threshold pickupLatLong driverPoolResults = do
+computeActualDistance orgId pickupLatLong driverPoolResults = do
   getDistanceResults <-
     Maps.getDistances orgId $
       Maps.GetDistancesReq
@@ -173,8 +172,4 @@ filterOutDriversWithDistanceAboveThreshold orgId threshold pickupLatLong driverP
           travelMode = Just Maps.CAR
         }
   logDebug $ "get distance results" <> show getDistanceResults
-  let result = NE.filter filterFunc getDistanceResults
-  logDebug $ "secondly filtered driver pool" <> show result
-  pure result
-  where
-    filterFunc estDist = getMeters estDist.distance <= fromIntegral threshold
+  pure $ NE.toList getDistanceResults

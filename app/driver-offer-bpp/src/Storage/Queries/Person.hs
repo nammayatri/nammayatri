@@ -19,6 +19,7 @@ import Domain.Types.DriverLocation
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Vehicle as Vehicle
+import GHC.Float (double2Int)
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person as TPerson
@@ -308,7 +309,7 @@ data DriverPoolResult = DriverPoolResult
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
     language :: Maybe Maps.Language,
     onRide :: Bool,
-    distanceToDriver :: Double,
+    distanceToDriver :: Int,
     vehicle :: Vehicle,
     lat :: Double,
     lon :: Double
@@ -356,4 +357,4 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
   return $ makeDriverPoolResult <$> res
   where
     makeDriverPoolResult (personId, mbDeviceToken, mblang, onRide, dist, vehicle, dlat, dlon) =
-      DriverPoolResult (cast personId) mbDeviceToken mblang onRide dist vehicle dlat dlon
+      DriverPoolResult (cast personId) mbDeviceToken mblang onRide (double2Int dist) vehicle dlat dlon

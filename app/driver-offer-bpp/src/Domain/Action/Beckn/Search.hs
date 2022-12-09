@@ -98,8 +98,8 @@ handler merchantId sReq = do
         return []
       else do
         mdriverPoolLimitForRandomize <- asks (.driverPoolLimit)
-        let shouldFilterByActualDistance = isNothing mdriverPoolLimitForRandomize
-        driverPool <- calculateDriverPool Nothing pickupLatLong org.id True shouldFilterByActualDistance
+        let shouldComputeActualDistance = isNothing mdriverPoolLimitForRandomize
+        driverPool <- calculateDriverPool Nothing pickupLatLong org.id True shouldComputeActualDistance
 
         logDebug $ "Search handler: driver pool " <> show driverPool
 

@@ -50,7 +50,7 @@ logDriverInPoolEvent whenPoolWasComputed bookingId getDistanceRes = do
     bookingId
     (Just whenPoolWasComputed)
     (Just driverInPool.vehicle.variant)
-    (Just $ Meters $ floor driverInPool.distanceToDriver)
+    (Just $ Meters $ driverInPool.distanceToDriver)
     (Just getDistanceRes.duration)
     Nothing
 

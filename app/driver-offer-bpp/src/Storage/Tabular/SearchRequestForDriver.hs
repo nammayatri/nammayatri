@@ -27,7 +27,8 @@ mkPersist
       id Text
       searchRequestId SearchRequestTId
       startTime UTCTime
-      distanceToPickup Meters
+      actualDistanceToPickup Meters
+      straightLineDistanceToPickup Meters
       durationToPickup Seconds
       vehicleVariant Variant.Variant
       baseFare Money
