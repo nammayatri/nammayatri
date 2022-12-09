@@ -5,7 +5,7 @@
             "Group": "Servers",
             "Port": 5432,
             "Username": "atlas",
-            "Host": "atlas-dev",
+            "Host": "atlas-dev-primary",
             "SSLMode": "prefer",
             "MaintenanceDB": "postgres"
         }
