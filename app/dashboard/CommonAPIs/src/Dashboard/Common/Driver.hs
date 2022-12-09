@@ -317,9 +317,7 @@ data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW
 validateAddVehicleReq :: Validate AddVehicleReq
 validateAddVehicleReq AddVehicleReq {..} =
   sequenceA_
-    [ validateField "model" model $
-        NotEmpty `And` star P.latinOrSpace,
-      validateField "color" colour $ NotEmpty `And` P.name,
+    [ validateField "color" colour $ NotEmpty `And` P.name,
       validateField "registrationNo" registrationNo $
         LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
     ]
