@@ -87,6 +87,7 @@ driverDocumentsInfo merchantShortId = do
       acc{Common.registered = acc.registered + 1,
           Common.verified = incrIf fd.driverInfo.verified acc.verified,
           Common.enabled = incrIf fd.driverInfo.enabled acc.enabled,
+          Common.blocked = incrIf (not fd.driverInfo.blocked) acc.blocked,
           Common.validDocuments = incrDocs (dlStatus == VALID) (rcStatus == VALID) acc.validDocuments,
           Common.invalidDocuments = incrDocs (dlStatus == INVALID) (rcStatus == INVALID) acc.invalidDocuments,
           Common.verificationPending = incrDocs (dlStatus == PENDING) (rcStatus == PENDING) acc.verificationPending,
@@ -127,14 +128,14 @@ limitOffset mbLimit mbOffset =
   maybe identity take mbLimit . maybe identity drop mbOffset
 
 ---------------------------------------------------------------------
-listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.DriverListRes
-listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone = do
+listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow Common.DriverListRes
+listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSearchPhone = do
   merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
-  driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbSearchPhone
+  driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSearchPhone
   items <- mapM buildDriverListItem driversWithInfo
   pure $ Common.DriverListRes (length items) items
   where
@@ -153,6 +154,7 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
         vehicleNo = mbVehicle <&> (.registrationNo),
         phoneNo,
         enabled = driverInformation.enabled,
+        blocked = driverInformation.blocked,
         verified = driverInformation.verified,
         onRide = driverInformation.onRide,
         active = driverInformation.active
@@ -279,6 +281,7 @@ driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
             numberOfRides = fromMaybe 0 ridesCount,
             mobileNumber,
             enabled = info.enabled,
+            blocked = info.blocked,
             verified = info.verified,
             vehicleDetails
           }

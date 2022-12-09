@@ -25,6 +25,7 @@ mkPersist
       active Bool
       onRide Bool
       enabled Bool
+      blocked Bool
       verified Bool
       createdAt UTCTime
       updatedAt UTCTime

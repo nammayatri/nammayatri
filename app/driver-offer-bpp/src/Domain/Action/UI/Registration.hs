@@ -141,6 +141,7 @@ createDriverDetails personId = do
             active = False,
             onRide = False,
             enabled = False,
+            blocked = False,
             verified = False,
             referralCode = Nothing,
             createdAt = now,

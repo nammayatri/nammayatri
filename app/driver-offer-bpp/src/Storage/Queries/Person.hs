@@ -75,9 +75,10 @@ findAllDriversWithInfoAndVehicle ::
   Int ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe Bool ->
   Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbSearchPhone = do
+findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSearchPhone = do
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
   Esq.findAll $ do
     person :& info :& mbVeh <-
@@ -95,6 +96,7 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnab
       person ^. PersonMerchantId ==. (val . toKey $ merchantId)
         &&. maybe (val True) (\verified -> info ^. DriverInformationVerified ==. val verified) mbVerified
         &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
+        &&. maybe (val True) (\blocked -> info ^. DriverInformationBlocked ==. val blocked) mbBlocked
         &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
     orderBy [asc (person ^. PersonFirstName)]
     limit $ fromIntegral limitVal
@@ -336,6 +338,7 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
           &&. person ^. PersonMerchantId ==. val (toKey merchantId)
           &&. driverInfo ^. DriverInformationActive
           &&. (if onlyNotOnRide then not_ (driverInfo ^. DriverInformationOnRide) else val True)
+          &&. not_ (driverInfo ^. DriverInformationBlocked)
           &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
                   ||. (location ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
               )

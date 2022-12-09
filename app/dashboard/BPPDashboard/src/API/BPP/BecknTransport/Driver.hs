@@ -88,10 +88,10 @@ handler merchantId =
     :<|> updatePhoneNumber merchantId
     :<|> addVehicle merchantId
 
-listDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
-listDriver userMerchantId merchantId mbLimit mbOffset verified enabled phone = withFlowHandlerAPI $ do
+listDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
+listDriver userMerchantId merchantId mbLimit mbOffset verified enabled blocked phone = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
-  Client.callBecknTransportBPP checkedMerchantId (.drivers.listDrivers) mbLimit mbOffset verified enabled phone
+  Client.callBecknTransportBPP checkedMerchantId (.drivers.listDrivers) mbLimit mbOffset verified enabled blocked phone
 
 driverActivity :: ShortId DM.Merchant -> ShortId DM.Merchant -> FlowHandler Common.DriverActivityRes
 driverActivity userMerchantId merchantId = withFlowHandlerAPI $ do

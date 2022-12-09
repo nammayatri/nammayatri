@@ -116,17 +116,21 @@ instanceExceptionWithParent 'BaseException ''ShardMappingError
 
 data DriverError
   = DriverAccountDisabled
+  | DriverAccountBlocked
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
 
 instance IsBaseError DriverError where
   toMessage DriverAccountDisabled = Just "Driver account has been disabled. He can't go online and receive ride offers in this state."
+  toMessage DriverAccountBlocked = Just "Driver account is blocked."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
     DriverAccountDisabled -> "DRIVER_ACCOUNT_DISABLED"
+    DriverAccountBlocked -> "DRIVER_ACCOUNT_BLOCKED"
   toHttpCode = \case
     DriverAccountDisabled -> E403
+    DriverAccountBlocked -> E403
 
 instance IsAPIError DriverError

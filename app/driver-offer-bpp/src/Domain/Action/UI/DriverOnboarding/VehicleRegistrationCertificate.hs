@@ -35,12 +35,14 @@ import Environment
 import qualified Idfy.Flow as Idfy
 import qualified Idfy.Types as Idfy
 import SharedLogic.DriverOnboarding
+import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
 import qualified Storage.Queries.DriverOnboarding.OperatingCity as QCity
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.Person as Person
+import Tools.Error
 
 data DriverRCReq = DriverRCReq
   { vehicleRegistrationCertNumber :: Text,
@@ -68,7 +70,8 @@ verifyRC ::
 verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
   runRequestValidation validateDriverRCReq req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-
+  driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)

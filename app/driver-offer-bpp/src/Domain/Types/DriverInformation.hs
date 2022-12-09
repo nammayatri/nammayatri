@@ -12,6 +12,7 @@ data DriverInformationE e = DriverInformation
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
+    blocked :: Bool,
     verified :: Bool,
     referralCode :: Maybe (EncryptedHashedField e Text),
     createdAt :: UTCTime,

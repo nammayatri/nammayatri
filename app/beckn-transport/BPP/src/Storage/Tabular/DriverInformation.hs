@@ -23,6 +23,7 @@ mkPersist
       active Bool
       onRide Bool
       enabled Bool
+      blocked Bool
       optForRental Bool
       createdAt UTCTime
       updatedAt UTCTime

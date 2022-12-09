@@ -99,6 +99,7 @@ data DriverInformationRes = DriverInformationRes
     onRide :: Bool,
     verified :: Bool,
     enabled :: Bool,
+    blocked :: Bool,
     organization :: DM.MerchantAPIEntity,
     language :: Maybe Maps.Language
   }
@@ -119,6 +120,7 @@ data DriverEntityRes = DriverEntityRes
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
+    blocked :: Bool,
     verified :: Bool,
     registeredAt :: UTCTime,
     language :: Maybe Maps.Language
@@ -276,6 +278,7 @@ createDriverDetails personId adminId = do
             active = False,
             onRide = False,
             enabled = True,
+            blocked = False,
             verified = False,
             referralCode = Nothing,
             createdAt = now,
@@ -313,6 +316,7 @@ setActivity personId isActive = do
   when isActive $ do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
     unless driverInfo.enabled $ throwError DriverAccountDisabled
+    unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   Esq.runTransaction $
     QDriverInformation.updateActivity driverId isActive
   pure APISuccess.Success
@@ -340,6 +344,7 @@ buildDriverEntityRes (person, driverInfo) = do
         active = driverInfo.active,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,
+        blocked = driverInfo.blocked,
         verified = driverInfo.verified,
         registeredAt = person.createdAt,
         language = person.language

@@ -76,9 +76,10 @@ findAllDriversWithInfoAndVehicle ::
   Int ->
   Int ->
   Maybe Bool ->
+  Maybe Bool ->
   Maybe Text ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbEnabled mbSearchPhone = do
+findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhone = do
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
   Esq.findAll $ do
     person :& info :& mbVeh <-
@@ -95,6 +96,7 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbEnabled mbSearc
     where_ $
       person ^. PersonMerchantId ==. (val . toKey $ merchantId)
         &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
+        &&. maybe (val True) (\blocked -> info ^. DriverInformationBlocked ==. val blocked) mbBlocked
         &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
     orderBy [asc (person ^. PersonFirstName)]
     limit $ fromIntegral limitVal
@@ -388,6 +390,7 @@ getNearestDrivers LatLong {..} radius merchantId mbPoolVariant fareProductType m
           &&. driverInfo ^. DriverInformationActive
           &&. driverInfo ^. DriverInformationOptForRental >=. val isRental
           &&. not_ (driverInfo ^. DriverInformationOnRide)
+          &&. not_ (driverInfo ^. DriverInformationBlocked)
           &&. ( Esq.isNothing (val mbPoolVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbPoolVariant -- when mbVariant = Nothing, we use all variants, is it correct?
                   ||. ( case mbPoolVariant of
                           Just SEDAN ->

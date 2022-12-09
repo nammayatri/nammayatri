@@ -32,6 +32,7 @@ type DriverListAPI =
     :> QueryParam "offset" Int
     :> QueryParam "verified" Bool
     :> QueryParam "enabled" Bool
+    :> QueryParam "blocked" Bool
     :> QueryParam "phone" Text
     :> Get '[JSON] DriverListRes
 
@@ -50,6 +51,7 @@ data DriverListItem = DriverListItem
     vehicleNo :: Maybe Text,
     phoneNo :: Maybe Text,
     enabled :: Bool,
+    blocked :: Bool,
     verified :: Bool,
     onRide :: Bool,
     active :: Bool
@@ -92,6 +94,7 @@ data DriverDocumentsInfoRes = DriverDocumentsInfoRes
   { registered :: !Int,
     verified :: !Int,
     enabled :: !Int,
+    blocked :: !Int,
     validDocuments :: !DocumentsByStateInfo,
     invalidDocuments :: !DocumentsByStateInfo,
     verificationPending :: !DocumentsByStateInfo,
@@ -118,6 +121,7 @@ emptyInfo =
     { registered = 0,
       verified = 0,
       enabled = 0,
+      blocked = 0,
       validDocuments = emptyDocumentsByStateInfo,
       invalidDocuments = emptyDocumentsByStateInfo,
       verificationPending = emptyDocumentsByStateInfo,
@@ -234,6 +238,7 @@ data DriverInfoRes = DriverInfoRes
     numberOfRides :: Int,
     mobileNumber :: Maybe Text,
     enabled :: Bool,
+    blocked :: Bool,
     verified :: Bool,
     vehicleDetails :: Maybe VehicleAPIEntity
   }

@@ -56,9 +56,10 @@ listDrivers ::
   Maybe Int ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe Bool ->
   Maybe Text ->
   Flow Common.DriverListRes
-listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone = do
+listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSearchPhone = do
   merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -68,7 +69,7 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbSearchPhone 
       then do
         let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
             offset = fromMaybe 0 mbOffset
-        QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbEnabled mbSearchPhone
+        QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbEnabled mbBlocked mbSearchPhone
       else pure []
   items <- mapM buildDriverListItem driversWithInfo
   pure $ Common.DriverListRes (length items) items
@@ -88,6 +89,7 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
         vehicleNo = mbVehicle <&> (.registrationNo),
         phoneNo,
         enabled = driverInformation.enabled,
+        blocked = driverInformation.blocked,
         verified = True,
         onRide = driverInformation.onRide,
         active = driverInformation.active
@@ -220,6 +222,7 @@ driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
             numberOfRides = fromMaybe 0 ridesCount,
             mobileNumber,
             enabled = info.enabled,
+            blocked = info.blocked,
             verified = True, -- not implemented for this bpp
             vehicleDetails = Just vehicleDetails
           }
