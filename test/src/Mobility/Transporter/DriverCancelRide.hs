@@ -14,29 +14,47 @@ import Utils
 spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl API.getTransporterBaseUrl
-  describe "Testing App and Transporter APIs" $
-    it "Testing API flow for ride cancelled by Driver" $ withBecknClients clients do
-      let (origin, _destination, searchReq_) = route1SearchRequest
-      Utils.setupDriver transporterDriver1 origin
-      Utils.setupDriver transporterDriver2 origin
+  beforeAndAfter_
+    ( do
+        mapM_ Utils.resetDriver [transporterDriver1, transporterDriver2]
+        Utils.resetCustomer appRegistrationToken
+    )
+    $ it "Testing API flow for ride cancelled by Driver" $
+      withBecknClients clients do
+        let (origin, _destination, searchReq_) = route1SearchRequest
+        Utils.setupDriver transporterDriver1 origin
+        Utils.setupDriver transporterDriver2 origin
 
-      scRes <- Utils.search'Confirm appRegistrationToken transporterDriver1 searchReq_
-      let bBookingId = scRes.bapBookingId
-          tBooking = scRes.bppBooking
+        Utils.search'Confirm appRegistrationToken searchReq_ \scRes -> do
+          let bBookingId = scRes.bapBookingId
+              tBooking = scRes.bppBooking
+          -- Driver1 Accepts a ride
+          void $ Utils.getRideInfo transporterDriver1 tBooking.id
+          tRide1 <- Utils.acceptRide transporterDriver1 tBooking
+          Utils.cancelRideByDriver transporterDriver1 tRide1
+          Utils.checkBookingBapStatus appRegistrationToken bBookingId AppRB.AWAITING_REASSIGNMENT
+          void $ Utils.getRideInfo transporterDriver2 tBooking.id
 
-      -- Driver1 Accepts a ride
-      tRide1 <- Utils.acceptRide transporterDriver1 tBooking
+          -- Driver2 Accepts a ride
+          void $ Utils.getRideInfo transporterDriver2 tBooking.id
+          tRide2 <- Utils.acceptRide transporterDriver2 tBooking
+          Utils.cancelRideByDriver transporterDriver2 tRide2
+          Utils.checkBookingBapStatus appRegistrationToken bBookingId AppRB.AWAITING_REASSIGNMENT
+          void $ Utils.getRideInfo transporterDriver2 tBooking.id
 
-      Utils.cancelRideByDriver transporterDriver1 tRide1
+          -- Driver2 Accepts a ride
+          tRide3 <- Utils.acceptRide transporterDriver2 tBooking
+          Utils.cancelRideByDriver transporterDriver2 tRide3
+          Utils.checkBookingBapStatus appRegistrationToken bBookingId AppRB.AWAITING_REASSIGNMENT
+          void $ Utils.getRideInfo transporterDriver2 tBooking.id
 
-      Utils.checkBookingBapStatus appRegistrationToken bBookingId AppRB.AWAITING_REASSIGNMENT
+          -- Driver2 Accepts a ride
+          tRide4 <- Utils.acceptRide transporterDriver2 tBooking
+          Utils.cancelRideByDriver transporterDriver2 tRide4
+          Utils.checkBookingBapStatus appRegistrationToken bBookingId AppRB.AWAITING_REASSIGNMENT
+          void $ Utils.getRideInfo transporterDriver2 tBooking.id
 
-      void $ Utils.getRideInfo transporterDriver2 tBooking.id
-
-      -- Driver2 Accepts a ride
-      tRide2 <- Utils.acceptRide transporterDriver2 tBooking
-
-      Utils.cancelRideByDriver transporterDriver2 tRide2
-      Utils.checkBookingBapStatus appRegistrationToken bBookingId AppRB.CANCELLED
-
-      mapM_ (liftIO . Utils.resetDriver) [transporterDriver1, transporterDriver2]
+          -- Driver2 Accepts a ride
+          tRide5 <- Utils.acceptRide transporterDriver2 tBooking
+          Utils.cancelRideByDriver transporterDriver2 tRide5
+          Utils.checkBookingBapStatus appRegistrationToken bBookingId AppRB.CANCELLED

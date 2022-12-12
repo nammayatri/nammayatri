@@ -23,15 +23,6 @@ updateStatus bookingId status driverIds =
       tbl ^. NotificationStatusBookingId ==. val (toKey bookingId)
         &&. tbl ^. NotificationStatusDriverId `in_` valList (toKey . cast <$> driverIds)
 
-fetchAttemptedNotificationsByRBId :: Transactionable m => Id Booking -> m [NotificationStatus]
-fetchAttemptedNotificationsByRBId bookingId =
-  Esq.findAll $ do
-    notificationStatus <- from $ table @NotificationStatusT
-    where_ $
-      notificationStatus ^. NotificationStatusBookingId ==. val (toKey bookingId)
-        &&. notificationStatus ^. NotificationStatusStatus `in_` valList [NotificationStatus.REJECTED, NotificationStatus.IGNORED]
-    return notificationStatus
-
 fetchActiveNotifications :: Transactionable m => m [NotificationStatus]
 fetchActiveNotifications =
   Esq.findAll $ do

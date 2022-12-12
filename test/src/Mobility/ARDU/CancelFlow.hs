@@ -13,8 +13,11 @@ import Utils
 spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getDriverOfferBppBaseUrl
-  describe "Testing App and Transporter APIs"
-    . after_ (Utils.resetDriver arduDriver1)
+  beforeAndAfter_
+    ( do
+        Utils.resetDriver arduDriver1
+        Utils.resetCustomer appRegistrationToken
+    )
     $ do
       it "Testing API flow for ride cancelled by Driver" $
         withBecknClients clients cancelFlow

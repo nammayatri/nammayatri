@@ -3,19 +3,18 @@ module Domain.Action.Allocation where
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.NonEmpty
 import Data.Generics.Labels ()
 import qualified Data.Text as T
-import Domain.Types.AllocationEvent (AllocationEventType (..))
+import qualified Domain.Types.AllocationEvent as DAllocEvent (AllocationEventType (..))
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
-import Domain.Types.DriverPool
 import Domain.Types.Merchant
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude
+import SharedLogic.DriverPool.Types
 
 data RequestData
   = Allocation
@@ -76,38 +75,32 @@ data AllocatorMetricsHandle m = AllocatorMetricsHandle
     incrementErrorCounter :: SomeException -> m ()
   }
 
-data SortMode
-  = ETA
-  | IdleTime
-  deriving (Eq, Generic, FromDhall)
-
 data ServiceHandle m = ServiceHandle
-  { getDriverSortMode :: m SortMode,
-    getConfiguredNotificationTime :: m Seconds,
+  { getConfiguredNotificationTime :: m Seconds,
     getConfiguredAllocationTime :: m Seconds,
     getConfiguredReallocationsLimit :: m Int,
-    getDriverBatchSize :: m Int,
     getRequests :: ShortId Subscriber -> Integer -> m [RideRequest],
-    getDriverPool :: Id SRB.Booking -> m SortedDriverPool,
+    getNextDriverPoolBatch :: Id SRB.Booking -> m [DriverPoolResult],
+    cleanupDriverPoolBatches :: Id SRB.Booking -> m (),
     getCurrentNotifications :: Id SRB.Booking -> m [CurrentNotification],
+    incrementPoolRadiusStep :: Id SRB.Booking -> m (),
     cleanupOldNotifications :: m Int,
     sendNewRideNotifications :: Id SRB.Booking -> NonEmpty (Id Driver) -> m (),
     sendRideNotAssignedNotification :: Id SRB.Booking -> Id Driver -> m (),
     addNotificationStatuses :: Id SRB.Booking -> NonEmpty (Id Driver) -> UTCTime -> m (),
     updateNotificationStatuses :: Id SRB.Booking -> NotificationStatus -> NonEmpty (Id Driver) -> m (),
     resetLastRejectionTimes :: NonEmpty (Id Driver) -> m (),
-    getAttemptedDrivers :: Id SRB.Booking -> m [Id Driver],
     getDriversWithNotification :: m [Id Driver],
     getTopDriversByIdleTime :: Int -> [Id Driver] -> m [Id Driver],
-    checkAvailability :: SortedDriverPool -> m SortedDriverPool,
+    checkAvailability :: [DriverPoolResult] -> m [DriverPoolResult],
     assignDriver :: Id SRB.Booking -> Id Driver -> m (),
     cancelBooking :: Id SRB.Booking -> SBCR.BookingCancellationReason -> m (),
     cleanupNotifications :: Id SRB.Booking -> m (),
     addAllocationRequest :: ShortId Subscriber -> Id SRB.Booking -> m (),
     getBooking :: Id SRB.Booking -> m SRB.Booking,
     removeRequest :: Id SRR.RideRequest -> m (),
-    logEvent :: AllocationEventType -> Id SRB.Booking -> m (),
-    logDriverEvents :: AllocationEventType -> Id SRB.Booking -> NonEmpty (Id Driver) -> m (),
+    logEvent :: DAllocEvent.AllocationEventType -> Id SRB.Booking -> m (),
+    logDriverEvents :: DAllocEvent.AllocationEventType -> Id SRB.Booking -> NonEmpty (Id Driver) -> m (),
     metrics :: AllocatorMetricsHandle m
   }
 
@@ -155,7 +148,7 @@ processRequest handle@ServiceHandle {..} subscriberId rideRequest = do
             case booking.status of
               status | status == SRB.CONFIRMED || status == SRB.TRIP_ASSIGNED -> do
                 cancel handle bookingId SBCR.ByUser Nothing
-                logEvent ConsumerCancelled bookingId
+                logEvent DAllocEvent.ConsumerCancelled bookingId
               _ ->
                 logWarning $ "Ride status is " <> show booking.status <> ", cancellation request skipped"
         logInfo "End processing request"
@@ -176,8 +169,9 @@ processDriverResponse handle@ServiceHandle {..} response bookingId = do
       Accept -> do
         logInfo $ "Assigning driver" <> show response.driverId
         assignDriver bookingId response.driverId
+        cleanupDriverPoolBatches bookingId
         cleanupNotifications bookingId
-        logDriverEvents MarkedAsAccepted bookingId $ singleton response.driverId
+        logDriverEvents DAllocEvent.MarkedAsAccepted bookingId $ singleton response.driverId
       Reject ->
         processRejection handle bookingId response.driverId
     else logDriverNoLongerNotified bookingId response.driverId
@@ -195,12 +189,14 @@ processAllocation handle@ServiceHandle {..} subscriberId booking = do
   allocationTimeFinished <- isAllocationTimeFinished handle currentTime orderTime
   allocationLimitExceed <- isReallocationLimitExceed handle booking.reallocationsCount
   logInfo $ "isAllocationTimeFinished " <> show allocationTimeFinished
-  if allocationTimeFinished || allocationLimitExceed
-    then do
-      let cancellationReason = if allocationTimeFinished then AllocationTimeExpired else ReallocationLimitExceed
-      cancel handle bookingId SBCR.ByAllocator $ Just cancellationReason
-      logEvent AllocationTimeFinished bookingId
-    else do
+  case (allocationTimeFinished, allocationLimitExceed) of
+    (True, _) -> do
+      cancel handle bookingId SBCR.ByAllocator $ Just AllocationTimeExpired
+      logEvent DAllocEvent.AllocationTimeFinished bookingId
+    (_, True) -> do
+      cancel handle bookingId SBCR.ByAllocator $ Just ReallocationLimitExceed
+      logEvent DAllocEvent.ReallocationLimitExceed bookingId
+    _ -> do
       currentNotifications <- getCurrentNotifications bookingId
       logInfo $ "getCurrentNotification " <> show currentNotifications
       case currentNotifications of
@@ -224,14 +220,14 @@ processRejection ServiceHandle {..} bookingId driverId = do
   logInfo "Processing rejection"
   resetLastRejectionTimes $ singleton driverId
   updateNotificationStatuses bookingId Rejected $ singleton driverId
-  logDriverEvents MarkedAsRejected bookingId $ singleton driverId
+  logDriverEvents DAllocEvent.MarkedAsRejected bookingId $ singleton driverId
 
 processExpiration :: MonadHandler m => ServiceHandle m -> Id SRB.Booking -> NonEmpty (Id Driver) -> m ()
 processExpiration ServiceHandle {..} bookingId driverIds = do
   logInfo "Processing expiration"
   resetLastRejectionTimes driverIds
   updateNotificationStatuses bookingId Ignored driverIds
-  logDriverEvents MarkedAsIgnored bookingId driverIds
+  logDriverEvents DAllocEvent.MarkedAsIgnored bookingId driverIds
 
 proceedToNewDrivers ::
   MonadHandler m =>
@@ -241,41 +237,39 @@ proceedToNewDrivers ::
   m ()
 proceedToNewDrivers handle@ServiceHandle {..} bookingId subscriberId = do
   logInfo "Proceed to new drivers"
-  driverPool <- getDriverPool bookingId
+  driverPool <- getDriverPool handle bookingId
+  availableDriversPool <- checkAvailability driverPool
+  driversWithNotification <- getDriversWithNotification
+  let filteredPool = filter (\dpRes -> dpRes.driverId `notElem` driversWithNotification) availableDriversPool
+  logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getDriverPoolDescs filteredPool)
+  processFilteredPool handle bookingId filteredPool subscriberId
+
+getDriverPool :: MonadHandler m => ServiceHandle m -> Id SRB.Booking -> m [DriverPoolResult]
+getDriverPool ServiceHandle {..} bookingId = do
+  driverPool <- getNextDriverPoolBatch bookingId
   logInfo $ "DriverPool " <> T.intercalate ", " (getDriverPoolDescs driverPool)
-  attemptedDrivers <- getAttemptedDrivers bookingId
-  let newDriversPool = filterDriverPool (`notElem` attemptedDrivers) driverPool
-  if not $ null (getDriverIds newDriversPool)
-    then do
-      availableDriversPool <- checkAvailability newDriversPool
-      driversWithNotification <- getDriversWithNotification
-      let filteredPool = filterDriverPool (`notElem` driversWithNotification) availableDriversPool
-      logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getDriverPoolDescs filteredPool)
-      processFilteredPool handle bookingId filteredPool subscriberId
-    else do
-      cancel handle bookingId SBCR.ByAllocator $ Just NoDriversInRange
-      logEvent EmptyDriverPool bookingId
+  if not $ null driverPool
+    then return driverPool
+    else getNextRadiusBatch
   where
-    getDriverPoolDescs :: SortedDriverPool -> [Text]
-    getDriverPoolDescs pool =
-      (\driverPoolResult -> driverPoolResult.driverId.getId <> "(" <> show driverPoolResult.distanceToPickup <> "m)")
-        <$> getSortedDriverPool pool
+    getNextRadiusBatch = do
+      incrementPoolRadiusStep bookingId
+      getNextDriverPoolBatch bookingId
+
+getDriverPoolDescs :: [DriverPoolResult] -> [Text]
+getDriverPoolDescs pool =
+  (\driverPoolResult -> driverPoolResult.driverId.getId <> "(" <> show driverPoolResult.distanceToPickup <> "m)")
+    <$> pool
 
 processFilteredPool ::
   MonadHandler m =>
   ServiceHandle m ->
   Id SRB.Booking ->
-  SortedDriverPool ->
+  [DriverPoolResult] ->
   ShortId Subscriber ->
   m ()
 processFilteredPool handle@ServiceHandle {..} bookingId filteredPool subscriberId = do
-  sortMode <- getDriverSortMode
-  batchSize <- getDriverBatchSize
-  topDrivers <-
-    case sortMode of
-      ETA -> pure $ take batchSize (getDriverIds filteredPool)
-      IdleTime -> getTopDriversByIdleTime batchSize (getDriverIds filteredPool)
-  case topDrivers of
+  case (.driverId) <$> filteredPool of
     driverId : driverIds -> do
       let drivers = driverId :| driverIds
       currentTime <- getCurrentTime
@@ -283,8 +277,8 @@ processFilteredPool handle@ServiceHandle {..} bookingId filteredPool subscriberI
       let expiryTime = addUTCTime notificationTime currentTime
       sendNewRideNotifications bookingId drivers
       addNotificationStatuses bookingId drivers expiryTime
-      logInfo $ "Notified drivers " <> show (map getId topDrivers)
-      logDriverEvents NotificationSent bookingId drivers
+      logInfo $ "Notified drivers " <> show (map (.driverId.getId) filteredPool)
+      logDriverEvents DAllocEvent.NotificationSent bookingId drivers
     [] -> do
       logInfo "All new drivers are unavailable or already have notifications. Waiting."
   checkRideLater handle subscriberId bookingId
@@ -299,6 +293,7 @@ cancel ServiceHandle {..} bookingId cancellationSource mbReasonCode = do
   logInfo "Cancelling ride"
   bookingCancellationReason <- buildBookingCancellationReason
   cancelBooking bookingId bookingCancellationReason
+  cleanupDriverPoolBatches bookingId
   cleanupNotifications bookingId
   where
     buildBookingCancellationReason = do

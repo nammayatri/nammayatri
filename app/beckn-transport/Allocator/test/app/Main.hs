@@ -2,9 +2,9 @@ module Main where
 
 import Allocation.AllocationTimeFinished
 import Allocation.Cancellation
-import Allocation.NearestDrivers
 import Allocation.NotificationStatus
 import Allocation.OnePoolTwoRide
+import Allocation.RadiusStep
 import Allocation.Reassignment
 import Allocation.TwoAllocations
 import EulerHS.Prelude
@@ -26,5 +26,5 @@ specs = do
         twoAllocations,
         cancellation,
         reassignment,
-        nearestDrivers
+        radiusStep
       ]

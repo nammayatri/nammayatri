@@ -13,16 +13,13 @@ import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Id
 import Beckn.Types.Registry (Subscriber (..))
 import Beckn.Utils.Common
-import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.BookingLocation as SBL
-import qualified Domain.Types.BusinessEvent as SB
 import Domain.Types.DiscountTransaction
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RideRequest as RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.RiderDetails as SRD
-import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.Schedule
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
@@ -66,7 +63,6 @@ confirm ::
     EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
-    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["schedulingReserveTime" ::: Seconds],
     CoreMetrics m
   ) =>
@@ -136,12 +132,6 @@ confirm transporterId subscriber req = do
             ..
           }
 
-  driverPoolResults <- DrPool.recalculateDriverPool booking
-  Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_CONFIRM (Just booking.id)) driverPoolResults
-  let driverPool = map (.driverId) driverPoolResults
-  logTagInfo "OnConfirmCallback" $
-    "Driver Pool for Ride " <> booking.id.getId <> " is set with drivers: "
-      <> T.intercalate ", " (getId <$> driverPool)
   Esq.runTransaction $ QBE.logRideConfirmedEvent booking.id
   return res
   where

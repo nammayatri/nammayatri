@@ -18,17 +18,22 @@ spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl API.getDriverOfferBppBaseUrl
   describe "Successful flow, location updates" $
-    after_ (Utils.resetDriver arduDriver1) $ do
-      it "Testing success flow and location updates for short curvy route" $
-        defaultSuccessFlow 30 680 680 karnatakaLocationUpdates clients
-      it "Testing success flow and location updates for the route with far isolated point" $
-        defaultSuccessFlow 700 8000 8000 karnatakaRouteIsolatedPoint clients
-      it "Testing success flow and location updates with reversed points list" $
-        reversedPointsListSuccessFlow 700 8000 8000 karnatakaRouteIsolatedPoint clients
-      it "Testing success flow and location updates with outdated points" $
-        outdatedPointsSuccessFlow 700 7000 8000 karnatakaRouteIsolatedPoint clients
-      it "Testing success flow and location updates called multiple times at the same time " $
-        raceConditionSuccessFlow 700 8000 8000 karnatakaRouteIsolatedPoint clients
+    beforeAndAfter_
+      ( do
+          Utils.resetDriver arduDriver1
+          Utils.resetCustomer appRegistrationToken
+      )
+      $ do
+        it "Testing success flow and location updates for short curvy route" $
+          defaultSuccessFlow 30 680 680 karnatakaLocationUpdates clients
+        it "Testing success flow and location updates for the route with far isolated point" $
+          defaultSuccessFlow 700 8000 8000 karnatakaRouteIsolatedPoint clients
+        it "Testing success flow and location updates with reversed points list" $
+          reversedPointsListSuccessFlow 700 8000 8000 karnatakaRouteIsolatedPoint clients
+        it "Testing success flow and location updates with outdated points" $
+          outdatedPointsSuccessFlow 700 7000 8000 karnatakaRouteIsolatedPoint clients
+        it "Testing success flow and location updates called multiple times at the same time " $
+          raceConditionSuccessFlow 700 8000 8000 karnatakaRouteIsolatedPoint clients
 
 waitBetweenUpdates :: Int
 waitBetweenUpdates = 1e5 + 1e6 * fromIntegral timeBetweenLocationUpdates

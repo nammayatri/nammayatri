@@ -32,6 +32,7 @@ import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
+import SharedLogic.DriverPool (DriverPoolConfig)
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
 import Tools.Metrics
@@ -52,15 +53,13 @@ data AppCfg = AppCfg
     nwAddress :: BaseUrl,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
-    caseExpiry :: Maybe Seconds,
+    searchExpiry :: Maybe Seconds,
     exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
-    defaultRadiusOfSearch :: Meters,
-    driverPositionInfoExpiry :: Maybe Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
@@ -81,7 +80,8 @@ data AppCfg = AppCfg
     defaultRideTimeEstimatedThreshold :: Seconds,
     cacheConfig :: CacheConfig,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
-    driverLocationUpdateNotificationTemplate :: Text
+    driverLocationUpdateNotificationTemplate :: Text,
+    driverPoolCfg :: DriverPoolConfig
   }
   deriving (Generic, FromDhall)
 
@@ -95,13 +95,11 @@ data AppEnv = AppEnv
     nwAddress :: BaseUrl,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
-    caseExpiry :: Maybe Seconds,
+    searchExpiry :: Maybe Seconds,
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
-    defaultRadiusOfSearch :: Meters,
-    driverPositionInfoExpiry :: Maybe Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
@@ -130,7 +128,8 @@ data AppEnv = AppEnv
     defaultRideTimeEstimatedThreshold :: Seconds,
     cacheConfig :: CacheConfig,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
-    driverLocationUpdateNotificationTemplate :: Text
+    driverLocationUpdateNotificationTemplate :: Text,
+    driverPoolCfg :: DriverPoolConfig
   }
   deriving (Generic)
 

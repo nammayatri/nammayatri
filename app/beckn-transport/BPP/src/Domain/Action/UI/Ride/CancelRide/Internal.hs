@@ -8,19 +8,17 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
-import SharedLogic.DriverPool (recalculateDriverPool)
+import SharedLogic.DriverPool 
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as Person
@@ -36,7 +34,7 @@ cancelRideImpl ::
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    HasDriverPoolConfig r,
     CoreMetrics m
   ) =>
   Id SRide.Ride ->
@@ -50,10 +48,7 @@ cancelRideImpl rideId bookingCReason = do
     CQM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
   if isCancelledByDriver
-    then do
-      driverPool <- recalculateDriverPool booking
-      Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_REALLOCATION (Just booking.id)) driverPool
-      reallocateRideTransaction transporter.subscriberId booking.id ride bookingCReason
+    then reallocateRideTransaction transporter.subscriberId booking.id ride bookingCReason
     else cancelRideTransaction booking.id ride bookingCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   fork "cancelRide - Notify BAP" $ do

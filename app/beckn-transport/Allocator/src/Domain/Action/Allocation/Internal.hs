@@ -1,20 +1,55 @@
-module Domain.Action.Allocation.Internal where
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
+module Domain.Action.Allocation.Internal
+  ( getConfiguredNotificationTime,
+    getConfiguredAllocationTime,
+    getConfiguredReallocationsLimit,
+    getRequests,
+    assignDriver,
+    toRideRequest,
+    getCurrentNotifications,
+    cleanupOldNotifications,
+    sendNewRideNotifications,
+    sendRideNotAssignedNotification,
+    updateNotificationStatuses,
+    resetLastRejectionTimes,
+    getDriversWithNotification,
+    getTopDriversByIdleTime,
+    checkAvailability,
+    cancelBooking,
+    cleanupNotifications,
+    removeRequest,
+    allocNotifStatusToStorageStatus,
+    addAllocationRequest,
+    addNotificationStatuses,
+    addAvailableDriver,
+    logEvent,
+    logDriverEvents,
+    getBooking,
+    incrementTaskCounter,
+    incrementFailedTaskCounter,
+    putTaskDuration,
+    findAllocatorFCMConfigByMerchantId,
+    incrementPoolRadiusStep,
+    getNextDriverPoolBatch,
+    cleanupDriverPoolBatches,
+  )
+where
 
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis (HedisFlow)
+import Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Data.Text as T
-import Domain.Action.Allocation as Alloc
+import qualified Domain.Action.Allocation as Alloc
 import Domain.Types.AllocationEvent (AllocationEventType)
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.DriverInformation as SDriverInfo
-import Domain.Types.DriverPool
 import Domain.Types.Merchant
 import qualified Domain.Types.NotificationStatus as SNS
 import Domain.Types.Person (Driver)
@@ -27,6 +62,7 @@ import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.TransporterConfig
+import SharedLogic.DriverPool.Types
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.AllocationEvent (logAllocationEvent)
@@ -48,9 +84,6 @@ import qualified Tools.Metrics.AllocatorMetrics as TMetrics
 import Tools.Notifications
 import qualified Tools.Notifications as Notify
 
-getDriverSortMode :: Flow SortMode
-getDriverSortMode = asks (.defaultSortMode)
-
 getConfiguredNotificationTime :: Flow Seconds
 getConfiguredNotificationTime = asks (.driverNotificationExpiry)
 
@@ -60,13 +93,7 @@ getConfiguredAllocationTime = asks (.rideAllocationExpiry)
 getConfiguredReallocationsLimit :: Flow Int
 getConfiguredReallocationsLimit = asks (.reallocationsLimit)
 
-getDriverPool :: Id Booking -> Flow SortedDriverPool
-getDriverPool = DrPool.getDriverPool
-
-getDriverBatchSize :: Flow Int
-getDriverBatchSize = asks (.driverBatchSize)
-
-getRequests :: ShortId Subscriber -> Integer -> Flow [RideRequest]
+getRequests :: ShortId Subscriber -> Integer -> Flow [Alloc.RideRequest]
 getRequests subscriberId numRequests = do
   allRequests <- QRR.fetchOldest subscriberId numRequests
   let (errors, requests) =
@@ -176,7 +203,7 @@ toRideRequest req =
       SRR.CANCELLATION -> Right Alloc.Cancellation
       SRR.DRIVER_RESPONSE ->
         case req.info of
-          Just driverResponse -> Right . DriverResponse $ castDriverResponse driverResponse
+          Just driverResponse -> Right . Alloc.DriverResponse $ castDriverResponse driverResponse
           Nothing -> Left "Driver info is not present "
     castDriverResponse SRR.DriverResponse {..} = do
       let response = case status of
@@ -186,7 +213,7 @@ toRideRequest req =
 
 getCurrentNotifications ::
   Id Booking ->
-  Flow [CurrentNotification]
+  Flow [Alloc.CurrentNotification]
 getCurrentNotifications bookingId = do
   notificationStatuses <- QNS.findActiveNotificationByRBId bookingId
   pure $ map buildCurrentNotification notificationStatuses
@@ -225,7 +252,7 @@ sendRideNotAssignedNotification bookingId driverId = do
   fcmConfig <- findAllocatorFCMConfigByMerchantId person.merchantId
   notifyRideNotAssigned fcmConfig booking.id person.id person.deviceToken
 
-updateNotificationStatuses :: EsqDBFlow m r => Id Booking -> NotificationStatus -> NonEmpty (Id Driver) -> m ()
+updateNotificationStatuses :: EsqDBFlow m r => Id Booking -> Alloc.NotificationStatus -> NonEmpty (Id Driver) -> m ()
 updateNotificationStatuses bookingId status driverIds = do
   let storageStatus = allocNotifStatusToStorageStatus status
   Esq.runTransaction $ QNS.updateStatus bookingId storageStatus $ toList driverIds
@@ -233,24 +260,20 @@ updateNotificationStatuses bookingId status driverIds = do
 resetLastRejectionTimes :: EsqDBFlow m r => NonEmpty (Id Driver) -> m ()
 resetLastRejectionTimes driverIds = Esq.runTransaction . QDS.updateIdleTimes $ toList driverIds
 
-getAttemptedDrivers :: EsqDBFlow m r => Id Booking -> m [Id Driver]
-getAttemptedDrivers bookingId =
-  QNS.fetchAttemptedNotificationsByRBId bookingId <&> map (.driverId)
-
 getDriversWithNotification :: EsqDBFlow m r => m [Id Driver]
 getDriversWithNotification = QNS.fetchActiveNotifications <&> fmap (.driverId)
 
 getTopDriversByIdleTime :: EsqDBFlow m r => Int -> [Id Driver] -> m [Id Driver]
 getTopDriversByIdleTime = QDS.getTopDriversByIdleTime
 
-checkAvailability :: EsqDBFlow m r => SortedDriverPool -> m SortedDriverPool
+checkAvailability :: EsqDBFlow m r => [DriverPoolResult] -> m [DriverPoolResult]
 checkAvailability driverPool = do
-  let driverIds = getDriverIds driverPool
+  let driverIds = (.driverId) <$> driverPool
   driversInfo <- QDriverInfo.fetchAllAvailableByIds driverIds
   let availableDriverIds = map (cast . SDriverInfo.driverId) driversInfo
   -- availableDriverIds is part of driverPool, but isn't sorted by distance
   -- So we can use order that we have in sorted pool driverPool
-  pure $ filterDriverPool (`elem` availableDriverIds) driverPool
+  pure $ filter (\dpRes -> dpRes.driverId `elem` availableDriverIds) driverPool
 
 cancelBooking ::
   ( HasCacheConfig r,
@@ -371,3 +394,57 @@ findAllocatorFCMConfigByMerchantId :: (MonadFlow m, HasCacheConfig r, HedisFlow 
 findAllocatorFCMConfigByMerchantId merchantId = do
   fcmConfig <- findFCMConfigByMerchantId merchantId
   pure fcmConfig{FCM.fcmTokenKeyPrefix = "transporter-allocator"}
+
+poolBatchNumKey :: Id Booking -> Text
+poolBatchNumKey bookingId = "Allocator:PoolBatchNum:BookingId-" <> bookingId.getId
+
+poolRadiusStepKey :: Id Booking -> Text
+poolRadiusStepKey bookingId = "Allocator:PoolRadiusStep:BookingId-" <> bookingId.getId
+
+cleanupDriverPoolBatches ::
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    HedisFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  Id Booking ->
+  m ()
+cleanupDriverPoolBatches bookingId = do
+  DrPool.cleanDriverPoolBatches bookingId
+  Redis.del (poolRadiusStepKey bookingId)
+  Redis.del (poolBatchNumKey bookingId)
+
+getNextDriverPoolBatch :: Id Booking -> Flow [DriverPoolResult]
+getNextDriverPoolBatch bookingId = do
+  batchNum <- getPoolBatchNum
+  radiusStep <- getPoolRadiusStep
+  DrPool.getDriverPoolBatch bookingId radiusStep batchNum
+  where
+    getPoolBatchNum :: (CacheFlow m r) => m PoolBatchNum
+    getPoolBatchNum = do
+      res <- Redis.get (poolBatchNumKey bookingId)
+      res' <- case res of
+        Just i -> return i
+        Nothing -> do
+          let expTime = 600
+          Redis.setExp (poolBatchNumKey bookingId) (0 :: Integer) expTime
+          return 0
+      void $ Redis.incr (poolBatchNumKey bookingId)
+      return res'
+
+    getPoolRadiusStep :: (CacheFlow m r) => m PoolRadiusStep
+    getPoolRadiusStep = do
+      res <- Redis.get (poolRadiusStepKey bookingId)
+      case res of
+        Just i -> return i
+        Nothing -> do
+          let expTime = 600
+          Redis.setExp (poolRadiusStepKey bookingId) (0 :: Integer) expTime
+          return 0
+
+incrementPoolRadiusStep :: (CacheFlow m r) => Id Booking -> m ()
+incrementPoolRadiusStep bookingId = do
+  Redis.del (poolBatchNumKey bookingId)
+  void $ Redis.incr (poolRadiusStepKey bookingId)

@@ -13,15 +13,17 @@ import Utils
 spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl API.getTransporterBaseUrl
-  describe "Testing App and Transporter APIs" $ do
-    it "Testing API flow for ride cancelled by App" . withBecknClients clients $ do
+  beforeAndAfter_
+    ( do
+        Utils.resetDriver transporterDriver1
+        Utils.resetCustomer appRegistrationToken
+    )
+    $ it "Testing API flow for ride cancelled by App" . withBecknClients clients $ do
       let (origin, _destination, searchReq_) = route1SearchRequest
       Utils.setupDriver transporterDriver1 origin
 
-      scRes <- Utils.search'Confirm appRegistrationToken transporterDriver1 searchReq_
-      let bBookingId = scRes.bapBookingId
+      Utils.search'Confirm appRegistrationToken searchReq_ \scRes -> do
+        let bBookingId = scRes.bapBookingId
 
-      -- cancel request initiated by App
-      Utils.cancelRideByApp appRegistrationToken bBookingId
-
-      liftIO $ Utils.resetDriver transporterDriver1
+        -- cancel request initiated by App
+        Utils.cancelRideByApp appRegistrationToken bBookingId

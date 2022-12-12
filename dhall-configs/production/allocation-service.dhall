@@ -11,10 +11,8 @@ let shards =
       ]
 
 in  { appCfg
-    , defaultSortMode = SortMode.ETA
     , driverNotificationExpiry = +25
     , rideAllocationExpiry = +120
-    , driverBatchSize = +5
     , requestsNumPerIteration = +50
     , processDelay = +1000
     , shards
@@ -28,10 +26,9 @@ in  { appCfg
         appCfg.loggerConfig // { logFilePath = "/tmp/allocation-service.log" }
     , kafkaProducerCfg = appCfg.kafkaProducerCfg
     , nwAddress = appCfg.nwAddress
-    , defaultRadiusOfSearch = appCfg.defaultRadiusOfSearch
-    , driverPositionInfoExpiry = appCfg.driverPositionInfoExpiry
     , graceTerminationPeriod = appCfg.graceTerminationPeriod
     , encTools = appCfg.encTools
     , selfUIUrl = appCfg.selfUIUrl
     , cacheConfig = appCfg.cacheConfig
+    , driverPoolCfg = appCfg.driverPoolCfg
     }

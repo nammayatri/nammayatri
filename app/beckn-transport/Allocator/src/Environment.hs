@@ -15,10 +15,10 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
-import Domain.Action.Allocation (SortMode)
 import Domain.Types.Merchant (Subscriber)
 import qualified "beckn-transport" Environment as App
 import EulerHS.Prelude
+import SharedLogic.DriverPool (DriverPoolConfig)
 import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
 import Tools.Streaming.Kafka
@@ -37,8 +37,6 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     driverNotificationExpiry :: Seconds,
     rideAllocationExpiry :: Seconds,
-    defaultSortMode :: SortMode,
-    driverBatchSize :: Int,
     reallocationsLimit :: Int,
     requestsNumPerIteration :: Integer,
     processDelay :: Milliseconds,
@@ -46,12 +44,11 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
     nwAddress :: BaseUrl,
-    defaultRadiusOfSearch :: Meters,
-    driverPositionInfoExpiry :: Maybe Seconds,
     graceTerminationPeriod :: Seconds,
     encTools :: EncTools,
     selfUIUrl :: BaseUrl,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    driverPoolCfg :: DriverPoolConfig
   }
   deriving (Generic, FromDhall)
 
@@ -60,16 +57,12 @@ data AppEnv = AppEnv
     httpClientOptions :: HttpClientOptions,
     driverNotificationExpiry :: Seconds,
     rideAllocationExpiry :: Seconds,
-    defaultSortMode :: SortMode,
-    driverBatchSize :: Int,
     reallocationsLimit :: Int,
     requestsNumPerIteration :: Integer,
     processDelay :: Milliseconds,
     shards :: Shards,
     loggerConfig :: LoggerConfig,
     nwAddress :: BaseUrl,
-    defaultRadiusOfSearch :: Meters,
-    driverPositionInfoExpiry :: Maybe Seconds,
     graceTerminationPeriod :: Seconds,
     encTools :: EncTools,
     esqDBEnv :: EsqDBEnv,
@@ -81,7 +74,8 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
     selfUIUrl :: BaseUrl,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    driverPoolCfg :: DriverPoolConfig
   }
   deriving (Generic)
 

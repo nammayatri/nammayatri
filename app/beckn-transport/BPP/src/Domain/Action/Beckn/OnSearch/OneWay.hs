@@ -44,7 +44,7 @@ onSearchCallback ::
     EncFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    DrPool.HasDriverPoolConfig r,
     HasFlowEnv m r '["driverEstimatedPickupDuration" ::: Seconds],
     HasBPPMetrics m r,
     CoreMetrics m
@@ -57,7 +57,7 @@ onSearchCallback ::
   Text ->
   m [QuoteInfo]
 onSearchCallback searchRequest transporterId now fromLocation toLocation transactionId = do
-  pool <- DrPool.calculateDriverPool fromLocation transporterId Nothing SFP.ONE_WAY
+  pool <- DrPool.calculateDriverPool fromLocation transporterId Nothing SFP.ONE_WAY 0
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId
       ||+ " with drivers " +| T.intercalate ", " (getId . (.driverId) <$> pool) |+ ""

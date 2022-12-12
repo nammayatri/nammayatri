@@ -10,13 +10,13 @@ import qualified Data.Time.Calendar.OrdinalDate as Time
 import Domain.Action.Allocation as Alloc
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.BookingLocation as Loc
-import Domain.Types.DriverPool
 import Domain.Types.Merchant
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.RideRequest as SRR
 import qualified Domain.Types.Vehicle as Veh
 import EulerHS.Prelude hiding (id)
 import Servant.Client
+import SharedLogic.DriverPool.Types
 import Test.Tasty.HUnit
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
@@ -140,7 +140,7 @@ addBooking Repository {..} bookingId reallocationsCount = do
   modifyIORef bookingsVar $ Map.insert bookingId booking
 
 updateBooking :: Repository -> Id SRB.Booking -> SRB.BookingStatus -> IO ()
-updateBooking Repository {..} bookingId status = do
+updateBooking Repository {..} bookingId status =
   modifyIORef bookingsVar $ Map.adjust (\booking -> booking{status = status}) bookingId
 
 addRequest :: RequestData -> Repository -> Id SRB.Booking -> IO ()
@@ -161,30 +161,21 @@ addResponse repository@Repository {..} bookingId driverId status = do
   let driverResponse = DriverResponseType driverId status
   addRequest (DriverResponse driverResponse) repository bookingId
 
-addDriverPool :: Repository -> Map (Id SRB.Booking) [Id Driver] -> IO ()
-addDriverPool Repository {..} driversMap = do
-  let driverPool = mkDefaultDriverPool <$> driversMap
-  writeIORef driverPoolVar driverPool
-
-addSortedDriverPool :: Repository -> Map (Id SRB.Booking) SortedDriverPool -> IO ()
-addSortedDriverPool Repository {..} driverPool = do
-  writeIORef driverPoolVar driverPool
-
-mkDefaultDriverPoolItem :: Id Driver -> DriverPoolItem
-mkDefaultDriverPoolItem driverId =
-  DriverPoolItem
-    { driverId,
-      distanceToPickup = 100
+mkDriverPoolResult :: Id Driver -> DriverPoolResult
+mkDriverPoolResult driverId =
+  DriverPoolResult
+    { driverId = driverId,
+      distanceToPickup = 100,
+      durationToPickup = 600,
+      variant = Veh.SUV,
+      lat = 0,
+      lon = 0
     }
 
-mkDefaultDriverPool :: [Id Driver] -> SortedDriverPool
-mkDefaultDriverPool driverIds = mkSortedDriverPool $ mkDefaultDriverPoolItem <$> driverIds
-
-addDriverInPool :: Repository -> Id SRB.Booking -> Id Driver -> IO ()
-addDriverInPool Repository {..} bookingId driverId = do
-  driversPool <- readIORef driverPoolVar
-  let newDriversPool = Map.adjust (addItemToPool $ mkDefaultDriverPoolItem driverId) bookingId driversPool
-  writeIORef driverPoolVar newDriversPool
+addDriverPool :: Repository -> Map (Id SRB.Booking, PoolRadiusStep, PoolBatchNum) [Id Driver] -> IO ()
+addDriverPool Repository {..} driversMap = do
+  let driverPool = map mkDriverPoolResult <$> driversMap
+  writeIORef driverPoolVar driverPool
 
 checkRideStatus :: Repository -> Id SRB.Booking -> SRB.BookingStatus -> IO ()
 checkRideStatus Repository {..} bookingId expectedStatus = do
@@ -238,20 +229,38 @@ toCurrentNotification ((_, driverId), (_, expiryTime)) =
 handle :: Repository -> ServiceHandle IO
 handle repository@Repository {..} =
   ServiceHandle
-    { getDriverSortMode = pure ETA,
+    { getConfiguredNotificationTime = pure notificationTime,
       getConfiguredAllocationTime = pure allocationTime,
-      getConfiguredNotificationTime = pure notificationTime,
       getConfiguredReallocationsLimit = pure reallocationsLimit,
-      getDriverBatchSize = pure 5,
       getRequests = \_ numRides -> do
         rideRequests <- readIORef rideRequestsVar
         let requests = Map.elems rideRequests
         pure $ take (fromIntegral numRides) requests,
-      getDriverPool = \bookingId -> do
+      getNextDriverPoolBatch = \bookingId -> do
+        bnmap <- readIORef batchNumVar
+        let bnnum = fromMaybe 0 $ Map.lookup bookingId bnmap
+        let newBnNum = bnnum + 1
+        writeIORef batchNumVar $ Map.insert bookingId newBnNum bnmap
+
+        rsmap <- readIORef radiusStepVar
+        let rsnum = fromMaybe 0 $ Map.lookup bookingId rsmap
+
         poolMap <- readIORef driverPoolVar
-        let pool = fromMaybe (mkSortedDriverPool []) $ Map.lookup bookingId poolMap
+        let pool = fromMaybe [] $ Map.lookup (bookingId, rsnum, bnnum) poolMap
         pure pool,
+      cleanupDriverPoolBatches = \bookingId -> do
+        rsmap <- readIORef radiusStepVar
+        writeIORef radiusStepVar $ Map.delete bookingId rsmap
+        bnmap <- readIORef batchNumVar
+        writeIORef batchNumVar $ Map.delete bookingId bnmap, -- it doesn't clean batches Map, which is not equals to main code
       sendNewRideNotifications = \_ _ -> pure (),
+      incrementPoolRadiusStep = \bookingId -> do
+        rsmap <- readIORef radiusStepVar
+        let num = fromMaybe 0 $ Map.lookup bookingId rsmap
+        let newNum = num + 1
+        writeIORef radiusStepVar $ Map.insert bookingId newNum rsmap
+        bnmap <- readIORef batchNumVar
+        writeIORef batchNumVar $ Map.delete bookingId bnmap,
       getCurrentNotifications = \rideId -> do
         notificationStatus <- readIORef notificationStatusVar
         let filtered =
@@ -274,13 +283,6 @@ handle repository@Repository {..} =
           \notificationStatuses ->
             foldl' (updateNotification rideId nStatus) notificationStatuses driverIds,
       resetLastRejectionTimes = \_ -> pure (),
-      getAttemptedDrivers = \rideId -> do
-        notificationStatus <- readIORef notificationStatusVar
-        let filtered =
-              fmap snd $
-                Map.keys $
-                  Map.filterWithKey (attemptedNotification rideId) notificationStatus
-        pure filtered,
       getDriversWithNotification = do
         notificationStatus <- readIORef notificationStatusVar
         let filtered = fmap snd $ Map.keys $ Map.filter (\(status, _) -> status == Notified) notificationStatus
@@ -299,8 +301,7 @@ handle repository@Repository {..} =
       getTopDriversByIdleTime = \count driverIds -> pure $ take count driverIds,
       checkAvailability = \driversPool -> do
         onRide <- readIORef onRideVar
-        -- trying to break sorting elements by distance
-        pure (mkSortedDriverPool . sortBy (compare `on` (.driverId)) . filter (\item -> item.driverId `notElem` onRide) . getSortedDriverPool $ driversPool),
+        pure $ filter (\item -> item.driverId `notElem` onRide) driversPool,
       sendRideNotAssignedNotification = \_ _ -> pure (),
       removeRequest = modifyIORef rideRequestsVar . Map.delete,
       addAllocationRequest = \_ -> addRequest Allocation repository,
@@ -322,7 +323,9 @@ handle repository@Repository {..} =
 
 data Repository = Repository
   { currentIdVar :: IORef Int,
-    driverPoolVar :: IORef (Map (Id SRB.Booking) SortedDriverPool),
+    batchNumVar :: IORef (Map (Id SRB.Booking) PoolBatchNum),
+    radiusStepVar :: IORef (Map (Id SRB.Booking) PoolRadiusStep),
+    driverPoolVar :: IORef (Map (Id SRB.Booking, PoolRadiusStep, PoolBatchNum) [DriverPoolResult]),
     bookingsVar :: IORef (Map (Id SRB.Booking) SRB.Booking),
     rideRequestsVar :: IORef (Map (Id SRR.RideRequest) RideRequest),
     notificationStatusVar :: IORef NotificationStatusMap,
@@ -330,9 +333,32 @@ data Repository = Repository
     onRideVar :: IORef [Id Driver]
   }
 
+printRepContent :: Repository -> IO ()
+printRepContent Repository {..} = do
+  currentId <- readIORef currentIdVar
+  print @Text $ "currentIdVar: " <> show currentId
+  batchNum <- readIORef batchNumVar
+  print @Text $ "batchNumVar: " <> show batchNum
+  radiusStep <- readIORef radiusStepVar
+  print @Text $ "radiusStepVar: " <> show radiusStep
+  driverPool <- readIORef driverPoolVar
+  print @Text $ "driverPoolVar: " <> show driverPool
+  bookings <- readIORef bookingsVar
+  print @Text $ "bookingsVar: " <> show (bookings <&> (.id))
+  rideRequests <- readIORef rideRequestsVar
+  print @Text $ "rideRequestsVar: " <> show rideRequests
+  notificationStatus <- readIORef notificationStatusVar
+  print @Text $ "notificationStatusVar: " <> show notificationStatus
+  assignments <- readIORef assignmentsVar
+  print @Text $ "assignmentsVar: " <> show assignments
+  onRide <- readIORef onRideVar
+  print @Text $ "onRideVar: " <> show onRide
+
 initRepository :: IO Repository
 initRepository = do
   initCurrentId <- newIORef 1
+  initBatchNum <- newIORef Map.empty
+  initRadiusStep <- newIORef Map.empty
   initDriverPool <- newIORef Map.empty
   initRides <- newIORef Map.empty
   initRideRequest <- newIORef Map.empty
@@ -342,6 +368,8 @@ initRepository = do
   let repository =
         Repository
           initCurrentId
+          initBatchNum
+          initRadiusStep
           initDriverPool
           initRides
           initRideRequest

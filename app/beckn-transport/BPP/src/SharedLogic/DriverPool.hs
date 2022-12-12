@@ -1,63 +1,60 @@
 module SharedLogic.DriverPool
-  ( DriverPoolResult (..),
-    calculateDriverPool,
-    recalculateDriverPool,
-    getDriverPool,
+  ( calculateDriverPool,
+    getDriverPoolBatch,
+    cleanDriverPoolBatches,
+    module Reexport,
   )
 where
 
+import Beckn.Prelude
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import qualified Data.List.Extra as List
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Booking as SRB
-import Domain.Types.DriverPool
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Person (Driver)
 import qualified Domain.Types.TransporterConfig as STConf
 import qualified Domain.Types.Vehicle as SV
-import qualified Domain.Types.Vehicle as Vehicle
-import EulerHS.Prelude hiding (id)
+import Safe (atMay)
+import SharedLogic.DriverPool.Config as Reexport
+import SharedLogic.DriverPool.Types as Reexport
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.Maps as Google
 import qualified Tools.Maps as Maps
 import Tools.Metrics
 
-data DriverPoolResult = DriverPoolResult
-  { driverId :: Id Driver,
-    distanceToPickup :: Meters,
-    durationToPickup :: Seconds,
-    variant :: Vehicle.Variant,
-    lat :: Double,
-    lon :: Double
-  }
-  deriving (Generic, HasCoordinates)
-
-mkDriverPoolItem :: DriverPoolResult -> DriverPoolItem
-mkDriverPoolItem DriverPoolResult {..} = DriverPoolItem {..}
-
 driverPoolKey :: Id SRB.Booking -> Text
-driverPoolKey = ("beckn:driverpool:" <>) . getId
+driverPoolKey bookingId = "DriverPool:BookingId-" <> bookingId.getId
 
-getDriverPool ::
+driverPoolBatchKey :: Id SRB.Booking -> PoolRadiusStep -> PoolBatchNum -> Text
+driverPoolBatchKey bookingId radiusStep batchNum = driverPoolKey bookingId <> ":RadiusStep-" <> show radiusStep <> ":BatchNum-" <> show batchNum
+
+getDriverPoolBatch ::
   ( EncFlow m r,
     HasCacheConfig r,
     CoreMetrics m,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
+    HasDriverPoolConfig r
   ) =>
   Id SRB.Booking ->
-  m SortedDriverPool
-getDriverPool bookingId =
-  getKeyRedis (driverPoolKey bookingId)
-    >>= maybe calcDriverPool (pure . mkSortedDriverPool)
+  PoolRadiusStep ->
+  PoolBatchNum ->
+  m [DriverPoolResult]
+getDriverPoolBatch bookingId radiusStep batchNum = do
+  Redis.get (driverPoolBatchKey bookingId batchNum radiusStep)
+    >>= flip maybe pure do
+      driverPool <- calcDriverPool
+      let sortedDriverPool = sortFunction driverPool
+      driverPoolBatches <- splitToBatches sortedDriverPool
+      cacheBatches driverPoolBatches
+      return $ fromMaybe [] $ driverPoolBatches `atMay` fromIntegral batchNum
   where
     calcDriverPool = do
       booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
@@ -66,43 +63,33 @@ getDriverPool bookingId =
       let pickupLoc = booking.fromLocation
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
           fareProductType = SRB.getFareProductType booking.bookingDetails
-      mkSortedDriverPool . map mkDriverPoolItem <$> calculateDriverPool pickupLatLong merchantId (Just vehicleVariant) fareProductType
+      calculateDriverPool pickupLatLong merchantId (Just vehicleVariant) fareProductType radiusStep
+    splitToBatches driverPool = do
+      batchSize <- asks (.driverPoolCfg.driverBatchSize)
+      return $ List.chunksOf batchSize driverPool
+    cacheBatches =
+      void . flip foldlM 0 \i batch -> do
+        Redis.setExp (driverPoolBatchKey bookingId i radiusStep) batch (60 * 10)
+        return (i + 1)
+    sortFunction driverPool =
+      driverPool -- it's random order by default
 
-    getKeyRedis :: Redis.HedisFlow m r => Text -> m (Maybe [DriverPoolItem])
-    getKeyRedis = Redis.get
-
-recalculateDriverPool ::
+cleanDriverPoolBatches ::
   ( EncFlow m r,
-    HasCacheConfig r,
-    EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    CoreMetrics m
+    CoreMetrics m,
+    Redis.HedisFlow m r
   ) =>
-  SRB.Booking ->
-  m [DriverPoolResult]
-recalculateDriverPool booking = do
-  let pickupLoc = booking.fromLocation
-      transporterId = booking.providerId
-      vehicleVariant = booking.vehicleVariant
-      fareProductType = SRB.getFareProductType booking.bookingDetails
-  let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-  driverPoolResults <- calculateDriverPool pickupLatLong transporterId (Just vehicleVariant) fareProductType
-  cancelledDrivers <- QRide.findAllCancelledByRBId booking.id <&> map (cast . (.driverId))
-  let filteredDriverPoolResults = [x | x <- driverPoolResults, x.driverId `notElem` cancelledDrivers]
-      filteredDriverPool = map mkDriverPoolItem filteredDriverPoolResults
-  setExRedis (driverPoolKey booking.id) filteredDriverPool (60 * 10)
-  return filteredDriverPoolResults
-  where
-    setExRedis :: Redis.HedisFlow m r => Text -> [DriverPoolItem] -> Int -> m ()
-    setExRedis = Redis.setExp
+  Id SRB.Booking ->
+  m ()
+cleanDriverPoolBatches bookingId =
+  Redis.delByPattern (driverPoolKey bookingId <> "*")
 
 calculateDriverPool ::
   ( EncFlow m r,
     HasCacheConfig r,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
-    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    HasDriverPoolConfig r,
     CoreMetrics m,
     HasCoordinates a
   ) =>
@@ -110,11 +97,12 @@ calculateDriverPool ::
   Id DM.Merchant ->
   Maybe SV.Variant ->
   SFP.FareProductType ->
+  PoolRadiusStep ->
   m [DriverPoolResult]
-calculateDriverPool pickup merchantId variant fareProductType = do
+calculateDriverPool pickup merchantId variant fareProductType radiusStep = do
   let pickupLatLong = getCoordinates pickup
   radius <- getRadius
-  mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
+  mbDriverPositionInfoExpiry <- asks (.driverPoolCfg.driverPositionInfoExpiry)
   nearestDriversResult <-
     measuringDurationToLog INFO "calculateDriverPool" $
       QP.getNearestDrivers
@@ -130,13 +118,26 @@ calculateDriverPool pickup merchantId variant fareProductType = do
       approxDriverPool' <- buildDriverPoolResults merchantId pickupLatLong (a :| xs)
       filterOutDriversWithDistanceAboveThreshold radius approxDriverPool'
   where
-    getRadius =
-      QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "radius")
-        >>= maybe
-          (fromIntegral <$> asks (.defaultRadiusOfSearch))
-          radiusFromTransporterConfig
+    getRadius = do
+      minRadius <-
+        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "min_radius")
+          >>= maybe
+            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
+            radiusFromTransporterConfig
+      maxRadius <-
+        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "max_radius")
+          >>= maybe
+            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
+            radiusFromTransporterConfig
+      radiusStepSize <-
+        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "radius_step_size")
+          >>= maybe
+            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
+            radiusFromTransporterConfig
+      return $ min (minRadius + radiusStepSize * radiusStep) maxRadius
+
     radiusFromTransporterConfig conf =
-      fromMaybeM (InternalError "The radius is not a number.")
+      fromMaybeM (InternalError "Value is not a number.")
         . readMaybe
         . toString
         $ conf.value

@@ -13,6 +13,7 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
+import SharedLogic.DriverPool (HasDriverPoolConfig)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFarePolicy
 import qualified Storage.Queries.Quote as QQuote
@@ -36,7 +37,7 @@ onSearchCallback ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    HasDriverPoolConfig r,
     HasBPPMetrics m r,
     CoreMetrics m
   ) =>

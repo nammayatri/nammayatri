@@ -32,9 +32,9 @@ import Mobility.AppBackend.Fixtures
 import Servant.Client
 import qualified "app-backend" Storage.Queries.Booking as BQRB
 import qualified "driver-offer-bpp" Storage.Queries.Booking as TQRB
-import qualified "driver-offer-bpp" Storage.Queries.DriverInformation as DriverInfo
 import qualified "driver-offer-bpp" Storage.Queries.DriverInformation as QTDrInfo
 import "driver-offer-bpp" Storage.Queries.DriverLocation
+import qualified Storage.Queries.DriverQuote as TDQ
 import qualified "driver-offer-bpp" Storage.Queries.Ride as TQRide
 import qualified "driver-offer-bpp" Storage.Queries.SearchRequest as QSReq
 import Utils
@@ -108,12 +108,15 @@ setupDriver driver initialPoint = do
 resetDriver :: DriverTestData -> IO ()
 resetDriver driver = runARDUFlow "" $ do
   rides <- TQRide.findAllByDriverId (cast driver.driverId) Nothing Nothing (Just True)
+  activeQuotes <- TDQ.findActiveQuotesByDriverId (cast driver.driverId) 99999
   Esq.runTransaction $ do
     void . forM rides $ \(ride, booking) -> do
       TQRide.updateStatus ride.id TRide.CANCELLED
       TQRB.updateStatus booking.id TRB.CANCELLED
-    DriverInfo.updateActivity (cast driver.driverId) False
-    DriverInfo.updateOnRide (cast driver.driverId) False
+    void . forM activeQuotes $ \activeQuote ->
+      TDQ.setInactiveByRequestId activeQuote.searchRequestId
+    QTDrInfo.updateActivity (cast driver.driverId) False
+    QTDrInfo.updateOnRide (cast driver.driverId) False
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)

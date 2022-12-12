@@ -95,8 +95,7 @@ specs' trees = do
     allServers =
       [ Allocator.runAllocator \cfg ->
           cfg & hideLogging
-            & #driverNotificationExpiry .~ 18
-            & #rideAllocationExpiry .~ 18,
+            & #driverNotificationExpiry .~ 18,
         DriverHC.runDriverHealthcheck hideLogging,
         Gateway.runGateway hideLogging,
         do

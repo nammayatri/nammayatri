@@ -7,6 +7,7 @@ import Domain.Action.Allocation
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.Person (Driver)
 import EulerHS.Prelude hiding (id)
+import SharedLogic.DriverPool.Types
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -22,8 +23,8 @@ driverPool1 = [Id "driver01", Id "driver02"]
 driverPool2 :: [Id Driver]
 driverPool2 = [Id "driver01", Id "driver03"]
 
-driverPoolPerRide :: Map (Id SRB.Booking) [Id Driver]
-driverPoolPerRide = Map.fromList [(booking01Id, driverPool1), (booking02Id, driverPool2)]
+driverPoolPerRide :: Map (Id SRB.Booking, PoolRadiusStep, PoolBatchNum) [Id Driver]
+driverPoolPerRide = Map.fromList [((booking01Id, 0, 0), driverPool1), ((booking02Id, 0, 0), driverPool2)]
 
 reassignmentRide :: TestTree
 reassignmentRide = testCase "Reassignment booking after cancellation" $ do
@@ -34,7 +35,7 @@ reassignmentRide = testCase "Reassignment booking after cancellation" $ do
   void $ process (handle r) org1 numRequestsToProcess
   addResponse r booking01Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
-  addRequest Cancellation r booking01Id
+  addRequest Cancellation r booking01Id --this won't cancell assigned ride, this request'll be skipped by allocator
   void $ process (handle r) org1 numRequestsToProcess
   updateBooking r booking01Id SRB.AWAITING_REASSIGNMENT
   addRequest Allocation r booking01Id

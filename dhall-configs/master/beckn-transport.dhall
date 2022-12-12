@@ -69,6 +69,12 @@ let kafkaProducerCfg =
 
 let cacheConfig = { configsExpTime = +86400 }
 
+let driverPoolCfg = {
+      defaultRadiusOfSearch = +5000
+      , driverPositionInfoExpiry = Some +600
+      , driverBatchSize = +5
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -84,7 +90,7 @@ in  { esqDBCfg
     , nwAddress = "https://api.sandbox.beckn.juspay.in/dev/bpp/cab/v1"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
-    , caseExpiry = Some +7200
+    , searchExpiry = Some +7200
     , exotelCfg = Some common.exotelCfg
     , migrationPath = None Text
     , autoMigrate = common.autoMigrate
@@ -92,8 +98,6 @@ in  { esqDBCfg
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/beckn-transport.log" }
     , graceTerminationPeriod = +90
-    , defaultRadiusOfSearch = +5000
-    , driverPositionInfoExpiry = Some +600
     , apiRateLimitOptions
     , httpClientOptions = common.httpClientOptions
     , authTokenCacheExpiry = +600
@@ -116,4 +120,5 @@ in  { esqDBCfg
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
+    , driverPoolCfg = driverPoolCfg
     }

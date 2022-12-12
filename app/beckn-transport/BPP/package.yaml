@@ -80,6 +80,8 @@ dependencies:
   - string-conversions
   - either
   - text-conversions
+  - safe
+  - extra
   - dashboard-bpp-helper-api
   - scheduler
 

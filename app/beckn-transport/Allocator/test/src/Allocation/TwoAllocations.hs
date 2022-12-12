@@ -20,7 +20,7 @@ twoAllocations = testCase "Two allocations" $ do
   r@Repository {..} <- initRepository
   let driverPool1 = [Id "driver01", Id "driver02", Id "driver03"]
       driverPool2 = [Id "driver05", Id "driver07", Id "driver08"]
-      driverPoolPerRide = Map.fromList [(booking01Id, driverPool1), (booking02Id, driverPool2)]
+      driverPoolPerRide = Map.fromList [((booking01Id, 0, 0), driverPool1), ((booking02Id, 0, 0), driverPool2)]
   addBooking r booking01Id 0
   addBooking r booking02Id 0
   addDriverPool r driverPoolPerRide

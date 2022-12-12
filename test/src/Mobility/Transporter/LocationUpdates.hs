@@ -20,17 +20,23 @@ import Utils
 spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
-  describe "Testing location updates (these tests pass only when the real google maps api key is supplied)" $ do
-    it "Testing location updates flow for short curvy route" $
-      defaultSuccessFlow 10 680 680 locationUpdatesRoute1 clients
-    it "Testing location updates for the route with far isolated point" $
-      defaultSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
-    it "Testing location updates for the route with reversed points list" $
-      revertedPointsListSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
-    it "Testing success flow and location updates with outdated points" $
-      outdatedPointsSuccessFlow 800 3768 8350 locationUpdatesIsolatedPoint clients
-    it "Testing success flow and location updates called multiple times at the same time " $
-      raceConditionSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+  describe "Testing location updates (these tests pass only when the real google maps api key is supplied)"
+    . beforeAndAfter_
+      ( do
+          Utils.resetDriver transporterDriver1
+          Utils.resetCustomer appRegistrationToken
+      )
+    $ do
+      it "Testing location updates flow for short curvy route" $
+        defaultSuccessFlow 10 680 680 locationUpdatesRoute1 clients
+      it "Testing location updates for the route with far isolated point" $
+        defaultSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+      it "Testing location updates for the route with reversed points list" $
+        revertedPointsListSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
+      it "Testing success flow and location updates with outdated points" $
+        outdatedPointsSuccessFlow 800 3768 8350 locationUpdatesIsolatedPoint clients
+      it "Testing success flow and location updates called multiple times at the same time " $
+        raceConditionSuccessFlow 800 8350 8350 locationUpdatesIsolatedPoint clients
 
 defaultSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
 defaultSuccessFlow eps distance chargeableDistance updates clients = withBecknClients clients $ do
@@ -77,34 +83,35 @@ successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates lo
 
   Utils.setupDriver transporterDriver1 origin
 
-  scRes <- Utils.search'Confirm appRegistrationToken transporterDriver1 searchReq_
+  Utils.search'Confirm appRegistrationToken searchReq_ \scRes -> do
+    let tBooking = scRes.bppBooking :: TRB.Booking
+        bBookingId = scRes.bapBookingId
 
-  let tBooking = scRes.bppBooking :: TRB.Booking
-      bBookingId = scRes.bapBookingId
+    void $ Utils.getRideInfo transporterDriver1 tBooking.id
 
-  -- Driver Accepts a ride
-  tRide <- Utils.acceptRide transporterDriver1 tBooking
+    -- Driver Accepts a ride
+    tRide <- Utils.acceptRide transporterDriver1 tBooking
 
-  let bppRideId = tRide.id
+    let bppRideId = tRide.id
 
-  -- we need to update location just before we start ride
-  updReq <- liftIO $ buildUpdateLocationRequest $ origin :| []
-  Utils.updateLocation transporterDriver1 updReq
+    -- we need to update location just before we start ride
+    updReq <- liftIO $ buildUpdateLocationRequest $ origin :| []
+    Utils.updateLocation transporterDriver1 updReq
 
-  --
-  Utils.startRide appRegistrationToken transporterDriver1 origin tRide bBookingId
+    --
+    Utils.startRide appRegistrationToken transporterDriver1 origin tRide bBookingId
 
-  liftIO $ threadDelay waitBetweenUpdates
-  locationUpdatesFunc
+    liftIO $ threadDelay waitBetweenUpdates
+    locationUpdatesFunc
 
-  ----
-  completedRideId <- Utils.endRide appRegistrationToken transporterDriver1 destination tRide bBookingId
+    ----
+    completedRideId <- Utils.endRide appRegistrationToken transporterDriver1 destination tRide bBookingId
 
-  tRide' <- Utils.getBPPRideById bppRideId
-  tRide'.traveledDistance `shouldSatisfy` equalsEps (realToFrac eps) distance
-  tRide'.chargeableDistance `shouldSatisfy` (equalsEps (roundToIntegral eps) chargeableDistance . fromJust)
+    tRide' <- Utils.getBPPRideById bppRideId
+    tRide'.traveledDistance `shouldSatisfy` equalsEps (realToFrac eps) distance
+    tRide'.chargeableDistance `shouldSatisfy` (equalsEps (roundToIntegral eps) chargeableDistance . fromJust)
 
-  -- Leave feedback
-  void . callBAP $ callAppFeedback 5 completedRideId
+    -- Leave feedback
+    void . callBAP $ callAppFeedback 5 completedRideId
 
-  liftIO $ Utils.resetDriver transporterDriver1
+    liftIO $ Utils.resetDriver transporterDriver1

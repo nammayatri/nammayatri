@@ -16,9 +16,14 @@ spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl API.getDriverOfferBppBaseUrl
   describe "Driver offering quote twice immediately" $
-    after_ (mapM_ Utils.resetDriver [arduDriver1, arduDriver2]) $ do
-      it "Should throw an error: found active quotes" $
-        driverOffersTwice clients
+    beforeAndAfter_
+      ( do
+          mapM_ Utils.resetDriver [arduDriver1, arduDriver2]
+          Utils.resetCustomer appRegistrationToken
+      )
+      $ do
+        it "Should throw an error: found active quotes" $
+          driverOffersTwice clients
 
 {-
   it "Should throw an error: driver on ride" $

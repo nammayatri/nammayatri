@@ -49,7 +49,10 @@ cradle:
       component: "beckn-transport-allocator:lib"
 
     - path: "app/beckn-transport/Allocator/server/Main.hs"
-      component: "beckn-transport-allocator:exe:beckn-transport-btm-exe"
+      component: "beckn-transport-allocator:exe:beckn-transport-allocator-exe"
+
+    - path: "app/beckn-transport/Allocator/test/src"
+      component: "beckn-transport-allocator:test:beckn-transport-allocator-tests"
 
     - path: "app/beckn-transport/Scheduler/src"
       component: "beckn-transport-scheduler:lib"

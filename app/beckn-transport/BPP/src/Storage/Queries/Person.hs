@@ -414,7 +414,7 @@ getNearestDrivers LatLong {..} radius merchantId mbPoolVariant fareProductType m
         )
     (personId, dist, vehicleVariant, canDowngradeToSedan, canDowngradeToHatchback, dlat, dlon) <- from withTable
     where_ $ dist <. val (fromIntegral radius)
-    orderBy [asc dist]
+    orderBy [rand] -- consider to do it from code side
     return (personId, dist, vehicleVariant, canDowngradeToSedan, canDowngradeToHatchback, dlat, dlon)
   return (makeDriverPoolResults =<< res)
   where

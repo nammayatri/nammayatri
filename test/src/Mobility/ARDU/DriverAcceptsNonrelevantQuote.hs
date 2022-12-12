@@ -14,7 +14,11 @@ spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl API.getDriverOfferBppBaseUrl
   describe "Driver offering on an irrelevant search request"
-    . after_ (mapM_ Utils.resetDriver [arduDriver1, arduDriver2])
+    . beforeAndAfter_
+      ( do
+          mapM_ Utils.resetDriver [arduDriver1, arduDriver2]
+          Utils.resetCustomer appRegistrationToken
+      )
     $ it "Should throw an irrelevant search request error" $
       driverOffersOnAnIrrelevantSearchRequest clients
 

@@ -13,15 +13,28 @@ import Utils
 spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl API.getTransporterBaseUrl
-  describe "Testing App and Transporter APIs" $
-    it "Testing API flow for ride rejected by Driver" $ withBecknClients clients do
+  beforeAndAfter_
+    ( do
+        Utils.resetDriver transporterDriver1
+        Utils.resetDriver transporterDriver2
+        Utils.resetCustomer appRegistrationToken
+    )
+    $ it "Testing API flow for ride rejected by Driver" $ withBecknClients clients do
       let (origin, _destination, searchReq_) = route1SearchRequest
       Utils.setupDriver transporterDriver1 origin
-      scRes <- Utils.search'Confirm appRegistrationToken transporterDriver1 searchReq_
-      let bBookingId = scRes.bapBookingId
-          tBooking = scRes.bppBooking
+      Utils.setupDriver transporterDriver2 origin
+      Utils.search'Confirm appRegistrationToken searchReq_ \scRes -> do
+        let tBooking = scRes.bppBooking
+        let bBookingId = scRes.bapBookingId
 
-      -- Driver Rejects a ride
-      Utils.rejectRide appRegistrationToken transporterDriver1 tBooking bBookingId
+        void $ Utils.getRideInfo transporterDriver1 tBooking.id
+        void $ Utils.getRideInfo transporterDriver2 tBooking.id
 
-      liftIO $ Utils.resetDriver transporterDriver1
+        -- Driver Rejects a ride
+        Utils.rejectRide transporterDriver1 tBooking
+
+        -- now this is empty
+        Utils.checkEmptyRideInfo transporterDriver1 tBooking.id
+        -- and this is not
+        void $ Utils.getRideInfo transporterDriver2 tBooking.id
+        Utils.cancelRideByApp appRegistrationToken bBookingId

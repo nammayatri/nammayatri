@@ -1,10 +1,14 @@
 module Utils where
 
+import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Error
 import Beckn.Types.Flow
-import Beckn.Types.Id (Id)
+import Beckn.Types.Id (Id (Id))
 import Beckn.Utils.Common
 import Data.Aeson (decode)
 import Data.String.Conversions
+import qualified "app-backend" Domain.Types.Booking as BDB
+import qualified "app-backend" Domain.Types.Ride as BDRide
 import qualified "app-backend" Environment as BecknApp
 import qualified "beckn-transport" Environment as BecknTransport
 import qualified "driver-offer-bpp" Environment as ARDU
@@ -17,6 +21,9 @@ import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Resources (appBackendEnv, driverOfferBppEnv, transporterAppEnv)
 import Servant.Client hiding (client)
+import qualified "app-backend" Storage.Queries.Booking as BQB
+import qualified "app-backend" Storage.Queries.RegistrationToken as BQRegToken
+import qualified "app-backend" Storage.Queries.Ride as BQRide
 
 defaultTestLoggerConfig :: LoggerConfig
 defaultTestLoggerConfig =
@@ -156,3 +163,20 @@ shouldReturnErrorCode description code eithRes =
 
 equalsEps :: (Ord a, Num a) => a -> a -> a -> Bool
 equalsEps eps x y = abs (x - y) < eps
+
+equals :: (Container l, Eq (Element l)) => l -> l -> Bool
+equals list1 list2 = all (`elem` list1) list2 && all (`elem` list2) list1
+
+resetCustomer :: Text -> IO ()
+resetCustomer token = runAppFlow "" $ do
+  regToken <- BQRegToken.findByToken token >>= fromMaybeM (InvalidToken token)
+  activeBookings <- BQB.findByRiderIdAndStatus (Id regToken.entityId) BDB.activeBookingStatus
+  forM_ activeBookings $ \activeBooking -> do
+    rides <- BQRide.findActiveByRBId activeBooking.id
+    Esq.runTransaction $ do
+      BQB.updateStatus activeBooking.id BDB.CANCELLED
+      void . forM rides $ \ride ->
+        BQRide.updateStatus ride.id BDRide.CANCELLED
+
+beforeAndAfter_ :: IO () -> SpecWith a -> SpecWith a
+beforeAndAfter_ f = after_ f . before_ f

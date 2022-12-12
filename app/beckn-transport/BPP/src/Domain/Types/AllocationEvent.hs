@@ -27,4 +27,5 @@ data AllocationEventType
   | ConsumerCancelled
   | EmptyDriverPool
   | AllocationTimeFinished
+  | ReallocationLimitExceed
   deriving (Show, Eq, Read, Generic, FromJSON, ToJSON)

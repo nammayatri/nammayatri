@@ -42,42 +42,42 @@ testOrder = do
   res <-
     runTransporterFlow "Test ordering" $
       Q.getNearestDrivers pickupPoint 5000 org1 (Just SUV) SFP.ONE_WAY (Just hour) <&> getIds
-  res `shouldBe` [closestDriver, furthestDriver]
+  res `shouldSatisfy` equals [closestDriver, furthestDriver]
 
 testInRadius :: IO ()
 testInRadius = do
   res <-
     runTransporterFlow "Test radius filtration" $
       Q.getNearestDrivers pickupPoint 800 org1 (Just SUV) SFP.ONE_WAY (Just hour) <&> getIds
-  res `shouldBe` [closestDriver]
+  res `shouldSatisfy` equals [closestDriver]
 
 testNotInRadius :: IO ()
 testNotInRadius = do
   res <-
     runTransporterFlow "Test outside radius filtration" $
       Q.getNearestDrivers pickupPoint 0 org1 (Just SUV) SFP.ONE_WAY (Just hour) <&> getIds
-  res `shouldBe` []
+  res `shouldSatisfy` equals []
 
 testDowngradingDriverWithSUV :: IO ()
 testDowngradingDriverWithSUV = do
   res <-
     runTransporterFlow "Test downgrading driver with SUV ride request" $
       Q.getNearestDrivers pickupPoint 10000 org1 (Just SUV) SFP.ONE_WAY (Just hour) <&> getIds
-  res `shouldBe` [closestDriver, furthestDriver, suvDriver]
+  res `shouldSatisfy` equals [closestDriver, furthestDriver, suvDriver]
 
 testDowngradingDriverWithSedan :: IO ()
 testDowngradingDriverWithSedan = do
   res <-
     runTransporterFlow "Test downgrading driver with sedan ride request" $
       Q.getNearestDrivers pickupPoint 10000 org1 (Just SEDAN) SFP.ONE_WAY (Just hour) <&> getIds
-  res `shouldBe` [suvDriver, sedanDriver]
+  res `shouldSatisfy` equals [suvDriver, sedanDriver]
 
 testDowngradingDriverWithHatchback :: IO ()
 testDowngradingDriverWithHatchback = do
   res <-
     runTransporterFlow "Test downgrading driver with hatchback ride request" $
       Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.ONE_WAY (Just hour) <&> getIds
-  res `shouldBe` [suvDriver, sedanDriver, hatchbackDriver]
+  res `shouldSatisfy` equals [suvDriver, sedanDriver, hatchbackDriver]
 
 testIsRental :: IO ()
 testIsRental = do
@@ -85,7 +85,7 @@ testIsRental = do
     runTransporterFlow "Test isRental" $ do
       setSuvDriverRental True
       Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL (Just hour) <&> getIds
-  res `shouldBe` [suvDriver]
+  res `shouldSatisfy` equals [suvDriver]
 
 testNotRental :: IO ()
 testNotRental = do
@@ -93,7 +93,7 @@ testNotRental = do
     runTransporterFlow "Test notRental" $ do
       setSuvDriverRental False
       Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL (Just hour) <&> getIds
-  res `shouldBe` []
+  res `shouldSatisfy` equals []
 
 getIds :: [Q.NearestDriversResult] -> [Text]
 getIds = map (getId . (.driverId))

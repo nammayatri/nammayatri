@@ -7,6 +7,7 @@ import Domain.Action.Allocation
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.Person (Driver)
 import EulerHS.Prelude hiding (id)
+import SharedLogic.DriverPool.Types
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -22,8 +23,8 @@ booking03Id = Id "booking03"
 driverPool1 :: [Id Driver]
 driverPool1 = [Id "driver01", Id "driver02", Id "driver03"]
 
-driverPoolPerRide :: Map (Id SRB.Booking) [Id Driver]
-driverPoolPerRide = Map.fromList [(booking01Id, driverPool1)]
+driverPoolPerRide :: Map (Id SRB.Booking, PoolRadiusStep, PoolBatchNum) [Id Driver]
+driverPoolPerRide = Map.fromList [((booking01Id, 0, 0), driverPool1)]
 
 driverPool3 :: [Id Driver]
 driverPool3 = [Id "driver01", Id "driver02", Id "driver03"]
@@ -31,8 +32,8 @@ driverPool3 = [Id "driver01", Id "driver02", Id "driver03"]
 driverPool4 :: [Id Driver]
 driverPool4 = [Id "driver05", Id "driver07", Id "driver08"]
 
-driverPoolPerRide1 :: Map (Id SRB.Booking) [Id Driver]
-driverPoolPerRide1 = Map.fromList [(booking01Id, driverPool3), (booking02Id, driverPool4)]
+driverPoolPerRide1 :: Map (Id SRB.Booking, PoolRadiusStep, PoolBatchNum) [Id Driver]
+driverPoolPerRide1 = Map.fromList [((booking01Id, 0, 0), driverPool3), ((booking02Id, 0, 0), driverPool4)]
 
 cancellationBeforeAssignment :: TestTree
 cancellationBeforeAssignment = testCase "Cancellation before assignment" $ do

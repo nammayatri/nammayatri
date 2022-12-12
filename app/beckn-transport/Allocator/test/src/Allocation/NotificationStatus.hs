@@ -7,6 +7,7 @@ import Domain.Action.Allocation
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.Person (Driver)
 import EulerHS.Prelude hiding (id)
+import SharedLogic.DriverPool.Types
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -16,8 +17,8 @@ booking01Id = Id "booking01"
 driverPool1 :: [Id Driver]
 driverPool1 = [Id "driver01", Id "driver02"]
 
-driverPoolPerRide :: Map (Id SRB.Booking) [Id Driver]
-driverPoolPerRide = Map.fromList [(booking01Id, driverPool1)]
+driverPoolPerRide :: Map (Id SRB.Booking, PoolRadiusStep, PoolBatchNum) [Id Driver]
+driverPoolPerRide = Map.fromList [((booking01Id, 0, 0), driverPool1), ((booking01Id, 0, 1), [Id "driver03"])]
 
 checkNotificationStatuses :: TestTree
 checkNotificationStatuses = testCaseSteps "Check NotificationStatus" $ \step -> do
@@ -34,9 +35,8 @@ checkNotificationStatuses = testCaseSteps "Check NotificationStatus" $ \step -> 
   void $ process (handle r) org1 numRequestsToProcess
   checkNotificationStatus r booking01Id (Id "driver01") Rejected
   checkNotificationStatus r booking01Id (Id "driver02") Notified
-  step "Driver01 Ignored"
+  step "Driver02 Ignored"
   threadDelay 1200000
-  addDriverInPool r booking01Id (Id "driver03")
   void $ process (handle r) org1 numRequestsToProcess
   checkNotificationStatus r booking01Id (Id "driver02") Ignored
   step "Driver03 No NotificationStatus"

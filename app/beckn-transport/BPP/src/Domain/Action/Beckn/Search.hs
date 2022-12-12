@@ -88,9 +88,9 @@ buildSearchReqLoc now LocationReq {..} = do
         ..
       }
 
-getValidTime :: HasFlowEnv m r '["caseExpiry" ::: Maybe Seconds] => UTCTime -> UTCTime -> m UTCTime
+getValidTime :: HasFlowEnv m r '["searchExpiry" ::: Maybe Seconds] => UTCTime -> UTCTime -> m UTCTime
 getValidTime now startTime = do
-  caseExpiry_ <- maybe 7200 fromIntegral <$> asks (.caseExpiry)
+  caseExpiry_ <- maybe 7200 fromIntegral <$> asks (.searchExpiry)
   let minExpiry = 300 -- 5 minutes
       timeToRide = startTime `diffUTCTime` now
       validTill = addUTCTime (minimum [fromInteger caseExpiry_, maximum [minExpiry, timeToRide]]) now
