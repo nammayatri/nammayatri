@@ -81,7 +81,8 @@ data AppCfg = AppCfg
     cacheConfig :: CacheConfig,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
-    driverPoolCfg :: DriverPoolConfig
+    driverPoolCfg :: DriverPoolConfig,
+    driverLocationUpdateTopic :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -129,7 +130,8 @@ data AppEnv = AppEnv
     cacheConfig :: CacheConfig,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
-    driverPoolCfg :: DriverPoolConfig
+    driverPoolCfg :: DriverPoolConfig,
+    driverLocationUpdateTopic :: Text
   }
   deriving (Generic)
 

@@ -26,4 +26,5 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , googleTranslateKey = sec.googleTranslateKey
     , registryUrl = "https://api.sandbox.beckn.juspay.in/dev/registry"
     , authServiceUrl = "http://beckn-app-backend-master.atlas:8013"
+    , consumerType = globalCommon.consumerType
     }

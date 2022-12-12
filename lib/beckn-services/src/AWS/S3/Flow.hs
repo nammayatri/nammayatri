@@ -8,7 +8,7 @@ import Beckn.Utils.Common
 import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import EulerHS.Prelude hiding (decodeUtf8, get, put, show, traceShowId)
+import EulerHS.Prelude hiding (decodeUtf8, get, put, show)
 import qualified EulerHS.Types as ET
 import Servant
 import Servant.Client

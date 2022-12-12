@@ -32,6 +32,8 @@ let loggerConfig =
       , prettyPrinting = False
       }
 
+let ConsumerType = < AVAILABILITY_TIME | FEED_TO_CLICKHOUSE >
+
 let httpClientOptions = { timeoutMs = +2000, maxRetries = +3 }
 
 let ServerName = < APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
@@ -47,4 +49,5 @@ in  { smsSessionConfig
     , ServerName
     , S3Config
     , periodType = PeriodType
+    , consumerType = ConsumerType
     }

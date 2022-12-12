@@ -9,6 +9,7 @@ import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis as Redis
+import Beckn.Streaming.Kafka.Producer.Types
 import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.App
 import Beckn.Types.Cache
@@ -80,7 +81,9 @@ data AppCfg = AppCfg
     driverLocationUpdateNotificationTemplate :: Text,
     cacheTranslationConfig :: CacheTranslationConfig,
     driverPoolCfg :: DriverPoolConfig,
-    sendSearchRequestJobCfg :: SendSearchRequestJobConfig
+    sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
+    kafkaProducerCfg :: KafkaProducerCfg,
+    driverLocationUpdateTopic :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -133,7 +136,10 @@ data AppEnv = AppEnv
     driverLocationUpdateNotificationTemplate :: Text,
     cacheTranslationConfig :: CacheTranslationConfig,
     driverPoolCfg :: DriverPoolConfig,
-    sendSearchRequestJobCfg :: SendSearchRequestJobConfig
+    sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
+    kafkaProducerCfg :: KafkaProducerCfg,
+    kafkaProducerTools :: KafkaProducerTools,
+    driverLocationUpdateTopic :: Text
   }
   deriving (Generic)
 
@@ -162,6 +168,7 @@ buildAppEnv cfg@AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   let modifierFunc = ("driver-offer-bpp:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc

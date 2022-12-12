@@ -114,6 +114,8 @@ let sendSearchRequestJobCfg =
       , singleBatchProcessTime = +10
       }
 
+let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -165,4 +167,6 @@ in  { esqDBCfg
     , cacheTranslationConfig
     , driverPoolCfg
     , sendSearchRequestJobCfg = sendSearchRequestJobCfg
+    , driverLocationUpdateTopic = "location-updates"
+    , kafkaProducerCfg
     }

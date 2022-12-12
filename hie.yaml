@@ -132,6 +132,15 @@ cradle:
     - path: "app/mock-bap/server/Paths_mock_bap.hs"
       component: "mock-bap:exe:mock-bap-exe"
 
+    - path: "app/kafka-consumers/src"
+      component: "kafka-consumers:lib"
+
+    - path: "app/kafka-consumers/app/Main.hs"
+      component: "kafka-consumers:exe:kafka-consumers-exe"
+
+    - path: "app/kafka-consumers/app/Paths_kafka_consumers.hs"
+      component: "kafka-consumers:exe:kafka-consumers-exe"
+
     - path: "app/public-transport-bap/src"
       component: "public-transport-bap:lib"
 

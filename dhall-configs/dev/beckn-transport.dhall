@@ -123,4 +123,5 @@ in  { esqDBCfg
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , driverPoolCfg
+    , driverLocationUpdateTopic = "location-updates"
     }

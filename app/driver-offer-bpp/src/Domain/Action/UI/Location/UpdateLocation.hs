@@ -13,6 +13,8 @@ import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Beckn.Storage.Hedis as Redis
+import Beckn.Streaming.Kafka.Producer (produceMessage)
+import Beckn.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
@@ -24,6 +26,7 @@ import Beckn.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Domain.Types.DriverLocation (DriverLocation)
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
@@ -52,6 +55,14 @@ data UpdateLocationHandle m = UpdateLocationHandle
     addIntermediateRoutePoints :: Id DRide.Ride -> NonEmpty LatLong -> m ()
   }
 
+data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
+  { rId :: Maybe Text,
+    mId :: Text,
+    ts :: UTCTime,
+    pt :: LatLong
+  }
+  deriving (Generic, FromJSON, ToJSON)
+
 buildUpdateLocationHandle ::
   Id Person.Person ->
   Flow (UpdateLocationHandle Flow)
@@ -71,6 +82,23 @@ buildUpdateLocationHandle driverId = do
           LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId
       }
 
+streamLocationUpdates ::
+  ( MonadFlow m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text]
+  ) =>
+  Maybe (Id DRide.Ride) ->
+  Id DM.Merchant ->
+  Id Person.Person ->
+  LatLong ->
+  UTCTime ->
+  m ()
+streamLocationUpdates mbRideId merchantId driverId point timestamp = do
+  topicName <- asks (.driverLocationUpdateTopic)
+  produceMessage
+    (topicName, Just (encodeUtf8 $ getId driverId))
+    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp point)
+
 updateLocationHandler ::
   ( Redis.HedisFlow m r,
     CoreMetrics m,
@@ -78,6 +106,8 @@ updateLocationHandler ::
     HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["slackCfg" ::: SlackConfig],
     HasFlowEnv m r '["driverLocationUpdateNotificationTemplate" ::: Text],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text],
     MonadTime m
   ) =>
   UpdateLocationHandle m ->
@@ -95,10 +125,12 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
         let newWaypoints = a :| ax
             currPoint = NE.last newWaypoints
         upsertDriverLocation currPoint.pt currPoint.ts
-        getInProgress
-          >>= maybe
-            (logInfo "No ride is assigned to driver, ignoring")
-            (\rideId -> addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
+        mbRideId <- getInProgress
+        mapM_ (\point -> streamLocationUpdates mbRideId driver.merchantId driver.id point.pt point.ts) (a : ax)
+        maybe
+          (logInfo "No ride is assigned to driver, ignoring")
+          (\rideId -> addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
+          mbRideId
   pure Success
   where
     filterNewWaypoints mbOldLoc = do

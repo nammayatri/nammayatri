@@ -26,4 +26,5 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , googleTranslateKey = sec.googleTranslateKey
     , registryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
     , authServiceUrl = "http://beckn-app-backend-sandbox.atlas:8013"
+    , consumerType = globalCommon.consumerType
     }

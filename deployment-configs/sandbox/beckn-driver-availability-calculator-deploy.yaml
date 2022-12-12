@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beckn-driver-avaiability-calculator-$DEPLOY_VARIANT-$BUILD_VERSION
+  namespace: atlas
+  labels:
+    version: $BUILD_VERSION
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: beckn-driver-avaiability-calculator-$DEPLOY_VARIANT
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
+      labels:
+        app: beckn-driver-avaiability-calculator-$DEPLOY_VARIANT
+        version: $BUILD_VERSION
+    spec:
+      containers:
+        - command:
+            - /bin/bash
+            - -c
+          args:
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/kafka-consumers-exe'
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: KAFKA_CONSUMERS_CONFIG_PATH
+              value: /etc/beckn/config/driver-availability-calculator.dhall
+          image: 701342709052.dkr.ecr.ap-southeast-1.amazonaws.com/beckn-uat:$BUILD_VERSION
+          imagePullPolicy: IfNotPresent
+          name: beckn-driver-availability-calculator-$DEPLOY_VARIANT
+          ports:
+            - containerPort: 8016
+              name: transport-http
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ui/
+              port: 8016
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            successThreshold: 1
+            timeoutSeconds: 12
+          readinessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /ui/
+              port: 8016
+            initialDelaySeconds: 30
+            periodSeconds: 12
+            successThreshold: 1
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+          volumeMounts:
+            - mountPath: "/var/local/beckn"
+              name: fcm-key
+              readOnly: true
+            - name: dhall-configs
+              mountPath: "/tmp/dhall-configs"
+              readOnly: true
+            - name: dhall-secrets
+              mountPath: "/tmp/dhall-secrets"
+              readOnly: true
+          securityContext:
+            privileged: false
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+          - name: single-request-reopen
+      imagePullSecrets:
+        - name: jp-gcr-ec
+      terminationGracePeriodSeconds: 90
+      volumes:
+        - name: fcm-key
+          secret:
+            secretName: beckn-fcm-key
+        - name: dhall-configs
+          configMap:
+            name: beckn-dhall-config-$DEPLOY_VARIANT
+            items:
+              - key: driver-availability-calculator.dhall
+                path: config/driver-availability-calculator.dhall
+              - key: common.dhall
+                path: config/common.dhall
+              - key: globalCommon.dhall
+                path: generic/common.dhall
+        - name: dhall-secrets
+          secret:
+            secretName: beckn-dhall-secret-$DEPLOY_VARIANT
+            items:
+              - key: driver-availability-calculator.dhall
+                path: config/secrets/driver-availability-calculator.dhall
+              - key: common.dhall
+                path: config/secrets/common.dhall
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: atlas
+  name: beckn-driver-availability-calculator-$DEPLOY_VARIANT
+  labels:
+    app: beckn-driver-availability-calculator-$DEPLOY_VARIANT
+spec:
+  ports:
+    - port: 8016
+      targetPort: 8016
+      name: transport-http
+    - port: 9999
+      targetPort: 9999
+      name: http-prom
+  selector:
+    app: beckn-driver-availability-calculator-$DEPLOY_VARIANT

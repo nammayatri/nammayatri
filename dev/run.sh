@@ -1,5 +1,4 @@
 #!/bin/bash
-
 apps () {
 cat << EOF
 allocation-service
@@ -22,8 +21,11 @@ bap-dashboard
 bpp-dashboard
 image-api-helper
 driver-offer-allocator
+kafka-consumers
 EOF
 }
+export CONSUMER_TYPE="AVAILABILITY_TIME"
+allApps=`apps`
 
 map () { while read -r line; do $1 "$line"; done; }
 
