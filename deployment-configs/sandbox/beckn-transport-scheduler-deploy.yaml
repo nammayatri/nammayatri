@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-transport-scheduler-$DEPLOY_VARIANT
+  name: beckn-transport-scheduler-$DEPLOY_VARIANT-$BUILD_VERSION
   namespace: atlas
   labels:
-    version: latest
+    version: $BUILD_VERSION
 spec:
   replicas: 2
   selector:
@@ -22,7 +22,7 @@ spec:
         traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
       labels:
         app: beckn-transport-scheduler-$DEPLOY_VARIANT
-        version: latest
+        version: $BUILD_VERSION
     spec:
       containers:
         - command:

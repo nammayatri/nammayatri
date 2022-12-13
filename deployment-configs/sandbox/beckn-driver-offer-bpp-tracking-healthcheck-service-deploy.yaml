@@ -1,15 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-driver-offer-bpp-$DEPLOY_VARIANT-$BUILD_VERSION
+  name: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT-$BUILD_VERSION
   namespace: atlas
   labels:
     version: $BUILD_VERSION
 spec:
-  replicas: 2
+  replicas: 1
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: beckn-driver-offer-bpp-$DEPLOY_VARIANT
+      app: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -20,115 +21,131 @@ spec:
       annotations:
         traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
       labels:
-        app: beckn-driver-offer-bpp-$DEPLOY_VARIANT
+        app: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT
         version: $BUILD_VERSION
     spec:
       containers:
-        - command:
+        - args:
+            - mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/*
+              /etc/beckn/. && echo "starting app server" && /opt/app/driver-tracking-healthcheck-exe
+          command:
             - /bin/bash
             - -c
-          args:
-            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/driver-offer-bpp-exe'
           env:
             - name: POD_NAME
               valueFrom:
                 fieldRef:
+                  apiVersion: v1
                   fieldPath: metadata.name
             - name: HOST_IP
               valueFrom:
                 fieldRef:
+                  apiVersion: v1
                   fieldPath: status.podIP
-            - name: DRIVER_OFFER_BPP_CONFIG_PATH
-              value: /etc/beckn/config/driver-offer-bpp.dhall
+            - name: DRIVER_TRACKING_HEALTHCHECK_SERVICE_CONFIG_PATH
+              value: /etc/beckn/config/driver-tracking-healthcheck-service.dhall
           image: 701342709052.dkr.ecr.ap-southeast-1.amazonaws.com/beckn-uat:$BUILD_VERSION
           imagePullPolicy: IfNotPresent
-          name: beckn-driver-offer-bpp-$DEPLOY_VARIANT
-          ports:
-            - containerPort: 8016
-              name: transport-http
           livenessProbe:
             failureThreshold: 3
             httpGet:
-              path: /ui/
-              port: 8016
+              path: /
+              port: 8115
+              scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 20
             successThreshold: 1
             timeoutSeconds: 12
+          name: beckn-driver-offer-bpp-$DEPLOY_VARIANT
+          ports:
+            - containerPort: 8115
+              name: transport-http
+              protocol: TCP
           readinessProbe:
             failureThreshold: 2
             httpGet:
-              path: /ui/
-              port: 8016
+              path: /
+              port: 8115
+              scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 12
             successThreshold: 1
             timeoutSeconds: 10
           resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
             requests:
               cpu: 100m
               memory: 512Mi
-            limits:
-              cpu: 1000m
-              memory: 1024Mi
-          volumeMounts:
-            - mountPath: "/var/local/beckn"
-              name: fcm-key
-              readOnly: true
-            - name: dhall-configs
-              mountPath: "/tmp/dhall-configs"
-              readOnly: true
-            - name: dhall-secrets
-              mountPath: "/tmp/dhall-secrets"
-              readOnly: true
           securityContext:
             privileged: false
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/local/beckn
+              name: fcm-key
+              readOnly: true
+            - mountPath: /tmp/dhall-configs
+              name: dhall-configs
+              readOnly: true
+            - mountPath: /tmp/dhall-secrets
+              name: dhall-secrets
+              readOnly: true
       dnsConfig:
         options:
           - name: ndots
             value: "1"
           - name: single-request-reopen
+      dnsPolicy: ClusterFirst
       imagePullSecrets:
         - name: jp-gcr-ec
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
       terminationGracePeriodSeconds: 90
       volumes:
         - name: fcm-key
           secret:
+            defaultMode: 420
             secretName: beckn-fcm-key
-        - name: dhall-configs
-          configMap:
-            name: beckn-dhall-config-$DEPLOY_VARIANT
+        - configMap:
+            defaultMode: 420
             items:
+              - key: driver-offer-bpp-tracking-healthcheck-service.dhall
+                path: config/driver-tracking-healthcheck-service.dhall
               - key: driver-offer-bpp.dhall
                 path: config/driver-offer-bpp.dhall
               - key: common.dhall
                 path: config/common.dhall
               - key: globalCommon.dhall
                 path: generic/common.dhall
+            name: beckn-dhall-config-$DEPLOY_VARIANT
+          name: dhall-configs
         - name: dhall-secrets
           secret:
-            secretName: beckn-dhall-secret-$DEPLOY_VARIANT
+            defaultMode: 420
             items:
               - key: driver-offer-bpp.dhall
                 path: config/secrets/driver-offer-bpp.dhall
               - key: common.dhall
                 path: config/secrets/common.dhall
-status: {}
+            secretName: beckn-dhall-secret-$DEPLOY_VARIANT
 ---
 apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: beckn-driver-offer-bpp-$DEPLOY_VARIANT
+  name: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT
   labels:
-    app: beckn-driver-offer-bpp-$DEPLOY_VARIANT
+    app: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT
 spec:
   ports:
-    - port: 8016
-      targetPort: 8016
+    - port: 8115
+      targetPort: 8115
       name: transport-http
     - port: 9999
       targetPort: 9999
       name: http-prom
   selector:
-    app: beckn-driver-offer-bpp-$DEPLOY_VARIANT
+    app: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT

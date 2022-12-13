@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-app-backend-$DEPLOY_VARIANT
+  name: beckn-app-backend-$DEPLOY_VARIANT-$BUILD_VERSION
   namespace: atlas
   labels:
-    version: latest
+    version: $BUILD_VERSION
 spec:
   replicas: 2
   selector:
@@ -18,11 +18,10 @@ spec:
   template:
     metadata:
       annotations:
-        iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
         traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
       labels:
         app: beckn-app-backend-$DEPLOY_VARIANT
-        version: latest
+        version: $BUILD_VERSION
     spec:
       containers:
         - command:
@@ -42,6 +41,7 @@ spec:
             - name: APP_BACKEND_CONFIG_PATH
               value: /etc/beckn/config/app-backend.dhall
           image: 701342709052.dkr.ecr.ap-southeast-1.amazonaws.com/beckn-uat:$BUILD_VERSION
+          imagePullPolicy: IfNotPresent
           name: beckn-app-backend-$DEPLOY_VARIANT
           ports:
             - containerPort: 8013
@@ -69,19 +69,19 @@ spec:
               cpu: 100m
               memory: 512Mi
             limits:
-              cpu: 1000m
-              memory: 1024Mi
+              cpu: "1"
+              memory: 1Gi
           securityContext:
             privileged: false
           volumeMounts:
-            - mountPath: "/var/local/beckn"
+            - mountPath: /var/local/beckn
               name: fcm-key
               readOnly: true
             - name: dhall-configs
-              mountPath: "/tmp/dhall-configs"
+              mountPath: /tmp/dhall-configs
               readOnly: true
             - name: dhall-secrets
-              mountPath: "/tmp/dhall-secrets"
+              mountPath: /tmp/dhall-secrets
               readOnly: true
       dnsConfig:
         options:

@@ -1,100 +1,114 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
-  namespace: atlas
   labels:
-    version: latest
+    version: $BUILD_VERSION
+  name: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT-$BUILD_VERSION
+  namespace: atlas
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
   strategy:
-    type: Recreate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
   template:
     metadata:
       annotations:
-        iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
+        iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role
         traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
       labels:
         app: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
-        version: latest
+        version: $BUILD_VERSION
     spec:
       containers:
-        - command:
+        - args:
+            - mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/*
+              /etc/beckn/. && echo "starting app server" && /opt/app/driver-tracking-healthcheck-exe
+          command:
             - /bin/bash
             - -c
-          args:
-            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/driver-tracking-healthcheck-exe'
           env:
             - name: POD_NAME
               valueFrom:
                 fieldRef:
+                  apiVersion: v1
                   fieldPath: metadata.name
             - name: HOST_IP
               valueFrom:
                 fieldRef:
+                  apiVersion: v1
                   fieldPath: status.podIP
             - name: DRIVER_TRACKING_HEALTHCHECK_SERVICE_CONFIG_PATH
               value: /etc/beckn/config/driver-tracking-healthcheck-service.dhall
           image: 701342709052.dkr.ecr.ap-southeast-1.amazonaws.com/beckn-uat:$BUILD_VERSION
-          name: beckn-transport-$DEPLOY_VARIANT
-          ports:
-            - containerPort: 8115
-              name: transport-http
+          imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 3
             httpGet:
               path: /
               port: 8115
+              scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 20
             successThreshold: 1
             timeoutSeconds: 12
+          name: beckn-transport-$DEPLOY_VARIANT
+          ports:
+            - containerPort: 8115
+              name: transport-http
+              protocol: TCP
           readinessProbe:
             failureThreshold: 2
             httpGet:
               path: /
               port: 8115
+              scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 12
             successThreshold: 1
             timeoutSeconds: 10
           resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
             requests:
               cpu: 100m
               memory: 512Mi
-            limits:
-              cpu: 1000m
-              memory: 1024Mi
-          volumeMounts:
-            - mountPath: "/var/local/beckn"
-              name: fcm-key
-              readOnly: true
-            - name: dhall-configs
-              mountPath: "/tmp/dhall-configs"
-              readOnly: true
-            - name: dhall-secrets
-              mountPath: "/tmp/dhall-secrets"
-              readOnly: true
           securityContext:
             privileged: false
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/local/beckn
+              name: fcm-key
+              readOnly: true
+            - mountPath: /tmp/dhall-configs
+              name: dhall-configs
+              readOnly: true
+            - mountPath: /tmp/dhall-secrets
+              name: dhall-secrets
+              readOnly: true
       dnsConfig:
         options:
           - name: ndots
             value: "1"
           - name: single-request-reopen
+      dnsPolicy: ClusterFirst
       imagePullSecrets:
         - name: jp-gcr-ec
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
       terminationGracePeriodSeconds: 90
       volumes:
         - name: fcm-key
           secret:
             secretName: beckn-fcm-key
-        - name: dhall-configs
-          configMap:
-            name: beckn-dhall-config-$DEPLOY_VARIANT
+        - configMap:
             items:
               - key: driver-tracking-healthcheck-service.dhall
                 path: config/driver-tracking-healthcheck-service.dhall
@@ -104,15 +118,16 @@ spec:
                 path: config/common.dhall
               - key: globalCommon.dhall
                 path: generic/common.dhall
+            name: beckn-dhall-config-$DEPLOY_VARIANT
+          name: dhall-configs
         - name: dhall-secrets
           secret:
-            secretName: beckn-dhall-secret-$DEPLOY_VARIANT
             items:
               - key: beckn-transport.dhall
                 path: config/secrets/beckn-transport.dhall
               - key: common.dhall
                 path: config/secrets/common.dhall
-status: {}
+            secretName: beckn-dhall-secret-$DEPLOY_VARIANT
 ---
 apiVersion: v1
 kind: Service
@@ -126,8 +141,8 @@ spec:
     - port: 8115
       targetPort: 8115
       name: transport-http
-    - port: 9997
-      targetPort: 9997
+    - port: 9999
+      targetPort: 9999
       name: http-prom
   selector:
     app: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT

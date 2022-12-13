@@ -1,25 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-transport-allocation-service-$DEPLOY_VARIANT
+  name: beckn-transport-allocation-service-$DEPLOY_VARIANT-$BUILD_VERSION
   namespace: atlas
   labels:
-    version: latest
+    version: $BUILD_VERSION
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: beckn-transport-allocation-service-$DEPLOY_VARIANT
   strategy:
-    type: Recreate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
   template:
     metadata:
       annotations:
-        iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
         traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
       labels:
         app: beckn-transport-allocation-service-$DEPLOY_VARIANT
-        version: latest
+        version: $BUILD_VERSION
     spec:
       containers:
         - command:
