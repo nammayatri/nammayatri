@@ -55,7 +55,7 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
           }
   OS.OnSearchMessage $
     OS.Catalog
-      { bpp_providers = [providerSpec],
+      { bpp_providers = pure providerSpec,
         bpp_descriptor = OS.Descriptor provider.subscriberId.getShortId
       }
 

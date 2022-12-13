@@ -30,7 +30,7 @@ mkOnSearchMessage DOnSearch.DOnSearchRes {..} = do
             offers = catMaybes offers,
             ..
           }
-  OnSearch.OnSearchMessage $ OnSearch.Catalog catalogDescriptor [provider]
+  OnSearch.OnSearchMessage $ OnSearch.Catalog catalogDescriptor $ pure provider
 
 --------------------------------------------------------------------------------------------------------
 ----------------------------------------------------ONE-WAY---------------------------------------------

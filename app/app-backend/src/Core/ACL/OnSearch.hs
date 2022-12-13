@@ -41,24 +41,22 @@ searchCbService context catalog = do
   providerId <- context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")
   providerUrl <- context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_uri")
   -- do we need throw an error when we have more than one provider?
-  case catalog.bpp_providers of
-    [] -> throwError $ InvalidRequest "Missing bpp/providers" -- TODO: make it NonEmpty
-    (provider : _) -> do
-      let items = provider.items
-      (estimatesInfo, quotesInfo) <- partitionEithers <$> traverse buildEstimateOrQuoteInfo items
-      let providerInfo =
-            DOnSearch.ProviderInfo
-              { providerId = providerId,
-                name = provider.descriptor.name,
-                url = providerUrl,
-                mobileNumber = provider.contacts,
-                ridesCompleted = provider.tags.rides_completed
-              }
-      pure
-        DOnSearch.DOnSearchReq
-          { requestId = Id context.message_id,
-            ..
+  let (provider :| _) = catalog.bpp_providers
+  let items = provider.items
+  (estimatesInfo, quotesInfo) <- partitionEithers <$> traverse buildEstimateOrQuoteInfo items
+  let providerInfo =
+        DOnSearch.ProviderInfo
+          { providerId = providerId,
+            name = provider.descriptor.name,
+            url = providerUrl,
+            mobileNumber = provider.contacts,
+            ridesCompleted = provider.tags.rides_completed
           }
+  pure
+    DOnSearch.DOnSearchReq
+      { requestId = Id context.message_id,
+        ..
+      }
 
 logOnSearchEvent :: EsqDBFlow m r => OnSearch.OnSearchReq -> m ()
 logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do

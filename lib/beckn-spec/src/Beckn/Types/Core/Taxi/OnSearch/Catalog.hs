@@ -9,7 +9,7 @@ import EulerHS.Prelude hiding (exp, id)
 
 data Catalog = Catalog
   { bpp_descriptor :: Descriptor,
-    bpp_providers :: [Provider]
+    bpp_providers :: NonEmpty Provider
   }
   deriving (Generic, Show)
 
