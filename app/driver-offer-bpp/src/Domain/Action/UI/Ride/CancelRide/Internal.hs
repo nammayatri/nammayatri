@@ -27,7 +27,7 @@ cancelRideImpl ::
     EncFlow m r,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    HasFlowEnv m r '["defaultStraightLineRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     FCMFlow m r,
     CoreMetrics m
   ) =>

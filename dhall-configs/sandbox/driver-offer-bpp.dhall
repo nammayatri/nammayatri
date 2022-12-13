@@ -129,7 +129,9 @@ in  { esqDBCfg
     , driverPositionInfoExpiry = None Integer
     , searchRequestExpirationSeconds = +120
     , driverQuoteExpirationSeconds = +15
-    , defaultRadiusOfSearch = +5000
+    , defaultStraightLineRadiusOfSearch = +5000
+    , defaultActualDistanceRadiusOfSearch = +5000
+    , shouldFilterDriverPoolActualDistance = True
     , driverUnlockDelay = +2
     , idfyCfg = common.idfyCfg
     , defaultPickupLocThreshold = +500

@@ -109,7 +109,7 @@ calculateDriverPool ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    HasFlowEnv m r ["defaultStraightLineRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds, "shouldFilterDriverPoolActualDistance" ::: Bool, "defaultActualDistanceRadiusOfSearch" ::: Meters],
     CoreMetrics m,
     HasPrettyLogger m r
   ) =>
@@ -120,7 +120,9 @@ calculateDriverPool ::
   Bool ->
   m [Maps.GetDistanceResp QP.DriverPoolResult LatLong]
 calculateDriverPool variant pickup merchantId onlyNotOnRide shouldComputeActualDistance = do
-  radius <- fromIntegral <$> asks (.defaultRadiusOfSearch)
+  straightLineRadius <- fromIntegral <$> asks (.defaultStraightLineRadiusOfSearch)
+  actualDistanceRadius <- fromIntegral <$> asks (.defaultActualDistanceRadiusOfSearch)
+  shouldFilterDriverPoolActualD <- asks (.shouldFilterDriverPoolActualDistance)
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
@@ -128,7 +130,7 @@ calculateDriverPool variant pickup merchantId onlyNotOnRide shouldComputeActualD
         QP.getNearestDrivers
           variant
           pickup
-          radius
+          straightLineRadius
           merchantId
           onlyNotOnRide
           mbDriverPositionInfoExpiry
@@ -137,7 +139,7 @@ calculateDriverPool variant pickup merchantId onlyNotOnRide shouldComputeActualD
     [] -> pure []
     (a : pprox) ->
       if shouldComputeActualDistance
-        then computeActualDistance merchantId pickup (a :| pprox)
+        then filterOutDriversWithDistanceAboveThreshold merchantId actualDistanceRadius shouldFilterDriverPoolActualD pickup (a :| pprox)
         else return $ buildGetDistanceResult <$> approxDriverPool
   where
     buildGetDistanceResult :: QP.DriverPoolResult -> Maps.GetDistanceResp QP.DriverPoolResult LatLong
@@ -152,7 +154,7 @@ calculateDriverPool variant pickup merchantId onlyNotOnRide shouldComputeActualD
               status = "OK"
             }
 
-computeActualDistance ::
+filterOutDriversWithDistanceAboveThreshold ::
   ( CoreMetrics m,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -160,10 +162,12 @@ computeActualDistance ::
     HasPrettyLogger m r
   ) =>
   Id DM.Merchant ->
+  Integer ->
+  Bool ->
   LatLong ->
   NonEmpty QP.DriverPoolResult ->
   m [Maps.GetDistanceResp QP.DriverPoolResult LatLong]
-computeActualDistance orgId pickupLatLong driverPoolResults = do
+filterOutDriversWithDistanceAboveThreshold orgId threshold shouldFilterDriverPoolActualDistance pickupLatLong driverPoolResults = do
   getDistanceResults <-
     Maps.getDistances orgId $
       Maps.GetDistancesReq
@@ -172,4 +176,8 @@ computeActualDistance orgId pickupLatLong driverPoolResults = do
           travelMode = Just Maps.CAR
         }
   logDebug $ "get distance results" <> show getDistanceResults
-  pure $ NE.toList getDistanceResults
+  let result = if shouldFilterDriverPoolActualDistance then NE.filter filterFunc getDistanceResults else NE.toList getDistanceResults
+  logDebug $ "secondly filtered driver pool" <> show result
+  pure result
+  where
+    filterFunc estDist = getMeters estDist.distance <= fromIntegral threshold

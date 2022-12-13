@@ -133,7 +133,9 @@ in  { esqDBCfg
     , driverPositionInfoExpiry = Some +36000
     , searchRequestExpirationSeconds = +3600
     , driverQuoteExpirationSeconds = +60
-    , defaultRadiusOfSearch = +5000
+    , defaultStraightLineRadiusOfSearch = +5000
+    , defaultActualDistanceRadiusOfSearch = +5000
+    , shouldFilterDriverPoolActualDistance = True
     , driverUnlockDelay = +2
     , idfyCfg = common.idfyCfg
     , dashboardToken = sec.dashboardToken
