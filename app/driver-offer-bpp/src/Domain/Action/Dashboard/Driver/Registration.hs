@@ -10,7 +10,6 @@ where
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
-import Beckn.Utils.Common
 import Dashboard.Common.Driver.Registration (GetDocumentResponse (imageBase64))
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver.Registration as Common
 import Domain.Action.UI.DriverOnboarding.DriverLicense
@@ -20,15 +19,12 @@ import Domain.Types.DriverOnboarding.Image
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import Environment
-import qualified Storage.CachedQueries.Merchant as QM
+import SharedLogic.Transporter (findMerchantByShortId)
 import Storage.Queries.DriverOnboarding.Image as QImage
-import Tools.Error
 
 documentsList :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DocumentsListResponse
 documentsList merchantShortId driverId = do
-  merchant <-
-    QM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   licImgs <- map (.id.getId) <$> findImagesByPersonAndType merchant.id (cast driverId) DriverLicense
   vehRegImgs <- map (.id.getId) <$> findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate
   pure
@@ -39,9 +35,7 @@ documentsList merchantShortId driverId = do
 
 getDocument :: ShortId DM.Merchant -> Id Common.Image -> Flow Common.GetDocumentResponse
 getDocument merchantShortId imageId = do
-  merchant <-
-    QM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   img <- getImage merchant.id (cast imageId)
   pure Common.GetDocumentResponse {imageBase64 = img}
 
@@ -51,9 +45,7 @@ mapImageType Common.VehicleRegistrationCertificate = Domain.VehicleRegistrationC
 
 uploadDocument :: ShortId DM.Merchant -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 uploadDocument merchantShortId driverId_ req = do
-  merchant <-
-    QM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   res <-
     validateImage
       True
@@ -67,9 +59,7 @@ uploadDocument merchantShortId driverId_ req = do
 
 registerDL :: ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 registerDL merchantShortId driverId_ Common.RegisterDLReq {..} = do
-  merchant <-
-    QM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   verifyDL
     True
     (Just merchant)
@@ -82,9 +72,7 @@ registerDL merchantShortId driverId_ Common.RegisterDLReq {..} = do
 
 registerRC :: ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterRCReq -> Flow APISuccess
 registerRC merchantShortId driverId_ Common.RegisterRCReq {..} = do
-  merchant <-
-    QM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   verifyRC
     True
     (Just merchant)

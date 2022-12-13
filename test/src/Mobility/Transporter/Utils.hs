@@ -213,7 +213,7 @@ startRide :: Text -> DriverTestData -> LatLong -> TRide.Ride -> Id BRB.Booking -
 startRide appToken driver origin tRide bBookingId = do
   void . callBPP $
     API.rideStart driver.token tRide.id $
-      API.buildStartRideReq tRide.otp origin
+      API.buildDriverStartRideReq tRide.otp origin
 
   void . pollDesc "trip started" $ do
     inprogressRBStatusResult <- callBAP (API.appBookingStatus bBookingId appToken)

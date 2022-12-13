@@ -1,0 +1,32 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name rideList
+
+# FIXME ?bookingStatus=CANCELLED
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/ride/list
+?bookingStatus="CANCELLED"
+# &rideId=036c9138-d96c-411a-aa6a-3a1df2b1e6c6
+&customerPhoneNo=9999999999
+&driverPhoneNo=6666666666
+&limit=10
+&offset=0
+token: {{customer_service}}
+
+###
+
+# @name rideInfo
+
+@rideId = {{rideList.response.body.rides[0].rideId}}
+
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/ride/{{rideId}}/info
+token: {{customer_service}}

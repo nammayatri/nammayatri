@@ -2,12 +2,16 @@ module Fixtures.Person where
 
 import Beckn.Types.Id
 import Beckn.Types.Version
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
 
 defaultVersion :: Version
 defaultVersion = Version 0 0 0
+
+defaultMerchantId :: Id DM.Merchant
+defaultMerchantId = Id "merchant1"
 
 defaultDriver :: Person.Person
 defaultDriver =
@@ -26,13 +30,19 @@ defaultDriver =
       identifier = Nothing,
       rating = Nothing,
       isNew = True,
-      merchantId = Id "1",
+      merchantId = defaultMerchantId,
       deviceToken = Nothing,
       description = Nothing,
       createdAt = Fixtures.defaultTime,
       updatedAt = Fixtures.defaultTime,
       bundleVersion = Just defaultVersion,
       clientVersion = Just defaultVersion
+    }
+
+anotherDriver :: Person.Person
+anotherDriver =
+  defaultDriver
+    { Person.id = Id "anotherDriver"
     }
 
 defaultAdmin :: Person.Person
@@ -43,4 +53,14 @@ defaultAdmin =
       Person.lastName = Just "Adminson",
       Person.role = Person.ADMIN,
       Person.email = Just "adminson@cool-admins.com"
+    }
+
+anotherMerchantId :: Id DM.Merchant
+anotherMerchantId = Id "anotherMerchantId"
+
+anotherMerchantAdmin :: Person.Person
+anotherMerchantAdmin =
+  defaultAdmin
+    { Person.id = Id "anotherMerchantAdmin",
+      Person.merchantId = anotherMerchantId
     }

@@ -1,0 +1,31 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name rideList
+
+# FIXME ?bookingStatus=CANCELLED
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/list
+?bookingStatus="CANCELLED"
+# &rideId=add682bc-26d2-435e-abd9-2b71fb643701
+&customerPhoneNo=9999999999
+# &driverPhoneNo=6666666666
+&limit=10
+&offset=0
+token: {{customer_service}}
+###
+
+# @name rideInfo
+
+@rideId = {{rideList.response.body.rides[0].rideId}}
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{rideId}}/info
+token: {{customer_service}}

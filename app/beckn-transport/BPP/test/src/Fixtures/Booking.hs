@@ -6,6 +6,7 @@ import qualified Domain.Types.Booking.BookingLocation as Loc
 import qualified Domain.Types.Vehicle as Veh
 import EulerHS.Prelude
 import qualified Fixtures.BaseUrl as Fixtures
+import qualified Fixtures.Person as Fixtures
 import qualified Fixtures.Time as Fixtures
 
 defaultBooking :: SRB.Booking
@@ -20,7 +21,7 @@ defaultBooking = do
   SRB.Booking
     { id = Id "1",
       status = SRB.CONFIRMED,
-      providerId = Id "",
+      providerId = Fixtures.defaultMerchantId,
       bapId = "",
       bapUri = Fixtures.defaultUrl,
       startTime = Fixtures.defaultTime,

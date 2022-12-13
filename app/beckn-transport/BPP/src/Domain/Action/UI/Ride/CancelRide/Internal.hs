@@ -1,4 +1,4 @@
-module Domain.Action.UI.Ride.CancelRide.Internal (cancelRide) where
+module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis (HedisFlow)
@@ -30,7 +30,7 @@ import Tools.Error
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 
-cancelRide ::
+cancelRideImpl ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -42,7 +42,7 @@ cancelRide ::
   Id SRide.Ride ->
   SBCR.BookingCancellationReason ->
   m ()
-cancelRide rideId bookingCReason = do
+cancelRideImpl rideId bookingCReason = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let transporterId = booking.providerId

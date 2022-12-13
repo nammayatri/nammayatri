@@ -1,11 +1,9 @@
-@bpp-dashboard-host = http://localhost:8018
-
 # access tokens with different roles
-@customer = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
-@driver = 223ed551-c9f8-4bae-b49a-30a696424b7f
-@juspay_ops = e789b47f-2e39-47a2-b297-33f8fd4b87d0
-@juspay_admin = 0f3378e2-da5b-4eac-a0f6-397ca48358de
-@customer_service = 07ef2a2a-b014-4a86-b1c0-e453e8b0b66e
+@customer = {{bpp-dashboard/token/YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/YATRI_PARTNER/customer_service}}
 
 # @name healthcheck
 GET {{bpp-dashboard-host}}
@@ -36,6 +34,8 @@ token: {{customer_service}}
 @driverId1 = 001b93df-4f7c-440f-bada-4d46c396d7d0
 @driverId2 = 002b93df-4f7c-440f-bada-4d46c396d7d0
 @driverId3 = driver-not-found-0000000000000000000
+
+@driverId4 = 6bc4bc84-2c43-425d-8853-22f47driver2
 
 POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1}}/enable
 token: {{juspay_ops}}
@@ -78,7 +78,7 @@ content-type: application/json
 
 ###
 
-POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1}}/unlinkVehicle
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId4}}/unlinkVehicle
  token: {{juspay_admin}}
  content-type: application/json
 

@@ -2,9 +2,13 @@ module API.UI.Ride
   ( module Reexport,
     API,
     handler,
+    StartRideReq (..),
+    EndRideReq (..),
+    CancelRideReq (..),
   )
 where
 
+import Beckn.External.Maps.Types
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -15,19 +19,15 @@ import Domain.Action.UI.Ride as Reexport
     DriverRideRes (..),
   )
 import qualified Domain.Action.UI.Ride as DRide
-import Domain.Action.UI.Ride.CancelRide as Reexport (CancelRideReq (..))
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler
-import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
-import Domain.Action.UI.Ride.EndRide as Reexport (EndRideReq (..))
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
-import Domain.Action.UI.Ride.StartRide as Reexport (StartRideReq (..))
 import qualified Domain.Action.UI.Ride.StartRide as SHandler
+import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import Environment
 import Servant
-import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Ride as QRide
+import SharedLogic.Person (findPerson)
 import Tools.Auth
 
 type API =
@@ -41,12 +41,12 @@ type API =
            :<|> TokenAuth
              :> Capture "rideId" (Id SRide.Ride)
              :> "start"
-             :> ReqBody '[JSON] SHandler.StartRideReq
+             :> ReqBody '[JSON] StartRideReq
              :> Post '[JSON] APISuccess
            :<|> TokenAuth
              :> Capture "rideId" (Id SRide.Ride)
              :> "end"
-             :> ReqBody '[JSON] EHandler.EndRideReq
+             :> ReqBody '[JSON] EndRideReq
              :> Post '[JSON] APISuccess
            :<|> TokenAuth
              :> Capture "rideId" (Id SRide.Ride)
@@ -55,6 +55,23 @@ type API =
              :> Post '[JSON] APISuccess
        )
 
+data StartRideReq = StartRideReq
+  { rideOtp :: Text,
+    point :: LatLong
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype EndRideReq = EndRideReq
+  { point :: LatLong
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data CancelRideReq = CancelRideReq
+  { reasonCode :: CancellationReasonCode,
+    additionalInfo :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 handler :: FlowServer API
 handler =
   listDriverRides
@@ -62,26 +79,24 @@ handler =
     :<|> endRide
     :<|> cancelRide
 
-startRide :: Id SP.Person -> Id SRide.Ride -> SHandler.StartRideReq -> FlowHandler APISuccess.APISuccess
-startRide personId rideId req = withFlowHandlerAPI $ do
-  shandle <- SHandler.buildStartRideHandle personId rideId
-  SHandler.startRide shandle (cast rideId) req
+startRide :: Id SP.Person -> Id SRide.Ride -> StartRideReq -> FlowHandler APISuccess.APISuccess
+startRide requestorId rideId StartRideReq {rideOtp, point} = withFlowHandlerAPI $ do
+  requestor <- findPerson requestorId
+  let driverReq = SHandler.DriverStartRideReq {rideOtp, point, requestor}
+  shandle <- SHandler.buildStartRideHandle requestor.merchantId
+  SHandler.driverStartRide shandle rideId driverReq
 
-endRide :: Id SP.Person -> Id SRide.Ride -> EHandler.EndRideReq -> FlowHandler APISuccess.APISuccess
-endRide personId rideId req = withFlowHandlerAPI $ do
-  shandle <- EHandler.buildEndRideHandle personId rideId
-  EHandler.endRide shandle personId req
+endRide :: Id SP.Person -> Id SRide.Ride -> EndRideReq -> FlowHandler APISuccess.APISuccess
+endRide requestorId rideId EndRideReq {point} = withFlowHandlerAPI $ do
+  requestor <- findPerson requestorId
+  let driverReq = EHandler.DriverEndRideReq {point, requestor}
+  shandle <- EHandler.buildEndRideHandle requestor.merchantId rideId
+  EHandler.driverEndRide shandle rideId driverReq
 
 cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess
-cancelRide personId rideId req = withFlowHandlerAPI $ do
-  CHandler.cancelRideHandler shandle personId rideId req
-  where
-    shandle =
-      CHandler.ServiceHandle
-        { findRideById = QRide.findById,
-          findById = QPerson.findById,
-          cancelRide = CInternal.cancelRide
-        }
+cancelRide personId rideId CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
+  let driverReq = CHandler.CancelRideReq {reasonCode, additionalInfo}
+  CHandler.driverCancelRideHandler CHandler.cancelRideHandle personId rideId driverReq
 
 listDriverRides ::
   Id SP.Person ->

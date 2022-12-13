@@ -1,9 +1,10 @@
-module Flow.RideAPI.CancelRide where
+module Flow.RideAPI.CancelRide (cancelRide) where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import qualified Domain.Action.UI.Ride.CancelRide as CancelRide
 import Domain.Types.CancellationReason
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
@@ -19,7 +20,11 @@ handle :: CancelRide.ServiceHandle IO
 handle =
   CancelRide.ServiceHandle
     { findRideById = \_rideId -> pure $ Just ride,
-      findById = \_personid -> pure $ Just Fixtures.defaultDriver,
+      findById = \personId ->
+        pure $
+          find
+            (\person -> person.id == personId)
+            [Fixtures.defaultDriver, Fixtures.anotherDriver, Fixtures.defaultAdmin, Fixtures.anotherMerchantAdmin],
       cancelRide = \_rideReq _requestedByAdmin -> pure ()
     }
 
@@ -35,12 +40,18 @@ cancelRide =
     "Ride cancellation"
     [ successfulCancellationByDriver,
       successfulCancellationByAdmin,
+      successfulCancellationByDashboard,
       failedCancellationByAnotherDriver,
+      failedCancellationByAnotherAdmin,
+      failedCancellationByAnotherMerchantDashboard,
       failedCancellationWhenQuoteStatusIsWrong
     ]
 
-runHandler :: CancelRide.ServiceHandle IO -> Id Person.Person -> Id Ride.Ride -> CancelRide.CancelRideReq -> IO APISuccess.APISuccess
-runHandler = CancelRide.cancelRideHandler
+runDriverHandler :: CancelRide.ServiceHandle IO -> Id Person.Person -> Id Ride.Ride -> CancelRide.CancelRideReq -> IO APISuccess.APISuccess
+runDriverHandler = CancelRide.driverCancelRideHandler
+
+runDashboardHandler :: CancelRide.ServiceHandle IO -> Id DM.Merchant -> Id Ride.Ride -> CancelRide.CancelRideReq -> IO APISuccess.APISuccess
+runDashboardHandler = CancelRide.dashboardCancelRideHandler
 
 someCancelRideReq :: CancelRide.CancelRideReq
 someCancelRideReq =
@@ -49,35 +60,44 @@ someCancelRideReq =
 successfulCancellationByDriver :: TestTree
 successfulCancellationByDriver =
   testCase "Cancel successfully if requested by driver executor" $ do
-    runHandler handle (Id "1") "1" someCancelRideReq
+    runDriverHandler handle Fixtures.defaultDriver.id "1" someCancelRideReq
       `shouldReturn` APISuccess.Success
 
 successfulCancellationByAdmin :: TestTree
 successfulCancellationByAdmin =
   testCase "Cancel successfully if requested by admin" $ do
-    runHandler handleCase (Id "1") "1" someCancelRideReq
+    runDriverHandler handle Fixtures.defaultAdmin.id "1" someCancelRideReq
       `shouldReturn` APISuccess.Success
-  where
-    handleCase = handle {CancelRide.findById = \_personId -> pure $ Just admin}
-    admin =
-      Fixtures.defaultDriver{id = Id "adminId",
-                             role = Person.ADMIN
-                            }
+
+successfulCancellationByDashboard :: TestTree
+successfulCancellationByDashboard =
+  testCase "Cancel successfully if requested by dashboard" $ do
+    runDashboardHandler handle Fixtures.defaultMerchantId "1" someCancelRideReq
+      `shouldReturn` APISuccess.Success
 
 failedCancellationByAnotherDriver :: TestTree
 failedCancellationByAnotherDriver =
   testCase "Fail cancellation if requested by driver not executor" $ do
-    runHandler handleCase (Id "driverNotExecutorId") "1" someCancelRideReq
+    runDriverHandler handle Fixtures.anotherDriver.id "1" someCancelRideReq
       `shouldThrow` (== NotAnExecutor)
-  where
-    handleCase = handle {CancelRide.findById = \_personId -> pure $ Just driverNotExecutor}
-    driverNotExecutor = Fixtures.defaultDriver{id = Id "driverNotExecutorId"}
+
+failedCancellationByAnotherAdmin :: TestTree
+failedCancellationByAnotherAdmin =
+  testCase "Fail cancellation if requested by another merchant admin" $ do
+    runDriverHandler handle Fixtures.anotherMerchantAdmin.id "1" someCancelRideReq
+      `shouldThrow` (== RideDoesNotExist "1")
+
+failedCancellationByAnotherMerchantDashboard :: TestTree
+failedCancellationByAnotherMerchantDashboard =
+  testCase "Fail cancellation if requested by another merchant dashboard" $ do
+    runDashboardHandler handle Fixtures.anotherMerchantId "1" someCancelRideReq
+      `shouldThrow` (== RideDoesNotExist "1")
 
 failedCancellationWhenQuoteStatusIsWrong :: TestTree
 failedCancellationWhenQuoteStatusIsWrong =
   testCase "Fail cancellation if ride has inappropriate ride status" $ do
-    runHandler handleCase (Id "1") "1" someCancelRideReq
+    runDriverHandler handleCase Fixtures.defaultDriver.id "1" someCancelRideReq
       `shouldThrow` (\(RideInvalidStatus _) -> True)
   where
-    handleCase = handle {CancelRide.findRideById = \_rideId -> pure $ Just completedPI}
-    completedPI = ride{status = Ride.COMPLETED}
+    handleCase = handle {CancelRide.findRideById = \_rideId -> pure $ Just completedRide}
+    completedRide = ride{status = Ride.COMPLETED}

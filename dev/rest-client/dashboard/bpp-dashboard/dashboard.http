@@ -1,5 +1,3 @@
-@bpp-dashboard-host = http://localhost:8018
-
 # @name healthcheck
 GET {{bpp-dashboard-host}}
 
@@ -147,11 +145,11 @@ token: {{token}}
 
 # @name profile
 
-@customerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
+@yatriPartnerCustomerToken = {{bpp-dashboard/token/YATRI_PARTNER/customer}}
 
 GET {{bpp-dashboard-host}}/user/profile
 content-type: application/json
-token: {{customerToken}}
+token: {{yatriPartnerCustomerToken}}
 
 ###
 
@@ -195,13 +193,11 @@ token: {{driverOfferCustomerToken}}
 
 # @name logout
 
-# this endpoint should remove only one token for APP_BACKEND_YATRI server
-
-@becknTransportCustomerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
+# this endpoint should remove only one token for YATRI_PARTNER merchant
 
 POST {{bpp-dashboard-host}}/user/logout
 content-type: application/json
-token: {{becknTransportCustomerToken}}
+token: {{yatriPartnerCustomerToken}}
 
 ###
 

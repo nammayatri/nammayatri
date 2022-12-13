@@ -14,6 +14,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Dashboard.Common.Driver as Common
 import qualified Dashboard.Common.Driver.Registration as Common
+import qualified Dashboard.Common.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
@@ -22,8 +23,9 @@ import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 import "lib-dashboard" Tools.Metrics
 
-newtype DriverOfferAPIs = DriverOfferAPIs
-  { drivers :: DriversAPIs
+data DriverOfferAPIs = DriverOfferAPIs
+  { drivers :: DriversAPIs,
+    rides :: RidesAPIs
   }
 
 data DriversAPIs = DriversAPIs
@@ -45,11 +47,23 @@ data DriversAPIs = DriversAPIs
     addVehicle :: Id Common.Driver -> Common.AddVehicleReq -> Euler.EulerClient APISuccess
   }
 
+data RidesAPIs = RidesAPIs
+  { rideList :: Maybe Int -> Maybe Int -> Maybe Common.BookingStatus -> Maybe (Id Common.Ride) -> Maybe Text -> Maybe Text -> Euler.EulerClient Common.RideListRes,
+    rideStart :: Id Common.Ride -> Common.StartRideReq -> Euler.EulerClient APISuccess,
+    rideEnd :: Id Common.Ride -> Common.EndRideReq -> Euler.EulerClient APISuccess,
+    rideCancel :: Id Common.Ride -> Common.CancelRideReq -> Euler.EulerClient APISuccess,
+    rideInfo :: Id Common.Ride -> Euler.EulerClient Common.RideInfoRes
+  }
+
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
 mkDriverOfferAPIs merchantId token = do
   let drivers = DriversAPIs {..}
+  let rides = RidesAPIs {..}
   DriverOfferAPIs {..}
   where
+    driversClient
+      :<|> ridesClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+
     driverDocumentsInfo
       :<|> listDrivers
       :<|> driverActivity
@@ -67,7 +81,13 @@ mkDriverOfferAPIs merchantId token = do
                :<|> registerDL
                :<|> registerRC
              ) =
-        clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+        driversClient
+
+    rideList
+      :<|> rideStart
+      :<|> rideEnd
+      :<|> rideCancel
+      :<|> rideInfo = ridesClient
 
 callDriverOfferBPP ::
   forall m r b c.

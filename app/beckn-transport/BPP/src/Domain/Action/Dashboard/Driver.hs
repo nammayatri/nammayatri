@@ -30,7 +30,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
-import qualified Storage.CachedQueries.Merchant as CQM
+import SharedLogic.Transporter (findMerchantByShortId)
 import qualified Storage.Queries.AllocationEvent as QAllocationEvent
 import qualified Storage.Queries.BusinessEvent as QBusinessEvent
 import qualified Storage.Queries.DriverInformation as QDriverInfo
@@ -60,9 +60,7 @@ listDrivers ::
   Maybe Text ->
   Flow Common.DriverListRes
 listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSearchPhone = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   -- all drivers are considered as verified, because driverInfo.verified is not implemented for this bpp
   driversWithInfo <-
     if mbVerified == Just True || isNothing mbVerified
@@ -98,17 +96,13 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
 ---------------------------------------------------------------------
 driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
 driverActivity merchantShortId = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   Common.mkDriverActivityRes <$> QDriverInfo.countDrivers merchant.id
 
 ---------------------------------------------------------------------
 enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
 enableDriver merchantShortId reqDriverId = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -129,9 +123,7 @@ enableDriver merchantShortId reqDriverId = do
 ---------------------------------------------------------------------
 disableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
 disableDriver merchantShortId reqDriverId = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -157,9 +149,7 @@ driverLocation ::
   Common.DriverIds ->
   Flow Common.DriverLocationRes
 driverLocation merchantShortId mbLimit mbOffset req = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   let driverIds = coerce req.driverIds
   allDrivers <- QPerson.findAllDriversByIdsFirstNameAsc merchant.id driverIds
   let driversNotFound =
@@ -194,9 +184,7 @@ mobileIndianCode = "+91"
 
 driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
 driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   driverDocsInfo <- case (mbMobileNumber, mbVehicleNumber) of
     (Just mobileNumber, Nothing) ->
       QPerson.fetchFullDriverByMobileNumber merchant.id mobileNumber mobileIndianCode
@@ -238,9 +226,7 @@ driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
 ---------------------------------------------------------------------
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
 deleteDriver merchantShortId reqDriverId = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
@@ -279,9 +265,7 @@ deleteDriver merchantShortId reqDriverId = do
 ---------------------------------------------------------------------
 unlinkVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
 unlinkVehicle merchantShortId reqDriverId = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
 
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -303,9 +287,7 @@ unlinkVehicle merchantShortId reqDriverId = do
 updatePhoneNumber :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> Flow APISuccess
 updatePhoneNumber merchantShortId reqDriverId req = do
   runRequestValidation Common.validateUpdatePhoneNumberReq req
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
 
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
@@ -340,9 +322,7 @@ updatePhoneNumber merchantShortId reqDriverId req = do
 addVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> Flow APISuccess
 addVehicle merchantShortId reqDriverId req = do
   runRequestValidation Common.validateAddVehicleReq req
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
 
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-

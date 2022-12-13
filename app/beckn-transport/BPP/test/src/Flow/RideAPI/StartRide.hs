@@ -1,12 +1,10 @@
-module Flow.RideAPI.StartRide where
+module Flow.RideAPI.StartRide (startRide) where
 
 import Beckn.External.Maps.Types
 import Beckn.Types.Id
 import Domain.Action.UI.Ride.StartRide as StartRide
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
-import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Fixtures
 import Test.Hspec
@@ -18,16 +16,16 @@ import Utils.SilentLogger ()
 handle :: StartRide.ServiceHandle IO
 handle =
   StartRide.ServiceHandle
-    { requestor = Fixtures.defaultDriver,
-      findBookingById = \rbId ->
+    { findBookingById = \rbId ->
         pure $
           if rbId == Id "1"
             then Just booking
             else Nothing,
-      startRideAndUpdateLocation = \_rideId _bookingId _pt -> pure (),
+      findLocationByDriverId = \_driverId -> pure $ Just Fixtures.defaultDriverLocation,
+      startRideAndUpdateLocation = \_driverId _rideId _bookingId _pt -> pure (),
       notifyBAPRideStarted = \_booking _ride -> pure (),
-      rateLimitStartRide = \_rideId -> pure (),
-      initializeDistanceCalculation = \_pt -> pure ()
+      rateLimitStartRide = \_driverId _rideId -> pure (),
+      initializeDistanceCalculation = \_rideId _personId _pt -> pure ()
     }
 
 ride :: Ride.Ride
@@ -44,76 +42,98 @@ booking =
     { SRB.status = SRB.CONFIRMED
     }
 
-searchRequest :: SearchRequest.SearchRequest
-searchRequest =
-  Fixtures.defaultSearchRequest
-    { SearchRequest.id = "1"
-    }
-
 startRide :: TestTree
 startRide =
   testGroup
     "Starting ride"
     [ successfulStartByDriver,
+      successfulStartByDashboard,
+      successfulStartByDashboardWithoutPoint,
       failedStartRequestedByDriverNotAnOrderExecutor,
       failedStartRequestedNotByDriver,
+      failedStartRequestedByAnotherMerchantDashboard,
       failedStartWhenQuoteStatusIsWrong,
       failedStartWithWrongOTP
     ]
 
-runHandler :: StartRide.ServiceHandle IO -> Ride.Ride -> StartRideReq -> IO ()
-runHandler = StartRide.startRideHandler
+runDriverHandler :: StartRide.ServiceHandle IO -> Ride.Ride -> DriverStartRideReq -> IO ()
+runDriverHandler sHandle sRide = StartRide.startRideHandler sHandle sRide . StartRide.DriverReq
 
-testStartRideReq :: StartRideReq
-testStartRideReq =
-  StartRideReq
+runDashboardHandler :: StartRide.ServiceHandle IO -> Ride.Ride -> DashboardStartRideReq -> IO ()
+runDashboardHandler sHandle sRide = StartRide.startRideHandler sHandle sRide . StartRide.DashboardReq
+
+testDriverStartRideReq :: DriverStartRideReq
+testDriverStartRideReq =
+  DriverStartRideReq
     { rideOtp = "otp",
-      point = LatLong 10 10
+      point = LatLong 10 10,
+      requestor = Fixtures.defaultDriver
+    }
+
+testDashboardStartRideReq :: DashboardStartRideReq
+testDashboardStartRideReq =
+  DashboardStartRideReq
+    { point = Just $ LatLong 10 10,
+      merchantId = Fixtures.defaultMerchantId
     }
 
 successfulStartByDriver :: TestTree
 successfulStartByDriver =
   testCase "Start successfully if requested by driver executor" $ do
-    runHandler handle ride testStartRideReq
+    runDriverHandler handle ride testDriverStartRideReq
       `shouldReturn` ()
+
+successfulStartByDashboard :: TestTree
+successfulStartByDashboard =
+  testCase "Start successfully if requested by dashboard" $ do
+    runDashboardHandler handle ride testDashboardStartRideReq
+      `shouldReturn` ()
+
+successfulStartByDashboardWithoutPoint :: TestTree
+successfulStartByDashboardWithoutPoint =
+  testCase "Start successfully if requested by dashboard without start point" $ do
+    runDashboardHandler handle ride testStartRideReqCase
+      `shouldReturn` ()
+  where
+    testStartRideReqCase = testDashboardStartRideReq{point = Nothing}
 
 failedStartRequestedByDriverNotAnOrderExecutor :: TestTree
 failedStartRequestedByDriverNotAnOrderExecutor = do
   testCase "Fail ride starting if requested by driver not an order executor" $ do
-    runHandler handleCase ride testStartRideReq
+    runDriverHandler handle ride testStartRideReqCase
       `shouldThrow` (== NotAnExecutor)
   where
-    handleCase =
-      handle
-        { StartRide.requestor =
-            Fixtures.defaultDriver{id = "2"}
-        }
+    testStartRideReqCase = testDriverStartRideReq{requestor = Fixtures.anotherDriver}
 
 failedStartRequestedNotByDriver :: TestTree
 failedStartRequestedNotByDriver = do
   testCase "Fail ride starting if requested not by driver" $ do
-    runHandler handleCase ride testStartRideReq
+    runDriverHandler handle ride testStartRideReqCase
       `shouldThrow` (== AccessDenied)
   where
-    handleCase =
-      handle
-        { StartRide.requestor =
-            Fixtures.defaultDriver{role = Person.ADMIN}
-        }
+    testStartRideReqCase = testDriverStartRideReq{requestor = Fixtures.defaultAdmin}
+
+failedStartRequestedByAnotherMerchantDashboard :: TestTree
+failedStartRequestedByAnotherMerchantDashboard = do
+  testCase "Fail ride starting if requested by another merchant dashboard" $ do
+    runDashboardHandler handle ride testStartRideReqCase
+      `shouldThrow` (== RideDoesNotExist ride.id.getId)
+  where
+    testStartRideReqCase = testDashboardStartRideReq{merchantId = Fixtures.anotherMerchantId}
 
 failedStartWhenQuoteStatusIsWrong :: TestTree
 failedStartWhenQuoteStatusIsWrong = do
   testCase "Fail ride starting if ride has wrong status" $ do
-    runHandler handle completeRide testStartRideReq
+    runDriverHandler handle completeRide testDriverStartRideReq
       `shouldThrow` (\(RideInvalidStatus _) -> True)
   where
     completeRide = ride{status = Ride.COMPLETED}
 
-wrongOtpReq :: StartRideReq
-wrongOtpReq = testStartRideReq {rideOtp = "otp2"}
+wrongOtpReq :: DriverStartRideReq
+wrongOtpReq = testDriverStartRideReq {rideOtp = "otp2"}
 
 failedStartWithWrongOTP :: TestTree
 failedStartWithWrongOTP = do
   testCase "Fail ride starting if OTP is wrong" $ do
-    runHandler handle ride wrongOtpReq
+    runDriverHandler handle ride wrongOtpReq
       `shouldThrow` (== IncorrectOTP)

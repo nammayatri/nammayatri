@@ -5,6 +5,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.CallStatus
+import Domain.Types.Ride
 import Storage.Tabular.CallStatus
 
 create :: CallStatus -> SqlDB ()
@@ -19,6 +20,14 @@ findByCallSid callSid =
     callStatus <- from $ table @CallStatusT
     where_ $ callStatus ^. CallStatusExotelCallSid ==. val callSid
     return callStatus
+
+countCallsByRideId :: Transactionable m => Id Ride -> m Int
+countCallsByRideId rideId = (fromMaybe 0 <$>) $
+  Esq.findOne $ do
+    callStatus <- from $ table @CallStatusT
+    where_ $ callStatus ^. CallStatusRideId ==. val (toKey rideId)
+    groupBy $ callStatus ^. CallStatusRideId
+    pure $ count @Int $ callStatus ^. CallStatusTId
 
 updateCallStatus :: Id CallStatus -> ExotelCallStatus -> Int -> BaseUrl -> SqlDB ()
 updateCallStatus callId status conversationDuration recordingUrl = do

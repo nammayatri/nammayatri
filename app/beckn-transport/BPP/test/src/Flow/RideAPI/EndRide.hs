@@ -26,6 +26,8 @@ endRideTests =
         "Successful"
         [ successfulEndByDriver,
           successfulEndRental,
+          successfulEndByDashboard,
+          successfulEndByDashboardWithoutPoint,
           locationUpdatesFailure,
           locationUpdatesSuccess
         ],
@@ -33,6 +35,7 @@ endRideTests =
         "Failing"
         [ failedEndRequestedByWrongDriver,
           failedEndRequestedNotByDriver,
+          failedEndRequestednByAnotherMerchantDashboard,
           failedEndWhenRideStatusIsWrong
         ]
     ]
@@ -40,14 +43,13 @@ endRideTests =
 handle :: Handle.ServiceHandle IO
 handle =
   Handle.ServiceHandle
-    { requestor = Fixtures.defaultDriver,
-      fetchRide = return ride,
+    { fetchRide = return ride,
       findBookingById = \rbId -> pure $ case rbId of
         Id "booking" -> Just booking
         Id "rentalBooking" -> Just rentalBooking
         _ -> Nothing,
       notifyCompleteToBAP = \_ _ _ -> pure (),
-      endRideTransaction = \_ _ _ -> pure (),
+      endRideTransaction = \_ _ _ _ -> pure (),
       calculateFare = \_ _ _ ->
         return $
           OneWayFareParameters
@@ -70,10 +72,10 @@ handle =
       buildRentalFareBreakups = \_ _ -> pure [],
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure (),
-      findDriverLoc = pure Nothing,
-      finalDistanceCalculation = \_ -> pure (),
+      findDriverLoc = \_ -> pure $ Just Fixtures.defaultDriverLocation,
+      finalDistanceCalculation = \_ _ _ -> pure (),
       getRentalFarePolicy = undefined, -- not required for current test cases
-      isDistanceCalculationFailed = pure False,
+      isDistanceCalculationFailed = \_ -> pure False,
       getDefaultPickupLocThreshold = pure 500,
       getDefaultDropLocThreshold = pure 500,
       getDefaultRideTravelledDistanceThreshold = pure 700,
@@ -81,10 +83,24 @@ handle =
       findConfigByKey = \_ -> pure Nothing
     }
 
-testEndRideReq :: EndRideReq
-testEndRideReq =
-  EndRideReq
-    { point = LatLong 10 10
+runDriverHandler :: Handle.ServiceHandle IO -> Ride.Ride -> DriverEndRideReq -> IO ()
+runDriverHandler sHandle sRide = Handle.endRideHandler sHandle sRide . Handle.DriverReq
+
+runDashboardHandler :: Handle.ServiceHandle IO -> Ride.Ride -> DashboardEndRideReq -> IO ()
+runDashboardHandler sHandle sRide = Handle.endRideHandler sHandle sRide . Handle.DashboardReq
+
+testDriverEndRideReq :: DriverEndRideReq
+testDriverEndRideReq =
+  DriverEndRideReq
+    { point = LatLong 10 10,
+      requestor = Fixtures.defaultDriver
+    }
+
+testDashboardEndRideReq :: DashboardEndRideReq
+testDashboardEndRideReq =
+  DashboardEndRideReq
+    { point = Just $ LatLong 10 10,
+      merchantId = Fixtures.defaultMerchantId
     }
 
 ride :: Ride.Ride
@@ -123,33 +139,53 @@ rentalBooking = do
 successfulEndByDriver :: TestTree
 successfulEndByDriver =
   testCase "Requested by correct driver" $
-    Handle.endRideHandler handle testEndRideReq `shouldReturn` ()
+    runDriverHandler handle ride testDriverEndRideReq `shouldReturn` ()
 
 successfulEndRental :: TestTree
 successfulEndRental =
   testCase "Requested for rentals by correct driver" $
-    Handle.endRideHandler modHandle testEndRideReq `shouldReturn` ()
+    runDriverHandler modHandle rentalRide testDriverEndRideReq `shouldReturn` ()
   where
     modHandle = handle{fetchRide = return rentalRide}
+
+successfulEndByDashboard :: TestTree
+successfulEndByDashboard =
+  testCase "Requested by dashboard" $
+    runDashboardHandler handle ride testDashboardEndRideReq `shouldReturn` ()
+
+successfulEndByDashboardWithoutPoint :: TestTree
+successfulEndByDashboardWithoutPoint =
+  testCase "Requested by dashboard without point" $
+    runDashboardHandler handle ride testEndRideReqCase `shouldReturn` ()
+  where
+    testEndRideReqCase = testDashboardEndRideReq{point = Nothing}
 
 failedEndRequestedByWrongDriver :: TestTree
 failedEndRequestedByWrongDriver =
   testCase "Requested by wrong driver" $
-    Handle.endRideHandler modHandle testEndRideReq `shouldThrow` (== NotAnExecutor)
+    runDriverHandler handle ride testEndRideReqCase `shouldThrow` (== NotAnExecutor)
   where
-    modHandle = handle{requestor = Fixtures.defaultDriver{id = "2"}}
+    testEndRideReqCase = testDriverEndRideReq{requestor = Fixtures.anotherDriver}
 
 failedEndRequestedNotByDriver :: TestTree
 failedEndRequestedNotByDriver =
   testCase "Requested not by driver" $
-    Handle.endRideHandler modHandle testEndRideReq `shouldThrow` (== AccessDenied)
+    runDriverHandler handle ride testEndRideReqCase `shouldThrow` (== AccessDenied)
   where
-    modHandle = handle{requestor = Fixtures.defaultAdmin}
+    testEndRideReqCase = testDriverEndRideReq{requestor = Fixtures.defaultAdmin}
+
+failedEndRequestednByAnotherMerchantDashboard :: TestTree
+failedEndRequestednByAnotherMerchantDashboard = do
+  testCase "Fail ride ending if requested by another merchant dashboard" $ do
+    runDashboardHandler handle ride testEndRideReqCase
+      `shouldThrow` (\(RideDoesNotExist _) -> True)
+  where
+    testEndRideReqCase = testDashboardEndRideReq{merchantId = Fixtures.anotherMerchantId}
 
 failedEndWhenRideStatusIsWrong :: TestTree
 failedEndWhenRideStatusIsWrong =
   testCase "A ride has wrong status" $
-    Handle.endRideHandler modHandle testEndRideReq `shouldThrow` (\(RideInvalidStatus _) -> True)
+    runDriverHandler modHandle completeRide testDriverEndRideReq `shouldThrow` (\(RideInvalidStatus _) -> True)
   where
     modHandle = handle{fetchRide = return completeRide}
     completeRide = ride{Ride.id = "ride", Ride.status = Ride.COMPLETED}
@@ -171,9 +207,9 @@ locationUpdatesFailureHandle =
     { findBookingById = \rbId -> pure $ case rbId of
         Id "booking" -> Just lufBooking
         _ -> Nothing,
-      isDistanceCalculationFailed = pure True,
+      isDistanceCalculationFailed = \_ -> pure True,
       notifyCompleteToBAP = \_ rd _ -> checkRide rd,
-      endRideTransaction = \_ rd _ -> checkRide rd,
+      endRideTransaction = \_ _ rd _ -> checkRide rd,
       recalculateFareEnabled = pure True,
       calculateFare = \_ _ _ -> do
         return $
@@ -193,9 +229,9 @@ locationUpdatesFailureHandle =
 locationUpdatesSuccessHandle :: Handle.ServiceHandle IO
 locationUpdatesSuccessHandle =
   locationUpdatesFailureHandle
-    { isDistanceCalculationFailed = pure False,
+    { isDistanceCalculationFailed = \_ -> pure False,
       notifyCompleteToBAP = \_ rd _ -> checkRide rd,
-      endRideTransaction = \_ rd _ -> checkRide rd
+      endRideTransaction = \_ _ rd _ -> checkRide rd
     }
   where
     checkRide :: Ride.Ride -> IO ()
@@ -206,9 +242,9 @@ locationUpdatesSuccessHandle =
 locationUpdatesFailure :: TestTree
 locationUpdatesFailure =
   testCase "Return estimated fare when failed to calculate actual distance" $
-    void $ Handle.endRideHandler locationUpdatesFailureHandle testEndRideReq
+    void $ runDriverHandler locationUpdatesFailureHandle ride testDriverEndRideReq
 
 locationUpdatesSuccess :: TestTree
 locationUpdatesSuccess =
   testCase "Return actual fare when succeeded to calculate actual distance" $
-    void $ Handle.endRideHandler locationUpdatesSuccessHandle testEndRideReq
+    void $ runDriverHandler locationUpdatesSuccessHandle ride testDriverEndRideReq

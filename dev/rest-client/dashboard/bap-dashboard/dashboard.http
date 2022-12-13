@@ -1,5 +1,3 @@
-@bap-dashboard-host = http://localhost:8017
-
 # @name healthcheck
 GET {{bap-dashboard-host}}
 
@@ -137,11 +135,11 @@ token: {{token}}
 
 # @name profile
 
-@customerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
+@yatriCustomerToken = {{bap-dashboard/token/YATRI/customer}}
 
 GET {{bap-dashboard-host}}/user/profile
 content-type: application/json
-token: {{customerToken}}
+token: {{yatriCustomerToken}}
 
 ###
 
@@ -211,9 +209,7 @@ token: {{arduCustomerToken}}
 
 # @name logout
 
-# this endpoint should remove only one token for APP_BACKEND_YATRI server
-
-@yatriCustomerToken = 512e0a7b-e521-4d6b-a0c4-8713ae345bf2
+# this endpoint should remove only one token for YATRI merchant
 
 POST {{bap-dashboard-host}}/user/logout
 content-type: application/json

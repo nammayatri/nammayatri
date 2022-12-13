@@ -52,8 +52,8 @@ tBookingStatus :: Id TRB.Booking -> Text -> ClientM TRB.BookingAPIEntity
 tBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe TRB.BookingStatus -> ClientM TbeBookingAPI.BookingListRes
 (tBookingStatus :<|> tBookingList :<|> _) :<|> _ = client (Proxy :: Proxy TbeBookingAPI.API)
 
-buildStartRideReq :: Text -> LatLong -> TbeRideAPI.StartRideReq
-buildStartRideReq otp pt =
+buildDriverStartRideReq :: Text -> LatLong -> TbeRideAPI.StartRideReq
+buildDriverStartRideReq otp pt =
   TbeRideAPI.StartRideReq
     { TbeRideAPI.rideOtp = otp,
       TbeRideAPI.point = pt
