@@ -14,8 +14,9 @@ let esqDBCfg =
       }
 
 let esqDBReplicaCfg =
-      { connectHost = esqDBCfg.connectHost
-      , connectPort = 5435
+      { connectHost =
+          "beckn-integ-v2-r1.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+      , connectPort = esqDBCfg.connectPort
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
@@ -92,7 +93,7 @@ in  { esqDBCfg
         common.loggerConfig // { logFilePath = "/tmp/beckn-transport.log" }
     , fcmUrl = common.fcmUrl
     , fcmJsonPath = common.fcmJsonPath
-    , fcmTokenKeyPrefix = "FIXME"
+    , fcmTokenKeyPrefix = "transporter-bpp"
     , graceTerminationPeriod = +90
     , defaultRadiusOfSearch = +5000
     , driverPositionInfoExpiry = Some +600

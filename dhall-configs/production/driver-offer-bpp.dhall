@@ -139,10 +139,10 @@ in  { esqDBCfg
     , defaultRideTimeEstimatedThreshold = +900
     , cacheConfig
     , acceptanceWindowOptions
-    , useIntelligentAllocation = True
+    , useIntelligentAllocation = False
     , metricsSearchDurationTimeout = +45
     , dashboardToken = sec.dashboardToken
-    , driverPoolLimit = Some +10
+    , driverPoolLimit = Some +20
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."

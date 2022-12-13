@@ -14,8 +14,8 @@ let esqDBCfg =
       }
 
 let esqDBReplicaCfg =
-      { connectHost = esqDBCfg.connectHost
-      , connectPort = 5435
+      { connectHost = "adb.reporting.beckn.juspay.net"
+      , connectPort = esqDBCfg.connectPort
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase

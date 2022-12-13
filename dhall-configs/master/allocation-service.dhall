@@ -48,7 +48,7 @@ in  { appCfg
     , nwAddress = appCfg.nwAddress
     , fcmUrl = appCfg.fcmUrl
     , fcmJsonPath = appCfg.fcmJsonPath
-    , fcmTokenKeyPrefix = "FIXME"
+    , fcmTokenKeyPrefix = "transporter-allocator"
     , defaultRadiusOfSearch = appCfg.defaultRadiusOfSearch
     , driverPositionInfoExpiry = appCfg.driverPositionInfoExpiry
     , graceTerminationPeriod = appCfg.graceTerminationPeriod

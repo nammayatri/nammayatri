@@ -1,10 +1,10 @@
 let globalCommon = ../generic/common.dhall
 
-let appCfg = ./beckn-transport.dhall
+let appCfg = ./driver-offer-bpp.dhall
 
 in  { driverAllowedDelay = +300
     , notificationMinDelay = +50000
-    , metricsPort = +9997
+    , metricsPort = +9999
     , healthcheckPort = +8115
     , loggerConfig =
             appCfg.loggerConfig
@@ -15,7 +15,7 @@ in  { driverAllowedDelay = +300
     , esqDBCfg = appCfg.esqDBCfg
     , fcmJsonPath = appCfg.fcmJsonPath
     , fcmUrl = appCfg.fcmUrl
-    , fcmTokenKeyPrefix = "driver-tracking-healthcheck-service"
+    , fcmTokenKeyPrefix = "driver-offer-bpp-tracking-healthcheck-service"
     , encTools = appCfg.encTools
     , driverInactiveDelay = +86400
     , smsCfg = appCfg.smsCfg

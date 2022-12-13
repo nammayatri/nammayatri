@@ -12,8 +12,9 @@ let esqDBCfg =
       }
 
 let esqDBReplicaCfg =
-      { connectHost = esqDBCfg.connectHost
-      , connectPort = 5435
+      { connectHost =
+          "beckn-integ-v2-r1.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+      , connectPort = esqDBCfg.connectPort
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
