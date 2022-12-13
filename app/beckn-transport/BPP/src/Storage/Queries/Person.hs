@@ -302,8 +302,8 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
         set
           tbl
           [ PersonUpdatedAt =. val now,
-            PersonClientVersion =. val mbBundleVersionText,
-            PersonBundleVersion =. val mbClientVersionText
+            PersonClientVersion =. val mbClientVersionText,
+            PersonBundleVersion =. val mbBundleVersionText
           ]
         where_ $
           tbl ^. PersonTId ==. val (toKey person.id)
