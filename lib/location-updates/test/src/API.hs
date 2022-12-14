@@ -27,6 +27,7 @@ apiSpec appEnv config =
             case config of
               GoogleConfig _ -> "google"
               OSRMConfig _ -> "osrm"
+              MMIConfig _ -> "mmi"
       it "should calculate correct distance for the short curvy route" $
         successFlow appEnv config 50 650 (Id $ "shortCurvyRoute" <> typeSuffix <> show randomSuffix) shortCurvyRoute
       it "should calculate correct distance for the route with far isolated point" $
