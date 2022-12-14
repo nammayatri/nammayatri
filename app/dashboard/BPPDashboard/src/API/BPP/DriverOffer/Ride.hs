@@ -59,13 +59,13 @@ rideList ::
   Maybe Int ->
   Maybe Int ->
   Maybe Common.BookingStatus ->
-  Maybe (Id Common.Ride) ->
+  Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
   FlowHandler Common.RideListRes
-rideList userMerchantId merchantId mbLimit mbOffset mbBookingStatus mbRideId mbCustomerPhone mbDriverPhone = withFlowHandlerAPI $ do
+rideList userMerchantId merchantId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
-  Client.callDriverOfferBPP checkedMerchantId (.rides.rideList) mbLimit mbOffset mbBookingStatus mbRideId mbCustomerPhone mbDriverPhone
+  Client.callDriverOfferBPP checkedMerchantId (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone
 
 rideStart :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
 rideStart userMerchantId merchantId rideId req = withFlowHandlerAPI $ do

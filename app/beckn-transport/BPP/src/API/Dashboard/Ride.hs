@@ -39,12 +39,12 @@ rideList ::
   Maybe Int ->
   Maybe Int ->
   Maybe Common.BookingStatus ->
-  Maybe (Id Common.Ride) ->
+  Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
   FlowHandler Common.RideListRes
-rideList merchantShortId mbLimit mbOffset mbBookingStatus mbRideId mbCustomerPhone =
-  withFlowHandlerAPI . DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbRideId mbCustomerPhone
+rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone =
+  withFlowHandlerAPI . DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone
 
 rideStart :: ShortId DM.Merchant -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
 rideStart merchantShortId reqRideId Common.StartRideReq {point} = withFlowHandlerAPI $ do

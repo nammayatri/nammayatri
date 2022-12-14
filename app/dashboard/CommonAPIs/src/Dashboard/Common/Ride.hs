@@ -28,7 +28,7 @@ type RideListAPI =
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
     :> QueryParam "bookingStatus" BookingStatus
-    :> QueryParam "rideId" (Id Ride)
+    :> QueryParam "rideShortId" (ShortId Ride)
     :> QueryParam "customerPhoneNo" Text
     :> QueryParam "driverPhoneNo" Text
     :> Get '[JSON] RideListRes
@@ -42,14 +42,12 @@ data RideListRes = RideListRes
 
 data RideListItem = RideListItem
   { rideId :: Id Ride,
-    driverId :: Id Driver,
+    rideShortId :: ShortId Ride,
     customerName :: Maybe Text,
     customerPhoneNo :: Text,
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
-    vehicleNo :: Maybe Text, -- may be Nothing, when we unlink vehicle
-    fromLocationArea :: Maybe Text,
-    toLocationArea :: Maybe Text,
+    vehicleNo :: Text,
     bookingStatus :: BookingStatus
   }
   deriving stock (Show, Generic)

@@ -13,19 +13,15 @@ import Domain.Types.Booking.Type as Booking
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
-import Domain.Types.RideDetails
+import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import Storage.Queries.Booking
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking as Booking
-import Storage.Tabular.Booking.BookingLocation as BookingLocation
-import Storage.Tabular.Booking.OneWayBooking as OneWayBooking
-import Storage.Tabular.Person as Person
 import Storage.Tabular.Rating as Rating
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
 import Storage.Tabular.RiderDetails as RiderDetails
-import Storage.Tabular.Vehicle as Vehicle
 
 create :: Ride -> SqlDB ()
 create dRide = Esq.runTransaction $
@@ -122,7 +118,7 @@ findAllRideAPIEntityDataByRBId rbId = Esq.buildDType $ do
         fullRideTable
           `innerJoin` table @RideDetailsT
             `Esq.on` ( \((ride :& _) :& rideDetails) ->
-                         (ride ^. Ride.RideId) ==. rideDetails ^. RideDetails.RideDetailsId
+                         (ride ^. Ride.RideTId) ==. rideDetails ^. RideDetails.RideDetailsId
                      )
     where_ $
       ride ^. Ride.RideBookingId ==. val (toKey rbId)
@@ -248,13 +244,10 @@ getCountByStatus merchantId = do
     return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))
 
 data RideItem = RideItem
-  { driver :: Person,
+  { rideShortId :: ShortId Ride,
+    rideDetails :: RideDetails,
     riderDetails :: RiderDetails,
-    rideId :: Id Ride,
     customerName :: Maybe Text,
-    vehicleNo :: Maybe Text,
-    fromLocationArea :: Maybe Text,
-    toLocationArea :: Maybe Text,
     bookingStatus :: Common.BookingStatus
   }
 
@@ -266,61 +259,45 @@ findAllRideItems ::
   Int ->
   Int ->
   Maybe Common.BookingStatus ->
-  Maybe (Id Ride) ->
+  Maybe (ShortId Ride) ->
   Maybe Text ->
   Maybe Text ->
   m [RideItem]
-findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideId mbCustomerPhone mbDriverPhone = do
+findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhone mbDriverPhone = do
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
   now <- getCurrentTime
   res <- Esq.findAll $ do
-    booking :& fromLocation :& _ :& mbToLocation :& ride :& driver :& mbVehicle :& riderDetails <-
+    booking :& ride :& rideDetails :& riderDetails <-
       from $
         table @BookingT
-          `innerJoin` table @BookingLocationT `Esq.on` (\(booking :& loc1) -> booking ^. BookingFromLocationId ==. loc1 ^. BookingLocationTId)
-          `leftJoin` table @OneWayBooking.OneWayBookingT
-            `Esq.on` ( \(booking :& _ :& mbOneWayBooking) ->
-                         just (booking ^. BookingTId) ==. mbOneWayBooking ?. OneWayBooking.OneWayBookingBookingId
-                     )
-          `leftJoin` table @BookingLocationT
-            `Esq.on` ( \(_ :& _ :& mbOneWayBooking :& mbLoc2) ->
-                         mbOneWayBooking ?. OneWayBookingToLocationId ==. mbLoc2 ?. BookingLocationTId
-                     )
           `innerJoin` table @RideT
-            `Esq.on` ( \(booking :& _ :& _ :& _ :& ride) ->
+            `Esq.on` ( \(booking :& ride) ->
                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
                      )
-          `innerJoin` table @PersonT
-            `Esq.on` ( \(_ :& _ :& _ :& _ :& ride :& driver) ->
-                         ride ^. Ride.RideDriverId ==. driver ^. Person.PersonTId
-                     )
-          `leftJoin` table @VehicleT
-            `Esq.on` ( \(_ :& _ :& _ :& _ :& _ :& driver :& mbVehicle) ->
-                         just (driver ^. Person.PersonTId) ==. mbVehicle ?. Vehicle.VehicleDriverId
+          `innerJoin` table @RideDetailsT
+            `Esq.on` ( \(_ :& ride :& rideDetails) ->
+                         ride ^. Ride.RideTId ==. rideDetails ^. RideDetails.RideDetailsId
                      )
           `innerJoin` table @RiderDetailsT
-            `Esq.on` ( \(booking :& _ :& _ :& _ :& _ :& _ :& _ :& riderDetails) ->
+            `Esq.on` ( \(booking :& _ :& _ :& riderDetails) ->
                          booking ^. Booking.BookingRiderId ==. just (riderDetails ^. RiderDetails.RiderDetailsTId)
                      )
     let bookingStatusVal = mkBookingStatusVal ride now
     where_ $
-      driver ^. PersonMerchantId ==. val (toKey merchantId)
+      booking ^. BookingProviderId ==. val (toKey merchantId)
         &&. whenJust_ mbBookingStatus (\bookingStatus -> bookingStatusVal ==. val bookingStatus)
-        &&. whenJust_ mbRideId (\rideId -> ride ^. Ride.RideTId ==. val (toKey rideId))
-        &&. whenJust_ mbDriverPhoneDBHash (\hash -> driver ^. PersonMobileNumberHash ==. val (Just hash))
+        &&. whenJust_ mbRideShortId (\rideShortId -> ride ^. Ride.RideShortId ==. val rideShortId.getShortId)
+        &&. whenJust_ mbDriverPhoneDBHash (\hash -> rideDetails ^. RideDetailsDriverNumberHash ==. val (Just hash))
         &&. whenJust_ mbCustomerPhoneDBHash (\hash -> riderDetails ^. RiderDetailsMobileNumberHash ==. val hash)
     orderBy [desc $ ride ^. RideCreatedAt]
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
     return
-      ( ride ^. RideTId,
-        booking ^. BookingRiderName,
+      ( ride ^. RideShortId,
+        rideDetails,
         riderDetails,
-        driver,
-        mbVehicle ?. VehicleRegistrationNo,
-        fromLocation ^. BookingLocationArea,
-        mbToLocation ?. BookingLocationArea,
+        booking ^. BookingRiderName,
         bookingStatusVal
       )
   pure $ mkRideItem <$> res
@@ -337,5 +314,5 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideId mbCustom
         ]
         (else_ $ val Common.ONGOING_6HRS)
 
-    mkRideItem (rideId, customerName, riderDetails, driver, vehicleNo, fromLocationArea, toLocationArea, bookingStatus) = do
-      RideItem {toLocationArea = join toLocationArea, ..}
+    mkRideItem (rideShortId, rideDetails, riderDetails, customerName, bookingStatus) = do
+      RideItem {rideShortId = ShortId rideShortId, ..}

@@ -14,13 +14,14 @@ import Beckn.Types.Id
 import qualified Domain.Types.Ride as SR
 import qualified Domain.Types.RideDetails as Domain
 import qualified Domain.Types.Vehicle as SV
+import Storage.Tabular.Ride (RideTId)
 import Storage.Tabular.Vehicle ()
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     RideDetailsT sql=ride_details
-      id Text
+      id RideTId
       driverName Text
       driverNumberEncrypted Text Maybe
       driverNumberHash DbHash Maybe
@@ -36,20 +37,20 @@ mkPersist
 
 instance TEntityKey RideDetailsT where
   type DomainKey RideDetailsT = Id SR.Ride
-  fromKey (RideDetailsTKey _id) = Id _id
-  toKey (Id id) = RideDetailsTKey id
+  fromKey (RideDetailsTKey _id) = fromKey _id
+  toKey id = RideDetailsTKey $ toKey id
 
 instance TType RideDetailsT Domain.RideDetails where
   fromTType RideDetailsT {..} = do
     return $
       Domain.RideDetails
-        { id = Id id,
+        { id = fromKey id,
           driverNumber = EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash,
           ..
         }
   toTType Domain.RideDetails {..} =
     RideDetailsT
-      { id = getId id,
+      { id = toKey id,
         driverNumberEncrypted = driverNumber <&> unEncrypted . (.encrypted),
         driverNumberHash = driverNumber <&> (.hash),
         ..

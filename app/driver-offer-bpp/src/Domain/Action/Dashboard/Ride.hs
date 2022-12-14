@@ -35,16 +35,16 @@ rideList ::
   Maybe Int ->
   Maybe Int ->
   Maybe Common.BookingStatus ->
-  Maybe (Id Common.Ride) ->
+  Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
   Flow Common.RideListRes
-rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqRideId mbCustomerPhone mbDriverPhone = do
+rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone = do
   merchant <- findMerchantByShortId merchantShortId
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
-  let mbRideId = cast @Common.Ride @DRide.Ride <$> mbReqRideId
-  rideItems <- QRide.findAllRideItems merchant.id limit offset mbBookingStatus mbRideId mbCustomerPhone mbDriverPhone
+  let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
+  rideItems <- QRide.findAllRideItems merchant.id limit offset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone
   rideListItems <- traverse buildRideListItem rideItems
   pure
     Common.RideListRes
@@ -58,18 +58,16 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqRideId mbCustomer
 buildRideListItem :: EncFlow m r => QRide.RideItem -> m Common.RideListItem
 buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
-  driverPhoneNo <- mapM decrypt driver.mobileNumber
+  driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   pure
     Common.RideListItem
-      { rideId = cast @DRide.Ride @Common.Ride rideId,
-        driverId = cast @DP.Person @Common.Driver driver.id,
+      { rideId = cast @DRide.Ride @Common.Ride rideDetails.id,
+        rideShortId = coerce @(ShortId DRide.Ride) @(ShortId Common.Ride) rideShortId,
         customerName,
         customerPhoneNo,
-        driverName = driver.firstName,
+        driverName = rideDetails.driverName,
         driverPhoneNo,
-        vehicleNo,
-        fromLocationArea,
-        toLocationArea,
+        vehicleNo = rideDetails.vehicleNumber,
         bookingStatus
       }
 
