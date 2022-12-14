@@ -113,7 +113,6 @@ dashboardEndRide ::
   m APISuccess.APISuccess
 dashboardEndRide handle rideId = endRideHandler handle rideId . DashboardReq
 
---TODO make it the same as in beckn transport
 endRideHandler ::
   (Redis.HedisFlow m r, CoreMetrics m, MonadFlow m) =>
   ServiceHandle m ->

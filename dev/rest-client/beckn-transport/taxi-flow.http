@@ -225,7 +225,7 @@ token: {{token}}
 
 ###
 
-@bppBookingId = 714164a4-03f4-4909-ad77-6ab0d96116b2
+@bppBookingId = a5345273-fac2-4903-ab68-5e6da261863d
 # this should be taken from the transporter BPP database
 # select id from booking where status = 'CONFIRMED';
 # driverNotificationExpiry time is equal to 25 seconds,
@@ -290,6 +290,19 @@ content-type: application/json
     "lat": 10.080241882783683,
     "lon": 76.33893232031218
   }
+}
+
+###
+
+# @name cancel
+POST {{app-host}}/rideBooking/{{bookingId}}/cancel
+content-type: application/json
+token: {{app-token}}
+
+{
+  "reasonCode": "OTHER",
+  "reasonStage": "OnAssign",
+  "additionalInfo": "driver is too fat"
 }
 
 ###

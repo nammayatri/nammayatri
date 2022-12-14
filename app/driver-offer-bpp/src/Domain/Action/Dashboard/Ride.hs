@@ -23,10 +23,9 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverLocation as QDrLoc
-import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
-import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -77,16 +76,16 @@ rideInfo merchantShortId reqRideId = do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound rideId.getId)
+  rideDetails <- QRideDetails.findById rideId >>= fromMaybeM (RideNotFound rideId.getId) -- FIXME RideDetailsNotFound
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
+  let driverId = ride.driverId
 
   -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
+  unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
 
-  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
-  mbVehicle <- QVehicle.findById driver.id -- driver can unlink vehicle, so it's optional
-  driverLocation <- QDrLoc.findById driver.id >>= fromMaybeM LocationNotFound
+  driverLocation <- QDrLoc.findById driverId >>= fromMaybeM LocationNotFound
 
   mbBCReason <-
     if ride.status == DRide.CANCELLED
@@ -98,7 +97,7 @@ rideInfo merchantShortId reqRideId = do
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
 
   customerPhoneNo <- decrypt riderDetails.mobileNumber
-  driverPhoneNo <- mapM decrypt driver.mobileNumber
+  driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   now <- getCurrentTime
   pure
     Common.RideInfoRes
@@ -108,10 +107,10 @@ rideInfo merchantShortId reqRideId = do
         rideOtp = ride.otp,
         customerPickupLocation = mkLocationAPIEntity booking.fromLocation,
         customerDropLocation = Just $ mkLocationAPIEntity booking.toLocation,
-        driverId = cast @DP.Person @Common.Driver driver.id,
-        driverName = driver.firstName,
+        driverId = cast @DP.Person @Common.Driver driverId,
+        driverName = rideDetails.driverName,
         driverPhoneNo,
-        vehicleNo = mbVehicle <&> (.registrationNo),
+        vehicleNo = rideDetails.vehicleNumber,
         driverStartLocation = ride.tripStartPos,
         driverCurrentLocation = getCoordinates driverLocation,
         rideBookingTime = booking.createdAt,

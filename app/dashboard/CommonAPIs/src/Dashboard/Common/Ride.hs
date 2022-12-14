@@ -138,7 +138,7 @@ data RideInfoRes = RideInfoRes
     driverId :: Id Driver,
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
-    vehicleNo :: Maybe Text,
+    vehicleNo :: Text,
     driverStartLocation :: Maybe LatLong,
     driverCurrentLocation :: LatLong,
     rideBookingTime :: UTCTime,

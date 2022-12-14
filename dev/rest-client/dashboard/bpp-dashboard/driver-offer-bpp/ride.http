@@ -12,10 +12,10 @@ GET {{bpp-dashboard-host}}
 
 # @name rideList
 
-# FIXME ?bookingStatus=CANCELLED
+# FIXME ?bookingStatus=COMPLETED
 GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/list
-?bookingStatus="CANCELLED"
-# &rideId=add682bc-26d2-435e-abd9-2b71fb643701
+?bookingStatus="COMPLETED"
+# &rideShortId=DNNJaROfj7
 &customerPhoneNo=9999999999
 # &driverPhoneNo=6666666666
 &limit=10
