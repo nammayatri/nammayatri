@@ -155,7 +155,7 @@ onUpdate registryUrl RideCompletedReq {..} = do
     QRB.updateStatus booking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
     QFareBreakup.createMany breakups
-  Notify.notifyOnRideCompleted booking ride
+  Notify.notifyOnRideCompleted booking updRide
   where
     buildFareBreakup :: MonadFlow m => Id SRB.Booking -> OnUpdateFareBreakup -> m DFareBreakup.FareBreakup
     buildFareBreakup bookingId OnUpdateFareBreakup {..} = do

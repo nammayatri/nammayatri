@@ -160,7 +160,7 @@ notifyOnRideCompleted booking ride = do
           unwords
             [ "Hope you enjoyed your trip with",
               driverName,
-              "Total Fare " <> show totalFare
+              "Total Fare " <> show (fromJust totalFare)
             ]
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
