@@ -26,6 +26,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Idfy.Types.IdfyConfig as Idfy
+import SharedLogic.DriverPool (DriverPoolConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
@@ -59,12 +60,8 @@ data AppCfg = AppCfg
     driverOnboardingConfigs :: DriverOnboardingConfigs,
     slackCfg :: SlackConfig,
     apiRateLimitOptions :: APIRateLimitOptions,
-    driverPositionInfoExpiry :: Maybe Seconds,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
-    defaultStraightLineRadiusOfSearch :: Meters,
-    defaultActualDistanceRadiusOfSearch :: Meters,
-    shouldFilterDriverPoolActualDistance :: Bool,
     searchRequestExpirationSeconds :: Int,
     driverQuoteExpirationSeconds :: Int,
     httpClientOptions :: HttpClientOptions,
@@ -77,12 +74,11 @@ data AppCfg = AppCfg
     defaultRideTimeEstimatedThreshold :: Seconds,
     cacheConfig :: CacheConfig,
     metricsSearchDurationTimeout :: Seconds,
-    driverPoolLimit :: Maybe Int,
     acceptanceWindowOptions :: SlidingWindowOptions,
-    useIntelligentAllocation :: Bool,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
-    cacheTranslationConfig :: CacheTranslationConfig
+    cacheTranslationConfig :: CacheTranslationConfig,
+    driverPoolCfg :: DriverPoolConfig
   }
   deriving (Generic, FromDhall)
 
@@ -115,12 +111,8 @@ data AppEnv = AppEnv
     driverOnboardingConfigs :: DriverOnboardingConfigs,
     slackCfg :: SlackConfig,
     apiRateLimitOptions :: APIRateLimitOptions,
-    driverPositionInfoExpiry :: Maybe Seconds,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
-    defaultStraightLineRadiusOfSearch :: Meters,
-    defaultActualDistanceRadiusOfSearch :: Meters,
-    shouldFilterDriverPoolActualDistance :: Bool,
     bppMetrics :: BPPMetricsContainer,
     searchRequestExpirationSeconds :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
@@ -132,13 +124,12 @@ data AppEnv = AppEnv
     defaultRideTravelledDistanceThreshold :: Meters,
     defaultRideTimeEstimatedThreshold :: Seconds,
     cacheConfig :: CacheConfig,
-    driverPoolLimit :: Maybe Int,
     s3Env :: S3Env Flow,
     acceptanceWindowOptions :: SlidingWindowOptions,
-    useIntelligentAllocation :: Bool,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
-    cacheTranslationConfig :: CacheTranslationConfig
+    cacheTranslationConfig :: CacheTranslationConfig,
+    driverPoolCfg :: DriverPoolConfig
   }
   deriving (Generic)
 

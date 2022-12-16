@@ -77,6 +77,8 @@ dependencies:
   - openapi3
   - string-conversions
   - either
+  - extra
+  - safe
 
 ghc-options:
   - -fwrite-ide-info

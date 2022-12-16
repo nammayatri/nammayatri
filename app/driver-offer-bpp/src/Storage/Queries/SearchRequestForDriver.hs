@@ -9,8 +9,8 @@ import Domain.Types.SearchRequest
 import Domain.Types.SearchRequestForDriver as Domain
 import Storage.Tabular.SearchRequestForDriver
 
-create :: SearchRequestForDriver -> SqlDB ()
-create = Esq.create
+createMany :: [SearchRequestForDriver] -> SqlDB ()
+createMany = Esq.createMany
 
 findAllByRequestId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]
 findAllByRequestId searchReqId = do

@@ -21,6 +21,7 @@ driver-offer-bpp
 bap-dashboard
 bpp-dashboard
 image-api-helper
+driver-offer-allocator
 EOF
 }
 

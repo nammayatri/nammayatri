@@ -6,7 +6,7 @@ module Lib.Scheduler.Environment where
 import Beckn.Mock.App
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis (HedisCfg, HedisEnv)
+import Beckn.Storage.Hedis (HedisCfg, HedisEnv, disconnectHedis)
 import Beckn.Types.Common
 import Beckn.Utils.App (Shutdown)
 import Beckn.Utils.Dhall (FromDhall)
@@ -54,6 +54,7 @@ data SchedulerEnv t = SchedulerEnv
 releaseSchedulerEnv :: SchedulerEnv t -> IO ()
 releaseSchedulerEnv SchedulerEnv {..} = do
   releaseLoggerEnv loggerEnv
+  disconnectHedis hedisEnv
 
 newtype SchedulerM t a = SchedulerM {unSchedulerM :: MockM (SchedulerEnv t) a}
   deriving newtype (Functor, Applicative, Monad, MonadReader (SchedulerEnv t), MonadIO)

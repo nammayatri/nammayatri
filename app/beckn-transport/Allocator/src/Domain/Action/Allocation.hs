@@ -80,6 +80,7 @@ data ServiceHandle m = ServiceHandle
     getConfiguredAllocationTime :: m Seconds,
     getConfiguredReallocationsLimit :: m Int,
     getRequests :: ShortId Subscriber -> Integer -> m [RideRequest],
+    prepareDriverPoolBatches :: Id SRB.Booking -> m (),
     getNextDriverPoolBatch :: Id SRB.Booking -> m [DriverPoolResult],
     cleanupDriverPoolBatches :: Id SRB.Booking -> m (),
     getCurrentNotifications :: Id SRB.Booking -> m [CurrentNotification],
@@ -254,6 +255,7 @@ getDriverPool ServiceHandle {..} bookingId = do
   where
     getNextRadiusBatch = do
       incrementPoolRadiusStep bookingId
+      prepareDriverPoolBatches bookingId
       getNextDriverPoolBatch bookingId
 
 getDriverPoolDescs :: [DriverPoolResult] -> [Text]

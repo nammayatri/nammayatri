@@ -51,7 +51,7 @@ testNotInRadius = do
       Q.getNearestDrivers Nothing pickupPoint 10 org1 False (Just hour) <&> getIds
   res `shouldSatisfy` equals []
 
-getIds :: [Q.DriverPoolResult] -> [Text]
+getIds :: [Q.NearestDriversResult] -> [Text]
 getIds = map (getId . (.driverId))
 
 pickupPoint :: LatLong

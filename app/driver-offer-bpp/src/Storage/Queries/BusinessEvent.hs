@@ -1,6 +1,5 @@
 module Storage.Queries.BusinessEvent where
 
-import qualified Beckn.External.Maps.Interface.Types as Maps
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
@@ -10,7 +9,6 @@ import Domain.Types.BusinessEvent
 import Domain.Types.Person (Driver)
 import Domain.Types.Ride
 import Domain.Types.Vehicle.Variant (Variant)
-import Storage.Queries.Person
 import Storage.Tabular.BusinessEvent ()
 
 logBusinessEvent ::
@@ -39,20 +37,6 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
         duration = duration,
         rideId = rideId
       }
-
--- FIXME we don't use this event
-logDriverInPoolEvent :: WhenPoolWasComputed -> Maybe (Id Booking) -> Maps.GetDistanceResp DriverPoolResult a -> SqlDB ()
-logDriverInPoolEvent whenPoolWasComputed bookingId getDistanceRes = do
-  let driverInPool = getDistanceRes.origin
-  logBusinessEvent
-    (Just driverInPool.driverId)
-    DRIVER_IN_POOL
-    bookingId
-    (Just whenPoolWasComputed)
-    (Just driverInPool.vehicle.variant)
-    (Just $ Meters $ driverInPool.distanceToDriver)
-    (Just getDistanceRes.duration)
-    Nothing
 
 logDriverAssignedEvent :: Id Driver -> Id Booking -> Id Ride -> SqlDB ()
 logDriverAssignedEvent driverId bookingId rideId = do

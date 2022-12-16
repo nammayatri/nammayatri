@@ -6,8 +6,9 @@ module TestMain where
 import qualified "app-backend" App as AppBackend
 import qualified "beckn-gateway" App as Gateway
 import qualified "beckn-transport" App as TransporterBackend
-import qualified "beckn-transport-allocator" App as Allocator
+import qualified "beckn-transport-allocator" App as YatriAllocator
 import qualified "beckn-transport-driver-tracking-health-check" App as DriverHC
+import qualified "driver-offer-allocator" App as ARDUAllocator
 import qualified "driver-offer-bpp" App as DriverOfferBpp
 import qualified "mock-fcm" App as MockFcm
 import qualified "mock-public-transport-bpp" App as MockPublicTransportBpp
@@ -56,7 +57,8 @@ main = do
       "mock-public-transport-bpp",
       "public-transport-search-consumer",
       "search-result-aggregator",
-      "driver-offer-bpp"
+      "driver-offer-bpp",
+      "driver-offer-allocator"
     ]
   -- ... and run
   defaultMain =<< specs
@@ -93,7 +95,7 @@ specs' trees = do
       )
   where
     allServers =
-      [ Allocator.runAllocator \cfg ->
+      [ YatriAllocator.runAllocator \cfg ->
           cfg & hideLogging
             & #driverNotificationExpiry .~ 18,
         DriverHC.runDriverHealthcheck hideLogging,
@@ -122,7 +124,11 @@ specs' trees = do
             & #kafkaConsumerCfgs . #publicTransportQuotes . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
         DriverOfferBpp.runDriverOfferBpp $
           \cfg ->
-            cfg & hideLogging
+            cfg & hideLogging,
+        ARDUAllocator.runDriverOfferAllocator $ \cfg ->
+          cfg{appCfg = cfg.appCfg & hideLogging,
+              schedulerConfig = cfg.schedulerConfig & hideLogging
+             }
       ]
 
     startServers servers = do

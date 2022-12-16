@@ -30,9 +30,7 @@ module Domain.Action.Allocation.Internal
     incrementFailedTaskCounter,
     putTaskDuration,
     findAllocatorFCMConfigByMerchantId,
-    incrementPoolRadiusStep,
-    getNextDriverPoolBatch,
-    cleanupDriverPoolBatches,
+    module Reexport,
   )
 where
 
@@ -45,6 +43,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Data.Text as T
 import qualified Domain.Action.Allocation as Alloc
+import Domain.Action.Allocation.Internal.DriverPool as Reexport
 import Domain.Types.AllocationEvent (AllocationEventType)
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.Booking as SRB
@@ -60,9 +59,8 @@ import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.DriverPool as DrPool
-import SharedLogic.TransporterConfig
 import SharedLogic.DriverPool.Types
+import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.AllocationEvent (logAllocationEvent)
@@ -394,57 +392,3 @@ findAllocatorFCMConfigByMerchantId :: (MonadFlow m, HasCacheConfig r, HedisFlow 
 findAllocatorFCMConfigByMerchantId merchantId = do
   fcmConfig <- findFCMConfigByMerchantId merchantId
   pure fcmConfig{FCM.fcmTokenKeyPrefix = "transporter-allocator"}
-
-poolBatchNumKey :: Id Booking -> Text
-poolBatchNumKey bookingId = "Allocator:PoolBatchNum:BookingId-" <> bookingId.getId
-
-poolRadiusStepKey :: Id Booking -> Text
-poolRadiusStepKey bookingId = "Allocator:PoolRadiusStep:BookingId-" <> bookingId.getId
-
-cleanupDriverPoolBatches ::
-  ( HasCacheConfig r,
-    EsqDBFlow m r,
-    HedisFlow m r,
-    EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
-  ) =>
-  Id Booking ->
-  m ()
-cleanupDriverPoolBatches bookingId = do
-  DrPool.cleanDriverPoolBatches bookingId
-  Redis.del (poolRadiusStepKey bookingId)
-  Redis.del (poolBatchNumKey bookingId)
-
-getNextDriverPoolBatch :: Id Booking -> Flow [DriverPoolResult]
-getNextDriverPoolBatch bookingId = do
-  batchNum <- getPoolBatchNum
-  radiusStep <- getPoolRadiusStep
-  DrPool.getDriverPoolBatch bookingId radiusStep batchNum
-  where
-    getPoolBatchNum :: (CacheFlow m r) => m PoolBatchNum
-    getPoolBatchNum = do
-      res <- Redis.get (poolBatchNumKey bookingId)
-      res' <- case res of
-        Just i -> return i
-        Nothing -> do
-          let expTime = 600
-          Redis.setExp (poolBatchNumKey bookingId) (0 :: Integer) expTime
-          return 0
-      void $ Redis.incr (poolBatchNumKey bookingId)
-      return res'
-
-    getPoolRadiusStep :: (CacheFlow m r) => m PoolRadiusStep
-    getPoolRadiusStep = do
-      res <- Redis.get (poolRadiusStepKey bookingId)
-      case res of
-        Just i -> return i
-        Nothing -> do
-          let expTime = 600
-          Redis.setExp (poolRadiusStepKey bookingId) (0 :: Integer) expTime
-          return 0
-
-incrementPoolRadiusStep :: (CacheFlow m r) => Id Booking -> m ()
-incrementPoolRadiusStep bookingId = do
-  Redis.del (poolBatchNumKey bookingId)
-  void $ Redis.incr (poolRadiusStepKey bookingId)

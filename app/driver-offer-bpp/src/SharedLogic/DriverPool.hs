@@ -2,10 +2,11 @@
 
 module SharedLogic.DriverPool
   ( calculateDriverPool,
-    randomizeAndLimitSelection,
-    intelligentPoolSelection,
+    calculateDriverPoolWithActualDist,
     incrementAcceptanceCount,
+    getLatestAcceptanceRatio,
     incrementTotalCount,
+    module Reexport,
   )
 where
 
@@ -16,21 +17,20 @@ import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Common
 import qualified Beckn.Utils.SlidingWindowCounters as SWC
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Set as Set
-import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DP
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import GHC.Float (double2Int, int2Double)
+import SharedLogic.DriverPool.Config as Reexport
+import SharedLogic.DriverPool.Types as Reexport
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Person as QP
-import System.Random
 import Tools.Maps as Maps
 import Tools.Metrics
 
 mkAcceptanceKey :: Text -> Text
-mkAcceptanceKey = (<> "-quote-accepted")
+mkAcceptanceKey driverId = driverId <> "-quote-accepted"
 
 withWindowOptions ::
   ( Redis.HedisFlow m r,
@@ -47,127 +47,113 @@ incrementTotalCount ::
     HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
     L.MonadFlow m
   ) =>
-  Id a ->
+  Id DP.Person ->
   m ()
-incrementTotalCount driverId = withWindowOptions $ SWC.incrementTotalCount (getId driverId)
+incrementTotalCount driverId = withWindowOptions $ SWC.incrementTotalCount driverId.getId
 
 incrementAcceptanceCount ::
   ( Redis.HedisFlow m r,
     HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
     L.MonadFlow m
   ) =>
-  Id a ->
+  Id DP.Person ->
   m ()
-incrementAcceptanceCount driverId = withWindowOptions $ SWC.incrementWindowCount (mkAcceptanceKey $ getId driverId)
+incrementAcceptanceCount driverId = withWindowOptions $ SWC.incrementWindowCount (mkAcceptanceKey driverId.getId)
 
-intelligentPoolSelection ::
-  ( Redis.HedisFlow m r,
-    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
-    L.MonadFlow m
-  ) =>
-  [Maps.GetDistanceResp QP.DriverPoolResult LatLong] ->
-  Int ->
-  m [Maps.GetDistanceResp QP.DriverPoolResult LatLong]
-intelligentPoolSelection dp n =
-  withWindowOptions $
-    \wo ->
-      map snd
-        . take n
-        . sortOn (Down . fst)
-        <$> ( (\poolWithRatio -> logInfo ("Drivers in Pool with acceptance ratios " <> show poolWithRatio) $> poolWithRatio)
-                =<< mapM (\dPoolRes -> (,dPoolRes) <$> SWC.getLatestRatio (getId dPoolRes.origin.driverId) mkAcceptanceKey wo) dp
-            )
-
-randomizeAndLimitSelection ::
-  (L.MonadFlow m) =>
-  [Maps.GetDistanceResp QP.DriverPoolResult LatLong] ->
-  Int ->
-  m [Maps.GetDistanceResp QP.DriverPoolResult LatLong]
-randomizeAndLimitSelection driverPool limit = do
-  let poolLen = length driverPool
-      startIdx = 0
-      endIdx = poolLen - 1
-  randomNumList <- getRandomNumberList startIdx endIdx limit
-  return $ fmap (driverPool !!) randomNumList
-
-getRandomNumberList :: (L.MonadFlow m) => Int -> Int -> Int -> m [Int]
-getRandomNumberList start end count = do
-  n <- round <$> L.runIO getPOSIXTime
-  let pureGen = mkStdGen n
-  return $ toList $ nextNumber pureGen Set.empty
-  where
-    nextNumber :: RandomGen g => g -> Set.Set Int -> Set.Set Int
-    nextNumber gen acc =
-      if Set.size acc == min (end - start + 1) count
-        then acc
-        else
-          let (n, gen') = randomR (start, end) gen
-           in nextNumber gen' (Set.union (Set.singleton n) acc)
+getLatestAcceptanceRatio ::
+  (L.MonadFlow m, Redis.HedisFlow m r) =>
+  Id DP.Driver ->
+  SWC.SlidingWindowOptions ->
+  m Double
+getLatestAcceptanceRatio driverId = SWC.getLatestRatio (getId driverId) mkAcceptanceKey
 
 calculateDriverPool ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    HasFlowEnv m r ["defaultStraightLineRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds, "shouldFilterDriverPoolActualDistance" ::: Bool, "defaultActualDistanceRadiusOfSearch" ::: Meters],
+    HasDriverPoolConfig r,
     CoreMetrics m,
-    HasPrettyLogger m r
+    HasCoordinates a
   ) =>
   Maybe Variant ->
-  LatLong ->
+  a ->
   Id DM.Merchant ->
   Bool ->
-  Bool ->
-  m [Maps.GetDistanceResp QP.DriverPoolResult LatLong]
-calculateDriverPool variant pickup merchantId onlyNotOnRide shouldComputeActualDistance = do
-  straightLineRadius <- fromIntegral <$> asks (.defaultStraightLineRadiusOfSearch)
-  actualDistanceRadius <- fromIntegral <$> asks (.defaultActualDistanceRadiusOfSearch)
-  shouldFilterDriverPoolActualD <- asks (.shouldFilterDriverPoolActualDistance)
-  mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
+  PoolRadiusStep ->
+  m [DriverPoolResult]
+calculateDriverPool mbVariant pickup merchantId onlyNotOnRide radiusStep = do
+  radius <- getRadius
+  let coord = getCoordinates pickup
+  mbDriverPositionInfoExpiry <- asks (.driverPoolCfg.driverPositionInfoExpiry)
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
       Esq.runInReplica $
         QP.getNearestDrivers
-          variant
-          pickup
-          straightLineRadius
+          mbVariant
+          coord
+          radius
           merchantId
           onlyNotOnRide
           mbDriverPositionInfoExpiry
-  logPretty DEBUG "approxDriverPool" approxDriverPool
-  case approxDriverPool of
-    [] -> pure []
-    (a : pprox) ->
-      if shouldComputeActualDistance
-        then filterOutDriversWithDistanceAboveThreshold merchantId actualDistanceRadius shouldFilterDriverPoolActualD pickup (a :| pprox)
-        else return $ buildGetDistanceResult <$> approxDriverPool
+  return $ makeDriverPoolResult <$> approxDriverPool
   where
-    buildGetDistanceResult :: QP.DriverPoolResult -> Maps.GetDistanceResp QP.DriverPoolResult LatLong
-    buildGetDistanceResult driverMetadata =
-      let distance = driverMetadata.distanceToDriver
-          duration = int2Double distance / 30000 * 3600 -- Average speed of 30km/hr
-       in Maps.GetDistanceResp
-            { origin = driverMetadata,
-              destination = pickup,
-              distance = Meters distance,
-              duration = Seconds . double2Int $ duration,
-              status = "OK"
-            }
+    getRadius = do
+      minRadius <- fromIntegral <$> asks (.driverPoolCfg.minRadiusOfSearch)
+      maxRadius <- fromIntegral <$> asks (.driverPoolCfg.maxRadiusOfSearch)
+      radiusStepSize <- asks (.driverPoolCfg.radiusStep)
+      return $ min (minRadius + radiusStepSize * radiusStep) maxRadius
+    makeDriverPoolResult :: QP.NearestDriversResult -> DriverPoolResult
+    makeDriverPoolResult QP.NearestDriversResult {..} = do
+      DriverPoolResult
+        { distanceToPickup = distanceToDriver,
+          variant = variant,
+          ..
+        }
 
-filterOutDriversWithDistanceAboveThreshold ::
+calculateDriverPoolWithActualDist ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasDriverPoolConfig r,
+    CoreMetrics m,
+    HasCoordinates a
+  ) =>
+  Maybe Variant ->
+  a ->
+  Id DM.Merchant ->
+  Bool ->
+  PoolRadiusStep ->
+  m [DriverPoolWithActualDistResult]
+calculateDriverPoolWithActualDist mbVariant pickup merchantId onlyNotOnRide radiusStep = do
+  driverPool <- calculateDriverPool mbVariant pickup merchantId onlyNotOnRide radiusStep
+  case driverPool of
+    [] -> return []
+    (a : pprox) -> do
+      mbActualDistanceThreshold <- asks (.driverPoolCfg.actualDistanceThreshold)
+      driverPoolWithActialDist <- computeActualDistance merchantId pickup (a :| pprox)
+      let filtDriverPoolWithActialDist = case mbActualDistanceThreshold of
+            Nothing -> NE.toList driverPoolWithActialDist
+            Just threshold -> NE.filter (filterFunc threshold) driverPoolWithActialDist
+      logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActialDist
+      return filtDriverPoolWithActialDist
+  where
+    filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
+
+computeActualDistance ::
   ( CoreMetrics m,
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasPrettyLogger m r
+    HasCoordinates a
   ) =>
   Id DM.Merchant ->
-  Integer ->
-  Bool ->
-  LatLong ->
-  NonEmpty QP.DriverPoolResult ->
-  m [Maps.GetDistanceResp QP.DriverPoolResult LatLong]
-filterOutDriversWithDistanceAboveThreshold orgId threshold shouldFilterDriverPoolActualDistance pickupLatLong driverPoolResults = do
+  a ->
+  NonEmpty DriverPoolResult ->
+  m (NonEmpty DriverPoolWithActualDistResult)
+computeActualDistance orgId pickup driverPoolResults = do
+  let pickupLatLong = getCoordinates pickup
   getDistanceResults <-
     Maps.getDistances orgId $
       Maps.GetDistancesReq
@@ -176,8 +162,11 @@ filterOutDriversWithDistanceAboveThreshold orgId threshold shouldFilterDriverPoo
           travelMode = Just Maps.CAR
         }
   logDebug $ "get distance results" <> show getDistanceResults
-  let result = if shouldFilterDriverPoolActualDistance then NE.filter filterFunc getDistanceResults else NE.toList getDistanceResults
-  logDebug $ "secondly filtered driver pool" <> show result
-  pure result
+  return $ mkDriverPoolWithActualDistResult <$> getDistanceResults
   where
-    filterFunc estDist = getMeters estDist.distance <= fromIntegral threshold
+    mkDriverPoolWithActualDistResult distDur = do
+      DriverPoolWithActualDistResult
+        { driverPoolResult = distDur.origin,
+          actualDistanceToPickup = distDur.distance,
+          actualDurationToPickup = distDur.duration
+        }

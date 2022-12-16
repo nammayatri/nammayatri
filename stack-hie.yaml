@@ -39,6 +39,7 @@ packages:
   - app/driver-tracking-health-check
   - app/beckn-transport/Scheduler
   - app/driver-offer-bpp
+  - app/bpp/driver-offer-bpp/Allocator
   - app/app-backend
   - app/search-result-aggregator
   - app/mock-sms

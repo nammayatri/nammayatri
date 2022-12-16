@@ -45,6 +45,12 @@ cradle:
     - path: "app/driver-offer-bpp/server/Main.hs"
       component: "driver-offer-bpp:exe:driver-offer-bpp-exe"
 
+    - path: "app/bpp/driver-offer-bpp/Allocator/src"
+      component: "driver-offer-allocator:lib"
+
+    - path: "app/bpp/driver-offer-bpp/Allocator/server/Main.hs"
+      component: "driver-offer-allocator:exe:driver-offer-allocator-exe"
+
     - path: "app/beckn-transport/Allocator/src"
       component: "beckn-transport-allocator:lib"
 

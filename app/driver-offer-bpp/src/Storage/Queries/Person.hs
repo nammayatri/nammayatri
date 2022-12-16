@@ -19,7 +19,6 @@ import Domain.Types.DriverLocation
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Vehicle as Vehicle
-import GHC.Float (double2Int)
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person as TPerson
@@ -306,13 +305,13 @@ updateAverageRating personId newAverageRating = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-data DriverPoolResult = DriverPoolResult
+data NearestDriversResult = NearestDriversResult
   { driverId :: Id Driver,
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
     language :: Maybe Maps.Language,
     onRide :: Bool,
-    distanceToDriver :: Int,
-    vehicle :: Vehicle,
+    distanceToDriver :: Meters,
+    variant :: Vehicle.Variant,
     lat :: Double,
     lon :: Double
   }
@@ -326,7 +325,7 @@ getNearestDrivers ::
   Id Merchant ->
   Bool ->
   Maybe Seconds ->
-  m [DriverPoolResult]
+  m [NearestDriversResult]
 getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
   now <- getCurrentTime
   res <- Esq.findAll $ do
@@ -351,13 +350,13 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
           location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
           location ^. DriverLocationLat,
           location ^. DriverLocationLon,
-          vehicle
+          vehicle ^. VehicleVariant
         )
-    (personId, mbDeviceToken, language, onRide, dist, dlat, dlon, vehicle) <- from withTable
+    (personId, mbDeviceToken, language, onRide, dist, dlat, dlon, variant) <- from withTable
     where_ $ dist <. val (fromIntegral radiusMeters)
     orderBy [asc dist]
-    return (personId, mbDeviceToken, language, onRide, dist, vehicle, dlat, dlon)
-  return $ makeDriverPoolResult <$> res
+    return (personId, mbDeviceToken, language, onRide, dist, variant, dlat, dlon)
+  return $ makeNearestDriversResult <$> res
   where
-    makeDriverPoolResult (personId, mbDeviceToken, mblang, onRide, dist, vehicle, dlat, dlon) =
-      DriverPoolResult (cast personId) mbDeviceToken mblang onRide (double2Int dist) vehicle dlat dlon
+    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, dist :: Double, variant, dlat, dlon) =
+      NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) variant dlat dlon

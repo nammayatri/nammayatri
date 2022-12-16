@@ -8,8 +8,10 @@ import Beckn.Types.Id
 import Beckn.Types.Time
 import Domain.Types.Booking
 import Domain.Types.RiderDetails (RiderDetails)
+import qualified Domain.Types.SearchRequest as DSR
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
+import Storage.Tabular.DriverQuote as DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 
 create :: Booking -> SqlDB ()
@@ -43,6 +45,21 @@ findById bookingId = buildDType $
       (rb :& bFromLoc :& bToLoc :& farePars) <-
         from baseBookingTable
       where_ $ rb ^. BookingTId ==. val (toKey bookingId)
+      pure (rb, bFromLoc, bToLoc, farePars)
+
+findBySearchReq :: Transactionable m => Id DSR.SearchRequest -> m (Maybe Booking)
+findBySearchReq searchReqId = buildDType $
+  fmap (fmap $ extractSolidType @Booking) $
+    Esq.findOne' $ do
+      (rb :& bFromLoc :& bToLoc :& farePars :& dq) <-
+        from
+          ( baseBookingTable
+              `innerJoin` table @DriverQuote.DriverQuoteT
+              `Esq.on` ( \(rb :& _ :& _ :& _ :& dq) ->
+                           rb ^. BookingQuoteId ==. dq ^. DriverQuoteTId
+                       )
+          )
+      where_ $ dq ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
       pure (rb, bFromLoc, bToLoc, farePars)
 
 updateStatus :: Id Booking -> BookingStatus -> SqlDB ()

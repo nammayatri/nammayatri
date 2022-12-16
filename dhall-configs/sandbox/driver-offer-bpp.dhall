@@ -90,6 +90,14 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 let acceptanceWindowOptions =
       { period = +7, periodType = common.periodType.Days }
 
+let driverPoolCfg = {
+    minRadiusOfSearch = +5000
+  , maxRadiusOfSearch = +7000
+  , radiusStep = +500
+  , driverPositionInfoExpiry = None Integer
+  , actualDistanceThreshold = Some +7000
+}
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -123,12 +131,8 @@ in  { esqDBCfg
     , driverOnboardingConfigs
     , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
     , smsCfg = smsConfig
-    , driverPositionInfoExpiry = None Integer
     , searchRequestExpirationSeconds = +120
     , driverQuoteExpirationSeconds = +15
-    , defaultStraightLineRadiusOfSearch = +1500
-    , defaultActualDistanceRadiusOfSearch = +2000
-    , shouldFilterDriverPoolActualDistance = True
     , driverUnlockDelay = +2
     , idfyCfg = common.idfyCfg
     , defaultPickupLocThreshold = +500
@@ -137,12 +141,11 @@ in  { esqDBCfg
     , defaultRideTimeEstimatedThreshold = +900
     , cacheConfig
     , acceptanceWindowOptions
-    , useIntelligentAllocation = True
     , metricsSearchDurationTimeout = +45
     , dashboardToken = sec.dashboardToken
-    , driverPoolLimit = Some +3
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , cacheTranslationConfig
+    , driverPoolCfg = driverPoolCfg
     }

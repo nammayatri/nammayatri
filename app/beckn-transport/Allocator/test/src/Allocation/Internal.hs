@@ -236,6 +236,7 @@ handle repository@Repository {..} =
         rideRequests <- readIORef rideRequestsVar
         let requests = Map.elems rideRequests
         pure $ take (fromIntegral numRides) requests,
+      prepareDriverPoolBatches = \_bookingId -> return (),
       getNextDriverPoolBatch = \bookingId -> do
         bnmap <- readIORef batchNumVar
         let bnnum = fromMaybe 0 $ Map.lookup bookingId bnmap

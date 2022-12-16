@@ -87,8 +87,8 @@ dependencies:
   - beckn-services
   - unordered-containers
   - dashboard-bpp-helper-api
-  - random
   - extra
+  - scheduler
 
 ghc-options:
   - -fwrite-ide-info

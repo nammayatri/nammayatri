@@ -7,14 +7,11 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.List
-import qualified Data.Set as Set
-import Data.Time.Clock.POSIX (getPOSIXTime)
 import Domain.Types.FarePolicy (FarePolicy)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
 import Environment
-import qualified EulerHS.Language as L
 import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
@@ -22,9 +19,6 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Geometry as QGeometry
-import Storage.Queries.Person (DriverPoolResult)
-import qualified Storage.Queries.Person as QP
-import System.Random
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
@@ -97,14 +91,11 @@ handler merchantId sReq = do
         logDebug "Trip doesnot match any fare policy constraints."
         return []
       else do
-        mdriverPoolLimitForRandomize <- asks (.driverPoolLimit)
-        let shouldComputeActualDistance = isNothing mdriverPoolLimitForRandomize
-        driverPool <- calculateDriverPool Nothing pickupLatLong org.id True shouldComputeActualDistance
+        driverPool <- calculateDriverPool Nothing pickupLatLong org.id True 0
 
         logDebug $ "Search handler: driver pool " <> show driverPool
 
-        let getVariant x = x.origin.vehicle.variant
-            listOfProtoQuotes = nubBy ((==) `on` getVariant) driverPool
+        let listOfProtoQuotes = nubBy ((==) `on` (.variant)) driverPool
             filteredProtoQuotes = zipMatched farePolicies listOfProtoQuotes
 
         estimates <- mapM (mkEstimate org sReq.pickupTime distance) filteredProtoQuotes
@@ -118,50 +109,32 @@ handler merchantId sReq = do
           cond2 = (>= tripDistance) <$> fp.maxAllowedTripDistance
        in and $ catMaybes [cond1, cond2]
 
--- Generate `count` number of random numbers with bounds `start` and `end`
-getRandomNumberList :: (L.MonadFlow m) => Int -> Int -> Int -> m [Int]
-getRandomNumberList start end count = do
-  n <- round <$> L.runIO getPOSIXTime
-  let pureGen = mkStdGen n
-  return $ toList $ nextNumber pureGen Set.empty
-  where
-    nextNumber :: RandomGen g => g -> Set.Set Int -> Set.Set Int
-    nextNumber gen acc =
-      if Set.size acc == min (end - start + 1) count
-        then acc
-        else
-          let (n, gen') = randomR (start, end) gen
-           in nextNumber gen' (Set.union (Set.singleton n) acc)
-
-type DriverMetaData = Maps.GetDistanceResp QP.DriverPoolResult Maps.LatLong
-
-zipMatched :: [FarePolicy] -> [DriverMetaData] -> [(FarePolicy, DriverMetaData)]
-zipMatched farePolicies driverPool =
-  mapMaybe match farePolicies
-  where
-    match :: FarePolicy -> Maybe (FarePolicy, DriverMetaData)
-    match farePolicy =
-      let fpVehicleVariant = farePolicy.vehicleVariant
-          driverPoolVariants = map (\d -> d.origin.vehicle.variant) driverPool
-          midx = elemIndex fpVehicleVariant driverPoolVariants
-       in fmap (\idx -> (farePolicy, driverPool !! idx)) midx
+    zipMatched farePolicies driverPool =
+      mapMaybe match farePolicies
+      where
+        match :: FarePolicy -> Maybe (FarePolicy, DriverPoolResult)
+        match farePolicy =
+          let fpVehicleVariant = farePolicy.vehicleVariant
+              driverPoolVariants = map (.variant) driverPool
+              midx = elemIndex fpVehicleVariant driverPoolVariants
+           in fmap (\idx -> (farePolicy, driverPool !! idx)) midx
 
 mkEstimate ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   DM.Merchant ->
   UTCTime ->
   Meters ->
-  (FarePolicy, Maps.GetDistanceResp DriverPoolResult a) ->
+  (FarePolicy, DriverPoolResult) ->
   m EstimateItem
 mkEstimate org startTime dist (farePolicy, driverMetadata) = do
   fareParams <- calculateFare org.id farePolicy dist startTime Nothing
   let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare
-  logDebug $ "distanceToPickup: " <> show driverMetadata.distance
+  logDebug $ "distanceToPickup: " <> show driverMetadata.distanceToPickup
   pure
     EstimateItem
-      { vehicleVariant = driverMetadata.origin.vehicle.variant,
-        distanceToPickup = driverMetadata.distance,
+      { vehicleVariant = driverMetadata.variant,
+        distanceToPickup = driverMetadata.distanceToPickup,
         minFare = baseFare,
         maxFare = baseFare + farePolicy.driverExtraFee.maxFee
       }

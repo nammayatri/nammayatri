@@ -1,4 +1,4 @@
-name: beckn-test
+name: driver-offer-allocator
 version: 0.1.0.0
 github: "juspay/beckn"
 license: AllRightsReserved
@@ -33,9 +33,7 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
-  - NumDecimals
   - OverloadedStrings
-  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
@@ -49,74 +47,70 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - StandaloneDeriving
+  - PackageImports
 
 dependencies:
-  - mock-sms
-  - mock-fcm
-  - app-backend
-  - beckn-transport
-  - beckn-gateway
-  - beckn-core
-  - mock-registry
   - aeson
   - base >= 4.7 && < 5
   - generic-lens
-  - async
-  - data-default-class
+  - bytestring
+  - cryptonite
+  - containers
   - euler-hs
-  - http-client
-  - http-client-tls
-  - http-types
+  - exceptions
+  - hspec
   - servant
   - servant-client
+  - servant-client-core
   - servant-server
   - text
-  - bytestring
-  - utf8-string
-  - time
-  - uuid
-  - warp
   - wai
-  - hspec
-  - hspec-core
-  - tasty
-  - tasty-hspec
+  - warp
+  - time
+  - stm
+  - resource-pool
+  - uuid
+  - prometheus-client
   - record-hasfield
   - record-dot-preprocessor
-  - hspec-expectations-lifted
-  - HUnit
-  - unix
+  - servant-openapi3
+  - openapi3
   - string-conversions
-  - public-transport-bap
-  - mock-public-transport-bpp
-  - search-result-aggregator
-  - public-transport-search-consumer
-  - beckn-transport-allocator
-  - beckn-transport-driver-tracking-health-check
-  - driver-offer-bpp
-  - location-updates
-  - driver-offer-allocator
+  - either
+  - text-conversions
+  - scheduler
+  - safe
+  - extra
+  - random
 
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -Wall
-  - -Wcompat
-  - -Widentities
-  - -fhide-source-paths
-  - -Werror
-  - -Wno-unrecognised-pragmas
   - -fplugin=RecordDotPreprocessor
-  - -threaded
 
 library:
   source-dirs:
     - src
+  ghc-options:
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+    - -Werror
+  dependencies:
+    - driver-offer-bpp
+    - beckn-core
+    - beckn-spec
 
-tests:
-  beckn-integ-test:
+executables:
+  driver-offer-allocator-exe:
     main: Main.hs
-    source-dirs:
-      - app
+    source-dirs: server
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
     dependencies:
-      - beckn-test
+      - driver-offer-allocator
+      - beckn-core

@@ -24,6 +24,7 @@ handle =
       getConfiguredAllocationTime = I.getConfiguredAllocationTime,
       getConfiguredReallocationsLimit = I.getConfiguredReallocationsLimit,
       getRequests = I.getRequests,
+      prepareDriverPoolBatches = I.prepareDriverPoolBatches,
       getNextDriverPoolBatch = I.getNextDriverPoolBatch,
       cleanupDriverPoolBatches = I.cleanupDriverPoolBatches,
       getCurrentNotifications = I.getCurrentNotifications,
