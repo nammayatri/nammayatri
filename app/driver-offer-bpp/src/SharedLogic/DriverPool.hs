@@ -132,12 +132,12 @@ calculateDriverPoolWithActualDist mbVariant pickup merchantId onlyNotOnRide radi
     [] -> return []
     (a : pprox) -> do
       mbActualDistanceThreshold <- asks (.driverPoolCfg.actualDistanceThreshold)
-      driverPoolWithActialDist <- computeActualDistance merchantId pickup (a :| pprox)
-      let filtDriverPoolWithActialDist = case mbActualDistanceThreshold of
-            Nothing -> NE.toList driverPoolWithActialDist
-            Just threshold -> NE.filter (filterFunc threshold) driverPoolWithActialDist
-      logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActialDist
-      return filtDriverPoolWithActialDist
+      driverPoolWithActualDist <- computeActualDistance merchantId pickup (a :| pprox)
+      let filtDriverPoolWithActualDist = case mbActualDistanceThreshold of
+            Nothing -> NE.toList driverPoolWithActualDist
+            Just threshold -> NE.filter (filterFunc threshold) driverPoolWithActualDist
+      logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist
+      return filtDriverPoolWithActualDist
   where
     filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
 

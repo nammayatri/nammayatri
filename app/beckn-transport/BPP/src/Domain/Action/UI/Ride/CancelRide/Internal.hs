@@ -13,7 +13,7 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
-import SharedLogic.DriverPool 
+import SharedLogic.DriverPool
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
