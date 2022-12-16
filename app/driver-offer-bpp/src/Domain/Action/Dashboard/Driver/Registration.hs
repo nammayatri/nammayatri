@@ -8,6 +8,7 @@ module Domain.Action.Dashboard.Driver.Registration
 where
 
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Dashboard.Common.Driver.Registration (GetDocumentResponse (imageBase64))
@@ -25,8 +26,8 @@ import Storage.Queries.DriverOnboarding.Image as QImage
 documentsList :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DocumentsListResponse
 documentsList merchantShortId driverId = do
   merchant <- findMerchantByShortId merchantShortId
-  licImgs <- map (.id.getId) <$> findImagesByPersonAndType merchant.id (cast driverId) DriverLicense
-  vehRegImgs <- map (.id.getId) <$> findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate
+  licImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) DriverLicense)
+  vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate)
   pure
     Common.DocumentsListResponse
       { driverLicense = licImgs,

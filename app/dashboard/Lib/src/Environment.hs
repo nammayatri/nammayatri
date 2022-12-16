@@ -18,6 +18,7 @@ import Tools.Metrics
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
+    esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     port :: Int,
     migrationPath :: Maybe FilePath,
@@ -35,6 +36,7 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { esqDBEnv :: EsqDBEnv,
+    esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
     port :: Int,
     loggerConfig :: LoggerConfig,
@@ -57,6 +59,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
   let modifierFunc = ("dashboard:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc

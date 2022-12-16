@@ -66,19 +66,16 @@ mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriv
 mkFullDriver (p, l, i, v) = FullDriver p l i v
 
 findAllDriversWithInfoAndVehicle ::
-  ( Transactionable m,
-    EncFlow m r
-  ) =>
+  Transactionable m =>
   Id Merchant ->
   Int ->
   Int ->
   Maybe Bool ->
   Maybe Bool ->
   Maybe Bool ->
-  Maybe Text ->
+  Maybe DbHash ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSearchPhone = do
-  mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
+findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSearchPhoneDBHash = do
   Esq.findAll $ do
     person :& info :& mbVeh <-
       from $

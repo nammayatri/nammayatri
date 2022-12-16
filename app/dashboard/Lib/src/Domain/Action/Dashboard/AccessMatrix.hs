@@ -1,7 +1,8 @@
 module Domain.Action.Dashboard.AccessMatrix where
 
 import Beckn.Prelude
-import Beckn.Types.Common
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import Beckn.Types.Id
 import Beckn.Utils.Common (fromMaybeM)
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -12,22 +13,22 @@ import Tools.Auth
 import Tools.Error
 
 getAccessMatrix ::
-  EsqDBFlow m r =>
+  EsqDBReplicaFlow m r =>
   TokenInfo ->
   Maybe Integer ->
   Maybe Integer ->
   m DMatrix.AccessMatrixAPIEntity
 getAccessMatrix _ mbLimit mbOffset = do
-  roles <- QRole.findAllByLimitOffset mbLimit mbOffset
-  accessMatrixItems <- QMatrix.findAllByRoles roles
+  roles <- runInReplica $ QRole.findAllByLimitOffset mbLimit mbOffset
+  accessMatrixItems <- runInReplica $ QMatrix.findAllByRoles roles
   pure $ DMatrix.mkAccessMatrixAPIEntity roles accessMatrixItems
 
 getAccessMatrixByRole ::
-  EsqDBFlow m r =>
+  EsqDBReplicaFlow m r =>
   TokenInfo ->
   Id DRole.Role ->
   m DMatrix.AccessMatrixRowAPIEntity
 getAccessMatrixByRole _ roleId = do
-  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  accessMatrixItems <- QMatrix.findAllByRoleId roleId
+  role <- runInReplica $ QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  accessMatrixItems <- runInReplica $ QMatrix.findAllByRoleId roleId
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role

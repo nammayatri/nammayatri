@@ -59,7 +59,7 @@ driverDocumentsInfo merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
   onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
-  drivers <- QDocStatus.fetchDriverDocsInfo merchant.id Nothing
+  drivers <- Esq.runInReplica $ QDocStatus.fetchDriverDocsInfo merchant.id Nothing
   pure $ foldl' (func onboardingTryLimit now) Common.emptyInfo drivers
   where
     oneMonth :: NominalDiffTime
@@ -131,7 +131,8 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSe
   merchant <- findMerchantByShortId merchantShortId
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
-  driversWithInfo <- QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSearchPhone
+  mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
+  driversWithInfo <- Esq.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSearchPhoneDBHash
   items <- mapM buildDriverListItem driversWithInfo
   pure $ Common.DriverListRes (length items) items
   where
@@ -160,7 +161,7 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
 driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
 driverActivity merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
-  Common.mkDriverActivityRes <$> QDriverInfo.countDrivers merchant.id
+  Common.mkDriverActivityRes <$> Esq.runInReplica (QDriverInfo.countDrivers merchant.id)
 
 ---------------------------------------------------------------------
 enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
@@ -206,7 +207,7 @@ driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.Driver
 driverLocation merchantShortId mbLimit mbOffset req = do
   merchant <- findMerchantByShortId merchantShortId
   let driverIds = coerce req.driverIds
-  allDrivers <- QPerson.findAllDriversByIdsFirstNameAsc merchant.id driverIds
+  allDrivers <- Esq.runInReplica $ QPerson.findAllDriversByIdsFirstNameAsc merchant.id driverIds
   let driversNotFound =
         filter (not . (`elem` map ((.id) . (.person)) allDrivers)) driverIds
       limitedDrivers = limitOffset mbLimit mbOffset allDrivers
@@ -241,12 +242,15 @@ driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Flow Common.Dri
 driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
   merchant <- findMerchantByShortId merchantShortId
   driverDocsInfo <- case (mbMobileNumber, mbVehicleNumber) of
-    (Just mobileNumber, Nothing) ->
-      QDocStatus.fetchFullDriverInfoWithDocsByMobileNumber merchant.id mobileNumber mobileIndianCode
-        >>= fromMaybeM (PersonDoesNotExist $ mobileIndianCode <> mobileNumber)
+    (Just mobileNumber, Nothing) -> do
+      mobileNumberDbHash <- getDbHash mobileNumber
+      Esq.runInReplica $
+        QDocStatus.fetchFullDriverInfoWithDocsByMobileNumber merchant.id mobileNumberDbHash mobileIndianCode
+          >>= fromMaybeM (PersonDoesNotExist $ mobileIndianCode <> mobileNumber)
     (Nothing, Just vehicleNumber) ->
-      QDocStatus.fetchFullDriverInfoWithDocsByVehNumber merchant.id vehicleNumber
-        >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+      Esq.runInReplica $
+        QDocStatus.fetchFullDriverInfoWithDocsByVehNumber merchant.id vehicleNumber
+          >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
   buildDriverInfoRes driverDocsInfo
   where

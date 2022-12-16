@@ -11,6 +11,15 @@ let esqDBCfg =
       , connectSchemaName = "atlas_bap_dashboard"
       }
 
+let esqDBReplicaCfg =
+      { connectHost = esqDBCfg.connectHost
+      , connectPort = 5435
+      , connectUser = esqDBCfg.connectUser
+      , connectPassword = esqDBCfg.connectPassword
+      , connectDatabase = esqDBCfg.connectDatabase
+      , connectSchemaName = esqDBCfg.connectSchemaName
+      }
+
 let rcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
       , connectPort = 6379
@@ -32,6 +41,7 @@ let appBackend =
       }
 
 in  { esqDBCfg
+    , esqDBReplicaCfg
     , hedisCfg = rcfg
     , port = +8017
     , migrationPath = None Text

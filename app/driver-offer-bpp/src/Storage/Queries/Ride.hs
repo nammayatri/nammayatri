@@ -247,21 +247,17 @@ data RideItem = RideItem
   }
 
 findAllRideItems ::
-  ( Transactionable m,
-    EncFlow m r
-  ) =>
+  Transactionable m =>
   Id Merchant ->
   Int ->
   Int ->
   Maybe Common.BookingStatus ->
   Maybe (ShortId Ride) ->
-  Maybe Text ->
-  Maybe Text ->
+  Maybe DbHash ->
+  Maybe DbHash ->
+  UTCTime ->
   m [RideItem]
-findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhone mbDriverPhone = do
-  mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
-  mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
-  now <- getCurrentTime
+findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now = do
   res <- Esq.findAll $ do
     booking :& ride :& rideDetails :& riderDetails <-
       from $
@@ -278,7 +274,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
             `Esq.on` ( \(booking :& _ :& _ :& riderDetails) ->
                          booking ^. Booking.BookingRiderId ==. just (riderDetails ^. RiderDetails.RiderDetailsTId)
                      )
-    let bookingStatusVal = mkBookingStatusVal ride now
+    let bookingStatusVal = mkBookingStatusVal ride
     where_ $
       booking ^. BookingProviderId ==. val (toKey merchantId)
         &&. whenJust_ mbBookingStatus (\bookingStatus -> bookingStatusVal ==. val bookingStatus)
@@ -298,12 +294,12 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
   pure $ mkRideItem <$> res
   where
     -- ride considered as ONGOING_6HRS if ride.status = INPROGRESS, but somehow ride.tripStartTime = Nothing
-    ongoing6HrsCond ride now =
+    ongoing6HrsCond ride =
       ride ^. Ride.RideTripStartTime +. just (Esq.interval [Esq.HOUR 6]) <=. val (Just now)
-    mkBookingStatusVal ride now =
+    mkBookingStatusVal ride =
       case_
         [ when_ (ride ^. Ride.RideStatus ==. val Ride.NEW) then_ $ val Common.UPCOMING,
-          when_ (ride ^. Ride.RideStatus ==. val Ride.INPROGRESS &&. not_ (ongoing6HrsCond ride now)) then_ $ val Common.ONGOING,
+          when_ (ride ^. Ride.RideStatus ==. val Ride.INPROGRESS &&. not_ (ongoing6HrsCond ride)) then_ $ val Common.ONGOING,
           when_ (ride ^. Ride.RideStatus ==. val Ride.COMPLETED) then_ $ val Common.COMPLETED,
           when_ (ride ^. Ride.RideStatus ==. val Ride.CANCELLED) then_ $ val Common.CANCELLED
         ]

@@ -2,6 +2,7 @@ module Domain.Action.Dashboard.Roles where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -99,7 +100,7 @@ buildAccessMatrixItem roleId req = do
       }
 
 listRoles ::
-  ( EsqDBFlow m r,
+  ( EsqDBReplicaFlow m r,
     EncFlow m r
   ) =>
   TokenInfo ->
@@ -108,7 +109,7 @@ listRoles ::
   Maybe Integer ->
   m ListRoleRes
 listRoles _ mbSearchString mbLimit mbOffset = do
-  personAndRoleList <- QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
+  personAndRoleList <- Esq.runInReplica $ QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
   res <- forM personAndRoleList $ \role -> do
     pure $ mkRoleAPIEntity role
   pure $ ListRoleRes res

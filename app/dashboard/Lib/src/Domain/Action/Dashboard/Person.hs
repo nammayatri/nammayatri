@@ -3,6 +3,8 @@ module Domain.Action.Dashboard.Person where
 import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
@@ -88,14 +90,15 @@ createPerson _ personEntity = do
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError (InvalidRequest err)
 
 listPerson ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r) =>
   TokenInfo ->
   Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
   m ListPersonRes
 listPerson _ mbSearchString mbLimit mbOffset = do
-  personAndRoleList <- QP.findAllWithLimitOffset mbSearchString mbLimit mbOffset
+  mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
+  personAndRoleList <- runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList) -> do
     decPerson <- decrypt encPerson
     pure $ DP.makePersonAPIEntity decPerson role merchantAccessList
@@ -195,24 +198,25 @@ buildMerchantAccess personId merchantId = do
       }
 
 profile ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r) =>
   TokenInfo ->
   m DP.PersonAPIEntity
 profile tokenInfo = do
-  encPerson <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  role <- QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
-  merchantAccessList <- QAccess.findAllByPersonId tokenInfo.personId
+  encPerson <- runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  role <- runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  merchantAccessList <- runInReplica $ QAccess.findAllByPersonId tokenInfo.personId
   decPerson <- decrypt encPerson
   pure $ DP.makePersonAPIEntity decPerson role (merchantAccessList <&> (.shortId))
 
 getCurrentMerchant ::
-  EsqDBFlow m r =>
+  EsqDBReplicaFlow m r =>
   TokenInfo ->
   m MerchantAccessRes
 getCurrentMerchant tokenInfo = do
   merchant <-
-    QMerchant.findById tokenInfo.merchantId
-      >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
+    runInReplica $
+      QMerchant.findById tokenInfo.merchantId
+        >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
   pure $ MerchantAccessReq merchant.shortId
 
 buildPerson :: (EncFlow m r) => CreatePersonReq -> m SP.Person

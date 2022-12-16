@@ -171,9 +171,8 @@ mkFullDriverWithRidesCountQuery ridesCountAggQuery =
                    just (person ^. PersonTId) ==. mbPersonId
                )
 
-fetchFullDriverInfoWithDocsByMobileNumber :: (Transactionable m, EncFlow m r) => Id Merchant -> Text -> Text -> m (Maybe FullDriverWithDocs)
-fetchFullDriverInfoWithDocsByMobileNumber merchantId mobileNumber mobileCountryCode = fmap (fmap mkFullDriverInfoWithDocs) $ do
-  mobileNumberDbHash <- getDbHash mobileNumber
+fetchFullDriverInfoWithDocsByMobileNumber :: Transactionable m => Id Merchant -> DbHash -> Text -> m (Maybe FullDriverWithDocs)
+fetchFullDriverInfoWithDocsByMobileNumber merchantId mobileNumberDbHash mobileCountryCode = fmap (fmap mkFullDriverInfoWithDocs) $ do
   Esq.findOne $ do
     ridesCountAggQuery <- ridesCountAggTable
     person :& license :& assoc :& registration :& info :& mbVeh :& (_, mbRidesCount) <-

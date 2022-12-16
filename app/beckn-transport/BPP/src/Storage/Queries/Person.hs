@@ -69,18 +69,15 @@ mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriv
 mkFullDriver (person, location, info, vehicle) = FullDriver {..}
 
 findAllDriversWithInfoAndVehicle ::
-  ( Transactionable m,
-    EncFlow m r
-  ) =>
+  Transactionable m =>
   Id Merchant ->
   Int ->
   Int ->
   Maybe Bool ->
   Maybe Bool ->
-  Maybe Text ->
+  Maybe DbHash ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhone = do
-  mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
+findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
   Esq.findAll $ do
     person :& info :& mbVeh <-
       from $
@@ -159,9 +156,8 @@ ridesCountAggTable = with $ do
   groupBy $ ride ^. RideDriverId
   pure (ride ^. RideDriverId, count @Int $ ride ^. RideId)
 
-fetchFullDriverByMobileNumber :: (Transactionable m, EncFlow m r) => Id Merchant -> Text -> Text -> m (Maybe DriverWithRidesCount)
-fetchFullDriverByMobileNumber merchantId mobileNumber mobileCountryCode = fmap (fmap mkDriverWithRidesCount) $ do
-  mobileNumberDbHash <- getDbHash mobileNumber
+fetchFullDriverByMobileNumber :: Transactionable m => Id Merchant -> DbHash -> Text -> m (Maybe DriverWithRidesCount)
+fetchFullDriverByMobileNumber merchantId mobileNumberDbHash mobileCountryCode = fmap (fmap mkDriverWithRidesCount) $ do
   Esq.findOne $ do
     ridesCountAggQuery <- ridesCountAggTable
     person :& driverInfo :& vehicle :& (_, mbRidesCount) <-

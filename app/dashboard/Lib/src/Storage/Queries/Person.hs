@@ -43,16 +43,14 @@ findByEmailAndPassword email password = do
 
 -- TODO add filtering by role
 findAllWithLimitOffset ::
-  ( Transactionable m,
-    EncFlow m r
-  ) =>
+  Transactionable m =>
   Maybe Text ->
+  Maybe DbHash ->
   Maybe Integer ->
   Maybe Integer ->
   m [(Person, Role, [ShortId Merchant.Merchant])]
-findAllWithLimitOffset mbSearchString mbLimit mbOffset =
+findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset =
   fromMaybeList <$> do
-    mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
     findAll $ do
       merchantAccessAggTable <- with $ do
         (merchantAccess :& merchant) <-
