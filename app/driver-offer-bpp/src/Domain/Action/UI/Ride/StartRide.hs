@@ -10,8 +10,6 @@ where
 
 import Beckn.External.Maps.HasCoordinates
 import Beckn.External.Maps.Types
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Tools.Metrics.CoreMetrics
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -22,7 +20,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DDrLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
 import EulerHS.Prelude
 import qualified Lib.LocationUpdates as LocUpd
@@ -46,12 +44,14 @@ data DashboardStartRideReq = DashboardStartRideReq
   }
 
 data ServiceHandle m = ServiceHandle
-  { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
+  { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
+    findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findLocationByDriverId :: Id DP.Person -> m (Maybe DDrLoc.DriverLocation),
-    startRideAndUpdateLocation :: Id DP.Person -> Id SRide.Ride -> Id SRB.Booking -> LatLong -> m (),
-    notifyBAPRideStarted :: SRB.Booking -> SRide.Ride -> m (),
-    rateLimitStartRide :: Id DP.Person -> Id SRide.Ride -> m (),
-    initializeDistanceCalculation :: Id SRide.Ride -> Id DP.Person -> LatLong -> m ()
+    startRideAndUpdateLocation :: Id DP.Person -> Id DRide.Ride -> Id SRB.Booking -> LatLong -> m (),
+    notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> m (),
+    rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
+    initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
+    whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
 
 buildStartRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
@@ -59,50 +59,40 @@ buildStartRideHandle merchantId = do
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId False
   pure
     ServiceHandle
-      { findBookingById = QRB.findById,
+      { findRideById = QRide.findById,
+        findBookingById = QRB.findById,
         findLocationByDriverId = QDrLoc.findById,
         startRideAndUpdateLocation = SInternal.startRideTransaction,
         notifyBAPRideStarted = sendRideStartedUpdateToBAP,
         rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
-        initializeDistanceCalculation = LocUpd.initializeDistanceCalculation defaultRideInterpolationHandler
+        initializeDistanceCalculation = LocUpd.initializeDistanceCalculation defaultRideInterpolationHandler,
+        whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
 driverStartRide ::
-  ( EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m,
-    MonadFlow m
-  ) =>
+  (MonadThrow m, Log m) =>
   ServiceHandle m ->
-  Id SRide.Ride ->
+  Id DRide.Ride ->
   DriverStartRideReq ->
   m APISuccess.APISuccess
 driverStartRide handle rideId = startRide handle rideId . DriverReq
 
 dashboardStartRide ::
-  ( EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m,
-    MonadFlow m
-  ) =>
+  (MonadThrow m, Log m) =>
   ServiceHandle m ->
-  Id SRide.Ride ->
+  Id DRide.Ride ->
   DashboardStartRideReq ->
   m APISuccess.APISuccess
 dashboardStartRide handle rideId = startRide handle rideId . DashboardReq
 
 startRide ::
-  ( EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m,
-    MonadFlow m
-  ) =>
+  (MonadThrow m, Log m) =>
   ServiceHandle m ->
-  Id SRide.Ride ->
+  Id DRide.Ride ->
   StartRideReq ->
   m APISuccess.APISuccess
 startRide ServiceHandle {..} rideId req = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
@@ -131,10 +121,10 @@ startRide ServiceHandle {..} rideId req = do
           driverLocation <- findLocationByDriverId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
 
-  LocUpd.whenWithLocationUpdatesLock driverId $ do
+  whenWithLocationUpdatesLock driverId $ do
     startRideAndUpdateLocation driverId ride.id booking.id point
     initializeDistanceCalculation ride.id driverId point
     notifyBAPRideStarted booking ride
   pure APISuccess.Success
   where
-    isValidRideStatus status = status == SRide.NEW
+    isValidRideStatus status = status == DRide.NEW

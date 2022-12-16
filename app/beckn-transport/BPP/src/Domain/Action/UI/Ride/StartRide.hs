@@ -2,29 +2,25 @@ module Domain.Action.UI.Ride.StartRide
   ( ServiceHandle (..),
     DriverStartRideReq (..),
     DashboardStartRideReq (..),
-    StartRideReq (..),
     buildStartRideHandle,
     driverStartRide,
     dashboardStartRide,
-    startRideHandler,
   )
 where
 
 import Beckn.External.Maps.HasCoordinates
 import Beckn.External.Maps.Types
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Tools.Metrics.CoreMetrics
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Beckn.Utils.SlidingWindowLimiter
+import Beckn.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DDrLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
 import EulerHS.Prelude
 import qualified Lib.LocationUpdates as LocUpd
@@ -33,15 +29,6 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-
-data ServiceHandle m = ServiceHandle
-  { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    findLocationByDriverId :: Id DP.Person -> m (Maybe DDrLoc.DriverLocation),
-    startRideAndUpdateLocation :: Id DP.Person -> Id SRide.Ride -> Id SRB.Booking -> LatLong -> m (),
-    notifyBAPRideStarted :: SRB.Booking -> SRide.Ride -> m (),
-    rateLimitStartRide :: Id DP.Person -> Id SRide.Ride -> m (),
-    initializeDistanceCalculation :: Id SRide.Ride -> Id DP.Person -> LatLong -> m ()
-  }
 
 data StartRideReq = DriverReq DriverStartRideReq | DashboardReq DashboardStartRideReq
 
@@ -56,61 +43,56 @@ data DashboardStartRideReq = DashboardStartRideReq
     merchantId :: Id DM.Merchant
   }
 
+data ServiceHandle m = ServiceHandle
+  { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
+    findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
+    findLocationByDriverId :: Id DP.Person -> m (Maybe DDrLoc.DriverLocation),
+    startRideAndUpdateLocation :: Id DP.Person -> Id DRide.Ride -> Id SRB.Booking -> LatLong -> m (),
+    notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> m (),
+    rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
+    initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
+    whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
+  }
+
 buildStartRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
 buildStartRideHandle merchantId = do
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId False
   pure
     ServiceHandle
-      { findBookingById = QRB.findById,
+      { findRideById = QRide.findById,
+        findBookingById = QRB.findById,
         findLocationByDriverId = QDrLoc.findById,
         startRideAndUpdateLocation = SInternal.startRideTransaction,
         notifyBAPRideStarted = sendRideStartedUpdateToBAP,
         rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
-        initializeDistanceCalculation = LocUpd.initializeDistanceCalculation defaultRideInterpolationHandler
+        initializeDistanceCalculation = LocUpd.initializeDistanceCalculation defaultRideInterpolationHandler,
+        whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
 driverStartRide ::
-  ( EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m,
-    MonadFlow m
-  ) =>
+  (MonadThrow m, Log m) =>
   ServiceHandle m ->
-  Id SRide.Ride ->
+  Id DRide.Ride ->
   DriverStartRideReq ->
   m APISuccess.APISuccess
 driverStartRide handle rideId = startRide handle rideId . DriverReq
 
 dashboardStartRide ::
-  ( EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m,
-    MonadFlow m
-  ) =>
+  (MonadThrow m, Log m) =>
   ServiceHandle m ->
-  Id SRide.Ride ->
+  Id DRide.Ride ->
   DashboardStartRideReq ->
   m APISuccess.APISuccess
 dashboardStartRide handle rideId = startRide handle rideId . DashboardReq
 
 startRide ::
-  ( EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m,
-    MonadFlow m
-  ) =>
+  (MonadThrow m, Log m) =>
   ServiceHandle m ->
-  Id SRide.Ride ->
+  Id DRide.Ride ->
   StartRideReq ->
   m APISuccess.APISuccess
-startRide handle@ServiceHandle {..} rideId req = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  let driverId = ride.driverId
-  LocUpd.whenWithLocationUpdatesLock driverId $ startRideHandler handle ride req
-  pure APISuccess.Success
-
-startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> SRide.Ride -> StartRideReq -> m ()
-startRideHandler ServiceHandle {..} ride req = do
+startRide ServiceHandle {..} rideId req = do
+  ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
@@ -139,8 +121,10 @@ startRideHandler ServiceHandle {..} ride req = do
           driverLocation <- findLocationByDriverId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
 
-  startRideAndUpdateLocation driverId ride.id booking.id point
-  initializeDistanceCalculation ride.id driverId point
-  notifyBAPRideStarted booking ride
+  whenWithLocationUpdatesLock driverId $ do
+    startRideAndUpdateLocation driverId ride.id booking.id point
+    initializeDistanceCalculation ride.id driverId point
+    notifyBAPRideStarted booking ride
+  pure APISuccess.Success
   where
-    isValidRideStatus status = status == SRide.NEW
+    isValidRideStatus status = status == DRide.NEW

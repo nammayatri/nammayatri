@@ -10,8 +10,6 @@ where
 
 import Beckn.External.Maps
 import Beckn.Prelude (roundToIntegral)
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Tools.Metrics.CoreMetrics
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -72,7 +70,8 @@ data ServiceHandle m = ServiceHandle
     getDefaultDropLocThreshold :: m Meters,
     getDefaultRideTravelledDistanceThreshold :: m Meters,
     getDefaultRideTimeEstimatedThreshold :: m Seconds,
-    findConfig :: m (Maybe DTConf.TransporterConfig)
+    findConfig :: m (Maybe DTConf.TransporterConfig),
+    whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
 
 buildEndRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
@@ -94,32 +93,33 @@ buildEndRideHandle merchantId = do
         getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
         getDefaultRideTravelledDistanceThreshold = asks (.defaultRideTravelledDistanceThreshold),
         getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
-        findConfig = QTConf.findByMerchantId merchantId
+        findConfig = QTConf.findByMerchantId merchantId,
+        whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
 driverEndRide ::
-  (Redis.HedisFlow m r, CoreMetrics m, MonadFlow m) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
   m APISuccess.APISuccess
-driverEndRide handle rideId = endRideHandler handle rideId . DriverReq
+driverEndRide handle rideId = endRide handle rideId . DriverReq
 
 dashboardEndRide ::
-  (Redis.HedisFlow m r, CoreMetrics m, MonadFlow m) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
   m APISuccess.APISuccess
-dashboardEndRide handle rideId = endRideHandler handle rideId . DashboardReq
+dashboardEndRide handle rideId = endRide handle rideId . DashboardReq
 
-endRideHandler ::
-  (Redis.HedisFlow m r, CoreMetrics m, MonadFlow m) =>
+endRide ::
+  (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
   m APISuccess.APISuccess
-endRideHandler ServiceHandle {..} rideId req = do
+endRide ServiceHandle {..} rideId req = do
   rideOld <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = rideOld.driverId
   booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
@@ -134,19 +134,20 @@ endRideHandler ServiceHandle {..} rideId req = do
       unless (booking.providerId == dashboardReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
 
   unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
-  LocUpd.whenWithLocationUpdatesLock driverId $ do
-    point <- case req of
-      DriverReq driverReq -> do
-        logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-        pure driverReq.point
-      DashboardReq dashboardReq -> do
-        logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
-        case dashboardReq.point of
-          Just point -> pure point
-          Nothing -> do
-            driverLocation <- findDriverLoc driverId >>= fromMaybeM LocationNotFound
-            pure $ getCoordinates driverLocation
 
+  point <- case req of
+    DriverReq driverReq -> do
+      logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
+      pure driverReq.point
+    DashboardReq dashboardReq -> do
+      logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
+      case dashboardReq.point of
+        Just point -> pure point
+        Nothing -> do
+          driverLocation <- findDriverLoc driverId >>= fromMaybeM LocationNotFound
+          pure $ getCoordinates driverLocation
+
+  whenWithLocationUpdatesLock driverId $ do
     -- here we update the current ride, so below we fetch the updated version
     finalDistanceCalculation rideOld.id driverId point
     ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)

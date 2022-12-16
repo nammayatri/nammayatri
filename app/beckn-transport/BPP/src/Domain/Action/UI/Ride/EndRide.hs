@@ -5,7 +5,6 @@ module Domain.Action.UI.Ride.EndRide
     buildEndRideHandle,
     driverEndRide,
     dashboardEndRide,
-    endRideHandler,
     EndRideReq (..),
   )
 where
@@ -13,8 +12,6 @@ where
 import Beckn.External.Maps.HasCoordinates
 import Beckn.External.Maps.Types
 import Beckn.Prelude (roundToIntegral)
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Tools.Metrics.CoreMetrics
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -71,7 +68,8 @@ data ServiceHandle m = ServiceHandle
     getDefaultDropLocThreshold :: m Meters,
     getDefaultRideTravelledDistanceThreshold :: m Meters,
     getDefaultRideTimeEstimatedThreshold :: m Seconds,
-    findConfigByKey :: DTConf.ConfigKey -> m (Maybe DTConf.TransporterConfig)
+    findConfigByKey :: DTConf.ConfigKey -> m (Maybe DTConf.TransporterConfig),
+    whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq
@@ -109,11 +107,12 @@ buildEndRideHandle merchantId rideId = do
         getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
         getDefaultRideTravelledDistanceThreshold = asks (.defaultRideTravelledDistanceThreshold),
         getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
-        findConfigByKey = QTConf.findValueByMerchantIdAndKey merchantId
+        findConfigByKey = QTConf.findValueByMerchantIdAndKey merchantId,
+        whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
 driverEndRide ::
-  (Redis.HedisFlow m r, CoreMetrics m, MonadFlow m, EsqDBFlow m r) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -121,7 +120,7 @@ driverEndRide ::
 driverEndRide handle rideId = endRide handle rideId . DriverReq
 
 dashboardEndRide ::
-  (Redis.HedisFlow m r, CoreMetrics m, MonadFlow m, EsqDBFlow m r) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -129,24 +128,13 @@ dashboardEndRide ::
 dashboardEndRide handle rideId = endRide handle rideId . DashboardReq
 
 endRide ::
-  (Redis.HedisFlow m r, CoreMetrics m, MonadFlow m, EsqDBFlow m r) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
   m APISuccess.APISuccess
 endRide handle@ServiceHandle {..} rideId req = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  let driverId = ride.driverId
-  LocUpd.whenWithLocationUpdatesLock driverId $ endRideHandler handle ride req
-  return APISuccess.Success
-
-endRideHandler ::
-  (MonadThrow m, Log m, MonadTime m) =>
-  ServiceHandle m ->
-  DRide.Ride ->
-  EndRideReq ->
-  m ()
-endRideHandler handle@ServiceHandle {..} rideOld req = do
+  rideOld <- fetchRide
   let driverId = rideOld.driverId
   booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
 
@@ -157,42 +145,44 @@ endRideHandler handle@ServiceHandle {..} rideOld req = do
         DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
         _ -> throwError AccessDenied
     DashboardReq dashboardReq -> do
-      unless (booking.providerId == dashboardReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
+      unless (booking.providerId == dashboardReq.merchantId) $ throwError (RideDoesNotExist rideId.getId)
 
   unless (rideOld.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
   point <- case req of
     DriverReq driverReq -> do
-      logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
+      logTagInfo "driver -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideId)
       pure driverReq.point
     DashboardReq dashboardReq -> do
-      logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideOld.id)
+      logTagInfo "dashboard -> endRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId rideId)
       case dashboardReq.point of
         Just point -> pure point
         Nothing -> do
           driverLocation <- findDriverLoc driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
 
-  -- here we update the current ride, so below we fetch the updated version
-  finalDistanceCalculation rideOld.id driverId point
-  ride <- fetchRide
+  whenWithLocationUpdatesLock driverId $ do
+    -- here we update the current ride, so below we fetch the updated version
+    finalDistanceCalculation rideId driverId point
+    ride <- fetchRide
 
-  now <- getCurrentTime
-  (chargeableDistance, fare, totalFare, fareBreakups) <- do
-    case booking.bookingDetails of
-      SRB.OneWayDetails oneWayDetails -> recalculateFare booking oneWayDetails now ride point driverId
-      SRB.RentalDetails rentalDetails -> calcRentalFare booking rentalDetails now ride driverId
-  let updRide =
-        ride{chargeableDistance = Just chargeableDistance,
-             fare = Just fare,
-             totalFare = Just totalFare,
-             tripEndTime = Just now,
-             tripEndPos = Just point
-            }
+    now <- getCurrentTime
+    (chargeableDistance, fare, totalFare, fareBreakups) <- do
+      case booking.bookingDetails of
+        SRB.OneWayDetails oneWayDetails -> recalculateFare booking oneWayDetails now ride point driverId
+        SRB.RentalDetails rentalDetails -> calcRentalFare booking rentalDetails now ride driverId
+    let updRide =
+          ride{chargeableDistance = Just chargeableDistance,
+               fare = Just fare,
+               totalFare = Just totalFare,
+               tripEndTime = Just now,
+               tripEndPos = Just point
+              }
 
-  endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide fareBreakups
+    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide fareBreakups
 
-  notifyCompleteToBAP booking updRide fareBreakups
+    notifyCompleteToBAP booking updRide fareBreakups
+  return APISuccess.Success
   where
     recalculateFare booking oneWayDetails now ride point driverId = do
       let vehicleVariant = booking.vehicleVariant
