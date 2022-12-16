@@ -6,6 +6,250 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [14.11.0] - 14-12-2022
+
+Changes
+
+- Add actual distance filter in driver pool filtering
+
+- Persist UI version in BAP/BPP DB
+
+- Make merchantId mandatory for bpp person
+
+- various bug fixes
+
+- Send search expiry to the frontend
+
+## [14.10.1] - 10-12-2022
+
+Changes
+
+- Remove distance matrix based driver pool filtering in select API
+
+- various bug fixes
+
+## [14.10.0] - 9-12-2022
+
+Changes
+
+- Intelligent driver pool computation
+
+- Persist UI version in BAP/BPP DB
+
+- Add DriverLocation to SearchRequestForDriver
+
+- Store all cancellation reasons in case of re-allocation
+
+- Send estimate range to BAP in search API
+
+- various bug fixes
+
+- Validate merchantId in auth API
+
+## [14.9.1] - 3-12-2022
+
+Changes
+
+- Handle deletion of drivers and vehicles
+
+- various bug fixes
+
+- Add force enable and add vehicle api for driver
+
+- Visualize ride cli helper should output csv as another option
+
+## [14.9.0] - 1-12-2022
+
+Changes
+
+- various bug fixes
+
+- DL to be verified as valid for the below DL Vehicle classes
+
+- Add change driver's phone number and vehicle apis
+
+- Integrate OSRM match API as alternative for google snap-to-road API
+
+- Move GET APIs to lookup from read replica DB
+
+- Block driver if he had already active offer
+
+- Fix timeout error in driver list api if not provide limit
+
+- Skipping check for image if date of issue field is there
+
+- Rename Organization to Merchant at BPP
+
+- Remove join queries from search, quote, booking and estimate tables of app-backend
+
+- Re arrange cancellation reasons on basis of priority
+
+- Upload image in chunks for validateImage API
+
+- Update fare recomputation logic
+
+## [14.8.0] - 18-11-2022
+
+Changes
+
+- various bug fixes
+
+- remove postgresConfig from configs
+
+- change the request body for web engage
+
+- Add Karnataka geofence for NammaYatri application
+
+## [14.7.0] - 15-11-2022
+
+Changes
+
+- update area value in regional language
+
+- added google translate api
+
+## [14.6.0] - 14-11-2022
+
+Changes
+
+- make dl valid class of vehicles as config
+
+- Update fare recomputation logic
+
+- Parse geocoding address based on outer `type` sublocality_level_2
+
+- Add rate limit in driver location updates
+
+- Expose endpoint for SMS campaign - WebEngage
+
+- Changing dashboard admin and users paths
+
+- Create person API by dashboard admin in dashboard
+
+- list role api by using search string in dashboard with limit and offset
+
+- Send notification to other blocked drivers who have given quote when customer accepts any offered quote
+
+- Driver Onboarding Dashboard APIs
+
+- Add Swagger for dashboard APIs
+
+- Auth on basis of merchant instead of server
+
+- Change user login flow
+
+- Filter list API response based on booking status
+
+- various bug fixes
+
+## [14.5.0] - 4-11-2022
+
+Changes
+
+- Remove distance matrix API for on_search estimates in dobpp
+
+- Add Passenger/3WN classes also as valid COV for RC
+
+## [14.4.0] - 1-11-2022
+
+Changes
+
+- Limit max drivers in driver pool and randomise driver selection
+
+- Add option to black list user
+
+- Rate limit search requests per user
+
+## [14.3.0] - 29-10-2022
+
+Changes
+
+- Limit max trip distance which BPP can offer quotes for
+
+- Integrate Google maps Geocode API and expose it proxy to UI
+
+- Use session_id in proxies google maps API
+
+- Driver Onboarding Dashboard APIs
+
+- various bug fixes
+
+## [14.2.0] - 22-10-2022
+
+Changes
+
+- various bug fixes
+
+- Add dateOfIssue to register DL API request and dateOfRegistration in register RC API.
+
+- Add dateOnDoc, encryptedDocData and imageExtractionValidation columns to IdfyVerification table.
+
+## [14.1.2] - 12-10-2022
+
+Changes
+
+- add more fields in rc table and idfy response dump type
+
+## [14.1.1] - 11-10-2022
+
+Changes
+
+- moving from idfy rc_basic to rc_plus
+
+## [14.1.0] - 11-10-2022
+
+Changes
+
+- get driver docs images
+
+- improve dashboard flow
+
+- Various bug fixes
+
+## [14.0.0] - 7-10-2022
+
+Changes
+
+- Update dhall configs of sandbox to latest
+
+- Recomputation actual distance when
+    ride start location is not within threshold (<500m) radius of pickup location and of
+    or ride end location is not within threshold (<500m) radius of destination location
+
+- Handled IDFY errors properly
+
+- Simplify application of night fare charges
+
+- Added slack alert for driver onboard failure
+
+- Rearranging Address, for fcm notification type NEW_RIDE_AVAILABLE
+
+- Added referral code for driver
+
+- Driver profile API should return vehicle as optional field in Driver-offer-bpp
+
+- Add image validation
+
+- Pickup and drop location shown to the driver should be in native languge selected by the driver
+
+- Move AccessMatrix and Roles to DB for Dashboard ops
+
+- Adding access matrix in auth module
+
+- Setting up Dashboard Server
+
+- Update Redis endpoint for master/sandbox endpoints
+
+- Add Idfy API Request and Response Type's
+
+- store ride rating on bap side in feedback api and show it in rideBookingList
+
+- Add S3 service
+
+- Rider name should be shared with the BPP and displayed to the driver for them to easily find each other
+
+- Various bug fixes
+
 ## [13.0.0] - 14-08-2022 (partial), 13-09-2022
 
 Task list for these changes are large. Listing notable changes here
@@ -759,6 +1003,23 @@ policy
 - Go-live production release
 
 [Unreleased]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/compare/commits?targetBranch=refs%2Ftags%2Fv13.0.0&sourceBranch=refs%2Fheads%2Fmaster&targetRepoId=762
+
+[14.11.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.11.0&merges=include
+[14.10.1]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.10.1&merges=include
+[14.10.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.10.0&merges=include
+[14.9.1]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2F14.9.1&merges=include
+[14.9.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2F14.9.0&merges=include
+[14.8.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.8.0&merges=include
+[14.7.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.7.0&merges=include
+[14.6.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.6.0&merges=include
+[14.5.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.5.0&merges=include
+[14.4.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.4.0&merges=include
+[14.3.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.3.0&merges=include
+[14.2.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2F14.2.0&merges=include
+[14.1.2]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.1.2&merges=include
+[14.1.1]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.1.1&merges=include
+[14.1.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.1.0&merges=include
+[14.0.0]: https://bitbucket.juspay.net/projects/BEC/repos/beckn/commits?until=refs%2Ftags%2Fv14.0.0&merges=include
 [13.0.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv13.0.0&merges=include
 [12.1.1]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv12.1.1&merges=include
 [12.1.0]: https://bitbucket.juspay.net/projects/JUSPAY/repos/beckn/commits?until=refs%2Ftags%2Fv12.1.0&merges=include
