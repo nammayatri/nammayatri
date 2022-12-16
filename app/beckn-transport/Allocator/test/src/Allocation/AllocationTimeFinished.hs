@@ -17,8 +17,8 @@ booking01Id = Id "booking01"
 driverPool1 :: [Id Driver]
 driverPool1 = [Id "driver01", Id "driver02"]
 
-driverPoolPerRide :: Map (Id SRB.Booking, PoolRadiusStep, PoolBatchNum) [Id Driver]
-driverPoolPerRide = Map.fromList [((booking01Id, 0, 0), driverPool1)]
+driverPoolPerRide :: Map (Id SRB.Booking, PoolBatchNum) [Id Driver]
+driverPoolPerRide = Map.fromList [((booking01Id, 0), driverPool1)]
 
 allocationTimeFinished :: TestTree
 allocationTimeFinished = testCase "AllocationTimeFinished" $ do

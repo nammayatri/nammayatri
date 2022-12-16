@@ -113,7 +113,7 @@ filterOutDriversWithDistanceAboveThreshold ::
   ( EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Integer ->
+  Int ->
   NonEmpty DriverPoolResult ->
   m [DriverPoolResult]
 filterOutDriversWithDistanceAboveThreshold threshold driverPoolResults = do

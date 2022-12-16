@@ -17,8 +17,8 @@ booking01Id = Id "booking01"
 driverPool1 :: [Id Driver]
 driverPool1 = [Id "driver01", Id "driver02"]
 
-driverPoolPerRide :: Map (Id SRB.Booking, PoolRadiusStep, PoolBatchNum) [Id Driver]
-driverPoolPerRide = Map.fromList [((booking01Id, 0, 0), driverPool1), ((booking01Id, 0, 1), [Id "driver03"])]
+driverPoolPerRide :: Map (Id SRB.Booking, PoolBatchNum) [Id Driver]
+driverPoolPerRide = Map.fromList [((booking01Id, 0), driverPool1), ((booking01Id, 1), [Id "driver03"])]
 
 checkNotificationStatuses :: TestTree
 checkNotificationStatuses = testCaseSteps "Check NotificationStatus" $ \step -> do

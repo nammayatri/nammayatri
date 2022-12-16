@@ -1,77 +1,152 @@
 module Domain.Action.Allocation.Internal.DriverPool
-  ( prepareDriverPoolBatches,
+  ( isBatchNumExceedLimit,
     getNextDriverPoolBatch,
     cleanupDriverPoolBatches,
-    incrementPoolRadiusStep,
   )
 where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Hedis as Redis
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import qualified Data.List.Extra as List
+import Domain.Action.Allocation.Internal.DriverPool.Config
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.TransporterConfig as STConf
 import Environment (Flow)
 import SharedLogic.DriverPool (calculateDriverPool)
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QBooking
-import Tools.Error
-import Tools.Maps as Google
 import Tools.Metrics
+
+isBatchNumExceedLimit ::
+  ( Redis.HedisFlow m r,
+    HasDriverPoolBatchesConfig r
+  ) =>
+  Id SRB.Booking ->
+  m Bool
+isBatchNumExceedLimit bookingId = do
+  maxNumberOfBatches <- asks (.driverPoolBatchesCfg.maxNumberOfBatches)
+  currentBatchNum <- getPoolBatchNum bookingId
+  return $ currentBatchNum >= maxNumberOfBatches
 
 driverPoolKey :: Id SRB.Booking -> Text
 driverPoolKey bookingId = "DriverPool:BookingId-" <> bookingId.getId
 
-driverPoolBatchKey :: Id SRB.Booking -> PoolRadiusStep -> PoolBatchNum -> Text
-driverPoolBatchKey bookingId radiusStep batchNum = driverPoolKey bookingId <> ":RadiusStep-" <> show radiusStep <> ":BatchNum-" <> show batchNum
+driverPoolBatchKey :: Id SRB.Booking -> PoolBatchNum -> Text
+driverPoolBatchKey bookingId batchNum = driverPoolKey bookingId <> ":BatchNum-" <> show batchNum
 
-prepareDriverPoolBatches ::
+prepareDriverPoolBatch ::
   ( EncFlow m r,
     HasCacheConfig r,
     CoreMetrics m,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
-    HasDriverPoolConfig r
+    HasDriverPoolConfig r,
+    HasDriverPoolBatchesConfig r
   ) =>
   Id SRB.Booking ->
-  m ()
-prepareDriverPoolBatches bookingId = do
-  radiusStep <- getPoolRadiusStep bookingId
-  driverPool <- calcDriverPool radiusStep
-  let sortedDriverPool = sortFunction driverPool
-  driverPoolBatches <- splitToBatches sortedDriverPool
-  cacheBatches radiusStep driverPoolBatches
+  PoolBatchNum ->
+  m [DriverPoolResult]
+prepareDriverPoolBatch bookingId batchNum = do
+  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  previousBatchesDrivers <- getPreviousBatchesDrivers
+  prepareDriverPoolBatch' booking previousBatchesDrivers
   where
-    calcDriverPool radiusStep = do
-      booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+    prepareDriverPoolBatch' booking previousBatchesDrivers = do
+      radiusStep <- getPoolRadiusStep bookingId
+      driverPool <- calcDriverPool booking radiusStep
+      sortedDriverPool <- sortFunction driverPool
+      let onlyNewDriversPool = filter (\dpr -> dpr.driverId `notElem` previousBatchesDrivers) sortedDriverPool
+      driverPoolBatch <- getBatch onlyNewDriversPool
+      if null driverPoolBatch
+        then do
+          isAtMaxRadiusStep' <- isAtMaxRadiusStep booking radiusStep
+          if isAtMaxRadiusStep'
+            then return []
+            else do
+              incrementPoolRadiusStep bookingId
+              prepareDriverPoolBatch' booking previousBatchesDrivers
+        else do
+          batchSize <- asks (.driverPoolBatchesCfg.driverBatchSize)
+          filledBatch <-
+            if length driverPoolBatch >= batchSize
+              then return driverPoolBatch
+              else do
+                incrementPoolRadiusStep bookingId
+                fillBatch batchSize sortedDriverPool driverPoolBatch
+          cacheBatch filledBatch
+          return filledBatch
+
+    calcDriverPool ::
+      ( EncFlow m r,
+        HasCacheConfig r,
+        CoreMetrics m,
+        EsqDBFlow m r,
+        Redis.HedisFlow m r,
+        HasDriverPoolConfig r
+      ) =>
+      SRB.Booking ->
+      PoolRadiusStep ->
+      m [DriverPoolResult]
+    calcDriverPool booking radiusStep = do
       let vehicleVariant = booking.vehicleVariant
           merchantId = booking.providerId
       let pickupLoc = booking.fromLocation
-      let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
           fareProductType = SRB.getFareProductType booking.bookingDetails
-      calculateDriverPool pickupLatLong merchantId (Just vehicleVariant) fareProductType radiusStep
-    splitToBatches driverPool = do
-      batchSize <- asks (.driverPoolCfg.driverBatchSize)
-      return $ List.chunksOf batchSize driverPool
-    cacheBatches radiusStep =
-      void . flip foldlM 0 \i batch -> do
-        Redis.setExp (driverPoolBatchKey bookingId i radiusStep) batch (60 * 10)
-        return (i + 1)
+      calculateDriverPool pickupLoc merchantId (Just vehicleVariant) fareProductType radiusStep
+    getBatch driverPool = do
+      batchSize <- asks (.driverPoolBatchesCfg.driverBatchSize)
+      return $ take batchSize driverPool
+    fillBatch batchSize driverPool batch = do
+      let batchDriverIds = batch <&> (.driverId)
+      let driversToFillBatch = take (batchSize - length batch) $ filter (\dpr -> dpr.driverId `notElem` batchDriverIds) driverPool
+      return $ batch <> driversToFillBatch
+    cacheBatch batch = do
+      Redis.setExp (driverPoolBatchKey bookingId batchNum) batch (60 * 10)
+    isAtMaxRadiusStep booking radiusStep = do
+      let merchantId = booking.providerId
+      minRadius :: Double <-
+        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "min_radius")
+          >>= maybe
+            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
+            radiusFromTransporterConfig
+      maxRadius :: Double <-
+        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "max_radius")
+          >>= maybe
+            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
+            radiusFromTransporterConfig
+      radiusStepSize :: Double <-
+        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "radius_step_size")
+          >>= maybe
+            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
+            radiusFromTransporterConfig
+      let maxRadiusStep = ceiling $ (maxRadius - minRadius) / radiusStepSize
+      return $ maxRadiusStep <= radiusStep
+    radiusFromTransporterConfig conf =
+      fromMaybeM (InternalError "Value is not a number.")
+        . readMaybe
+        . toString
+        $ conf.value
+
+    getPreviousBatchesDrivers = do
+      batches <- forM [0 .. (batchNum - 1)] \num -> do
+        getDriverPoolBatch bookingId num
+      return $ (.driverId) <$> concat batches
     sortFunction driverPool =
-      driverPool -- it's random order by default
+      return driverPool -- it's random order by default
 
 getDriverPoolBatch ::
   ( Redis.HedisFlow m r
   ) =>
   Id SRB.Booking ->
-  PoolRadiusStep ->
   PoolBatchNum ->
   m [DriverPoolResult]
-getDriverPoolBatch bookingId radiusStep batchNum = do
-  Redis.get (driverPoolBatchKey bookingId batchNum radiusStep)
+getDriverPoolBatch bookingId batchNum = do
+  Redis.get (driverPoolBatchKey bookingId batchNum)
     >>= maybe whenFoundNothing whenFoundSomething
   where
     whenFoundNothing = return []
@@ -99,21 +174,20 @@ cleanupDriverPoolBatches bookingId = do
 
 getNextDriverPoolBatch :: Id SRB.Booking -> Flow [DriverPoolResult]
 getNextDriverPoolBatch bookingId = do
-  batchNum <- getPoolBatchNum
-  radiusStep <- getPoolRadiusStep bookingId
-  getDriverPoolBatch bookingId radiusStep batchNum
-  where
-    getPoolBatchNum :: (Redis.HedisFlow m r) => m PoolBatchNum
-    getPoolBatchNum = do
-      res <- Redis.get (poolBatchNumKey bookingId)
-      res' <- case res of
-        Just i -> return i
-        Nothing -> do
-          let expTime = 600
-          Redis.setExp (poolBatchNumKey bookingId) (0 :: Integer) expTime
-          return 0
-      void $ Redis.incr (poolBatchNumKey bookingId)
-      return res'
+  batchNum <- getPoolBatchNum bookingId
+  prepareDriverPoolBatch bookingId batchNum
+
+getPoolBatchNum :: (Redis.HedisFlow m r) => Id SRB.Booking -> m PoolBatchNum
+getPoolBatchNum bookingId = do
+  res <- Redis.get (poolBatchNumKey bookingId)
+  res' <- case res of
+    Just i -> return i
+    Nothing -> do
+      let expTime = 600
+      Redis.setExp (poolBatchNumKey bookingId) (0 :: Integer) expTime
+      return 0
+  void $ Redis.incr (poolBatchNumKey bookingId)
+  return res'
 
 getPoolRadiusStep :: (Redis.HedisFlow m r) => Id SRB.Booking -> m PoolRadiusStep
 getPoolRadiusStep bookingId = do
@@ -136,5 +210,4 @@ incrementPoolRadiusStep ::
   Id SRB.Booking ->
   m ()
 incrementPoolRadiusStep bookingId = do
-  Redis.del (poolBatchNumKey bookingId)
   void $ Redis.incr (poolRadiusStepKey bookingId)

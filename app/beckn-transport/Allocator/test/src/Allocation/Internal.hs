@@ -172,7 +172,7 @@ mkDriverPoolResult driverId =
       lon = 0
     }
 
-addDriverPool :: Repository -> Map (Id SRB.Booking, PoolRadiusStep, PoolBatchNum) [Id Driver] -> IO ()
+addDriverPool :: Repository -> Map (Id SRB.Booking, PoolBatchNum) [Id Driver] -> IO ()
 addDriverPool Repository {..} driversMap = do
   let driverPool = map mkDriverPoolResult <$> driversMap
   writeIORef driverPoolVar driverPool
@@ -236,32 +236,25 @@ handle repository@Repository {..} =
         rideRequests <- readIORef rideRequestsVar
         let requests = Map.elems rideRequests
         pure $ take (fromIntegral numRides) requests,
-      prepareDriverPoolBatches = \_bookingId -> return (),
+      isBatchNumExceedLimit = \_ -> return False,
       getNextDriverPoolBatch = \bookingId -> do
         bnmap <- readIORef batchNumVar
         let bnnum = fromMaybe 0 $ Map.lookup bookingId bnmap
         let newBnNum = bnnum + 1
         writeIORef batchNumVar $ Map.insert bookingId newBnNum bnmap
 
-        rsmap <- readIORef radiusStepVar
-        let rsnum = fromMaybe 0 $ Map.lookup bookingId rsmap
+        -- rsmap <- readIORef radiusStepVar
+        -- let rsnum = fromMaybe 0 $ Map.lookup bookingId rsmap
 
         poolMap <- readIORef driverPoolVar
-        let pool = fromMaybe [] $ Map.lookup (bookingId, rsnum, bnnum) poolMap
-        pure pool,
+        let pool = fromMaybe [] $ Map.lookup (bookingId, bnnum) poolMap
+        pure pool, -- TODO: real code much more complex, mb we need to create DriverPoolHandler too to test it?
       cleanupDriverPoolBatches = \bookingId -> do
         rsmap <- readIORef radiusStepVar
         writeIORef radiusStepVar $ Map.delete bookingId rsmap
         bnmap <- readIORef batchNumVar
         writeIORef batchNumVar $ Map.delete bookingId bnmap, -- it doesn't clean batches Map, which is not equals to main code
       sendNewRideNotifications = \_ _ -> pure (),
-      incrementPoolRadiusStep = \bookingId -> do
-        rsmap <- readIORef radiusStepVar
-        let num = fromMaybe 0 $ Map.lookup bookingId rsmap
-        let newNum = num + 1
-        writeIORef radiusStepVar $ Map.insert bookingId newNum rsmap
-        bnmap <- readIORef batchNumVar
-        writeIORef batchNumVar $ Map.delete bookingId bnmap,
       getCurrentNotifications = \rideId -> do
         notificationStatus <- readIORef notificationStatusVar
         let filtered =
@@ -326,7 +319,7 @@ data Repository = Repository
   { currentIdVar :: IORef Int,
     batchNumVar :: IORef (Map (Id SRB.Booking) PoolBatchNum),
     radiusStepVar :: IORef (Map (Id SRB.Booking) PoolRadiusStep),
-    driverPoolVar :: IORef (Map (Id SRB.Booking, PoolRadiusStep, PoolBatchNum) [DriverPoolResult]),
+    driverPoolVar :: IORef (Map (Id SRB.Booking, PoolBatchNum) [DriverPoolResult]),
     bookingsVar :: IORef (Map (Id SRB.Booking) SRB.Booking),
     rideRequestsVar :: IORef (Map (Id SRR.RideRequest) RideRequest),
     notificationStatusVar :: IORef NotificationStatusMap,

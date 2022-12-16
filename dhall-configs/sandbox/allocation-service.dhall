@@ -13,6 +13,11 @@ let shards =
           "api.sandbox.beckn.juspay.in/bpp/cab/v1/87a04bab-bc3b-4d2a-866a-3c5ee9cc3b34"
       ]
 
+let driverPoolBatchesCfg = {
+  driverBatchSize = +5
+, maxNumberOfBatches = +3
+}
+
 in  { appCfg
     , metricsPort = +9999
     , reallocationsLimit = +5
@@ -34,4 +39,5 @@ in  { appCfg
     , selfUIUrl = appCfg.selfUIUrl
     , cacheConfig = appCfg.cacheConfig
     , driverPoolCfg = appCfg.driverPoolCfg
+    , driverPoolBatchesCfg = driverPoolBatchesCfg
     }

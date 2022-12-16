@@ -10,6 +10,11 @@ let shards =
           "api.beckn.juspay.in/bpp/cab/v1/3c5fa6ae-2e90-4bb9-818e-7bb109b4cca3"
       ]
 
+let driverPoolBatchesCfg = {
+  driverBatchSize = +5
+, maxNumberOfBatches = +3
+}
+
 in  { appCfg
     , driverNotificationExpiry = +25
     , rideAllocationExpiry = +120
@@ -31,4 +36,5 @@ in  { appCfg
     , selfUIUrl = appCfg.selfUIUrl
     , cacheConfig = appCfg.cacheConfig
     , driverPoolCfg = appCfg.driverPoolCfg
+    , driverPoolBatchesCfg = driverPoolBatchesCfg
     }

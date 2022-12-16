@@ -72,9 +72,8 @@ let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 let cacheConfig = { configsExpTime = +86400 }
 
 let driverPoolCfg = {
-      defaultRadiusOfSearch = +5000
+        defaultRadiusOfSearch = +5000
       , driverPositionInfoExpiry = Some +36000
-      , driverBatchSize = +5
       }
 
 in  { esqDBCfg

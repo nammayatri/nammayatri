@@ -15,6 +15,7 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
+import Domain.Action.Allocation.Internal.DriverPool.Config (DriverPoolBatchesConfig)
 import Domain.Types.Merchant (Subscriber)
 import qualified "beckn-transport" Environment as App
 import EulerHS.Prelude
@@ -48,7 +49,8 @@ data AppCfg = AppCfg
     encTools :: EncTools,
     selfUIUrl :: BaseUrl,
     cacheConfig :: CacheConfig,
-    driverPoolCfg :: DriverPoolConfig
+    driverPoolCfg :: DriverPoolConfig,
+    driverPoolBatchesCfg :: DriverPoolBatchesConfig
   }
   deriving (Generic, FromDhall)
 
@@ -75,7 +77,8 @@ data AppEnv = AppEnv
     kafkaProducerTools :: KafkaProducerTools,
     selfUIUrl :: BaseUrl,
     cacheConfig :: CacheConfig,
-    driverPoolCfg :: DriverPoolConfig
+    driverPoolCfg :: DriverPoolConfig,
+    driverPoolBatchesCfg :: DriverPoolBatchesConfig
   }
   deriving (Generic)
 

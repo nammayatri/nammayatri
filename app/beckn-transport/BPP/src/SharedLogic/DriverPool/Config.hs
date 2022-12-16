@@ -6,8 +6,7 @@ import Beckn.Utils.Dhall (FromDhall)
 
 data DriverPoolConfig = DriverPoolConfig
   { defaultRadiusOfSearch :: Meters,
-    driverPositionInfoExpiry :: Maybe Seconds,
-    driverBatchSize :: Int
+    driverPositionInfoExpiry :: Maybe Seconds
   }
   deriving (Generic, FromDhall)
 

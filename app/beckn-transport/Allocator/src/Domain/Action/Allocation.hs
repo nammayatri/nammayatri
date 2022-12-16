@@ -52,13 +52,14 @@ data CurrentNotification = CurrentNotification
   }
   deriving (Show)
 
-data AllocatorCancellationReason = AllocationTimeExpired | NoDriversInRange | ReallocationLimitExceed
+data AllocatorCancellationReason = AllocationTimeExpired | NoDriversInRange | ReallocationLimitExceed | BatchLimitExceed
 
 instance ToJSON AllocatorCancellationReason where
   toJSON = \case
     AllocationTimeExpired -> "ALLOCATION_TIME_EXPIRED"
     NoDriversInRange -> "NO_DRIVERS_IN_RANGE"
     ReallocationLimitExceed -> "REALLOCATION_LIMIT_EXCEED"
+    BatchLimitExceed -> "BATCH_LIMIT_EXCEED"
 
 type MonadHandler m =
   ( MonadCatch m,
@@ -80,11 +81,10 @@ data ServiceHandle m = ServiceHandle
     getConfiguredAllocationTime :: m Seconds,
     getConfiguredReallocationsLimit :: m Int,
     getRequests :: ShortId Subscriber -> Integer -> m [RideRequest],
-    prepareDriverPoolBatches :: Id SRB.Booking -> m (),
+    isBatchNumExceedLimit :: Id SRB.Booking -> m Bool,
     getNextDriverPoolBatch :: Id SRB.Booking -> m [DriverPoolResult],
     cleanupDriverPoolBatches :: Id SRB.Booking -> m (),
     getCurrentNotifications :: Id SRB.Booking -> m [CurrentNotification],
-    incrementPoolRadiusStep :: Id SRB.Booking -> m (),
     cleanupOldNotifications :: m Int,
     sendNewRideNotifications :: Id SRB.Booking -> NonEmpty (Id Driver) -> m (),
     sendRideNotAssignedNotification :: Id SRB.Booking -> Id Driver -> m (),
@@ -238,25 +238,19 @@ proceedToNewDrivers ::
   m ()
 proceedToNewDrivers handle@ServiceHandle {..} bookingId subscriberId = do
   logInfo "Proceed to new drivers"
-  driverPool <- getDriverPool handle bookingId
-  availableDriversPool <- checkAvailability driverPool
-  driversWithNotification <- getDriversWithNotification
-  let filteredPool = filter (\dpRes -> dpRes.driverId `notElem` driversWithNotification) availableDriversPool
-  logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getDriverPoolDescs filteredPool)
-  processFilteredPool handle bookingId filteredPool subscriberId
-
-getDriverPool :: MonadHandler m => ServiceHandle m -> Id SRB.Booking -> m [DriverPoolResult]
-getDriverPool ServiceHandle {..} bookingId = do
-  driverPool <- getNextDriverPoolBatch bookingId
-  logInfo $ "DriverPool " <> T.intercalate ", " (getDriverPoolDescs driverPool)
-  if not $ null driverPool
-    then return driverPool
-    else getNextRadiusBatch
-  where
-    getNextRadiusBatch = do
-      incrementPoolRadiusStep bookingId
-      prepareDriverPoolBatches bookingId
-      getNextDriverPoolBatch bookingId
+  isBatchNumExceedLimit' <- isBatchNumExceedLimit bookingId
+  if isBatchNumExceedLimit'
+    then do
+      cancel handle bookingId SBCR.ByAllocator $ Just BatchLimitExceed
+      logEvent DAllocEvent.BatchLimitExceed bookingId
+    else do
+      driverPool <- getNextDriverPoolBatch bookingId
+      logInfo $ "DriverPool " <> T.intercalate ", " (getDriverPoolDescs driverPool)
+      availableDriversPool <- checkAvailability driverPool
+      driversWithNotification <- getDriversWithNotification
+      let filteredPool = filter (\dpRes -> dpRes.driverId `notElem` driversWithNotification) availableDriversPool
+      logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getDriverPoolDescs filteredPool)
+      processFilteredPool handle bookingId filteredPool subscriberId
 
 getDriverPoolDescs :: [DriverPoolResult] -> [Text]
 getDriverPoolDescs pool =

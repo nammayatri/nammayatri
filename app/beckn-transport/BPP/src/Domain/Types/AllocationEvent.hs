@@ -28,4 +28,5 @@ data AllocationEventType
   | EmptyDriverPool
   | AllocationTimeFinished
   | ReallocationLimitExceed
+  | BatchLimitExceed
   deriving (Show, Eq, Read, Generic, FromJSON, ToJSON)

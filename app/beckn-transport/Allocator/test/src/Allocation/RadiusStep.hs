@@ -27,9 +27,9 @@ radiusStep = testCaseSteps "Allocation - Reject - Allocation - Reject - Allocati
   r@Repository {..} <- initRepository
   let driverPoolPerRide =
         Map.fromList
-          [ ((booking01Id, 0, 0), driverPool1),
-            ((booking01Id, 1, 0), driverPool2),
-            ((booking01Id, 2, 0), driverPool3)
+          [ ((booking01Id, 0), driverPool1),
+            ((booking01Id, 1), driverPool2),
+            ((booking01Id, 2), driverPool3)
           ]
   addBooking r booking01Id 0
   addDriverPool r driverPoolPerRide

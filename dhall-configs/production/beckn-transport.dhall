@@ -66,7 +66,6 @@ let cacheConfig = { configsExpTime = +86400 }
 let driverPoolCfg = {
       defaultRadiusOfSearch = +5000
       , driverPositionInfoExpiry = Some +300
-      , driverBatchSize = +5
       }
 
 in  { esqDBCfg

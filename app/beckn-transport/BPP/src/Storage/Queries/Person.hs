@@ -372,7 +372,7 @@ data NearestDriversResult = NearestDriversResult
 getNearestDrivers ::
   (Transactionable m, MonadTime m) =>
   LatLong ->
-  Integer ->
+  Int ->
   Id Merchant ->
   Maybe Vehicle.Variant ->
   SFP.FareProductType ->

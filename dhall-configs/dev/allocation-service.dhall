@@ -9,6 +9,11 @@ let shards =
       , globalCommon.mkShard +1 "another-test-cabs"
       ]
 
+let driverPoolBatchesCfg = {
+  driverBatchSize = +5
+, maxNumberOfBatches = +3
+}
+
 in  { appCfg
     , metricsPort = +9996
     , reallocationsLimit = +5
@@ -32,4 +37,5 @@ in  { appCfg
     , encTools = appCfg.encTools
     , selfUIUrl = appCfg.selfUIUrl
     , cacheConfig = appCfg.cacheConfig
+    , driverPoolBatchesCfg = driverPoolBatchesCfg
     }

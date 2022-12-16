@@ -23,8 +23,8 @@ driverPool1 = [Id "driver01", Id "driver02"]
 driverPool2 :: [Id Driver]
 driverPool2 = [Id "driver01", Id "driver03"]
 
-driverPoolPerRide :: Map (Id SRB.Booking, PoolRadiusStep, PoolBatchNum) [Id Driver]
-driverPoolPerRide = Map.fromList [((booking01Id, 0, 0), driverPool1), ((booking02Id, 0, 0), driverPool2)]
+driverPoolPerRide :: Map (Id SRB.Booking, PoolBatchNum) [Id Driver]
+driverPoolPerRide = Map.fromList [((booking01Id, 0), driverPool1), ((booking02Id, 0), driverPool2)]
 
 reassignmentRide :: TestTree
 reassignmentRide = testCase "Reassignment booking after cancellation" $ do

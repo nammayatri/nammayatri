@@ -19,7 +19,7 @@ allocationDriverResponseAllocationDriverResponse :: TestTree
 allocationDriverResponseAllocationDriverResponse = testCaseSteps "Allocation - DriverResponse - Allocation - DriverResponse" $ \step -> do
   r@Repository {..} <- initRepository
   let driverPool1 = [Id "driver01", Id "driver02"]
-      driverPoolPerRide = Map.fromList [((booking01Id, 0, 0), driverPool1), ((booking02Id, 0, 0), driverPool1)]
+      driverPoolPerRide = Map.fromList [((booking01Id, 0), driverPool1), ((booking02Id, 0), driverPool1)]
   addBooking r booking01Id 0
   addBooking r booking02Id 0
   addDriverPool r driverPoolPerRide
@@ -63,7 +63,7 @@ allocationDriverResponseCancellationAllocationDriverResponse :: TestTree
 allocationDriverResponseCancellationAllocationDriverResponse = testCaseSteps "Allocation - DriverResponse - Cancellation - Allocation - DriverResponse" $ \step -> do
   r@Repository {..} <- initRepository
   let driverPool1 = [Id "driver01", Id "driver02"]
-      driverPoolPerRide = Map.fromList [((booking01Id, 0, 0), driverPool1), ((booking02Id, 0, 0), driverPool1)]
+      driverPoolPerRide = Map.fromList [((booking01Id, 0), driverPool1), ((booking02Id, 0), driverPool1)]
   addBooking r booking01Id 0
   addBooking r booking02Id 0
   addDriverPool r driverPoolPerRide
@@ -108,13 +108,13 @@ allocationDriverResponseCancellationAllocationDriverResponse = testCaseSteps "Al
 twoAllocationTwoDriverResponse :: TestTree
 twoAllocationTwoDriverResponse = testCaseSteps "Allocation - Allocation - DriverResponse - DriverResponse" $ \step -> do
   r@Repository {..} <- initRepository
-  let driverPool1 = [Id "driver01", Id "driver02"]
+  let driverPool1 = [Id "driver01", Id "driver02", Id "driver03", Id "driver04", Id "driver05"]
       driverPoolPerRide =
         Map.fromList
-          [ ((booking01Id, 0, 0), driverPool1),
-            ((booking02Id, 0, 0), driverPool1),
-            ((booking02Id, 1, 0), driverPool1),
-            ((booking02Id, 2, 0), driverPool1)
+          [ ((booking01Id, 0), driverPool1),
+            ((booking02Id, 0), driverPool1),
+            ((booking02Id, 1), driverPool1),
+            ((booking02Id, 2), driverPool1)
           ]
   addBooking r booking01Id 0
   addBooking r booking02Id 0
