@@ -55,7 +55,7 @@ setInactiveByRequestId searchReqId = Esq.update $ \p -> do
   set p [SearchRequestForDriverStatus =. val Domain.Inactive]
   where_ $ p ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
 
-updateDriverResponse :: Id SearchRequest -> Response -> SqlDB ()
-updateDriverResponse searchReqId response = Esq.update $ \p -> do
+updateDriverResponse :: Id SearchRequestForDriver -> SearchRequestForDriverResponse -> SqlDB ()
+updateDriverResponse id response = Esq.update $ \p -> do
   set p [SearchRequestForDriverResponse =. val (Just response)]
-  where_ $ p ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
+  where_ $ p ^. SearchRequestForDriverId ==. val (getId id)

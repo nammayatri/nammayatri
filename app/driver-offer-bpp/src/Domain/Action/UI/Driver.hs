@@ -224,7 +224,7 @@ data DriverOfferReq = DriverOfferReq
 data DriverRespondReq = DriverRespondReq
   { offeredFare :: Maybe Money,
     searchRequestId :: Id DSReq.SearchRequest,
-    response :: Response
+    response :: SearchRequestForDriverResponse
   }
   deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
@@ -541,6 +541,7 @@ isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFe
 offerQuoteLockKey :: Id Person -> Text
 offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 
+-- DEPRECATED
 offerQuote ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
@@ -585,22 +586,22 @@ respondQuote ::
   m APISuccess
 respondQuote driverId req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
+    sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
+    now <- getCurrentTime
+    when (sReq.validTill < now) $ throwError SearchRequestExpired
+    let mbOfferedFare = req.offeredFare
+    organization <- CQM.findById sReq.providerId >>= fromMaybeM (MerchantDoesNotExist sReq.providerId.getId)
+    driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    driverInfo <- QDrInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+    when driverInfo.onRide $ throwError DriverOnRide
+    sReqFD <-
+      QSRD.findByDriverAndSearchReq driverId sReq.id
+        >>= fromMaybeM NoSearchRequestForDriver
     case req.response of
       Accept -> do
         logDebug $ "offered fare: " <> show req.offeredFare
-        sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
-        now <- getCurrentTime
-        when (sReq.validTill < now) $ throwError SearchRequestExpired
-        let mbOfferedFare = req.offeredFare
-        organization <- CQM.findById sReq.providerId >>= fromMaybeM (MerchantDoesNotExist sReq.providerId.getId)
-        driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
         incrementAcceptanceCount driverId
         whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
-        driverInfo <- QDrInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
-        when driverInfo.onRide $ throwError DriverOnRide
-        sReqFD <-
-          QSRD.findByDriverAndSearchReq driverId sReq.id
-            >>= fromMaybeM NoSearchRequestForDriver
         when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
         farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
         whenJust mbOfferedFare $ \off ->
@@ -608,13 +609,13 @@ respondQuote driverId req = do
             throwError $ NotAllowedExtraFee $ show off
         fareParams <- calculateFare organization.id farePolicy sReq.estimatedDistance sReqFD.startTime mbOfferedFare
         driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
-        Esq.runTransaction $ QDrQt.create driverQuote
-        sendDriverOffer organization sReq driverQuote
         Esq.runTransaction $ do
-          QSRD.updateDriverResponse req.searchRequestId req.response
+          QDrQt.create driverQuote
+          QSRD.updateDriverResponse sReqFD.id req.response
+        sendDriverOffer organization sReq driverQuote
       Reject -> do
         Esq.runTransaction $ do
-          QSRD.updateDriverResponse req.searchRequestId req.response
+          QSRD.updateDriverResponse sReqFD.id req.response
   pure Success
   where
     buildDriverQuote ::

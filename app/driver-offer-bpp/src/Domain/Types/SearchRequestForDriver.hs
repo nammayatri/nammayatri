@@ -17,11 +17,11 @@ data DriverSearchRequestStatus = Active | Inactive
   deriving (Show, Read, Eq)
   deriving (PrettyShow) via Showable DriverSearchRequestStatus
 
-data Response
+data SearchRequestForDriverResponse
   = Accept
   | Reject
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema, Read, Eq)
-  deriving (PrettyShow) via Showable Response
+  deriving (PrettyShow) via Showable SearchRequestForDriverResponse
 
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
@@ -38,7 +38,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     lat :: Maybe Double,
     lon :: Maybe Double,
     createdAt :: UTCTime,
-    response :: Maybe Response
+    response :: Maybe SearchRequestForDriverResponse
   }
   deriving (Generic, Show, PrettyShow)
 

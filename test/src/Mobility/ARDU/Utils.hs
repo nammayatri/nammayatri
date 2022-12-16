@@ -144,7 +144,7 @@ getNearbySearchRequestForDriver driver estimateId =
     )
     ((.searchRequestsForDriver) <$> callBPP (API.getNearbySearchRequests driver.token))
 
-respondQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.Response -> ClientsM ()
+respondQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM ()
 respondQuote driver fare bppSearchRequestId response =
   void $ callBPP $ API.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
 
@@ -152,7 +152,7 @@ offerQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM (
 offerQuote driver fare bppSearchRequestId =
   void $ callBPP $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
-respondQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.Response -> ClientsM (Either ClientError APISuccess)
+respondQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM (Either ClientError APISuccess)
 respondQuoteEither driver fare bppSearchRequestId response =
   callBppEither $ API.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
 
