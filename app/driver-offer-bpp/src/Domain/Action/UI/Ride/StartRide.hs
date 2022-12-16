@@ -101,14 +101,8 @@ startRide ::
   Id SRide.Ride ->
   StartRideReq ->
   m APISuccess.APISuccess
-startRide handle@ServiceHandle {..} rideId req = do
+startRide ServiceHandle {..} rideId req = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  let driverId = ride.driverId
-  LocUpd.whenWithLocationUpdatesLock driverId $ startRideHandler handle ride req
-  pure APISuccess.Success
-
-startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> SRide.Ride -> StartRideReq -> m ()
-startRideHandler ServiceHandle {..} ride req = do
   let driverId = ride.driverId
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
@@ -137,8 +131,10 @@ startRideHandler ServiceHandle {..} ride req = do
           driverLocation <- findLocationByDriverId driverId >>= fromMaybeM LocationNotFound
           pure $ getCoordinates driverLocation
 
-  startRideAndUpdateLocation driverId ride.id booking.id point
-  initializeDistanceCalculation ride.id driverId point
-  notifyBAPRideStarted booking ride
+  LocUpd.whenWithLocationUpdatesLock driverId $ do
+    startRideAndUpdateLocation driverId ride.id booking.id point
+    initializeDistanceCalculation ride.id driverId point
+    notifyBAPRideStarted booking ride
+  pure APISuccess.Success
   where
     isValidRideStatus status = status == SRide.NEW
