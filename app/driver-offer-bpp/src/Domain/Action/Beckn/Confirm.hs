@@ -31,6 +31,7 @@ import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -68,7 +69,8 @@ handler ::
     EncFlow m r,
     CoreMetrics m,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->
@@ -225,6 +227,7 @@ cancelBooking ::
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
     CoreMetrics m,
     HasHttpClientOptions r c,
     HasCacheConfig r
@@ -235,28 +238,36 @@ cancelBooking ::
   m ()
 cancelBooking booking driver transporter = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
-  bookingCancellationReason <- buildBookingCancellationReason booking.id driver.id
+  let transporterId' = booking.providerId
+  unless (transporterId' == transporter.id) $ throwError AccessDenied
+  mbRide <- QRide.findActiveByRBId booking.id
+  bookingCancellationReason <- buildBookingCancellationReason booking.id driver.id mbRide
   Esq.runTransaction $ do
     QRB.updateStatus booking.id DRB.CANCELLED
     QBCR.create bookingCancellationReason
+    whenJust mbRide $ \ride -> do
+      QRide.updateStatus ride.id DRide.CANCELLED
+      QDriverInfo.updateOnRide (cast ride.driverId) False
   fork "cancelBooking - Notify BAP" $ do
-    BP.sendBookingCancelledUpdateToBAP booking transporter DBCR.ByApplication
-  fork "cancelRide - Notify driver" $ do
-    Notify.notifyOnCancel transporter.id booking driver.id driver.deviceToken DBCR.ByApplication
+    BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
+  whenJust mbRide $ \_ ->
+    fork "cancelRide - Notify driver" $ do
+      Notify.notifyOnCancel transporter.id booking driver.id driver.deviceToken bookingCancellationReason.source
 
 buildBookingCancellationReason ::
   MonadFlow m =>
   Id DRB.Booking ->
   Id DPerson.Person ->
+  Maybe DRide.Ride ->
   m DBCR.BookingCancellationReason
-buildBookingCancellationReason bookingId driverId = do
+buildBookingCancellationReason bookingId driverId ride = do
   guid <- generateGUID
   return
     DBCR.BookingCancellationReason
       { id = guid,
         driverId = Just driverId,
         bookingId,
-        rideId = Nothing,
+        rideId = (.id) <$> ride,
         source = DBCR.ByApplication,
         reasonCode = Nothing,
         additionalInfo = Nothing

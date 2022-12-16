@@ -3,6 +3,7 @@ module Domain.Action.Beckn.Confirm
     DConfirmReq (..),
     DConfirmRes (..),
     ConfirmResBDetails (..),
+    cancel,
   )
 where
 
@@ -13,6 +14,7 @@ import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Id
 import Beckn.Types.Registry (Subscriber (..))
 import Beckn.Utils.Common
+import Domain.Action.Beckn.Cancel (CancelReq)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.BookingLocation as SBL
 import Domain.Types.DiscountTransaction
@@ -172,3 +174,32 @@ mkDiscountTransaction booking discount currTime =
       discount = discount,
       createdAt = currTime
     }
+
+cancel ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DM.Merchant ->
+  CancelReq ->
+  m AckResponse
+cancel transporterId req = do
+  merchant <-
+    CQM.findById transporterId
+      >>= fromMaybeM (MerchantNotFound transporterId.getId)
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  let transporterId' = booking.providerId
+  unless (transporterId' == transporterId) $ throwError AccessDenied
+  rideReq <- buildRideReq booking.id merchant.subscriberId
+  Esq.runTransaction $ RideRequest.create rideReq
+  pure Ack
+  where
+    buildRideReq bookingId subscriberId = do
+      guid <- generateGUID
+      now <- getCurrentTime
+      pure
+        SRideRequest.RideRequest
+          { id = Id guid,
+            bookingId = bookingId,
+            subscriberId = subscriberId,
+            createdAt = now,
+            _type = SRideRequest.CANCELLATION,
+            info = Nothing
+          }

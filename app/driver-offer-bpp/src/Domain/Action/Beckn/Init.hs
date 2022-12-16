@@ -2,18 +2,23 @@ module Domain.Action.Beckn.Init where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Hedis
+import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Utils.Error.Throwing
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
+import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.SearchRequest as QSR
 
@@ -37,6 +42,50 @@ buildBookingLocation DLoc.SearchReqLocation {..} = do
       { id = Id guid,
         ..
       }
+
+cancelBooking ::
+  ( EsqDBFlow m r,
+    HedisFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m,
+    HasHttpClientOptions r c,
+    HasCacheConfig r
+  ) =>
+  DRB.Booking ->
+  Id DM.Merchant ->
+  m AckResponse
+cancelBooking booking transporterId = do
+  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
+  let transporterId' = booking.providerId
+  unless (transporterId' == transporterId) $ throwError AccessDenied
+  bookingCancellationReason <- buildBookingCancellationReason
+  transporter <- QM.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
+  Esq.runTransaction $ do
+    QRB.updateStatus booking.id DRB.CANCELLED
+  fork "cancelBooking - Notify BAP" $ do
+    BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
+  pure Ack
+  where
+    buildBookingCancellationReason = do
+      rideBookingCancelationM <- QBCR.findByRideBookingId booking.id
+      let oldId = (.id) <$> rideBookingCancelationM
+      newId <- generateGUID
+      let guid = fromMaybe newId oldId
+      let cancellationReason =
+            DBCR.BookingCancellationReason
+              { id = guid,
+                driverId = Nothing,
+                bookingId = booking.id,
+                rideId = Nothing,
+                source = DBCR.ByApplication,
+                reasonCode = Nothing,
+                additionalInfo = Nothing
+              }
+      if isJust oldId
+        then Esq.runTransaction $ QBCR.update cancellationReason
+        else Esq.runTransaction $ QBCR.create cancellationReason
+      return cancellationReason
 
 handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
 handler merchantId req = do

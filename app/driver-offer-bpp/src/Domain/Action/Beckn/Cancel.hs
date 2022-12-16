@@ -39,6 +39,7 @@ cancel ::
     EsqDBFlow m r,
     HedisFlow m r,
     CacheFlow m r,
+    HasHttpClientOptions r c,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,

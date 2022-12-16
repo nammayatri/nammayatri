@@ -66,6 +66,7 @@ onUpdate ::
     EsqDBFlow m r,
     CoreMetrics m,
     HasBapInfo r m,
+    HasHttpClientOptions r c,
     HasFlowEnv
       m
       r
@@ -87,7 +88,7 @@ onUpdate registryUrl RideAssignedReq {..} = do
     QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
     QRide.create ride
   Notify.notifyOnRideAssigned booking ride
-  CallBPP.callTrack booking ride
+  withRetry $ CallBPP.callTrack booking ride
   where
     buildRide :: MonadFlow m => SRB.Booking -> m SRide.Ride
     buildRide booking = do

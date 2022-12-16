@@ -7,9 +7,10 @@ module API.UI.Confirm
 where
 
 import Beckn.Prelude hiding (init)
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (BecknAPICallError)
+import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified Core.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
@@ -48,9 +49,14 @@ confirm personId quoteId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dConfirmRes <- DConfirm.confirm personId quoteId
     becknInitReq <- ACL.buildInitReq dConfirmRes
-    handle (\(_ :: BecknAPICallError) -> DConfirm.cancelBooking dConfirmRes.booking) $
+    handle (errHandler dConfirmRes.booking) $
       void $ withRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
     return $
       ConfirmRes
         { bookingId = dConfirmRes.booking.id
         }
+  where
+    errHandler booking exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking booking
+      | otherwise = throwM exc
