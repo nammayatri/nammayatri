@@ -164,13 +164,12 @@ sendRideCompletedUpdateToBAP ::
   DRB.Booking ->
   SRide.Ride ->
   Fare.FareParameters ->
-  Money ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams finalFare = do
+sendRideCompletedUpdateToBAP booking ride fareParams = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, finalFare}
+  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
   void $ callOnUpdate transporter booking rideCompletedMsg
 

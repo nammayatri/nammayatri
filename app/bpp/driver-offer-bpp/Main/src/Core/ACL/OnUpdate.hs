@@ -33,7 +33,6 @@ data OnUpdateBuildReq
       }
   | RideCompletedBuildReq
       { ride :: DRide.Ride,
-        finalFare :: Money,
         fareParams :: Fare.FareParameters
       }
   | BookingCancelledBuildReq

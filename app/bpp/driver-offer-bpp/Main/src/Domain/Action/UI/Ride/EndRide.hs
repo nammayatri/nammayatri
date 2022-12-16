@@ -53,7 +53,7 @@ data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> m (),
-    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Money -> m (),
+    notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
     getFarePolicy :: Id DM.Merchant -> Variant -> m (Maybe FarePolicy),
     calculateFare ::
       Id DM.Merchant ->
@@ -213,10 +213,10 @@ endRide ServiceHandle {..} rideId req = do
           <> show actualRideDuration
       pure timeOutsideOfThreshold
 
-    (chargeableDistance, finalFare) <-
+    (chargeableDistance, finalFare, updatedFareParams) <-
       if not distanceCalculationFailed && (pickupDropOutsideOfThreshold || distanceOutsideOfThreshold || timeOutsideOfThreshold)
         then recalculateFare booking ride
-        else pure (booking.estimatedDistance, booking.estimatedFare)
+        else pure (booking.estimatedDistance, booking.estimatedFare, booking.fareParams)
 
     let updRide =
           ride{tripEndTime = Just now,
@@ -226,7 +226,7 @@ endRide ServiceHandle {..} rideId req = do
               }
     endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide
 
-    notifyCompleteToBAP booking updRide booking.fareParams booking.estimatedFare
+    notifyCompleteToBAP booking updRide updatedFareParams
   return APISuccess.Success
   where
     recalculateFare booking ride = do
@@ -247,4 +247,4 @@ endRide ServiceHandle {..} rideId req = do
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric transporterId fareDiff distanceDiff
-      return (actualDistance, updatedFare)
+      return (actualDistance, updatedFare, fareParams)
