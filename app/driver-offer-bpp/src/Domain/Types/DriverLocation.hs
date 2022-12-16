@@ -14,4 +14,4 @@ data DriverLocation = DriverLocation
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq, HasCoordinates)
+  deriving (Generic, Show, Eq, HasCoordinates, FromJSON, ToJSON)

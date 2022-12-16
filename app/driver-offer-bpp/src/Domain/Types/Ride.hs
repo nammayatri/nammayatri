@@ -51,7 +51,7 @@ data Ride = Ride
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
 data RideRating = RideRating
   { id :: Id RideRating,
@@ -60,4 +60,4 @@ data RideRating = RideRating
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)

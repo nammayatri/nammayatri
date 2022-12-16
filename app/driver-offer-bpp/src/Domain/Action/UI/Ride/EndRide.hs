@@ -31,11 +31,11 @@ import Environment (Flow)
 import EulerHS.Prelude hiding (pi)
 import qualified Lib.LocationUpdates as LocUpd
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.FareCalculator as Fare
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 

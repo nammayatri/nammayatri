@@ -18,4 +18,4 @@ startRideTransaction driverId rId bookingId firstPoint = Esq.runTransaction $ do
   QRide.updateStartTimeAndLoc rId firstPoint
   QBE.logRideCommencedEvent (cast driverId) bookingId rId
   now <- getCurrentTime
-  DrLoc.upsertGpsCoord driverId firstPoint now
+  void $ DrLoc.upsertGpsCoord driverId firstPoint now

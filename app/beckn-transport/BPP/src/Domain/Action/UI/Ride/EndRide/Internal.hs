@@ -10,6 +10,8 @@ import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import Domain.Types.Merchant
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Ride as SRide
+import qualified SharedLogic.DriverLocation as SDrLoc
+import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
@@ -20,14 +22,17 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
-endRideTransaction :: EsqDBFlow m r => Id Driver -> Id SRB.Booking -> SRide.Ride -> [DFareBreakup.FareBreakup] -> m ()
-endRideTransaction driverId bookingId ride fareBreakups = Esq.runTransaction $ do
-  QRide.updateAll ride.id ride
-  QRide.updateStatus ride.id SRide.COMPLETED
-  QRB.updateStatus bookingId SRB.COMPLETED
-  DriverInformation.updateOnRide driverId False
-  DriverStats.updateIdleTime driverId
-  traverse_ QFareBreakup.create fareBreakups
+endRideTransaction :: (CacheFlow m r, EsqDBFlow m r) => Id Driver -> Id SRB.Booking -> SRide.Ride -> [DFareBreakup.FareBreakup] -> m ()
+endRideTransaction driverId bookingId ride fareBreakups = do
+  Esq.runTransaction $ do
+    QRide.updateAll ride.id ride
+    QRide.updateStatus ride.id SRide.COMPLETED
+    QRB.updateStatus bookingId SRB.COMPLETED
+    DriverInformation.updateOnRide driverId False
+    DriverStats.updateIdleTime driverId
+    traverse_ QFareBreakup.create fareBreakups
+  SRide.clearCache $ cast driverId
+  SDrLoc.clearDriverInfoCache driverId
 
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do

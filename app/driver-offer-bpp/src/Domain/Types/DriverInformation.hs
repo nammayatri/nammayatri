@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Domain.Types.DriverInformation where
 
 import Beckn.External.Encryption
@@ -21,3 +23,11 @@ data DriverInformationE e = DriverInformation
   deriving (Generic)
 
 type DriverInformation = DriverInformationE 'AsEncrypted
+
+instance FromJSON (EncryptedHashed Text)
+
+instance ToJSON (EncryptedHashed Text)
+
+instance FromJSON DriverInformation
+
+instance ToJSON DriverInformation

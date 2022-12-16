@@ -93,4 +93,4 @@ setDriverWithOldLocation :: FlowR ARDUEnv.AppEnv ()
 setDriverWithOldLocation = do
   now <- getCurrentTime
   Esq.runTransaction $
-    QL.upsertGpsCoord (Id driverWithOldLocation) (LatLong 13.005432 77.59336) ((-86400) `addUTCTime` now) -- one day ago
+    void $ QL.upsertGpsCoord (Id driverWithOldLocation) (LatLong 13.005432 77.59336) ((-86400) `addUTCTime` now) -- one day ago

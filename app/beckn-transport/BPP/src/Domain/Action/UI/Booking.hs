@@ -36,12 +36,12 @@ import Domain.Types.RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
+import qualified SharedLogic.DriverLocation as QDrLoc
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.FarePolicy.FareBreakup as QFareBreakup
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Person as QP
@@ -137,9 +137,8 @@ getRideInfo bookingId personId = do
       booking <- Esq.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
       driver <- Esq.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       driverLocation <-
-        Esq.runInReplica $
-          QDrLoc.findById driver.id
-            >>= fromMaybeM LocationNotFound
+        QDrLoc.findById driver.id
+          >>= fromMaybeM LocationNotFound
       let fromLocation = booking.fromLocation
       let toLocation = case booking.bookingDetails of
             SRB.OneWayDetails details -> Just details.toLocation

@@ -18,4 +18,4 @@ data DriverInformation = DriverInformation
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool
   }
-  deriving (Generic)
+  deriving (Generic, ToJSON, FromJSON)

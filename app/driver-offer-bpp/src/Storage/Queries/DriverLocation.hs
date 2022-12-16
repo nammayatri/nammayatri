@@ -33,13 +33,15 @@ findById ::
   m (Maybe DriverLocation)
 findById = Esq.findById
 
-upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB ()
+upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation
 upsertGpsCoord drLocationId latLong calculationTime = do
   mbDrLoc <- Esq.findById @DriverLocation @DriverLocationT drLocationId
+  now <- getCurrentTime
   case mbDrLoc of
-    Nothing -> Storage.Queries.DriverLocation.create drLocationId latLong calculationTime
-    Just _ -> do
-      now <- getCurrentTime
+    Nothing -> do
+      Storage.Queries.DriverLocation.create drLocationId latLong calculationTime
+      return $ DriverLocation drLocationId latLong.lat latLong.lon calculationTime now now
+    Just oldLocation -> do
       Esq.update $ \tbl -> do
         set
           tbl
@@ -50,6 +52,7 @@ upsertGpsCoord drLocationId latLong calculationTime = do
             DriverLocationUpdatedAt =. val now
           ]
         where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
+      return $ oldLocation{lat = latLong.lat, lon = latLong.lon, coordinatesCalculatedAt = calculationTime, updatedAt = now}
 
 deleteById :: Id Person -> SqlDB ()
 deleteById = deleteByKey @DriverLocationT

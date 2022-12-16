@@ -10,7 +10,6 @@ where
 
 import Beckn.External.Maps.Types
 import Beckn.Prelude hiding (Handler)
-import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
@@ -23,21 +22,21 @@ import Beckn.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
 import GHC.Records.Extra
 import qualified Lib.LocationUpdates as LocUpd
-import qualified Storage.Queries.DriverLocation as DrLoc
+import qualified SharedLogic.DriverLocation as DrLoc
+import qualified SharedLogic.Ride as SRide
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics (CoreMetrics)
 
 data Handler m = Handler
   { driver :: Person.Person,
     findDriverLocation :: m (Maybe DriverLocation),
     upsertDriverLocation :: LatLong -> UTCTime -> m (),
-    getInProgress :: m (Maybe SRide.Ride),
-    addIntermediateRoutePoints :: Id SRide.Ride -> NonEmpty LatLong -> m ()
+    getInProgress :: m (Maybe (Id DRide.Ride)),
+    addIntermediateRoutePoints :: Id DRide.Ride -> NonEmpty LatLong -> m ()
   }
 
 type UpdateLocationReq = NonEmpty Waypoint
@@ -62,9 +61,8 @@ buildUpdateLocationHandle driverId = do
     Handler
       { driver,
         findDriverLocation = DrLoc.findById driverId,
-        upsertDriverLocation = \point timestamp ->
-          Esq.runTransaction $ DrLoc.upsertGpsCoord driverId point timestamp,
-        getInProgress = QRide.getInProgressByDriverId driverId,
+        upsertDriverLocation = DrLoc.upsertGpsCoord driverId,
+        getInProgress = SRide.getInProgressRideIdByDriverId driverId,
         addIntermediateRoutePoints = \rideId ->
           LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId
       }
@@ -96,7 +94,7 @@ updateLocationHandler Handler {..} waypoints = withLogTag "driverLocationUpdate"
         getInProgress
           >>= maybe
             (logInfo "No ride is assigned to driver, ignoring")
-            (\ride -> addIntermediateRoutePoints ride.id $ NE.map (.pt) newWaypoints)
+            (\rideId -> addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
   pure Success
   where
     filterNewWaypoints mbOldLoc = do
