@@ -94,7 +94,7 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 let driverPoolCfg = {
     minRadiusOfSearch = +5000
   , maxRadiusOfSearch = +7000
-  , radiusStep = +500
+  , radiusStepSize = +500
   , driverPositionInfoExpiry = Some +36000
   , actualDistanceThreshold = Some +7000
 }

@@ -18,10 +18,10 @@ sendSearchRequestToDrivers Job {jobData} = do
   where
     handle searchReq =
       Handle
-        { isRideAlreadyAssigned = I.isRideAlreadyAssigned searchReq.id,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch searchReq.id,
-          prepareDriverPoolBatches = I.prepareDriverPoolBatches searchReq,
-          incrementPoolRadiusStep = I.incrementPoolRadiusStep searchReq,
+        { isBatchNumExceedLimit = I.isBatchNumExceedLimit searchReq.id,
+          isRideAlreadyAssigned = I.isRideAlreadyAssigned searchReq.id,
+          getNextDriverPoolBatch = I.getNextDriverPoolBatch searchReq,
+          cleanupDriverPoolBatches = I.cleanupDriverPoolBatches searchReq.id,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq jobData.baseFare,
           getRescheduleTime = I.getRescheduleTime
         }

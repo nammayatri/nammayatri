@@ -29,6 +29,7 @@ let PoolSortingType = <ByAcceptanceRatio | ByRandom>
 
 let driverPoolBatchesCfg = {
   driverBatchSize = +5
+, maxNumberOfBatches = +3
 , poolSortingType = PoolSortingType.ByRandom
 }
 

@@ -3,12 +3,11 @@ module SharedLogic.DriverPool.Config where
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
-import SharedLogic.DriverPool.Types (PoolRadiusStep)
 
 data DriverPoolConfig = DriverPoolConfig
   { minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,
-    radiusStep :: PoolRadiusStep,
+    radiusStepSize :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     actualDistanceThreshold :: Maybe Meters
   }

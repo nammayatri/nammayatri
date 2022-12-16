@@ -11,6 +11,7 @@ import EulerHS.Prelude hiding (id)
 
 data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,
+    maxNumberOfBatches :: Int,
     poolSortingType :: PoolSortingType
   }
   deriving (Generic, FromDhall)

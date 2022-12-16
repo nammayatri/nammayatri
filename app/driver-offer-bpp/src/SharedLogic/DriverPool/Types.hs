@@ -15,9 +15,9 @@ import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import Tools.Maps as Google
 
-type PoolBatchNum = Integer
+type PoolBatchNum = Int
 
-type PoolRadiusStep = Integer
+type PoolRadiusStep = Int
 
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,

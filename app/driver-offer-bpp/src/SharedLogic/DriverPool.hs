@@ -101,8 +101,8 @@ calculateDriverPool mbVariant pickup merchantId onlyNotOnRide radiusStep = do
     getRadius = do
       minRadius <- fromIntegral <$> asks (.driverPoolCfg.minRadiusOfSearch)
       maxRadius <- fromIntegral <$> asks (.driverPoolCfg.maxRadiusOfSearch)
-      radiusStepSize <- asks (.driverPoolCfg.radiusStep)
-      return $ min (minRadius + radiusStepSize * radiusStep) maxRadius
+      radiusStepSize <- asks (.driverPoolCfg.radiusStepSize)
+      return $ min (minRadius + fromIntegral radiusStepSize * radiusStep) maxRadius
     makeDriverPoolResult :: QP.NearestDriversResult -> DriverPoolResult
     makeDriverPoolResult QP.NearestDriversResult {..} = do
       DriverPoolResult

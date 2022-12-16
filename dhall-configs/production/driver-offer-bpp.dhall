@@ -92,7 +92,7 @@ let acceptanceWindowOptions =
 let driverPoolCfg = {
     minRadiusOfSearch = +1200
   , maxRadiusOfSearch = +2700
-  , radiusStep = +500
+  , radiusStepSize = +500
   , driverPositionInfoExpiry = Some +180
   , actualDistanceThreshold = Some +2700
 }

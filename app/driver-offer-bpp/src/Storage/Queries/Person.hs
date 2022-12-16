@@ -321,7 +321,7 @@ getNearestDrivers ::
   (Transactionable m, MonadTime m) =>
   Maybe Variant ->
   LatLong ->
-  Integer ->
+  Int ->
   Id Merchant ->
   Bool ->
   Maybe Seconds ->
