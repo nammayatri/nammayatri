@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 apps () {
 cat << EOF
