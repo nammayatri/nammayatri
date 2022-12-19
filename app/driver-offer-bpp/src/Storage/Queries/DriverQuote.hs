@@ -1,5 +1,6 @@
 module Storage.Queries.DriverQuote where
 
+import Data.Int (Int32)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
@@ -69,6 +70,15 @@ findAllByRequestId searchReqId = do
           dQuote ^. DriverQuoteStatus ==. val Domain.Active
             &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
         pure (dQuote, farePars)
+
+countAllByRequestId :: Transactionable m => Id DSReq.SearchRequest -> m Int32
+countAllByRequestId searchReqId = do
+    fmap (fromMaybe 0) $ Esq.findOne $ do
+        dQuote <- from $ table @DriverQuoteT
+        where_ $
+          dQuote ^. DriverQuoteStatus ==. val Domain.Active
+            &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+        pure (countRows @Int32)
 
 deleteByDriverId :: Id Person -> SqlDB ()
 deleteByDriverId personId =

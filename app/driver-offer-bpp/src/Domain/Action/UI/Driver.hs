@@ -603,6 +603,7 @@ respondQuote driverId req = do
         incrementAcceptanceCount driverId
         whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
         when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
+        whenM (quotesCountExceeded sReq) (throwError QuoteAlreadyRejected)
         farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
         whenJust mbOfferedFare $ \off ->
           unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
@@ -653,6 +654,10 @@ respondQuote driverId req = do
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
       logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
       pure $ not $ null activeQuotes
+    quotesCountExceeded sReq = do
+      quoteCount <- QDrQt.countAllByRequestId sReq.id
+      let concurrentQuoteLimit = 5 -- TODO make configurable
+      pure $ quoteCount > concurrentQuoteLimit
 
 getStats ::
   (EsqDBReplicaFlow m r, EncFlow m r) =>
