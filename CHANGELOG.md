@@ -10,83 +10,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Changes
 
-- Add actual distance filter in driver pool filtering
+- [BKN-2461] Add actual distance filter in driver pool filtering
 
-- Persist UI version in BAP/BPP DB
+- [BKN-2291] Persist UI version in BAP/BPP DB
 
-- Make merchantId mandatory for bpp person
+- [BKN-2430] Make merchantId mandatory for bpp person
 
-- various bug fixes
+- [BKN-2407] various bug fixes
 
-- Send search expiry to the frontend
+- [BKN-2431] Send search expiry to the frontend
 
 ## [14.10.1] - 10-12-2022
 
 Changes
 
-- Remove distance matrix based driver pool filtering in select API
+- [BKN-2441] Remove distance matrix based driver pool filtering in select API
 
-- various bug fixes
+- [BKN-2406,BKN-2287] various bug fixes
 
 ## [14.10.0] - 9-12-2022
 
 Changes
 
-- Intelligent driver pool computation
+- [BKN-2293] Intelligent driver pool computation
 
-- Persist UI version in BAP/BPP DB
+- [BKN-2291] Persist UI version in BAP/BPP DB
 
-- Add DriverLocation to SearchRequestForDriver
+- [BKN-2328] Add DriverLocation to SearchRequestForDriver
 
-- Store all cancellation reasons in case of re-allocation
+- [BKN-2265] Store all cancellation reasons in case of re-allocation
 
-- Send estimate range to BAP in search API
+- [BKN-2060] Send estimate range to BAP in search API
 
-- various bug fixes
+- [BKN-2287] various bug fixes
 
-- Validate merchantId in auth API
+- [BKN-2348] Validate merchantId in auth API
 
 ## [14.9.1] - 3-12-2022
 
 Changes
 
-- Handle deletion of drivers and vehicles
+- [BKN-1191] Handle deletion of drivers and vehicles
 
-- various bug fixes
+- [BKN-2393] various bug fixes
 
-- Add force enable and add vehicle api for driver
+- [BKN-2352] Add force enable and add vehicle api for driver
 
-- Visualize ride cli helper should output csv as another option
+- [BKN-2340] Visualize ride cli helper should output csv as another option
 
 ## [14.9.0] - 1-12-2022
 
 Changes
 
-- various bug fixes
+- [BKN-2355] DL to be verified as valid for the below DL Vehicle classes
 
-- DL to be verified as valid for the below DL Vehicle classes
+- [BKN-2236] Add change driver's phone number and vehicle apis
 
-- Add change driver's phone number and vehicle apis
+- [BKN-2086] Integrate OSRM match API as alternative for google snap-to-road API
 
-- Integrate OSRM match API as alternative for google snap-to-road API
+- [BKN-2262] Move GET APIs to lookup from read replica DB
 
-- Move GET APIs to lookup from read replica DB
+- [BKN-2321] Block driver if he had already active offer
 
-- Block driver if he had already active offer
+- [BKN-2332] Fix timeout error in driver list api if not provide limit
 
-- Fix timeout error in driver list api if not provide limit
+- [BKN-2323] Skipping check for image if date of issue field is there
 
-- Skipping check for image if date of issue field is there
+- [BKN-2213] Rename Organization to Merchant at BPP
 
-- Rename Organization to Merchant at BPP
+- [BKN-2261] Remove join queries from search, quote, booking and estimate tables of app-backend
 
-- Remove join queries from search, quote, booking and estimate tables of app-backend
+- [BKN-2269] Re arrange cancellation reasons on basis of priority
 
-- Re arrange cancellation reasons on basis of priority
+- [BKN-2264] Upload image in chunks for validateImage API
 
-- Upload image in chunks for validateImage API
+- [BKN-2238] Update fare recomputation logic
 
-- Update fare recomputation logic
+- [BKN-2353,BKN-2332,BKN-2287,BKN-2252] various bug fixes
 
 ## [14.8.0] - 18-11-2022
 
@@ -98,7 +98,7 @@ Changes
 
 - change the request body for web engage
 
-- Add Karnataka geofence for NammaYatri application
+- [BKN-2089] Add Karnataka geofence for NammaYatri application
 
 ## [14.7.0] - 15-11-2022
 
@@ -112,143 +112,143 @@ Changes
 
 Changes
 
-- make dl valid class of vehicles as config
+- [BKN-2242] make dl valid class of vehicles as config
 
-- Update fare recomputation logic
+- [BKN-2238] Update fare recomputation logic
 
-- Parse geocoding address based on outer `type` sublocality_level_2
+- [BKN-2228] Parse geocoding address based on outer `type` sublocality_level_2
 
-- Add rate limit in driver location updates
+- [BKN-2240] Add rate limit in driver location updates
 
-- Expose endpoint for SMS campaign - WebEngage
+- [BKN-2135] Expose endpoint for SMS campaign - WebEngage
 
-- Changing dashboard admin and users paths
+- [BKN-2230] Changing dashboard admin and users paths
 
-- Create person API by dashboard admin in dashboard
+- [BKN-2069] Create person API by dashboard admin in dashboard
 
-- list role api by using search string in dashboard with limit and offset
+- [BKN-2070] list role api by using search string in dashboard with limit and offset
 
-- Send notification to other blocked drivers who have given quote when customer accepts any offered quote
+- [BKN-2100] Send notification to other blocked drivers who have given quote when customer accepts any offered quote
 
-- Driver Onboarding Dashboard APIs
+- [BKN-1944] Driver Onboarding Dashboard APIs
 
-- Add Swagger for dashboard APIs
+- [BKN-2212] Add Swagger for dashboard APIs
 
-- Auth on basis of merchant instead of server
+- [BKN-2151] Auth on basis of merchant instead of server
 
-- Change user login flow
+- [BKN-2152] Change user login flow
 
-- Filter list API response based on booking status
+- [BKN-2062] Filter list API response based on booking status
 
-- various bug fixes
+- [BKN-2219,BKN-2158] various bug fixes
 
 ## [14.5.0] - 4-11-2022
 
 Changes
 
-- Remove distance matrix API for on_search estimates in dobpp
+- [BKN-2216] Remove distance matrix API for on_search estimates in dobpp
 
-- Add Passenger/3WN classes also as valid COV for RC
+- [BKN-2210] Add Passenger/3WN classes also as valid COV for RC
 
 ## [14.4.0] - 1-11-2022
 
 Changes
 
-- Limit max drivers in driver pool and randomise driver selection
+- [BKN-2192] Limit max drivers in driver pool and randomise driver selection
 
-- Add option to black list user
+- [BKN-2194] Add option to black list user
 
-- Rate limit search requests per user
+- [BKN-2193] Rate limit search requests per user
 
 ## [14.3.0] - 29-10-2022
 
 Changes
 
-- Limit max trip distance which BPP can offer quotes for
+- [BKN-2162] Limit max trip distance which BPP can offer quotes for
 
-- Integrate Google maps Geocode API and expose it proxy to UI
+- [BKN-2113] Integrate Google maps Geocode API and expose it proxy to UI
 
-- Use session_id in proxies google maps API
+- [BKN-2097] Use session_id in proxies google maps API
 
-- Driver Onboarding Dashboard APIs
+- [BKN-1944] Driver Onboarding Dashboard APIs
 
-- various bug fixes
+- [BKN-2029] various bug fixes
 
 ## [14.2.0] - 22-10-2022
 
 Changes
 
-- various bug fixes
+- [BKN-2109] Add dateOfIssue to register DL API request and dateOfRegistration in register RC API.
 
-- Add dateOfIssue to register DL API request and dateOfRegistration in register RC API.
+- [BKN-2109] Add dateOnDoc, encryptedDocData and imageExtractionValidation columns to IdfyVerification table.
 
-- Add dateOnDoc, encryptedDocData and imageExtractionValidation columns to IdfyVerification table.
+- [BKN-2029,BKN-1195] various bug fixes
 
 ## [14.1.2] - 12-10-2022
 
 Changes
 
-- add more fields in rc table and idfy response dump type
+- [BKN-2075] add more fields in rc table and idfy response dump type
 
 ## [14.1.1] - 11-10-2022
 
 Changes
 
-- moving from idfy rc_basic to rc_plus
+- [BKN-2075] moving from idfy rc_basic to rc_plus
 
 ## [14.1.0] - 11-10-2022
 
 Changes
 
-- get driver docs images
+- [BKN-2064] get driver docs images
 
-- improve dashboard flow
+- [BKN-1945] improve dashboard flow
 
-- Various bug fixes
+- [BKN-2029] Various bug fixes
 
 ## [14.0.0] - 7-10-2022
 
 Changes
 
-- Update dhall configs of sandbox to latest
+- [BKN-2053] Update dhall configs of sandbox to latest
 
-- Recomputation actual distance when
+- [BKN-2007] Recomputation actual distance when
     ride start location is not within threshold (<500m) radius of pickup location and of
     or ride end location is not within threshold (<500m) radius of destination location
 
-- Handled IDFY errors properly
+- [BKN-2042] Handled IDFY errors properly
 
-- Simplify application of night fare charges
+- [BKN-2010] Simplify application of night fare charges
 
-- Added slack alert for driver onboard failure
+- [BKN-2013] Added slack alert for driver onboard failure
 
-- Rearranging Address, for fcm notification type NEW_RIDE_AVAILABLE
+- [BKN-1908] Rearranging Address, for fcm notification type NEW_RIDE_AVAILABLE
 
-- Added referral code for driver
+- [BKN-2015] Added referral code for driver
 
-- Driver profile API should return vehicle as optional field in Driver-offer-bpp
+- [BKN-2002] Driver profile API should return vehicle as optional field in Driver-offer-bpp
 
-- Add image validation
+- [BKN-1892] Add image validation
 
-- Pickup and drop location shown to the driver should be in native languge selected by the driver
+- [BKN-1825] Pickup and drop location shown to the driver should be in native languge selected by the driver
 
-- Move AccessMatrix and Roles to DB for Dashboard ops
+- [BKN-1943] Move AccessMatrix and Roles to DB for Dashboard ops
 
-- Adding access matrix in auth module
+- [BKN-1890] Adding access matrix in auth module
 
-- Setting up Dashboard Server
+- [BKN-1889] Setting up Dashboard Server
 
-- Update Redis endpoint for master/sandbox endpoints
+- [BKN-1887] Update Redis endpoint for master/sandbox endpoints
 
-- Add Idfy API Request and Response Type's
+- [BKN-1924] Add Idfy API Request and Response Type's
 
-- store ride rating on bap side in feedback api and show it in rideBookingList
+- [BKN-1852] store ride rating on bap side in feedback api and show it in rideBookingList
 
-- Add S3 service
+- [BKN-1777] Add S3 service
 
-- Rider name should be shared with the BPP and displayed to the driver for them to easily find each other
+- [BKN-1826] Rider name should be shared with the BPP and displayed to the driver for them to easily find each other
 
-- Various bug fixes
+- [BKN-2029,BKN-2030] Various bug fixes
 
 ## [13.0.0] - 14-08-2022 (partial), 13-09-2022
 
