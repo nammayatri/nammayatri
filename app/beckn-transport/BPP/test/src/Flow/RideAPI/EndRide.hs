@@ -3,6 +3,7 @@
 module Flow.RideAPI.EndRide (endRideTests) where
 
 import Beckn.External.Maps.Types
+import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Action.UI.Ride.EndRide as Handle
@@ -80,14 +81,9 @@ handle =
       getDefaultDropLocThreshold = pure 500,
       getDefaultRideTravelledDistanceThreshold = pure 700,
       getDefaultRideTimeEstimatedThreshold = pure 900,
-      findConfigByKey = \_ -> pure Nothing
+      findConfigByKey = \_ -> pure Nothing,
+      whenWithLocationUpdatesLock = \_driverId action -> action
     }
-
-runDriverHandler :: Handle.ServiceHandle IO -> Ride.Ride -> DriverEndRideReq -> IO ()
-runDriverHandler sHandle sRide = Handle.endRideHandler sHandle sRide . Handle.DriverReq
-
-runDashboardHandler :: Handle.ServiceHandle IO -> Ride.Ride -> DashboardEndRideReq -> IO ()
-runDashboardHandler sHandle sRide = Handle.endRideHandler sHandle sRide . Handle.DashboardReq
 
 testDriverEndRideReq :: DriverEndRideReq
 testDriverEndRideReq =
@@ -139,45 +135,45 @@ rentalBooking = do
 successfulEndByDriver :: TestTree
 successfulEndByDriver =
   testCase "Requested by correct driver" $
-    runDriverHandler handle ride testDriverEndRideReq `shouldReturn` ()
+    driverEndRide handle ride.id testDriverEndRideReq `shouldReturn` Success
 
 successfulEndRental :: TestTree
 successfulEndRental =
   testCase "Requested for rentals by correct driver" $
-    runDriverHandler modHandle rentalRide testDriverEndRideReq `shouldReturn` ()
+    driverEndRide modHandle rentalRide.id testDriverEndRideReq `shouldReturn` Success
   where
     modHandle = handle{fetchRide = return rentalRide}
 
 successfulEndByDashboard :: TestTree
 successfulEndByDashboard =
   testCase "Requested by dashboard" $
-    runDashboardHandler handle ride testDashboardEndRideReq `shouldReturn` ()
+    dashboardEndRide handle ride.id testDashboardEndRideReq `shouldReturn` Success
 
 successfulEndByDashboardWithoutPoint :: TestTree
 successfulEndByDashboardWithoutPoint =
   testCase "Requested by dashboard without point" $
-    runDashboardHandler handle ride testEndRideReqCase `shouldReturn` ()
+    dashboardEndRide handle ride.id testEndRideReqCase `shouldReturn` Success
   where
     testEndRideReqCase = testDashboardEndRideReq{point = Nothing}
 
 failedEndRequestedByWrongDriver :: TestTree
 failedEndRequestedByWrongDriver =
   testCase "Requested by wrong driver" $
-    runDriverHandler handle ride testEndRideReqCase `shouldThrow` (== NotAnExecutor)
+    driverEndRide handle ride.id testEndRideReqCase `shouldThrow` (== NotAnExecutor)
   where
     testEndRideReqCase = testDriverEndRideReq{requestor = Fixtures.anotherDriver}
 
 failedEndRequestedNotByDriver :: TestTree
 failedEndRequestedNotByDriver =
   testCase "Requested not by driver" $
-    runDriverHandler handle ride testEndRideReqCase `shouldThrow` (== AccessDenied)
+    driverEndRide handle ride.id testEndRideReqCase `shouldThrow` (== AccessDenied)
   where
     testEndRideReqCase = testDriverEndRideReq{requestor = Fixtures.defaultAdmin}
 
 failedEndRequestednByAnotherMerchantDashboard :: TestTree
 failedEndRequestednByAnotherMerchantDashboard = do
   testCase "Fail ride ending if requested by another merchant dashboard" $ do
-    runDashboardHandler handle ride testEndRideReqCase
+    dashboardEndRide handle ride.id testEndRideReqCase
       `shouldThrow` (\(RideDoesNotExist _) -> True)
   where
     testEndRideReqCase = testDashboardEndRideReq{merchantId = Fixtures.anotherMerchantId}
@@ -185,10 +181,10 @@ failedEndRequestednByAnotherMerchantDashboard = do
 failedEndWhenRideStatusIsWrong :: TestTree
 failedEndWhenRideStatusIsWrong =
   testCase "A ride has wrong status" $
-    runDriverHandler modHandle completeRide testDriverEndRideReq `shouldThrow` (\(RideInvalidStatus _) -> True)
+    driverEndRide modHandle ride.id testDriverEndRideReq `shouldThrow` (\(RideInvalidStatus _) -> True)
   where
     modHandle = handle{fetchRide = return completeRide}
-    completeRide = ride{Ride.id = "ride", Ride.status = Ride.COMPLETED}
+    completeRide = ride{Ride.status = Ride.COMPLETED}
 
 -----
 
@@ -242,9 +238,9 @@ locationUpdatesSuccessHandle =
 locationUpdatesFailure :: TestTree
 locationUpdatesFailure =
   testCase "Return estimated fare when failed to calculate actual distance" $
-    void $ runDriverHandler locationUpdatesFailureHandle ride testDriverEndRideReq
+    void $ driverEndRide locationUpdatesFailureHandle ride.id testDriverEndRideReq
 
 locationUpdatesSuccess :: TestTree
 locationUpdatesSuccess =
   testCase "Return actual fare when succeeded to calculate actual distance" $
-    void $ runDriverHandler locationUpdatesSuccessHandle ride testDriverEndRideReq
+    void $ driverEndRide locationUpdatesSuccessHandle ride.id testDriverEndRideReq

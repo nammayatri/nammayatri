@@ -5,7 +5,6 @@ module Domain.Action.UI.Ride.EndRide
     buildEndRideHandle,
     driverEndRide,
     dashboardEndRide,
-    EndRideReq (..),
   )
 where
 
