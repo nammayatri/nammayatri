@@ -1,4 +1,5 @@
 let common = ../generic/common.dhall
+
 let appCfg = ./driver-offer-bpp.dhall
 
 let sec = ./secrets/beckn-transport.dhall
@@ -6,12 +7,12 @@ let sec = ./secrets/beckn-transport.dhall
 let transporter = ./beckn-transport.dhall
 
 let schedulerConfig =
-     { loggerConfig =
-            common.loggerConfig
-        //  { logRawSql = False
-            , logFilePath = "/tmp/driver-offer-scheduler.log"
-            , prettyPrinting = True
-            }
+      { loggerConfig =
+              common.loggerConfig
+          //  { logRawSql = False
+              , logFilePath = "/tmp/driver-offer-scheduler.log"
+              , prettyPrinting = True
+              }
       , esqDBCfg = appCfg.esqDBCfg
       , metricsPort = +8056
       , hedisCfg = appCfg.hedisCfg
@@ -25,18 +26,21 @@ let schedulerConfig =
       , graceTerminationPeriod = +10
       }
 
-let PoolSortingType = <ByAcceptanceRatio | ByRandom>
+let PoolSortingType = < ByAcceptanceRatio | ByRandom >
 
-let driverPoolBatchesCfg = {
-  driverBatchSize = +5
-, maxNumberOfBatches = +3
-, poolSortingType = PoolSortingType.ByRandom
-}
+let driverPoolBatchesCfg =
+      { driverBatchSize = +5
+      , maxNumberOfBatches = +3
+      , poolSortingType = PoolSortingType.ByRandom
+      }
 
-in {
-   appCfg = appCfg
-        // {loggerConfig = appCfg.loggerConfig //  { logFilePath = "/tmp/driver-offer-allocator.log" }}
-,  schedulerConfig = schedulerConfig
-,  driverPoolBatchesCfg = driverPoolBatchesCfg
-,  singleBatchProcessTime = +10
-}
+in  { appCfg =
+            appCfg
+        //  { loggerConfig =
+                    appCfg.loggerConfig
+                //  { logFilePath = "/tmp/driver-offer-allocator.log" }
+            }
+    , schedulerConfig
+    , driverPoolBatchesCfg
+    , singleBatchProcessTime = +10
+    }

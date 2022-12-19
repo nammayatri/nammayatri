@@ -89,13 +89,13 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 let acceptanceWindowOptions =
       { period = +7, periodType = common.periodType.Days }
 
-let driverPoolCfg = {
-    minRadiusOfSearch = +1200
-  , maxRadiusOfSearch = +2700
-  , radiusStepSize = +500
-  , driverPositionInfoExpiry = Some +180
-  , actualDistanceThreshold = Some +2700
-}
+let driverPoolCfg =
+      { minRadiusOfSearch = +1200
+      , maxRadiusOfSearch = +2700
+      , radiusStepSize = +500
+      , driverPositionInfoExpiry = Some +180
+      , actualDistanceThreshold = Some +2700
+      }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -146,5 +146,5 @@ in  { esqDBCfg
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , cacheTranslationConfig
-    , driverPoolCfg = driverPoolCfg
+    , driverPoolCfg
     }

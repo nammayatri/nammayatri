@@ -25,7 +25,7 @@ let rcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
       , connectPort = 6379
       , connectAuth = None Text
-      , connectDatabase = +1
+      , connectDatabase = +0
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
@@ -92,13 +92,13 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 let acceptanceWindowOptions =
       { period = +7, periodType = common.periodType.Days }
 
-let driverPoolCfg = {
-    minRadiusOfSearch = +5000
-  , maxRadiusOfSearch = +7000
-  , radiusStepSize = +500
-  , driverPositionInfoExpiry = None Integer
-  , actualDistanceThreshold = Some +7000
-}
+let driverPoolCfg =
+      { minRadiusOfSearch = +5000
+      , maxRadiusOfSearch = +7000
+      , radiusStepSize = +500
+      , driverPositionInfoExpiry = None Integer
+      , actualDistanceThreshold = Some +7000
+      }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -149,5 +149,5 @@ in  { esqDBCfg
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , cacheTranslationConfig
-    , driverPoolCfg = driverPoolCfg
+    , driverPoolCfg
     }

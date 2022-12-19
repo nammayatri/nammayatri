@@ -1,3 +1,1 @@
-{ dbUserId = "atlas"
-, dbPassword = "atlas"
-}
+{ dbUserId = "atlas", dbPassword = "atlas" }

@@ -4,7 +4,7 @@ let appCfg = ./driver-offer-bpp.dhall
 
 in  { driverAllowedDelay = +300
     , notificationMinDelay = +50000
-    , metricsPort = +9999
+    , metricsPort = +9997
     , healthcheckPort = +8115
     , loggerConfig =
             appCfg.loggerConfig
@@ -13,8 +13,6 @@ in  { driverAllowedDelay = +300
     , graceTerminationPeriod = appCfg.graceTerminationPeriod
     , hedisCfg = appCfg.hedisCfg
     , esqDBCfg = appCfg.esqDBCfg
-    , fcmJsonPath = appCfg.fcmJsonPath
-    , fcmUrl = appCfg.fcmUrl
     , fcmTokenKeyPrefix = "driver-offer-bpp-tracking-healthcheck-service"
     , encTools = appCfg.encTools
     , driverInactiveDelay = +86400

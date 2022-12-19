@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: driver-offer-allocator-service-$DEPLOY_VARIANT-$BUILD_VERSION
+  namespace: atlas
+  labels:
+    version: $BUILD_VERSION
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: driver-offer-allocator-service-$DEPLOY_VARIANT
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
+      labels:
+        app: driver-offer-allocator-service-$DEPLOY_VARIANT
+        version: $BUILD_VERSION
+    spec:
+      containers:
+        - command:
+            - /bin/bash
+            - -c
+          args:
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/driver-offer-allocator-exe'
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: DRIVER_OFFER_ALLOCATOR_CONFIG_PATH
+              value: /etc/beckn/config/driver-offer-allocator.dhall
+          image: 701342709052.dkr.ecr.ap-southeast-1.amazonaws.com/beckn-uat:$BUILD_VERSION
+          name: beckn-driver-offer-bpp-$DEPLOY_VARIANT
+          ports:
+            - containerPort: 8055
+              name: transport-http
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: 8055
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            successThreshold: 1
+            timeoutSeconds: 12
+          readinessProbe:
+            failureThreshold: 2
+            httpGet:
+              path: /
+              port: 8055
+            initialDelaySeconds: 30
+            periodSeconds: 12
+            successThreshold: 1
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1024Mi
+          volumeMounts:
+            - mountPath: "/var/local/beckn"
+              name: fcm-key
+              readOnly: true
+            - name: dhall-configs
+              mountPath: "/tmp/dhall-configs"
+              readOnly: true
+            - name: dhall-secrets
+              mountPath: "/tmp/dhall-secrets"
+              readOnly: true
+          securityContext:
+            privileged: false
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+          - name: single-request-reopen
+      imagePullSecrets:
+        - name: jp-gcr-ec
+      terminationGracePeriodSeconds: 90
+      volumes:
+        - name: fcm-key
+          secret:
+            secretName: beckn-fcm-key
+        - name: dhall-configs
+          configMap:
+            name: beckn-dhall-config-$DEPLOY_VARIANT
+            items:
+              - key: driver-offer-allocator.dhall
+                path: config/driver-offer-allocator.dhall
+              - key: driver-offer-bpp.dhall
+                path: config/driver-offer-bpp.dhall
+              - key: beckn-transport.dhall
+                path: config/beckn-transport.dhall
+              - key: common.dhall
+                path: config/common.dhall
+              - key: globalCommon.dhall
+                path: generic/common.dhall
+        - name: dhall-secrets
+          secret:
+            secretName: beckn-dhall-secret-$DEPLOY_VARIANT
+            items:
+              - key: driver-offer-bpp.dhall
+                path: config/secrets/driver-offer-bpp.dhall
+              - key: beckn-transport.dhall
+                path: config/secrets/beckn-transport.dhall
+              - key: common.dhall
+                path: config/secrets/common.dhall
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: atlas
+  name: driver-offer-allocator-service-$DEPLOY_VARIANT
+  labels:
+    app: driver-offer-allocator-service-$DEPLOY_VARIANT
+spec:
+  ports:
+    - port: 8055
+      targetPort: 8055
+      name: transport-http
+  selector:
+    app: driver-offer-allocator-service-$DEPLOY_VARIANT

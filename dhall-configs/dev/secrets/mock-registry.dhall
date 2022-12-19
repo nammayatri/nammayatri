@@ -1,3 +1,1 @@
-{ dbUserId = "atlas_registry_user"
-, dbPassword = "atlas"
-}
+{ dbUserId = "atlas_registry_user", dbPassword = "atlas" }

@@ -69,10 +69,8 @@ let kafkaProducerCfg =
 
 let cacheConfig = { configsExpTime = +86400 }
 
-let driverPoolCfg = {
-      defaultRadiusOfSearch = +5000
-      , driverPositionInfoExpiry = Some +600
-      }
+let driverPoolCfg =
+      { defaultRadiusOfSearch = +5000, driverPositionInfoExpiry = Some +600 }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -119,5 +117,5 @@ in  { esqDBCfg
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
-    , driverPoolCfg = driverPoolCfg
+    , driverPoolCfg
     }

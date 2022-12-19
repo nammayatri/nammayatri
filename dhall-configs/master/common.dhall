@@ -22,11 +22,8 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , branchName
     , periodType = globalCommon.periodType
     , passetto = { _1 = "passetto-hs.atlas", _2 = 8012 }
-    , fcmJsonPath = Some "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
     , googleTranslateUrl = "https://www.googleapis.com/"
     , googleTranslateKey = sec.googleTranslateKey
-    , fcmUrl =
-        "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/"
     , registryUrl = "https://api.sandbox.beckn.juspay.in/dev/registry"
     , authServiceUrl = "http://beckn-app-backend-master.atlas:8013"
     }

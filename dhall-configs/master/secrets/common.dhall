@@ -1,43 +1,40 @@
 let globalCommon = ../../generic/common.dhall
 
 let exotelCfg =
-  { apiKey = "xxxxxxx"
-  , apiToken = "xxxxxxx"
-  , sid = "xxxxxxx"
-  , callerId = "xxxxxxx"
-  } : globalCommon.ExotelCfg
+        { apiKey = "xxxxxxx"
+        , apiToken = "xxxxxxx"
+        , sid = "xxxxxxx"
+        , callerId = "xxxxxxx"
+        }
+      : globalCommon.ExotelCfg
 
 let s3Config1 =
-  { secretAccessKey = "xxxxxxx"
-  , accessKeyId = "xxxxxxx"
-  , bucketName = "xxxxxxx"
-  , region = "xxxxxxx"
-  , pathPrefix = "xxxxxxx"
-  }
+      { secretAccessKey = "xxxxxxx"
+      , accessKeyId = "xxxxxxx"
+      , bucketName = "xxxxxxx"
+      , region = "xxxxxxx"
+      , pathPrefix = "xxxxxxx"
+      }
+
 let s3Config = globalCommon.S3Config.S3AwsConf s3Config1
 
 let idfyCfg =
-  { account_id = "xxxxxxx",
-    api_key = "xxxxxxx",
-    secret = "xxxxxxx",
-    url = "http://localhost:6235"
-  }
+      { account_id = "xxxxxxx"
+      , api_key = "xxxxxxx"
+      , secret = "xxxxxxx"
+      , url = "http://localhost:6235"
+      }
 
 let InfoBIPConfig =
-  { username = "xxxxxxx",
-    password = "xxxxxxx",
-    token = "xxxxxxx"
-  }
+      { username = "xxxxxxx", password = "xxxxxxx", token = "xxxxxxx" }
 
-in
-
-{ smsUserName = "xxxxxxx"
-, smsPassword = "yyyyyyy"
-, exotelCfg = exotelCfg
-, s3Config = s3Config
-, idfyCfg = idfyCfg
-, googleKey = "topSecret.googleKey"
-, googleTranslateKey = "topSecret.googleTranslateKey"
-, InfoBIPConfig = InfoBIPConfig
-, slackToken = "xxxxxxx"
-}
+in  { smsUserName = "xxxxxxx"
+    , smsPassword = "yyyyyyy"
+    , exotelCfg
+    , s3Config
+    , idfyCfg
+    , googleKey = "topSecret.googleKey"
+    , googleTranslateKey = "topSecret.googleTranslateKey"
+    , InfoBIPConfig
+    , slackToken = "xxxxxxx"
+    }

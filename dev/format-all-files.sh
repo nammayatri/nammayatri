@@ -40,7 +40,7 @@ if ! which dhall >& /dev/null; then
 fi
 
 for file in $DHALL_FILES; do
-  DHALL_CMD="dhall format --inplace ${file}"
+  DHALL_CMD="dhall format ${file}"
   ${DHALL_CMD}
   if ! dhall --file "${file}" 1>/dev/null; then
     BAD_DHALL_FILES+=" ${file}"
