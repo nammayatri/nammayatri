@@ -12,12 +12,15 @@ import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
 import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Common
+import qualified Data.HashMap as HM
 import qualified Domain.Types.SearchRequest as DSR
+import Domain.Types.TransporterConfig (TransporterConfig)
 import EulerHS.Prelude hiding (id)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import SharedLogic.DriverPool
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
+import qualified Storage.CachedQueries.TransporterConfig as TC
 import Tools.Maps as Maps
 import Tools.Metrics
 
@@ -47,7 +50,7 @@ prepareDriverPoolBatch ::
     Redis.HedisFlow m r,
     HasDriverPoolConfig r,
     HasSendSearchRequestJobConfig r,
-    HasField "windowOptions" r SWC.SlidingWindowOptions
+    SWC.HasWindowOptions r
   ) =>
   DSR.SearchRequest ->
   PoolBatchNum ->
@@ -102,9 +105,10 @@ prepareDriverPoolBatch searchReq batchNum = withLogTag ("BatchNum-" <> show batc
       Redis.withCrossAppRedis $ Redis.setExp (driverPoolBatchKey searchReq.id batchNum) batch (60 * 10)
     sortFunction driverPool = do
       sortingType <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.poolSortingType)
+      let merchantId = searchReq.providerId
       case sortingType of
-        ByAcceptanceRatio -> intelligentPoolSelection driverPool
-        ByRandom -> randomizeAndLimitSelection driverPool
+        Intelligent -> TC.findByMerchantId merchantId >>= intelligentPoolSelection driverPool
+        Random -> randomizeAndLimitSelection driverPool
     isAtMaxRadiusStep radiusStep = do
       minRadiusOfSearch <- fromIntegral @_ @Double <$> asks (.driverPoolCfg.minRadiusOfSearch)
       maxRadiusOfSearch <- fromIntegral @_ @Double <$> asks (.driverPoolCfg.maxRadiusOfSearch)
@@ -138,17 +142,31 @@ getDriverPoolBatch searchReqId batchNum = do
 
 intelligentPoolSelection ::
   ( Redis.HedisFlow m r,
-    HasField "windowOptions" r SWC.SlidingWindowOptions,
+    SWC.HasWindowOptions r,
     MonadFlow m
   ) =>
   [DriverPoolWithActualDistResult] ->
+  Maybe TransporterConfig ->
   m [DriverPoolWithActualDistResult]
-intelligentPoolSelection dp =
-  map snd
-    . sortOn (Down . fst)
-    <$> ( (\poolWithRatio -> logInfo ("Drivers in Pool with acceptance ratios " <> show poolWithRatio) $> poolWithRatio)
-            =<< mapM (\dPoolRes -> (,dPoolRes) <$> getLatestAcceptanceRatio dPoolRes.driverPoolResult.driverId) dp
-        )
+intelligentPoolSelection dp Nothing = logInfo "Weightages not available in DB, going with random selection" *> randomizeAndLimitSelection dp
+intelligentPoolSelection dp (Just transporterConfig) = do
+  logTagInfo "Weightage config for intelligent driver pool" $ show transporterConfig
+  let driverIds = map (.driverPoolResult.driverId) dp
+  driverCancellationScore <- getScoreWithWeight (transporterConfig.cancellationRatioWeightage) <$> getRatios getLatestCancellationRatio driverIds
+  driverAcceptanceScore <- getScoreWithWeight (transporterConfig.acceptanceRatioWeightage) <$> getRatios getLatestAcceptanceRatio driverIds
+  driverAvailabilityScore <- getScoreWithWeight (transporterConfig.availabilityTimeWeightage) . map (second (sum . catMaybes)) <$> getRatios getCurrentWindowAvailability driverIds
+  let overallScore = calculateOverallScore [driverAcceptanceScore, driverAvailabilityScore, driverCancellationScore]
+      sortedDriverPool = sortOn (Down . fst) overallScore
+  logTagInfo "Driver Acceptance Score" $ show driverAcceptanceScore
+  logTagInfo "Driver Cancellation Score" $ show driverCancellationScore
+  logTagInfo "Driver Availability Score" $ show driverAvailabilityScore
+  logTagInfo "Overall Score" $ show (map (second getDriverId) overallScore)
+  pure $ map snd sortedDriverPool
+  where
+    calculateOverallScore scoresList = map (\dObj -> (,dObj) . sum $ mapMaybe (HM.lookup (getDriverId dObj)) scoresList) dp
+    getRatios fn arr = mapM (\dId -> (dId.getId,) <$> fn dId) arr
+    getDriverId = getId . (.driverPoolResult.driverId)
+    getScoreWithWeight weight driverParamsValue = HM.fromList $ map (second (fromIntegral weight *)) driverParamsValue
 
 randomizeAndLimitSelection ::
   (MonadFlow m) =>
@@ -183,7 +201,7 @@ getNextDriverPoolBatch ::
     Redis.HedisFlow m r,
     HasDriverPoolConfig r,
     HasSendSearchRequestJobConfig r,
-    HasField "windowOptions" r SWC.SlidingWindowOptions
+    SWC.HasWindowOptions r
   ) =>
   DSR.SearchRequest ->
   m [DriverPoolWithActualDistResult]

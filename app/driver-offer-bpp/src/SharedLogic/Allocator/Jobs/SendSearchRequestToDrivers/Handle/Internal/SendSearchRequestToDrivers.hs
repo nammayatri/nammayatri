@@ -30,7 +30,7 @@ sendSearchRequestToDrivers ::
     TranslateFlow m r,
     CacheFlow m r,
     HasSendSearchRequestJobConfig r,
-    HasField "windowOptions" r SWC.SlidingWindowOptions
+    SWC.HasWindowOptions r
   ) =>
   DSR.SearchRequest ->
   Money ->
@@ -48,7 +48,7 @@ sendSearchRequestToDrivers searchReq driverMinExtraFee driverMaxExtraFee baseFar
     QSRD.createMany searchRequestsForDrivers
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
-    incrementTotalCount sReqFD.driverId
+    incrementTotalQuotesCount sReqFD.driverId
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq

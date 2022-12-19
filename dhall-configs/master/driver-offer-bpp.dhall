@@ -101,12 +101,12 @@ let driverPoolCfg =
       , driverQuoteLimit = +5
       }
 
-let PoolSortingType = < ByAcceptanceRatio | ByRandom >
+let PoolSortingType = < Intelligent | Random >
 
 let driverPoolBatchesCfg =
       { driverBatchSize = +5
       , maxNumberOfBatches = +3
-      , poolSortingType = PoolSortingType.ByRandom
+      , poolSortingType = PoolSortingType.Random
       }
 
 let sendSearchRequestJobCfg =
