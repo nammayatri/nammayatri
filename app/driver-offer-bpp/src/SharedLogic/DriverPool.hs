@@ -30,7 +30,7 @@ import Tools.Maps as Maps
 import Tools.Metrics
 
 mkAcceptanceKey :: Text -> Text
-mkAcceptanceKey driverId = driverId <> "-quote-accepted"
+mkAcceptanceKey driverId = "driver-offer:DriverPool:Quote-accepted:DriverId-" <> driverId
 
 withWindowOptions ::
   ( Redis.HedisFlow m r,
@@ -49,7 +49,7 @@ incrementTotalCount ::
   ) =>
   Id DP.Person ->
   m ()
-incrementTotalCount driverId = withWindowOptions $ SWC.incrementTotalCount driverId.getId
+incrementTotalCount driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.incrementTotalCount driverId.getId
 
 incrementAcceptanceCount ::
   ( Redis.HedisFlow m r,
@@ -58,14 +58,16 @@ incrementAcceptanceCount ::
   ) =>
   Id DP.Person ->
   m ()
-incrementAcceptanceCount driverId = withWindowOptions $ SWC.incrementWindowCount (mkAcceptanceKey driverId.getId)
+incrementAcceptanceCount driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.incrementWindowCount (mkAcceptanceKey driverId.getId)
 
 getLatestAcceptanceRatio ::
-  (L.MonadFlow m, Redis.HedisFlow m r) =>
+  ( L.MonadFlow m,
+    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
+    Redis.HedisFlow m r
+  ) =>
   Id DP.Driver ->
-  SWC.SlidingWindowOptions ->
   m Double
-getLatestAcceptanceRatio driverId = SWC.getLatestRatio (getId driverId) mkAcceptanceKey
+getLatestAcceptanceRatio driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.getLatestRatio (getId driverId) mkAcceptanceKey
 
 calculateDriverPool ::
   ( EncFlow m r,

@@ -132,16 +132,6 @@ getDriverPoolBatch searchReqId batchNum = do
         return []
       a -> return a
 
-withWindowOptions ::
-  ( Redis.HedisFlow m r,
-    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
-    MonadFlow m
-  ) =>
-  (SWC.SlidingWindowOptions -> m a) ->
-  m a
-withWindowOptions fn = do
-  asks (.acceptanceWindowOptions) >>= fn
-
 intelligentPoolSelection ::
   ( Redis.HedisFlow m r,
     HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
@@ -150,13 +140,11 @@ intelligentPoolSelection ::
   [DriverPoolWithActualDistResult] ->
   m [DriverPoolWithActualDistResult]
 intelligentPoolSelection dp =
-  withWindowOptions $
-    \wo ->
-      map snd
-        . sortOn (Down . fst)
-        <$> ( (\poolWithRatio -> logInfo ("Drivers in Pool with acceptance ratios " <> show poolWithRatio) $> poolWithRatio)
-                =<< mapM (\dPoolRes -> (,dPoolRes) <$> getLatestAcceptanceRatio dPoolRes.driverPoolResult.driverId wo) dp
-            )
+  map snd
+    . sortOn (Down . fst)
+    <$> ( (\poolWithRatio -> logInfo ("Drivers in Pool with acceptance ratios " <> show poolWithRatio) $> poolWithRatio)
+            =<< mapM (\dPoolRes -> (,dPoolRes) <$> getLatestAcceptanceRatio dPoolRes.driverPoolResult.driverId) dp
+        )
 
 randomizeAndLimitSelection ::
   (MonadFlow m) =>
