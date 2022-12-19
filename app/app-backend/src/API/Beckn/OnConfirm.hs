@@ -1,6 +1,7 @@
 module API.Beckn.OnConfirm (API, handler) where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import Beckn.Utils.Common
@@ -20,5 +21,10 @@ onConfirm ::
   FlowHandler AckResponse
 onConfirm (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnConfirmReq <- ACL.buildOnConfirmReq req
-  whenJust mbDOnConfirmReq (DOnConfirm.onConfirm registryUrl)
+  whenJust mbDOnConfirmReq $ \onConfirmReq ->
+    Redis.whenWithLockRedis (onConfirmLockKey onConfirmReq.bppBookingId.getId) 60 $
+      DOnConfirm.onConfirm registryUrl onConfirmReq
   pure Ack
+
+onConfirmLockKey :: Text -> Text
+onConfirmLockKey id = "Customer:OnConfirm:BppBookingId-" <> id

@@ -1,6 +1,7 @@
 module API.Beckn.OnSelect (API, handler) where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import Beckn.Utils.Common
@@ -20,5 +21,10 @@ onSelect ::
   FlowHandler AckResponse
 onSelect (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnSelectReq <- ACL.buildOnSelectReq req
-  whenJust mbDOnSelectReq (DOnSelect.onSelect registryUrl)
+  whenJust mbDOnSelectReq $ \onSelectReq ->
+    Redis.whenWithLockRedis (onSelectLockKey req.context.message_id) 60 $
+      DOnSelect.onSelect registryUrl onSelectReq
   pure Ack
+
+onSelectLockKey :: Text -> Text
+onSelectLockKey id = "Customer:OnSelect:MessageId-" <> id
