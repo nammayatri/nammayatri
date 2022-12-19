@@ -34,6 +34,7 @@ other
 s3
 /dev/osrm/*
 !/dev/osrm/README
+!/dev/osrm/Dockerfile.osrm
 
 # load test files
 .dev/load-test/*.json

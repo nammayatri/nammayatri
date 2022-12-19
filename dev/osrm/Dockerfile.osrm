@@ -1,0 +1,9 @@
+FROM osrm/osrm-backend
+
+COPY ./dev/osrm /data
+
+RUN osrm-extract -p /opt/car.lua /data/southern-zone-latest.osm.pbf
+RUN osrm-partition /data/southern-zone-latest.osrm
+RUN osrm-customize /data/southern-zone-latest.osrm
+
+ENTRYPOINT [ "osrm-routed", "--algorithm", "mld", "/data/southern-zone-latest.osrm" ]
