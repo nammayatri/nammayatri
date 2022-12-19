@@ -64,7 +64,8 @@ mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
             value = fromIntegral estimatedFare,
             offered_value,
             minimum_value = offered_value,
-            maximum_value = offered_value
+            maximum_value = offered_value,
+            value_breakup = []
           }
       tags =
         OnSearch.ItemTags
@@ -137,7 +138,8 @@ mkRentalItem DRentalSearch.QuoteInfo {..} offer_id fulfillment_id = do
             value = fromIntegral estimatedFare,
             offered_value,
             minimum_value = offered_value,
-            maximum_value = offered_value
+            maximum_value = offered_value,
+            value_breakup = []
           }
   OnSearch.Item
     { category_id = OnSearch.RENTAL_TRIP,

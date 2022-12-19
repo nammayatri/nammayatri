@@ -4,6 +4,7 @@ import Beckn.Prelude
 import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
 import Beckn.Types.Core.Taxi.OnSearch (Item (base_distance))
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
+import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Vehicle.Variant as Variant
 
@@ -77,14 +78,15 @@ data QuoteEntities = QuoteEntities
     item :: OS.Item
   }
 
-currency :: Text
-currency = "INR"
+currency' :: Text
+currency' = "INR"
 
 mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DSearch.EstimateItem -> QuoteEntities
 mkQuoteEntities start end it = do
   let variant = castVariant it.vehicleVariant
       minPriceDecimalValue = OS.DecimalValue $ toRational it.minFare
       maxPriceDecimalValue = OS.DecimalValue $ toRational it.maxFare
+      estimateBreakupList = buildEstimateBreakUpList <$> it.estimateBreakupList
       fulfillment =
         OS.FulfillmentInfo
           { start,
@@ -99,11 +101,12 @@ mkQuoteEntities start end it = do
             offer_id = Nothing,
             price =
               OS.ItemPrice
-                { currency,
+                { currency = currency',
                   value = minPriceDecimalValue,
                   offered_value = minPriceDecimalValue,
                   minimum_value = minPriceDecimalValue,
-                  maximum_value = maxPriceDecimalValue
+                  maximum_value = maxPriceDecimalValue,
+                  value_breakup = estimateBreakupList
                 },
             descriptor =
               OS.ItemDescriptor
@@ -118,6 +121,19 @@ mkQuoteEntities start end it = do
   QuoteEntities
     { fulfillment,
       item
+    }
+
+buildEstimateBreakUpList ::
+  DSearch.BreakupItem ->
+  BreakupItem
+buildEstimateBreakUpList DSearch.BreakupItem {..} = do
+  BreakupItem
+    { title = title,
+      price =
+        BreakupPrice
+          { currency = price.currency,
+            value = realToFrac price.value
+          }
     }
 
 castVariant :: Variant.Variant -> Common.VehicleVariant

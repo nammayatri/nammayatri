@@ -25,9 +25,24 @@ data Estimate = Estimate
     providerCompletedRidesCount :: Int,
     vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    estimateBreakupList :: [EstimateBreakup]
   }
   deriving (Generic, Show, PrettyShow)
+
+data EstimateBreakup = EstimateBreakup
+  { id :: Id EstimateBreakup,
+    estimateId :: Id Estimate,
+    title :: Text,
+    price :: EstimateBreakupPrice
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow, ToSchema)
+
+data EstimateBreakupPrice = EstimateBreakupPrice
+  { currency :: Text,
+    value :: Money
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow, ToSchema)
 
 data FareRange = FareRange
   { minFare :: Money,
@@ -46,7 +61,14 @@ data EstimateAPIEntity = EstimateAPIEntity
     agencyNumber :: Text,
     agencyCompletedRidesCount :: Int,
     tripTerms :: [Text],
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    estimateFareBreakup :: [EstimateBreakupAPIEntity]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
+  { title :: Text,
+    price :: Money
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -57,5 +79,13 @@ mkEstimateAPIEntity Estimate {..} = do
       agencyNumber = providerMobileNumber,
       agencyCompletedRidesCount = providerCompletedRidesCount,
       tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
+      estimateFareBreakup = mkEstimateBreakupAPIEntity <$> estimateBreakupList,
       ..
+    }
+
+mkEstimateBreakupAPIEntity :: EstimateBreakup -> EstimateBreakupAPIEntity
+mkEstimateBreakupAPIEntity EstimateBreakup {..} = do
+  EstimateBreakupAPIEntity
+    { title = title,
+      price = price.value
     }

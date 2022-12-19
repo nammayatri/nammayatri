@@ -8,6 +8,7 @@ import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
+import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..))
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Core.ACL.Common (validatePrices)
@@ -80,6 +81,7 @@ buildEstimateOrQuoteInfo item = do
       vehicleVariant = castVehicleVariant itemCode.vehicleVariant
       estimatedFare = roundToIntegral item.price.value
       estimatedTotalFare = roundToIntegral item.price.offered_value
+      estimateBreakupList = buildEstimateBreakUpList <$> item.price.value_breakup
       descriptions = item.quote_terms
   validatePrices estimatedFare estimatedTotalFare
 
@@ -137,3 +139,16 @@ validateFareRange totalFare DEstimate.FareRange {..} = do
   when (maxFare < 0) $ throwError $ InvalidRequest "Maximum discounted price is less than zero"
   when (maxFare < minFare) $ throwError $ InvalidRequest "Maximum discounted price is less than minimum discounted price"
   when (totalFare > maxFare || totalFare < minFare) $ throwError $ InvalidRequest "Discounted price outside of range"
+
+buildEstimateBreakUpList ::
+  BreakupItem ->
+  DOnSearch.EstimateBreakupInfo
+buildEstimateBreakUpList BreakupItem {..} = do
+  DOnSearch.EstimateBreakupInfo
+    { title = title,
+      price =
+        DOnSearch.BreakupPriceInfo
+          { currency = price.currency,
+            value = roundToIntegral price.value
+          }
+    }

@@ -61,11 +61,30 @@ data ItemPrice = ItemPrice
     value :: DecimalValue,
     offered_value :: DecimalValue,
     minimum_value :: DecimalValue,
-    maximum_value :: DecimalValue
+    maximum_value :: DecimalValue,
+    value_breakup :: [BreakupItem]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema ItemPrice where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data BreakupItem = BreakupItem
+  { title :: Text,
+    price :: BreakupPrice
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema BreakupItem where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data BreakupPrice = BreakupPrice
+  { currency :: Text,
+    value :: DecimalValue
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema BreakupPrice where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 newtype ItemTags = ItemTags

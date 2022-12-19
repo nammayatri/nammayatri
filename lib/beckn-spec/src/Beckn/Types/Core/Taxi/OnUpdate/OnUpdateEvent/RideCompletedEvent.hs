@@ -6,6 +6,7 @@ where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
+import Beckn.Utils.GenericPretty (PrettyShow)
 import Beckn.Utils.Schema
 import qualified Control.Lens as L
 import Data.Aeson as A
@@ -98,7 +99,7 @@ data BreakupItem = BreakupItem
   { title :: Text,
     price :: BreakupPrice
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
 
 instance ToSchema BreakupItem where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
@@ -107,7 +108,7 @@ data BreakupPrice = BreakupPrice
   { currency :: Text,
     value :: DecimalValue
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
 
 instance ToSchema BreakupPrice where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

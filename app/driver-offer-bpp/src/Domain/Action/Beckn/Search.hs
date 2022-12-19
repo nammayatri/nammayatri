@@ -46,7 +46,8 @@ data EstimateItem = EstimateItem
   { vehicleVariant :: Variant.Variant,
     distanceToPickup :: Meters,
     minFare :: Money,
-    maxFare :: Money
+    maxFare :: Money,
+    estimateBreakupList :: [BreakupItem]
   }
 
 data TransporterInfo = TransporterInfo
@@ -56,6 +57,16 @@ data TransporterInfo = TransporterInfo
     ridesInProgress :: Int,
     ridesCompleted :: Int,
     ridesConfirmed :: Int
+  }
+
+data BreakupItem = BreakupItem
+  { title :: Text,
+    price :: BreakupPrice
+  }
+
+data BreakupPrice = BreakupPrice
+  { currency :: Text,
+    value :: Money
   }
 
 handler :: Id DM.Merchant -> DSearchReq -> Flow DSearchRes
@@ -129,6 +140,8 @@ mkEstimate ::
 mkEstimate org startTime dist (farePolicy, driverMetadata) = do
   fareParams <- calculateFare org.id farePolicy dist startTime Nothing
   let baseFare = fareSum fareParams
+      currency = "INR"
+      estimateBreakups = mkBreakupListItems (BreakupPrice currency) BreakupItem farePolicy
   logDebug $ "baseFare: " <> show baseFare
   logDebug $ "distanceToPickup: " <> show driverMetadata.distanceToPickup
   pure
@@ -136,8 +149,41 @@ mkEstimate org startTime dist (farePolicy, driverMetadata) = do
       { vehicleVariant = driverMetadata.variant,
         distanceToPickup = driverMetadata.distanceToPickup,
         minFare = baseFare,
-        maxFare = baseFare + farePolicy.driverExtraFee.maxFee
+        maxFare = baseFare + farePolicy.driverExtraFee.maxFee,
+        estimateBreakupList = estimateBreakups
       }
+
+mkBreakupListItems ::
+  (Money -> breakupItemPrice) ->
+  (Text -> breakupItemPrice -> breakupItem) ->
+  FarePolicy ->
+  [breakupItem]
+mkBreakupListItems mkPrice mkBreakupItem farePolicy = do
+  let baseDistanceFare = roundToIntegral farePolicy.baseDistanceFare
+      baseDistanceFareCaption = "BASE_DISTANCE_FARE"
+      baseDistanceFareItem = mkBreakupItem baseDistanceFareCaption (mkPrice baseDistanceFare)
+
+      perExtraKmFare = roundToIntegral farePolicy.perExtraKmFare
+      perExtraKmFareCaption = "EXTRA_PER_KM_FARE"
+      perExtraKmFareItem = mkBreakupItem perExtraKmFareCaption (mkPrice perExtraKmFare)
+
+      deadKmFare = farePolicy.deadKmFare
+      deadKmFareCaption = "DEAD_KILOMETER_FARE"
+      deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice deadKmFare)
+
+      nightShiftRate = fromMaybe 1 (roundToIntegral <$> farePolicy.nightShiftRate)
+      nightShiftRateCaption = "NIGH_SHIFT_FARE"
+      nightShiftRateItem = mkBreakupItem nightShiftRateCaption (mkPrice nightShiftRate)
+
+      driverMinExtraFee = farePolicy.driverExtraFee.minFee
+      driverMinExtraFeeCaption = "DRIVER_MIN_EXTRA_FEE"
+      driverMinExtraFeeItem = mkBreakupItem driverMinExtraFeeCaption (mkPrice driverMinExtraFee)
+
+      driverMaxExtraFee = farePolicy.driverExtraFee.minFee
+      driverMaxExtraFeeCaption = "DRIVER_MAX_EXTRA_FEE"
+      driverMaxExtraFeeItem = mkBreakupItem driverMaxExtraFeeCaption (mkPrice driverMaxExtraFee)
+
+  [baseDistanceFareItem, perExtraKmFareItem, deadKmFareItem, nightShiftRateItem, driverMinExtraFeeItem, driverMaxExtraFeeItem]
 
 buildSearchReqLocation :: (MonadGuid m, MonadTime m) => DLoc.SearchReqLocationAPIEntity -> m DLoc.SearchReqLocation
 buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do

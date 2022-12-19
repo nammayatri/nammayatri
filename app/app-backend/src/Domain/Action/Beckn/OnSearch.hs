@@ -6,10 +6,13 @@ module Domain.Action.Beckn.OnSearch
     QuoteDetails (..),
     OneWayQuoteDetails (..),
     RentalQuoteDetails (..),
+    EstimateBreakupInfo (..),
+    BreakupPriceInfo (..),
     onSearch,
   )
 where
 
+import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -21,7 +24,6 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
-import EulerHS.Prelude hiding (id, state)
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
@@ -50,7 +52,18 @@ data EstimateInfo = EstimateInfo
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     totalFareRange :: DEstimate.FareRange,
-    descriptions :: [Text]
+    descriptions :: [Text],
+    estimateBreakupList :: [EstimateBreakupInfo]
+  }
+
+data EstimateBreakupInfo = EstimateBreakupInfo
+  { title :: Text,
+    price :: BreakupPriceInfo
+  }
+
+data BreakupPriceInfo = BreakupPriceInfo
+  { currency :: Text,
+    value :: Money
   }
 
 data QuoteInfo = QuoteInfo
@@ -90,7 +103,6 @@ onSearchService ::
   Flow ()
 onSearchService transactionId registryUrl DOnSearchReq {..} = do
   _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
-
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
   Metrics.finishSearchMetrics merchant.name transactionId
@@ -113,6 +125,7 @@ buildEstimate ::
 buildEstimate requestId providerInfo now EstimateInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
+  estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
   pure
     DEstimate.Estimate
       { id = uid,
@@ -122,6 +135,7 @@ buildEstimate requestId providerInfo now EstimateInfo {..} = do
         providerId = providerInfo.providerId,
         providerUrl = providerInfo.url,
         createdAt = now,
+        estimateBreakupList = estimateBreakupList',
         ..
       }
 
@@ -169,3 +183,27 @@ buildTripTerms [] = pure Nothing
 buildTripTerms descriptions = do
   id <- generateGUID
   pure . Just $ DTripTerms.TripTerms {..}
+
+buildEstimateBreakUp ::
+  MonadFlow m =>
+  [EstimateBreakupInfo] ->
+  Id DEstimate.Estimate ->
+  m [DEstimate.EstimateBreakup]
+buildEstimateBreakUp estimatesItems estId =
+  estimatesItems
+    `for` \estimateItem -> do
+      id <- generateGUID
+      price' <- mkEstimatePrice estimateItem.price
+      pure
+        DEstimate.EstimateBreakup
+          { title = estimateItem.title,
+            price = price',
+            estimateId = estId,
+            ..
+          }
+
+mkEstimatePrice ::
+  MonadFlow m =>
+  BreakupPriceInfo ->
+  m DEstimate.EstimateBreakupPrice
+mkEstimatePrice BreakupPriceInfo {..} = pure DEstimate.EstimateBreakupPrice {..}
