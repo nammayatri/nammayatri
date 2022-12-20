@@ -20,6 +20,7 @@ sendSearchRequestToDrivers Job {jobData} = do
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit searchReq.id,
           isRideAlreadyAssigned = I.isRideAlreadyAssigned searchReq.id,
+          receivedMinDriverQuotes = I.receivedMinDriverQuotes searchReq.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch searchReq,
           cleanupDriverPoolBatches = I.cleanupDriverPoolBatches searchReq.id,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq jobData.baseFare,

@@ -14,6 +14,7 @@ type HandleMonad m = (Monad m)
 data Handle m = Handle
   { isBatchNumExceedLimit :: m Bool,
     isRideAlreadyAssigned :: m Bool,
+    receivedMinDriverQuotes :: m Bool,
     getNextDriverPoolBatch :: m [DriverPoolWithActualDistResult],
     cleanupDriverPoolBatches :: m (),
     sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> m (),
@@ -23,9 +24,10 @@ data Handle m = Handle
 handler :: HandleMonad m => Handle m -> m ExecutionResult
 handler h@Handle {..} = do
   isRideAssigned <- isRideAlreadyAssigned
+  receivedDriverQuotes <- receivedMinDriverQuotes
   res <-
-    if isRideAssigned
-      then return Complete
+    if isRideAssigned || receivedDriverQuotes
+      then return Complete -- ride already assigned | received quotes from drivers
       else processRequestSending h
   case res of
     Complete -> cleanupDriverPoolBatches

@@ -98,6 +98,7 @@ let driverPoolCfg =
       , radiusStepSize = +500
       , driverPositionInfoExpiry = None Integer
       , actualDistanceThreshold = Some +7000
+      , minDriverQuotesRequired = +1
       }
 
 in  { esqDBCfg

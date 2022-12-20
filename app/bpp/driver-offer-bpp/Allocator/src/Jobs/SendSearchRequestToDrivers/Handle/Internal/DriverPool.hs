@@ -65,24 +65,24 @@ prepareDriverPoolBatch searchReq batchNum = do
       sortedDriverPool <- sortFunction driverPool
       let onlyNewDriversPool = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) sortedDriverPool
       driverPoolBatch <- getBatch onlyNewDriversPool
-      if null driverPoolBatch
+      batchSize <- asks (.driverPoolBatchesCfg.driverBatchSize)
+      if length driverPoolBatch < batchSize
         then do
           isAtMaxRadiusStep' <- isAtMaxRadiusStep radiusStep
           if isAtMaxRadiusStep'
-            then return []
+            then do
+              if null driverPoolBatch
+                then return []
+                else do
+                  filledBatch <- fillBatch batchSize sortedDriverPool driverPoolBatch
+                  cacheBatch filledBatch
+                  return filledBatch
             else do
               incrementPoolRadiusStep searchReq.id
               prepareDriverPoolBatch' previousBatchesDrivers
         else do
-          batchSize <- asks (.driverPoolBatchesCfg.driverBatchSize)
-          filledBatch <-
-            if length driverPoolBatch >= batchSize
-              then return driverPoolBatch
-              else do
-                incrementPoolRadiusStep searchReq.id
-                fillBatch batchSize sortedDriverPool driverPoolBatch
-          cacheBatch filledBatch
-          return filledBatch
+          cacheBatch driverPoolBatch
+          return driverPoolBatch
 
     calcDriverPool radiusStep = do
       let vehicleVariant = searchReq.vehicleVariant
