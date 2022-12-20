@@ -29,6 +29,7 @@ sendSearchRequestToDrivers searchReq baseFare driverPool = do
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare) driverPool
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   Esq.runTransaction $ do
+    QSRD.setInactiveByRequestId searchReq.id -- inactive previous request by drivers so that they can make new offers.
     QSRD.createMany searchRequestsForDrivers
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do

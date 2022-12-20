@@ -73,13 +73,10 @@ prepareDriverPoolBatch bookingId batchNum = withLogTag ("BatchNum-" <> show batc
           isAtMaxRadiusStep' <- isAtMaxRadiusStep booking radiusStep
           if isAtMaxRadiusStep'
             then do
-              if null driverPoolBatch
-                then return []
-                else do
-                  filledBatch <- fillBatch batchSize sortedDriverPool driverPoolBatch
-                  logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
-                  cacheBatch filledBatch
-                  return filledBatch
+              filledBatch <- fillBatch batchSize sortedDriverPool driverPoolBatch
+              logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
+              cacheBatch filledBatch
+              return filledBatch
             else do
               incrementPoolRadiusStep bookingId
               prepareDriverPoolBatch' booking previousBatchesDrivers
@@ -103,7 +100,7 @@ prepareDriverPoolBatch bookingId batchNum = withLogTag ("BatchNum-" <> show batc
           merchantId = booking.providerId
       let pickupLoc = booking.fromLocation
           fareProductType = SRB.getFareProductType booking.bookingDetails
-      calculateDriverPool pickupLoc merchantId (Just vehicleVariant) fareProductType radiusStep
+      calculateDriverPool pickupLoc merchantId (Just vehicleVariant) fareProductType (Just radiusStep)
     getBatch driverPool = do
       batchSize <- asks (.driverPoolBatchesCfg.driverBatchSize)
       return $ take batchSize driverPool

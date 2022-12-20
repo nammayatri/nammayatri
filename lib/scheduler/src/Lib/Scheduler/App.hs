@@ -221,10 +221,10 @@ registerExecutionResult job result =
                 fromIntegral waitBeforeRetry `addUTCTime` now
 
 defaultCatcher :: C.MonadThrow m => SomeException -> m ExecutionResult
-defaultCatcher _ = pure defaultResult
+defaultCatcher exep = pure $ defaultResult exep
 
-defaultResult :: ExecutionResult
-defaultResult = Terminate "uncaught exception"
+defaultResult :: SomeException -> ExecutionResult
+defaultResult exep = Terminate (show exep)
 
 -- api
 

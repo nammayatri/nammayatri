@@ -82,9 +82,9 @@ calculateDriverPool ::
   a ->
   Id DM.Merchant ->
   Bool ->
-  PoolRadiusStep ->
+  Maybe PoolRadiusStep ->
   m [DriverPoolResult]
-calculateDriverPool mbVariant pickup merchantId onlyNotOnRide radiusStep = do
+calculateDriverPool mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
   radius <- getRadius
   let coord = getCoordinates pickup
   mbDriverPositionInfoExpiry <- asks (.driverPoolCfg.driverPositionInfoExpiry)
@@ -101,10 +101,13 @@ calculateDriverPool mbVariant pickup merchantId onlyNotOnRide radiusStep = do
   return $ makeDriverPoolResult <$> approxDriverPool
   where
     getRadius = do
-      minRadius <- fromIntegral <$> asks (.driverPoolCfg.minRadiusOfSearch)
       maxRadius <- fromIntegral <$> asks (.driverPoolCfg.maxRadiusOfSearch)
-      radiusStepSize <- asks (.driverPoolCfg.radiusStepSize)
-      return $ min (minRadius + fromIntegral radiusStepSize * radiusStep) maxRadius
+      case mRadiusStep of
+        Just radiusStep -> do
+          minRadius <- fromIntegral <$> asks (.driverPoolCfg.minRadiusOfSearch)
+          radiusStepSize <- asks (.driverPoolCfg.radiusStepSize)
+          return $ min (minRadius + fromIntegral radiusStepSize * radiusStep) maxRadius
+        Nothing -> return maxRadius
     makeDriverPoolResult :: QP.NearestDriversResult -> DriverPoolResult
     makeDriverPoolResult QP.NearestDriversResult {..} = do
       DriverPoolResult
@@ -126,10 +129,10 @@ calculateDriverPoolWithActualDist ::
   a ->
   Id DM.Merchant ->
   Bool ->
-  PoolRadiusStep ->
+  Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist mbVariant pickup merchantId onlyNotOnRide radiusStep = do
-  driverPool <- calculateDriverPool mbVariant pickup merchantId onlyNotOnRide radiusStep
+calculateDriverPoolWithActualDist mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
+  driverPool <- calculateDriverPool mbVariant pickup merchantId onlyNotOnRide mRadiusStep
   case driverPool of
     [] -> return []
     (a : pprox) -> do

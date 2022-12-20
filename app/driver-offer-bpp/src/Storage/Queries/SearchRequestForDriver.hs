@@ -37,6 +37,7 @@ findByDriver driverId = do
     where_ $
       sReq ^. SearchRequestForDriverDriverId ==. val (toKey driverId)
         &&. sReq ^. SearchRequestForDriverSearchRequestValidTill >. val now
+        &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
     orderBy [desc $ sReq ^. SearchRequestForDriverSearchRequestValidTill]
     pure sReq
 

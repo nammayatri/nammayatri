@@ -36,9 +36,9 @@ calculateDriverPool ::
   Id DM.Merchant ->
   Maybe SV.Variant ->
   SFP.FareProductType ->
-  PoolRadiusStep ->
+  Maybe PoolRadiusStep ->
   m [DriverPoolResult]
-calculateDriverPool pickup merchantId variant fareProductType radiusStep = do
+calculateDriverPool pickup merchantId variant fareProductType mRadiusStep = do
   let pickupLatLong = getCoordinates pickup
   radius <- getRadius
   mbDriverPositionInfoExpiry <- asks (.driverPoolCfg.driverPositionInfoExpiry)
@@ -58,22 +58,25 @@ calculateDriverPool pickup merchantId variant fareProductType radiusStep = do
       filterOutDriversWithDistanceAboveThreshold radius approxDriverPool'
   where
     getRadius = do
-      minRadius <-
-        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "min_radius")
-          >>= maybe
-            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
-            radiusFromTransporterConfig
       maxRadius <-
         QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "max_radius")
           >>= maybe
             (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
             radiusFromTransporterConfig
-      radiusStepSize <-
-        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "radius_step_size")
-          >>= maybe
-            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
-            radiusFromTransporterConfig
-      return $ min (minRadius + radiusStepSize * radiusStep) maxRadius
+      case mRadiusStep of
+        Just radiusStep -> do
+          minRadius <-
+            QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "min_radius")
+              >>= maybe
+                (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
+                radiusFromTransporterConfig
+          radiusStepSize <-
+            QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "radius_step_size")
+              >>= maybe
+                (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
+                radiusFromTransporterConfig
+          return $ min (minRadius + radiusStepSize * radiusStep) maxRadius
+        Nothing -> return maxRadius
 
     radiusFromTransporterConfig conf =
       fromMaybeM (InternalError "Value is not a number.")

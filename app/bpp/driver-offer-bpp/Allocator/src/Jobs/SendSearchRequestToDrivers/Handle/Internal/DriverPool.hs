@@ -72,13 +72,10 @@ prepareDriverPoolBatch searchReq batchNum = withLogTag ("BatchNum-" <> show batc
           isAtMaxRadiusStep' <- isAtMaxRadiusStep radiusStep
           if isAtMaxRadiusStep'
             then do
-              if null driverPoolBatch
-                then return []
-                else do
-                  filledBatch <- fillBatch batchSize sortedDriverPool driverPoolBatch
-                  logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
-                  cacheBatch filledBatch
-                  return filledBatch
+              filledBatch <- fillBatch batchSize sortedDriverPool driverPoolBatch
+              logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
+              cacheBatch filledBatch
+              return filledBatch
             else do
               incrementPoolRadiusStep searchReq.id
               prepareDriverPoolBatch' previousBatchesDrivers
@@ -91,7 +88,7 @@ prepareDriverPoolBatch searchReq batchNum = withLogTag ("BatchNum-" <> show batc
           merchantId = searchReq.providerId
       let pickupLoc = searchReq.fromLocation
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-      calculateDriverPoolWithActualDist (Just vehicleVariant) pickupLatLong merchantId True radiusStep
+      calculateDriverPoolWithActualDist (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
     getBatch driverPool = do
       batchSize <- asks (.driverPoolBatchesCfg.driverBatchSize)
       return $ take batchSize driverPool
