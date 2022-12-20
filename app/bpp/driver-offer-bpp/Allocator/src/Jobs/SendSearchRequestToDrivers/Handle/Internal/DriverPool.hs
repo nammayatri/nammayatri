@@ -191,19 +191,32 @@ cleanupDriverPoolBatches searchReqId = do
 getNextDriverPoolBatch :: DSR.SearchRequest -> Flow [DriverPoolWithActualDistResult]
 getNextDriverPoolBatch searchReq = do
   batchNum <- getPoolBatchNum searchReq.id
+  incrementBatchNum searchReq.id
   prepareDriverPoolBatch searchReq batchNum
 
 getPoolBatchNum :: (Redis.HedisFlow m r) => Id DSR.SearchRequest -> m PoolBatchNum
 getPoolBatchNum searchReqId = do
   res <- Redis.get (poolBatchNumKey searchReqId)
-  res' <- case res of
+  case res of
     Just i -> return i
     Nothing -> do
       let expTime = 600
       Redis.setExp (poolBatchNumKey searchReqId) (0 :: Integer) expTime
       return 0
+
+incrementBatchNum ::
+  ( EncFlow m r,
+    HasCacheConfig r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m,
+    EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    HasDriverPoolConfig r
+  ) =>
+  Id DSR.SearchRequest ->
+  m ()
+incrementBatchNum searchReqId = do
   void $ Redis.incr (poolBatchNumKey searchReqId)
-  return res'
 
 getPoolRadiusStep :: (Redis.HedisFlow m r) => Id DSR.SearchRequest -> m PoolRadiusStep
 getPoolRadiusStep searchReqId = do
