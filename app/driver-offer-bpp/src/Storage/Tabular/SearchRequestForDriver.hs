@@ -40,6 +40,8 @@ mkPersist
       status Domain.DriverSearchRequestStatus
       createdAt UTCTime
       response Domain.SearchRequestForDriverResponse Maybe
+      driverMinExtraFee Money
+      driverMaxExtraFee Money
       Primary id
       deriving Generic
     |]

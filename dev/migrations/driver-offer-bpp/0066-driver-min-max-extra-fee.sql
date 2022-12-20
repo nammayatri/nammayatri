@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_min_extra_charge  double precision NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_max_extra_charge  double precision NOT NULL;

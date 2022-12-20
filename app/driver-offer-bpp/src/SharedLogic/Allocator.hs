@@ -13,7 +13,9 @@ data JobType = SendSearchRequestToDriver
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { requestId :: Id DSR.SearchRequest,
-    baseFare :: Money
+    baseFare :: Money,
+    driverMinExtraFee :: Money,
+    driverMaxExtraFee :: Money
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

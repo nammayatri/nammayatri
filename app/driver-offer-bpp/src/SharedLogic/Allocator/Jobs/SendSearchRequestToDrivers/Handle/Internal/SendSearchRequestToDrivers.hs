@@ -34,12 +34,14 @@ sendSearchRequestToDrivers ::
   ) =>
   DSR.SearchRequest ->
   Money ->
+  Money ->
+  Money ->
   [DriverPoolWithActualDistResult] ->
   m ()
-sendSearchRequestToDrivers searchReq baseFare driverPool = do
+sendSearchRequestToDrivers searchReq driverMinExtraFee driverMaxExtraFee baseFare driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare validTill) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare driverMinExtraFee driverMaxExtraFee) driverPool
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   Esq.runTransaction $ do
     QSRD.setInactiveByRequestId searchReq.id -- inactive previous request by drivers so that they can make new offers.
@@ -61,9 +63,11 @@ sendSearchRequestToDrivers searchReq baseFare driverPool = do
       DSearchReq.SearchRequest ->
       Money ->
       UTCTime ->
+      Money ->
+      Money ->
       DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchRequest baseFare_ validTill dpwRes = do
+    buildSearchRequestForDriver searchRequest baseFare_ validTill driverMinExtraCharge driverMaxExtraCharge dpwRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
@@ -84,6 +88,8 @@ sendSearchRequestToDrivers searchReq baseFare driverPool = do
                 baseFare = baseFare_,
                 createdAt = now,
                 response = Nothing,
+                driverMinExtraFee = driverMinExtraCharge,
+                driverMaxExtraFee = driverMaxExtraCharge,
                 ..
               }
       pure searchRequestForDriver

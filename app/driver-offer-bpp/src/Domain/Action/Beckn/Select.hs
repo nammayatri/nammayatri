@@ -63,6 +63,7 @@ handler merchantId sReq = do
       Just distRes -> pure distRes
   fareParams <- calculateFare merchantId farePolicy distance sReq.pickupTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration
+  let driverExtraFare = farePolicy.driverExtraFee
   let baseFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
@@ -84,7 +85,9 @@ handler merchantId sReq = do
         createAllocatorSendSearchRequestToDriverJob inTime $
           SendSearchRequestToDriverJobData
             { requestId = searchReq.id,
-              baseFare = baseFare
+              baseFare = baseFare,
+              driverMinExtraFee = driverExtraFare.minFee,
+              driverMaxExtraFee = driverExtraFare.maxFee
             }
     _ -> return ()
 

@@ -38,7 +38,9 @@ data SearchRequestForDriver = SearchRequestForDriver
     lat :: Maybe Double,
     lon :: Maybe Double,
     createdAt :: UTCTime,
-    response :: Maybe SearchRequestForDriverResponse
+    response :: Maybe SearchRequestForDriverResponse,
+    driverMinExtraFee :: Money,
+    driverMaxExtraFee :: Money
   }
   deriving (Generic, Show, PrettyShow)
 
@@ -52,7 +54,9 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     fromLocation :: DLoc.SearchReqLocation,
     toLocation :: DLoc.SearchReqLocation,
     distance :: Meters,
-    driverLatLong :: LatLong
+    driverLatLong :: LatLong,
+    driverMinExtraFee :: Money,
+    driverMaxExtraFee :: Money
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
@@ -72,5 +76,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest =
         LatLong
           { lat = fromMaybe 0.0 nearbyReq.lat,
             lon = fromMaybe 0.0 nearbyReq.lon
-          }
+          },
+      driverMinExtraFee = nearbyReq.driverMinExtraFee,
+      driverMaxExtraFee = nearbyReq.driverMaxExtraFee
     }
