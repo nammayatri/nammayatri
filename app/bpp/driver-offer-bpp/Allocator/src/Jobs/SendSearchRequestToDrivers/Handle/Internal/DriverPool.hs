@@ -11,16 +11,12 @@ import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
 import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Common
-import qualified Data.Set as Set
-import Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified Domain.Types.SearchRequest as DSR
 import Environment (Flow)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import SharedLogic.DriverPool
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
-import System.Random
 import Tools.Maps as Maps
 import Tools.Metrics
 
@@ -55,16 +51,21 @@ prepareDriverPoolBatch ::
   DSR.SearchRequest ->
   PoolBatchNum ->
   m [DriverPoolWithActualDistResult]
-prepareDriverPoolBatch searchReq batchNum = do
+prepareDriverPoolBatch searchReq batchNum = withLogTag ("BatchNum-" <> show batchNum) $ do
   previousBatchesDrivers <- getPreviousBatchesDrivers
+  logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   prepareDriverPoolBatch' previousBatchesDrivers
   where
     prepareDriverPoolBatch' previousBatchesDrivers = do
       radiusStep <- getPoolRadiusStep searchReq.id
       driverPool <- calcDriverPool radiusStep
+      logDebug $ "DriverPool-" <> show driverPool
       sortedDriverPool <- sortFunction driverPool
+      logDebug $ "SortedDriverPool-" <> show sortedDriverPool
       let onlyNewDriversPool = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) sortedDriverPool
+      logDebug $ "OnlyNewDriversPool-" <> show onlyNewDriversPool
       driverPoolBatch <- getBatch onlyNewDriversPool
+      logDebug $ "DriverPoolBatch-" <> show driverPoolBatch
       batchSize <- asks (.driverPoolBatchesCfg.driverBatchSize)
       if length driverPoolBatch < batchSize
         then do
@@ -75,6 +76,7 @@ prepareDriverPoolBatch searchReq batchNum = do
                 then return []
                 else do
                   filledBatch <- fillBatch batchSize sortedDriverPool driverPoolBatch
+                  logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
                   cacheBatch filledBatch
                   return filledBatch
             else do
@@ -98,6 +100,7 @@ prepareDriverPoolBatch searchReq batchNum = do
       let driversToFillBatch = take (batchSize - length batch) $ filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) driverPool
       return $ batch <> driversToFillBatch
     cacheBatch batch = do
+      logDebug $ "Caching batch-" <> show batch
       Redis.setExp (driverPoolBatchKey searchReq.id batchNum) batch (60 * 10)
     sortFunction driverPool = do
       sortingType <- asks (.driverPoolBatchesCfg.poolSortingType)
@@ -125,7 +128,9 @@ getDriverPoolBatch searchReqId batchNum = do
   Redis.get (driverPoolBatchKey searchReqId batchNum)
     >>= maybe whenFoundNothing whenFoundSomething
   where
-    whenFoundNothing = return []
+    whenFoundNothing = do
+      logWarning "Unexpected empty driver pool batch cache."
+      return []
     whenFoundSomething = \case
       [] -> do
         logWarning "Unexpected empty driver pool batch."
@@ -146,31 +151,12 @@ intelligentPoolSelection dp =
             =<< mapM (\dPoolRes -> (,dPoolRes) <$> getLatestAcceptanceRatio dPoolRes.driverPoolResult.driverId) dp
         )
 
+--TODO: Create proper module to randomize things
 randomizeAndLimitSelection ::
   (MonadFlow m) =>
   [DriverPoolWithActualDistResult] ->
   m [DriverPoolWithActualDistResult]
-randomizeAndLimitSelection driverPool = do
-  let poolLen = length driverPool
-      startIdx = 0
-      endIdx = poolLen - 1
-  randomNumList <- getRandomNumberList startIdx endIdx
-  return $ fmap (driverPool !!) randomNumList
-
---TODO: Create proper module to randomize things
-getRandomNumberList :: (L.MonadFlow m) => Int -> Int -> m [Int]
-getRandomNumberList start end = do
-  n <- round <$> L.runIO getPOSIXTime
-  let pureGen = mkStdGen n
-  return $ toList $ nextNumber pureGen Set.empty
-  where
-    nextNumber :: RandomGen g => g -> Set.Set Int -> Set.Set Int
-    nextNumber gen acc =
-      if Set.size acc == end - start + 1
-        then acc
-        else
-          let (n, gen') = randomR (start, end) gen
-           in nextNumber gen' (Set.union (Set.singleton n) acc)
+randomizeAndLimitSelection = return -- randomized from db side
 
 poolBatchNumKey :: Id DSR.SearchRequest -> Text
 poolBatchNumKey searchReqId = "Allocator:PoolBatchNum:SearchReqId-" <> searchReqId.getId
@@ -187,9 +173,10 @@ cleanupDriverPoolBatches searchReqId = do
   Redis.delByPattern (driverPoolKey searchReqId <> "*")
   Redis.del (poolRadiusStepKey searchReqId)
   Redis.del (poolBatchNumKey searchReqId)
+  logInfo "Cleanup redis."
 
 getNextDriverPoolBatch :: DSR.SearchRequest -> Flow [DriverPoolWithActualDistResult]
-getNextDriverPoolBatch searchReq = do
+getNextDriverPoolBatch searchReq = withLogTag "getNextDriverPoolBatch" do
   batchNum <- getPoolBatchNum searchReq.id
   incrementBatchNum searchReq.id
   prepareDriverPoolBatch searchReq batchNum
@@ -205,18 +192,14 @@ getPoolBatchNum searchReqId = do
       return 0
 
 incrementBatchNum ::
-  ( EncFlow m r,
-    HasCacheConfig r,
-    EsqDBReplicaFlow m r,
-    CoreMetrics m,
-    EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    HasDriverPoolConfig r
+  ( Redis.HedisFlow m r
   ) =>
   Id DSR.SearchRequest ->
   m ()
 incrementBatchNum searchReqId = do
-  void $ Redis.incr (poolBatchNumKey searchReqId)
+  res <- Redis.incr (poolBatchNumKey searchReqId)
+  logInfo $ "Increment batch num to " <> show res <> "."
+  return ()
 
 getPoolRadiusStep :: (Redis.HedisFlow m r) => Id DSR.SearchRequest -> m PoolRadiusStep
 getPoolRadiusStep searchReqId = do
@@ -229,15 +212,11 @@ getPoolRadiusStep searchReqId = do
       return 0
 
 incrementPoolRadiusStep ::
-  ( EncFlow m r,
-    HasCacheConfig r,
-    EsqDBReplicaFlow m r,
-    CoreMetrics m,
-    EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    HasDriverPoolConfig r
+  ( Redis.HedisFlow m r
   ) =>
   Id DSR.SearchRequest ->
   m ()
 incrementPoolRadiusStep searchReqId = do
-  void $ Redis.incr (poolRadiusStepKey searchReqId)
+  res <- Redis.incr (poolRadiusStepKey searchReqId)
+  logInfo $ "Increment radius step to " <> show res <> "."
+  return ()

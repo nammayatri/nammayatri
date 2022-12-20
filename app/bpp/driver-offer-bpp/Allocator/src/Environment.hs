@@ -57,7 +57,8 @@ data HandlerEnv = HandlerEnv
     googleTranslateKey :: Text,
     coreMetrics :: CoreMetricsContainer,
     driverPoolBatchesCfg :: DriverPoolBatchesConfig,
-    singleBatchProcessTime :: Seconds
+    singleBatchProcessTime :: Seconds,
+    ssrMetrics :: SendSearchRequestToDriverMetricsContainer
   }
   deriving (Generic)
 
@@ -69,6 +70,7 @@ buildHandlerEnv HandlerCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
+  ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
   return HandlerEnv {..}
 

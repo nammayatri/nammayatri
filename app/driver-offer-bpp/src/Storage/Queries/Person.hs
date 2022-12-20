@@ -354,7 +354,7 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
         )
     (personId, mbDeviceToken, language, onRide, dist, dlat, dlon, variant) <- from withTable
     where_ $ dist <. val (fromIntegral radiusMeters)
-    orderBy [asc dist]
+    orderBy [rand]
     return (personId, mbDeviceToken, language, onRide, dist, variant, dlat, dlon)
   return $ makeNearestDriversResult <$> res
   where

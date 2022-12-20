@@ -1,48 +1,72 @@
 module Jobs.SendSearchRequestToDrivers.Handle
   ( HandleMonad,
     Handle (..),
+    MetricsHandle (..),
     handler,
   )
 where
 
 import Beckn.Prelude
+import Beckn.Utils.Common
 import Lib.Scheduler.Types (ExecutionResult (..))
 import SharedLogic.DriverPool
 
-type HandleMonad m = (Monad m)
+type HandleMonad m = (Monad m, MonadClock m, Log m)
+
+data MetricsHandle m = MetricsHandle
+  { incrementTaskCounter :: m (),
+    incrementFailedTaskCounter :: m (),
+    putTaskDuration :: Milliseconds -> m ()
+  }
 
 data Handle m = Handle
   { isBatchNumExceedLimit :: m Bool,
     isRideAlreadyAssigned :: m Bool,
-    receivedMinDriverQuotes :: m Bool,
+    isReceivedMaxDriverQuotes :: m Bool,
     getNextDriverPoolBatch :: m [DriverPoolWithActualDistResult],
     cleanupDriverPoolBatches :: m (),
     sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> m (),
-    getRescheduleTime :: m UTCTime
+    getRescheduleTime :: m UTCTime,
+    metrics :: MetricsHandle m
   }
 
 handler :: HandleMonad m => Handle m -> m ExecutionResult
 handler h@Handle {..} = do
-  isRideAssigned <- isRideAlreadyAssigned
-  receivedDriverQuotes <- receivedMinDriverQuotes
-  res <-
-    if isRideAssigned || receivedDriverQuotes
-      then return Complete -- ride already assigned | received quotes from drivers
-      else processRequestSending h
-  case res of
-    Complete -> cleanupDriverPoolBatches
-    _ -> return ()
-  return res
+  metrics.incrementTaskCounter
+  measuringDuration (\ms _ -> metrics.putTaskDuration ms) $ do
+    isRideAssigned <- isRideAlreadyAssigned
+    res <-
+      if isRideAssigned
+        then do
+          logInfo "Ride already assigned."
+          return Complete
+        else do
+          isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
+          if isReceivedMaxDriverQuotes'
+            then do
+              logInfo "Received enough quotes from drivers."
+              return Complete
+            else processRequestSending h
+    case res of
+      Complete -> cleanupDriverPoolBatches
+      _ -> return ()
+    return res
 
 processRequestSending :: HandleMonad m => Handle m -> m ExecutionResult
 processRequestSending Handle {..} = do
   isBatchNumExceedLimit' <- isBatchNumExceedLimit
   if isBatchNumExceedLimit'
-    then return Complete -- No driver accepted
+    then do
+      metrics.incrementFailedTaskCounter
+      logInfo "No driver accepted"
+      return Complete
     else do
       driverPool <- getNextDriverPoolBatch
       if null driverPool
-        then return Complete -- No driver available
+        then do
+          metrics.incrementFailedTaskCounter
+          logInfo "No driver available"
+          return Complete
         else do
           sendSearchRequestToDrivers driverPool
           ReSchedule <$> getRescheduleTime

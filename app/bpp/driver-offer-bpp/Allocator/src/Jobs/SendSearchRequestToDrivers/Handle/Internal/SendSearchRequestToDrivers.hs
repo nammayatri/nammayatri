@@ -25,7 +25,7 @@ type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 
 sendSearchRequestToDrivers :: DSR.SearchRequest -> Money -> [DriverPoolWithActualDistResult] -> Flow ()
 sendSearchRequestToDrivers searchReq baseFare driverPool = do
-  logInfo $ "Final Driver Pool " <> show driverPool
+  logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare) driverPool
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   Esq.runTransaction $ do

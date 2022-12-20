@@ -1,7 +1,7 @@
 module Jobs.SendSearchRequestToDrivers.Handle.Internal
   ( isRideAlreadyAssigned,
     getRescheduleTime,
-    receivedMinDriverQuotes,
+    isReceivedMaxDriverQuotes,
     module Reexport,
   )
 where
@@ -19,11 +19,11 @@ import qualified Storage.Queries.DriverQuote as QDQ
 isRideAlreadyAssigned :: Id SearchRequest -> Flow Bool
 isRideAlreadyAssigned searchReqId = isJust <$> QB.findBySearchReq searchReqId
 
-receivedMinDriverQuotes :: Id SearchRequest -> Flow Bool
-receivedMinDriverQuotes searchReqId = do
+isReceivedMaxDriverQuotes :: Id SearchRequest -> Flow Bool
+isReceivedMaxDriverQuotes searchReqId = do
   totalQuotesRecieved <- length <$> QDQ.findAllByRequestId searchReqId
-  minDriverQuotesRequired <- asks (.driverPoolCfg.minDriverQuotesRequired)
-  pure (totalQuotesRecieved >= minDriverQuotesRequired)
+  maxDriverQuotesRequired <- asks (.driverPoolCfg.maxDriverQuotesRequired)
+  pure (totalQuotesRecieved >= maxDriverQuotesRequired)
 
 getRescheduleTime :: Flow UTCTime
 getRescheduleTime = do
