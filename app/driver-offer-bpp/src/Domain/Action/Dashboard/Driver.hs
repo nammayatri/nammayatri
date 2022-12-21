@@ -197,7 +197,6 @@ disableDriver merchantShortId reqDriverId = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   Esq.runTransaction $ do
-    QVehicle.deleteById personId
     QDriverInfo.updateEnabledState driverId False
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
@@ -301,14 +300,6 @@ deleteDriver merchantShortId reqDriverId = do
   unless (isNothing ride) $
     throwError $ InvalidRequest "Unable to delete driver, which have at least one ride"
 
-  dl <- QDriverLicense.findByDriverId personId
-  unless (isNothing dl) $
-    throwError $ InvalidRequest "Unable to delete driver, which have driver license"
-
-  rcAssociation <- QRCAssociation.getActiveAssociationByDriver personId
-  unless (isNothing rcAssociation) $
-    throwError $ InvalidRequest "Unable to delete driver, which have registration certificate associated"
-
   driverInformation <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when driverInformation.enabled $
     throwError $ InvalidRequest "Driver should be disabled before deletion"
@@ -318,6 +309,8 @@ deleteDriver merchantShortId reqDriverId = do
   Esq.runTransaction $ do
     QIV.deleteByPersonId personId
     QImage.deleteByPersonId personId
+    QDriverLicense.deleteByDriverId personId
+    QRCAssociation.deleteByDriverId personId
     QDriverQuote.deleteByDriverId personId
     QSearchReqForDriver.deleteByDriverId personId
     QDriverInfo.deleteById driverId

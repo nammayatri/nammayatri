@@ -53,3 +53,9 @@ findByDLNumber dlNumber = do
     dl <- from $ table @DriverLicenseT
     where_ $ dl ^. DriverLicenseLicenseNumberHash ==. val dlNumberHash
     return dl
+
+deleteByDriverId :: Id Person -> SqlDB ()
+deleteByDriverId driverId =
+  Esq.delete $ do
+    dl <- from $ table @DriverLicenseT
+    where_ $ dl ^. DriverLicenseDriverId ==. val (toKey driverId)

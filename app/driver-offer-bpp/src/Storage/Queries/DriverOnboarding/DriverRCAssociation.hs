@@ -71,3 +71,9 @@ endAssociation driverId = do
     where_ $
       tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
         &&. tbl ^. DriverRCAssociationAssociatedTill >. val (Just now)
+
+deleteByDriverId :: Id Person -> SqlDB ()
+deleteByDriverId driverId =
+  Esq.delete $ do
+    associations <- from $ table @DriverRCAssociationT
+    where_ $ associations ^. DriverRCAssociationDriverId ==. val (toKey driverId)
