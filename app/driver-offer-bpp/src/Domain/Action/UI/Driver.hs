@@ -69,7 +69,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
-import SharedLogic.DriverPool (incrementAcceptanceCount)
+import SharedLogic.DriverPool (incrementAcceptanceCount, DriverPoolConfig)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
@@ -553,7 +553,7 @@ offerQuote ::
     HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "driverPoolCfg" ::: DriverPoolConfig],
     HasHttpClientOptions r c,
     CoreMetrics m,
     HasPrettyLogger m r
@@ -576,7 +576,7 @@ respondQuote ::
     HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "driverPoolCfg" ::: DriverPoolConfig],
     HasHttpClientOptions r c,
     CoreMetrics m,
     HasPrettyLogger m r
@@ -656,8 +656,8 @@ respondQuote driverId req = do
       pure $ not $ null activeQuotes
     quotesCountExceeded sReq = do
       quoteCount <- QDrQt.countAllByRequestId sReq.id
-      let concurrentQuoteLimit = 5 -- TODO make configurable
-      pure $ quoteCount > concurrentQuoteLimit
+      driverPoolCfg <- asks (.driverPoolCfg)
+      pure $ quoteCount > (fromIntegral driverPoolCfg.driverQuoteLimit)
 
 getStats ::
   (EsqDBReplicaFlow m r, EncFlow m r) =>

@@ -10,7 +10,8 @@ data DriverPoolConfig = DriverPoolConfig
     radiusStepSize :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     actualDistanceThreshold :: Maybe Meters,
-    maxDriverQuotesRequired :: Int
+    maxDriverQuotesRequired :: Int,
+    driverQuoteLimit :: Int
   }
   deriving (Generic, FromDhall)
 
