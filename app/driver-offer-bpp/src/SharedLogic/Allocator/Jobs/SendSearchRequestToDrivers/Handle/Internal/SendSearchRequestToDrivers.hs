@@ -30,7 +30,7 @@ sendSearchRequestToDrivers ::
     TranslateFlow m r,
     CacheFlow m r,
     HasSendSearchRequestJobConfig r,
-    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions
+    HasField "windowOptions" r SWC.SlidingWindowOptions
   ) =>
   DSR.SearchRequest ->
   Money ->

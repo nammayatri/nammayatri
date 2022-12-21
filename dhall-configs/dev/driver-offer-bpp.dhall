@@ -44,8 +44,7 @@ let smsConfig =
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
-let acceptanceWindowOptions =
-      { period = +7, periodType = common.periodType.Days }
+let windowOptions = { period = +7, periodType = common.periodType.Days }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
@@ -161,7 +160,7 @@ in  { esqDBCfg
     , defaultRideTimeEstimatedThreshold = +900
     , cacheConfig
     , metricsSearchDurationTimeout = +45
-    , acceptanceWindowOptions
+    , windowOptions
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."

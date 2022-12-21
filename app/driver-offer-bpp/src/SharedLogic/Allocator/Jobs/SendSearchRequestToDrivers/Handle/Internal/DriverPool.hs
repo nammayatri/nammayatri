@@ -46,7 +46,7 @@ prepareDriverPoolBatch ::
     Redis.HedisFlow m r,
     HasDriverPoolConfig r,
     HasSendSearchRequestJobConfig r,
-    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions
+    HasField "windowOptions" r SWC.SlidingWindowOptions
   ) =>
   DSR.SearchRequest ->
   PoolBatchNum ->
@@ -137,7 +137,7 @@ getDriverPoolBatch searchReqId batchNum = do
 
 intelligentPoolSelection ::
   ( Redis.HedisFlow m r,
-    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
+    HasField "windowOptions" r SWC.SlidingWindowOptions,
     MonadFlow m
   ) =>
   [DriverPoolWithActualDistResult] ->
@@ -183,7 +183,7 @@ getNextDriverPoolBatch ::
     Redis.HedisFlow m r,
     HasDriverPoolConfig r,
     HasSendSearchRequestJobConfig r,
-    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions
+    HasField "windowOptions" r SWC.SlidingWindowOptions
   ) =>
   DSR.SearchRequest ->
   m [DriverPoolWithActualDistResult]

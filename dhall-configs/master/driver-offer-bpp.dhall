@@ -89,8 +89,7 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
-let acceptanceWindowOptions =
-      { period = +7, periodType = common.periodType.Days }
+let windowOptions = { period = +7, periodType = common.periodType.Days }
 
 let driverPoolCfg =
       { minRadiusOfSearch = +5000
@@ -157,7 +156,7 @@ in  { esqDBCfg
     , defaultRideTravelledDistanceThreshold = +700
     , defaultRideTimeEstimatedThreshold = +900
     , cacheConfig
-    , acceptanceWindowOptions
+    , windowOptions
     , metricsSearchDurationTimeout = +45
     , dashboardToken = sec.dashboardToken
     , driverLocationUpdateRateLimitOptions

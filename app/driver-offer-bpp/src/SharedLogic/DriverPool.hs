@@ -6,6 +6,8 @@ module SharedLogic.DriverPool
     incrementAcceptanceCount,
     getLatestAcceptanceRatio,
     incrementTotalCount,
+    incrementCancellationCount,
+    getLatestCancellationRatio,
     module Reexport,
   )
 where
@@ -32,19 +34,22 @@ import Tools.Metrics
 mkAcceptanceKey :: Text -> Text
 mkAcceptanceKey driverId = "driver-offer:DriverPool:Quote-accepted:DriverId-" <> driverId
 
+mkCancellationKey :: Text -> Text
+mkCancellationKey driverId = "driver-offer:DriverPool:Ride-cancelled:DriverId-" <> driverId
+
 withWindowOptions ::
   ( Redis.HedisFlow m r,
-    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
+    HasField "windowOptions" r SWC.SlidingWindowOptions,
     L.MonadFlow m
   ) =>
   (SWC.SlidingWindowOptions -> m a) ->
   m a
 withWindowOptions fn = do
-  asks (.acceptanceWindowOptions) >>= fn
+  asks (.windowOptions) >>= fn
 
 incrementTotalCount ::
   ( Redis.HedisFlow m r,
-    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
+    HasField "windowOptions" r SWC.SlidingWindowOptions,
     L.MonadFlow m
   ) =>
   Id DP.Person ->
@@ -53,7 +58,7 @@ incrementTotalCount driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC
 
 incrementAcceptanceCount ::
   ( Redis.HedisFlow m r,
-    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
+    HasField "windowOptions" r SWC.SlidingWindowOptions,
     L.MonadFlow m
   ) =>
   Id DP.Person ->
@@ -62,12 +67,30 @@ incrementAcceptanceCount driverId = Redis.withCrossAppRedis $ withWindowOptions 
 
 getLatestAcceptanceRatio ::
   ( L.MonadFlow m,
-    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions,
+    HasField "windowOptions" r SWC.SlidingWindowOptions,
     Redis.HedisFlow m r
   ) =>
   Id DP.Driver ->
   m Double
 getLatestAcceptanceRatio driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.getLatestRatio (getId driverId) mkAcceptanceKey
+
+incrementCancellationCount ::
+  ( Redis.HedisFlow m r,
+    HasField "windowOptions" r SWC.SlidingWindowOptions,
+    L.MonadFlow m
+  ) =>
+  Id DP.Person ->
+  m ()
+incrementCancellationCount driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.incrementWindowCount (mkCancellationKey driverId.getId)
+
+getLatestCancellationRatio ::
+  ( L.MonadFlow m,
+    HasField "windowOptions" r SWC.SlidingWindowOptions,
+    Redis.HedisFlow m r
+  ) =>
+  Id DP.Driver ->
+  m Double
+getLatestCancellationRatio driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.getLatestRatio (getId driverId) mkCancellationKey
 
 calculateDriverPool ::
   ( EncFlow m r,

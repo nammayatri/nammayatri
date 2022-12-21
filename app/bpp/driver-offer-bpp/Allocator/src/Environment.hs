@@ -49,7 +49,7 @@ data HandlerEnv = HandlerEnv
     hedisEnv :: HedisEnv,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
-    acceptanceWindowOptions :: SlidingWindowOptions,
+    windowOptions :: SlidingWindowOptions,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     coreMetrics :: CoreMetricsContainer,
