@@ -1,5 +1,6 @@
 module API.Beckn.Rating (API, handler) where
 
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
 import Beckn.Types.Id
@@ -29,6 +30,9 @@ rating _ (SignatureAuthResult _ subscriber _) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "ratingAPI" "Received rating API call."
     dRatingReq <- ACL.buildRatingReq subscriber req
-
-    DRating.handler dRatingReq
+    Redis.whenWithLockRedis (ratingLockKey dRatingReq.bookingId.getId) 60 $ do
+      DRating.handler dRatingReq
     pure Ack
+
+ratingLockKey :: Text -> Text
+ratingLockKey id = "Driver:Rating:BookingId-" <> id

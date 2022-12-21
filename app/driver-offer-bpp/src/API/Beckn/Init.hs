@@ -1,6 +1,7 @@
 module API.Beckn.Init (API, handler) where
 
 import Beckn.Prelude hiding (init)
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
@@ -33,7 +34,13 @@ init transporterId (SignatureAuthResult _ subscriber _) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Init API Flow" "Reached"
     dInitReq <- ACL.buildInitReq subscriber req
-    let context = req.context
-    dInitRes <- DInit.handler transporterId dInitReq
-    CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
-      pure $ ACL.mkOnInitMessage dInitRes
+    Redis.whenWithLockRedis (initLockKey dInitReq.driverQuoteId.getId) 60 $ do
+      let context = req.context
+      dInitRes <- DInit.handler transporterId dInitReq
+      void $
+        CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
+          pure $ ACL.mkOnInitMessage dInitRes
+    pure Ack
+
+initLockKey :: Text -> Text
+initLockKey id = "Driver:Init:DriverQuoteId-" <> id

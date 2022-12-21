@@ -1,6 +1,7 @@
 module API.Beckn.Select (API, handler) where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import Beckn.Types.Id
@@ -29,5 +30,9 @@ select transporterId (SignatureAuthResult _ subscriber _) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Select API Flow" "Reached"
     dSelectReq <- ACL.buildSelectReq subscriber req
-    DSelect.handler transporterId dSelectReq
+    Redis.whenWithLockRedis (selectLockKey dSelectReq.messageId) 60 $
+      DSelect.handler transporterId dSelectReq
     pure Ack
+
+selectLockKey :: Text -> Text
+selectLockKey id = "Driver:Select:MessageId-" <> id
