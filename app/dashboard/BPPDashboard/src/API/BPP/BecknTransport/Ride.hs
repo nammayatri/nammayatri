@@ -55,7 +55,7 @@ handler merchantId =
 
 rideList ::
   ShortId DM.Merchant ->
-  ShortId DM.Merchant ->
+  ApiTokenInfo ->
   Maybe Int ->
   Maybe Int ->
   Maybe Common.BookingStatus ->
@@ -63,26 +63,26 @@ rideList ::
   Maybe Text ->
   Maybe Text ->
   FlowHandler Common.RideListRes
-rideList userMerchantId merchantId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+rideList merchantShortId apiTokenInfo mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone
 
-rideStart :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
-rideStart userMerchantId merchantId rideId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+rideStart :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
+rideStart merchantShortId apiTokenInfo rideId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.rides.rideStart) rideId req
 
-rideEnd :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Ride -> Common.EndRideReq -> FlowHandler APISuccess
-rideEnd userMerchantId merchantId rideId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+rideEnd :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Ride -> Common.EndRideReq -> FlowHandler APISuccess
+rideEnd merchantShortId apiTokenInfo rideId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.rides.rideEnd) rideId req
 
-rideCancel :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Ride -> Common.CancelRideReq -> FlowHandler APISuccess
-rideCancel userMerchantId merchantId rideId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+rideCancel :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Ride -> Common.CancelRideReq -> FlowHandler APISuccess
+rideCancel merchantShortId apiTokenInfo rideId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.rides.rideCancel) rideId req
 
-rideInfo :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Ride -> FlowHandler Common.RideInfoRes
-rideInfo userMerchantId merchantId rideId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+rideInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Ride -> FlowHandler Common.RideInfoRes
+rideInfo merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.rides.rideInfo) rideId

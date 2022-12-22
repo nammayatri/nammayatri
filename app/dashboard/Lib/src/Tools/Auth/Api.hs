@@ -12,13 +12,13 @@ import Beckn.Utils.Servant.HeaderAuth
 import Data.Singletons.TH
 import Domain.Types.AccessMatrix as Reexport (ApiAccessType (..), ApiEntity (..))
 import qualified Domain.Types.AccessMatrix as DMatrix
-import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Domain.Types.ServerName as Reexport (ServerName (..))
 import qualified Domain.Types.ServerName as DSN
 import Servant hiding (throwError)
 import qualified Storage.Queries.AccessMatrix as QAccessMatrix
-import qualified Storage.Queries.Merchant as QMerchant
+import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Auth.Common as Common
 import Tools.Servant.HeaderAuth
@@ -36,8 +36,13 @@ data VerifyApi
 
 data ApiPayload (sn :: DSN.ServerName) (at :: DMatrix.ApiAccessType) (ae :: DMatrix.ApiEntity)
 
+data ApiTokenInfo = ApiTokenInfo
+  { personId :: Id DP.Person,
+    merchant :: DM.Merchant
+  }
+
 instance VerificationMethod VerifyApi where
-  type VerificationResult VerifyApi = (ShortId DMerchant.Merchant)
+  type VerificationResult VerifyApi = ApiTokenInfo
   verificationDescription =
     "Checks whether token is registered and checks person api access. \
     \If you don't have a token, use registration endpoints."
@@ -54,11 +59,12 @@ verifyApi ::
   (Common.AuthFlow m r, Redis.HedisFlow m r) =>
   DMatrix.ApiAccessLevel ->
   RegToken ->
-  m (ShortId DMerchant.Merchant)
+  m ApiTokenInfo
 verifyApi requiredAccessLevel token = do
   (personId, merchantId) <- Common.verifyPerson token
-  _personId <- verifyAccessLevel requiredAccessLevel personId
-  verifyServer requiredAccessLevel.serverName merchantId
+  verifiedPersonId <- verifyAccessLevel requiredAccessLevel personId
+  verifiedMerchant <- verifyServer requiredAccessLevel.serverName merchantId
+  pure ApiTokenInfo {personId = verifiedPersonId, merchant = verifiedMerchant}
 
 instance
   forall (sn :: DSN.ServerName) (at :: DMatrix.ApiAccessType) (ae :: DMatrix.ApiEntity).
@@ -90,9 +96,9 @@ checkUserAccess _ _ = False
 verifyServer ::
   EsqDBFlow m r =>
   DSN.ServerName ->
-  Id DMerchant.Merchant ->
-  m (ShortId DMerchant.Merchant)
+  Id DM.Merchant ->
+  m DM.Merchant
 verifyServer requiredServerAccess merchantId = do
-  merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (requiredServerAccess == merchant.serverName) $ throwError AccessDenied
-  return merchant.shortId
+  return merchant

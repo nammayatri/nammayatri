@@ -37,32 +37,32 @@ type RegisterDLAPI = ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS :> Common.
 
 type RegisterRCAPI = ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS :> Common.RegisterRCAPI
 
-documentsList :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
-documentsList userMerchantId merchantId driverId =
+documentsList :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.DocumentsListResponse
+documentsList merchantShortId apiTokenInfo driverId =
   withFlowHandlerAPI $ do
-    checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+    checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
     Client.callDriverOfferBPP checkedMerchantId (.drivers.documentsList) driverId
 
-getDocument :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Image -> FlowHandler Common.GetDocumentResponse
-getDocument userMerchantId merchantId imageId =
+getDocument :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Image -> FlowHandler Common.GetDocumentResponse
+getDocument merchantShortId apiTokenInfo imageId =
   withFlowHandlerAPI $ do
-    checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+    checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
     Client.callDriverOfferBPP checkedMerchantId (.drivers.getDocument) imageId
 
-uploadDocument :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.UploadDocumentReq -> FlowHandler Common.UploadDocumentResp
-uploadDocument userMerchantId merchantId driverId req =
+uploadDocument :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.UploadDocumentReq -> FlowHandler Common.UploadDocumentResp
+uploadDocument merchantShortId apiTokenInfo driverId req =
   withFlowHandlerAPI $ do
-    checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+    checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
     Client.callDriverOfferBPP checkedMerchantId (.drivers.uploadDocument) driverId req
 
-registerDL :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess
-registerDL userMerchantId merchantId driverId req =
+registerDL :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess
+registerDL merchantShortId apiTokenInfo driverId req =
   withFlowHandlerAPI $ do
-    checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+    checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
     Client.callDriverOfferBPP checkedMerchantId (.drivers.registerDL) driverId req
 
-registerRC :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.RegisterRCReq -> FlowHandler APISuccess
-registerRC userMerchantId merchantId driverId req =
+registerRC :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterRCReq -> FlowHandler APISuccess
+registerRC merchantShortId apiTokenInfo driverId req =
   withFlowHandlerAPI $ do
-    checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+    checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
     Client.callDriverOfferBPP checkedMerchantId (.drivers.registerRC) driverId req

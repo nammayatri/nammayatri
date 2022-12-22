@@ -31,20 +31,20 @@ handler merchantId =
 
 listCustomer ::
   ShortId DM.Merchant ->
-  ShortId DM.Merchant ->
+  ApiTokenInfo ->
   Maybe Integer ->
   Maybe Integer ->
   FlowHandler Text
-listCustomer userMerchantId merchantId mbLimit mbOffset = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+listCustomer merchantShortId apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callAppBackendBAP checkedMerchantId (.customers.customerList) mbLimit mbOffset
 
 updateCustomer ::
   ShortId DM.Merchant ->
-  ShortId DM.Merchant ->
+  ApiTokenInfo ->
   Id BAP.Person ->
   Text ->
   FlowHandler Text
-updateCustomer userMerchantId merchantId customerId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+updateCustomer merchantShortId apiTokenInfo customerId req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callAppBackendBAP checkedMerchantId (.customers.customerUpdate) customerId req

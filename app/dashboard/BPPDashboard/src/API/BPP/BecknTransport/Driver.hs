@@ -88,56 +88,56 @@ handler merchantId =
     :<|> updatePhoneNumber merchantId
     :<|> addVehicle merchantId
 
-listDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
-listDriver userMerchantId merchantId mbLimit mbOffset verified enabled blocked phone = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+listDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
+listDriver merchantShortId apiTokenInfo mbLimit mbOffset verified enabled blocked phone = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.listDrivers) mbLimit mbOffset verified enabled blocked phone
 
-driverActivity :: ShortId DM.Merchant -> ShortId DM.Merchant -> FlowHandler Common.DriverActivityRes
-driverActivity userMerchantId merchantId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+driverActivity :: ShortId DM.Merchant -> ApiTokenInfo -> FlowHandler Common.DriverActivityRes
+driverActivity merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.driverActivity)
 
-enableDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
-enableDriver userMerchantId merchantId driverId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+enableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+enableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.enableDriver) driverId
 
-disableDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
-disableDriver userMerchantId merchantId driverId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+disableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+disableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.disableDriver) driverId
 
-driverLocation :: ShortId DM.Merchant -> ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
-driverLocation userMerchantId merchantId mbLimit mbOffset req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+driverLocation :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
+driverLocation merchantShortId apiTokenInfo mbLimit mbOffset req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.driverLocation) mbLimit mbOffset req
 
-driverInfo :: ShortId DM.Merchant -> ShortId DM.Merchant -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
-driverInfo userMerchantId merchantId mbMobileNumber mbVehicleNumber = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+driverInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
+driverInfo merchantShortId apiTokenInfo mbMobileNumber mbVehicleNumber = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   when (isJust mbMobileNumber == isJust mbVehicleNumber) $
     throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
   Client.callBecknTransportBPP checkedMerchantId (.drivers.driverInfo) mbMobileNumber mbVehicleNumber
 
-deleteDriver :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
-deleteDriver userMerchantId merchantId driverId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+deleteDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+deleteDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.deleteDriver) driverId
 
-unlinkVehicle :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
-unlinkVehicle userMerchantId merchantId driverId = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+unlinkVehicle :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+unlinkVehicle merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.unlinkVehicle) driverId
 
-updatePhoneNumber :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> FlowHandler APISuccess
-updatePhoneNumber userMerchantId merchantId driverId req = withFlowHandlerAPI $ do
+updatePhoneNumber :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> FlowHandler APISuccess
+updatePhoneNumber merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateUpdatePhoneNumberReq req
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.updatePhoneNumber) driverId req
 
-addVehicle :: ShortId DM.Merchant -> ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
-addVehicle userMerchantId merchantId driverId req = withFlowHandlerAPI $ do
+addVehicle :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
+addVehicle merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateAddVehicleReq req
-  checkedMerchantId <- merchantAccessCheck userMerchantId merchantId
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.addVehicle) driverId req
