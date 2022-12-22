@@ -7,7 +7,7 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Utils.Common (logInfo)
+import Beckn.Utils.Common (addUTCTime, logInfo)
 import qualified Data.Map as M
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -26,7 +26,8 @@ type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 sendSearchRequestToDrivers :: DSR.SearchRequest -> Money -> [DriverPoolWithActualDistResult] -> Flow ()
 sendSearchRequestToDrivers searchReq baseFare driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare) driverPool
+  validTill <- getSearchRequestValidTill
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare validTill) driverPool
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   Esq.runTransaction $ do
     QSRD.setInactiveByRequestId searchReq.id -- inactive previous request by drivers so that they can make new offers.
@@ -39,13 +40,19 @@ sendSearchRequestToDrivers searchReq baseFare driverPool = do
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq
     Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where
+    getSearchRequestValidTill :: Flow UTCTime
+    getSearchRequestValidTill = do
+      now <- getCurrentTime
+      singleBatchProcessTime <- fromIntegral <$> asks (.singleBatchProcessTime)
+      return $ singleBatchProcessTime `addUTCTime` now
     buildSearchRequestForDriver ::
       (MonadFlow m) =>
       DSearchReq.SearchRequest ->
       Money ->
+      UTCTime ->
       DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchRequest baseFare_ dpwRes = do
+    buildSearchRequestForDriver searchRequest baseFare_ validTill dpwRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
@@ -54,7 +61,7 @@ sendSearchRequestToDrivers searchReq baseFare driverPool = do
               { id = guid,
                 searchRequestId = searchRequest.id,
                 startTime = searchRequest.startTime,
-                searchRequestValidTill = searchRequest.validTill,
+                searchRequestValidTill = validTill,
                 driverId = cast dpRes.driverId,
                 vehicleVariant = dpRes.variant,
                 actualDistanceToPickup = dpwRes.actualDistanceToPickup,
