@@ -59,7 +59,9 @@ import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.DriverLocation as SDrLoc
 import SharedLogic.DriverPool.Types
+import qualified SharedLogic.Ride as SRide
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -277,6 +279,7 @@ cancelBooking ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
+    CacheFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -297,6 +300,9 @@ cancelBooking bookingId reason = do
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED
       QDriverInfo.updateOnRide (cast ride.driverId) False
+  whenJust mbRide $ \ride -> do
+    SRide.clearCache $ cast ride.driverId
+    SDrLoc.clearDriverInfoCache $ cast ride.driverId
   logTagInfo ("bookingId-" <> getId bookingId) ("Cancellation reason " <> show reason.source)
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter reason.source

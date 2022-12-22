@@ -13,7 +13,9 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.DriverLocation as SDrLoc
 import SharedLogic.DriverPool
+import qualified SharedLogic.Ride as SRide
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -63,16 +65,21 @@ cancelRideImpl rideId bookingCReason = do
     isCancelledByDriver = bookingCReason.source == SBCR.ByDriver
 
 cancelRideTransaction ::
-  EsqDBFlow m r =>
+  ( EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
   Id SRB.Booking ->
   SRide.Ride ->
   SBCR.BookingCancellationReason ->
   m ()
-cancelRideTransaction bookingId ride bookingCReason = Esq.runTransaction $ do
-  updateDriverInfo ride.driverId
-  QRide.updateStatus ride.id SRide.CANCELLED
-  QRB.updateStatus bookingId SRB.CANCELLED
-  QBCR.create bookingCReason
+cancelRideTransaction bookingId ride bookingCReason = do
+  Esq.runTransaction $ do
+    updateDriverInfo ride.driverId
+    QRide.updateStatus ride.id SRide.CANCELLED
+    QRB.updateStatus bookingId SRB.CANCELLED
+    QBCR.create bookingCReason
+  SRide.clearCache $ cast ride.driverId
+  SDrLoc.clearDriverInfoCache $ cast ride.driverId
   where
     updateDriverInfo personId = do
       let driverId = cast personId
@@ -80,7 +87,9 @@ cancelRideTransaction bookingId ride bookingCReason = Esq.runTransaction $ do
       when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
 
 reallocateRideTransaction ::
-  EsqDBFlow m r =>
+  ( EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
   ShortId DM.Subscriber ->
   Id SRB.Booking ->
   SRide.Ride ->
@@ -95,6 +104,8 @@ reallocateRideTransaction subscriberId bookingId ride bookingCReason = do
     updateDriverInfo
     QBCR.create bookingCReason
     RideRequest.create rideRequest
+  SRide.clearCache $ cast ride.driverId
+  SDrLoc.clearDriverInfoCache $ cast ride.driverId
   where
     updateDriverInfo = do
       let driverId = cast ride.driverId

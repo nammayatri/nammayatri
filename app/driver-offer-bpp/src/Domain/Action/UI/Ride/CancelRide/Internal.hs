@@ -9,6 +9,8 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.DriverLocation as SDrLoc
+import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
@@ -48,16 +50,21 @@ cancelRideImpl rideId bookingCReason = do
     Notify.notifyOnCancel transporterId booking driver.id driver.deviceToken bookingCReason.source
 
 cancelRideTransaction ::
-  EsqDBFlow m r =>
+  ( EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
   Id SRB.Booking ->
   SRide.Ride ->
   SBCR.BookingCancellationReason ->
   m ()
-cancelRideTransaction bookingId ride bookingCReason = Esq.runTransaction $ do
-  updateDriverInfo ride.driverId
-  QRide.updateStatus ride.id SRide.CANCELLED
-  QRB.updateStatus bookingId SRB.CANCELLED
-  QBCR.create bookingCReason
+cancelRideTransaction bookingId ride bookingCReason = do
+  Esq.runTransaction $ do
+    updateDriverInfo ride.driverId
+    QRide.updateStatus ride.id SRide.CANCELLED
+    QRB.updateStatus bookingId SRB.CANCELLED
+    QBCR.create bookingCReason
+  SRide.clearCache $ cast ride.driverId
+  SDrLoc.clearDriverInfoCache $ cast ride.driverId
   where
     updateDriverInfo personId = do
       let driverId = cast personId
