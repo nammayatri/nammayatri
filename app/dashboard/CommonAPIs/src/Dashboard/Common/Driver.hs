@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Dashboard.Common.Driver
   ( module Dashboard.Common.Driver,
@@ -8,6 +9,7 @@ where
 
 import Beckn.External.Maps.Types
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
@@ -16,8 +18,18 @@ import Beckn.Utils.Validation
 import Dashboard.Common as Reexport
 import Servant
 
--- there are no paths in the API types in this module because they can be different in real applications
---
+-- we need to save endpoint transactions only for POST, PUT, DELETE APIs
+data DriverEndpoint
+  = EnableDriverEndpoint
+  | DisableDriverEndpoint
+  | DeleteDriverEndpoint
+  | UnlinkVehicleEndpoint
+  | UpdatePhoneNumberEndpoint
+  | AddVehicleEndpoint
+  deriving (Show, Read)
+
+derivePersistField "DriverEndpoint"
+
 newtype DriverIds = EnableDriversRequest
   { driverIds :: [Id Driver]
   }

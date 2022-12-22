@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Dashboard.Common.Driver.Registration
   ( module Dashboard.Common.Driver.Registration,
     module Reexport,
@@ -5,10 +7,20 @@ module Dashboard.Common.Driver.Registration
 where
 
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Dashboard.Common as Reexport
 import Servant
+
+-- we need to save endpoint transactions only for POST, PUT, DELETE APIs
+data DriverRegistrationEndpoint
+  = UploadDocumentEndpoint
+  | RegisterDLEndpoint
+  | RegisterRCEndpoint
+  deriving (Show, Read)
+
+derivePersistField "DriverRegistrationEndpoint"
 
 -- driver documents list API --------------
 -- ----------------------------------------

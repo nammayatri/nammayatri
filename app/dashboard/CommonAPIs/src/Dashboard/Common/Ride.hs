@@ -20,6 +20,15 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Servant
 
+-- we need to save endpoint transactions only for POST, PUT, DELETE APIs
+data RideEndpoint
+  = RideStartEndpoint
+  | RideEndEndpoint
+  | RideCancelEndpoint
+  deriving (Show, Read)
+
+derivePersistField "RideEndpoint"
+
 ---------------------------------------------------------
 -- ride list --------------------------------------------
 
@@ -121,7 +130,7 @@ newtype CancellationReasonCode = CancellationReasonCode Text
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
--- ride info ------------------------------------------
+-- ride info --------------------------------------------
 
 type RideInfoAPI =
   Capture "rideId" (Id Ride)
