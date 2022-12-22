@@ -276,6 +276,7 @@ updateMobileNumberAndCode person = do
       [ PersonMobileCountryCode =. val (TPerson.mobileCountryCode personT),
         PersonMobileNumberEncrypted =. val (TPerson.mobileNumberEncrypted personT),
         PersonMobileNumberHash =. val (TPerson.mobileNumberHash personT),
+        PersonUnencryptedMobileNumber =. val (TPerson.unencryptedMobileNumber personT),
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey person.id)

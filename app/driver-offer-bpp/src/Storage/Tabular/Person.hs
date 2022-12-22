@@ -35,6 +35,7 @@ mkPersist
       gender Domain.Gender
       identifierType Domain.IdentifierType
       email Text Maybe
+      unencryptedMobileNumber Text Maybe
       mobileNumberEncrypted Text Maybe
       mobileNumberHash DbHash Maybe
       mobileCountryCode Text Maybe

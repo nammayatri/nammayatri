@@ -168,6 +168,7 @@ makePerson req mbBundleVersion mbClientVersion merchantId = do
         identifierType = SP.MOBILENUMBER,
         email = Nothing,
         passwordHash = Nothing,
+        unencryptedMobileNumber = Just req.mobileNumber,
         mobileNumber = Just encMobNum,
         mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,

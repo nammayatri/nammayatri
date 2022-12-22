@@ -480,6 +480,7 @@ buildDriver req merchantId = do
         SP.passwordHash = Nothing,
         SP.identifier = Nothing,
         SP.identifierType = SP.MOBILENUMBER,
+        SP.unencryptedMobileNumber = Just req.mobileNumber,
         SP.mobileNumber = mobileNumber,
         SP.mobileCountryCode = Just req.mobileCountryCode,
         SP.isNew = True,

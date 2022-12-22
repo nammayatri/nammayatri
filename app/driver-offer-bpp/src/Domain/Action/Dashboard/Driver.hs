@@ -367,7 +367,8 @@ updatePhoneNumber merchantShortId reqDriverId req = do
   let updDriver =
         driver
           { DP.mobileCountryCode = Just req.newCountryCode,
-            DP.mobileNumber = Just encNewPhoneNumber
+            DP.mobileNumber = Just encNewPhoneNumber,
+            DP.unencryptedMobileNumber = Just req.newPhoneNumber
           }
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId

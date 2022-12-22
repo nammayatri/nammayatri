@@ -68,6 +68,7 @@ data PersonE e = Person
     gender :: Gender,
     identifierType :: IdentifierType,
     email :: Maybe Text,
+    unencryptedMobileNumber :: Maybe Text,
     mobileNumber :: Maybe (EncryptedHashedField e Text),
     mobileCountryCode :: Maybe Text,
     passwordHash :: Maybe DbHash,
