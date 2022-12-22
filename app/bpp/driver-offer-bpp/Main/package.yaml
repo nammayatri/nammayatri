@@ -90,6 +90,7 @@ dependencies:
   - dashboard-bpp-helper-api
   - extra
   - scheduler
+  - singletons
 
 ghc-options:
   - -fwrite-ide-info

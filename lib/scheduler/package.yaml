@@ -62,6 +62,7 @@ dependencies:
 - unliftio-core
 - prometheus-client
 - servant-server
+- singletons
 
 ghc-options:
   - -fwrite-ide-info

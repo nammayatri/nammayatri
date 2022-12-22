@@ -5,35 +5,47 @@ module App.Scheduler where
 -- FIXME: This entire module is just for example
 -- TODO: move it to the integration tests when real usage of the scheduler library appears.
 
+import App.Scheduler.Types
 import Beckn.Mock.App (MockM, runMock)
 import Beckn.Prelude
 import Beckn.Randomizer
-import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Beckn.Utils.Dhall (FromDhall, readDhallConfigDefault)
-import Beckn.Utils.GenericPretty (PrettyShow, Showable (..))
+import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.IOLogging (LoggerEnv, prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
 import Environment (Flow)
 import Lib.Scheduler
+import Lib.Scheduler.ScheduleJob (createJobIn)
+import Storage as QSJ
 
-runExampleScheduler :: (SchedulerConfig JobType -> SchedulerConfig JobType) -> IO ()
+schedulerHandle :: LoggerResources -> SchedulerHandle SchedulerJobType
+schedulerHandle loggerRes =
+  SchedulerHandle
+    { getTasksById = QSJ.getTasksById,
+      getReadyTasks = QSJ.getReadyTasks,
+      markAsComplete = QSJ.markAsComplete,
+      markAsFailed = QSJ.markAsFailed,
+      updateErrorCountAndFail = QSJ.updateErrorCountAndFail,
+      reSchedule = QSJ.reSchedule,
+      updateFailureCount = QSJ.updateFailureCount,
+      reScheduleOnError = QSJ.reScheduleOnError,
+      jobHandlers =
+        emptyJobHandlerList
+          & putJobHandlerInList (liftIO . runMock loggerRes . bananasCounterHandler)
+          & putJobHandlerInList (liftIO . runMock loggerRes . timePrinterHandler)
+          & putJobHandlerInList (liftIO . runMock loggerRes . incorrectDataJobHandler)
+          & putJobHandlerInList (liftIO . runMock loggerRes . testTerminationHandler)
+    }
+
+runExampleScheduler :: (SchedulerConfig -> SchedulerConfig) -> IO ()
 runExampleScheduler configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "scheduler-example-scheduler"
   let loggerConfig = appCfg.loggerConfig
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
   let loggerRes = LoggerResources {..}
-  runScheduler appCfg $ schedulerHandlerList loggerRes
-
-schedulerHandlerList :: LoggerResources -> JobHandlerList JobType
-schedulerHandlerList loggerRes =
-  [ (PrintBananasCount, JobHandler $ runMock loggerRes . bananasCounterHandler),
-    (PrintCurrentTimeWithErrorProbability, JobHandler $ runMock loggerRes . timePrinterHandler),
-    (IncorrectDataJobType, JobHandler $ runMock loggerRes . incorrectDataJobHandler),
-    (TestTermination, JobHandler $ runMock loggerRes . testTerminationHandler)
-  ]
+  runSchedulerService appCfg $ schedulerHandle loggerRes
 
 -----------------
 
@@ -44,38 +56,20 @@ data LoggerResources = LoggerResources
 
 type SchedulerT = MockM LoggerResources
 
-makeTestJobEntry :: JobType -> d -> JobEntry JobType d
-makeTestJobEntry jType jData =
+makeTestJobEntry :: forall e. (JobTypeConstaints e) => JobContent e -> JobEntry e
+makeTestJobEntry jData =
   JobEntry
-    { jobType = jType,
-      jobData = jData,
+    { jobData = jData,
       maxErrors = 5
     }
 
-data JobType
-  = PrintBananasCount
-  | PrintCurrentTimeWithErrorProbability
-  | IncorrectDataJobType
-  | FakeJobType
-  | TestTermination
-  deriving stock (Generic, Show, Eq, Ord)
-  deriving anyclass (FromJSON, ToJSON, FromDhall)
-  deriving (PrettyShow) via Showable JobType
-
 -----------------
-data BananasCount = BananasCount
-  { count :: Int,
-    createdAt :: UTCTime
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (FromJSON, ToJSON, PrettyShow)
 
-createBananasCountingJob :: NominalDiffTime -> Flow (Id (Job JobType BananasCount))
+createBananasCountingJob :: NominalDiffTime -> Flow (Id (AnyJob SchedulerJobType))
 createBananasCountingJob scheduleIn = do
   now <- getCurrentTime
   bCount <- getRandomInRange (1, 10 :: Int)
-  Esq.runTransaction $
-    createJobIn scheduleIn $ makeTestJobEntry PrintBananasCount $ makeJobData now bCount
+  createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'PrintBananasCount $ makeJobData now bCount
   where
     makeJobData now_ bCount_ =
       BananasCount
@@ -83,19 +77,19 @@ createBananasCountingJob scheduleIn = do
           count = bCount_
         }
 
-bananasCounterHandler :: Job JobType BananasCount -> SchedulerT ExecutionResult
+bananasCounterHandler :: Job 'PrintBananasCount -> SchedulerT ExecutionResult
 bananasCounterHandler job = do
   logInfo "job of type 1 is being executed: printing job data"
   logPretty INFO "job data" job.jobData
   pure Complete
 
 -----------------
-createTimePrinterJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
-createTimePrinterJob scheduleIn =
-  Esq.runTransaction $
-    createJobIn scheduleIn $ makeTestJobEntry PrintCurrentTimeWithErrorProbability ()
 
-timePrinterHandler :: Job JobType () -> SchedulerT ExecutionResult
+createTimePrinterJob :: NominalDiffTime -> Flow (Id (AnyJob SchedulerJobType))
+createTimePrinterJob scheduleIn =
+  createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'PrintCurrentTimeWithErrorProbability ()
+
+timePrinterHandler :: Job 'PrintCurrentTimeWithErrorProbability -> SchedulerT ExecutionResult
 timePrinterHandler _ = do
   logInfo "job of type 2 is being executed: trying to print current time with some probability of an error"
   randomNum <- getRandomInRange (1 :: Int, 6)
@@ -107,46 +101,35 @@ timePrinterHandler _ = do
       pure Complete
 
 -----------------
-createFakeJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
+
+createFakeJob :: NominalDiffTime -> Flow (Id (AnyJob SchedulerJobType))
 createFakeJob scheduleIn =
-  Esq.runTransaction $
-    createJobIn scheduleIn $ makeTestJobEntry FakeJobType ()
+  createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'FakeJobType ()
 
 -----------------
-data IncorrectlySerializable = IncSer
-  { foo :: Int,
-    bar :: Text
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, PrettyShow)
-  deriving (FromJSON) via JSONfail IncorrectlySerializable
 
-newtype JSONfail a = JSONfail a
-
-instance FromJSON (JSONfail a) where
-  parseJSON _ = fail "fake fail"
-
-createIncorrectDataJob :: NominalDiffTime -> Flow (Id (Job JobType IncorrectlySerializable))
+createIncorrectDataJob :: NominalDiffTime -> Flow (Id (AnyJob SchedulerJobType))
 createIncorrectDataJob scheduleIn =
-  Esq.runTransaction $
-    createJobIn scheduleIn $ makeTestJobEntry IncorrectDataJobType val
+  createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'IncorrectDataJobType val
   where
     val = IncSer 2 "quux"
 
-incorrectDataJobHandler :: Job JobType IncorrectlySerializable -> SchedulerT ExecutionResult
+incorrectDataJobHandler :: Job 'IncorrectDataJobType -> SchedulerT ExecutionResult
 incorrectDataJobHandler _ = do
   logError "you shouldn't get here"
   pure Complete
 
 -----------------
-createTestTerminationJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
-createTestTerminationJob scheduleIn =
-  Esq.runTransaction $
-    createJobIn scheduleIn $ makeTestJobEntry TestTermination ()
 
-testTerminationHandler :: Job JobType () -> SchedulerT ExecutionResult
+createTestTerminationJob :: NominalDiffTime -> Flow (Id (AnyJob SchedulerJobType))
+createTestTerminationJob scheduleIn =
+  createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'TestTermination ()
+
+testTerminationHandler :: Job 'TestTermination -> SchedulerT ExecutionResult
 testTerminationHandler _ = flip C.catchAll (\_ -> pure Retry) $ do
   logDebug "before pause"
   threadDelaySec 10
   logDebug "after pause"
   pure Complete
+
+------------------

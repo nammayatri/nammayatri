@@ -263,6 +263,7 @@ updateArrival rideId = do
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
+
 data RideItem = RideItem
   { rideShortId :: ShortId Ride,
     rideDetails :: RideDetails,

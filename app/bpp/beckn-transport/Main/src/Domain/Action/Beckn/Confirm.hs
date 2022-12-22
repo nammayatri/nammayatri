@@ -22,7 +22,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RideRequest as RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.RiderDetails as SRD
-import SharedLogic.Schedule
+import SharedLogic.Scheduler
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -32,6 +32,7 @@ import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD
+import Storage.Queries.SchedulerJob (createScheduleRentalRideRequestJob)
 import Tools.Error
 import Tools.Metrics
 

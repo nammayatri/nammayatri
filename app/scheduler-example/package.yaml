@@ -66,6 +66,8 @@ dependencies:
   - esqueleto
   - template-haskell
   - exceptions
+  - singletons
+  - containers
 
 ghc-options:
   - -Wall
