@@ -29,8 +29,8 @@ let schedulerConfig =
 let PoolSortingType = < ByAcceptanceRatio | ByRandom >
 
 let driverPoolBatchesCfg =
-      { driverBatchSize = +5
-      , maxNumberOfBatches = +3
+      { driverBatchSize = +20
+      , maxNumberOfBatches = +1
       , poolSortingType = PoolSortingType.ByRandom
       }
 
@@ -42,5 +42,5 @@ in  { appCfg =
             }
     , schedulerConfig
     , driverPoolBatchesCfg
-    , singleBatchProcessTime = +10
+    , singleBatchProcessTime = +30
     }

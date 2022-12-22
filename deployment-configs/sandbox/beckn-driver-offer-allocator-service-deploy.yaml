@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: driver-offer-allocator-service-$DEPLOY_VARIANT-$BUILD_VERSION
+  name: beckn-driver-offer-allocator-service-$DEPLOY_VARIANT-$BUILD_VERSION
   namespace: atlas
   labels:
     version: $BUILD_VERSION
@@ -9,7 +9,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: driver-offer-allocator-service-$DEPLOY_VARIANT
+      app: beckn-driver-offer-allocator-service-$DEPLOY_VARIANT
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -20,7 +20,7 @@ spec:
       annotations:
         traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
       labels:
-        app: driver-offer-allocator-service-$DEPLOY_VARIANT
+        app: beckn-driver-offer-allocator-service-$DEPLOY_VARIANT
         version: $BUILD_VERSION
     spec:
       containers:
@@ -124,13 +124,13 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: driver-offer-allocator-service-$DEPLOY_VARIANT
+  name: beckn-driver-offer-allocator-service-$DEPLOY_VARIANT
   labels:
-    app: driver-offer-allocator-service-$DEPLOY_VARIANT
+    app: beckn-driver-offer-allocator-service-$DEPLOY_VARIANT
 spec:
   ports:
     - port: 8055
       targetPort: 8055
       name: transport-http
   selector:
-    app: driver-offer-allocator-service-$DEPLOY_VARIANT
+    app: beckn-driver-offer-allocator-service-$DEPLOY_VARIANT

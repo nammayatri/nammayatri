@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    version: $BUILD_VERSION
+  name: beckn-driver-offer-allocator-service-production-$BUILD_VERSION
+  namespace: atlas
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: beckn-driver-offer-allocator-service-production
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: beckn-driver-offer-allocator-service-production
+        version: $BUILD_VERSION
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-type
+                operator: In
+                values:
+                - generic-compute
+      containers:
+      - args:
+        - mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/*
+          /etc/beckn/. && echo "starting app server" && /opt/app/driver-offer-allocator-exe
+        command:
+        - /bin/bash
+        - -c
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: DRIVER_OFFER_ALLOCATOR_CONFIG_PATH
+          value: /etc/beckn/config/driver-offer-allocator.dhall
+        image: 147728078333.dkr.ecr.ap-south-1.amazonaws.com/beckn-uat:$BUILD_VERSION
+        imagePullPolicy: IfNotPresent
+        name: beckn-driver-offer-allocator-service-production
+        ports:
+        - containerPort: 8055
+          name: http-app
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 512Mi
+        securityContext:
+          privileged: false
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/local/beckn
+          name: fcm-key
+          readOnly: true
+        - mountPath: /tmp/dhall-configs
+          name: dhall-configs
+          readOnly: true
+        - mountPath: /tmp/dhall-secrets
+          name: dhall-secrets
+          readOnly: true
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "1"
+        - name: single-request-reopen
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 1337
+      terminationGracePeriodSeconds: 90
+      volumes:
+      - name: fcm-key
+        secret:
+          defaultMode: 420
+          secretName: beckn-fcm-key
+      - configMap:
+          defaultMode: 420
+          items:
+          - key: driver-offer-allocator.dhall
+            path: config/driver-offer-allocator.dhall
+          - key: driver-offer-bpp.dhall
+            path: config/driver-offer-bpp.dhall
+          - key: beckn-transport.dhall
+            path: config/beckn-transport.dhall
+          - key: common.dhall
+            path: config/common.dhall
+          - key: globalCommon.dhall
+            path: generic/common.dhall
+          name: beckn-dhall-config-production-pilot
+        name: dhall-configs
+      - name: dhall-secrets
+        secret:
+          defaultMode: 420
+          items:
+          - key: driver-offer-bpp.dhall
+            path: config/secrets/driver-offer-bpp.dhall
+          - key: beckn-transport.dhall
+            path: config/secrets/beckn-transport.dhall
+          - key: common.dhall
+            path: config/secrets/common.dhall
+          secretName: beckn-dhall-secret-production-pilot
+status: {}

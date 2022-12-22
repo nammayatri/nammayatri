@@ -57,7 +57,7 @@ let rcfg =
       { connectHost = "cache.primary.beckn.juspay.net"
       , connectPort = 6379
       , connectAuth = None Text
-      , connectDatabase = +1
+      , connectDatabase = +0
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = Some +100
@@ -90,13 +90,13 @@ let acceptanceWindowOptions =
       { period = +7, periodType = common.periodType.Days }
 
 let driverPoolCfg =
-      { minRadiusOfSearch = +1200
-      , maxRadiusOfSearch = +2700
+      { minRadiusOfSearch = +500
+      , maxRadiusOfSearch = +1500
       , radiusStepSize = +500
       , driverPositionInfoExpiry = Some +180
-      , actualDistanceThreshold = Some +2700
+      , actualDistanceThreshold = Some +1900
       , maxDriverQuotesRequired = +1
-      , driverQuoteLimit = +5
+      , driverQuoteLimit = +3
       }
 
 in  { esqDBCfg
