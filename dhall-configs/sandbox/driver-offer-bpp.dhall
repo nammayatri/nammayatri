@@ -97,6 +97,7 @@ let driverPoolCfg =
       , driverPositionInfoExpiry = None Integer
       , actualDistanceThreshold = Some +7000
       , maxDriverQuotesRequired = +1
+      , driverQuoteLimit = +5
       }
 
 in  { esqDBCfg

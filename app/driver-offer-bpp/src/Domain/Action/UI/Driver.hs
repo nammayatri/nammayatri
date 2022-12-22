@@ -69,7 +69,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
-import SharedLogic.DriverPool (incrementAcceptanceCount, DriverPoolConfig)
+import SharedLogic.DriverPool (DriverPoolConfig, incrementAcceptanceCount)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
@@ -603,7 +603,8 @@ respondQuote driverId req = do
         incrementAcceptanceCount driverId
         whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
         when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
-        whenM (quotesCountExceeded sReq) (throwError QuoteAlreadyRejected)
+        quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
+        whenM (quotesCountExceeded quoteCount) (throwError QuoteAlreadyRejected)
         farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
         whenJust mbOfferedFare $ \off ->
           unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
@@ -613,6 +614,7 @@ respondQuote driverId req = do
         Esq.runTransaction $ do
           QDrQt.create driverQuote
           QSRD.updateDriverResponse sReqFD.id req.response
+        whenM (quotesCountReached quoteCount) $ sendRemoveRideRequestNotification organization.id driverQuote
         sendDriverOffer organization sReq driverQuote
       Reject -> do
         Esq.runTransaction $ do
@@ -654,10 +656,17 @@ respondQuote driverId req = do
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
       logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
       pure $ not $ null activeQuotes
-    quotesCountExceeded sReq = do
-      quoteCount <- QDrQt.countAllByRequestId sReq.id
+    quotesCountExceeded quoteCount = do
       driverPoolCfg <- asks (.driverPoolCfg)
       pure $ quoteCount > (fromIntegral driverPoolCfg.driverQuoteLimit)
+    quotesCountReached quoteCount = do
+      driverPoolCfg <- asks (.driverPoolCfg)
+      pure $ quoteCount >= (fromIntegral driverPoolCfg.driverQuoteLimit)
+    sendRemoveRideRequestNotification orgId driverQuote = do
+      driverSearchReqs <- QSRD.findAllActiveWithoutRespByRequestId req.searchRequestId
+      for_ driverSearchReqs $ \driverReq -> do
+        driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
+        Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
 
 getStats ::
   (EsqDBReplicaFlow m r, EncFlow m r) =>

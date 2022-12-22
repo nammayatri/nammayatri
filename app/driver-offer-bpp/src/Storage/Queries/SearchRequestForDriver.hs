@@ -12,12 +12,23 @@ import Storage.Tabular.SearchRequestForDriver
 createMany :: [SearchRequestForDriver] -> SqlDB ()
 createMany = Esq.createMany
 
-findAllByRequestId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]
-findAllByRequestId searchReqId = do
+findAllActiveByRequestId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveByRequestId searchReqId = do
   Esq.findAll $ do
     sReq <- from $ table @SearchRequestForDriverT
     where_ $
       sReq ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
+        &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
+    pure sReq
+
+findAllActiveWithoutRespByRequestId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveWithoutRespByRequestId searchReqId = do
+  Esq.findAll $ do
+    sReq <- from $ table @SearchRequestForDriverT
+    where_ $
+      sReq ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
+        &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
+        &&. Esq.isNothing (sReq ^. SearchRequestForDriverResponse)
     pure sReq
 
 findByDriverAndSearchReq :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequestForDriver)

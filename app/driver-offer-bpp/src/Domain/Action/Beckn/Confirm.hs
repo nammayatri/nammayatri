@@ -91,7 +91,7 @@ handler subscriber transporterId req = do
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
   ride <- buildRide driver.id booking
   rideDetails <- buildRideDetails ride driver
-  driverSearchReqs <- QSRD.findAllByRequestId driverQuote.searchRequestId
+  driverSearchReqs <- QSRD.findAllActiveByRequestId driverQuote.searchRequestId
   Esq.runTransaction $ do
     when isNewRider $ QRD.create riderDetails
     QRB.updateRiderId booking.id riderDetails.id
