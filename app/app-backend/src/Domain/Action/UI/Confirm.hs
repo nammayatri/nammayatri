@@ -160,22 +160,16 @@ cancelBooking booking = do
   bookingCancellationReason <- buildBookingCancellationReason booking.id
   DB.runTransaction $ do
     QRideB.updateStatus booking.id DRB.CANCELLED
-    QBCR.create bookingCancellationReason
+    QBCR.upsert bookingCancellationReason
   Notify.notifyOnBookingCancelled booking DBCR.ByApplication
-
-buildBookingCancellationReason ::
-  MonadFlow m =>
-  Id DRB.Booking ->
-  m DBCR.BookingCancellationReason
-buildBookingCancellationReason bookingId = do
-  guid <- generateGUID
-  return
-    DBCR.BookingCancellationReason
-      { id = guid,
-        bookingId = bookingId,
-        rideId = Nothing,
-        source = DBCR.ByApplication,
-        reasonCode = Nothing,
-        reasonStage = Nothing,
-        additionalInfo = Nothing
-      }
+  where
+    buildBookingCancellationReason bookingId = do
+      return $
+        DBCR.BookingCancellationReason
+          { bookingId = bookingId,
+            rideId = Nothing,
+            source = DBCR.ByApplication,
+            reasonCode = Nothing,
+            reasonStage = Nothing,
+            additionalInfo = Nothing
+          }

@@ -297,7 +297,7 @@ cancelBooking bookingId reason = do
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
   Esq.runTransaction $ do
     QRB.updateStatus booking.id SRB.CANCELLED
-    QBCR.create reason
+    QBCR.upsert reason
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED
       QDriverInfo.updateOnRide (cast ride.driverId) False

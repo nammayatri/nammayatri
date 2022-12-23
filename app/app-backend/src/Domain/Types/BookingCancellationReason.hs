@@ -9,8 +9,7 @@ import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStag
 import Domain.Types.Ride (Ride)
 
 data BookingCancellationReason = BookingCancellationReason
-  { id :: Id BookingCancellationReason,
-    bookingId :: Id Booking,
+  { bookingId :: Id Booking,
     rideId :: Maybe (Id Ride),
     source :: CancellationSource,
     reasonCode :: Maybe CancellationReasonCode,

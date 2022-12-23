@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.booking_cancellation_reason DROP COLUMN id;
+ALTER TABLE atlas_driver_offer_bpp.booking_cancellation_reason ADD PRIMARY KEY (booking_id)

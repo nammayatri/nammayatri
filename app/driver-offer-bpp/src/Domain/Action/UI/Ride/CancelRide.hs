@@ -85,11 +85,9 @@ cancelRideHandler ServiceHandle {..} requestorId rideId req = do
       ride.status == DRide.NEW
     buildRideCancelationReason mbDriverId source ride = do
       let CancelRideReq {..} = req
-      guid <- generateGUID
       return $
         DBCR.BookingCancellationReason
-          { id = guid,
-            bookingId = ride.bookingId,
+          { bookingId = ride.bookingId,
             rideId = Just ride.id,
             source = source,
             reasonCode = Just reasonCode,

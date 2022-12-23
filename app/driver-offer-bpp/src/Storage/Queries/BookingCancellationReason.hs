@@ -27,17 +27,14 @@ findByRideBookingId rideBookingId =
     where_ $ rideBookingCancellationReason ^. BookingCancellationReasonBookingId ==. val (toKey rideBookingId)
     return rideBookingCancellationReason
 
-update :: BookingCancellationReason -> SqlDB ()
-update cancellationReason = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ BookingCancellationReasonId =. val (getId cancellationReason.id),
-        BookingCancellationReasonBookingId =. val (toKey cancellationReason.bookingId),
-        BookingCancellationReasonRideId =. val (toKey <$> cancellationReason.rideId),
-        BookingCancellationReasonSource =. val (cancellationReason.source),
-        BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
-        BookingCancellationReasonDriverId =. val (toKey <$> cancellationReason.driverId),
-        BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
-      ]
-    where_ $ tbl ^. BookingCancellationReasonId ==. val (getId cancellationReason.id)
+upsert :: BookingCancellationReason -> SqlDB ()
+upsert cancellationReason@BookingCancellationReason {..} =
+  Esq.upsert
+    cancellationReason
+    [ BookingCancellationReasonBookingId =. val (toKey cancellationReason.bookingId),
+      BookingCancellationReasonRideId =. val (toKey <$> cancellationReason.rideId),
+      BookingCancellationReasonSource =. val (cancellationReason.source),
+      BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
+      BookingCancellationReasonDriverId =. val (toKey <$> cancellationReason.driverId),
+      BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
+    ]

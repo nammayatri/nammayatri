@@ -69,7 +69,7 @@ cancelRideTransaction bookingId ride bookingCReason = do
     updateDriverInfo ride.driverId
     QRide.updateStatus ride.id SRide.CANCELLED
     QRB.updateStatus bookingId SRB.CANCELLED
-    QBCR.create bookingCReason
+    QBCR.upsert bookingCReason
   SRide.clearCache $ cast ride.driverId
   SDrLoc.clearDriverInfoCache $ cast ride.driverId
   where

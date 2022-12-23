@@ -9,7 +9,6 @@ module Storage.Tabular.BookingCancellationReason where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.BookingCancellationReason as Domain
 import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.CancellationReason (CancellationReasonTId)
@@ -22,28 +21,22 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     BookingCancellationReasonT sql=booking_cancellation_reason
-      id Text
       driverId PersonTId Maybe
       bookingId BookingTId
       rideId RideTId Maybe
       source Domain.CancellationSource
       reasonCode CancellationReasonTId Maybe
       additionalInfo Text Maybe
-      Primary id
+      Primary bookingId
+      UniqueBookingCancellationReasonBookingId bookingId
       deriving Generic
     |]
-
-instance TEntityKey BookingCancellationReasonT where
-  type DomainKey BookingCancellationReasonT = Id Domain.BookingCancellationReason
-  fromKey (BookingCancellationReasonTKey _id) = Id _id
-  toKey (Id id) = BookingCancellationReasonTKey id
 
 instance TType BookingCancellationReasonT Domain.BookingCancellationReason where
   fromTType BookingCancellationReasonT {..} = do
     return $
       Domain.BookingCancellationReason
-        { id = Id id,
-          bookingId = fromKey bookingId,
+        { bookingId = fromKey bookingId,
           rideId = fromKey <$> rideId,
           reasonCode = fromKey <$> reasonCode,
           driverId = fromKey <$> driverId,
@@ -51,8 +44,7 @@ instance TType BookingCancellationReasonT Domain.BookingCancellationReason where
         }
   toTType Domain.BookingCancellationReason {..} =
     BookingCancellationReasonT
-      { id = getId id,
-        driverId = toKey <$> driverId,
+      { driverId = toKey <$> driverId,
         bookingId = toKey bookingId,
         rideId = toKey <$> rideId,
         reasonCode = toKey <$> reasonCode,

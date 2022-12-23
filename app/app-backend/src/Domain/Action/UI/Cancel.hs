@@ -36,15 +36,14 @@ data CancelRes = CancelRes
 cancel :: (EncFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id Person.Person -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  when (booking.status == SRB.CANCELLED) $ throwError (BookingInvalidStatus "This booking is already cancelled")
   canCancelBooking <- isBookingCancellable booking
   unless canCancelBooking $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
-
-  duplicateCheck
-  bookingCancelationReason <- buildBookingCancelationReason
-  DB.runTransaction $ QBCR.create bookingCancelationReason
+  cancellationReason <- buildBookingCancelationReason
+  DB.runTransaction $ QBCR.upsert cancellationReason
   return $
     CancelRes
       { bppBookingId = bppBookingId,
@@ -53,13 +52,8 @@ cancel bookingId _ req = do
         cancellationSource = SBCR.ByUser
       }
   where
-    duplicateCheck = do
-      rideBookingCancelationM <- QBCR.findByRideBookingId bookingId
-      when (isJust rideBookingCancelationM) $
-        throwError $ InvalidRequest "This ride is already cancelled."
     buildBookingCancelationReason = do
       let CancelReq {..} = req
-      id <- generateGUID
       return $
         SBCR.BookingCancellationReason
           { bookingId = bookingId,

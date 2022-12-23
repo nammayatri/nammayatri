@@ -78,7 +78,7 @@ cancelRideTransaction bookingId ride bookingCReason = do
     updateDriverInfo ride.driverId
     QRide.updateStatus ride.id SRide.CANCELLED
     QRB.updateStatus bookingId SRB.CANCELLED
-    QBCR.create bookingCReason
+    QBCR.upsert bookingCReason
   SRide.clearCache $ cast ride.driverId
   SDrLoc.clearDriverInfoCache $ cast ride.driverId
   where
@@ -103,7 +103,7 @@ reallocateRideTransaction subscriberId bookingId ride bookingCReason = do
     QRB.increaseReallocationsCounter bookingId
     QRide.updateStatus ride.id SRide.CANCELLED
     updateDriverInfo
-    QBCR.create bookingCReason
+    QBCR.upsert bookingCReason
     RideRequest.create rideRequest
   SRide.clearCache $ cast ride.driverId
   SDrLoc.clearDriverInfoCache $ cast ride.driverId

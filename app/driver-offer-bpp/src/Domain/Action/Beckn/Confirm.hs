@@ -244,7 +244,7 @@ cancelBooking booking driver transporter = do
   bookingCancellationReason <- buildBookingCancellationReason booking.id driver.id mbRide
   Esq.runTransaction $ do
     QRB.updateStatus booking.id DRB.CANCELLED
-    QBCR.create bookingCancellationReason
+    QBCR.upsert bookingCancellationReason
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id DRide.CANCELLED
       QDriverInfo.updateOnRide (cast ride.driverId) False
@@ -253,22 +253,14 @@ cancelBooking booking driver transporter = do
   whenJust mbRide $ \_ ->
     fork "cancelRide - Notify driver" $ do
       Notify.notifyOnCancel transporter.id booking driver.id driver.deviceToken bookingCancellationReason.source
-
-buildBookingCancellationReason ::
-  MonadFlow m =>
-  Id DRB.Booking ->
-  Id DPerson.Person ->
-  Maybe DRide.Ride ->
-  m DBCR.BookingCancellationReason
-buildBookingCancellationReason bookingId driverId ride = do
-  guid <- generateGUID
-  return
-    DBCR.BookingCancellationReason
-      { id = guid,
-        driverId = Just driverId,
-        bookingId,
-        rideId = (.id) <$> ride,
-        source = DBCR.ByApplication,
-        reasonCode = Nothing,
-        additionalInfo = Nothing
-      }
+  where
+    buildBookingCancellationReason bookingId driverId ride = do
+      return $
+        DBCR.BookingCancellationReason
+          { driverId = Just driverId,
+            bookingId,
+            rideId = (.id) <$> ride,
+            source = DBCR.ByApplication,
+            reasonCode = Nothing,
+            additionalInfo = Nothing
+          }

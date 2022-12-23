@@ -19,3 +19,15 @@ findByRideBookingId rideBookingId =
     rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
     where_ $ rideBookingCancellationReason ^. BookingCancellationReasonBookingId ==. val (toKey rideBookingId)
     return rideBookingCancellationReason
+
+upsert :: BookingCancellationReason -> SqlDB ()
+upsert cancellationReason@BookingCancellationReason {..} =
+  Esq.upsert
+    cancellationReason
+    [ BookingCancellationReasonBookingId =. val (toKey cancellationReason.bookingId),
+      BookingCancellationReasonRideId =. val (toKey <$> cancellationReason.rideId),
+      BookingCancellationReasonSource =. val (cancellationReason.source),
+      BookingCancellationReasonReasonCode =. val (toKey <$> cancellationReason.reasonCode),
+      BookingCancellationReasonReasonStage =. val (cancellationReason.reasonStage),
+      BookingCancellationReasonAdditionalInfo =. val (cancellationReason.additionalInfo)
+    ]

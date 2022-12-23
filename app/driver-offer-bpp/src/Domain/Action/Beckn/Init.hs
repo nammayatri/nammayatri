@@ -62,30 +62,22 @@ cancelBooking booking transporterId = do
   bookingCancellationReason <- buildBookingCancellationReason
   transporter <- QM.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
   Esq.runTransaction $ do
+    QBCR.upsert bookingCancellationReason
     QRB.updateStatus booking.id DRB.CANCELLED
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
   pure Ack
   where
     buildBookingCancellationReason = do
-      rideBookingCancelationM <- QBCR.findByRideBookingId booking.id
-      let oldId = (.id) <$> rideBookingCancelationM
-      newId <- generateGUID
-      let guid = fromMaybe newId oldId
-      let cancellationReason =
-            DBCR.BookingCancellationReason
-              { id = guid,
-                driverId = Nothing,
-                bookingId = booking.id,
-                rideId = Nothing,
-                source = DBCR.ByApplication,
-                reasonCode = Nothing,
-                additionalInfo = Nothing
-              }
-      if isJust oldId
-        then Esq.runTransaction $ QBCR.update cancellationReason
-        else Esq.runTransaction $ QBCR.create cancellationReason
-      return cancellationReason
+      return $
+        DBCR.BookingCancellationReason
+          { driverId = Nothing,
+            bookingId = booking.id,
+            rideId = Nothing,
+            source = DBCR.ByApplication,
+            reasonCode = Nothing,
+            additionalInfo = Nothing
+          }
 
 handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
 handler merchantId req = do

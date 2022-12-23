@@ -181,7 +181,7 @@ onUpdate registryUrl BookingCancelledReq {..} = do
     QRB.updateStatus booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED
     unless (cancellationSource == SBCR.ByUser) $
-      QBCR.create bookingCancellationReason
+      QBCR.upsert bookingCancellationReason
   -- notify customer
   Notify.notifyOnBookingCancelled booking cancellationSource
   where
@@ -199,22 +199,20 @@ onUpdate registryUrl BookingReallocationReq {..} = do
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
     QRide.updateStatus ride.id SRide.CANCELLED
-    QBCR.create bookingCancellationReason
+    QBCR.upsert bookingCancellationReason
   -- notify customer
   Notify.notifyOnBookingReallocated booking
 
 buildBookingCancellationReason ::
-  MonadFlow m =>
+  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) =>
   Id SRB.Booking ->
   Maybe (Id SRide.Ride) ->
   SBCR.CancellationSource ->
   m SBCR.BookingCancellationReason
 buildBookingCancellationReason bookingId mbRideId cancellationSource = do
-  guid <- generateGUID
   return
     SBCR.BookingCancellationReason
-      { id = guid,
-        bookingId = bookingId,
+      { bookingId = bookingId,
         rideId = mbRideId,
         source = cancellationSource,
         reasonCode = Nothing,

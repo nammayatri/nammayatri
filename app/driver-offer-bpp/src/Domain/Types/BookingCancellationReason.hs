@@ -10,8 +10,7 @@ import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
 
 data BookingCancellationReason = BookingCancellationReason
-  { id :: Id BookingCancellationReason,
-    driverId :: Maybe (Id DP.Person),
+  { driverId :: Maybe (Id DP.Person),
     bookingId :: Id DRB.Booking,
     rideId :: Maybe (Id DRide.Ride),
     source :: CancellationSource,

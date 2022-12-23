@@ -105,7 +105,7 @@ data ServiceHandle m = ServiceHandle
     metrics :: AllocatorMetricsHandle m
   }
 
-process :: MonadHandler m => ServiceHandle m -> ShortId Subscriber -> Integer -> m Int
+process :: (MonadHandler m, EsqDBFlow m r) => ServiceHandle m -> ShortId Subscriber -> Integer -> m Int
 process handle@ServiceHandle {..} subscriberId requestsNum = do
   cleanedNotificationsCount <- cleanupOldNotifications
   when (cleanedNotificationsCount > 0) $ logInfo $ "Cleaned notifications count: " <> show cleanedNotificationsCount
@@ -116,7 +116,7 @@ process handle@ServiceHandle {..} subscriberId requestsNum = do
     $ traverse_ (processRequest handle subscriberId) rideRequests
   pure rideRequestsNum
 
-processRequest :: MonadHandler m => ServiceHandle m -> ShortId Subscriber -> RideRequest -> m ()
+processRequest :: (MonadHandler m, EsqDBFlow m r) => ServiceHandle m -> ShortId Subscriber -> RideRequest -> m ()
 processRequest handle@ServiceHandle {..} subscriberId rideRequest = do
   metrics.incrementTaskCounter subscriberId
   measuringDuration (\dur _ -> metrics.putTaskDuration subscriberId dur) $ do
@@ -178,7 +178,7 @@ processDriverResponse handle@ServiceHandle {..} response bookingId = do
     else logDriverNoLongerNotified bookingId response.driverId
 
 processAllocation ::
-  MonadHandler m =>
+  (MonadHandler m, EsqDBFlow m r) =>
   ServiceHandle m ->
   ShortId Subscriber ->
   SRB.Booking ->
@@ -231,7 +231,7 @@ processExpiration ServiceHandle {..} bookingId driverIds = do
   logDriverEvents DAllocEvent.MarkedAsIgnored bookingId driverIds
 
 proceedToNewDrivers ::
-  MonadHandler m =>
+  (MonadHandler m, EsqDBFlow m r) =>
   ServiceHandle m ->
   Id SRB.Booking ->
   ShortId Subscriber ->
@@ -284,26 +284,30 @@ checkRideLater ServiceHandle {..} subscriberId bookingId = do
   addAllocationRequest subscriberId bookingId
   logInfo "Check ride later"
 
-cancel :: MonadHandler m => ServiceHandle m -> Id SRB.Booking -> SBCR.CancellationSource -> Maybe AllocatorCancellationReason -> m ()
+cancel :: (MonadHandler m, EsqDBFlow m r) => ServiceHandle m -> Id SRB.Booking -> SBCR.CancellationSource -> Maybe AllocatorCancellationReason -> m ()
 cancel ServiceHandle {..} bookingId cancellationSource mbReasonCode = do
   logInfo "Cancelling ride"
-  bookingCancellationReason <- buildBookingCancellationReason
+  bookingCancellationReason <- buildBookingCancellationReason bookingId cancellationSource mbReasonCode
   cancelBooking bookingId bookingCancellationReason
   cleanupDriverPoolBatches bookingId
   cleanupNotifications bookingId
-  where
-    buildBookingCancellationReason = do
-      guid <- generateGUID
-      return
-        SBCR.BookingCancellationReason
-          { id = guid,
-            driverId = Nothing,
-            bookingId = bookingId,
-            rideId = Nothing,
-            source = cancellationSource,
-            reasonCode = SCR.CancellationReasonCode . encodeToText <$> mbReasonCode,
-            additionalInfo = Nothing
-          }
+
+buildBookingCancellationReason ::
+  (MonadHandler m, EsqDBFlow m r) =>
+  Id SRB.Booking ->
+  SBCR.CancellationSource ->
+  Maybe AllocatorCancellationReason ->
+  m SBCR.BookingCancellationReason
+buildBookingCancellationReason bookingId cancellationSource mbReasonCode = do
+  return
+    SBCR.BookingCancellationReason
+      { driverId = Nothing,
+        bookingId = bookingId,
+        rideId = Nothing,
+        source = cancellationSource,
+        reasonCode = SCR.CancellationReasonCode . encodeToText <$> mbReasonCode,
+        additionalInfo = Nothing
+      }
 
 isAllocationTimeFinished :: MonadHandler m => ServiceHandle m -> UTCTime -> UTCTime -> m Bool
 isAllocationTimeFinished ServiceHandle {..} currentTime orderTime = do

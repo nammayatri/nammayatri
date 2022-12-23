@@ -59,8 +59,8 @@ cancel transporterId _ req = do
   mbRide <- QRide.findActiveByRBId req.bookingId
   bookingCR <- buildBookingCancellationReason
   Esq.runTransaction $ do
+    QBCR.upsert bookingCR
     QRB.updateStatus booking.id SRB.CANCELLED
-    QBCR.create bookingCR
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED
       QDriverInfo.updateOnRide (cast ride.driverId) False
@@ -76,14 +76,13 @@ cancel transporterId _ req = do
       Notify.notifyOnCancel transporter.id booking driver.id driver.deviceToken bookingCR.source
   where
     buildBookingCancellationReason = do
-      guid <- generateGUID
-      return
+      return $
         DBCR.BookingCancellationReason
-          { id = guid,
-            driverId = Nothing,
-            bookingId = req.bookingId,
+          { bookingId = req.bookingId,
             rideId = Nothing,
             source = DBCR.ByUser,
             reasonCode = Nothing,
-            additionalInfo = Nothing
+            driverId = Nothing,
+            additionalInfo = Nothing,
+            ..
           }
