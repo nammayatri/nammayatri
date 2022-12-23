@@ -13,10 +13,10 @@ data Transaction = Transaction
   { id :: Id Transaction,
     personId :: Id DP.Person,
     merchantId :: Id DM.Merchant,
+    endpoint :: Endpoint, -- Text?
     commonDriverId :: Maybe (Id Common.Driver),
     commonRideId :: Maybe (Id Common.Ride),
-    endpoint :: Endpoint, -- Text?
-    request :: Text,
+    request :: Maybe Text,
     response :: Maybe Text,
     errorCode :: Maybe Text,
     createdAt :: UTCTime

@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Avoid lambda using `infix`" #-}
 module API.BPP.BecknTransport.Driver
   ( API,
     handler,
@@ -9,6 +6,7 @@ where
 
 import qualified BPPClient.BecknTransport as Client
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -16,8 +14,11 @@ import Beckn.Utils.Common (throwError, withFlowHandlerAPI)
 import Beckn.Utils.Validation (runRequestValidation)
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
+import qualified "lib-dashboard" Domain.Types.Transaction as DTransaction
 import "lib-dashboard" Environment
 import Servant hiding (throwError)
+import qualified SharedLogic.Transaction as Transaction
+import qualified "lib-dashboard" Storage.Queries.Transaction as QTransaction
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -101,7 +102,11 @@ driverActivity merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
 enableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 enableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callBecknTransportBPP checkedMerchantId (.drivers.enableDriver) driverId
+  success <- Client.callBecknTransportBPP checkedMerchantId (.drivers.enableDriver) driverId
+  transaction <- Transaction.buildTransaction apiTokenInfo driverId (DTransaction.DriverEndpoint Common.EnableDriverEndpoint) Nothing (Just "TODO")
+  Esq.runTransaction $
+    QTransaction.create transaction
+  pure success
 
 disableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 disableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do

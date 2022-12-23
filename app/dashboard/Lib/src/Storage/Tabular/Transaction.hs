@@ -26,7 +26,7 @@ mkPersist
       commonDriverId Text Maybe
       commonRideId Text Maybe
       endpoint Domain.Endpoint
-      request Text
+      request Text Maybe
       response Text Maybe
       errorCode Text Maybe
       createdAt UTCTime
