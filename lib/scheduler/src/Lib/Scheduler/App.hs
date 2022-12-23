@@ -75,15 +75,15 @@ runScheduler SchedulerConfig {..} handlersList = do
 runner :: (JobTypeConstraints t) => SchedulerM t ()
 runner = do
   iterSessionId <- generateGUIDText
+  before <- getCurrentTime
   withLogTag iterSessionId $ do
-    before <- getCurrentTime
     logInfo "Starting runner iteration"
     runnerIteration
-    after <- getCurrentTime
-    let diff = floor $ abs $ diffUTCTime after before
-    loopIntervalSec <- asks (.loopIntervalSec)
-    threadDelaySec (loopIntervalSec - diff)
-    runner
+  after <- getCurrentTime
+  let diff = floor $ abs $ diffUTCTime after before
+  loopIntervalSec <- asks (.loopIntervalSec)
+  threadDelaySec (loopIntervalSec - diff)
+  runner
 
 errorLogger :: (Log m, Show a) => a -> m ()
 errorLogger e = logError $ "error occured: " <> show e
