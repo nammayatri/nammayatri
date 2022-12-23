@@ -22,7 +22,7 @@ mkPersist
     TransactionT sql=transaction
       id Text
       personId PersonTId
-      merchantId MerchantTId
+      merchantId MerchantTId Maybe
       commonDriverId Text Maybe
       commonRideId Text Maybe
       endpoint Domain.Endpoint
@@ -45,7 +45,7 @@ instance TType TransactionT Domain.Transaction where
       Domain.Transaction
         { id = Id id,
           personId = fromKey personId,
-          merchantId = fromKey merchantId,
+          merchantId = fromKey <$> merchantId,
           commonDriverId = Id <$> commonDriverId,
           commonRideId = Id <$> commonRideId,
           ..
@@ -54,7 +54,7 @@ instance TType TransactionT Domain.Transaction where
     TransactionT
       { id = getId id,
         personId = toKey personId,
-        merchantId = toKey merchantId,
+        merchantId = toKey <$> merchantId,
         commonDriverId = getId <$> commonDriverId,
         commonRideId = getId <$> commonRideId,
         ..

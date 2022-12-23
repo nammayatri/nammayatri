@@ -22,7 +22,7 @@ buildTransaction apiTokenInfo commonDriverId endpoint request errorCode = do
     DTransaction.Transaction
       { id = uid,
         personId = apiTokenInfo.personId,
-        merchantId = apiTokenInfo.merchant.id,
+        merchantId = Just apiTokenInfo.merchant.id,
         commonDriverId = Just commonDriverId,
         commonRideId = Nothing,
         response = Nothing,

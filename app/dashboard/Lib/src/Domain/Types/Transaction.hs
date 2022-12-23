@@ -12,7 +12,7 @@ import qualified Domain.Types.Person as DP
 data Transaction = Transaction
   { id :: Id Transaction,
     personId :: Id DP.Person,
-    merchantId :: Id DM.Merchant,
+    merchantId :: Maybe (Id DM.Merchant), -- will be Nothing for admin apis
     endpoint :: Endpoint, -- Text?
     commonDriverId :: Maybe (Id Common.Driver),
     commonRideId :: Maybe (Id Common.Ride),
