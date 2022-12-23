@@ -33,5 +33,7 @@ sendSearchRequestToDrivers Job {id, jobData} = withLogTag ("JobId-" <> id.getId)
               { incrementTaskCounter = Metrics.incrementTaskCounter merchant.name,
                 incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter merchant.name,
                 putTaskDuration = Metrics.putTaskDuration merchant.name
-              }
+              },
+          setBatchDurationLock = I.setBatchDurationLock searchReq.id,
+          createRescheduleTime = I.createRescheduleTime
         }

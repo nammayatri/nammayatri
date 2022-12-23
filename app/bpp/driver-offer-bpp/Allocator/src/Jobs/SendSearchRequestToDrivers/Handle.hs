@@ -27,7 +27,9 @@ data Handle m = Handle
     cleanupDriverPoolBatches :: m (),
     sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> m (),
     getRescheduleTime :: m UTCTime,
-    metrics :: MetricsHandle m
+    metrics :: MetricsHandle m,
+    setBatchDurationLock :: m (Maybe UTCTime),
+    createRescheduleTime :: UTCTime -> m UTCTime
   }
 
 handler :: HandleMonad m => Handle m -> m ExecutionResult
@@ -55,19 +57,23 @@ handler h@Handle {..} = do
 
 processRequestSending :: HandleMonad m => Handle m -> m ExecutionResult
 processRequestSending Handle {..} = do
-  isBatchNumExceedLimit' <- isBatchNumExceedLimit
-  if isBatchNumExceedLimit'
-    then do
-      metrics.incrementFailedTaskCounter
-      logInfo "No driver accepted"
-      return Complete
-    else do
-      driverPool <- getNextDriverPoolBatch
-      if null driverPool
+  mLastProcTime <- setBatchDurationLock
+  case mLastProcTime of
+    Just lastProcTime -> ReSchedule <$> createRescheduleTime lastProcTime
+    Nothing -> do
+      isBatchNumExceedLimit' <- isBatchNumExceedLimit
+      if isBatchNumExceedLimit'
         then do
           metrics.incrementFailedTaskCounter
-          logInfo "No driver available"
+          logInfo "No driver accepted"
           return Complete
         else do
-          sendSearchRequestToDrivers driverPool
-          ReSchedule <$> getRescheduleTime
+          driverPool <- getNextDriverPoolBatch
+          if null driverPool
+            then do
+              metrics.incrementFailedTaskCounter
+              logInfo "No driver available"
+              return Complete
+            else do
+              sendSearchRequestToDrivers driverPool
+              ReSchedule <$> getRescheduleTime

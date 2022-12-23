@@ -2,11 +2,14 @@ module Jobs.SendSearchRequestToDrivers.Handle.Internal
   ( isRideAlreadyAssigned,
     getRescheduleTime,
     isReceivedMaxDriverQuotes,
+    setBatchDurationLock,
+    createRescheduleTime,
     module Reexport,
   )
 where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Hedis.Queries as Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.SearchRequest
@@ -30,3 +33,19 @@ getRescheduleTime = do
   now <- getCurrentTime
   singleBatchProcessTime <- fromIntegral <$> asks (.singleBatchProcessTime)
   return $ singleBatchProcessTime `addUTCTime` now
+
+setBatchDurationLock :: Id SearchRequest -> Flow (Maybe UTCTime)
+setBatchDurationLock searchRequestId = do
+  now <- getCurrentTime
+  singleBatchProcessTime <- fromIntegral <$> asks (.singleBatchProcessTime)
+  res <- Hedis.setNxExpire (getId searchRequestId) singleBatchProcessTime now
+  if not res
+    then do
+      lastProcTime <- Hedis.get (getId searchRequestId)
+      return lastProcTime
+    else return Nothing
+
+createRescheduleTime :: UTCTime -> Flow UTCTime
+createRescheduleTime lastProcTime = do
+  singleBatchProcessTime <- fromIntegral <$> asks (.singleBatchProcessTime)
+  return $ singleBatchProcessTime `addUTCTime` lastProcTime
