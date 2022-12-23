@@ -7,7 +7,7 @@ common_ride_id character(36),
 endpoint character varying(255) NOT NULL,
 request text,
 response text,
-error_code text, --character varying(255)
+response_error text,
 created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ,CONSTRAINT  idx_transaction_primary PRIMARY KEY (id)
 );

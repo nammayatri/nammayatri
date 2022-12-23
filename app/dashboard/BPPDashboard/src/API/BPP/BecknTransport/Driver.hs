@@ -6,8 +6,8 @@ where
 
 import qualified BPPClient.BecknTransport as Client
 import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.APISuccess (APISuccess)
+import Beckn.Types.APISuccess (APISuccess (..))
+import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common (throwError, withFlowHandlerAPI)
@@ -18,7 +18,6 @@ import qualified "lib-dashboard" Domain.Types.Transaction as DTransaction
 import "lib-dashboard" Environment
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as Transaction
-import qualified "lib-dashboard" Storage.Queries.Transaction as QTransaction
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -89,6 +88,18 @@ handler merchantId =
     :<|> updatePhoneNumber merchantId
     :<|> addVehicle merchantId
 
+buildTransaction ::
+  ( MonadFlow m,
+    ToJSON request
+  ) =>
+  Common.DriverEndpoint ->
+  ApiTokenInfo ->
+  Id Common.Driver ->
+  Maybe request ->
+  m DTransaction.Transaction
+buildTransaction endpoint =
+  Transaction.buildTransaction (DTransaction.DriverAPI endpoint)
+
 listDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
 listDriver merchantShortId apiTokenInfo mbLimit mbOffset verified enabled blocked phone = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
@@ -102,11 +113,9 @@ driverActivity merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
 enableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 enableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  success <- Client.callBecknTransportBPP checkedMerchantId (.drivers.enableDriver) driverId
-  transaction <- Transaction.buildTransaction apiTokenInfo driverId (DTransaction.DriverEndpoint Common.EnableDriverEndpoint) Nothing (Just "TODO")
-  Esq.runTransaction $
-    QTransaction.create transaction
-  pure success
+  transaction <- buildTransaction Common.EnableDriverEndpoint apiTokenInfo driverId Transaction.emptyRequest
+  Transaction.withTransactionStoring transaction $
+    Client.callBecknTransportBPP checkedMerchantId (.drivers.enableDriver) driverId
 
 disableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 disableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do

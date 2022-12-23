@@ -18,12 +18,12 @@ data Transaction = Transaction
     commonRideId :: Maybe (Id Common.Ride),
     request :: Maybe Text,
     response :: Maybe Text,
-    errorCode :: Maybe Text,
+    responseError :: Maybe Text,
     createdAt :: UTCTime
   }
 
 data Endpoint
-  = RideEndpoint Common.RideEndpoint
-  | DriverEndpoint Common.DriverEndpoint
-  | DriverRegistrationEndpoint Common.DriverRegistrationEndpoint
+  = RideAPI Common.RideEndpoint
+  | DriverAPI Common.DriverEndpoint
+  | DriverRegistrationAPI Common.DriverRegistrationEndpoint
   deriving (Show, Read)

@@ -28,7 +28,7 @@ mkPersist
       endpoint Domain.Endpoint
       request Text Maybe
       response Text Maybe
-      errorCode Text Maybe
+      responseError Text Maybe
       createdAt UTCTime
       Primary id
       deriving Generic
