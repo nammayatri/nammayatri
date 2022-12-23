@@ -11,9 +11,9 @@ import qualified Beckn.Utils.FlowLogging as L
 import Beckn.Utils.Servant.SignatureAuth
 import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
 import qualified EulerHS.Runtime as R
-import Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import qualified Storage.CachedQueries.Merchant as Storage
 
 runDriverOfferAllocator ::

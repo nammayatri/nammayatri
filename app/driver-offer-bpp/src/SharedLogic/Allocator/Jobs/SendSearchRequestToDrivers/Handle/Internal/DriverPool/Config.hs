@@ -1,4 +1,4 @@
-module Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   ( DriverPoolBatchesConfig (..),
     HasDriverPoolBatchesConfig,
     PoolSortingType (..),

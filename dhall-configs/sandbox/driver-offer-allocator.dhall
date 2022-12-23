@@ -26,14 +26,6 @@ let schedulerConfig =
       , graceTerminationPeriod = +10
       }
 
-let PoolSortingType = < ByAcceptanceRatio | ByRandom >
-
-let driverPoolBatchesCfg =
-      { driverBatchSize = +5
-      , maxNumberOfBatches = +3
-      , poolSortingType = PoolSortingType.ByRandom
-      }
-
 in  { appCfg =
             appCfg
         //  { loggerConfig =
@@ -41,6 +33,4 @@ in  { appCfg =
                 //  { logFilePath = "/tmp/driver-offer-allocator.log" }
             }
     , schedulerConfig
-    , driverPoolBatchesCfg
-    , singleBatchProcessTime = +10
     }

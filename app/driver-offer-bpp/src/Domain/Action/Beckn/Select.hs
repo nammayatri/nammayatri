@@ -15,14 +15,17 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant (Variant)
 import Environment
+import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
 import SharedLogic.Allocator
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.FareCalculator
 import SharedLogic.GoogleMaps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
+import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.SearchRequest as QSReq
-import Tools.Error (FarePolicyError (NoFarePolicy))
+import Tools.Error (FarePolicyError (NoFarePolicy), MerchantError (MerchantNotFound))
 import Tools.Maps as Maps
 
 data DSelectReq = DSelectReq
@@ -67,13 +70,23 @@ handler merchantId sReq = do
       <> show distance
       <> "; estimated base fare:"
       <> show baseFare
+  merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+
+  inTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
   Esq.runTransaction $ do
     QSReq.create searchReq
-    createAllocatorSendSearchRequestToDriverJob $
-      SendSearchRequestToDriverJobData
-        { requestId = searchReq.id,
-          baseFare = baseFare
-        }
+
+  res <- sendSearchRequestToDrivers' searchReq merchant baseFare
+
+  case res of
+    ReSchedule ut ->
+      Esq.runTransaction $ do
+        createAllocatorSendSearchRequestToDriverJob inTime $
+          SendSearchRequestToDriverJobData
+            { requestId = searchReq.id,
+              baseFare = baseFare
+            }
+    _ -> return ()
 
 buildSearchRequest ::
   ( MonadTime m,

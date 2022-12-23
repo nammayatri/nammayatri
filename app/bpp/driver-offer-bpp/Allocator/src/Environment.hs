@@ -23,9 +23,9 @@ import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.SignatureAuth
 import Data.String.Conversions (cs)
 import "driver-offer-bpp" Environment (AppCfg (..))
-import Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (DriverPoolBatchesConfig)
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import SharedLogic.Allocator (JobType (..))
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
 import SharedLogic.DriverPool (DriverPoolConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheConfig)
@@ -34,9 +34,7 @@ import Tools.Metrics
 
 data HandlerCfg = HandlerCfg
   { schedulerConfig :: SchedulerConfig JobType,
-    appCfg :: AppCfg,
-    driverPoolBatchesCfg :: DriverPoolBatchesConfig,
-    singleBatchProcessTime :: Seconds
+    appCfg :: AppCfg
   }
   deriving (Generic, FromDhall)
 
@@ -50,14 +48,13 @@ data HandlerEnv = HandlerEnv
     encTools :: EncTools,
     hedisEnv :: HedisEnv,
     cacheConfig :: CacheConfig,
-    driverPoolCfg :: DriverPoolConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
     acceptanceWindowOptions :: SlidingWindowOptions,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     coreMetrics :: CoreMetricsContainer,
-    driverPoolBatchesCfg :: DriverPoolBatchesConfig,
-    singleBatchProcessTime :: Seconds,
+    driverPoolCfg :: DriverPoolConfig,
+    sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer
   }
   deriving (Generic)

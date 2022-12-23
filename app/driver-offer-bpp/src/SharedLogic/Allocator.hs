@@ -17,10 +17,10 @@ data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
-createAllocatorSendSearchRequestToDriverJob :: SendSearchRequestToDriverJobData -> Esq.SqlDB ()
-createAllocatorSendSearchRequestToDriverJob jobData =
+createAllocatorSendSearchRequestToDriverJob :: NominalDiffTime -> SendSearchRequestToDriverJobData -> Esq.SqlDB ()
+createAllocatorSendSearchRequestToDriverJob inTime jobData = do
   void $
-    createJobIn 0 $
+    createJobIn inTime $
       JobEntry
         { jobType = SendSearchRequestToDriver,
           jobData = jobData,

@@ -99,6 +99,19 @@ let driverPoolCfg =
       , driverQuoteLimit = +3
       }
 
+let PoolSortingType = < ByAcceptanceRatio | ByRandom >
+
+let driverPoolBatchesCfg =
+      { driverBatchSize = +20
+      , maxNumberOfBatches = +1
+      , poolSortingType = PoolSortingType.ByRandom
+      }
+
+let sendSearchRequestJobCfg =
+      { driverPoolBatchesCfg = driverPoolBatchesCfg
+      , singleBatchProcessTime = +30
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -149,4 +162,5 @@ in  { esqDBCfg
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , cacheTranslationConfig
     , driverPoolCfg
+    , sendSearchRequestJobCfg = sendSearchRequestJobCfg
     }

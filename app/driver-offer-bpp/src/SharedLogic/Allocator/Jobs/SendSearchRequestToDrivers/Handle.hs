@@ -1,4 +1,4 @@
-module Jobs.SendSearchRequestToDrivers.Handle
+module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
   ( HandleMonad,
     Handle (..),
     MetricsHandle (..),

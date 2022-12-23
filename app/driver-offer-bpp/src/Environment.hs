@@ -26,11 +26,12 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Idfy.Types.IdfyConfig as Idfy
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
 import SharedLogic.DriverPool (DriverPoolConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
-import Tools.Metrics.ARDUBPPMetrics
+import Tools.Metrics
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -78,7 +79,8 @@ data AppCfg = AppCfg
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
     cacheTranslationConfig :: CacheTranslationConfig,
-    driverPoolCfg :: DriverPoolConfig
+    driverPoolCfg :: DriverPoolConfig,
+    sendSearchRequestJobCfg :: SendSearchRequestJobConfig
   }
   deriving (Generic, FromDhall)
 
@@ -114,6 +116,7 @@ data AppEnv = AppEnv
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     bppMetrics :: BPPMetricsContainer,
+    ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     searchRequestExpirationSeconds :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
@@ -129,7 +132,8 @@ data AppEnv = AppEnv
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
     cacheTranslationConfig :: CacheTranslationConfig,
-    driverPoolCfg :: DriverPoolConfig
+    driverPoolCfg :: DriverPoolConfig,
+    sendSearchRequestJobCfg :: SendSearchRequestJobConfig
   }
   deriving (Generic)
 
@@ -162,6 +166,7 @@ buildAppEnv cfg@AppCfg {..} = do
   let modifierFunc = ("driver-offer-bpp:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
+  ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds

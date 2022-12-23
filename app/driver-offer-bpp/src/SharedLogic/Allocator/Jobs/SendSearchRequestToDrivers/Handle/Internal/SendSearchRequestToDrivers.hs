@@ -1,4 +1,4 @@
-module Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
+module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
   ( sendSearchRequestToDrivers,
   )
 where
@@ -7,13 +7,14 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
+import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Common (addUTCTime, logInfo)
 import qualified Data.Map as M
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
-import Environment
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheFlow)
@@ -23,7 +24,18 @@ import qualified Tools.Notifications as Notify
 
 type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 
-sendSearchRequestToDrivers :: DSR.SearchRequest -> Money -> [DriverPoolWithActualDistResult] -> Flow ()
+sendSearchRequestToDrivers ::
+  ( Log m,
+    EsqDBFlow m r,
+    TranslateFlow m r,
+    CacheFlow m r,
+    HasSendSearchRequestJobConfig r,
+    HasField "acceptanceWindowOptions" r SWC.SlidingWindowOptions
+  ) =>
+  DSR.SearchRequest ->
+  Money ->
+  [DriverPoolWithActualDistResult] ->
+  m ()
 sendSearchRequestToDrivers searchReq baseFare driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
@@ -40,10 +52,9 @@ sendSearchRequestToDrivers searchReq baseFare driverPool = do
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq
     Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where
-    getSearchRequestValidTill :: Flow UTCTime
     getSearchRequestValidTill = do
       now <- getCurrentTime
-      singleBatchProcessTime <- fromIntegral <$> asks (.singleBatchProcessTime)
+      singleBatchProcessTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
       return $ singleBatchProcessTime `addUTCTime` now
     buildSearchRequestForDriver ::
       (MonadFlow m) =>
