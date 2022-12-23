@@ -55,6 +55,7 @@ dependencies:
 - text
 - time
 - aeson
+- random
 - exceptions
 - containers
 - transformers

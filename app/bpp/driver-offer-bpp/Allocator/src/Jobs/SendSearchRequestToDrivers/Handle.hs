@@ -32,6 +32,7 @@ data Handle m = Handle
 
 handler :: HandleMonad m => Handle m -> m ExecutionResult
 handler h@Handle {..} = do
+  logInfo "Starting job execution"
   metrics.incrementTaskCounter
   measuringDuration (\ms _ -> metrics.putTaskDuration ms) $ do
     isRideAssigned <- isRideAlreadyAssigned

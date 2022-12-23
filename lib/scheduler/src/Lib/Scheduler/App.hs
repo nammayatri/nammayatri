@@ -30,6 +30,7 @@ import qualified Lib.Scheduler.Storage.Queries as Q
 import Lib.Scheduler.Types
 import Servant (Context (EmptyContext))
 import System.Exit
+import qualified System.Random as R
 import UnliftIO
 
 runScheduler ::
@@ -54,6 +55,8 @@ runScheduler SchedulerConfig {..} handlersList = do
 
   Metrics.serve metricsPort
   let serverStartAction = runner
+  randSecDelayBeforeStart <- Seconds <$> R.randomRIO (0, loopIntervalSec.getSeconds)
+  threadDelaySec randSecDelayBeforeStart -- to make runners start out_of_sync to reduce probability of picking same tasks.
   withAsync (runSchedulerM schedulerEnv serverStartAction) $ \schedulerAction ->
     runServerGeneric
       schedulerEnv
@@ -71,13 +74,16 @@ runScheduler SchedulerConfig {..} handlersList = do
 
 runner :: (JobTypeConstraints t) => SchedulerM t ()
 runner = do
-  before <- getCurrentTime
-  runnerIteration
-  after <- getCurrentTime
-  let diff = floor $ abs $ diffUTCTime after before
-  loopIntervalSec <- asks (.loopIntervalSec)
-  threadDelaySec (loopIntervalSec - diff)
-  runner
+  iterSessionId <- generateGUIDText
+  withLogTag iterSessionId $ do
+    before <- getCurrentTime
+    logInfo "Starting runner iteration"
+    runnerIteration
+    after <- getCurrentTime
+    let diff = floor $ abs $ diffUTCTime after before
+    loopIntervalSec <- asks (.loopIntervalSec)
+    threadDelaySec (loopIntervalSec - diff)
+    runner
 
 errorLogger :: (Log m, Show a) => a -> m ()
 errorLogger e = logError $ "error occured: " <> show e
@@ -86,9 +92,12 @@ runnerIteration :: (JobTypeConstraints t) => SchedulerM t ()
 runnerIteration = do
   jobType <- asks (.jobType)
   readyTasks <- getReadyTasks jobType
+  logTagDebug "All Tasks - Count" . show $ length readyTasks
+  logTagDebug "All Tasks" . show $ map (.id) readyTasks
   tasksPerIteration <- asks (.tasksPerIteration)
   availableReadyTasksIds <- pickTasks tasksPerIteration $ map (.id) readyTasks
-  logPretty DEBUG "available tasks" availableReadyTasksIds
+  logTagDebug "Available tasks - Count" . show $ length availableReadyTasksIds
+  logTagDebug "Available tasks" . show $ availableReadyTasksIds
   takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
   terminationMVar <- newEmptyMVar
   let inspectTermination = modifyMVarMasked_ terminationMVar pure
@@ -192,12 +201,18 @@ executeTask rawJob = do
           logFailJob rawJob description
           pure $ Terminate description
         Just (JobHandler handlerFunc_) -> do
-          let job = setJobType decJobType rawJob
-          withJobDataDecoded job $ liftIO . handlerFunc_
+          latestState <- Q.findById rawJob.id
+          if (latestState <&> (.scheduledAt)) > (Just rawJob.scheduledAt) || (latestState <&> (.status)) /= Just Pending
+            then pure DuplicateExecution
+            else do
+              let job = setJobType decJobType rawJob
+              withJobDataDecoded job $ liftIO . handlerFunc_
 
 registerExecutionResult :: Job t0 Text -> ExecutionResult -> SchedulerM t ()
 registerExecutionResult job result =
   case result of
+    DuplicateExecution -> do
+      logInfo $ "job id " <> show (job.id) <> " already executed "
     Complete -> do
       logInfo $ "job successfully completed on try " <> show (job.currErrors + 1)
       markAsComplete job.id
