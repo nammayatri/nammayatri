@@ -11,6 +11,7 @@ import Beckn.External.Maps.Types
 import qualified Beckn.External.Slack.Flow as SF
 import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
@@ -56,8 +57,9 @@ buildUpdateLocationHandle ::
   Flow (UpdateLocationHandle Flow)
 buildUpdateLocationHandle driverId = do
   driver <-
-    QP.findById driverId
-      >>= fromMaybeM (PersonNotFound driverId.getId)
+    runInReplica $
+      QP.findById driverId
+        >>= fromMaybeM (PersonNotFound driverId.getId)
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
   pure $
     UpdateLocationHandle
