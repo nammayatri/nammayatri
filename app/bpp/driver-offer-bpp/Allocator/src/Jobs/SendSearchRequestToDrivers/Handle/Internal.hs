@@ -40,9 +40,7 @@ setBatchDurationLock searchRequestId = do
   singleBatchProcessTime <- fromIntegral <$> asks (.singleBatchProcessTime)
   res <- Hedis.setNxExpire (getId searchRequestId) singleBatchProcessTime now
   if not res
-    then do
-      lastProcTime <- Hedis.get (getId searchRequestId)
-      return lastProcTime
+    then do Hedis.get (getId searchRequestId)
     else return Nothing
 
 createRescheduleTime :: UTCTime -> Flow UTCTime
