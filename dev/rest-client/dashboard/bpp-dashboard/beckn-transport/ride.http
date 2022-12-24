@@ -24,6 +24,51 @@ token: {{customer_service}}
 
 ###
 
+# @name rideStart
+
+@ride1Id = 2b0910b7-acef-454f-8004-ef4b098e4366
+
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/ride/{{ride1Id}}/start
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "point": {
+            "lon": 76.308364,
+            "lat": 10.025263
+    }
+}
+
+###
+
+# @name rideEnd
+
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/ride/{{ride1Id}}/end
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "point": {
+            "lon": 76.318364,
+            "lat": 10.025263
+    }
+}
+
+###
+
+# @name rideCancel
+
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/ride/{{ride1Id}}/cancel
+content-type: application/json
+token: {{customer_service}}
+
+{
+  "reasonCode": "OTHER",
+  "additionalInfo": "driver is too skinny"
+}
+
+###
+
 # @name rideInfo
 
 @rideId = {{rideList.response.body.rides[0].rideId}}

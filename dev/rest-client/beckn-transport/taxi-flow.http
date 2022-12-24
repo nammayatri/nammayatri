@@ -69,7 +69,6 @@ token: {{token}}
 }
 
 ###
-###
 
 # @name searchRoute2
 POST {{app-host}}/rideSearch

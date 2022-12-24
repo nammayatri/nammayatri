@@ -30,7 +30,9 @@ Content-Type: application/json
 @encodedFile = {{encodeFile.response.body.base64}}
 #@driverId = favorit-hatchback-000000000000000000
 @driverId = favorit-sedan-0000000000000000000000
+
 ###
+
 # @name uploadDoc
 @docType = DriverLicense
 #@docType = VehicleRegistrationCertificate
@@ -53,6 +55,7 @@ token: {{juspay_admin}}
 
 
 ###
+
 @imageId = {{getDocs.response.body.driverLicense[0]}}
 #@imageId = {{getDocs.response.body.vehicleRegistrationCertificate[0]}}
 

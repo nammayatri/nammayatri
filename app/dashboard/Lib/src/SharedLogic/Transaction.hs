@@ -3,9 +3,11 @@ module SharedLogic.Transaction where
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common (encodeToText, throwError)
 import qualified "dashboard-bpp-helper-api" Dashboard.Common as Common
+import qualified Data.Text as Text
 import qualified Domain.Types.Transaction as DT
 import qualified Storage.Queries.Transaction as QT
 import Tools.Auth
@@ -16,6 +18,13 @@ emptyRequest = Nothing
 
 emptyResponse :: Maybe ()
 emptyResponse = Nothing
+
+-- we need to validate id length to avoid internal error while storing transaction
+validateId :: (Log m, MonadThrow m) => Maybe (Id domain) -> Text -> m ()
+validateId Nothing _ = pure ()
+validateId (Just someId) domainName =
+  unless (Text.length someId.getId == 36) $
+    throwError . InvalidRequest $ domainName <> "Id should have length 36"
 
 buildTransaction ::
   ( MonadFlow m,
@@ -30,6 +39,8 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo commonDriverId commonRideId request = do
   uid <- generateGUID
   now <- getCurrentTime
+  validateId commonDriverId "driver"
+  validateId commonRideId "ride"
   pure
     DT.Transaction
       { id = uid,
