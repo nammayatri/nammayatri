@@ -1,6 +1,6 @@
 CREATE TABLE atlas_bpp_dashboard.transaction (
 id character(36) NOT NULL,
-person_id character(36) REFERENCES atlas_bpp_dashboard.person (id) NOT NULL,
+requestor_id character(36) REFERENCES atlas_bpp_dashboard.person (id) NOT NULL,
 merchant_id character(36) REFERENCES atlas_bpp_dashboard.merchant (id),
 common_driver_id character(36),
 common_ride_id character(36),

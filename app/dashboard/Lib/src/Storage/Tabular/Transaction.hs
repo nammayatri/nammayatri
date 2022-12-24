@@ -21,7 +21,7 @@ mkPersist
   [defaultQQ|
     TransactionT sql=transaction
       id Text
-      personId PersonTId
+      requestorId PersonTId
       merchantId MerchantTId Maybe
       commonDriverId Text Maybe
       commonRideId Text Maybe
@@ -44,7 +44,7 @@ instance TType TransactionT Domain.Transaction where
     return $
       Domain.Transaction
         { id = Id id,
-          personId = fromKey personId,
+          requestorId = fromKey requestorId,
           merchantId = fromKey <$> merchantId,
           commonDriverId = Id <$> commonDriverId,
           commonRideId = Id <$> commonRideId,
@@ -53,7 +53,7 @@ instance TType TransactionT Domain.Transaction where
   toTType Domain.Transaction {..} =
     TransactionT
       { id = getId id,
-        personId = toKey personId,
+        requestorId = toKey requestorId,
         merchantId = toKey <$> merchantId,
         commonDriverId = getId <$> commonDriverId,
         commonRideId = getId <$> commonRideId,

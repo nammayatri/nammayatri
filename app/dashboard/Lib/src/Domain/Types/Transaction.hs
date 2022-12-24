@@ -11,7 +11,7 @@ import qualified Domain.Types.Person as DP
 -- request is raw Text here, because if some field will be changed, we can't parse it
 data Transaction = Transaction
   { id :: Id Transaction,
-    personId :: Id DP.Person,
+    requestorId :: Id DP.Person,
     merchantId :: Maybe (Id DM.Merchant), -- will be Nothing for admin apis
     endpoint :: Endpoint, -- Text?
     commonDriverId :: Maybe (Id Common.Driver),

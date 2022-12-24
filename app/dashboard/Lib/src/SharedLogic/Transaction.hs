@@ -44,7 +44,7 @@ buildTransaction endpoint apiTokenInfo commonDriverId commonRideId request = do
   pure
     DT.Transaction
       { id = uid,
-        personId = apiTokenInfo.personId,
+        requestorId = apiTokenInfo.personId,
         merchantId = Just apiTokenInfo.merchant.id,
         request = encodeToText <$> request,
         response = Nothing,
