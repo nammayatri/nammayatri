@@ -71,6 +71,11 @@ data UploadDocumentReq = UploadDocumentReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+newtype UploadDocumentTransactionReq = UploadDocumentTransactionReq
+  { imageType :: DocumentType
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
 newtype UploadDocumentResp = UploadDocumentResp
   { imageId :: Id Image
   }

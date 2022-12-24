@@ -47,4 +47,6 @@ updateCustomer ::
   FlowHandler Text
 updateCustomer merchantShortId apiTokenInfo customerId req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  -- transaction <- buildTransaction Common.UpdateCustomerEndpoint apiTokenInfo customerId (Just req)
+  -- T.withTransactionStoring transaction $
   Client.callAppBackendBAP checkedMerchantId (.customers.customerUpdate) customerId req

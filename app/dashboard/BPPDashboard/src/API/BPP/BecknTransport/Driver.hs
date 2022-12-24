@@ -7,17 +7,17 @@ where
 import qualified BPPClient.BecknTransport as Client
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess (..))
-import Beckn.Types.Common
+-- import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Utils.Common (throwError, withFlowHandlerAPI)
+import Beckn.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
 import Beckn.Utils.Validation (runRequestValidation)
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "lib-dashboard" Domain.Types.Transaction as DTransaction
+import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Servant hiding (throwError)
-import qualified SharedLogic.Transaction as Transaction
+import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -96,9 +96,9 @@ buildTransaction ::
   ApiTokenInfo ->
   Id Common.Driver ->
   Maybe request ->
-  m DTransaction.Transaction
-buildTransaction endpoint =
-  Transaction.buildTransaction (DTransaction.DriverAPI endpoint)
+  m DT.Transaction
+buildTransaction endpoint apiTokenInfo driverId =
+  T.buildTransaction (DT.DriverAPI endpoint) apiTokenInfo (Just driverId) Nothing
 
 listDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
 listDriver merchantShortId apiTokenInfo mbLimit mbOffset verified enabled blocked phone = withFlowHandlerAPI $ do
@@ -113,14 +113,16 @@ driverActivity merchantShortId apiTokenInfo = withFlowHandlerAPI $ do
 enableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 enableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  transaction <- buildTransaction Common.EnableDriverEndpoint apiTokenInfo driverId Transaction.emptyRequest
-  Transaction.withTransactionStoring transaction $
+  transaction <- buildTransaction Common.EnableDriverEndpoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
     Client.callBecknTransportBPP checkedMerchantId (.drivers.enableDriver) driverId
 
 disableDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 disableDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callBecknTransportBPP checkedMerchantId (.drivers.disableDriver) driverId
+  transaction <- buildTransaction Common.DisableDriverEndpoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callBecknTransportBPP checkedMerchantId (.drivers.disableDriver) driverId
 
 driverLocation :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
 driverLocation merchantShortId apiTokenInfo mbLimit mbOffset req = withFlowHandlerAPI $ do
@@ -137,21 +139,29 @@ driverInfo merchantShortId apiTokenInfo mbMobileNumber mbVehicleNumber = withFlo
 deleteDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 deleteDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callBecknTransportBPP checkedMerchantId (.drivers.deleteDriver) driverId
+  transaction <- buildTransaction Common.DeleteDriverEndpoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callBecknTransportBPP checkedMerchantId (.drivers.deleteDriver) driverId
 
 unlinkVehicle :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 unlinkVehicle merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callBecknTransportBPP checkedMerchantId (.drivers.unlinkVehicle) driverId
+  transaction <- buildTransaction Common.UnlinkVehicleEndpoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callBecknTransportBPP checkedMerchantId (.drivers.unlinkVehicle) driverId
 
 updatePhoneNumber :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> FlowHandler APISuccess
 updatePhoneNumber merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateUpdatePhoneNumberReq req
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callBecknTransportBPP checkedMerchantId (.drivers.updatePhoneNumber) driverId req
+  transaction <- buildTransaction Common.UpdatePhoneNumberEndpoint apiTokenInfo driverId $ Just req
+  T.withTransactionStoring transaction $
+    Client.callBecknTransportBPP checkedMerchantId (.drivers.updatePhoneNumber) driverId req
 
 addVehicle :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicle merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
   runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callBecknTransportBPP checkedMerchantId (.drivers.addVehicle) driverId req
+  transaction <- buildTransaction Common.AddVehicleEndpoint apiTokenInfo driverId $ Just req
+  T.withTransactionStoring transaction $
+    Client.callBecknTransportBPP checkedMerchantId (.drivers.addVehicle) driverId req
