@@ -49,7 +49,7 @@ confirm personId quoteId =
     dConfirmRes <- DConfirm.confirm personId quoteId
     becknInitReq <- ACL.buildInitReq dConfirmRes
     handle (\(_ :: BecknAPICallError) -> DConfirm.cancelBooking dConfirmRes.booking) $
-      void $ CallBPP.init dConfirmRes.providerUrl becknInitReq
+      void $ withRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
     return $
       ConfirmRes
         { bookingId = dConfirmRes.booking.id

@@ -25,7 +25,7 @@ onInit (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . wit
   whenJust mbDOnInitReq $ \onInitReq ->
     Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $ do
       onInitRes <- DOnInit.onInit registryUrl onInitReq
-      void . CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
+      void $ withRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
   pure Ack
 
 onInitLockKey :: Text -> Text
