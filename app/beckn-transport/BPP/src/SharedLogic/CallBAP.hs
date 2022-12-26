@@ -39,6 +39,7 @@ sendRideAssignedUpdateToBAP ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
+    HasHttpClientOptions r c,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -62,6 +63,7 @@ sendRideStartedUpdateToBAP ::
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -81,6 +83,7 @@ sendRideCompletedUpdateToBAP ::
     HedisFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -99,6 +102,7 @@ sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -114,6 +118,7 @@ sendBookingReallocationUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -129,6 +134,7 @@ sendBookingReallocationUpdateToBAP booking rideId transporter reallocationSource
 callOnUpdate ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
     CoreMetrics m
   ) =>
   DM.Merchant ->
@@ -143,7 +149,7 @@ callOnUpdate transporter booking content = do
   bppUri <- buildBppUrl transporter.id
   msgId <- generateGUID
   context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just bppSubscriberId) (Just bppUri)
-  void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
+  void $ withRetry $ void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

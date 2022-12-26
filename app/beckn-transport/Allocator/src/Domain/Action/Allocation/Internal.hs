@@ -282,6 +282,7 @@ cancelBooking ::
     CacheFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
     CoreMetrics m
   ) =>
   Id SRB.Booking ->
