@@ -64,6 +64,7 @@ handler ::
     EsqDBFlow m r,
     HedisFlow m r,
     HasPrettyLogger m r,
+    HasHttpClientOptions r c,
     EncFlow m r,
     CoreMetrics m,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
@@ -225,6 +226,7 @@ cancelBooking ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m,
+    HasHttpClientOptions r c,
     HasCacheConfig r
   ) =>
   DRB.Booking ->

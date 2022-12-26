@@ -28,6 +28,7 @@ cancelRideImpl ::
     EsqDBFlow m r,
     EncFlow m r,
     HedisFlow m r,
+    HasHttpClientOptions r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>

@@ -45,7 +45,8 @@ import Tools.Metrics (CoreMetrics)
 
 callOnSelect ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
+    CoreMetrics m,
+    HasHttpClientOptions r c
   ) =>
   DM.Merchant ->
   DSR.SearchRequest ->
@@ -60,11 +61,12 @@ callOnSelect transporter searchRequest content = do
   let msgId = searchRequest.messageId
   context <- buildTaxiContext Context.ON_SELECT msgId Nothing bapId bapUri (Just bppSubscriberId) (Just bppUri)
   logDebug $ "on_select request bpp: " <> show content
-  void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
+  void $ withRetry $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
 
 callOnUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
+    CoreMetrics m,
+    HasHttpClientOptions r c
   ) =>
   DM.Merchant ->
   DRB.Booking ->
@@ -78,10 +80,11 @@ callOnUpdate transporter booking content = do
   bppUri <- buildBppUrl (transporter.id)
   msgId <- generateGUID
   context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just bppSubscriberId) (Just bppUri)
-  void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
+  void $ withRetry $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 callOnConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
     CoreMetrics m
   ) =>
   DM.Merchant ->
@@ -96,7 +99,7 @@ callOnConfirm transporter contextFromConfirm content = do
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl transporter.id
   context_ <- buildTaxiContext Context.ON_CONFIRM msgId Nothing bapId bapUri (Just bppSubscriberId) (Just bppUri)
-  void $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
+  void $ withRetry $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
@@ -111,6 +114,7 @@ sendRideAssignedUpdateToBAP ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     EncFlow m r,
+    HasHttpClientOptions r c,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -132,6 +136,7 @@ sendRideStartedUpdateToBAP ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     EncFlow m r,
+    HasHttpClientOptions r c,
     HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -152,6 +157,7 @@ sendRideCompletedUpdateToBAP ::
     EsqDBFlow m r,
     EncFlow m r,
     HedisFlow m r,
+    HasHttpClientOptions r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -172,6 +178,7 @@ sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
     CoreMetrics m
   ) =>
   DRB.Booking ->
@@ -185,6 +192,7 @@ sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
     CoreMetrics m,
     HasPrettyLogger m r
   ) =>
