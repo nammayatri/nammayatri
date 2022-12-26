@@ -7,6 +7,7 @@ module App.Scheduler where
 
 import Beckn.Mock.App (MockM, runMock)
 import Beckn.Prelude
+import Beckn.Randomizer
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.Id
@@ -17,7 +18,6 @@ import Beckn.Utils.IOLogging (LoggerEnv, prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
 import Environment (Flow)
 import Lib.Scheduler
-import System.Random
 
 runExampleScheduler :: (SchedulerConfig JobType -> SchedulerConfig JobType) -> IO ()
 runExampleScheduler configModifier = do
@@ -73,7 +73,7 @@ data BananasCount = BananasCount
 createBananasCountingJob :: NominalDiffTime -> Flow (Id (Job JobType BananasCount))
 createBananasCountingJob scheduleIn = do
   now <- getCurrentTime
-  bCount <- liftIO $ randomRIO (1, 10 :: Int)
+  bCount <- getRandomInRange (1, 10 :: Int)
   Esq.runTransaction $
     createJobIn scheduleIn $ makeTestJobEntry PrintBananasCount $ makeJobData now bCount
   where
@@ -98,7 +98,7 @@ createTimePrinterJob scheduleIn =
 timePrinterHandler :: Job JobType () -> SchedulerT ExecutionResult
 timePrinterHandler _ = do
   logInfo "job of type 2 is being executed: trying to print current time with some probability of an error"
-  randomNum <- liftIO $ randomRIO (1 :: Int, 6)
+  randomNum <- getRandomInRange (1 :: Int, 6)
   if randomNum >= 3
     then throwError $ InternalError "Time printing error"
     else do

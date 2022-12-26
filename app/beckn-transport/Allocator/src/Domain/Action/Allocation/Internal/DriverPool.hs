@@ -6,6 +6,7 @@ module Domain.Action.Allocation.Internal.DriverPool
 where
 
 import Beckn.Prelude
+import Beckn.Randomizer (randomizeList)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -140,8 +141,8 @@ prepareDriverPoolBatch bookingId batchNum = withLogTag ("BatchNum-" <> show batc
       batches <- forM [0 .. (batchNum - 1)] \num -> do
         getDriverPoolBatch bookingId num
       return $ (.driverId) <$> concat batches
-    sortFunction driverPool =
-      return driverPool -- it's random order by default
+    sortFunction =
+      randomizeList
 
 getDriverPoolBatch ::
   ( Redis.HedisFlow m r

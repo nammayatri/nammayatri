@@ -2,6 +2,7 @@ module API where
 
 import Beckn.External.Maps as Maps
 import Beckn.Prelude
+import Beckn.Randomizer
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Error.Throwing
@@ -9,7 +10,6 @@ import qualified Data.List.NonEmpty as NE
 import Lib.LocationUpdates as API
 import Lib.LocationUpdates.Internal as I
 import Routes
-import System.Random
 import Test.Tasty.Hspec
 import Utils
 
@@ -22,7 +22,7 @@ apiSpec :: AppEnv -> MapsServiceConfig -> Spec
 apiSpec appEnv config =
   after_ (resetRedis appEnv testDriverId) $
     describe "Testing location-updates lib API" $ do
-      randomSuffix <- runIO $ randomRIO (100, 999 :: Int)
+      randomSuffix <- runIO $ getRandomInRange (100, 999 :: Int)
       let typeSuffix =
             case config of
               GoogleConfig _ -> "google"

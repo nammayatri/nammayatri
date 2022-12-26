@@ -1,14 +1,14 @@
 module Types.Webhook where
 
+import Beckn.Randomizer
 import Beckn.Utils.Time
 import EulerHS.Prelude
 import Idfy.Types.Request
 import Idfy.Types.Response
-import System.Random
 
 buildSuccessRC :: (MonadIO m) => RCVerificationRequest -> Text -> UTCTime -> m VerificationResponse
 buildSuccessRC IdfyRequest {..} request_id now = do
-  idNumberRnd <- ("KA-" <>) . show <$> liftIO (randomRIO (10000000, 99999999 :: Int))
+  idNumberRnd <- ("KA-" <>) . show <$> getRandomInRange (10000000, 99999999 :: Int)
   let result =
         RCVerificationOutput
           { avg_gross_vehicle_weight = Nothing,
@@ -89,7 +89,7 @@ buildSuccessRC IdfyRequest {..} request_id now = do
 
 buildSuccessDL :: MonadIO m => DLVerificationRequest -> Text -> UTCTime -> m VerificationResponse
 buildSuccessDL IdfyRequest {..} request_id now = do
-  idNumberRnd <- ("MH-" <>) . show <$> liftIO (randomRIO (10000000, 99999999 :: Int))
+  idNumberRnd <- ("MH-" <>) . show <$> getRandomInRange (10000000, 99999999 :: Int)
   let result =
         DLVerificationOutput
           { address = Just "Address as available on Gov. Source",

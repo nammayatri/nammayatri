@@ -1,8 +1,8 @@
 module API.Beckn.Confirm (API, handler) where
 
 import Beckn.Prelude
-import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import Beckn.Types.Error

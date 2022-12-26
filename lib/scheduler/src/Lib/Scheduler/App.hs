@@ -6,6 +6,7 @@ module Lib.Scheduler.App
 where
 
 import Beckn.Prelude hiding (mask, throwIO)
+import Beckn.Randomizer
 import Beckn.Storage.Esqueleto
 import Beckn.Storage.Esqueleto.Config (prepareEsqDBEnv)
 import Beckn.Storage.Hedis (connectHedis)
@@ -30,7 +31,6 @@ import qualified Lib.Scheduler.Storage.Queries as Q
 import Lib.Scheduler.Types
 import Servant (Context (EmptyContext))
 import System.Exit
-import qualified System.Random as R
 import UnliftIO
 
 runScheduler ::
@@ -55,7 +55,7 @@ runScheduler SchedulerConfig {..} handlersList = do
 
   Metrics.serve metricsPort
   let serverStartAction = runner
-  randSecDelayBeforeStart <- Seconds <$> R.randomRIO (0, loopIntervalSec.getSeconds)
+  randSecDelayBeforeStart <- Seconds <$> getRandomInRange (0, loopIntervalSec.getSeconds)
   threadDelaySec randSecDelayBeforeStart -- to make runners start out_of_sync to reduce probability of picking same tasks.
   withAsync (runSchedulerM schedulerEnv serverStartAction) $ \schedulerAction ->
     runServerGeneric

@@ -6,6 +6,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
   )
 where
 
+import Beckn.Randomizer (randomizeList)
 import Beckn.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
@@ -149,12 +150,11 @@ intelligentPoolSelection dp =
             =<< mapM (\dPoolRes -> (,dPoolRes) <$> getLatestAcceptanceRatio dPoolRes.driverPoolResult.driverId) dp
         )
 
---TODO: Create proper module to randomize things
 randomizeAndLimitSelection ::
   (MonadFlow m) =>
   [DriverPoolWithActualDistResult] ->
   m [DriverPoolWithActualDistResult]
-randomizeAndLimitSelection = return -- randomized from db side
+randomizeAndLimitSelection = randomizeList
 
 poolBatchNumKey :: Id DSR.SearchRequest -> Text
 poolBatchNumKey searchReqId = "Driver-Offer:Allocator:PoolBatchNum:SearchReqId-" <> searchReqId.getId

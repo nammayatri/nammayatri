@@ -11,8 +11,8 @@ import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as SDrLoc
-import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB

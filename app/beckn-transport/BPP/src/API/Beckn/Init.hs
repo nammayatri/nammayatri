@@ -1,7 +1,7 @@
 module API.Beckn.Init (API, handler) where
 
-import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Prelude
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Init as API
@@ -44,9 +44,9 @@ initImpl transporterId (SignatureAuthResult _ subscriber _) req =
       dInitRes <- DInit.init transporterId dInitReq
       let cancelReq = makeCancelReq dInitRes.booking.id
       void . handle (errHandler cancelReq) $
-          withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
-              -- there should be DOnInit.onInit, but it is empty anyway
-            pure $ ACL.mkOnInitMessage dInitRes
+        withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
+          -- there should be DOnInit.onInit, but it is empty anyway
+          pure $ ACL.mkOnInitMessage dInitRes
       return ()
     pure Ack
   where

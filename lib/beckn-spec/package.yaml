@@ -126,7 +126,6 @@ dependencies:
   - hedis
   - transformers
   - extra
-  - random
   - hw-kafka-client
 
 ghc-options:

@@ -44,21 +44,21 @@ confirm transporterId (SignatureAuthResult _ subscriber _) req =
       dConfirmRes <- DConfirm.confirm transporterId subscriber dConfirmReq
       let cancelReq = makeCancelReq dConfirmRes.booking.id
       void . handle (errHandler cancelReq) $
-          withCallback dConfirmRes.transporter Context.CONFIRM OnConfirm.onConfirmAPI context context.bap_uri $
-            -- there should be DOnConfirm.onConfirm, but it is empty anyway
-            pure $ ACL.mkOnConfirmMessage dConfirmRes
+        withCallback dConfirmRes.transporter Context.CONFIRM OnConfirm.onConfirmAPI context context.bap_uri $
+          -- there should be DOnConfirm.onConfirm, but it is empty anyway
+          pure $ ACL.mkOnConfirmMessage dConfirmRes
       return ()
     pure Ack
-    where
-      errHandler cancelReq exc
-        | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancel transporterId cancelReq
-        | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancel transporterId cancelReq
-        | otherwise = throwM exc
-      
-      makeCancelReq bookingId =
-        CancelReq
-          { bookingId = bookingId
-          }
+  where
+    errHandler cancelReq exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancel transporterId cancelReq
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancel transporterId cancelReq
+      | otherwise = throwM exc
+
+    makeCancelReq bookingId =
+      CancelReq
+        { bookingId = bookingId
+        }
 
 confirmLockKey :: Text -> Text
 confirmLockKey id = "Driver:Confirm:BookingId-" <> id
