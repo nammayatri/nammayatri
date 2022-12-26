@@ -1,5 +1,6 @@
 module API.Beckn.Search (API, handler) where
 
+import qualified Beckn.Storage.Hedis as Redis
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as API
@@ -15,7 +16,7 @@ import qualified Domain.Action.Beckn.Search as DSearch
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
 import Environment
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant
 
 type API =
@@ -36,10 +37,16 @@ search ::
 search transporterId (SignatureAuthResult _ subscriber _) (SignatureAuthResult _ gateway _) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     dSearchReq <- ACL.buildSearchReq subscriber req
-    DSearch.DSearchRes {..} <- DSearch.search transporterId dSearchReq
-    let context = req.context
-    let callbackUrl = gateway.subscriber_url
-    let transactionId = dSearchReq.transactionId
-    withCallback' withRetry transporter Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
-      dOnSearchRes <- DOnSearch.onSearch (DOnSearch.DOnSearchReq {..})
-      pure $ ACL.mkOnSearchMessage dOnSearchRes
+    Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId) 60 $ do
+      DSearch.DSearchRes {..} <- DSearch.search transporterId dSearchReq
+      let context = req.context
+      let callbackUrl = gateway.subscriber_url
+      let transactionId = dSearchReq.transactionId
+      void $
+        withCallback' withRetry transporter Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
+          dOnSearchRes <- DOnSearch.onSearch (DOnSearch.DOnSearchReq {..})
+          pure $ ACL.mkOnSearchMessage dOnSearchRes
+    return Ack
+
+searchLockKey :: Text -> Text
+searchLockKey id = "Driver:Search:MessageId-" <> id

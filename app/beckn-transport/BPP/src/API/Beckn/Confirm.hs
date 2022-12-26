@@ -1,5 +1,6 @@
 module API.Beckn.Confirm (API, handler) where
 
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Confirm as API
@@ -15,7 +16,7 @@ import qualified Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
 import Environment
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant
 
 type API =
@@ -35,8 +36,14 @@ confirm transporterId (SignatureAuthResult _ subscriber _) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "confirm API Flow" "Reached"
     dConfirmReq <- ACL.buildConfirmReq subscriber req
-    let context = req.context
-    dConfirmRes <- DConfirm.confirm transporterId subscriber dConfirmReq
-    withCallback dConfirmRes.transporter Context.CONFIRM OnConfirm.onConfirmAPI context context.bap_uri $
-      -- there should be DOnConfirm.onConfirm, but it is empty anyway
-      pure $ ACL.mkOnConfirmMessage dConfirmRes
+    Redis.whenWithLockRedis (confirmLockKey dConfirmReq.bookingId.getId) 60 $ do
+      let context = req.context
+      dConfirmRes <- DConfirm.confirm transporterId subscriber dConfirmReq
+      void $
+        withCallback dConfirmRes.transporter Context.CONFIRM OnConfirm.onConfirmAPI context context.bap_uri $
+          -- there should be DOnConfirm.onConfirm, but it is empty anyway
+          pure $ ACL.mkOnConfirmMessage dConfirmRes
+    return Ack
+
+confirmLockKey :: Text -> Text
+confirmLockKey id = "Driver:Confirm:BookingId-" <> id

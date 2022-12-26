@@ -1,5 +1,6 @@
 module API.Beckn.Init (API, handler) where
 
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Init as API
@@ -15,7 +16,7 @@ import qualified Domain.Action.Beckn.Init as DInit
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
 import Environment
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant
 
 type API =
@@ -34,8 +35,14 @@ initImpl ::
 initImpl transporterId (SignatureAuthResult _ subscriber _) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     dInitReq <- ACL.buildInitReq subscriber req
-    let context = req.context
-    dInitRes <- DInit.init transporterId dInitReq
-    withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
-      -- there should be DOnInit.onInit, but it is empty anyway
-      pure $ ACL.mkOnInitMessage dInitRes
+    Redis.whenWithLockRedis (initLockKey dInitReq.transactionId) 60 $ do
+      let context = req.context
+      dInitRes <- DInit.init transporterId dInitReq
+      void $
+        withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
+          -- there should be DOnInit.onInit, but it is empty anyway
+          pure $ ACL.mkOnInitMessage dInitRes
+    return Ack
+
+initLockKey :: Text -> Text
+initLockKey id = "Driver:Init:TransactionId-" <> id

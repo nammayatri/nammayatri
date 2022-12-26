@@ -1,5 +1,6 @@
 module API.Beckn.Cancel (API, handler) where
 
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
@@ -11,7 +12,7 @@ import qualified Domain.Action.Beckn.Cancel as DCancel
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DM
 import Environment
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant
 
 type API =
@@ -30,6 +31,10 @@ cancel ::
 cancel transporterId subscriber req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Cancel API Flow" "Reached"
-    dConfirmReq <- ACL.buildCancelReq req
-    DCancel.cancel transporterId subscriber dConfirmReq
+    dCancelReq <- ACL.buildCancelReq req
+    Redis.whenWithLockRedis (cancelLockKey dCancelReq.bookingId.getId) 60 $
+      DCancel.cancel transporterId subscriber dCancelReq
     return Ack
+
+cancelLockKey :: Text -> Text
+cancelLockKey id = "Driver:Cancel:BookingId-" <> id
