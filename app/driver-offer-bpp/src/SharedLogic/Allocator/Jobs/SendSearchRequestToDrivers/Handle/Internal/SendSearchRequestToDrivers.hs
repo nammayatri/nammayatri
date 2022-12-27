@@ -41,7 +41,7 @@ sendSearchRequestToDrivers ::
 sendSearchRequestToDrivers searchReq driverMinExtraFee driverMaxExtraFee baseFare driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare driverMinExtraFee driverMaxExtraFee) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   Esq.runTransaction $ do
     QSRD.setInactiveByRequestId searchReq.id -- inactive previous request by drivers so that they can make new offers.
