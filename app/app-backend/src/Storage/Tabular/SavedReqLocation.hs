@@ -28,6 +28,7 @@ mkPersist
       building Text Maybe
       areaCode Text Maybe
       area Text Maybe
+      placeId Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       tag  Text

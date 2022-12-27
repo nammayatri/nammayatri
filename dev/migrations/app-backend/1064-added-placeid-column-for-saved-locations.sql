@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.saved_location ADD COLUMN place_id  varchar (255) NULL;
