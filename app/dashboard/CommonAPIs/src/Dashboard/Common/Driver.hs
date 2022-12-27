@@ -22,6 +22,8 @@ import Servant
 data DriverEndpoint
   = EnableDriverEndpoint
   | DisableDriverEndpoint
+  | BlockDriverEndpoint
+  | UnblockDriverEndpoint
   | DeleteDriverEndpoint
   | UnlinkVehicleEndpoint
   | UpdatePhoneNumberEndpoint
@@ -198,6 +200,22 @@ type EnableDriverAPI =
 type DisableDriverAPI =
   Capture "driverId" (Id Driver)
     :> "disable"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- block driver ----------------------------------------
+
+type BlockDriverAPI =
+  Capture "driverId" (Id Driver)
+    :> "block"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- unblock driver ---------------------------------------
+
+type UnblockDriverAPI =
+  Capture "driverId" (Id Driver)
+    :> "unblock"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------

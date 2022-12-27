@@ -68,6 +68,17 @@ updateEnabledState driverId isEnabled = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+updateBlockedState :: Id Driver -> Bool -> SqlDB ()
+updateBlockedState driverId isBlocked = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationBlocked =. val isBlocked,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
 updateEnabledStateReturningIds :: EsqDBFlow m r => Id Merchant -> [Id Driver] -> Bool -> m [Id Driver]
 updateEnabledStateReturningIds merchantId driverIds isEnabled = do
   Esq.runTransaction $ do

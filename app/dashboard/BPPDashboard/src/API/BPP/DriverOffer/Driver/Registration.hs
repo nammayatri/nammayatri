@@ -11,7 +11,7 @@ import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Servant
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth
+import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =

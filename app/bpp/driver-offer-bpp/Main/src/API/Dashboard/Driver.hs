@@ -18,6 +18,8 @@ type API =
            :<|> Common.DriverActivityAPI
            :<|> Common.EnableDriverAPI
            :<|> Common.DisableDriverAPI
+           :<|> Common.BlockDriverAPI
+           :<|> Common.UnblockDriverAPI
            :<|> Common.DriverLocationAPI
            :<|> Common.DriverInfoAPI
            :<|> Common.DeleteDriverAPI
@@ -35,6 +37,8 @@ handler merchantId =
     :<|> driverActivity merchantId
     :<|> enableDriver merchantId
     :<|> disableDriver merchantId
+    :<|> blockDriver merchantId
+    :<|> unblockDriver merchantId
     :<|> driverLocation merchantId
     :<|> driverInfo merchantId
     :<|> deleteDriver merchantId
@@ -59,6 +63,12 @@ enableDriver merchantShortId = withFlowHandlerAPI . DDriver.enableDriver merchan
 
 disableDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 disableDriver merchantShortId = withFlowHandlerAPI . DDriver.disableDriver merchantShortId
+
+blockDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+blockDriver merchantShortId = withFlowHandlerAPI . DDriver.blockDriver merchantShortId
+
+unblockDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+unblockDriver merchantShortId = withFlowHandlerAPI . DDriver.unblockDriver merchantShortId
 
 driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
 driverLocation merchantShortId mbLimit mbOffset = withFlowHandlerAPI . DDriver.driverLocation merchantShortId mbLimit mbOffset

@@ -32,6 +32,8 @@ data DriversAPIs = DriversAPIs
     driverActivity :: Euler.EulerClient Common.DriverActivityRes,
     enableDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
     disableDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
+    blockDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
+    unblockDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
     driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> Euler.EulerClient Common.DriverLocationRes,
     driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Common.DriverInfoRes,
     deleteDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
@@ -62,6 +64,8 @@ mkBecknTransportAPIs merchantId token = do
       :<|> driverActivity
       :<|> enableDriver
       :<|> disableDriver
+      :<|> blockDriver
+      :<|> unblockDriver
       :<|> driverLocation
       :<|> driverInfo
       :<|> deleteDriver

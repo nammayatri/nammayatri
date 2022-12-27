@@ -4,6 +4,8 @@ module Domain.Action.Dashboard.Driver
     driverActivity,
     enableDriver,
     disableDriver,
+    blockDriver,
+    unblockDriver,
     driverLocation,
     driverInfo,
     deleteDriver,
@@ -204,6 +206,44 @@ disableDriver merchantShortId reqDriverId = do
   pure Success
 
 ---------------------------------------------------------------------
+---------------------------------------------------------------------
+blockDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+blockDriver merchantShortId reqDriverId = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  let merchantId = driver.merchantId
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  Esq.runTransaction $ QDriverInfo.updateBlockedState driverId True
+  logTagInfo "dashboard -> blockDriver : " (show personId)
+  pure Success
+
+---------------------------------------------------------------------
+unblockDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+unblockDriver merchantShortId reqDriverId = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+  driver <-
+    QPerson.findById personId
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  let merchantId = driver.merchantId
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  Esq.runTransaction $ QDriverInfo.updateBlockedState driverId False
+  logTagInfo "dashboard -> unblockDriver : " (show personId)
+  pure Success
+
 driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> Flow Common.DriverLocationRes
 driverLocation merchantShortId mbLimit mbOffset req = do
   merchant <- findMerchantByShortId merchantShortId
