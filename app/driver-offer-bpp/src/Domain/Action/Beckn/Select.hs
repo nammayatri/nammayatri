@@ -77,8 +77,7 @@ handler merchantId sReq = do
   Esq.runTransaction $ do
     QSReq.create searchReq
 
-  res <- sendSearchRequestToDrivers' searchReq merchant baseFare
-
+  res <- sendSearchRequestToDrivers' searchReq merchant baseFare driverExtraFare.minFee driverExtraFare.maxFee
   case res of
     ReSchedule ut ->
       Esq.runTransaction $ do
