@@ -110,3 +110,15 @@ content-type: application/json
     "make" : "make",
     "driverName" : "Krishna"
 }
+
+###
+
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/{{driverId1}}/updateName
+token: {{juspay_admin}}
+content-type: application/json
+
+{
+    "firstName" : "John",
+    "middleName" : "Winston",
+    "lastName" : "Lennon"
+}

@@ -34,6 +34,7 @@ type API =
            :<|> UnlinkVehicleAPI
            :<|> UpdatePhoneNumberAPI
            :<|> AddVehicleAPI
+           :<|> UpdateDriverNameAPI
            :<|> Reg.API
        )
 
@@ -81,6 +82,10 @@ type AddVehicleAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
     :> Common.AddVehicleAPI
 
+type UpdateDriverNameAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+    :> Common.UpdateDriverNameAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   driverDocuments merchantId
@@ -94,6 +99,7 @@ handler merchantId =
     :<|> unlinkVehicle merchantId
     :<|> updatePhoneNumber merchantId
     :<|> addVehicle merchantId
+    :<|> updateDriverName merchantId
     :<|> Reg.handler merchantId
 
 buildTransaction ::
@@ -178,3 +184,11 @@ addVehicle merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.AddVehicleEndpoint apiTokenInfo driverId $ Just req
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.addVehicle) driverId req
+
+updateDriverName :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
+updateDriverName merchantShortId apiTokenInfo driverId req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateUpdateDriverNameReq req
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.UpdateDriverNameEndpoint apiTokenInfo driverId $ Just req
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.updateDriverName) driverId req

@@ -9,6 +9,7 @@ module Domain.Action.Dashboard.Driver
     unlinkVehicle,
     updatePhoneNumber,
     addVehicle,
+    updateDriverName,
   )
 where
 
@@ -20,6 +21,7 @@ import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Validation (runRequestValidation)
+import Control.Applicative ((<|>))
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
 import Data.Aeson (eitherDecode)
 import Data.Coerce
@@ -380,3 +382,29 @@ buildVehicle merchantId personId req = do
 
     castEnergyType :: Text -> Either Text DVeh.EnergyType
     castEnergyType = mapLeft show . eitherDecode . show
+
+---------------------------------------------------------------------
+updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> Flow APISuccess
+updateDriverName merchantShortId reqDriverId req = do
+  runRequestValidation Common.validateUpdateDriverNameReq req
+  merchant <- findMerchantByShortId merchantShortId
+
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+  driver <-
+    Esq.runInReplica (QPerson.findById personId)
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  let updDriver =
+        driver{firstName = req.firstName,
+               middleName = req.middleName <|> driver.middleName,
+               lastName = req.lastName <|> driver.lastName
+              }
+
+  Esq.runTransaction $ do
+    QPerson.updatePersonRec personId updDriver
+
+  logTagInfo "dashboard -> updateDriverName : " (show personId)
+  pure Success

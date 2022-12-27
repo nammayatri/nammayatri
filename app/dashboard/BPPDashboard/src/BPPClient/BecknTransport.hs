@@ -37,7 +37,8 @@ data DriversAPIs = DriversAPIs
     deleteDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
     unlinkVehicle :: Id Common.Driver -> Euler.EulerClient APISuccess,
     updatePhoneNumber :: Id Common.Driver -> Common.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
-    addVehicle :: Id Common.Driver -> Common.AddVehicleReq -> Euler.EulerClient APISuccess
+    addVehicle :: Id Common.Driver -> Common.AddVehicleReq -> Euler.EulerClient APISuccess,
+    updateDriverName :: Id Common.Driver -> Common.UpdateDriverNameReq -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
@@ -66,7 +67,8 @@ mkBecknTransportAPIs merchantId token = do
       :<|> deleteDriver
       :<|> unlinkVehicle
       :<|> updatePhoneNumber
-      :<|> addVehicle = driversClient
+      :<|> addVehicle
+      :<|> updateDriverName = driversClient
 
     rideList
       :<|> rideStart

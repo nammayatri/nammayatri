@@ -24,6 +24,7 @@ type API =
            :<|> Common.UnlinkVehicleAPI
            :<|> Common.UpdatePhoneNumberAPI
            :<|> Common.AddVehicleAPI
+           :<|> Common.UpdateDriverNameAPI
            :<|> Reg.API
        )
 
@@ -40,6 +41,7 @@ handler merchantId =
     :<|> unlinkVehicle merchantId
     :<|> updatePhoneNumber merchantId
     :<|> addVehicle merchantId
+    :<|> updateDriverName merchantId
     :<|> Reg.handler merchantId
 
 driverDocumentsInfo :: ShortId DM.Merchant -> FlowHandler Common.DriverDocumentsInfoRes
@@ -75,3 +77,6 @@ updatePhoneNumber merchantShortId driverId = withFlowHandlerAPI . DDriver.update
 
 addVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicle merchantShortId driverId = withFlowHandlerAPI . DDriver.addVehicle merchantShortId driverId
+
+updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
+updateDriverName merchantShortId driverId = withFlowHandlerAPI . DDriver.updateDriverName merchantShortId driverId

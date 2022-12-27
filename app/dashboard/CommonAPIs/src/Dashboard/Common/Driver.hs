@@ -26,6 +26,7 @@ data DriverEndpoint
   | UnlinkVehicleEndpoint
   | UpdatePhoneNumberEndpoint
   | AddVehicleEndpoint
+  | UpdateDriverNameEndpoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"
@@ -337,4 +338,28 @@ validateAddVehicleReq AddVehicleReq {..} =
     [ validateField "color" colour $ NotEmpty `And` P.name,
       validateField "registrationNo" registrationNo $
         LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
+    ]
+
+---------------------------------------------------------
+-- update driver name -----------------------------------
+
+type UpdateDriverNameAPI =
+  Capture "driverId" (Id Driver)
+    :> "updateName"
+    :> ReqBody '[JSON] UpdateDriverNameReq
+    :> Post '[JSON] APISuccess
+
+data UpdateDriverNameReq = UpdateDriverNameReq
+  { firstName :: Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+validateUpdateDriverNameReq :: Validate UpdateDriverNameReq
+validateUpdateDriverNameReq UpdateDriverNameReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
+      validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name
     ]

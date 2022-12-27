@@ -22,6 +22,7 @@ type API =
            :<|> Common.UnlinkVehicleAPI
            :<|> Common.UpdatePhoneNumberAPI
            :<|> Common.AddVehicleAPI
+           :<|> Common.UpdateDriverNameAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -36,6 +37,7 @@ handler merchantId =
     :<|> unlinkVehicle merchantId
     :<|> updatePhoneNumber merchantId
     :<|> addVehicle merchantId
+    :<|> updateDriverName merchantId
 
 listDrivers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> FlowHandler Common.DriverListRes
 listDrivers merchantShortId mbLimit mbOffset verified enabled blocked =
@@ -67,3 +69,6 @@ updatePhoneNumber merchantShortId driverId = withFlowHandlerAPI . DDriver.update
 
 addVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
 addVehicle merchantShortId driverId = withFlowHandlerAPI . DDriver.addVehicle merchantShortId driverId
+
+updateDriverName :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
+updateDriverName merchantShortId driverId = withFlowHandlerAPI . DDriver.updateDriverName merchantShortId driverId
