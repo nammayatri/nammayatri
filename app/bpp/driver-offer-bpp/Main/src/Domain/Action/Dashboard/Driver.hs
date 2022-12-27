@@ -214,14 +214,14 @@ blockDriver merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    QPerson.findById personId
+    Esq.runInReplica (QPerson.findById personId)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ QDriverInfo.updateBlockedState driverId True
+  QDriverInfo.updateBlockedState driverId True
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -233,14 +233,14 @@ unblockDriver merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    QPerson.findById personId
+    Esq.runInReplica (QPerson.findById personId)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ QDriverInfo.updateBlockedState driverId False
+  QDriverInfo.updateBlockedState driverId False
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -423,7 +423,7 @@ unlinkVehicle merchantShortId reqDriverId = do
   Esq.runTransaction $ do
     QVehicle.deleteById personId
     QRCAssociation.endAssociation personId
-  QDriverInfo.updateEnabledState driverId False
+  QDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 

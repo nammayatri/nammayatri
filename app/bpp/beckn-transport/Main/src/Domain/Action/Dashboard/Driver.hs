@@ -154,7 +154,7 @@ blockDriver merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    QPerson.findById personId
+    Esq.runInReplica (QPerson.findById personId)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
@@ -173,7 +173,7 @@ unblockDriver merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    QPerson.findById personId
+    Esq.runInReplica (QPerson.findById personId)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking

@@ -33,6 +33,16 @@ updateEnabledState driverId isEnabled = do
   clearDriverInfoCache driverId
   Esq.runTransaction $ Queries.updateEnabledState driverId isEnabled
 
+updateEnabledVerifiedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> Bool -> m ()
+updateEnabledVerifiedState driverId isEnabled isVerified = do
+  clearDriverInfoCache driverId
+  Esq.runTransaction $ Queries.updateEnabledVerifiedState driverId isEnabled isVerified
+
+updateBlockedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
+updateBlockedState driverId isBlocked = do
+  clearDriverInfoCache driverId
+  Esq.runTransaction $ Queries.updateBlockedState driverId isBlocked
+
 verifyAndEnableDriver :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m ()
 verifyAndEnableDriver driverId = do
   clearDriverInfoCache (cast driverId)
