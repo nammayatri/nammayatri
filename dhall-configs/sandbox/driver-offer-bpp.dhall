@@ -108,9 +108,7 @@ let driverPoolBatchesCfg =
       }
 
 let sendSearchRequestJobCfg =
-      { driverPoolBatchesCfg = driverPoolBatchesCfg
-      , singleBatchProcessTime = +10
-      }
+      { driverPoolBatchesCfg, singleBatchProcessTime = +10 }
 
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
@@ -164,7 +162,7 @@ in  { esqDBCfg
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , cacheTranslationConfig
     , driverPoolCfg
-    , sendSearchRequestJobCfg = sendSearchRequestJobCfg
+    , sendSearchRequestJobCfg
     , driverLocationUpdateTopic = "location-updates"
     , kafkaProducerCfg
     }

@@ -171,7 +171,7 @@ mkBreakupListItems mkPrice mkBreakupItem farePolicy = do
       deadKmFareCaption = "DEAD_KILOMETER_FARE"
       deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice deadKmFare)
 
-      nightShiftRate = fromMaybe 1 (roundToIntegral <$> farePolicy.nightShiftRate)
+      nightShiftRate = maybe 1 roundToIntegral farePolicy.nightShiftRate
       nightShiftRateCaption = "NIGH_SHIFT_FARE"
       nightShiftRateItem = mkBreakupItem nightShiftRateCaption (mkPrice nightShiftRate)
 
