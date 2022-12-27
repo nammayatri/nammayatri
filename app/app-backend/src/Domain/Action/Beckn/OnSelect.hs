@@ -11,6 +11,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
@@ -18,6 +19,7 @@ import Environment
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
@@ -77,7 +79,9 @@ onSelect registryUrl DOnSelectReq {..} = do
   logPretty DEBUG "quotes" quotes
   whenM (duplicateCheckCond (quotesInfo <&> (.quoteDetails.bppDriverQuoteId)) providerInfo.providerId) $
     throwError $ InvalidRequest "Duplicate OnSelect quote"
-  DB.runTransaction $ QQuote.createMany quotes
+  DB.runTransaction $ do
+    QQuote.createMany quotes
+    QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
   Notify.notifyOnDriverOfferIncoming estimateId quotes person
   where
     duplicateCheckCond :: EsqDBFlow m r => [Id DDriverOffer.BPPQuote] -> Text -> m Bool

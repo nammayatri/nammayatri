@@ -10,18 +10,21 @@ where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto (runInReplica)
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.Quote (QuoteAPIEntity (..))
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -48,6 +51,8 @@ select personId estimateId = do
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
+  Esq.runTransaction $
+    QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
   pure
     DSelectRes
       { providerId = estimate.providerId,

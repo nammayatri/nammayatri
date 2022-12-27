@@ -18,6 +18,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -26,6 +27,7 @@ import Domain.Types.VehicleVariant
 import Environment
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
@@ -114,6 +116,7 @@ onSearchService transactionId registryUrl DOnSearchReq {..} = do
   DB.runTransaction do
     QEstimate.createMany estimates
     QQuote.createMany quotes
+    QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
 
 buildEstimate ::
   MonadFlow m =>

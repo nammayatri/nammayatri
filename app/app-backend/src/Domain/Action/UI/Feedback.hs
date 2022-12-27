@@ -10,9 +10,11 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Environment as App
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -43,6 +45,7 @@ feedback request = do
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   DB.runTransaction $ do
     QRide.updateRideRating rideId ratingValue
+    QPFS.updateStatus booking.riderId DPFS.IDLE
   pure
     FeedbackRes
       { providerId = booking.providerId,

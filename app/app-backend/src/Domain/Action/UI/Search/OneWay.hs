@@ -15,11 +15,13 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import qualified Tools.Maps as MapSearch
@@ -76,6 +78,7 @@ oneWaySearch personId req = do
   Metrics.startSearchMetrics merchant.name txnId
   DB.runTransaction $ do
     QSearchRequest.create searchRequest
+    QPFS.updateStatus personId DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   let dSearchRes =
         OneWaySearchRes
           { origin = req.origin,

@@ -7,6 +7,7 @@ import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude hiding (state)
@@ -16,6 +17,7 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareBreakup as QFareBreakup
+import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
@@ -87,6 +89,7 @@ onUpdate registryUrl RideAssignedReq {..} = do
   DB.runTransaction $ do
     QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
     QRide.create ride
+    QPFS.updateStatus booking.riderId DPFS.RIDE_ASSIGNED {rideId = ride.id}
   Notify.notifyOnRideAssigned booking ride
   withRetry $ CallBPP.callTrack booking ride
   where
@@ -155,6 +158,7 @@ onUpdate registryUrl RideCompletedReq {..} = do
     QRB.updateStatus booking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
     QFareBreakup.createMany breakups
+    QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
   Notify.notifyOnRideCompleted booking updRide
   where
     buildFareBreakup :: MonadFlow m => Id SRB.Booking -> OnUpdateFareBreakup -> m DFareBreakup.FareBreakup
@@ -182,6 +186,7 @@ onUpdate registryUrl BookingCancelledReq {..} = do
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED
     unless (cancellationSource == SBCR.ByUser) $
       QBCR.upsert bookingCancellationReason
+    QPFS.updateStatus booking.riderId DPFS.IDLE
   -- notify customer
   Notify.notifyOnBookingCancelled booking cancellationSource
   where

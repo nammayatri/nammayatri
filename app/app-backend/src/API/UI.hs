@@ -11,6 +11,7 @@ import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Feedback as Feedback
+import qualified API.UI.Frontend as Frontend
 import qualified API.UI.GoogleTranslate as GoogleTranslateProxy
 import qualified API.UI.Maps as MapsProxy
 import qualified API.UI.Profile as Profile
@@ -53,6 +54,7 @@ type API =
            :<|> SavedReqLocation.API
            :<|> Webengage.API
            :<|> InfoBIPWebhook.API
+           :<|> Frontend.API
        )
 
 handler :: FlowServer API
@@ -79,3 +81,4 @@ handler =
     :<|> SavedReqLocation.handler
     :<|> Webengage.handler
     :<|> InfoBIPWebhook.handler
+    :<|> Frontend.handler

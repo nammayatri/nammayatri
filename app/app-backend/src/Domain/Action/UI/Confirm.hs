@@ -18,6 +18,7 @@ import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
@@ -26,6 +27,7 @@ import Domain.Types.VehicleVariant (VehicleVariant)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error
@@ -77,6 +79,7 @@ confirm personId quoteId = do
   let details = mkConfirmQuoteDetails quote.quoteDetails
   DB.runTransaction $ do
     QRideB.create booking
+    QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
   return $
     DConfirmRes
       { booking,

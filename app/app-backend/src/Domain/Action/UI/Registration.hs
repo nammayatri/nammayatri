@@ -31,8 +31,9 @@ import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
-import Domain.Types.Person (PersonAPIEntity)
+import Domain.Types.Person (PersonAPIEntity, PersonE (updatedAt))
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
@@ -40,6 +41,7 @@ import EulerHS.Prelude hiding (id)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
@@ -247,8 +249,17 @@ getRegistrationTokenE tokenId =
 createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
 createPerson req mbBundleVersion mbClientVersion merchantId = do
   person <- buildPerson req mbBundleVersion mbClientVersion merchantId
-  DB.runTransaction $ Person.create person
+  DB.runTransaction $ do
+    Person.create person
+    QDFS.create $ makeIdlePersonFlowStatus person
   pure person
+  where
+    makeIdlePersonFlowStatus person =
+      DPFS.PersonFlowStatus
+        { personId = person.id,
+          flowStatus = DPFS.IDLE,
+          updatedAt = person.updatedAt
+        }
 
 checkPersonExists :: EsqDBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
