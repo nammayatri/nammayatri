@@ -5,6 +5,7 @@ where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
+import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.SlidingWindowCounters as SWC
@@ -21,6 +22,7 @@ import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 
 type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 
@@ -29,6 +31,8 @@ sendSearchRequestToDrivers ::
     EsqDBFlow m r,
     TranslateFlow m r,
     CacheFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
     HasSendSearchRequestJobConfig r,
     HasField "windowOptions" r SWC.SlidingWindowOptions
   ) =>
@@ -41,7 +45,8 @@ sendSearchRequestToDrivers ::
 sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFee driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
+  batchNumber <- getPoolBatchNum searchReq.id
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   Esq.runTransaction $ do
     QSRD.setInactiveByRequestId searchReq.id -- inactive previous request by drivers so that they can make new offers.
@@ -60,6 +65,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
       return $ singleBatchProcessTime `addUTCTime` now
     buildSearchRequestForDriver ::
       (MonadFlow m) =>
+      Int ->
       DSearchReq.SearchRequest ->
       Money ->
       UTCTime ->
@@ -67,7 +73,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
       Money ->
       DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchRequest baseFare_ validTill driverMinExtraCharge driverMaxExtraCharge dpwRes = do
+    buildSearchRequestForDriver batchNumber searchRequest baseFare_ validTill driverMinExtraCharge driverMaxExtraCharge dpwRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult

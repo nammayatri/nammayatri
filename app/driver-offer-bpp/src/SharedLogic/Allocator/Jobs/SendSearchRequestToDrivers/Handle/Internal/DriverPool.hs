@@ -2,6 +2,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
   ( isBatchNumExceedLimit,
     cleanupDriverPoolBatches,
     getNextDriverPoolBatch,
+    getPoolBatchNum,
     module Reexport,
   )
 where

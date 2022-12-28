@@ -35,6 +35,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     vehicleVariant :: Variant.Variant,
     status :: DriverSearchRequestStatus,
     baseFare :: Money,
+    batchNumber :: Int,
     lat :: Maybe Double,
     lon :: Maybe Double,
     createdAt :: UTCTime,

@@ -32,6 +32,7 @@ mkPersist
       straightLineDistanceToPickup Meters
       durationToPickup Seconds
       vehicleVariant Variant.Variant
+      batchNumber Int
       baseFare Money
       lat Double Maybe
       lon Double Maybe
