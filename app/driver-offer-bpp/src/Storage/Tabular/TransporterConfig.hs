@@ -26,6 +26,9 @@ mkPersist
       dropLocThreshold Meters Maybe
       rideTravelledDistanceThreshold Meters Maybe
       rideTimeEstimatedThreshold Seconds Maybe
+      availabilityTimeWeightage Int
+      acceptanceRatioWeightage Int
+      cancellationRatioWeightage Int
       createdAt UTCTime
       updatedAt UTCTime
       fcmUrl Text

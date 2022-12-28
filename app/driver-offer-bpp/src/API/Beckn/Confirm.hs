@@ -17,6 +17,7 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import Servant
 import qualified SharedLogic.CallBAP as BP
+import SharedLogic.DriverPool (incrementTotalRidesCount)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPerson
@@ -51,6 +52,7 @@ confirm transporterId (SignatureAuthResult _ subscriber _) req =
             BP.callOnConfirm dConfirmRes.transporter context $ ACL.mkOnConfirmMessage now dConfirmRes
           void $
             BP.sendRideAssignedUpdateToBAP dConfirmRes.booking dConfirmRes.ride
+      incrementTotalRidesCount driverQuote.driverId
     pure Ack
   where
     errHandler dConfirmRes transporter driver exc

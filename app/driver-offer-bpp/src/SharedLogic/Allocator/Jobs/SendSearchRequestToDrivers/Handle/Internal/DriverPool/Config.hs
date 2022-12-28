@@ -20,5 +20,5 @@ type HasDriverPoolBatchesConfig r =
   ( HasField "driverPoolBatchesCfg" r DriverPoolBatchesConfig
   )
 
-data PoolSortingType = ByAcceptanceRatio | ByRandom
+data PoolSortingType = Intelligent | Random
   deriving (Generic, FromDhall)

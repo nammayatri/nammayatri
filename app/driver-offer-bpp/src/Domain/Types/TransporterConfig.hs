@@ -15,11 +15,14 @@ data TransporterConfigD u = TransporterConfig
     dropLocThreshold :: Maybe Meters,
     rideTravelledDistanceThreshold :: Maybe Meters,
     rideTimeEstimatedThreshold :: Maybe Seconds,
+    availabilityTimeWeightage :: Int,
+    acceptanceRatioWeightage :: Int,
+    cancellationRatioWeightage :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     fcmConfig :: FCMConfig
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 type TransporterConfig = TransporterConfigD 'Safe
 

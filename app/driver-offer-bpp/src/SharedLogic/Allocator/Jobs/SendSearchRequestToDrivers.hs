@@ -32,7 +32,7 @@ sendSearchRequestToDrivers ::
     HedisFlow m r,
     EsqDBFlow m r,
     Log m,
-    HasField "windowOptions" r SWC.SlidingWindowOptions
+    SWC.HasWindowOptions r
   ) =>
   Job JobType SendSearchRequestToDriverJobData ->
   m ExecutionResult
@@ -54,7 +54,7 @@ sendSearchRequestToDrivers' ::
     HedisFlow m r,
     EsqDBFlow m r,
     Log m,
-    HasField "windowOptions" r SWC.SlidingWindowOptions
+    SWC.HasWindowOptions r
   ) =>
   SearchRequest ->
   Merchant ->

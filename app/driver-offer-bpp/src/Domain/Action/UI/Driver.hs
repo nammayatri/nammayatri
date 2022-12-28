@@ -69,7 +69,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
-import SharedLogic.DriverPool (DriverPoolConfig, incrementAcceptanceCount)
+import SharedLogic.DriverPool (DriverPoolConfig, incrementQuoteAcceptedCount)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
@@ -551,7 +551,7 @@ offerQuote ::
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
-    HasField "windowOptions" r SWC.SlidingWindowOptions,
+    SWC.HasWindowOptions r,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "driverPoolCfg" ::: DriverPoolConfig],
@@ -574,7 +574,7 @@ respondQuote ::
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
-    HasField "windowOptions" r SWC.SlidingWindowOptions,
+    SWC.HasWindowOptions r,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "driverPoolCfg" ::: DriverPoolConfig],
@@ -601,7 +601,6 @@ respondQuote driverId req = do
     case req.response of
       Accept -> do
         logDebug $ "offered fare: " <> show req.offeredFare
-        incrementAcceptanceCount driverId
         whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
         when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
         quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
@@ -615,6 +614,7 @@ respondQuote driverId req = do
         Esq.runTransaction $ do
           QDrQt.create driverQuote
           QSRD.updateDriverResponse sReqFD.id req.response
+        incrementQuoteAcceptedCount driverId
         whenM (quotesCountReached quoteCount) $ sendRemoveRideRequestNotification organization.id driverQuote
         sendDriverOffer organization sReq driverQuote
       Reject -> do

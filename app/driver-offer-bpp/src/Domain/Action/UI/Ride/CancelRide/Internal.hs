@@ -29,7 +29,7 @@ cancelRideImpl ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasField "windowOptions" r SW.SlidingWindowOptions,
+    SW.HasWindowOptions r,
     HedisFlow m r,
     HasHttpClientOptions r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
