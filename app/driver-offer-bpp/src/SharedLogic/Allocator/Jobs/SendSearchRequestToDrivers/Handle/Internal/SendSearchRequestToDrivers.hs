@@ -38,7 +38,7 @@ sendSearchRequestToDrivers ::
   Money ->
   [DriverPoolWithActualDistResult] ->
   m ()
-sendSearchRequestToDrivers searchReq driverMinExtraFee driverMaxExtraFee baseFare driverPool = do
+sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFee driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
