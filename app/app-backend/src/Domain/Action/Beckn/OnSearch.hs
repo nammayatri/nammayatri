@@ -8,6 +8,7 @@ module Domain.Action.Beckn.OnSearch
     RentalQuoteDetails (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
+    NightShiftInfo (..),
     onSearch,
   )
 where
@@ -55,7 +56,14 @@ data EstimateInfo = EstimateInfo
     estimatedTotalFare :: Money,
     totalFareRange :: DEstimate.FareRange,
     descriptions :: [Text],
-    estimateBreakupList :: [EstimateBreakupInfo]
+    estimateBreakupList :: [EstimateBreakupInfo],
+    nightShiftRate :: Maybe NightShiftInfo
+  }
+
+data NightShiftInfo = NightShiftInfo
+  { nightShiftMultiplier :: Maybe Centesimal,
+    nightShiftStart :: Maybe TimeOfDay,
+    nightShiftEnd :: Maybe TimeOfDay
   }
 
 data EstimateBreakupInfo = EstimateBreakupInfo
@@ -139,6 +147,13 @@ buildEstimate requestId providerInfo now EstimateInfo {..} = do
         providerUrl = providerInfo.url,
         createdAt = now,
         estimateBreakupList = estimateBreakupList',
+        nightShiftRate =
+          Just $
+            DEstimate.NightShiftRate
+              { nightShiftMultiplier = nightShiftRate >>= (.nightShiftMultiplier),
+                nightShiftStart = nightShiftRate >>= (.nightShiftStart),
+                nightShiftEnd = nightShiftRate >>= (.nightShiftEnd)
+              },
         ..
       }
 

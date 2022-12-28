@@ -114,7 +114,14 @@ mkQuoteEntities start end it = do
                   code = OS.ItemCode OS.DRIVER_OFFER_ESTIMATE variant Nothing Nothing
                 },
             quote_terms = [],
-            tags = Just $ OS.ItemTags (OS.DecimalValue $ toRational it.distanceToPickup),
+            tags =
+              Just $
+                OS.ItemTags
+                  { distance_to_nearest_driver = Just $ OS.DecimalValue $ toRational it.distanceToPickup,
+                    night_shift_multiplier = OS.DecimalValue . toRational <$> ((.nightShiftMultiplier) =<< it.nightShiftRate),
+                    night_shift_start = (.nightShiftStart) =<< it.nightShiftRate,
+                    night_shift_end = (.nightShiftEnd) =<< it.nightShiftRate
+                  },
             base_distance = Nothing,
             base_duration = Nothing
           }

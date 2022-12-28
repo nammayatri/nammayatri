@@ -83,6 +83,7 @@ buildEstimateOrQuoteInfo item = do
       estimatedTotalFare = roundToIntegral item.price.offered_value
       estimateBreakupList = buildEstimateBreakUpList <$> item.price.value_breakup
       descriptions = item.quote_terms
+      nightShiftRate = buildNightShiftRate <$> item.tags
   validatePrices estimatedFare estimatedTotalFare
 
   let totalFareRange =
@@ -116,7 +117,7 @@ buildOneWayQuoteDetails ::
   m DOnSearch.OneWayQuoteDetails
 buildOneWayQuoteDetails item = do
   distanceToNearestDriver <-
-    (item.tags <&> (.distance_to_nearest_driver))
+    (item.tags >>= (.distance_to_nearest_driver))
       & fromMaybeM (InvalidRequest "Trip type is ONE_WAY, but distanceToNearestDriver is Nothing")
   pure
     DOnSearch.OneWayQuoteDetails
@@ -151,4 +152,14 @@ buildEstimateBreakUpList BreakupItem {..} = do
           { currency = price.currency,
             value = roundToIntegral price.value
           }
+    }
+
+buildNightShiftRate ::
+  OnSearch.ItemTags ->
+  DOnSearch.NightShiftInfo
+buildNightShiftRate itemTags = do
+  DOnSearch.NightShiftInfo
+    { nightShiftMultiplier = realToFrac <$> itemTags.night_shift_multiplier,
+      nightShiftStart = itemTags.night_shift_start,
+      nightShiftEnd = itemTags.night_shift_end
     }

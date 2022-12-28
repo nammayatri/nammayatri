@@ -30,6 +30,11 @@ instance TType FullEstimateT Domain.Estimate where
           estimatedFare = roundToIntegral estimatedFare,
           discount = roundToIntegral <$> discount,
           estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          nightShiftRate =
+            Just $
+              Domain.NightShiftRate
+                { ..
+                },
           ..
         }
   toTType Domain.Estimate {..} = do
@@ -45,6 +50,9 @@ instance TType FullEstimateT Domain.Estimate where
               estimatedTotalFare = realToFrac estimatedTotalFare,
               minTotalFare = realToFrac totalFareRange.minFare,
               maxTotalFare = realToFrac totalFareRange.maxFare,
+              nightShiftMultiplier = nightShiftRate >>= (.nightShiftMultiplier),
+              nightShiftStart = nightShiftRate >>= (.nightShiftStart),
+              nightShiftEnd = nightShiftRate >>= (.nightShiftEnd),
               ..
             }
     let mbTripTermsT = toTType <$> tripTerms

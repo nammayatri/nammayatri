@@ -34,6 +34,9 @@ mkPersist
       providerCompletedRidesCount Int
       vehicleVariant VehVar.VehicleVariant
       tripTermsId STripTerms.TripTermsTId Maybe
+      nightShiftMultiplier Centesimal Maybe
+      nightShiftStart TimeOfDay Maybe
+      nightShiftEnd TimeOfDay Maybe
       createdAt UTCTime
       Primary id
       deriving Generic

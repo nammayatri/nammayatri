@@ -47,7 +47,14 @@ data EstimateItem = EstimateItem
     distanceToPickup :: Meters,
     minFare :: Money,
     maxFare :: Money,
-    estimateBreakupList :: [BreakupItem]
+    estimateBreakupList :: [BreakupItem],
+    nightShiftRate :: Maybe NightShiftRate
+  }
+
+data NightShiftRate = NightShiftRate
+  { nightShiftMultiplier :: Maybe Centesimal,
+    nightShiftStart :: Maybe TimeOfDay,
+    nightShiftEnd :: Maybe TimeOfDay
   }
 
 data TransporterInfo = TransporterInfo
@@ -150,7 +157,14 @@ mkEstimate org startTime dist (farePolicy, driverMetadata) = do
         distanceToPickup = driverMetadata.distanceToPickup,
         minFare = baseFare,
         maxFare = baseFare + farePolicy.driverExtraFee.maxFee,
-        estimateBreakupList = estimateBreakups
+        estimateBreakupList = estimateBreakups,
+        nightShiftRate =
+          Just $
+            NightShiftRate
+              { nightShiftMultiplier = fareParams.nightShiftRate,
+                nightShiftStart = farePolicy.nightShiftStart,
+                nightShiftEnd = farePolicy.nightShiftEnd
+              }
       }
 
 mkBreakupListItems ::
@@ -171,19 +185,15 @@ mkBreakupListItems mkPrice mkBreakupItem farePolicy = do
       deadKmFareCaption = "DEAD_KILOMETER_FARE"
       deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice deadKmFare)
 
-      nightShiftRate = maybe 1 roundToIntegral farePolicy.nightShiftRate
-      nightShiftRateCaption = "NIGH_SHIFT_FARE"
-      nightShiftRateItem = mkBreakupItem nightShiftRateCaption (mkPrice nightShiftRate)
-
       driverMinExtraFee = farePolicy.driverExtraFee.minFee
       driverMinExtraFeeCaption = "DRIVER_MIN_EXTRA_FEE"
       driverMinExtraFeeItem = mkBreakupItem driverMinExtraFeeCaption (mkPrice driverMinExtraFee)
 
-      driverMaxExtraFee = farePolicy.driverExtraFee.minFee
+      driverMaxExtraFee = farePolicy.driverExtraFee.maxFee
       driverMaxExtraFeeCaption = "DRIVER_MAX_EXTRA_FEE"
       driverMaxExtraFeeItem = mkBreakupItem driverMaxExtraFeeCaption (mkPrice driverMaxExtraFee)
 
-  [baseDistanceFareItem, perExtraKmFareItem, deadKmFareItem, nightShiftRateItem, driverMinExtraFeeItem, driverMaxExtraFeeItem]
+  [baseDistanceFareItem, perExtraKmFareItem, deadKmFareItem, driverMinExtraFeeItem, driverMaxExtraFeeItem]
 
 buildSearchReqLocation :: (MonadGuid m, MonadTime m) => DLoc.SearchReqLocationAPIEntity -> m DLoc.SearchReqLocation
 buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do

@@ -4,13 +4,13 @@ module Beckn.Types.Core.Taxi.OnSearch.Item
   )
 where
 
+import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.ItemCode as Reexport
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
-import EulerHS.Prelude hiding (id)
 
 data Item = Item
   { category_id :: FareProductType,
@@ -87,8 +87,11 @@ data BreakupPrice = BreakupPrice
 instance ToSchema BreakupPrice where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-newtype ItemTags = ItemTags
-  { distance_to_nearest_driver :: DecimalValue
+data ItemTags = ItemTags
+  { distance_to_nearest_driver :: Maybe DecimalValue,
+    night_shift_multiplier :: Maybe DecimalValue,
+    night_shift_start :: Maybe TimeOfDay,
+    night_shift_end :: Maybe TimeOfDay
   }
   deriving (Generic, Show)
 
@@ -106,5 +109,8 @@ itemTagsJSONOptions =
   defaultOptions
     { fieldLabelModifier = \case
         "distance_to_nearest_driver" -> "./komn/distance_to_nearest_driver"
+        "night_shift_multiplier" -> "./komn/night_shift_multiplier"
+        "night_shift_start" -> "./komn/night_shift_start"
+        "night_shift_end" -> "./komn/night_shift_end"
         a -> a
     }

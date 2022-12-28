@@ -26,9 +26,17 @@ data Estimate = Estimate
     vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,
     createdAt :: UTCTime,
-    estimateBreakupList :: [EstimateBreakup]
+    estimateBreakupList :: [EstimateBreakup],
+    nightShiftRate :: Maybe NightShiftRate
   }
-  deriving (Generic, Show, PrettyShow)
+  deriving (Generic, Show)
+
+data NightShiftRate = NightShiftRate
+  { nightShiftMultiplier :: Maybe Centesimal,
+    nightShiftStart :: Maybe TimeOfDay,
+    nightShiftEnd :: Maybe TimeOfDay
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data EstimateBreakup = EstimateBreakup
   { id :: Id EstimateBreakup,
@@ -62,7 +70,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     agencyCompletedRidesCount :: Int,
     tripTerms :: [Text],
     createdAt :: UTCTime,
-    estimateFareBreakup :: [EstimateBreakupAPIEntity]
+    estimateFareBreakup :: [EstimateBreakupAPIEntity],
+    nightShiftRate :: Maybe NightShiftRate
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
