@@ -18,15 +18,17 @@ import qualified Storage.Queries.DriverLocation as DLQueries
 upsertGpsCoord :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> LatLong -> UTCTime -> m ()
 upsertGpsCoord driverId latLong calculationTime = do
   driverInfo <- findDriverInfoById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  oldLocation <- findById driverId
-  if not driverInfo.onRide || isNothing oldLocation
-    then do
-      driverLocation <- Esq.runTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime
-      cacheDriverLocation driverLocation
+  if not driverInfo.onRide -- if driver not on ride directly save location updates to DB
+    then void $ Esq.runTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime
     else do
-      let Just oldLoc = oldLocation
-      now <- getCurrentTime
-      cacheDriverLocation $ oldLoc{updatedAt = now, lat = latLong.lat, lon = latLong.lon, coordinatesCalculatedAt = calculationTime}
+      mOldLocation <- findById driverId
+      case mOldLocation of
+        Nothing -> do
+          driverLocation <- Esq.runTransaction $ DLQueries.upsertGpsCoord driverId latLong calculationTime
+          cacheDriverLocation driverLocation
+        Just oldLoc -> do
+          now <- getCurrentTime
+          cacheDriverLocation $ oldLoc{updatedAt = now, lat = latLong.lat, lon = latLong.lon, coordinatesCalculatedAt = calculationTime}
 
 makeDriverLocationKey :: Id Person -> Text
 makeDriverLocationKey id = "DriverLocation:PersonId-" <> id.getId
