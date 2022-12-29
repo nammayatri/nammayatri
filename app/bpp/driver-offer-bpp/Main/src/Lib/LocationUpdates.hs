@@ -49,6 +49,6 @@ whenWithLocationUpdatesLock driverId f = do
         )
     else do
       logDebug $ lockKey <> " unable to get lock"
-      throwError (InternalError "Driver can't be locked")
+      throwError (InvalidRequest "Driver can't be locked")
   where
     lockKey = "DriverLocationUpdate:DriverId-" <> driverId.getId

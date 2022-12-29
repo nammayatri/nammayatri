@@ -92,13 +92,13 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 let windowOptions = { period = +7, periodType = common.periodType.Days }
 
 let driverPoolCfg =
-      { minRadiusOfSearch = +5000
-      , maxRadiusOfSearch = +7000
+      { minRadiusOfSearch = +500
+      , maxRadiusOfSearch = +1800
       , radiusStepSize = +500
       , driverPositionInfoExpiry = None Integer
-      , actualDistanceThreshold = Some +7000
+      , actualDistanceThreshold = Some +2000
       , maxDriverQuotesRequired = +1
-      , driverQuoteLimit = +5
+      , driverQuoteLimit = +1
       }
 
 let PoolSortingType = < Intelligent | Random >
@@ -110,7 +110,7 @@ let driverPoolBatchesCfg =
       }
 
 let sendSearchRequestJobCfg =
-      { driverPoolBatchesCfg, singleBatchProcessTime = +10 }
+      { driverPoolBatchesCfg, singleBatchProcessTime = +30 }
 
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
