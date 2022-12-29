@@ -5,7 +5,6 @@ module Domain.Action.UI.DriverOnboarding.Referral where
 
 import Beckn.External.Encryption (encrypt)
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto hiding (isNothing)
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
 import Beckn.Types.Validation (Validate)
