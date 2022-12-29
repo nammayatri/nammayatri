@@ -16,13 +16,13 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 
 type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 
