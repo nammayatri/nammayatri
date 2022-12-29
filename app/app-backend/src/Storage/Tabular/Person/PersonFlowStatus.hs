@@ -10,16 +10,18 @@ module Storage.Tabular.Person.PersonFlowStatus where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import Beckn.Utils.Common (decodeFromText, encodeToText)
+import Beckn.Utils.Text (encodeToText)
+import Data.Aeson
+import Data.ByteString.Lazy (fromStrict)
 import Domain.Types.Person (Person)
 import qualified Domain.Types.Person.PersonFlowStatus as Domain
 import Storage.Tabular.Person (PersonTId)
 
 instance PersistField Domain.FlowStatus where
   toPersistValue = PersistText . encodeToText
-  fromPersistValue (PersistText v) = case decodeFromText v of
+  fromPersistValue (PersistByteString v) = case decode $ fromStrict v of
     Just res -> Right res
-    Nothing -> Left "Unable to parse FlowStatus"
+    Nothing -> Left "Unable to parse FlowStatus."
   fromPersistValue _ = Left "Invalid PersistValue type on FlowStatus parse."
 
 instance PersistFieldSql Domain.FlowStatus where
