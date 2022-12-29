@@ -24,7 +24,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Vehicle
 import Domain.Types.Vehicle.Variant
 import Environment
-import qualified Storage.Queries.DriverInformation as DIQuery
+import qualified Storage.CachedQueries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
@@ -107,7 +107,7 @@ verificationStatus onboardingTryLimit imagesNum verificationReq =
 enableDriver :: Id SP.Person -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Maybe DL.DriverLicense -> Flow ()
 enableDriver _ _ Nothing Nothing = return ()
 enableDriver personId merchantId (Just rc) (Just dl) = do
-  DB.runTransaction $ DIQuery.verifyAndEnableDriver personId
+  DIQuery.verifyAndEnableDriver personId
   rcNumber <- decrypt rc.certificateNumber
   now <- getCurrentTime
   let vehicle = buildVehicle now personId merchantId rcNumber

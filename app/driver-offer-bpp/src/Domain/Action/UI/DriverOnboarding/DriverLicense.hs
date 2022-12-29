@@ -36,7 +36,7 @@ import Environment
 import qualified Idfy.Flow as Idfy
 import qualified Idfy.Types as Idfy
 import SharedLogic.DriverOnboarding
-import qualified Storage.Queries.DriverInformation as DriverInfo
+import qualified Storage.CachedQueries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery

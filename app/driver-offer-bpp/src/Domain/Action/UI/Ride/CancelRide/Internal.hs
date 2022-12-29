@@ -10,14 +10,13 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.DriverLocation as SDrLoc
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as DriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -65,15 +64,11 @@ cancelRideTransaction ::
   SBCR.BookingCancellationReason ->
   m ()
 cancelRideTransaction bookingId ride bookingCReason = do
+  let driverId = cast ride.driverId
+  DriverInformation.updateOnRide driverId False
   Esq.runTransaction $ do
-    updateDriverInfo ride.driverId
+    when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
     QRide.updateStatus ride.id SRide.CANCELLED
     QRB.updateStatus bookingId SRB.CANCELLED
     QBCR.upsert bookingCReason
-  SRide.clearCache $ cast ride.driverId
-  SDrLoc.clearDriverInfoCache $ cast ride.driverId
-  where
-    updateDriverInfo personId = do
-      let driverId = cast personId
-      DriverInformation.updateOnRide driverId False
-      when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
+  SRide.clearCache ride.driverId

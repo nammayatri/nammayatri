@@ -35,8 +35,8 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as QD
 import Storage.CachedQueries.Merchant as QMerchant
-import qualified Storage.Queries.DriverInformation as QD
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
@@ -301,6 +301,7 @@ cleanCachedTokens personId = do
 
 logout ::
   ( EsqDBFlow m r,
+    CacheFlow m r,
     Redis.HedisFlow m r
   ) =>
   Id SP.Person ->
@@ -313,5 +314,5 @@ logout personId = do
   Esq.runTransaction $ do
     QP.updateDeviceToken uperson.id Nothing
     QR.deleteByPersonId personId
-    when (uperson.role == SP.DRIVER) $ QD.updateActivity (cast uperson.id) False
+  when (uperson.role == SP.DRIVER) $ QD.updateActivity (cast uperson.id) False
   pure Success

@@ -16,13 +16,12 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.DriverLocation as SDrLoc
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as QDriverInfo
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -63,10 +62,10 @@ cancel transporterId _ req = do
     QRB.updateStatus booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED
-      QDriverInfo.updateOnRide (cast ride.driverId) False
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
-    SDrLoc.clearDriverInfoCache $ cast ride.driverId
+    QDriverInfo.updateOnRide (cast ride.driverId) False
+
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCR.source

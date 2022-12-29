@@ -25,13 +25,12 @@ import qualified Domain.Types.RiderDetails as DRD
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as QDriverInfo
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
-import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -102,13 +101,13 @@ handler subscriber transporterId req = do
     QBL.updateAddress booking.fromLocation.id req.fromAddress
     QBL.updateAddress booking.toLocation.id req.toAddress
     whenJust req.mbRiderName $ QRB.updateRiderName booking.id
-    QDI.updateOnRide (cast driver.id) True
     QRide.create ride
     QRideD.create rideDetails
     QBE.logRideConfirmedEvent booking.id
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
     QDQ.setInactiveByRequestId driverQuote.searchRequestId
     QSRD.setInactiveByRequestId driverQuote.searchRequestId
+  QDriverInfo.updateOnRide (cast driver.id) True
 
   for_ driverSearchReqs $ \driverReq -> do
     let driverId = driverReq.driverId
@@ -247,7 +246,8 @@ cancelBooking booking driver transporter = do
     QBCR.upsert bookingCancellationReason
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id DRide.CANCELLED
-      QDriverInfo.updateOnRide (cast ride.driverId) False
+  whenJust mbRide $ \ride -> do
+    QDriverInfo.updateOnRide (cast ride.driverId) False
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
   whenJust mbRide $ \_ ->

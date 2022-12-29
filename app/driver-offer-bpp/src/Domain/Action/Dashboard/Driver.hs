@@ -38,7 +38,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import SharedLogic.Transporter (findMerchantByShortId)
-import qualified Storage.Queries.DriverInformation as QDriverInfo
+import qualified Storage.CachedQueries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
@@ -180,8 +180,7 @@ enableDriver merchantShortId reqDriverId = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   _vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-  Esq.runTransaction $ do
-    QDriverInfo.updateEnabledState driverId True
+  QDriverInfo.updateEnabledState driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
   pure Success
 
@@ -199,8 +198,7 @@ disableDriver merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ do
-    QDriverInfo.updateEnabledState driverId False
+  QDriverInfo.updateEnabledState driverId False
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -312,6 +310,7 @@ deleteDriver merchantShortId reqDriverId = do
 
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
+  QDriverInfo.deleteById driverId
   Esq.runTransaction $ do
     QIV.deleteByPersonId personId
     QImage.deleteByPersonId personId
@@ -319,7 +318,6 @@ deleteDriver merchantShortId reqDriverId = do
     QRCAssociation.deleteByDriverId personId
     QDriverQuote.deleteByDriverId personId
     QSearchReqForDriver.deleteByDriverId personId
-    QDriverInfo.deleteById driverId
     QDriverStats.deleteById driverId
     QDriverLocation.deleteById personId
     QR.deleteByPersonId personId
@@ -344,8 +342,8 @@ unlinkVehicle merchantShortId reqDriverId = do
 
   Esq.runTransaction $ do
     QVehicle.deleteById personId
-    QDriverInfo.updateEnabledState driverId False
     QRCAssociation.endAssociation personId
+  QDriverInfo.updateEnabledState driverId False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 

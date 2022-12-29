@@ -13,7 +13,7 @@ import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation (runRequestValidation, validateField)
 import qualified Domain.Types.Person as Person
 import Environment
-import qualified Storage.Queries.DriverInformation as DriverInformation
+import qualified Storage.CachedQueries.DriverInformation as DriverInformation
 
 newtype ReferralReq = ReferralReq
   {value :: Text}
@@ -34,5 +34,5 @@ addReferral ::
 addReferral personId req = do
   runRequestValidation validateReferralReq req
   value <- encrypt req.value
-  runTransaction $ DriverInformation.addReferralCode personId value
+  DriverInformation.addReferralCode personId value
   return Success

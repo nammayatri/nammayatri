@@ -72,10 +72,9 @@ import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.DriverPool (DriverPoolConfig, incrementQuoteAcceptedCount)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.Queries.DriverInformation as QDrInfo
-import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -312,7 +311,7 @@ getInformation ::
 getInformation personId = do
   let driverId = cast personId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  driverInfo <- runInReplica $ QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   let merchantId = person.merchantId
   organization <-
@@ -320,7 +319,7 @@ getInformation personId = do
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   pure $ makeDriverInformationRes driverEntity organization
 
-setActivity :: (EsqDBFlow m r) => Id SP.Person -> Bool -> m APISuccess.APISuccess
+setActivity :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Bool -> m APISuccess.APISuccess
 setActivity personId isActive = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
@@ -328,8 +327,7 @@ setActivity personId isActive = do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
     unless driverInfo.enabled $ throwError DriverAccountDisabled
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
-  Esq.runTransaction $
-    QDriverInformation.updateActivity driverId isActive
+  QDriverInformation.updateActivity driverId isActive
   pure APISuccess.Success
 
 listDriver :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
@@ -376,9 +374,8 @@ changeDriverEnableState admin personId isEnabled = do
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (person.merchantId == admin.merchantId) $ throwError Unauthorized
-  Esq.runTransaction $ do
-    QDriverInformation.updateEnabledState driverId isEnabled
-    unless isEnabled $ QDriverInformation.updateActivity driverId False
+  QDriverInformation.updateEnabledState driverId isEnabled
+  unless isEnabled $ QDriverInformation.updateActivity driverId False
   unless isEnabled $ do
     Notify.notifyDriver person.merchantId FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> changeDriverEnableState : ") (show (driverId, isEnabled))
@@ -388,7 +385,7 @@ changeDriverEnableState admin personId isEnabled = do
     notificationTitle = "Account is disabled."
     notificationMessage = "Your account has been disabled. Contact support for more info."
 
-deleteDriver :: (EsqDBFlow m r, Redis.HedisFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
+deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
   driver <-
     QPerson.findById driverId
@@ -396,8 +393,8 @@ deleteDriver admin driverId = do
   unless (driver.merchantId == admin.merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession driverId
+  QDriverInformation.deleteById (cast driverId)
   Esq.runTransaction $ do
-    QDriverInformation.deleteById (cast driverId)
     QDriverStats.deleteById (cast driverId)
     QR.deleteByPersonId driverId
     QVehicle.deleteById driverId
@@ -593,7 +590,7 @@ respondQuote driverId req = do
     let mbOfferedFare = req.offeredFare
     organization <- CQM.findById sReq.providerId >>= fromMaybeM (MerchantDoesNotExist sReq.providerId.getId)
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    driverInfo <- QDrInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+    driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
     when driverInfo.onRide $ throwError DriverOnRide
     sReqFD <-
       QSRD.findByDriverAndSearchReq driverId sReq.id

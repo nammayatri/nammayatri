@@ -13,12 +13,11 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude hiding (id)
-import qualified SharedLogic.DriverLocation as SDrLoc
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as DriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -30,10 +29,9 @@ endRideTransaction driverId bookingId ride = do
     QRide.updateAll ride.id ride
     QRide.updateStatus ride.id Ride.COMPLETED
     QRB.updateStatus bookingId SRB.COMPLETED
-    DriverInformation.updateOnRide driverId False
     DriverStats.updateIdleTime driverId
+  DriverInformation.updateOnRide driverId False
   SRide.clearCache $ cast driverId
-  SDrLoc.clearDriverInfoCache driverId
 
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do
