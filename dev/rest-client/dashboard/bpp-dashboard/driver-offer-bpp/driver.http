@@ -66,13 +66,13 @@ content-type: application/json
 
 ###
 
-GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/info?mobileNumber=6666666666
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/info?mobileNumber=6666666666&mobileCountryCode=%2B94
 token: {{customer_service}}
 content-type: application/json
 
 ###
 
-GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/info?vehicleNumber=4810
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/info?vehicleNumber=4811
 token: {{customer_service}}
 content-type: application/json
 

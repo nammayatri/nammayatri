@@ -6,7 +6,7 @@
 @customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
 
 @image-api-helper-host = http://localhost:8099
-@fileFolder = ./other
+@fileFolder = ./dev/rest-client/dashboard/bpp-dashboard/driver-offer-bpp/image
 @fileOriginal = leo.jpg
 @fileCopy = leo2.jpg
 
@@ -100,7 +100,7 @@ token: {{juspay_admin}}
 Content-Type: application/json
 
 {
-    "vehicleRegistrationCertNumber": "E4R2,231",
+    "vehicleRegistrationCertNumber": "KAE4R2,231",
     "imageId": "{{imageId}}",
     "operatingCity": "Bangalore"
 }

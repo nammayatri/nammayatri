@@ -238,6 +238,7 @@ data DriverLocationItem = DriverLocationItem
 type DriverInfoAPI =
   "info"
     :> QueryParam "mobileNumber" Text
+    :> QueryParam "mobileCountryCode" Text
     :> QueryParam "vehicleNumber" Text
     :> Get '[JSON] DriverInfoRes
 
@@ -250,6 +251,7 @@ data DriverInfoRes = DriverInfoRes
     dateOfBirth :: Maybe UTCTime,
     numberOfRides :: Int,
     mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
     enabled :: Bool,
     blocked :: Bool,
     verified :: Bool,

@@ -185,15 +185,16 @@ buildDriverLocationListItem f = do
 mobileIndianCode :: Text
 mobileIndianCode = "+91"
 
-driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
-driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
+driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
+driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber = do
   merchant <- findMerchantByShortId merchantShortId
+  let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
   driverDocsInfo <- case (mbMobileNumber, mbVehicleNumber) of
     (Just mobileNumber, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       Esq.runInReplica $
-        QPerson.fetchFullDriverByMobileNumber merchant.id mobileNumberDbHash mobileIndianCode
-          >>= fromMaybeM (PersonDoesNotExist $ mobileIndianCode <> mobileNumber)
+        QPerson.fetchFullDriverByMobileNumber merchant.id mobileNumberDbHash mobileCountryCode
+          >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
     (Nothing, Just vehicleNumber) ->
       Esq.runInReplica $
         QPerson.fetchFullDriverInfoByVehNumber merchant.id vehicleNumber
@@ -215,6 +216,7 @@ driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
             dateOfBirth = Nothing, -- not implemented for this bpp
             numberOfRides = fromMaybe 0 ridesCount,
             mobileNumber,
+            mobileCountryCode = person.mobileCountryCode,
             enabled = info.enabled,
             blocked = info.blocked,
             verified = True, -- not implemented for this bpp

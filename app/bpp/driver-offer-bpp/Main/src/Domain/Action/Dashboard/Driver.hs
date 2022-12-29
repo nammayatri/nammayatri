@@ -234,19 +234,19 @@ buildDriverLocationListItem f = do
       }
 
 ---------------------------------------------------------------------
--- FIXME Do we need to include mobileCountryCode into query params?
 mobileIndianCode :: Text
 mobileIndianCode = "+91"
 
-driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
-driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
+driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
+driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber = do
   merchant <- findMerchantByShortId merchantShortId
+  let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
   driverDocsInfo <- case (mbMobileNumber, mbVehicleNumber) of
     (Just mobileNumber, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       Esq.runInReplica $
-        QDocStatus.fetchFullDriverInfoWithDocsByMobileNumber merchant.id mobileNumberDbHash mobileIndianCode
-          >>= fromMaybeM (PersonDoesNotExist $ mobileIndianCode <> mobileNumber)
+        QDocStatus.fetchFullDriverInfoWithDocsByMobileNumber merchant.id mobileNumberDbHash mobileCountryCode
+          >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
     (Nothing, Just vehicleNumber) ->
       Esq.runInReplica $
         QDocStatus.fetchFullDriverInfoWithDocsByVehNumber merchant.id vehicleNumber
@@ -269,6 +269,7 @@ driverInfo merchantShortId mbMobileNumber mbVehicleNumber = do
             dateOfBirth = join $ license <&> (.driverDob),
             numberOfRides = fromMaybe 0 ridesCount,
             mobileNumber,
+            mobileCountryCode = person.mobileCountryCode,
             enabled = info.enabled,
             blocked = info.blocked,
             verified = info.verified,

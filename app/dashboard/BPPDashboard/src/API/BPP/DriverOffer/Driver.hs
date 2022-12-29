@@ -148,12 +148,12 @@ driverLocation merchantShortId apiTokenInfo mbLimit mbOffset req = withFlowHandl
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.drivers.driverLocation) mbLimit mbOffset req
 
-driverInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
-driverInfo merchantShortId apiTokenInfo mbMobileNumber mbVehicleNumber = withFlowHandlerAPI $ do
+driverInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
+driverInfo merchantShortId apiTokenInfo mbMobileNumber mbMobileCountryCode mbVehicleNumber = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   when (isJust mbMobileNumber == isJust mbVehicleNumber) $
     throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
-  Client.callDriverOfferBPP checkedMerchantId (.drivers.driverInfo) mbMobileNumber mbVehicleNumber
+  Client.callDriverOfferBPP checkedMerchantId (.drivers.driverInfo) mbMobileNumber mbMobileCountryCode mbVehicleNumber
 
 deleteDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 deleteDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
