@@ -8,8 +8,6 @@ module Domain.Action.UI.Location.UpdateLocation
 where
 
 import Beckn.External.Maps.Types
-import qualified Beckn.External.Slack.Flow as SF
-import Beckn.External.Slack.Types (SlackConfig)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Beckn.Storage.Hedis as Redis
@@ -24,7 +22,6 @@ import Beckn.Utils.Common hiding (id)
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Beckn.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import qualified Data.List.NonEmpty as NE
-import qualified Data.Text as T
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
@@ -104,8 +101,6 @@ updateLocationHandler ::
     CoreMetrics m,
     MonadFlow m,
     HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
-    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
-    HasFlowEnv m r '["driverLocationUpdateNotificationTemplate" ::: Text],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text],
     MonadTime m
@@ -114,8 +109,8 @@ updateLocationHandler ::
   UpdateLocationReq ->
   m APISuccess
 updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $ do
-  checkLocationUpdatesRateLimit driver.id
   logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
+  checkLocationUpdatesRateLimit driver.id
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
   LocUpd.whenWithLocationUpdatesLock driver.id $ do
     mbOldLoc <- findDriverLocation
@@ -142,8 +137,6 @@ checkLocationUpdatesRateLimit ::
     CoreMetrics m,
     MonadFlow m,
     HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
-    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
-    HasFlowEnv m r '["driverLocationUpdateNotificationTemplate" ::: Text],
     MonadTime m
   ) =>
   Id Person.Person ->
@@ -153,9 +146,6 @@ checkLocationUpdatesRateLimit personId = do
   hitsLimit <- asks (.driverLocationUpdateRateLimitOptions.limit)
   limitResetTimeInSec <- asks (.driverLocationUpdateRateLimitOptions.limitResetTimeInSec)
   unlessM (slidingWindowLimiter key hitsLimit limitResetTimeInSec) $ do
-    msgTemplate <- asks (.driverLocationUpdateNotificationTemplate)
-    let message = T.replace "{#driver-id#}" (getId personId) msgTemplate
-    _ <- SF.postMessage message
     logError "Location updates hitting limit, ignoring"
     throwError $ HitsLimitError limitResetTimeInSec
 
