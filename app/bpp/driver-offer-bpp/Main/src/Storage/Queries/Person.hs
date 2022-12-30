@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Storage.Queries.Person where
 
 import Beckn.External.Encryption
@@ -10,7 +8,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Types.Version
-import Beckn.Utils.Common
+import Beckn.Utils.Common hiding (Value)
 import Beckn.Utils.GenericPretty
 import Control.Applicative ((<|>))
 import qualified Data.Maybe as Mb
@@ -18,10 +16,12 @@ import Domain.Types.DriverInformation
 import Domain.Types.DriverLocation
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
+import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person as TPerson
+import Storage.Tabular.Ride
 import Storage.Tabular.Vehicle as Vehicle
 
 baseFullPersonQuery ::
@@ -114,6 +114,54 @@ findAllDriversByIdsFirstNameAsc merchantId driverIds = fmap (map mkFullDriver) $
         &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
     orderBy [asc (person ^. PersonFirstName)]
     return (person, driverLocation, driverInfo, vehicle)
+
+data DriverWithRidesCount = DriverWithRidesCount
+  { person :: Person,
+    info :: DriverInformation,
+    vehicle :: Maybe Vehicle,
+    ridesCount :: Maybe Int
+  }
+
+mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
+mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
+
+ridesCountAggTable :: SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
+ridesCountAggTable = with $ do
+  ride <- from $ table @RideT
+  where_ (not_ $ ride ^. RideStatus `in_` valList [Ride.NEW, Ride.CANCELLED])
+  groupBy $ ride ^. RideDriverId
+  pure (ride ^. RideDriverId, count @Int $ ride ^. RideId)
+
+fetchDriverInfoWithRidesCount :: Transactionable m => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber = fmap (fmap mkDriverWithRidesCount) $ do
+  Esq.findOne $ do
+    ridesCountAggQuery <- ridesCountAggTable
+    person :& driverInfo :& mbVehicle :& (_, mbRidesCount) <-
+      from $
+        table @PersonT
+          `innerJoin` table @DriverInformationT
+          `Esq.on` ( \(person :& driverInfo) ->
+                       person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
+                   )
+          `leftJoin` table @VehicleT
+          `Esq.on` ( \(person :& _ :& mbVehicle) ->
+                       just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
+                   )
+          `leftJoin` ridesCountAggQuery
+          `Esq.on` ( \(person :& _ :& _ :& (mbPersonId, _mbRidesCount)) ->
+                       just (person ^. PersonTId) ==. mbPersonId
+                   )
+    where_ $
+      person ^. PersonMerchantId ==. (val . toKey $ merchantId)
+        &&. person ^. PersonRole ==. val Person.DRIVER
+        &&. whenJust_
+          mbMobileNumberDbHashWithCode
+          ( \(mobileNumberDbHash, mobileCountryCode) ->
+              person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
+                &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+          )
+        &&. whenJust_ mbVehicleNumber (\vehicleNumber -> mbVehicle ?. VehicleRegistrationNo ==. just (val vehicleNumber))
+    pure (person, driverInfo, mbVehicle, mbRidesCount)
 
 findByIdAndRoleAndMerchantId ::
   Transactionable m =>

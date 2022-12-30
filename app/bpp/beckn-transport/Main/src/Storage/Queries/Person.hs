@@ -119,35 +119,12 @@ findAllDriversByIdsFirstNameAsc merchantId driverIds = fmap (map mkFullDriver) $
 data DriverWithRidesCount = DriverWithRidesCount
   { person :: Person,
     info :: DriverInformation,
-    vehicle :: Vehicle,
+    vehicle :: Maybe Vehicle,
     ridesCount :: Maybe Int
   }
 
-mkDriverWithRidesCount :: (Person, DriverInformation, Vehicle, Maybe Int) -> DriverWithRidesCount
+mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
 mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
-
-mkDriverWithRidesCountQuery ::
-  From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->
-  From
-    ( Table PersonT
-        :& Table DriverInformationT
-        :& Table VehicleT
-        :& (SqlExpr (Value (Maybe PersonTId)), SqlExpr (Value (Maybe Int)))
-    )
-mkDriverWithRidesCountQuery ridesCountAggQuery =
-  table @PersonT
-    `innerJoin` table @DriverInformationT
-    `Esq.on` ( \(person :& driverInfo) ->
-                 person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
-             )
-    `innerJoin` table @VehicleT
-    `Esq.on` ( \(person :& _ :& vehicle) ->
-                 person ^. PersonTId ==. vehicle ^. VehicleDriverId
-             )
-    `leftJoin` ridesCountAggQuery
-    `Esq.on` ( \(person :& _ :& _ :& (mbPersonId, _mbRidesCount)) ->
-                 just (person ^. PersonTId) ==. mbPersonId
-             )
 
 ridesCountAggTable :: SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
 ridesCountAggTable = with $ do
@@ -156,30 +133,36 @@ ridesCountAggTable = with $ do
   groupBy $ ride ^. RideDriverId
   pure (ride ^. RideDriverId, count @Int $ ride ^. RideId)
 
-fetchFullDriverByMobileNumber :: Transactionable m => Id Merchant -> DbHash -> Text -> m (Maybe DriverWithRidesCount)
-fetchFullDriverByMobileNumber merchantId mobileNumberDbHash mobileCountryCode = fmap (fmap mkDriverWithRidesCount) $ do
+fetchDriverInfoWithRidesCount :: Transactionable m => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber = fmap (fmap mkDriverWithRidesCount) $ do
   Esq.findOne $ do
     ridesCountAggQuery <- ridesCountAggTable
-    person :& driverInfo :& vehicle :& (_, mbRidesCount) <-
-      from $ mkDriverWithRidesCountQuery ridesCountAggQuery
+    person :& driverInfo :& mbVehicle :& (_, mbRidesCount) <-
+      from $
+        table @PersonT
+          `innerJoin` table @DriverInformationT
+          `Esq.on` ( \(person :& driverInfo) ->
+                       person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
+                   )
+          `leftJoin` table @VehicleT
+          `Esq.on` ( \(person :& _ :& mbVehicle) ->
+                       just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
+                   )
+          `leftJoin` ridesCountAggQuery
+          `Esq.on` ( \(person :& _ :& _ :& (mbPersonId, _mbRidesCount)) ->
+                       just (person ^. PersonTId) ==. mbPersonId
+                   )
     where_ $
-      (person ^. PersonRole ==. val Person.DRIVER)
-        &&. person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
-        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
-        &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-    pure (person, driverInfo, vehicle, mbRidesCount)
-
-fetchFullDriverInfoByVehNumber :: Transactionable m => Id Merchant -> Text -> m (Maybe DriverWithRidesCount)
-fetchFullDriverInfoByVehNumber merchantId vehicleNumber = fmap (fmap mkDriverWithRidesCount) $
-  Esq.findOne $ do
-    ridesCountAggQuery <- ridesCountAggTable
-    person :& driverInfo :& vehicle :& (_, mbRidesCount) <-
-      from $ mkDriverWithRidesCountQuery ridesCountAggQuery
-    where_ $
-      (person ^. PersonRole ==. val Person.DRIVER)
-        &&. vehicle ^. VehicleRegistrationNo ==. val vehicleNumber
-        &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-    pure (person, driverInfo, vehicle, mbRidesCount)
+      person ^. PersonMerchantId ==. (val . toKey $ merchantId)
+        &&. person ^. PersonRole ==. val Person.DRIVER
+        &&. whenJust_
+          mbMobileNumberDbHashWithCode
+          ( \(mobileNumberDbHash, mobileCountryCode) ->
+              person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
+                &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+          )
+        &&. whenJust_ mbVehicleNumber (\vehicleNumber -> mbVehicle ?. VehicleRegistrationNo ==. just (val vehicleNumber))
+    pure (person, driverInfo, mbVehicle, mbRidesCount)
 
 findByIdAndRoleAndMerchantId ::
   Transactionable m =>

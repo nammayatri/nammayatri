@@ -247,24 +247,73 @@ data DriverInfoRes = DriverInfoRes
     firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
-    dlNumber :: Maybe Text,
-    dateOfBirth :: Maybe UTCTime,
     numberOfRides :: Int,
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,
     enabled :: Bool,
     blocked :: Bool,
     verified :: Bool,
-    vehicleDetails :: Maybe VehicleAPIEntity
+    vehicleNumber :: Maybe Text,
+    driverLicenseDetails :: Maybe DriverLicenseAPIEntity,
+    vehicleRegistrationDetails :: [DriverRCAssociationAPIEntity]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data VehicleAPIEntity = VehicleAPIEntity
-  { dateOfReg :: Maybe UTCTime,
-    vehicleClass :: Maybe Text,
-    vehicleNumber :: Text
+data DriverLicense
+
+data VehicleRegistrationCertificate
+
+data DriverLicenseAPIEntity = DriverLicenseAPIEntity
+  { driverLicenseId :: Id DriverLicense,
+    documentImageId1 :: Id Image,
+    documentImageId2 :: Maybe (Id Image),
+    driverDob :: Maybe UTCTime,
+    driverName :: Maybe Text,
+    licenseNumber :: Text,
+    licenseExpiry :: UTCTime,
+    classOfVehicles :: [Text],
+    failedRules :: [Text],
+    verificationStatus :: VerificationStatus,
+    consent :: Bool,
+    consentTimestamp :: UTCTime
+    -- createdAt :: UTCTime, -- do we need it?
+    -- updatedAt UTCTime,
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverRCAssociationAPIEntity = DriverRCAssociationAPIEntity
+  { associatedOn :: UTCTime,
+    associatedTill :: UTCTime,
+    details :: VehicleRegistrationCertificateAPIEntity
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificate
+  { id :: Id VehicleRegistrationCertificate,
+    documentImageId :: Id Image,
+    certificateNumber :: Text,
+    fitnessExpiry :: UTCTime,
+    permitExpiry :: Maybe UTCTime,
+    pucExpiry :: Maybe UTCTime,
+    insuranceValidity :: Maybe UTCTime,
+    vehicleClass :: Maybe Text,
+    failedRules :: [Text],
+    vehicleManufacturer :: Maybe Text,
+    vehicleCapacity :: Maybe Int,
+    vehicleModel :: Maybe Text,
+    vehicleColor :: Maybe Text,
+    vehicleEnergyType :: Maybe Text,
+    verificationStatus :: VerificationStatus
+    -- createdAt :: UTCTime, -- do we need it?
+    -- updatedAt UTCTime,
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VerificationStatus = PENDING | VALID | INVALID
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

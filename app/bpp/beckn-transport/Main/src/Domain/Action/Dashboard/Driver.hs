@@ -193,11 +193,11 @@ driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber = 
     (Just mobileNumber, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       Esq.runInReplica $
-        QPerson.fetchFullDriverByMobileNumber merchant.id mobileNumberDbHash mobileCountryCode
+        QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
     (Nothing, Just vehicleNumber) ->
       Esq.runInReplica $
-        QPerson.fetchFullDriverInfoByVehNumber merchant.id vehicleNumber
+        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber)
           >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
   buildDriverInfoRes driverDocsInfo
@@ -205,31 +205,22 @@ driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber = 
     buildDriverInfoRes :: EncFlow m r => QPerson.DriverWithRidesCount -> m Common.DriverInfoRes
     buildDriverInfoRes QPerson.DriverWithRidesCount {..} = do
       mobileNumber <- traverse decrypt person.mobileNumber
-      let vehicleDetails = mkVehicleAPIEntity vehicle.registrationNo
       pure
         Common.DriverInfoRes
           { driverId = cast @DP.Person @Common.Driver person.id,
             firstName = person.firstName,
             middleName = person.middleName,
             lastName = person.lastName,
-            dlNumber = Nothing, -- not implemented for this bpp
-            dateOfBirth = Nothing, -- not implemented for this bpp
             numberOfRides = fromMaybe 0 ridesCount,
             mobileNumber,
             mobileCountryCode = person.mobileCountryCode,
             enabled = info.enabled,
             blocked = info.blocked,
             verified = True, -- not implemented for this bpp
-            vehicleDetails = Just vehicleDetails
+            vehicleNumber = vehicle <&> (.registrationNo),
+            driverLicenseDetails = Nothing, -- not implemented for this bpp
+            vehicleRegistrationDetails = [] -- not implemented for this bpp
           }
-
-    mkVehicleAPIEntity :: Text -> Common.VehicleAPIEntity
-    mkVehicleAPIEntity vehicleNumber = do
-      Common.VehicleAPIEntity
-        { vehicleNumber,
-          dateOfReg = Nothing, -- not implemented for this bpp,
-          vehicleClass = Nothing -- not implemented for this bpp
-        }
 
 ---------------------------------------------------------------------
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess

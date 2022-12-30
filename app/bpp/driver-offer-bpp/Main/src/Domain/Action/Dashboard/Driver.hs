@@ -240,51 +240,51 @@ mobileIndianCode = "+91"
 driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
 driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber = do
   merchant <- findMerchantByShortId merchantShortId
-  let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
+
   driverDocsInfo <- case (mbMobileNumber, mbVehicleNumber) of
     (Just mobileNumber, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
+      let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
       Esq.runInReplica $
-        QDocStatus.fetchFullDriverInfoWithDocsByMobileNumber merchant.id mobileNumberDbHash mobileCountryCode
+        QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
     (Nothing, Just vehicleNumber) ->
       Esq.runInReplica $
-        QDocStatus.fetchFullDriverInfoWithDocsByVehNumber merchant.id vehicleNumber
+        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber)
           >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
   buildDriverInfoRes driverDocsInfo
   where
-    buildDriverInfoRes :: (EncFlow m r) => QDocStatus.FullDriverWithDocs -> m Common.DriverInfoRes
-    buildDriverInfoRes driver@QDocStatus.FullDriverWithDocs {..} = do
+    buildDriverInfoRes :: EncFlow m r => QPerson.DriverWithRidesCount -> m Common.DriverInfoRes
+    buildDriverInfoRes QPerson.DriverWithRidesCount {..} = do
       mobileNumber <- traverse decrypt person.mobileNumber
-      dlNumber <- traverse decrypt $ license <&> (.licenseNumber)
-      let vehicleDetails = mkVehicleAPIEntity driver <$> (vehicle <&> (.registrationNo))
+      -- driverLicenseDetails <- buildDriverLicenseAPIEntity license
       pure
         Common.DriverInfoRes
           { driverId = cast @DP.Person @Common.Driver person.id,
-            firstName = person.firstName, -- license.driverName ?
+            firstName = person.firstName,
             middleName = person.middleName,
             lastName = person.lastName,
-            dlNumber,
-            dateOfBirth = join $ license <&> (.driverDob),
             numberOfRides = fromMaybe 0 ridesCount,
             mobileNumber,
             mobileCountryCode = person.mobileCountryCode,
             enabled = info.enabled,
             blocked = info.blocked,
             verified = info.verified,
-            vehicleDetails
+            vehicleNumber = vehicle <&> (.registrationNo),
+            driverLicenseDetails = Nothing, -- TODO
+            vehicleRegistrationDetails = [] -- TODO
           }
 
-    mkVehicleAPIEntity :: QDocStatus.FullDriverWithDocs -> Text -> Common.VehicleAPIEntity
-    mkVehicleAPIEntity QDocStatus.FullDriverWithDocs {..} vehicleNumber = do
-      let mbAssociation = fst <$> registration
-      let mbCertificate = snd <$> registration
-      Common.VehicleAPIEntity
-        { vehicleNumber,
-          dateOfReg = mbAssociation <&> (.associatedOn),
-          vehicleClass = join $ mbCertificate <&> (.vehicleClass)
-        }
+-- buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
+-- buildDriverLicenseAPIEntity DriverLicense {..} = do
+--   licenseNumber' <- decrypt licenseNumber
+--   pure
+--     Common.DriverLicenseAPIEntity
+--       { driverLicenseId = cast @DriverLicense @Common.DriverLicense id,
+--         licenseNumber = licenseNumber',
+--         ..
+--       }
 
 ---------------------------------------------------------------------
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess

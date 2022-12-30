@@ -1,6 +1,5 @@
 module Storage.Queries.DriverOnboarding.Status where
 
-import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
@@ -13,8 +12,6 @@ import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegistrationCertificate)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
-import qualified Domain.Types.Ride as Ride
-import Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverOnboarding.DriverLicense
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
@@ -22,8 +19,6 @@ import Storage.Tabular.DriverOnboarding.IdfyVerification
 import Storage.Tabular.DriverOnboarding.Image
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Tabular.Person
-import Storage.Tabular.Ride
-import Storage.Tabular.Vehicle as Vehicle
 
 data DriverDocsInfo = DriverDocsInfo
   { person :: Person,
@@ -110,100 +105,3 @@ mkDriverDocsInfo (p, l, licReq, a, r, regReq, driverInfo, licImages, vehRegImage
   DriverDocsInfo p l licReq ((,) <$> a <*> r) regReq driverInfo (def0 licImages) (def0 vehRegImages)
   where
     def0 = fromMaybe 0
-
--- this datatype is a bit ad hoc, but I think it's ok (_Yuri_)
-data FullDriverWithDocs = FullDriverWithDocs
-  { person :: Person,
-    license :: Maybe DriverLicense,
-    registration :: Maybe (DriverRCAssociation, VehicleRegistrationCertificate),
-    info :: DriverInformation,
-    vehicle :: Maybe Vehicle,
-    ridesCount :: Maybe Int -- it's not used in all queries
-  }
-
-baseFullDriverWithDocsQuery ::
-  From
-    ( Table PersonT
-        :& MbTable DriverLicenseT
-        :& MbTable DriverRCAssociationT
-        :& MbTable VehicleRegistrationCertificateT
-        :& Table DriverInformationT
-        :& MbTable VehicleT
-    )
-baseFullDriverWithDocsQuery =
-  table @PersonT
-    `Esq.leftJoin` table @DriverLicenseT `Esq.on` (\(p :& l) -> just (p ^. PersonTId) ==. l ?. DriverLicenseDriverId)
-    `Esq.leftJoin` table @DriverRCAssociationT
-      `Esq.on` (\(p :& _ :& rcAssoc) -> just (p ^. PersonTId) ==. rcAssoc ?. DriverRCAssociationDriverId)
-    `Esq.leftJoin` table @VehicleRegistrationCertificateT
-      `Esq.on` (\(_ :& _ :& rcAssoc :& regCert) -> rcAssoc ?. DriverRCAssociationRcId ==. regCert ?. VehicleRegistrationCertificateTId)
-    `innerJoin` table @DriverInformationT
-      `Esq.on` ( \(person :& _ :& _ :& _ :& driverInfo) ->
-                   person ^. PersonTId ==. driverInfo ^. DriverInformationDriverId
-               )
-    `leftJoin` table @VehicleT
-      `Esq.on` ( \(person :& _ :& _ :& _ :& _ :& vehicle) ->
-                   just (person ^. PersonTId) ==. vehicle ?. VehicleDriverId
-               )
-
-ridesCountAggTable :: SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
-ridesCountAggTable = with $ do
-  ride <- from $ table @RideT
-  where_ (not_ $ ride ^. RideStatus `in_` valList [Ride.NEW, Ride.CANCELLED])
-  groupBy $ ride ^. RideDriverId
-  pure (ride ^. RideDriverId, count @Int $ ride ^. RideId)
-
-mkFullDriverWithRidesCountQuery ::
-  From (SqlExpr (Value PersonTId), SqlExpr (Value Int)) ->
-  From
-    ( Table PersonT
-        :& MbTable DriverLicenseT
-        :& MbTable DriverRCAssociationT
-        :& MbTable VehicleRegistrationCertificateT
-        :& Table DriverInformationT
-        :& MbTable VehicleT
-        :& (SqlExpr (Value (Maybe PersonTId)), SqlExpr (Value (Maybe Int)))
-    )
-mkFullDriverWithRidesCountQuery ridesCountAggQuery =
-  baseFullDriverWithDocsQuery
-    `Esq.leftJoin` ridesCountAggQuery
-      `Esq.on` ( \(person :& _ :& _ :& _ :& _ :& _ :& (mbPersonId, _mbRidesCount)) ->
-                   just (person ^. PersonTId) ==. mbPersonId
-               )
-
-fetchFullDriverInfoWithDocsByMobileNumber :: Transactionable m => Id Merchant -> DbHash -> Text -> m (Maybe FullDriverWithDocs)
-fetchFullDriverInfoWithDocsByMobileNumber merchantId mobileNumberDbHash mobileCountryCode = fmap (fmap mkFullDriverInfoWithDocs) $ do
-  Esq.findOne $ do
-    ridesCountAggQuery <- ridesCountAggTable
-    person :& license :& assoc :& registration :& info :& mbVeh :& (_, mbRidesCount) <-
-      from $ mkFullDriverWithRidesCountQuery ridesCountAggQuery
-    where_ $
-      (person ^. PersonRole ==. val DRIVER)
-        &&. person ^. PersonMobileCountryCode ==. val (Just mobileCountryCode)
-        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
-        &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-    pure (person, license, assoc, registration, info, mbVeh, mbRidesCount)
-
-fetchFullDriverInfoWithDocsByVehNumber :: Transactionable m => Id Merchant -> Text -> m (Maybe FullDriverWithDocs)
-fetchFullDriverInfoWithDocsByVehNumber merchantId vehicleNumber = fmap (fmap mkFullDriverInfoWithDocs) $
-  Esq.findOne $ do
-    ridesCountAggQuery <- ridesCountAggTable
-    person :& license :& assoc :& registration :& info :& mbVeh :& (_, mbRidesCount) <-
-      from $ mkFullDriverWithRidesCountQuery ridesCountAggQuery
-    where_ $
-      (person ^. PersonRole ==. val DRIVER)
-        &&. mbVeh ?. VehicleRegistrationNo ==. val (Just vehicleNumber)
-        &&. person ^. PersonMerchantId ==. (val . toKey $ merchantId)
-    pure (person, license, assoc, registration, info, mbVeh, mbRidesCount)
-
-mkFullDriverInfoWithDocs ::
-  ( Person,
-    Maybe DriverLicense,
-    Maybe DriverRCAssociation,
-    Maybe VehicleRegistrationCertificate,
-    DriverInformation,
-    Maybe Vehicle,
-    Maybe Int
-  ) ->
-  FullDriverWithDocs
-mkFullDriverInfoWithDocs (p, l, a, v, i, mbVeh, mbRidesCount) = FullDriverWithDocs p l ((,) <$> a <*> v) i mbVeh mbRidesCount
