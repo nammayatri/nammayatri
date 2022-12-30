@@ -60,7 +60,7 @@ content-type: application/json
 
 ###
 
-GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/info?mobileNumber=6666666666
+GET {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/driver/info?mobileNumber=6666666666&mobileCountryCode=%2B94
 token: {{customer_service}}
 content-type: application/json
 

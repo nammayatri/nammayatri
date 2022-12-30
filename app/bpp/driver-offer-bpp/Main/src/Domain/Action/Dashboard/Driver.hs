@@ -30,8 +30,9 @@ import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverOnboarding.DriverLicense
-import Domain.Types.DriverOnboarding.DriverRCAssociation (DriverRCAssociation)
+import Domain.Types.DriverOnboarding.DriverRCAssociation (DriverRCAssociation (..))
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
+import Domain.Types.DriverOnboarding.Image (Image)
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -241,7 +242,7 @@ driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> F
 driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber = do
   merchant <- findMerchantByShortId merchantShortId
 
-  driverDocsInfo <- case (mbMobileNumber, mbVehicleNumber) of
+  driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber) of
     (Just mobileNumber, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
@@ -253,38 +254,76 @@ driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber = 
         QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber)
           >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
-  buildDriverInfoRes driverDocsInfo
-  where
-    buildDriverInfoRes :: EncFlow m r => QPerson.DriverWithRidesCount -> m Common.DriverInfoRes
-    buildDriverInfoRes QPerson.DriverWithRidesCount {..} = do
-      mobileNumber <- traverse decrypt person.mobileNumber
-      -- driverLicenseDetails <- buildDriverLicenseAPIEntity license
-      pure
-        Common.DriverInfoRes
-          { driverId = cast @DP.Person @Common.Driver person.id,
-            firstName = person.firstName,
-            middleName = person.middleName,
-            lastName = person.lastName,
-            numberOfRides = fromMaybe 0 ridesCount,
-            mobileNumber,
-            mobileCountryCode = person.mobileCountryCode,
-            enabled = info.enabled,
-            blocked = info.blocked,
-            verified = info.verified,
-            vehicleNumber = vehicle <&> (.registrationNo),
-            driverLicenseDetails = Nothing, -- TODO
-            vehicleRegistrationDetails = [] -- TODO
-          }
+  let driverId = driverWithRidesCount.person.id
+  mbDriverLicense <- Esq.runInReplica $ QDriverLicense.findByDriverId driverId
+  rcAssociationHistory <- Esq.runInReplica $ QRCAssociation.findAllByDriverId driverId
+  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory
 
--- buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
--- buildDriverLicenseAPIEntity DriverLicense {..} = do
---   licenseNumber' <- decrypt licenseNumber
---   pure
---     Common.DriverLicenseAPIEntity
---       { driverLicenseId = cast @DriverLicense @Common.DriverLicense id,
---         licenseNumber = licenseNumber',
---         ..
---       }
+buildDriverInfoRes ::
+  EncFlow m r =>
+  QPerson.DriverWithRidesCount ->
+  Maybe DriverLicense ->
+  [(DriverRCAssociation, VehicleRegistrationCertificate)] ->
+  m Common.DriverInfoRes
+buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory = do
+  mobileNumber <- traverse decrypt person.mobileNumber
+  driverLicenseDetails <- traverse buildDriverLicenseAPIEntity mbDriverLicense
+  vehicleRegistrationDetails <- traverse buildRCAssociationAPIEntity rcAssociationHistory
+  pure
+    Common.DriverInfoRes
+      { driverId = cast @DP.Person @Common.Driver person.id,
+        firstName = person.firstName,
+        middleName = person.middleName,
+        lastName = person.lastName,
+        numberOfRides = fromMaybe 0 ridesCount,
+        mobileNumber,
+        mobileCountryCode = person.mobileCountryCode,
+        enabled = info.enabled,
+        blocked = info.blocked,
+        verified = info.verified,
+        vehicleNumber = vehicle <&> (.registrationNo),
+        driverLicenseDetails,
+        vehicleRegistrationDetails
+      }
+
+buildDriverLicenseAPIEntity :: EncFlow m r => DriverLicense -> m Common.DriverLicenseAPIEntity
+buildDriverLicenseAPIEntity DriverLicense {..} = do
+  licenseNumber' <- decrypt licenseNumber
+  pure
+    Common.DriverLicenseAPIEntity
+      { driverLicenseId = cast @DriverLicense @Common.DriverLicense id,
+        documentImageId1 = cast @Image @Common.Image documentImageId1,
+        documentImageId2 = (cast @Image @Common.Image) <$> documentImageId2,
+        licenseNumber = licenseNumber',
+        verificationStatus = castVerificationStatus verificationStatus,
+        ..
+      }
+
+buildRCAssociationAPIEntity ::
+  EncFlow m r =>
+  (DriverRCAssociation, VehicleRegistrationCertificate) ->
+  m Common.DriverRCAssociationAPIEntity
+buildRCAssociationAPIEntity (DriverRCAssociation {..}, vehicleRC) = do
+  details <- buildVehicleRCAPIEntity vehicleRC
+  pure Common.DriverRCAssociationAPIEntity {..}
+
+buildVehicleRCAPIEntity :: EncFlow m r => VehicleRegistrationCertificate -> m Common.VehicleRegistrationCertificateAPIEntity
+buildVehicleRCAPIEntity VehicleRegistrationCertificate {..} = do
+  certificateNumber' <- decrypt certificateNumber
+  pure
+    Common.VehicleRegistrationCertificateAPIEntity
+      { registrationCertificateId = cast @VehicleRegistrationCertificate @Common.VehicleRegistrationCertificate id,
+        documentImageId = cast @Image @Common.Image documentImageId,
+        certificateNumber = certificateNumber',
+        verificationStatus = castVerificationStatus verificationStatus,
+        ..
+      }
+
+castVerificationStatus :: IV.VerificationStatus -> Common.VerificationStatus
+castVerificationStatus = \case
+  IV.PENDING -> Common.PENDING
+  IV.VALID -> Common.VALID
+  IV.INVALID -> Common.INVALID
 
 ---------------------------------------------------------------------
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess

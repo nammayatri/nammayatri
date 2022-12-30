@@ -10,6 +10,7 @@ import Domain.Types.DriverOnboarding.DriverRCAssociation
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Person (Person)
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
+import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 
 create :: DriverRCAssociation -> SqlDB ()
 create = Esq.create
@@ -33,17 +34,23 @@ getActiveAssociationByDriver driverId = do
         &&. association ^. DriverRCAssociationAssociatedTill >. val (Just now)
     return association
 
-findOneByDriverId ::
-  (Transactionable m, MonadFlow m) =>
+findAllByDriverId ::
+  Transactionable m =>
   Id Person ->
-  m (Maybe DriverRCAssociation)
-findOneByDriverId driverId = do
-  findOne $ do
-    association <- from $ table @DriverRCAssociationT
+  m [(DriverRCAssociation, VehicleRegistrationCertificate)]
+findAllByDriverId driverId = do
+  findAll $ do
+    rcAssoc :& regCert <-
+      from $
+        table @DriverRCAssociationT
+          `Esq.innerJoin` table @VehicleRegistrationCertificateT
+            `Esq.on` ( \(rcAssoc :& regCert) ->
+                         rcAssoc ^. DriverRCAssociationRcId ==. regCert ^. VehicleRegistrationCertificateTId
+                     )
     where_ $
-      association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
-    limit 1
-    return association
+      rcAssoc ^. DriverRCAssociationDriverId ==. val (toKey driverId)
+    orderBy [desc $ rcAssoc ^. DriverRCAssociationAssociatedOn]
+    return (rcAssoc, regCert)
 
 getActiveAssociationByRC ::
   (Transactionable m, MonadFlow m) =>

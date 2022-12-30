@@ -188,10 +188,10 @@ mobileIndianCode = "+91"
 driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
 driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber = do
   merchant <- findMerchantByShortId merchantShortId
-  let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
   driverDocsInfo <- case (mbMobileNumber, mbVehicleNumber) of
     (Just mobileNumber, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
+      let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
       Esq.runInReplica $
         QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)

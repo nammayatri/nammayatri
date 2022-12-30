@@ -41,6 +41,7 @@ token: {{customer_service}}
 @driverId1 = favorit-auto1-0000000000000000000000
 @driverId2 = favorit-auto2-0000000000000000000000
 @driverId3 = favorit-suv-000000000000000000000001
+@driverId4 = favorit-sedan-0000000000000000000000
 
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1}}/enable
 token: {{juspay_ops}}
@@ -84,7 +85,7 @@ content-type: application/json
 
 ###
 
-POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1}}/unlinkVehicle
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId4}}/unlinkVehicle
 token: {{juspay_admin}}
 content-type: application/json
 
@@ -100,7 +101,7 @@ content-type: application/json
 }
 ###
 
-POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId1}}/addVehicle
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId4}}/addVehicle
 token: {{juspay_admin}}
 content-type: application/json
 

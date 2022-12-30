@@ -285,14 +285,16 @@ data DriverLicenseAPIEntity = DriverLicenseAPIEntity
 
 data DriverRCAssociationAPIEntity = DriverRCAssociationAPIEntity
   { associatedOn :: UTCTime,
-    associatedTill :: UTCTime,
+    associatedTill :: Maybe UTCTime,
     details :: VehicleRegistrationCertificateAPIEntity
+    -- consent :: Bool, -- do we need it?
+    -- consentTimestamp :: UTCTime
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificate
-  { id :: Id VehicleRegistrationCertificate,
+data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPIEntity
+  { registrationCertificateId :: Id VehicleRegistrationCertificate,
     documentImageId :: Id Image,
     certificateNumber :: Text,
     fitnessExpiry :: UTCTime,
