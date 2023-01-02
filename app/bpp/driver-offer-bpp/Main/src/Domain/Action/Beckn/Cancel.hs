@@ -16,9 +16,9 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.DriverInformation as QDriverInfo
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -36,6 +36,7 @@ cancel ::
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
     HedisFlow m r,
     CacheFlow m r,
     HasHttpClientOptions r c,
@@ -64,7 +65,7 @@ cancel transporterId _ req = do
       QRide.updateStatus ride.id SRide.CANCELLED
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
-    QDriverInfo.updateOnRide (cast ride.driverId) False
+    DLoc.updateOnRide (cast ride.driverId) False
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
   fork "cancelBooking - Notify BAP" $ do

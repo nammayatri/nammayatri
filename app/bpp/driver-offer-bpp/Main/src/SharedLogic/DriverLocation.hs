@@ -45,3 +45,22 @@ cacheDriverLocation driverLocation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let driverLocationKey = makeDriverLocationKey driverLocation.driverId
   Hedis.setExp driverLocationKey driverLocation expTime
+
+updateOnRide :: (CacheFlow m r, Esq.EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Driver -> Bool -> m ()
+updateOnRide driverId onRide = do
+  if onRide
+    then do
+      -- driver coming to ride, update location from db to redis
+      driverLocation <- DLQueries.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+      cacheDriverLocation driverLocation
+    else do
+      -- driver going out of ride, update location from redis to db
+      mDriverLocatation <- findById (cast driverId)
+      maybe
+        (pure ())
+        ( \loc -> do
+            let latLong = LatLong loc.lat loc.lon
+            void $ Esq.runTransaction $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt
+        )
+        mDriverLocatation
+  CDI.updateOnRide driverId onRide

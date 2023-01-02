@@ -10,10 +10,10 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.DriverInformation as DriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -27,6 +27,7 @@ import qualified Tools.Notifications as Notify
 cancelRideImpl ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
     SW.HasWindowOptions r,
     HedisFlow m r,
@@ -57,7 +58,8 @@ cancelRideImpl rideId bookingCReason = do
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    Esq.EsqDBReplicaFlow m r
   ) =>
   Id SRB.Booking ->
   SRide.Ride ->
@@ -65,7 +67,7 @@ cancelRideTransaction ::
   m ()
 cancelRideTransaction bookingId ride bookingCReason = do
   let driverId = cast ride.driverId
-  DriverInformation.updateOnRide driverId False
+  DLoc.updateOnRide driverId False
   Esq.runTransaction $ do
     when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
     QRide.updateStatus ride.id SRide.CANCELLED
