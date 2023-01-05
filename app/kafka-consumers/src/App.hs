@@ -38,7 +38,8 @@ startKafkaConsumer = do
 
 startConsumerWithEnv :: AppEnv -> IO ()
 startConsumerWithEnv appEnv@AppEnv {..} = do
-  processData readMessages
+  kafkaConsumer <- newKafkaConsumer
+  processData kafkaConsumer
   where
     newKafkaConsumer =
       either (error . ("Unable to open a kafka consumer: " <>) . show) id
@@ -46,35 +47,35 @@ startConsumerWithEnv appEnv@AppEnv {..} = do
           (kafkaConsumerCfg.consumerProperties)
           (Consumer.topics kafkaConsumerCfg.topicNames)
 
-    processData msges =
+    processData kafkaConsumer = do
       case consumerType of
-        AVAILABILITY_TIME -> processStreamforAvailability msges
+        AVAILABILITY_TIME -> processStreamforAvailability kafkaConsumer
         FEED_TO_CLICKHOUSE -> clickhousefeeder
 
     clickhousefeeder = withFlow . throwError $ InternalError "Implementation missing"
 
-    processStreamforAvailability msges =
-      msges
+    processStreamforAvailability kafkaConsumer =
+      readMessages kafkaConsumer
         & S.mapMaybe hush
-        & S.mapMaybe ((\(a, b) -> (,) <$> a <*> b) . ((A.decode . LBS.fromStrict <=< crValue) &&& (pure . decodeUtf8 <=< crKey)))
-        & S.mapM (\(a, b :: Text) -> processRealtimeLocationUpdates a b $> (a, b))
-        & S.intervalsOf (fromIntegral dumpEvery) (SF.lmap (\(a, b) -> ((b, a.mId), a)) (SF.classify buildTimeSeries))
-        & S.mapM (Map.traverseWithKey calculateAvailableTime)
+        & S.mapMaybe ((\(ma, (mb, cr)) -> (\a b -> (a, b, cr)) <$> ma <*> mb) . ((A.decode . LBS.fromStrict <=< crValue) &&& (pure . decodeUtf8 <=< crKey) &&& id))
+        & S.mapM (\(a, b :: Text, cr) -> processRealtimeLocationUpdates a b $> (a, b, cr))
+        & S.intervalsOf (fromIntegral dumpEvery) (SF.lmap (\(a, b, cr) -> ((b, a.mId), (a, cr))) (SF.classify buildTimeSeries))
+        & S.mapM (Map.traverseWithKey (calculateAvailableTime kafkaConsumer))
         & S.drain
 
-    calculateAvailableTime (driverId, merchantId) = withFlow . DO.calculateAvailableTime merchantId driverId . reverse
+    calculateAvailableTime kafkaConsumer (driverId, merchantId) = withFlow . DO.calculateAvailableTime merchantId driverId kafkaConsumer . reverse
 
     processRealtimeLocationUpdates locationUpdate = withFlow . DO.processData locationUpdate
 
     buildTimeSeries = SF.mkFold step start extract
       where
-        step !acc val = pure (val.ts : acc)
+        step !acc (val, cr) = pure ((val.ts, cr) : acc)
         start = pure []
         extract = pure
 
-    readMessages =
+    readMessages kafkaConsumer =
       S.bracket
-        newKafkaConsumer
+        (pure kafkaConsumer)
         Consumer.closeConsumer
         (\kc -> S.repeatM (Consumer.pollMessage kc (Consumer.Timeout 500)))
 

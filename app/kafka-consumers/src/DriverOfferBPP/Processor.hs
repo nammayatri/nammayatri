@@ -17,6 +17,7 @@ import qualified DriverOfferBPP.Storage.Queries as Q
 import qualified DriverOfferBPP.Types as T
 import Environment (AppEnv)
 import EulerHS.Prelude
+import qualified Kafka.Consumer as Consumer
 
 type Flow = FlowR AppEnv
 
@@ -37,9 +38,10 @@ createOrUpdateDriverAvailability merchantId driverId (bucketStartTime, bucketEnd
           }
   DB.runTransaction $ Q.createOrUpdateDriverAvailability newAvailabilityEntry
 
-calculateAvailableTime :: Text -> Text -> [UTCTime] -> Flow ()
-calculateAvailableTime _ _ [] = pure ()
-calculateAvailableTime merchantId driverId (fstTime : restTimeSeries) = do
+calculateAvailableTime :: Text -> Text -> Consumer.KafkaConsumer -> [(UTCTime, Consumer.ConsumerRecord (Maybe ByteString) (Maybe ByteString))] -> Flow ()
+calculateAvailableTime _ _ _ [] = pure ()
+calculateAvailableTime merchantId driverId kc ((fstTime, fstCR) : restTimeSeriesWithCr) = do
+  let restTimeSeries = map fst restTimeSeriesWithCr
   mbLatestAvailabilityRecord <- Q.findLatestByDriverIdAndMerchantId driverId merchantId
   timeBetweenUpdates <- asks (.timeBetweenUpdates)
   granualityPeriodType <- asks (.granualityPeriodType)
@@ -60,7 +62,13 @@ calculateAvailableTime merchantId driverId (fstTime : restTimeSeries) = do
   logInfo $ "ActiveTime pairs " <> show availabilityInWindow
   logInfo $ "Adding " <> show availableTime <> " seconds available time for driverId: " <> show driverId
   void $ M.traverseWithKey (createOrUpdateDriverAvailability merchantId driverId) availabilityInWindow
+  let mbLastCR = lastMaybe (fstCR : map snd restTimeSeriesWithCr)
+  whenJust mbLastCR (void . Consumer.commitOffsetMessage Consumer.OffsetCommit kc)
   where
+    lastMaybe arr = go $ reverse arr
+      where
+        go [] = Nothing
+        go (a : _) = Just a
     sumPairDiff = foldr' (\timePair acc -> acc + uncurry (flip diffUTCTime) timePair) 0
     getBucketPair periodType (_, endTime) = do
       let bucketEndTime = SW.incrementPeriod periodType endTime

@@ -31,7 +31,7 @@ instance FromDhall ConsumerConfig where
            in (\a b -> a <> logLevel KafkaLogInfo <> b)
                 . (groupId . ConsumerGroupId)
                 <$> cgId
-                <*> ((<>) (autoCommit (Millis 1000)) . brokersList <$> bs)
+                <*> ((<>) noAutoCommit . brokersList <$> bs)
 
 data ConsumerType = AVAILABILITY_TIME | FEED_TO_CLICKHOUSE deriving (Generic, FromDhall, Read)
 
