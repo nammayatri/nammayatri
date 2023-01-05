@@ -191,6 +191,6 @@ in  { esqDBCfg
     , driverPoolCfg
     , overrideDriverPoolCfg = Some overrideDriverPoolCfg
     , sendSearchRequestJobCfg
-    , driverLocationUpdateTopic = "location-updates"
+    , driverLocationUpdateTopic = "location-updates-master"
     , kafkaProducerCfg
     }
