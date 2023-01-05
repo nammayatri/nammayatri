@@ -49,14 +49,14 @@ prepareDriverPoolBatch ::
     CoreMetrics m,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
-    HasDriverPoolConfig r,
     HasSendSearchRequestJobConfig r,
     SWC.HasWindowOptions r
   ) =>
+  DriverPoolConfig ->
   DSR.SearchRequest ->
   PoolBatchNum ->
   m [DriverPoolWithActualDistResult]
-prepareDriverPoolBatch searchReq batchNum = withLogTag ("BatchNum-" <> show batchNum) $ do
+prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-" <> show batchNum) $ do
   previousBatchesDrivers <- getPreviousBatchesDrivers
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   prepareDriverPoolBatch' previousBatchesDrivers
@@ -93,7 +93,7 @@ prepareDriverPoolBatch searchReq batchNum = withLogTag ("BatchNum-" <> show batc
           merchantId = searchReq.providerId
       let pickupLoc = searchReq.fromLocation
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-      calculateDriverPoolWithActualDist (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
+      calculateDriverPoolWithActualDist driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
     getBatch driverPool = do
       batchSize <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.driverBatchSize)
       return $ take batchSize driverPool
@@ -111,9 +111,9 @@ prepareDriverPoolBatch searchReq batchNum = withLogTag ("BatchNum-" <> show batc
         Intelligent -> TC.findByMerchantId merchantId >>= intelligentPoolSelection driverPool
         Random -> randomizeAndLimitSelection driverPool
     isAtMaxRadiusStep radiusStep = do
-      minRadiusOfSearch <- fromIntegral @_ @Double <$> asks (.driverPoolCfg.minRadiusOfSearch)
-      maxRadiusOfSearch <- fromIntegral @_ @Double <$> asks (.driverPoolCfg.maxRadiusOfSearch)
-      radiusStepSize <- fromIntegral @_ @Double <$> asks (.driverPoolCfg.radiusStepSize)
+      let minRadiusOfSearch = fromIntegral @_ @Double driverPoolCfg.minRadiusOfSearch
+      let maxRadiusOfSearch = fromIntegral @_ @Double driverPoolCfg.maxRadiusOfSearch
+      let radiusStepSize = fromIntegral @_ @Double driverPoolCfg.radiusStepSize
       let maxRadiusStep = ceiling $ (maxRadiusOfSearch - minRadiusOfSearch) / radiusStepSize
       return $ maxRadiusStep <= radiusStep
     getPreviousBatchesDrivers = do
@@ -200,16 +200,16 @@ getNextDriverPoolBatch ::
     CoreMetrics m,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
-    HasDriverPoolConfig r,
     HasSendSearchRequestJobConfig r,
     SWC.HasWindowOptions r
   ) =>
+  DriverPoolConfig ->
   DSR.SearchRequest ->
   m [DriverPoolWithActualDistResult]
-getNextDriverPoolBatch searchReq = withLogTag "getNextDriverPoolBatch" do
+getNextDriverPoolBatch driverPoolConfig searchReq = withLogTag "getNextDriverPoolBatch" do
   batchNum <- getPoolBatchNum searchReq.id
   incrementBatchNum searchReq.id
-  prepareDriverPoolBatch searchReq batchNum
+  prepareDriverPoolBatch driverPoolConfig searchReq batchNum
 
 getPoolBatchNum :: (Redis.HedisFlow m r) => Id DSR.SearchRequest -> m PoolBatchNum
 getPoolBatchNum searchReqId = do

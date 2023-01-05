@@ -109,7 +109,8 @@ handler merchantId sReq = do
         logDebug "Trip doesnot match any fare policy constraints."
         return []
       else do
-        driverPool <- calculateDriverPool Nothing pickupLatLong org.id True Nothing
+        driverPoolCfg <- getDriverPoolConfig distance
+        driverPool <- calculateDriverPool driverPoolCfg Nothing pickupLatLong org.id True Nothing
 
         logDebug $ "Search handler: driver pool " <> show driverPool
 

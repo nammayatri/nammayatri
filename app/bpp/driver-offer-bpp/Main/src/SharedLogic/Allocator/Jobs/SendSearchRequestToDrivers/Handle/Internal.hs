@@ -17,7 +17,7 @@ import Domain.Types.SearchRequest
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as Reexport
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers as Reexport
-import SharedLogic.DriverPool (HasDriverPoolConfig)
+import SharedLogic.DriverPool (DriverPoolConfig)
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -34,17 +34,16 @@ isRideAlreadyAssigned searchReqId = isJust <$> QB.findBySearchReq searchReqId
 
 isReceivedMaxDriverQuotes ::
   ( HasCacheConfig r,
-    HasDriverPoolConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
     Log m
   ) =>
+  DriverPoolConfig ->
   Id SearchRequest ->
   m Bool
-isReceivedMaxDriverQuotes searchReqId = do
+isReceivedMaxDriverQuotes driverPoolCfg searchReqId = do
   totalQuotesRecieved <- length <$> QDQ.findAllByRequestId searchReqId
-  maxDriverQuotesRequired <- asks (.driverPoolCfg.maxDriverQuotesRequired)
-  pure (totalQuotesRecieved >= maxDriverQuotesRequired)
+  pure (totalQuotesRecieved >= driverPoolCfg.maxDriverQuotesRequired)
 
 getRescheduleTime ::
   ( HasCacheConfig r,

@@ -69,7 +69,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
-import SharedLogic.DriverPool (DriverPoolConfig, incrementQuoteAcceptedCount)
+import SharedLogic.DriverPool (HasDriverPoolConfig, getDriverPoolConfig, incrementQuoteAcceptedCount)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
@@ -551,7 +551,8 @@ offerQuote ::
     SWC.HasWindowOptions r,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "driverPoolCfg" ::: DriverPoolConfig],
+    HasDriverPoolConfig r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     CoreMetrics m,
     HasPrettyLogger m r
@@ -574,7 +575,8 @@ respondQuote ::
     SWC.HasWindowOptions r,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "driverPoolCfg" ::: DriverPoolConfig],
+    HasDriverPoolConfig r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     CoreMetrics m,
     HasPrettyLogger m r
@@ -600,8 +602,9 @@ respondQuote driverId req = do
         logDebug $ "offered fare: " <> show req.offeredFare
         whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
         when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
+        quoteLimit <- getQuoteLimit sReq.estimatedDistance
         quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
-        whenM (quotesCountExceeded quoteCount) (throwError QuoteAlreadyRejected)
+        when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
         farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
         whenJust mbOfferedFare $ \off ->
           unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
@@ -612,7 +615,8 @@ respondQuote driverId req = do
           QDrQt.create driverQuote
           QSRD.updateDriverResponse sReqFD.id req.response
         incrementQuoteAcceptedCount driverId
-        whenM (quotesCountReached quoteCount) $ sendRemoveRideRequestNotification organization.id driverQuote
+        -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
+        when ((quoteCount + 1) >= quoteLimit) $ sendRemoveRideRequestNotification organization.id driverQuote
         sendDriverOffer organization sReq driverQuote
       Reject -> do
         Esq.runTransaction $ do
@@ -654,12 +658,9 @@ respondQuote driverId req = do
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
       logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
       pure $ not $ null activeQuotes
-    quotesCountExceeded quoteCount = do
-      driverPoolCfg <- asks (.driverPoolCfg)
-      pure $ quoteCount > (fromIntegral driverPoolCfg.driverQuoteLimit)
-    quotesCountReached quoteCount = do
-      driverPoolCfg <- asks (.driverPoolCfg)
-      pure $ quoteCount >= (fromIntegral driverPoolCfg.driverQuoteLimit)
+    getQuoteLimit dist = do
+      driverPoolCfg <- getDriverPoolConfig dist
+      pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification orgId driverQuote = do
       driverSearchReqs <- QSRD.findAllActiveWithoutRespByRequestId req.searchRequestId
       for_ driverSearchReqs $ \driverReq -> do

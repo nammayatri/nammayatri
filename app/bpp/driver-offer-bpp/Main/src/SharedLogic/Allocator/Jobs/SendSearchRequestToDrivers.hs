@@ -13,7 +13,7 @@ import SharedLogic.Allocator (JobType, SendSearchRequestToDriverJobData (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
-import SharedLogic.DriverPool.Config (HasDriverPoolConfig)
+import SharedLogic.DriverPool.Config (DriverPoolConfig, HasDriverPoolConfig, getDriverPoolConfig)
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -40,7 +40,8 @@ sendSearchRequestToDrivers Job {id, jobData} = withLogTag ("JobId-" <> id.getId)
   let searchReqId = jobData.requestId
   searchReq <- QSR.findById searchReqId >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  sendSearchRequestToDrivers' searchReq merchant jobData.baseFare jobData.driverMinExtraFee jobData.driverMaxExtraFee
+  driverPoolConfig <- getDriverPoolConfig jobData.estimatedRideDistance
+  sendSearchRequestToDrivers' driverPoolConfig searchReq merchant jobData.baseFare jobData.driverMinExtraFee jobData.driverMaxExtraFee
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
@@ -49,28 +50,28 @@ sendSearchRequestToDrivers' ::
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     Metrics.CoreMetrics m,
     HasSendSearchRequestJobConfig r,
-    HasDriverPoolConfig r,
     HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
     Log m,
     SWC.HasWindowOptions r
   ) =>
+  DriverPoolConfig ->
   SearchRequest ->
   Merchant ->
   Money ->
   Money ->
   Money ->
   m ExecutionResult
-sendSearchRequestToDrivers' searchReq merchant baseFare driverMinExtraCharge driverMaxExtraCharge = do
+sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverMinExtraCharge driverMaxExtraCharge = do
   handler handle
   where
     handle =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit searchReq.id,
           isRideAlreadyAssigned = I.isRideAlreadyAssigned searchReq.id,
-          isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes searchReq.id,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch searchReq,
+          isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchReq.id,
+          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq,
           cleanupDriverPoolBatches = I.cleanupDriverPoolBatches searchReq.id,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare driverMinExtraCharge driverMaxExtraCharge,
           getRescheduleTime = I.getRescheduleTime,

@@ -19,6 +19,7 @@ import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.CacheDistance as CD
+import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
 import SharedLogic.GoogleMaps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
@@ -77,7 +78,8 @@ handler merchantId sReq = do
   Esq.runTransaction $ do
     QSReq.create searchReq
 
-  res <- sendSearchRequestToDrivers' searchReq merchant baseFare driverExtraFare.minFee driverExtraFare.maxFee
+  driverPoolConfig <- getDriverPoolConfig distance
+  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverExtraFare.minFee driverExtraFare.maxFee
   case res of
     ReSchedule ut ->
       Esq.runTransaction $ do
@@ -85,6 +87,7 @@ handler merchantId sReq = do
           SendSearchRequestToDriverJobData
             { requestId = searchReq.id,
               baseFare = baseFare,
+              estimatedRideDistance = distance,
               driverMinExtraFee = driverExtraFare.minFee,
               driverMaxExtraFee = driverExtraFare.maxFee
             }

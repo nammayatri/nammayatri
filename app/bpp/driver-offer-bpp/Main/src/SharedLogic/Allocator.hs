@@ -2,7 +2,7 @@ module SharedLogic.Allocator where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common (Money)
+import Beckn.Types.Common (Meters, Money)
 import Beckn.Types.Id
 import Beckn.Utils.Dhall (FromDhall)
 import qualified Domain.Types.SearchRequest as DSR
@@ -14,6 +14,7 @@ data JobType = SendSearchRequestToDriver
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { requestId :: Id DSR.SearchRequest,
     baseFare :: Money,
+    estimatedRideDistance :: Meters,
     driverMinExtraFee :: Money,
     driverMaxExtraFee :: Money
   }

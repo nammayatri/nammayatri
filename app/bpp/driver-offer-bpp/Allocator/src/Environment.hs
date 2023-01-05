@@ -26,7 +26,7 @@ import "driver-offer-bpp" Environment (AppCfg (..))
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import SharedLogic.Allocator (JobType (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
-import SharedLogic.DriverPool (DriverPoolConfig)
+import SharedLogic.DriverPool (DriverPoolConfig, OverrideDriverPoolConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheConfig)
 import System.Environment (lookupEnv)
@@ -54,6 +54,7 @@ data HandlerEnv = HandlerEnv
     googleTranslateKey :: Text,
     coreMetrics :: CoreMetricsContainer,
     driverPoolCfg :: DriverPoolConfig,
+    overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer
   }
@@ -69,6 +70,7 @@ buildHandlerEnv HandlerCfg {..} = do
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
+  let overrideDriverPoolConfig = fromMaybe [] overrideDriverPoolCfg
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

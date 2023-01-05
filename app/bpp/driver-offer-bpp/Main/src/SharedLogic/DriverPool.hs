@@ -127,20 +127,19 @@ calculateDriverPool ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    HasDriverPoolConfig r,
     CoreMetrics m,
     HasCoordinates a
   ) =>
+  DriverPoolConfig ->
   Maybe Variant ->
   a ->
   Id DM.Merchant ->
   Bool ->
   Maybe PoolRadiusStep ->
   m [DriverPoolResult]
-calculateDriverPool mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
-  radius <- getRadius
+calculateDriverPool driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
+  let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
-  mbDriverPositionInfoExpiry <- asks (.driverPoolCfg.driverPositionInfoExpiry)
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
       Esq.runInReplica $
@@ -150,17 +149,17 @@ calculateDriverPool mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
           radius
           merchantId
           onlyNotOnRide
-          mbDriverPositionInfoExpiry
+          driverPoolCfg.driverPositionInfoExpiry
   return $ makeDriverPoolResult <$> approxDriverPool
   where
-    getRadius = do
-      maxRadius <- fromIntegral <$> asks (.driverPoolCfg.maxRadiusOfSearch)
-      case mRadiusStep of
+    getRadius mRadiusStep_ = do
+      let maxRadius = fromIntegral driverPoolCfg.maxRadiusOfSearch
+      case mRadiusStep_ of
         Just radiusStep -> do
-          minRadius <- fromIntegral <$> asks (.driverPoolCfg.minRadiusOfSearch)
-          radiusStepSize <- asks (.driverPoolCfg.radiusStepSize)
-          return $ min (minRadius + fromIntegral radiusStepSize * radiusStep) maxRadius
-        Nothing -> return maxRadius
+          let minRadius = fromIntegral driverPoolCfg.minRadiusOfSearch
+          let radiusStepSize = fromIntegral driverPoolCfg.radiusStepSize
+          min (minRadius + radiusStepSize * radiusStep) maxRadius
+        Nothing -> maxRadius
     makeDriverPoolResult :: QP.NearestDriversResult -> DriverPoolResult
     makeDriverPoolResult QP.NearestDriversResult {..} = do
       DriverPoolResult
@@ -174,24 +173,23 @@ calculateDriverPoolWithActualDist ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    HasDriverPoolConfig r,
     CoreMetrics m,
     HasCoordinates a
   ) =>
+  DriverPoolConfig ->
   Maybe Variant ->
   a ->
   Id DM.Merchant ->
   Bool ->
   Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
-  driverPool <- calculateDriverPool mbVariant pickup merchantId onlyNotOnRide mRadiusStep
+calculateDriverPoolWithActualDist driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
+  driverPool <- calculateDriverPool driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep
   case driverPool of
     [] -> return []
     (a : pprox) -> do
-      mbActualDistanceThreshold <- asks (.driverPoolCfg.actualDistanceThreshold)
       driverPoolWithActualDist <- computeActualDistance merchantId pickup (a :| pprox)
-      let filtDriverPoolWithActualDist = case mbActualDistanceThreshold of
+      let filtDriverPoolWithActualDist = case driverPoolCfg.actualDistanceThreshold of
             Nothing -> NE.toList driverPoolWithActualDist
             Just threshold -> NE.filter (filterFunc threshold) driverPoolWithActualDist
       logDebug $ "secondly filtered driver pool" <> show filtDriverPoolWithActualDist

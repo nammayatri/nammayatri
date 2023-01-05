@@ -28,7 +28,7 @@ import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Idfy.Types.IdfyConfig as Idfy
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
-import SharedLogic.DriverPool (DriverPoolConfig)
+import SharedLogic.DriverPool (DriverPoolConfig, OverrideDriverPoolConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
@@ -81,6 +81,7 @@ data AppCfg = AppCfg
     driverLocationUpdateNotificationTemplate :: Text,
     cacheTranslationConfig :: CacheTranslationConfig,
     driverPoolCfg :: DriverPoolConfig,
+    overrideDriverPoolCfg :: Maybe [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
     driverLocationUpdateTopic :: Text
@@ -136,6 +137,7 @@ data AppEnv = AppEnv
     driverLocationUpdateNotificationTemplate :: Text,
     cacheTranslationConfig :: CacheTranslationConfig,
     driverPoolCfg :: DriverPoolConfig,
+    overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
     kafkaProducerTools :: KafkaProducerTools,
@@ -178,6 +180,7 @@ buildAppEnv cfg@AppCfg {..} = do
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
+      overrideDriverPoolConfig = fromMaybe [] overrideDriverPoolCfg
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
