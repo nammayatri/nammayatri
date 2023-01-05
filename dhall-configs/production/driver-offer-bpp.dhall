@@ -95,7 +95,7 @@ let driverPoolCfg =
       , driverPositionInfoExpiry = Some +180
       , actualDistanceThreshold = Some +1900
       , maxDriverQuotesRequired = +1
-      , driverQuoteLimit = +3
+      , driverQuoteLimit = +2
       }
 
 let PoolSortingType = < Intelligent | Random >
