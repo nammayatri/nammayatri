@@ -38,10 +38,11 @@ createOrUpdateDriverAvailability merchantId driverId (bucketStartTime, bucketEnd
           }
   DB.runTransaction $ Q.createOrUpdateDriverAvailability newAvailabilityEntry
 
-calculateAvailableTime :: Text -> Text -> Consumer.KafkaConsumer -> [(UTCTime, Consumer.ConsumerRecord (Maybe ByteString) (Maybe ByteString))] -> Flow ()
-calculateAvailableTime _ _ _ [] = pure ()
-calculateAvailableTime merchantId driverId kc ((fstTime, fstCR) : restTimeSeriesWithCr) = do
-  let restTimeSeries = map fst restTimeSeriesWithCr
+calculateAvailableTime :: Text -> Text -> Consumer.KafkaConsumer -> ([UTCTime], Maybe (Consumer.ConsumerRecord (Maybe ByteString) (Maybe ByteString))) -> Flow ()
+calculateAvailableTime _ _ _ ([], Nothing) = pure ()
+calculateAvailableTime _ _ _ ([], Just _) = logInfo "Should never reach here, no locationupdates but kafka consumer record :-/ "
+calculateAvailableTime _ _ _ (_, Nothing) = logInfo "Should never reach here, locationupdates but no kafka consumer record :-/"
+calculateAvailableTime merchantId driverId kc (fstTime : restTimeSeries, Just lastCR) = do
   mbLatestAvailabilityRecord <- Q.findLatestByDriverIdAndMerchantId driverId merchantId
   timeBetweenUpdates <- asks (.timeBetweenUpdates)
   granualityPeriodType <- asks (.granualityPeriodType)
@@ -62,17 +63,12 @@ calculateAvailableTime merchantId driverId kc ((fstTime, fstCR) : restTimeSeries
   logInfo $ "ActiveTime pairs " <> show availabilityInWindow
   logInfo $ "Adding " <> show availableTime <> " seconds available time for driverId: " <> show driverId
   void $ M.traverseWithKey (createOrUpdateDriverAvailability merchantId driverId) availabilityInWindow
-  let mbLastCR = lastMaybe (fstCR : map snd restTimeSeriesWithCr)
-  whenJust mbLastCR (void . Consumer.commitOffsetMessage Consumer.OffsetCommit kc)
+  void $ Consumer.commitOffsetMessage Consumer.OffsetCommit kc lastCR
   where
-    lastMaybe arr = go $ reverse arr
-      where
-        go [] = Nothing
-        go (a : _) = Just a
     sumPairDiff = foldr' (\timePair acc -> acc + uncurry (flip diffUTCTime) timePair) 0
     getBucketPair periodType (_, endTime) = do
       let bucketEndTime = SW.incrementPeriod periodType endTime
-      let bucketStartTime = flip addUTCTime bucketEndTime . fromInteger $ SW.convertPeriodTypeToSeconds periodType
+      let bucketStartTime = flip addUTCTime bucketEndTime . fromInteger $ -1 * SW.convertPeriodTypeToSeconds periodType
       (bucketStartTime, bucketEndTime)
 
 mkPairsWithLessThenThreshold :: Integer -> UTCTime -> SWT.PeriodType -> [UTCTime] -> [SWT.TimePair]
@@ -92,8 +88,8 @@ processData T.LocationUpdates {..} driverId = do
   timeBetweenUpdates <- asks (.timeBetweenUpdates)
   windowOptions <- asks (.windowOptions)
   lastUpdatedAt <- fromMaybe newUpdatedAt <$> Redis.get (mkLastTimeStampKey driverId)
-  Redis.setExp (mkLastTimeStampKey driverId) newUpdatedAt 14400 -- 4 hours
-  unless (lastUpdatedAt >= newUpdatedAt) $ do
+  unless (lastUpdatedAt > newUpdatedAt) $ do
+    Redis.setExp (mkLastTimeStampKey driverId) newUpdatedAt 14400 -- 4 hours
     let activeTimePairs = mkPairsWithLessThenThreshold timeBetweenUpdates lastUpdatedAt windowOptions.periodType [lastUpdatedAt, newUpdatedAt]
     mapM_
       ( \(startTime, endTime) -> do

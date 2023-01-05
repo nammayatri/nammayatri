@@ -63,14 +63,14 @@ startConsumerWithEnv appEnv@AppEnv {..} = do
         & S.mapM (Map.traverseWithKey (calculateAvailableTime kafkaConsumer))
         & S.drain
 
-    calculateAvailableTime kafkaConsumer (driverId, merchantId) = withFlow . DO.calculateAvailableTime merchantId driverId kafkaConsumer . reverse
+    calculateAvailableTime kafkaConsumer (driverId, merchantId) (timeSeries, mbCR) = withFlow . DO.calculateAvailableTime merchantId driverId kafkaConsumer $ (reverse timeSeries, mbCR)
 
     processRealtimeLocationUpdates locationUpdate = withFlow . DO.processData locationUpdate
 
     buildTimeSeries = SF.mkFold step start extract
       where
-        step !acc (val, cr) = pure ((val.ts, cr) : acc)
-        start = pure []
+        step (!(acc), _) (val, cr) = pure (val.ts : acc, Just cr)
+        start = pure ([], Nothing)
         extract = pure
 
     readMessages kafkaConsumer =

@@ -16,6 +16,7 @@ data DriverAvailability = DriverAvailability
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
+  deriving (Show)
 
 data LocationUpdates = LocationUpdates
   { rId :: Maybe Text,
