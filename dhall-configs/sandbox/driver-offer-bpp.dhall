@@ -99,6 +99,12 @@ let driverPoolCfg =
       , driverQuoteLimit = +2
       }
 
+let overrideDriverPoolCfg =
+      [ { configRange = { startDistance = +0, endDistance = None Integer }
+        , driverPoolCfg
+        }
+      ]
+
 let PoolSortingType = < Intelligent | Random >
 
 let driverPoolBatchesCfg =
@@ -162,6 +168,7 @@ in  { esqDBCfg
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , cacheTranslationConfig
     , driverPoolCfg
+    , overrideDriverPoolCfg = Some overrideDriverPoolCfg
     , sendSearchRequestJobCfg
     , driverLocationUpdateTopic = "location-updates"
     , kafkaProducerCfg

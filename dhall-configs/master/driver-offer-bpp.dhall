@@ -92,14 +92,39 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 let windowOptions = { period = +7, periodType = common.periodType.Days }
 
 let driverPoolCfg =
-      { minRadiusOfSearch = +500
-      , maxRadiusOfSearch = +1800
+      { minRadiusOfSearch = +700
+      , maxRadiusOfSearch = +1700
       , radiusStepSize = +500
       , driverPositionInfoExpiry = None Integer
       , actualDistanceThreshold = Some +2000
       , maxDriverQuotesRequired = +1
       , driverQuoteLimit = +2
       }
+
+let overrideDriverPoolCfg =
+      [ { configRange = { startDistance = +0, endDistance = Some +5000 }
+        , driverPoolCfg =
+          { minRadiusOfSearch = +250
+          , maxRadiusOfSearch = +750
+          , radiusStepSize = +250
+          , driverPositionInfoExpiry = None Integer
+          , actualDistanceThreshold = Some +1000
+          , maxDriverQuotesRequired = +1
+          , driverQuoteLimit = +2
+          }
+        }
+      , { configRange = { startDistance = +5001, endDistance = Some +13000 }
+        , driverPoolCfg =
+          { minRadiusOfSearch = +500
+          , maxRadiusOfSearch = +1300
+          , radiusStepSize = +400
+          , driverPositionInfoExpiry = None Integer
+          , actualDistanceThreshold = Some +1600
+          , maxDriverQuotesRequired = +1
+          , driverQuoteLimit = +2
+          }
+        }
+      ]
 
 let PoolSortingType = < Intelligent | Random >
 
@@ -112,7 +137,7 @@ let driverPoolBatchesCfg =
 let sendSearchRequestJobCfg =
       { driverPoolBatchesCfg, singleBatchProcessTime = +30 }
 
-let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
+let kafkaProducerCfg = { brokers = [ "kafka.kafka.svc.cluster.local:9092" ] }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -164,6 +189,7 @@ in  { esqDBCfg
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , cacheTranslationConfig
     , driverPoolCfg
+    , overrideDriverPoolCfg = Some overrideDriverPoolCfg
     , sendSearchRequestJobCfg
     , driverLocationUpdateTopic = "location-updates"
     , kafkaProducerCfg
