@@ -68,9 +68,7 @@ let httpClientOptions = { timeoutMs = +2000, maxRetries = +3 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
-let kafkaProducerCfg =
-      { brokers = [ "alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092" ]
-      }
+let kafkaProducerCfg = { brokers = [] : List Text }
 
 let rideConfig =
       { driverReachedDistance = +100, driverOnTheWayNotifyExpiry = +3600 }

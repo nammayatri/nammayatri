@@ -62,9 +62,7 @@ let httpClientOptions = { timeoutMs = +2000, maxRetries = +3 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
-let kafkaProducerCfg =
-      { brokers = [ "alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092" ]
-      }
+let kafkaProducerCfg = { brokers = [ "kafka.kafka.svc.cluster.local:9092" ] }
 
 let cacheConfig = { configsExpTime = +86400 }
 
@@ -116,4 +114,5 @@ in  { esqDBCfg
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , driverPoolCfg
+    , driverLocationUpdateTopic = "location-updates-sandbox"
     }
