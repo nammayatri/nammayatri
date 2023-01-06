@@ -45,17 +45,16 @@ let smsConfig =
   }
 
 let InfoBIPConfig =
-  { username = common.InfoBIPConfig.username
-  , password = common.InfoBIPConfig.password
-  , token = common.InfoBIPConfig.token
-  , url = "https://gye1yw.api.infobip.com"
-  , webhookurl = "http://localhost:8013/v2/update/status"
-  , sender = "JUSPAY"
-  }
+      { username = sec.infoBipConfig.infoBipUserName
+      , password = sec.infoBipConfig.infoBipPassword
+      , token = sec.infoBipConfig.infoBipToken
+      , url = "https://5vmxvj.api.infobip.com"
+      , report = True
+      , webhookurl = "http://localhost:8013/v2/update/status"
+      , sender = "JUSPAY"
+      }
 
-let WebengageConfig =
-  { url = "https://st.in.webengage.com"
-  }
+let WebengageConfig = { webhookurl = "https://st.in.webengage.com" }
 
 let gwUri = "http://localhost:8015/v1"
 

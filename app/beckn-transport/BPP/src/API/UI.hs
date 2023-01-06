@@ -14,7 +14,7 @@ import qualified API.UI.TranspAdmin as TranspAdmin
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
 import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
-import qualified API.UI.Webengage.Webengage as Webengage
+import qualified API.UI.Webengage.WebengageSms as Webengage
 import Environment
 import EulerHS.Prelude
 import Servant

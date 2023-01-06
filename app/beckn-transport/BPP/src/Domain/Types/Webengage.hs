@@ -11,6 +11,8 @@ data Webengage = Webengage
     infoMessageId :: Text,
     webMessageId :: Text,
     toNumber :: Text,
-    status :: Maybe Text
+    status :: Maybe Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic)

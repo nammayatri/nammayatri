@@ -23,7 +23,7 @@ import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Support as Support
 import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
-import qualified API.UI.Webengage.Webengage as Webengage
+import qualified API.UI.Webengage.WebengageSms as Webengage
 import Environment
 import EulerHS.Prelude
 import Servant

@@ -16,7 +16,6 @@ in { smsSessionConfig = globalCommon.smsSessionConfig
    , slackToken = sec.slackToken
    , signatureExpiry = globalCommon.signatureExpiry
    , httpClientOptions = globalCommon.httpClientOptions
-   , InfoBIPConfig = sec.InfoBIPConfig
    , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword
    , passetto = { _1 = "localhost", _2 = 8021 }

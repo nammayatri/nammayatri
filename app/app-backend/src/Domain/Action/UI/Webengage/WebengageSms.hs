@@ -1,4 +1,4 @@
-module Domain.Action.UI.Webengage.Webengage where
+module Domain.Action.UI.Webengage.WebengageSms where
 
 import Beckn.External.Encryption (decrypt)
 import qualified Beckn.External.Infobip.Flow as IF
@@ -31,7 +31,7 @@ data SmsData = SmsData
 data MetaData = MetaData
   { campaignType :: Text,
     custom :: Custom,
-    timestamp :: UTCTime, --to be confirmed
+    timestamp :: UTCTime,
     messageId :: Text,
     indiaDLT :: IndiaDLT
   }
@@ -76,9 +76,9 @@ callInfobip req = withTransactionIdLogTag' req.metadata.messageId $ do
   mobileNumber <- fromMaybeM (PersonDoesNotExist personId.getId) decPerson.mobileNumber
   countryCode <- fromMaybeM (PersonDoesNotExist personId.getId) decPerson.mobileCountryCode
   infoBipRes <- IF.sendSms infoBIPCfg smsBody (countryCode <> mobileNumber) entityId templetId
-  let infoMessage = head infoBipRes.messages
-  let status = Just infoMessage.status.groupName
-  webengage <- buildWebengage version entityId templetId infoMessage.messageId webMsgId personId.getId status
+  message <- fromMaybeM (InvalidRequest "Response Not Found") $ listToMaybe infoBipRes.messages
+  let status = Just message.status.groupName
+  webengage <- buildWebengage version entityId templetId message.messageId webMsgId personId.getId status
   runTransaction $ QWeb.create webengage
   return $
     WebengageRes
@@ -87,6 +87,7 @@ callInfobip req = withTransactionIdLogTag' req.metadata.messageId $ do
   where
     buildWebengage version entityId templetId infoMsgId webMsgId personId status = do
       id <- generateGUID
+      now <- getCurrentTime
       return $
         Webengage
           { id = id,
@@ -96,5 +97,7 @@ callInfobip req = withTransactionIdLogTag' req.metadata.messageId $ do
             infoMessageId = infoMsgId,
             webMessageId = webMsgId,
             toNumber = personId,
-            status = status
+            status = status,
+            createdAt = now,
+            updatedAt = now
           }

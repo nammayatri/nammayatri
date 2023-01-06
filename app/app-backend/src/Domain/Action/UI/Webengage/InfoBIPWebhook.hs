@@ -2,18 +2,18 @@ module Domain.Action.UI.Webengage.InfoBIPWebhook where
 
 import qualified Beckn.External.Infobip.Flow as IF
 import qualified Beckn.External.Infobip.Types as IT hiding (id)
-import Beckn.Prelude
+import Beckn.Prelude hiding (error)
+import Beckn.Storage.Esqueleto hiding (from)
 import Beckn.Types.APISuccess
 import Beckn.Utils.Common
-import Beckn.Utils.Dhall (FromDhall)
 import qualified Storage.Queries.Webengage as QW
 import Tools.Error
 import Tools.Metrics
 
 newtype StatusRes = StatusRes
-  { messages :: [Message]
+  { results :: [Message]
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
 
 data Message = Message
   { to :: Text,
@@ -21,7 +21,7 @@ data Message = Message
     messageId :: Text,
     smsCount :: Integer
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
 
 data SMSStatus = SMSStatus
   { description :: Text,
@@ -30,7 +30,7 @@ data SMSStatus = SMSStatus
     id :: Int,
     name :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
 
 sendStatus ::
   ( HasFlowEnv m r '["webengageCfg" ::: IT.WebengageConfig],
@@ -41,20 +41,21 @@ sendStatus ::
   ) =>
   StatusRes ->
   m APISuccess
-sendStatus req = withTransactionIdLogTag' (head req.messages).messageId $ do
+sendStatus req = do
+  message <- fromMaybeM (InvalidRequest "Response Not Found") $ listToMaybe req.results
   webengageCfg <- asks (.webengageCfg)
-  let infoBipRes = head req.messages
-  webengageData <- QW.findByInfoMsgId infoBipRes.messageId >>= fromMaybeM (PersonDoesNotExist infoBipRes.messageId)
+  webengageData <- QW.findByInfoMsgId message.messageId >>= fromMaybeM (PersonDoesNotExist message.messageId)
   let version = webengageData.version
   let webMsgId = webengageData.webMessageId
   let toNumber = webengageData.toNumber
-  let infoBipStatus = infoBipRes.status.groupName
+  let infoBipStatus = message.status.groupName
+  runTransaction $ QW.updateStatus message.messageId infoBipStatus
   webengageRes <- buildwebengageRes version webMsgId toNumber infoBipStatus
   _ <- IF.callWebengageWebhook webengageCfg webengageRes
   return Success
   where
     buildwebengageRes version webMsgId toNumber infoBipStatus = do
-      if infoBipStatus == "DELIVERED_TO_HANDSET"
+      if infoBipStatus == "DELIVERED"
         then
           return $
             IT.WebengageRes

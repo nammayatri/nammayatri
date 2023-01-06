@@ -1,0 +1,2 @@
+ALTER TABLE atlas_transporter.webengage ADD COLUMN created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;
+ALTER TABLE atlas_transporter.webengage ADD COLUMN updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL;

@@ -48,16 +48,16 @@ let geofencingConfig =
 }
 
 let InfoBIPConfig =
-  { username = common.InfoBIPConfig.username
-  , password = common.InfoBIPConfig.password
-  , token = common.InfoBIPConfig.token
-  , url = "https://gye1yw.api.infobip.com"
-  , sender = "JUSPAY"
-  }
+      { username = sec.infoBipConfig.infoBipUserName
+      , password = sec.infoBipConfig.infoBipPassword
+      , token = sec.infoBipConfig.infoBipToken
+      , url = "https://gye1yw.api.infobip.com"
+      , report = True
+      , webhookurl = "http://localhost:8014/v2/update/status"
+      , sender = "JUSPAY"
+      }
 
-let WebengageConfig =
-  { url = "https://st.in.webengage.com"
-  }
+let WebengageConfig = { webhookurl = "https://st.in.webengage.com" }
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 

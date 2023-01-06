@@ -1,4 +1,4 @@
-module API.UI.Webengage.Webengage
+module API.UI.Webengage.WebengageSms
   ( API,
     handler,
     WE.WebengageRes (..),
@@ -6,7 +6,7 @@ module API.UI.Webengage.Webengage
 where
 
 import Beckn.Utils.Common
-import qualified Domain.Action.UI.Webengage.Webengage as WE
+import qualified Domain.Action.UI.Webengage.WebengageSms as WE
 import Environment
 import EulerHS.Prelude hiding (id)
 import Servant
@@ -14,7 +14,7 @@ import Servant
 type API =
   "webengage"
     :> "2"
-    :> "customer"
+    :> "transporter"
     :> ReqBody '[JSON] WE.WebengageReq
     :> Post '[JSON] WE.WebengageRes
 

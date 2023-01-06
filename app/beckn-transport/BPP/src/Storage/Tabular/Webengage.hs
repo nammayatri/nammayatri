@@ -24,6 +24,8 @@ mkPersist
         webMessageId Text
         toNumber Text
         status Text Maybe
+        createdAt UTCTime
+        updatedAt UTCTime
         Primary id
         deriving Generic
     |]
