@@ -7,9 +7,13 @@
 
 module Storage.Tabular.TransporterConfig where
 
+import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Common (Meters)
 import Beckn.Types.Id
+import Beckn.Types.Time
+import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.TransporterConfig as Domain
 import Storage.Tabular.Merchant (MerchantTId)
 
@@ -19,34 +23,50 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     TransporterConfigT sql=transporter_config
-      id Text
-      transporterId MerchantTId
-      configKey Domain.ConfigKey sql=key
-      value Text
+      merchantId MerchantTId
+      pickupLocThreshold Meters Maybe
+      dropLocThreshold Meters Maybe
+      rideTravelledDistanceThreshold Meters Maybe
+      rideTimeEstimatedThreshold Seconds Maybe
+      waitingTimeEstimatedThreshold Seconds Maybe
+      maxRadius Meters
+      minRadius Meters
+      radiusStepSize Meters
+      availabilityTimeWeightage Int
+      acceptanceRatioWeightage Int
+      cancellationRatioWeightage Int
       createdAt UTCTime
       updatedAt UTCTime
-      Primary id
+      fcmUrl Text
+      fcmServiceAccount Text
+      fcmTokenKeyPrefix Text
+      Primary merchantId
       deriving Generic
     |]
 
 instance TEntityKey TransporterConfigT where
-  type DomainKey TransporterConfigT = Id Domain.TransporterParameter
-  fromKey (TransporterConfigTKey _id) = Id _id
-  toKey (Id id) = TransporterConfigTKey id
+  type DomainKey TransporterConfigT = Id Domain.Merchant
+  fromKey (TransporterConfigTKey _id) = fromKey _id
+  toKey id = TransporterConfigTKey $ toKey id
 
 instance TType TransporterConfigT Domain.TransporterConfig where
   fromTType TransporterConfigT {..} = do
+    fcmUrl' <- parseBaseUrl fcmUrl
     return $
       Domain.TransporterConfig
-        { id = Id id,
-          transporterId = fromKey transporterId,
-          key = configKey,
+        { merchantId = fromKey merchantId,
+          fcmConfig =
+            FCM.FCMConfig
+              { fcmUrl = fcmUrl',
+                ..
+              },
           ..
         }
   toTType Domain.TransporterConfig {..} =
     TransporterConfigT
-      { id = getId id,
-        transporterId = toKey transporterId,
-        configKey = key,
+      { merchantId = toKey merchantId,
+        fcmUrl = showBaseUrl fcmConfig.fcmUrl,
+        fcmServiceAccount = fcmConfig.fcmServiceAccount,
+        fcmTokenKeyPrefix = fcmConfig.fcmTokenKeyPrefix,
         ..
       }

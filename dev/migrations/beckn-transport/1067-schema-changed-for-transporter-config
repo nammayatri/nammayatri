@@ -1,0 +1,28 @@
+ALTER TABLE atlas_transporter.transporter_config RENAME TO transporter_config_old;
+
+CREATE TABLE atlas_transporter.transporter_config (
+merchant_id character(36) NOT NULL,
+pickup_loc_threshold bigint,
+drop_loc_threshold bigint,
+ride_travelled_distance_threshold bigint,
+ride_time_estimated_threshold bigint,
+max_radius bigint NOT NULL,
+min_radius bigint NOT NULL,
+radius_step_size bigint NOT NULL,
+availability_time_weightage int,
+acceptance_ratio_weightage int,
+cancellation_ratio_weightage int,
+fcm_url text NOT NULL,
+fcm_service_account text NOT NULL,
+fcm_token_key_prefix text NOT NULL,
+created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+CONSTRAINT  transporter_config_primary_key PRIMARY KEY (merchant_id),
+CONSTRAINT  transporter_config_merchant_id_fkey FOREIGN KEY (merchant_id) REFERENCES atlas_transporter.merchant(id)
+);
+
+ALTER TABLE atlas_transporter.transporter_config OWNER TO atlas_transporter_user;
+
+INSERT INTO atlas_transporter.transporter_config (merchant_id, pickup_loc_threshold, drop_loc_threshold, ride_travelled_distance_threshold, ride_time_estimated_threshold, max_radius, min_radius, radius_step_size, availability_time_weightage, acceptance_ratio_weightage, cancellation_ratio_weightage, created_at, updated_at, fcm_url, fcm_service_account, fcm_token_key_prefix) VALUES
+    ('7f7896dd-787e-4a0b-8675-e9e6fe93bb8f','500','500','700','900',"1500","500","500",70,40,-40,'2022-04-12 15:15:42.213874+00','2022-04-12 15:15:42.213874+00','http://localhost:4545/','ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAianAtYmVja24tZGV2IiwKICAicHJpdmF0ZV9rZXlfaWQiOiAieHh4eHh4eHh4eHh4eHh4eHh4eCIsCiAgInByaXZhdGVfa2V5IjogIi0tLS0tQkVHSU4gUFJJVkFURSBLRVktLS0tLXh4eHh4eHh4eHh4eHh4eHh4eHgtLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tXG4iLAogICJjbGllbnRfZW1haWwiOiAiYmVja24tZmNtQGpwLWJlY2tuLWRldi5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsCiAgImNsaWVudF9pZCI6ICJ4eHh4eHh4eHh4IiwKICAiYXV0aF91cmkiOiAiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tL28vb2F1dGgyL2F1dGgiLAogICJ0b2tlbl91cmkiOiAiaHR0cHM6Ly9vYXV0aDIuZ29vZ2xlYXBpcy5jb20vdG9rZW4iLAogICJhdXRoX3Byb3ZpZGVyX3g1MDlfY2VydF91cmwiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vb2F1dGgyL3YxL2NlcnRzIiwKICAiY2xpZW50X3g1MDlfY2VydF91cmwiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vcm9ib3QvdjEvbWV0YWRhdGEveDUwOS9iZWNrbi1mY20lNDBqcC1iZWNrbi1kZXYuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iCn0=', 'transporter-bpp'),
+    ('e1f37274-f0aa-4bb3-93a0-2476349487b7','500','500','700','900',"1500","500","500",70,40,-40,'2022-04-12 15:15:42.213874+00','2022-04-12 15:15:42.213874+00','http://localhost:4545/','ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAianAtYmVja24tZGV2IiwKICAicHJpdmF0ZV9rZXlfaWQiOiAieHh4eHh4eHh4eHh4eHh4eHh4eCIsCiAgInByaXZhdGVfa2V5IjogIi0tLS0tQkVHSU4gUFJJVkFURSBLRVktLS0tLXh4eHh4eHh4eHh4eHh4eHh4eHgtLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tXG4iLAogICJjbGllbnRfZW1haWwiOiAiYmVja24tZmNtQGpwLWJlY2tuLWRldi5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsCiAgImNsaWVudF9pZCI6ICJ4eHh4eHh4eHh4IiwKICAiYXV0aF91cmkiOiAiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tL28vb2F1dGgyL2F1dGgiLAogICJ0b2tlbl91cmkiOiAiaHR0cHM6Ly9vYXV0aDIuZ29vZ2xlYXBpcy5jb20vdG9rZW4iLAogICJhdXRoX3Byb3ZpZGVyX3g1MDlfY2VydF91cmwiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vb2F1dGgyL3YxL2NlcnRzIiwKICAiY2xpZW50X3g1MDlfY2VydF91cmwiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vcm9ib3QvdjEvbWV0YWRhdGEveDUwOS9iZWNrbi1mY20lNDBqcC1iZWNrbi1kZXYuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iCn0=', 'transporter-bpp');

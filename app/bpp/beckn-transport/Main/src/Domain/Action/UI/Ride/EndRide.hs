@@ -69,7 +69,7 @@ data ServiceHandle m = ServiceHandle
     getDefaultRideTravelledDistanceThreshold :: m Meters,
     getDefaultRideTimeEstimatedThreshold :: m Seconds,
     getDefaultWaitingTimeEstimatedThreshold :: m Seconds,
-    findConfigByKey :: DTConf.ConfigKey -> m (Maybe DTConf.TransporterConfig),
+    getConfig :: m DTConf.TransporterConfig,
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
 
@@ -109,7 +109,7 @@ buildEndRideHandle merchantId rideId = do
         getDefaultRideTravelledDistanceThreshold = asks (.defaultRideTravelledDistanceThreshold),
         getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
         getDefaultWaitingTimeEstimatedThreshold = asks (.defaultWaitingTimeEstimatedThreshold),
-        findConfigByKey = QTConf.findValueByMerchantIdAndKey merchantId,
+        getConfig = QTConf.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId),
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
@@ -309,6 +309,7 @@ endRide handle@ServiceHandle {..} rideId req = do
       pure $ roundToIntegral fareableWaitingTime * fromMaybe 0 waitingChargePerMin
 
 data Stop = PICKUP | DROP
+  deriving (Show)
 
 getLocThreshold ::
   (MonadThrow m, Log m) =>
@@ -316,69 +317,36 @@ getLocThreshold ::
   Stop ->
   m Meters
 getLocThreshold ServiceHandle {..} stop = do
-  (paramName, defaultThreshold) <- case stop of
-    PICKUP -> (DTConf.ConfigKey "pickup_loc_threshold",) <$> getDefaultPickupLocThreshold
-    DROP -> (DTConf.ConfigKey "drop_loc_threshold",) <$> getDefaultDropLocThreshold
-  mbThresholdConfig <- findConfigByKey paramName
-  mbThreshold <- thresholdFromConfig paramName `mapM` mbThresholdConfig
-  pure $ fromMaybe defaultThreshold mbThreshold
-  where
-    -- TODO derive instance Read Meters
-    thresholdFromConfig paramName conf =
-      fromMaybeM (InternalError $ show paramName <> " is not a number.")
-        . (Meters <$>)
-        . (readMaybe @Int)
-        . toString
-        $ conf.value
+  transporterConfig <- getConfig
+  (mbThresholdConfig, defaultThreshold) <- case stop of
+    PICKUP -> (transporterConfig.pickupLocThreshold,) <$> getDefaultPickupLocThreshold
+    DROP -> (transporterConfig.dropLocThreshold,) <$> getDefaultDropLocThreshold
+  pure $ fromMaybe defaultThreshold mbThresholdConfig
 
 getRideDistanceThreshold ::
   (MonadThrow m, Log m) =>
   ServiceHandle m ->
   m Meters
 getRideDistanceThreshold ServiceHandle {..} = do
-  (paramName, defaultThreshold) <- (DTConf.ConfigKey "ride_travelled_distance",) <$> getDefaultRideTravelledDistanceThreshold
-  mbThresholdConfig <- findConfigByKey paramName
-  mbThreshold <- thresholdFromConfigMeter paramName `mapM` mbThresholdConfig
-  pure $ fromMaybe defaultThreshold mbThreshold
-  where
-    -- TODO derive instance Read Meters
-    thresholdFromConfigMeter paramName conf =
-      fromMaybeM (InternalError $ show paramName <> " is not a number.")
-        . (Meters <$>)
-        . (readMaybe @Int)
-        . toString
-        $ conf.value
+  transporterConfig <- getConfig
+  (mbThresholdConfig, defaultThreshold) <- (transporterConfig.rideTravelledDistanceThreshold,) <$> getDefaultRideTravelledDistanceThreshold
+  pure $ fromMaybe defaultThreshold mbThresholdConfig
 
 getRideTimeThreshold ::
   (MonadThrow m, Log m) =>
   ServiceHandle m ->
   m Seconds
 getRideTimeThreshold ServiceHandle {..} = do
-  (paramName, defaultThreshold) <- (DTConf.ConfigKey "ride_estimated_time",) <$> getDefaultRideTimeEstimatedThreshold
-  mbThresholdConfig <- findConfigByKey paramName
-  mbThreshold <- thresholdFromConfigSeconds paramName `mapM` mbThresholdConfig
-  pure $ fromMaybe defaultThreshold mbThreshold
-  where
-    thresholdFromConfigSeconds paramName conf =
-      fromMaybeM (InternalError $ show paramName <> " is not a number.")
-        . (Seconds <$>)
-        . (readMaybe @Int)
-        . toString
-        $ conf.value
+  transporterConfig <- getConfig
+  (mbThresholdConfig, defaultThreshold) <- (transporterConfig.rideTimeEstimatedThreshold,) <$> getDefaultRideTimeEstimatedThreshold
+  pure $ fromMaybe defaultThreshold mbThresholdConfig
 
 getWaitingTimeThreshold ::
   (MonadThrow m, Log m) =>
   ServiceHandle m ->
   m Seconds
 getWaitingTimeThreshold ServiceHandle {..} = do
-  (paramName, defaultThreshold) <- (DTConf.ConfigKey "driver_waiting_threshold",) <$> getDefaultWaitingTimeEstimatedThreshold
-  mbThresholdConfig <- findConfigByKey paramName
-  mbThreshold <- thresholdFromConfigSeconds paramName `mapM` mbThresholdConfig
-  pure $ fromMaybe defaultThreshold mbThreshold
-  where
-    thresholdFromConfigSeconds paramName conf =
-      fromMaybeM (InternalError $ show paramName <> " is not a number.")
-        . (Seconds <$>)
-        . (readMaybe @Int)
-        . toString
-        $ conf.value
+  transporterConfig <- getConfig
+  (mbThresholdConfig, defaultThreshold) <- (transporterConfig.waitingTimeEstimatedThreshold,) <$> getDefaultRideTimeEstimatedThreshold
+  pure $ fromMaybe defaultThreshold mbThresholdConfig
+

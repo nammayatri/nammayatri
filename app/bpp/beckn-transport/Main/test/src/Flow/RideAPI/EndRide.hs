@@ -83,7 +83,7 @@ handle =
       getDefaultRideTravelledDistanceThreshold = pure 700,
       getDefaultRideTimeEstimatedThreshold = pure 900,
       getDefaultWaitingTimeEstimatedThreshold = pure 3,
-      findConfigByKey = \_ -> pure Nothing,
+      getConfig = pure Nothing,
       whenWithLocationUpdatesLock = \_driverId action -> action
     }
 

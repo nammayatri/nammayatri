@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.TransporterConfig
-  ( findValueByMerchantIdAndKey,
+  ( findByMerchantId,
   )
 where
 
@@ -17,17 +17,17 @@ import GHC.Base (coerce)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.TransporterConfig as Queries
 
-findValueByMerchantIdAndKey :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> ConfigKey -> m (Maybe TransporterConfig)
-findValueByMerchantIdAndKey merchantId key =
-  Hedis.get (makeMerchantIdKey merchantId key) >>= \case
+findByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe TransporterConfig)
+findByMerchantId id =
+  Hedis.get (makeMerchantIdKey id) >>= \case
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
-    Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findValueByMerchantIdAndKey merchantId key
+    Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantId id
 
 cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
 cacheTransporterConfig cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantIdKey cfg.transporterId cfg.key
+  let merchantIdKey = makeMerchantIdKey cfg.merchantId
   Hedis.setExp merchantIdKey (coerce @TransporterConfig @(TransporterConfigD 'Unsafe) cfg) expTime
 
-makeMerchantIdKey :: Id Merchant -> ConfigKey -> Text
-makeMerchantIdKey id key = "CachedQueries:TransporterConfig:MerchantId-" <> id.getId <> ":Key-" <> show key
+makeMerchantIdKey :: Id Merchant -> Text
+makeMerchantIdKey id = "CachedQueries:TransporterConfig:MerchantId-" <> id.getId

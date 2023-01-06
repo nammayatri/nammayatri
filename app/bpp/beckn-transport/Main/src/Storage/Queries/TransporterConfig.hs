@@ -12,11 +12,10 @@ import Domain.Types.Merchant
 import Domain.Types.TransporterConfig
 import Storage.Tabular.TransporterConfig
 
-findValueByMerchantIdAndKey :: Transactionable m => Id Merchant -> ConfigKey -> m (Maybe TransporterConfig)
-findValueByMerchantIdAndKey merchantId key =
+findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe TransporterConfig)
+findByMerchantId merchantId =
   Esq.findOne $ do
     config <- from $ table @TransporterConfigT
     where_ $
-      config ^. TransporterConfigTransporterId ==. val (toKey merchantId)
-        &&. config ^. TransporterConfigConfigKey ==. val key
+      config ^. TransporterConfigMerchantId ==. val (toKey merchantId)
     return config

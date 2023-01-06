@@ -13,7 +13,6 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Action.Allocation.Internal.DriverPool.Config
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.TransporterConfig as STConf
 import Environment (Flow)
 import SharedLogic.DriverPool (calculateDriverPool)
 import SharedLogic.DriverPool.Config as Reexport
@@ -114,28 +113,14 @@ prepareDriverPoolBatch bookingId batchNum = withLogTag ("BatchNum-" <> show batc
       Redis.setExp (driverPoolBatchKey bookingId batchNum) batch (60 * 10)
     isAtMaxRadiusStep booking radiusStep = do
       let merchantId = booking.providerId
-      minRadius :: Double <-
-        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "min_radius")
-          >>= maybe
-            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
-            radiusFromTransporterConfig
-      maxRadius :: Double <-
-        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "max_radius")
-          >>= maybe
-            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
-            radiusFromTransporterConfig
-      radiusStepSize :: Double <-
-        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "radius_step_size")
-          >>= maybe
-            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
-            radiusFromTransporterConfig
-      let maxRadiusStep = ceiling $ (maxRadius - minRadius) / radiusStepSize
+      transporterConfig <-
+        QTConf.findByMerchantId merchantId
+          >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+      let maxRadius :: Double = fromIntegral transporterConfig.maxRadius.getMeters
+          minRadius :: Double = fromIntegral transporterConfig.minRadius.getMeters
+          radiusStepSize :: Double = fromIntegral transporterConfig.radiusStepSize.getMeters
+          maxRadiusStep = ceiling $ (maxRadius - minRadius) / radiusStepSize
       return $ maxRadiusStep <= radiusStep
-    radiusFromTransporterConfig conf =
-      fromMaybeM (InternalError "Value is not a number.")
-        . readMaybe
-        . toString
-        $ conf.value
 
     getPreviousBatchesDrivers = do
       batches <- forM [0 .. (batchNum - 1)] \num -> do

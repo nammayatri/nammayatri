@@ -11,7 +11,6 @@ import Beckn.Utils.Common
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.TransporterConfig as STConf
 import qualified Domain.Types.Vehicle as SV
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
@@ -58,31 +57,16 @@ calculateDriverPool pickup merchantId variant fareProductType mRadiusStep = do
       filterOutDriversWithDistanceAboveThreshold radius approxDriverPool'
   where
     getRadius = do
-      maxRadius <-
-        QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "max_radius")
-          >>= maybe
-            (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
-            radiusFromTransporterConfig
+      transporterConfig <-
+        QTConf.findByMerchantId merchantId
+          >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+      let maxRadius = transporterConfig.maxRadius.getMeters
+          minRadius = transporterConfig.minRadius.getMeters
+          radiusStepSize = transporterConfig.radiusStepSize.getMeters
       case mRadiusStep of
-        Just radiusStep -> do
-          minRadius <-
-            QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "min_radius")
-              >>= maybe
-                (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
-                radiusFromTransporterConfig
-          radiusStepSize <-
-            QTConf.findValueByMerchantIdAndKey merchantId (STConf.ConfigKey "radius_step_size")
-              >>= maybe
-                (fromIntegral <$> asks (.driverPoolCfg.defaultRadiusOfSearch))
-                radiusFromTransporterConfig
+        Just radiusStep ->
           return $ min (minRadius + radiusStepSize * radiusStep) maxRadius
         Nothing -> return maxRadius
-
-    radiusFromTransporterConfig conf =
-      fromMaybeM (InternalError "Value is not a number.")
-        . readMaybe
-        . toString
-        $ conf.value
 
 buildDriverPoolResults ::
   ( EncFlow m r,
