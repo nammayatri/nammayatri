@@ -20,6 +20,7 @@ import Beckn.Utils.CalculateDistance (distanceBetweenInMeters)
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
+import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
@@ -28,6 +29,7 @@ import qualified SharedLogic.CallBAP as BP
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
 import Tools.Error
@@ -126,6 +128,7 @@ arrivedAtPickup rideId req = do
   unless (isJust ride.driverArrivalTime) $ do
     Esq.runTransaction $ do
       QRide.updateArrival rideId
+      QDFS.updateStatus ride.driverId DDFS.WAITING_FOR_CUSTOMER {rideId}
     BP.sendDriverArrivalUpdateToBAP booking ride ride.driverArrivalTime
   pure Success
   where

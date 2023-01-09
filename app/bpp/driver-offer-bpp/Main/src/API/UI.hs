@@ -9,6 +9,7 @@ import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Driver as Driver
 import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.FarePolicy as FarePolicy
+import qualified API.UI.Frontend as Frontend
 import qualified API.UI.Location as Location
 import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Registration as Registration
@@ -30,6 +31,7 @@ type API =
            :<|> OrgAdmin.API
            :<|> Driver.API
            :<|> Vehicle.API
+           :<|> Frontend.API
            :<|> Transporter.API
            :<|> FarePolicy.API
            :<|> Location.API
@@ -47,6 +49,7 @@ handler =
     :<|> OrgAdmin.handler
     :<|> Driver.handler
     :<|> Vehicle.handler
+    :<|> Frontend.handler
     :<|> Transporter.handler
     :<|> FarePolicy.handler
     :<|> Location.handler

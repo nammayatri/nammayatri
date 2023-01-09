@@ -16,6 +16,7 @@ import qualified Data.Text as T
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
@@ -32,6 +33,8 @@ import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -104,6 +107,7 @@ handler subscriber transporterId req = do
     QBL.updateAddress booking.toLocation.id req.toAddress
     whenJust req.mbRiderName $ QRB.updateRiderName booking.id
     QRide.create ride
+    QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
     QRideD.create rideDetails
     QBE.logRideConfirmedEvent booking.id
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
@@ -251,6 +255,10 @@ cancelBooking booking driver transporter = do
     QBCR.upsert bookingCancellationReason
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id DRide.CANCELLED
+      driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      if driverInfo.active
+        then QDFS.updateStatus ride.driverId DDFS.ACTIVE
+        else QDFS.updateStatus ride.driverId DDFS.IDLE
   whenJust mbRide $ \ride -> do
     DLoc.updateOnRide (cast ride.driverId) False
   fork "cancelBooking - Notify BAP" $ do

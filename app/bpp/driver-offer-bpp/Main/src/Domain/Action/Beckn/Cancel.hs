@@ -14,6 +14,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as SR
@@ -25,6 +26,8 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -72,6 +75,10 @@ cancel transporterId _ req = do
     QRB.updateStatus booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED
+      driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      if driverInfo.active
+        then QDFS.updateStatus ride.driverId DDFS.ACTIVE
+        else QDFS.updateStatus ride.driverId DDFS.IDLE
   whenJust mbRide $ \ride -> do
     SRide.clearCache $ cast ride.driverId
     DLoc.updateOnRide (cast ride.driverId) False

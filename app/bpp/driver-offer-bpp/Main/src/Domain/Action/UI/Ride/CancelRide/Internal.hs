@@ -6,6 +6,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.CallBAP as BP
@@ -13,9 +14,11 @@ import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -66,9 +69,13 @@ cancelRideTransaction ::
 cancelRideTransaction bookingId ride bookingCReason = do
   let driverId = cast ride.driverId
   DLoc.updateOnRide driverId False
+  driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   Esq.runTransaction $ do
     when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
     QRide.updateStatus ride.id SRide.CANCELLED
     QRB.updateStatus bookingId SRB.CANCELLED
     QBCR.upsert bookingCReason
+    if driverInfo.active
+      then QDFS.updateStatus ride.driverId DDFS.ACTIVE
+      else QDFS.updateStatus ride.driverId DDFS.IDLE
   SRide.clearCache ride.driverId

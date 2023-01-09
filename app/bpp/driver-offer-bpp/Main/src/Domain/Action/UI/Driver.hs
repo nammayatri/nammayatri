@@ -51,6 +51,7 @@ import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import Data.Time (Day)
+import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
@@ -74,6 +75,7 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -259,6 +261,7 @@ createDriver admin req = do
   vehicle <- buildVehicle req.vehicle person.id merchantId
   Esq.runTransaction $ do
     QPerson.create person
+    QDFS.create $ makeIdleDriverFlowStatus person
     createDriverDetails person.id admin.id
     QVehicle.create vehicle
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
@@ -276,6 +279,13 @@ createDriver admin req = do
   return $ OnboardDriverRes personAPIEntity
   where
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
+
+    makeIdleDriverFlowStatus person =
+      DDFS.DriverFlowStatus
+        { personId = person.id,
+          flowStatus = DDFS.IDLE,
+          updatedAt = person.updatedAt
+        }
 
 createDriverDetails :: Id SP.Person -> Id SP.Person -> Esq.SqlDB ()
 createDriverDetails personId adminId = do
@@ -328,6 +338,12 @@ setActivity personId isActive = do
     unless driverInfo.enabled $ throwError DriverAccountDisabled
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   QDriverInformation.updateActivity driverId isActive
+  driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
+  logInfo $ "driverStatus " <> show driverStatus
+  unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE]) $ do
+    if isActive
+      then Esq.runTransaction $ QDFS.updateStatus personId DDFS.ACTIVE
+      else Esq.runTransaction $ QDFS.updateStatus personId DDFS.IDLE
   pure APISuccess.Success
 
 listDriver :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
@@ -626,6 +642,7 @@ respondQuote driverId req = do
         Esq.runTransaction $ do
           QDrQt.create driverQuote
           QSRD.updateDriverResponse sReqFD.id req.response
+          QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
         DP.incrementQuoteAcceptedCount sReq.providerId driverId
         -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
         when ((quoteCount + 1) >= quoteLimit) $ sendRemoveRideRequestNotification organization.id driverQuote

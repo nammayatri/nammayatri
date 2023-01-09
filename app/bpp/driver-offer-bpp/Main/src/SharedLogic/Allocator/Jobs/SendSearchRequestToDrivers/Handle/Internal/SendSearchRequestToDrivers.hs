@@ -10,6 +10,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common (addUTCTime, logInfo)
 import qualified Data.Map as M
+import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -20,6 +21,7 @@ import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool.Config as DP
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
@@ -48,10 +50,13 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
   batchNumber <- getPoolBatchNum searchReq.id
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
+  let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   Esq.runTransaction $ do
     QSRD.setInactiveByRequestId searchReq.id -- inactive previous request by drivers so that they can make new offers.
     QSRD.createMany searchRequestsForDrivers
-  let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
+    forM_ driverPoolZipSearchRequests $ \(_, sReqFD) -> do
+      QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = sReqFD.searchRequestId, validTill = sReqFD.searchRequestValidTill}
+
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     incrementTotalQuotesCount searchReq.providerId sReqFD.driverId
     addSearchRequestValidTillToCache searchReq.id searchReq.providerId (cast sReqFD.driverId) validTill
