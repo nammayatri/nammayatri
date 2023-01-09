@@ -12,6 +12,7 @@ import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.FCM.Types as FCM
 import Kernel.External.Maps as Maps
+import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -321,6 +322,17 @@ updateDeviceToken personId mbDeviceToken = do
     set
       tbl
       [ PersonDeviceToken =. val mbDeviceToken,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
+updateWhatsappNotificationEnrollStatus personId enrollStatus = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonWhatsappNotificationEnrollStatus =. val enrollStatus,
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)

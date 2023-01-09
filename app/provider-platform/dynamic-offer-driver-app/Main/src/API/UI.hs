@@ -17,6 +17,7 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
+import qualified API.UI.Whatsapp as Whatsapp
 import Environment
 import Kernel.Prelude
 import Servant
@@ -39,6 +40,7 @@ type API =
            :<|> Ride.API
            :<|> Call.API
            :<|> CancellationReason.API
+           :<|> Whatsapp.API
        )
 
 handler :: FlowServer API
@@ -57,3 +59,4 @@ handler =
     :<|> Ride.handler
     :<|> Call.handler
     :<|> CancellationReason.handler
+    :<|> Whatsapp.handler

@@ -11,6 +11,7 @@ import qualified Domain.Types.Person as Domain
 import Kernel.External.Encryption (DbHash (..), Encrypted (..), EncryptedHashed (..))
 import Kernel.External.FCM.Types (FCMRecipientToken)
 import Kernel.External.Types (Language)
+import Kernel.External.Whatsapp.Interface.Types (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Centesimal)
@@ -22,6 +23,7 @@ derivePersistField "Domain.Role"
 derivePersistField "Domain.Gender"
 derivePersistField "Domain.IdentifierType"
 derivePersistField "Language"
+derivePersistField "OptApiMethods"
 
 mkPersist
   defaultSqlSettings
@@ -46,6 +48,7 @@ mkPersist
       merchantId MerchantTId
       deviceToken FCMRecipientToken Maybe
       language Language Maybe
+      whatsappNotificationEnrollStatus OptApiMethods Maybe
       description Text Maybe
       createdAt UTCTime
       updatedAt UTCTime

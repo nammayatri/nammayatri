@@ -505,6 +505,7 @@ buildDriver req merchantId = do
         SP.createdAt = now,
         SP.updatedAt = now,
         SP.clientVersion = Nothing,
+        SP.whatsappNotificationEnrollStatus = Nothing,
         SP.bundleVersion = Nothing
       }
 

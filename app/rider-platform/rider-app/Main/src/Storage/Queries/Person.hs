@@ -5,6 +5,7 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
+import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
@@ -124,6 +125,17 @@ updateDeviceToken personId mbDeviceToken = do
         PersonDeviceToken =. val mbDeviceToken
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)
+
+updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
+updateWhatsappNotificationEnrollStatus personId enrollStatus = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonWhatsappNotificationEnrollStatus =. val enrollStatus,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
 setIsNewFalse :: Id Person -> SqlDB ()
 setIsNewFalse personId = do

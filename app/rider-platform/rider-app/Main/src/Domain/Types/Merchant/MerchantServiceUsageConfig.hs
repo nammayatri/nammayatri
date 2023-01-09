@@ -4,6 +4,7 @@ import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.External.Maps.Types
 import Kernel.External.SMS.Types
+import Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -16,6 +17,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getPlaceDetails :: MapsService,
     autoComplete :: MapsService,
     smsProvidersPriorityList :: [SmsService],
+    whatsappProvidersPriorityList :: [WhatsappService],
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }

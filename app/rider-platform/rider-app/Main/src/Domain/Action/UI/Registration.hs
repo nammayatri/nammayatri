@@ -24,6 +24,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.External.FCM.Types (FCMRecipientToken)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
@@ -49,11 +50,13 @@ import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
+import Tools.Whatsapp
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text,
-    merchantId :: ShortId Merchant
+    merchantId :: ShortId Merchant --,
+    -- otpChannel :: Maybe OTPChannel
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -70,12 +73,20 @@ data AuthRes = AuthRes
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+-- Need to have discussion around this
+-- data OTPChannel = SMS | WHATSAPP
+--   deriving (Generic, Show, Enum, Eq, FromJSON, ToJSON, ToSchema)
+
+-- defaultOTPChannel :: OTPChannel
+-- defaultOTPChannel = SMS
+
 type ResendAuthRes = AuthRes
 
 ---------- Verify Login --------
 data AuthVerifyReq = AuthVerifyReq
   { otp :: Text,
-    deviceToken :: FCMRecipientToken
+    deviceToken :: FCMRecipientToken,
+    whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -112,6 +123,7 @@ auth req mbBundleVersion mbClientVersion = do
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
+  -- otpChannel = fromMaybe defaultOTPChannel req.otpChannel
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
@@ -173,7 +185,8 @@ buildPerson req bundleVersion clientVersion merchantId = do
         createdAt = now,
         updatedAt = now,
         bundleVersion = bundleVersion,
-        clientVersion = clientVersion
+        clientVersion = clientVersion,
+        whatsappNotificationEnrollStatus = Nothing
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -215,7 +228,8 @@ verify ::
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    CacheFlow m r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -242,11 +256,36 @@ verify tokenId req = do
   updPerson <- Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
   decPerson <- decrypt updPerson
   let personAPIEntity = SP.makePersonAPIEntity decPerson
+  unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
+    fork "whatsapp_opt_api_call" $ do
+      case decPerson.mobileNumber of
+        Nothing -> throwError $ AuthBlocked "Mobile Number is null"
+        Just mobileNo -> callWhatsappOptApi mobileNo person.id person.merchantId req.whatsappNotificationEnroll
   return $ AuthVerifyRes token personAPIEntity
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
+
+callWhatsappOptApi ::
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    EncFlow m r,
+    CacheFlow m r
+  ) =>
+  Text ->
+  Id SP.Person ->
+  Id DMerchant.Merchant ->
+  Maybe Whatsapp.OptApiMethods ->
+  m ()
+callWhatsappOptApi mobileNo personId merchantId hasOptedIn = do
+  let status = case hasOptedIn of
+        Nothing -> Whatsapp.OPT_IN
+        Just wSNotificationEnroll -> wSNotificationEnroll
+  void $ whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
+  DB.runTransaction $
+    Person.updateWhatsappNotificationEnrollStatus personId $ Just status
 
 getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
 getRegistrationTokenE tokenId =

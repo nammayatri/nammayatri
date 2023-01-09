@@ -20,6 +20,7 @@ import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -45,6 +46,7 @@ import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 import Tools.Metrics
 import Tools.SMS as Sms hiding (Success)
+import Tools.Whatsapp as Whatsapp
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,
@@ -71,7 +73,8 @@ type ResendAuthRes = AuthRes
 ---------- Verify Login --------
 data AuthVerifyReq = AuthVerifyReq
   { otp :: Text,
-    deviceToken :: FCMRecipientToken
+    deviceToken :: FCMRecipientToken,
+    whatsappNotificationEnroll :: Maybe Whatsapp.OptApiMethods
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -188,7 +191,8 @@ makePerson req mbBundleVersion mbClientVersion merchantId = do
         createdAt = now,
         updatedAt = now,
         bundleVersion = mbBundleVersion,
-        clientVersion = mbClientVersion
+        clientVersion = mbClientVersion,
+        whatsappNotificationEnrollStatus = Nothing
       }
 
 makeSession ::
@@ -245,7 +249,8 @@ verify ::
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    CacheFlow m r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -269,12 +274,36 @@ verify tokenId req = do
       QP.setIsNewFalse person.id
   updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
+  unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
+    fork "whatsapp_opt_api_call" $ do
+      case decPerson.mobileNumber of
+        Nothing -> throwError $ AuthBlocked "Mobile Number is null"
+        Just mobileNo -> callWhatsappOptApi mobileNo person.merchantId person.id req.whatsappNotificationEnroll
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthVerifyRes token personAPIEntity
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
+
+callWhatsappOptApi ::
+  ( EsqDBFlow m r,
+    CoreMetrics m,
+    EncFlow m r,
+    CacheFlow m r
+  ) =>
+  Text ->
+  Id DO.Merchant ->
+  Id SP.Person ->
+  Maybe Whatsapp.OptApiMethods ->
+  m ()
+callWhatsappOptApi mobileNo merchantId personId hasOptedIn = do
+  let status = case hasOptedIn of
+        Nothing -> Whatsapp.OPT_IN
+        Just wSNotificationEnroll -> wSNotificationEnroll
+  void $ Whatsapp.whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
+  DB.runTransaction $
+    QP.updateWhatsappNotificationEnrollStatus personId $ Just status
 
 checkRegistrationTokenExists :: (Esq.Transactionable m, MonadThrow m, Log m) => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =

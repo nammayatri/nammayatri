@@ -8,18 +8,20 @@ import Domain.Types.Merchant (Merchant)
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
 import Kernel.External.SMS as Sms
+import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Text.Show
 
-data ServiceName = MapsService Maps.MapsService | SmsService Sms.SmsService
+data ServiceName = MapsService Maps.MapsService | SmsService Sms.SmsService | WhatsappService Whatsapp.WhatsappService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 instance Show ServiceName where
   show (MapsService s) = "Maps_" <> show s
   show (SmsService s) = "Sms_" <> show s
+  show (WhatsappService s) = "Whatsapp_" <> show s
 
 instance Read ServiceName where
   readsPrec d' r' =
@@ -34,13 +36,17 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Sms_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (WhatsappService v1, r2)
+                 | r1 <- stripPrefix "Whatsapp_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
       r'
     where
       app_prec = 10
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
 
-data ServiceConfigD (s :: UsageSafety) = MapsServiceConfig !MapsServiceConfig | SmsServiceConfig !SmsServiceConfig
+data ServiceConfigD (s :: UsageSafety) = MapsServiceConfig !MapsServiceConfig | SmsServiceConfig !SmsServiceConfig | WhatsappServiceConfig !WhatsappServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -72,6 +78,8 @@ getServiceName osc = case osc.serviceConfig of
   SmsServiceConfig smsCfg -> case smsCfg of
     Sms.ExotelSmsConfig _ -> SmsService Sms.ExotelSms
     Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
+  WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
+    Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
 
 buildMerchantServiceConfig ::
   MonadTime m =>

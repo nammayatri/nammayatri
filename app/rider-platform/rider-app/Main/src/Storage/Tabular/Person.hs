@@ -10,6 +10,7 @@ module Storage.Tabular.Person where
 import qualified Domain.Types.Person as Domain
 import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
 import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.External.Whatsapp.Interface.Types (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
@@ -19,6 +20,7 @@ import qualified Storage.Tabular.Merchant as SMerchant
 derivePersistField "Domain.Role"
 derivePersistField "Domain.Gender"
 derivePersistField "Domain.IdentifierType"
+derivePersistField "OptApiMethods"
 
 mkPersist
   defaultSqlSettings
@@ -44,6 +46,7 @@ mkPersist
       deviceToken FCMRecipientToken Maybe
       description Text Maybe
       merchantId SMerchant.MerchantTId
+      whatsappNotificationEnrollStatus OptApiMethods Maybe
       createdAt UTCTime
       updatedAt UTCTime
       bundleVersion Text Maybe

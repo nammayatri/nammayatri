@@ -23,8 +23,8 @@ let mockGoogleCfg =
 in  { smsSessionConfig = globalCommon.smsSessionConfig
     , autoMigrate = globalCommon.autoMigrate
     , loggerConfig =
-          globalCommon.loggerConfig
-        // { logToFile = True, logRawSql = True, prettyPrinting = True }
+            globalCommon.loggerConfig
+        //  { logToFile = True, logRawSql = True, prettyPrinting = True }
     , LogLevel = globalCommon.LogLevel
     , ExotelCfg = globalCommon.ExotelCfg
     , exotelCfg = sec.exotelCfg
@@ -41,8 +41,8 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , smsPassword = sec.smsPassword
     , InfoBIPConfig = sec.InfoBIPConfig
     , passetto = { _1 = "localhost", _2 = 8021 }
-    , googleCfg = googleCfg
-    , mockGoogleCfg = mockGoogleCfg
+    , googleCfg
+    , mockGoogleCfg
     , googleTranslateUrl = "https://www.googleapis.com/"
     , googleTranslateKey = sec.googleTranslateKey
     , registryUrl = mockRegistryUrl

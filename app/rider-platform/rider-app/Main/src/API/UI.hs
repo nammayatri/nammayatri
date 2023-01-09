@@ -26,6 +26,7 @@ import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Support as Support
 import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
 import qualified API.UI.Webengage.Webengage as Webengage
+import qualified API.UI.Whatsapp as Whatsapp
 import Environment
 import EulerHS.Prelude
 import Servant
@@ -55,6 +56,7 @@ type API =
            :<|> Webengage.API
            :<|> InfoBIPWebhook.API
            :<|> Frontend.API
+           :<|> Whatsapp.API
        )
 
 handler :: FlowServer API
@@ -82,3 +84,4 @@ handler =
     :<|> Webengage.handler
     :<|> InfoBIPWebhook.handler
     :<|> Frontend.handler
+    :<|> Whatsapp.handler

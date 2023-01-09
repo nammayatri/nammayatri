@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as Domain
 import Kernel.External.Maps.Types
 import Kernel.External.SMS.Types
+import Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
@@ -29,6 +30,7 @@ mkPersist
       getPlaceDetails MapsService
       autoComplete MapsService
       smsProvidersPriorityList (PostgresList SmsService)
+      whatsappProvidersPriorityList (PostgresList WhatsappService)
       updatedAt UTCTime
       createdAt UTCTime
       Primary merchantId
@@ -46,11 +48,13 @@ instance TType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig whe
       Domain.MerchantServiceUsageConfig
         { merchantId = fromKey merchantId,
           smsProvidersPriorityList = unPostgresList smsProvidersPriorityList,
+          whatsappProvidersPriorityList = unPostgresList whatsappProvidersPriorityList,
           ..
         }
   toTType Domain.MerchantServiceUsageConfig {..} = do
     MerchantServiceUsageConfigT
       { merchantId = toKey merchantId,
         smsProvidersPriorityList = PostgresList smsProvidersPriorityList,
+        whatsappProvidersPriorityList = PostgresList whatsappProvidersPriorityList,
         ..
       }
