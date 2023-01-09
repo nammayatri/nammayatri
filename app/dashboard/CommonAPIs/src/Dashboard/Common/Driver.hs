@@ -431,6 +431,6 @@ validateUpdateDriverNameReq :: Validate UpdateDriverNameReq
 validateUpdateDriverNameReq UpdateDriverNameReq {..} =
   sequenceA_
     [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
-      validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
-      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name
+      validateField "middleName" middleName $ InMaybe P.name,
+      validateField "lastName" lastName $ InMaybe P.name
     ]

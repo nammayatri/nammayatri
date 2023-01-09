@@ -529,11 +529,11 @@ updateDriverName merchantShortId reqDriverId req = do
 
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
-
+  -- empty string in request condsidered as Nothing in db, Nothing in request is not affect db value
   let updDriver =
         driver{firstName = req.firstName,
-               middleName = req.middleName <|> driver.middleName,
-               lastName = req.lastName <|> driver.lastName
+               middleName = if req.middleName == Just "" then Nothing else req.middleName <|> driver.middleName,
+               lastName = if req.lastName == Just "" then Nothing else req.lastName <|> driver.lastName
               }
 
   Esq.runTransaction $ do
