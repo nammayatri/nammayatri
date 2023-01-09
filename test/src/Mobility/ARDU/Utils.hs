@@ -107,7 +107,7 @@ setupDriver driver initialPoint = do
 
 resetDriver :: DriverTestData -> IO ()
 resetDriver driver = runARDUFlow "" $ do
-  rides <- TQRide.findAllByDriverId (cast driver.driverId) Nothing Nothing (Just True)
+  rides <- TQRide.findAllByDriverId (cast driver.driverId) Nothing Nothing (Just True) Nothing
   activeQuotes <- TDQ.findActiveQuotesByDriverId (cast driver.driverId) 99999
   Esq.runTransaction $ do
     void . forM rides $ \(ride, booking) -> do

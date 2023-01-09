@@ -33,6 +33,7 @@ type API =
            :> QueryParam "limit" Integer
            :> QueryParam "offset" Integer
            :> QueryParam "onlyActive" Bool
+           :> QueryParam "status" Ride.RideStatus
            :> Get '[JSON] DRide.DriverRideListRes
            :<|> TokenAuth
            :> Capture "rideId" (Id Ride.Ride)
@@ -106,8 +107,9 @@ listDriverRides ::
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
+  Maybe Ride.RideStatus ->
   FlowHandler DRide.DriverRideListRes
-listDriverRides driverId mbLimit mbOffset = withFlowHandlerAPI . DRide.listDriverRides driverId mbLimit mbOffset
+listDriverRides driverId mbLimit mbOffset mbRideStatus = withFlowHandlerAPI . DRide.listDriverRides driverId mbLimit mbOffset mbRideStatus
 
 arrivedAtPickup :: Id SP.Person -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtPickup _ rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req

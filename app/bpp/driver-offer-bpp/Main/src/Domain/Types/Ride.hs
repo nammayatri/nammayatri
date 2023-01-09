@@ -3,6 +3,7 @@
 module Domain.Types.Ride where
 
 import Beckn.External.Maps.Types
+import qualified Beckn.Prelude as BP
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Aeson
@@ -20,7 +21,7 @@ data RideStatus
   | INPROGRESS
   | COMPLETED
   | CANCELLED
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, BP.ToParamSchema)
 
 instance FromHttpApiData RideStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
