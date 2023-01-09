@@ -5,7 +5,7 @@ module App (startKafkaConsumer) where
 import Beckn.Prelude
 import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.Flow
-import Beckn.Utils.Common (throwError)
+import Beckn.Utils.Common (generateGUID, throwError, withLogTag)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.FlowLogging as L
 import Control.Error.Util
@@ -63,9 +63,9 @@ startConsumerWithEnv appEnv@AppEnv {..} = do
         & S.mapM (Map.traverseWithKey (calculateAvailableTime kafkaConsumer))
         & S.drain
 
-    calculateAvailableTime kafkaConsumer (driverId, merchantId) (timeSeries, mbCR) = withFlow . DO.calculateAvailableTime merchantId driverId kafkaConsumer $ (reverse timeSeries, mbCR)
+    calculateAvailableTime kafkaConsumer (driverId, merchantId) (timeSeries, mbCR) = withFlow . withLogTag driverId . DO.calculateAvailableTime merchantId driverId kafkaConsumer $ (reverse timeSeries, mbCR)
 
-    processRealtimeLocationUpdates locationUpdate = withFlow . DO.processData locationUpdate
+    processRealtimeLocationUpdates locationUpdate driverId = withFlow . withLogTag driverId $ generateGUID >>= flip withLogTag (DO.processData locationUpdate driverId)
 
     buildTimeSeries = SF.mkFold step start extract
       where

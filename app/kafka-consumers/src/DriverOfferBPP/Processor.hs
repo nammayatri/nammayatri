@@ -40,15 +40,14 @@ createOrUpdateDriverAvailability merchantId driverId (bucketStartTime, bucketEnd
 
 calculateAvailableTime :: Text -> Text -> Consumer.KafkaConsumer -> ([UTCTime], Maybe (Consumer.ConsumerRecord (Maybe ByteString) (Maybe ByteString))) -> Flow ()
 calculateAvailableTime _ _ _ ([], Nothing) = pure ()
-calculateAvailableTime _ _ _ ([], Just _) = logInfo "Should never reach here, no locationupdates but kafka consumer record :-/ "
-calculateAvailableTime _ _ _ (_, Nothing) = logInfo "Should never reach here, locationupdates but no kafka consumer record :-/"
+calculateAvailableTime _ _ _ ([], Just lastCR) = logInfo $ "Should never reach here, no locationupdates but kafka consumer records , last consumer record: " <> show lastCR
+calculateAvailableTime _ _ _ (locationUpdatesTimeSeries, Nothing) = logInfo $ "Should never reach here, locationupdates but no kafka consumer record, time series: " <> show locationUpdatesTimeSeries
 calculateAvailableTime merchantId driverId kc (fstTime : restTimeSeries, Just lastCR) = do
   mbLatestAvailabilityRecord <- Q.findLatestByDriverIdAndMerchantId driverId merchantId
   timeBetweenUpdates <- asks (.timeBetweenUpdates)
   granualityPeriodType <- asks (.granualityPeriodType)
   let lastAvailableTime = fromMaybe fstTime $ mbLatestAvailabilityRecord <&> (.lastAvailableTime)
       activeTimePairs = mkPairsWithLessThenThreshold timeBetweenUpdates lastAvailableTime granualityPeriodType $ filter (> lastAvailableTime) (fstTime : restTimeSeries)
-      availableTime = sumPairDiff activeTimePairs
       availabilityInWindow =
         foldr
           ( \timePair acc -> do
@@ -60,12 +59,11 @@ calculateAvailableTime merchantId driverId kc (fstTime : restTimeSeries, Just la
           )
           M.empty
           activeTimePairs
-  logInfo $ "ActiveTime pairs " <> show availabilityInWindow
-  logInfo $ "Adding " <> show availableTime <> " seconds available time for driverId: " <> show driverId
+  logInfo $ "ActiveTime pairs " <> show activeTimePairs
+  logInfo $ "availabilityInWindow " <> show availabilityInWindow
   void $ M.traverseWithKey (createOrUpdateDriverAvailability merchantId driverId) availabilityInWindow
   void $ Consumer.commitOffsetMessage Consumer.OffsetCommit kc lastCR
   where
-    sumPairDiff = foldr' (\timePair acc -> acc + uncurry (flip diffUTCTime) timePair) 0
     getBucketPair periodType (_, endTime) = do
       let bucketEndTime = SW.incrementPeriod periodType endTime
       let bucketStartTime = flip addUTCTime bucketEndTime . fromInteger $ -1 * SW.convertPeriodTypeToSeconds periodType
