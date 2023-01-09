@@ -82,6 +82,7 @@ dependencies:
   - text-conversions
   - dashboard-bpp-helper-api
   - scheduler
+  - singletons
 
 ghc-options:
   - -fwrite-ide-info

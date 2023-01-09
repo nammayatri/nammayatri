@@ -13,11 +13,9 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
 import qualified Control.Monad.Catch as C
 import Control.Monad.IO.Unlift (MonadUnliftIO)
-import Data.Map (Map)
-import Lib.Scheduler.JobHandler
 import Lib.Scheduler.Metrics (SchedulerMetrics)
 
-data SchedulerConfig t = SchedulerConfig
+data SchedulerConfig = SchedulerConfig
   { loggerConfig :: LoggerConfig,
     metricsPort :: Int,
     esqDBCfg :: EsqDBConfig,
@@ -27,23 +25,20 @@ data SchedulerConfig t = SchedulerConfig
     loopIntervalSec :: Seconds,
     expirationTime :: Integer,
     waitBeforeRetry :: Int,
-    jobType :: Maybe t,
     tasksPerIteration :: Int,
     graceTerminationPeriod :: Seconds
   }
   deriving (Generic, FromDhall)
 
-data SchedulerEnv t = SchedulerEnv
+data SchedulerEnv = SchedulerEnv
   { esqDBEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
     metrics :: SchedulerMetrics,
-    handlersMap :: Map t (JobHandler t),
     loopIntervalSec :: Seconds,
     expirationTime :: Integer,
     waitBeforeRetry :: Int,
-    jobType :: Maybe t,
     tasksPerIteration :: Int,
     graceTerminationPeriod :: Seconds,
     port :: Int,
@@ -51,14 +46,14 @@ data SchedulerEnv t = SchedulerEnv
   }
   deriving (Generic)
 
-releaseSchedulerEnv :: SchedulerEnv t -> IO ()
+releaseSchedulerEnv :: SchedulerEnv -> IO ()
 releaseSchedulerEnv SchedulerEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
 
-newtype SchedulerM t a = SchedulerM {unSchedulerM :: MockM (SchedulerEnv t) a}
-  deriving newtype (Functor, Applicative, Monad, MonadReader (SchedulerEnv t), MonadIO)
+newtype SchedulerM a = SchedulerM {unSchedulerM :: MockM SchedulerEnv a}
+  deriving newtype (Functor, Applicative, Monad, MonadReader SchedulerEnv, MonadIO)
   deriving newtype (C.MonadThrow, C.MonadCatch, C.MonadMask, MonadClock, MonadTime, MonadGuid, Log, Forkable, MonadUnliftIO)
 
-runSchedulerM :: SchedulerEnv t -> SchedulerM t a -> IO a
+runSchedulerM :: SchedulerEnv -> SchedulerM a -> IO a
 runSchedulerM env action = runMock env $ unSchedulerM action

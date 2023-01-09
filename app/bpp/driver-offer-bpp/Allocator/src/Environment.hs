@@ -1,7 +1,6 @@
 module Environment
   ( HandlerCfg (..),
     HandlerEnv (..),
-    JobType (..),
     SchedulerConfig (..),
     Flow,
     buildHandlerEnv,
@@ -24,7 +23,6 @@ import Beckn.Utils.Servant.SignatureAuth
 import Data.String.Conversions (cs)
 import "driver-offer-bpp" Environment (AppCfg (..))
 import Lib.Scheduler.Environment (SchedulerConfig (..))
-import SharedLogic.Allocator (JobType (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
 import SharedLogic.DriverPool (DriverPoolConfig, OverrideDriverPoolConfig)
 import SharedLogic.GoogleTranslate
@@ -33,7 +31,7 @@ import System.Environment (lookupEnv)
 import Tools.Metrics
 
 data HandlerCfg = HandlerCfg
-  { schedulerConfig :: SchedulerConfig JobType,
+  { schedulerConfig :: SchedulerConfig,
     appCfg :: AppCfg
   }
   deriving (Generic, FromDhall)

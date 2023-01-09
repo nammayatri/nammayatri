@@ -25,6 +25,7 @@ import SharedLogic.GoogleMaps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
+import Storage.Queries.AllocatorJob (createAllocatorSendSearchRequestToDriverJob)
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error (FarePolicyError (NoFarePolicy), MerchantError (MerchantNotFound))
 import Tools.Maps as Maps

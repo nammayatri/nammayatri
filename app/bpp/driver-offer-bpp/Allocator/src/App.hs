@@ -15,6 +15,23 @@ import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import qualified Storage.CachedQueries.Merchant as Storage
+import qualified Storage.Queries.AllocatorJob as QAllJ
+
+allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobType
+allocatorHandle flowRt env =
+  SchedulerHandle
+    { getTasksById = QAllJ.getTasksById,
+      getReadyTasks = QAllJ.getReadyTasks,
+      markAsComplete = QAllJ.markAsComplete,
+      markAsFailed = QAllJ.markAsFailed,
+      updateErrorCountAndFail = QAllJ.updateErrorCountAndFail,
+      reSchedule = QAllJ.reSchedule,
+      updateFailureCount = QAllJ.updateFailureCount,
+      reScheduleOnError = QAllJ.reScheduleOnError,
+      jobHandlers =
+        emptyJobHandlerList
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
+    }
 
 runDriverOfferAllocator ::
   (HandlerCfg -> HandlerCfg) ->
@@ -40,9 +57,4 @@ runDriverOfferAllocator configModifier = do
 
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'
-    runScheduler handlerCfg.schedulerConfig $ allocatorHandlerList flowRt' handlerEnv
-
-allocatorHandlerList :: R.FlowRuntime -> HandlerEnv -> JobHandlerList JobType
-allocatorHandlerList flowRt env =
-  [ (SendSearchRequestToDriver, JobHandler $ \x -> runFlowR flowRt env $ sendSearchRequestToDrivers x)
-  ]
+    runSchedulerService handlerCfg.schedulerConfig $ allocatorHandle flowRt' handlerEnv

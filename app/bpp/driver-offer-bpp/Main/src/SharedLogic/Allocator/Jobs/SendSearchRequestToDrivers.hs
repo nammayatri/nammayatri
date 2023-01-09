@@ -9,7 +9,7 @@ import Beckn.Utils.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.SearchRequest (SearchRequest)
 import Lib.Scheduler
-import SharedLogic.Allocator (JobType, SendSearchRequestToDriverJobData (..))
+import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
@@ -34,7 +34,7 @@ sendSearchRequestToDrivers ::
     Log m,
     SWC.HasWindowOptions r
   ) =>
-  Job JobType SendSearchRequestToDriverJobData ->
+  Job 'SendSearchRequestToDriver ->
   m ExecutionResult
 sendSearchRequestToDrivers Job {id, jobData} = withLogTag ("JobId-" <> id.getId) do
   let searchReqId = jobData.requestId

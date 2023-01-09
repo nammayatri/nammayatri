@@ -21,7 +21,6 @@ let schedulerConfig =
       , loopIntervalSec = +5
       , expirationTime = +60
       , waitBeforeRetry = +1
-      , jobType = None {}
       , tasksPerIteration = +20
       , graceTerminationPeriod = +10
       }
