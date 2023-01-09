@@ -69,7 +69,7 @@ startConsumerWithEnv appEnv@AppEnv {..} = do
 
     buildTimeSeries = SF.mkFold step start extract
       where
-        step (!(acc), _) (val, cr) = pure (val.ts : acc, Just cr)
+        step (!acc, _) (val, cr) = pure (val.ts : acc, Just cr)
         start = pure ([], Nothing)
         extract = pure
 
