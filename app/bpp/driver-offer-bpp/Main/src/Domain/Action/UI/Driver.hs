@@ -45,7 +45,6 @@ import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Beckn.Types.Predicate
-import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Common
 import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Beckn.Utils.Predicates as P
@@ -548,7 +547,6 @@ offerQuote ::
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
-    SWC.HasWindowOptions r,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
     HasDriverPoolConfig r,
@@ -572,7 +570,6 @@ respondQuote ::
     HasPrettyLogger m r,
     HasField "driverQuoteExpirationSeconds" r NominalDiffTime,
     HasField "coreVersion" r Text,
-    SWC.HasWindowOptions r,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
     HasDriverPoolConfig r,
@@ -614,7 +611,7 @@ respondQuote driverId req = do
         Esq.runTransaction $ do
           QDrQt.create driverQuote
           QSRD.updateDriverResponse sReqFD.id req.response
-        incrementQuoteAcceptedCount driverId
+        incrementQuoteAcceptedCount sReq.providerId driverId
         -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
         when ((quoteCount + 1) >= quoteLimit) $ sendRemoveRideRequestNotification organization.id driverQuote
         sendDriverOffer organization sReq driverQuote

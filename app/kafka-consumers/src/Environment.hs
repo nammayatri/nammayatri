@@ -3,6 +3,7 @@ module Environment where
 import Beckn.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Beckn.Storage.Hedis.Config
 import Beckn.Types.SlidingWindowCounters
+import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Dhall
 import Beckn.Utils.IOLogging
 import qualified Data.Text as T
@@ -47,7 +48,7 @@ data AppCfg = AppCfg
     dumpEvery :: Seconds,
     kafkaConsumerCfg :: ConsumerConfig,
     timeBetweenUpdates :: Seconds,
-    windowOptions :: SlidingWindowOptions,
+    availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
     granualityPeriodType :: PeriodType,
     loggerConfig :: LoggerConfig
   }
@@ -61,7 +62,7 @@ data AppEnv = AppEnv
     hedisEnv :: HedisEnv,
     kafkaConsumerCfg :: ConsumerConfig,
     timeBetweenUpdates :: Seconds,
-    windowOptions :: SlidingWindowOptions,
+    availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
     granualityPeriodType :: PeriodType,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,

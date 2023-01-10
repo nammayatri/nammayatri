@@ -44,8 +44,6 @@ let smsConfig =
 
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
-let windowOptions = { period = +7, periodType = common.periodType.Days }
-
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let slackCfg =
@@ -95,9 +93,16 @@ let driverPoolCfg =
       , maxRadiusOfSearch = +7000
       , radiusStepSize = +500
       , driverPositionInfoExpiry = Some +36000
+      , intelligentPoolPercentage = Some +50
       , actualDistanceThreshold = Some +7000
       , maxDriverQuotesRequired = +1
       , driverQuoteLimit = +2
+      }
+
+let intelligentPoolConfig =
+      { minQuotesToQualifyForIntelligentPool = +5
+      , minQuotesToQualifyForIntelligentPoolWindowOption =
+        { period = +24, periodType = common.periodType.Hours }
       }
 
 let overrideDriverPoolCfg =
@@ -168,13 +173,13 @@ in  { esqDBCfg
     , defaultWaitingTimeEstimatedThreshold = +3
     , cacheConfig
     , metricsSearchDurationTimeout = +45
-    , windowOptions
     , driverLocationUpdateRateLimitOptions
     , driverReachedDistance = +100
     , driverLocationUpdateNotificationTemplate =
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , cacheTranslationConfig
     , driverPoolCfg
+    , intelligentPoolConfig
     , overrideDriverPoolCfg = Some overrideDriverPoolCfg
     , sendSearchRequestJobCfg
     , driverLocationUpdateTopic = "location-updates"

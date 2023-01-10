@@ -12,6 +12,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common (Meters)
 import Beckn.Types.Id
+import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Types.Time
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.TransporterConfig as Domain
@@ -27,8 +28,11 @@ mkPersist
       rideTravelledDistanceThreshold Meters Maybe
       rideTimeEstimatedThreshold Seconds Maybe
       availabilityTimeWeightage Int
+      availabilityTimeWindowOption SWC.SlidingWindowOptions
       acceptanceRatioWeightage Int
+      acceptanceRatioWindowOption SWC.SlidingWindowOptions
       cancellationRatioWeightage Int
+      cancellationRatioWindowOption SWC.SlidingWindowOptions
       waitingTimeEstimatedThreshold Seconds Maybe
       createdAt UTCTime
       updatedAt UTCTime

@@ -11,15 +11,16 @@ import Beckn.Randomizer (randomizeList)
 import Beckn.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
-import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Common
 import qualified Data.HashMap as HM
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.TransporterConfig (TransporterConfig)
 import EulerHS.Prelude hiding (id)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import SharedLogic.DriverPool
+import qualified SharedLogic.DriverPool.Config as DP
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.TransporterConfig as TC
 import Tools.Maps as Maps
@@ -49,8 +50,8 @@ prepareDriverPoolBatch ::
     CoreMetrics m,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
-    HasSendSearchRequestJobConfig r,
-    SWC.HasWindowOptions r
+    DP.HasDriverPoolConfig r,
+    HasSendSearchRequestJobConfig r
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
@@ -64,21 +65,18 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
     prepareDriverPoolBatch' previousBatchesDrivers = do
       radiusStep <- getPoolRadiusStep searchReq.id
       driverPool <- calcDriverPool radiusStep
-      logDebug $ "DriverPool-" <> show driverPool
-      sortedDriverPool <- sortFunction driverPool
-      logDebug $ "SortedDriverPool-" <> show sortedDriverPool
-      let onlyNewDriversPool = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) sortedDriverPool
-      logDebug $ "OnlyNewDriversPool-" <> show onlyNewDriversPool
-      driverPoolBatch <- getBatch onlyNewDriversPool
-      logDebug $ "DriverPoolBatch-" <> show driverPoolBatch
+      sortingType <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.poolSortingType)
       batchSize <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.driverBatchSize)
-      minBatchSize <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.minDriverBatchSize)
-      if length driverPoolBatch < minBatchSize
+      logDebug $ "DriverPool-" <> show driverPool
+      let onlyNewDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) driverPool
+      driverPoolBatch <- mkDriverPoolBatch batchSize sortingType onlyNewDrivers
+      logDebug $ "DriverPoolBatch-" <> show driverPoolBatch
+      if length driverPoolBatch < batchSize
         then do
           isAtMaxRadiusStep' <- isAtMaxRadiusStep radiusStep
           if isAtMaxRadiusStep'
             then do
-              filledBatch <- fillBatch batchSize sortedDriverPool driverPoolBatch
+              filledBatch <- fillBatch searchReq.providerId sortingType batchSize driverPool driverPoolBatch
               logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
               cacheBatch filledBatch
               return filledBatch
@@ -88,6 +86,38 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
         else do
           cacheBatch driverPoolBatch
           return driverPoolBatch
+      where
+        mkDriverPoolBatch batchSize sortingType onlyNewDrivers = do
+          case sortingType of
+            Intelligent -> makeIntelligentDriverPool batchSize searchReq.providerId onlyNewDrivers
+            Random -> makeRandomDriverPool batchSize onlyNewDrivers
+
+        bimapM fna fnb (a, b) = (,) <$> fna a <*> fnb b
+
+        makeIntelligentDriverPool batchSize merchantId onlyNewDrivers = do
+          transporterConfig <- TC.findByMerchantId merchantId
+          minQuotesToQualifyForIntelligentPool <- asks (.intelligentPoolConfig.minQuotesToQualifyForIntelligentPool)
+          (sortedDriverPool, randomizedDriverPool) <-
+            bimapM (sortWithDriverScore merchantId transporterConfig) randomizeAndLimitSelection
+              =<< splitDriverPoolForSorting minQuotesToQualifyForIntelligentPool onlyNewDrivers
+          let intelligentPoolPercentage = fromMaybe 50 driverPoolCfg.intelligentPoolPercentage
+              intelligentCount = min (length sortedDriverPool) (batchSize * intelligentPoolPercentage `div` 100)
+              randomCount = batchSize - intelligentCount
+              (sortedPart, restSorted) = splitAt intelligentCount sortedDriverPool
+              (randomPart, restRandom) = splitAt randomCount randomizedDriverPool
+              poolBatch = sortedPart <> randomPart
+              batchSizeFormed = length poolBatch
+          logDebug $ "IntelligentDriverPool - SortedDriversCount " <> show (length sortedPart)
+          logDebug $ "IntelligentDriverPool - RandomizedDriversCount " <> show (length randomPart)
+          logDebug $ "IntelligentDriverPool - RestSorted " <> show (length restSorted)
+          logDebug $ "IntelligentDriverPool - RestRandom " <> show (length restRandom)
+          if batchSizeFormed < batchSize
+            then do
+              logDebug $ "IntelligentDriverPool - Driver Deficit, adding more from " <> if not (null restSorted) then " intelligent pool." else " randomized pool."
+              pure $ poolBatch <> take (batchSize - batchSizeFormed) (restSorted <> restRandom)
+            else pure poolBatch
+
+        makeRandomDriverPool batchSize onlyNewDrivers = take batchSize <$> randomizeAndLimitSelection onlyNewDrivers
 
     calcDriverPool radiusStep = do
       let vehicleVariant = searchReq.vehicleVariant
@@ -95,22 +125,33 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       let pickupLoc = searchReq.fromLocation
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
       calculateDriverPoolWithActualDist driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
-    getBatch driverPool = do
-      batchSize <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.driverBatchSize)
-      return $ take batchSize driverPool
-    fillBatch batchSize driverPool batch = do
+    fillBatch merchantId sortingType batchSize driverPool batch = do
+      transporterConfig <- TC.findByMerchantId merchantId
       let batchDriverIds = batch <&> (.driverPoolResult.driverId)
-      let driversToFillBatch = take (batchSize - length batch) $ filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) driverPool
-      return $ batch <> driversToFillBatch
+      let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) driverPool
+      minQuotesToQualifyForIntelligentPool <- asks (.intelligentPoolConfig.minQuotesToQualifyForIntelligentPool)
+      (batch <>) . take (batchSize - length batch)
+        <$> case sortingType of
+          Intelligent -> do
+            (gtMinQ, ltMinQ) <- splitDriverPoolForSorting minQuotesToQualifyForIntelligentPool driversNotInBatch -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
+            sortedDrivers <- sortWithDriverScore merchantId transporterConfig gtMinQ
+            pure $ ltMinQ <> sortedDrivers
+          Random -> pure driversNotInBatch
     cacheBatch batch = do
       logDebug $ "Caching batch-" <> show batch
       Redis.withCrossAppRedis $ Redis.setExp (driverPoolBatchKey searchReq.id batchNum) batch (60 * 10)
-    sortFunction driverPool = do
-      sortingType <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.poolSortingType)
-      let merchantId = searchReq.providerId
-      case sortingType of
-        Intelligent -> TC.findByMerchantId merchantId >>= intelligentPoolSelection driverPool
-        Random -> randomizeAndLimitSelection driverPool
+    -- splitDriverPoolForSorting :: minQuotes Int -> [DriverPool Array] -> ([GreaterThanMinQuotesDP], [LessThanMinQuotesDP])
+    splitDriverPoolForSorting minQuotes =
+      foldrM
+        ( \dObj (gtX, ltX) -> do
+            driverQuotesCount <- getQuotesCount dObj.driverPoolResult.driverId
+            pure $
+              if driverQuotesCount >= minQuotes
+                then (dObj : gtX, ltX)
+                else (gtX, dObj : ltX)
+        )
+        ([], [])
+
     isAtMaxRadiusStep radiusStep = do
       let minRadiusOfSearch = fromIntegral @_ @Double driverPoolCfg.minRadiusOfSearch
       let maxRadiusOfSearch = fromIntegral @_ @Double driverPoolCfg.maxRadiusOfSearch
@@ -142,21 +183,23 @@ getDriverPoolBatch searchReqId batchNum = do
         return []
       a -> return a
 
-intelligentPoolSelection ::
+sortWithDriverScore ::
   ( Redis.HedisFlow m r,
-    SWC.HasWindowOptions r,
+    HasCacheConfig r,
+    EsqDBFlow m r,
     MonadFlow m
   ) =>
-  [DriverPoolWithActualDistResult] ->
+  Id Merchant ->
   Maybe TransporterConfig ->
+  [DriverPoolWithActualDistResult] ->
   m [DriverPoolWithActualDistResult]
-intelligentPoolSelection dp Nothing = logInfo "Weightages not available in DB, going with random selection" *> randomizeAndLimitSelection dp
-intelligentPoolSelection dp (Just transporterConfig) = do
+sortWithDriverScore _ Nothing dp = logInfo "Weightages not available in DB, going with random selection" *> randomizeAndLimitSelection dp
+sortWithDriverScore merchantId (Just transporterConfig) dp = do
   logTagInfo "Weightage config for intelligent driver pool" $ show transporterConfig
   let driverIds = map (.driverPoolResult.driverId) dp
-  driverCancellationScore <- getScoreWithWeight (transporterConfig.cancellationRatioWeightage) <$> getRatios getLatestCancellationRatio driverIds
-  driverAcceptanceScore <- getScoreWithWeight (transporterConfig.acceptanceRatioWeightage) <$> getRatios getLatestAcceptanceRatio driverIds
-  driverAvailabilityScore <- getScoreWithWeight (transporterConfig.availabilityTimeWeightage) . map (second (sum . catMaybes)) <$> getRatios getCurrentWindowAvailability driverIds
+  driverCancellationScore <- getScoreWithWeight (transporterConfig.cancellationRatioWeightage) <$> getRatios (getLatestCancellationRatio merchantId) driverIds
+  driverAcceptanceScore <- getScoreWithWeight (transporterConfig.acceptanceRatioWeightage) <$> getRatios (getLatestAcceptanceRatio merchantId) driverIds
+  driverAvailabilityScore <- getScoreWithWeight (transporterConfig.availabilityTimeWeightage) . map (second (sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
   let overallScore = calculateOverallScore [driverAcceptanceScore, driverAvailabilityScore, driverCancellationScore]
       sortedDriverPool = sortOn (Down . fst) overallScore
   logTagInfo "Driver Acceptance Score" $ show driverAcceptanceScore
@@ -200,9 +243,9 @@ getNextDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     EsqDBFlow m r,
+    DP.HasDriverPoolConfig r,
     Redis.HedisFlow m r,
-    HasSendSearchRequestJobConfig r,
-    SWC.HasWindowOptions r
+    HasSendSearchRequestJobConfig r
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->

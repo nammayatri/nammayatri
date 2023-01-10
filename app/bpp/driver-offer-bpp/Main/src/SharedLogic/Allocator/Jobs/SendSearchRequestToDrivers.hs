@@ -4,7 +4,6 @@ import Beckn.Prelude hiding (handle)
 import Beckn.Storage.Esqueleto (EsqDBReplicaFlow)
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Error
-import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.SearchRequest (SearchRequest)
@@ -14,6 +13,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSear
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import SharedLogic.DriverPool.Config (DriverPoolConfig, HasDriverPoolConfig, getDriverPoolConfig)
+import qualified SharedLogic.DriverPool.Config as DP
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -31,8 +31,7 @@ sendSearchRequestToDrivers ::
     HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
-    Log m,
-    SWC.HasWindowOptions r
+    Log m
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -50,11 +49,11 @@ sendSearchRequestToDrivers' ::
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     Metrics.CoreMetrics m,
     HasSendSearchRequestJobConfig r,
+    DP.HasDriverPoolConfig r,
     HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
-    Log m,
-    SWC.HasWindowOptions r
+    Log m
   ) =>
   DriverPoolConfig ->
   SearchRequest ->

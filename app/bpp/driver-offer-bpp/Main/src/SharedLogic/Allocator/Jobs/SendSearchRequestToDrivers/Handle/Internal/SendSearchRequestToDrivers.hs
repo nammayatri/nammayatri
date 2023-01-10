@@ -8,7 +8,6 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Common (addUTCTime, logInfo)
 import qualified Data.Map as M
 import qualified Domain.Types.SearchRequest as DSR
@@ -18,6 +17,7 @@ import Domain.Types.SearchRequestForDriver
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import SharedLogic.DriverPool
+import qualified SharedLogic.DriverPool.Config as DP
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -31,10 +31,10 @@ sendSearchRequestToDrivers ::
     EsqDBFlow m r,
     TranslateFlow m r,
     CacheFlow m r,
+    DP.HasDriverPoolConfig r,
     EncFlow m r,
     Redis.HedisFlow m r,
-    HasSendSearchRequestJobConfig r,
-    SWC.HasWindowOptions r
+    HasSendSearchRequestJobConfig r
   ) =>
   DSR.SearchRequest ->
   Money ->
@@ -53,7 +53,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
     QSRD.createMany searchRequestsForDrivers
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
-    incrementTotalQuotesCount sReqFD.driverId
+    incrementTotalQuotesCount searchReq.providerId sReqFD.driverId
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq

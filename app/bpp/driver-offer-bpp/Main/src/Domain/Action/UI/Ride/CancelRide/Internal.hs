@@ -3,7 +3,6 @@ module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Id
-import qualified Beckn.Types.SlidingWindowCounters as SW
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -29,7 +28,6 @@ cancelRideImpl ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
-    SW.HasWindowOptions r,
     HedisFlow m r,
     HasHttpClientOptions r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -53,7 +51,7 @@ cancelRideImpl rideId bookingCReason = do
   fork "cancelRide - Notify driver" $ do
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     when (bookingCReason.source == SBCR.ByDriver) $
-      DP.incrementCancellationCount driver.id
+      DP.incrementCancellationCount transporterId driver.id
     Notify.notifyOnCancel transporterId booking driver.id driver.deviceToken bookingCReason.source
 
 cancelRideTransaction ::

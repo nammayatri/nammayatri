@@ -2,7 +2,14 @@ module SharedLogic.DriverPool.Config where
 
 import Beckn.Prelude
 import Beckn.Types.Common
+import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Dhall (FromDhall)
+
+data IntelligentPoolConfig = IntelligentPoolConfig
+  { minQuotesToQualifyForIntelligentPool :: Int,
+    minQuotesToQualifyForIntelligentPoolWindowOption :: SWC.SlidingWindowOptions
+  }
+  deriving (Generic, FromDhall)
 
 data DriverPoolConfig = DriverPoolConfig
   { minRadiusOfSearch :: Meters,
@@ -11,7 +18,8 @@ data DriverPoolConfig = DriverPoolConfig
     driverPositionInfoExpiry :: Maybe Seconds,
     actualDistanceThreshold :: Maybe Meters,
     maxDriverQuotesRequired :: Int,
-    driverQuoteLimit :: Int
+    driverQuoteLimit :: Int,
+    intelligentPoolPercentage :: Maybe Int
   }
   deriving (Generic, FromDhall)
 
@@ -29,7 +37,8 @@ data OverrideDriverPoolConfig = OverrideDriverPoolConfig
 
 type HasDriverPoolConfig r =
   ( HasField "driverPoolCfg" r DriverPoolConfig,
-    HasField "overrideDriverPoolConfig" r [OverrideDriverPoolConfig]
+    HasField "overrideDriverPoolConfig" r [OverrideDriverPoolConfig],
+    HasField "intelligentPoolConfig" r IntelligentPoolConfig
   )
 
 getDriverPoolConfig :: (MonadFlow m, MonadReader r m, HasDriverPoolConfig r) => Meters -> m DriverPoolConfig

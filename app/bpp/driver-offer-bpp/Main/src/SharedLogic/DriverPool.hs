@@ -10,6 +10,7 @@ module SharedLogic.DriverPool
     incrementCancellationCount,
     getLatestCancellationRatio,
     getCurrentWindowAvailability,
+    getQuotesCount,
     module Reexport,
   )
 where
@@ -23,12 +24,14 @@ import qualified Beckn.Utils.SlidingWindowCounters as SWC
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
 import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.TransporterConfig as TC
 import qualified Storage.Queries.Person as QP
 import Tools.Maps as Maps
 import Tools.Metrics
@@ -48,79 +51,138 @@ mkRideCancelledKey driverId = "driver-offer:DriverPool:Ride-cancelled:DriverId-"
 mkAvailableTimeKey :: Text -> Text
 mkAvailableTimeKey driverId = "driver-offer:DriverPool:Available-time:DriverId-" <> driverId
 
-withWindowOptions ::
+windowFromTransporterConfig :: (L.MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> (DTC.TransporterConfig -> SWC.SlidingWindowOptions) -> m SWC.SlidingWindowOptions
+windowFromTransporterConfig merchantId windowKey = maybe defaultWindow windowKey <$> TC.findByMerchantId merchantId
+  where
+    defaultWindow = SWC.SlidingWindowOptions 7 SWC.Days
+
+withAcceptanceRatioWindowOption ::
   ( Redis.HedisFlow m r,
-    SWC.HasWindowOptions r,
-    L.MonadFlow m
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DM.Merchant ->
+  (SWC.SlidingWindowOptions -> m a) ->
+  m a
+withAcceptanceRatioWindowOption merchantId fn = windowFromTransporterConfig merchantId (.acceptanceRatioWindowOption) >>= fn
+
+withCancellationRatioWindowOption ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DM.Merchant ->
+  (SWC.SlidingWindowOptions -> m a) ->
+  m a
+withCancellationRatioWindowOption merchantId fn = windowFromTransporterConfig merchantId (.cancellationRatioWindowOption) >>= fn
+
+withAvailabilityTimeWindowOption ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DM.Merchant ->
+  (SWC.SlidingWindowOptions -> m a) ->
+  m a
+withAvailabilityTimeWindowOption merchantId fn = windowFromTransporterConfig merchantId (.availabilityTimeWindowOption) >>= fn
+
+withMinQuotesToQualifyIntelligentPoolWindowOption ::
+  ( Redis.HedisFlow m r,
+    Reexport.HasDriverPoolConfig r
   ) =>
   (SWC.SlidingWindowOptions -> m a) ->
   m a
-withWindowOptions fn = do
-  asks (.windowOptions) >>= fn
+withMinQuotesToQualifyIntelligentPoolWindowOption fn = do
+  asks (.intelligentPoolConfig.minQuotesToQualifyForIntelligentPoolWindowOption) >>= fn
 
 incrementTotalQuotesCount ::
   ( Redis.HedisFlow m r,
-    SWC.HasWindowOptions r,
-    L.MonadFlow m
+    Reexport.HasDriverPoolConfig r,
+    EsqDBFlow m r,
+    CacheFlow m r
   ) =>
+  Id DM.Merchant ->
   Id DP.Person ->
   m ()
-incrementTotalQuotesCount driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.incrementWindowCount (mkTotalQuotesKey driverId.getId)
+incrementTotalQuotesCount merchantId driverId =
+  Redis.withCrossAppRedis do
+    withAcceptanceRatioWindowOption merchantId $ SWC.incrementWindowCount (mkTotalQuotesKey driverId.getId) -- for acceptance ratio calculation
+    withMinQuotesToQualifyIntelligentPoolWindowOption $ SWC.incrementWindowCount (mkQuotesCountKey driverId.getId) -- total quotes sent count in different sliding window (used in driver pool for random vs intelligent filtering)
 
 incrementQuoteAcceptedCount ::
   ( Redis.HedisFlow m r,
-    SWC.HasWindowOptions r,
-    L.MonadFlow m
+    EsqDBFlow m r,
+    CacheFlow m r
   ) =>
+  Id DM.Merchant ->
   Id DP.Person ->
   m ()
-incrementQuoteAcceptedCount driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.incrementWindowCount (mkQuotesAcceptedKey driverId.getId)
+incrementQuoteAcceptedCount merchantId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantId $ SWC.incrementWindowCount (mkQuotesAcceptedKey driverId.getId)
 
 getLatestAcceptanceRatio ::
-  ( L.MonadFlow m,
-    SWC.HasWindowOptions r,
+  ( EsqDBFlow m r,
+    CacheFlow m r,
     Redis.HedisFlow m r
   ) =>
+  Id DM.Merchant ->
   Id DP.Driver ->
   m Double
-getLatestAcceptanceRatio driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.getLatestRatio (getId driverId) mkQuotesAcceptedKey mkTotalQuotesKey
+getLatestAcceptanceRatio merchantId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantId $ SWC.getLatestRatio (getId driverId) mkQuotesAcceptedKey mkTotalQuotesKey
 
 incrementTotalRidesCount ::
   ( Redis.HedisFlow m r,
-    SWC.HasWindowOptions r,
-    L.MonadFlow m
+    EsqDBFlow m r,
+    CacheFlow m r
   ) =>
+  Id DM.Merchant ->
   Id DP.Person ->
   m ()
-incrementTotalRidesCount driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.incrementWindowCount (mkTotalRidesKey driverId.getId)
+incrementTotalRidesCount merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.incrementWindowCount (mkTotalRidesKey driverId.getId)
 
 incrementCancellationCount ::
   ( Redis.HedisFlow m r,
-    SWC.HasWindowOptions r,
-    L.MonadFlow m
+    EsqDBFlow m r,
+    CacheFlow m r
   ) =>
+  Id DM.Merchant ->
   Id DP.Person ->
   m ()
-incrementCancellationCount driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.incrementWindowCount (mkRideCancelledKey driverId.getId)
+incrementCancellationCount merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.incrementWindowCount (mkRideCancelledKey driverId.getId)
 
 getLatestCancellationRatio ::
-  ( L.MonadFlow m,
-    SWC.HasWindowOptions r,
+  ( EsqDBFlow m r,
+    CacheFlow m r,
     Redis.HedisFlow m r
   ) =>
+  Id DM.Merchant ->
   Id DP.Driver ->
   m Double
-getLatestCancellationRatio driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey
+getLatestCancellationRatio merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.getLatestRatio driverId.getId mkRideCancelledKey mkTotalRidesKey
 
 getCurrentWindowAvailability ::
-  ( L.MonadFlow m,
-    SWC.HasWindowOptions r,
-    Redis.HedisFlow m r,
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
     FromJSON a
   ) =>
+  Id DM.Merchant ->
   Id DP.Driver ->
   m [Maybe a]
-getCurrentWindowAvailability driverId = Redis.withCrossAppRedis $ withWindowOptions $ SWC.getCurrentWindowValues (mkAvailableTimeKey driverId.getId)
+getCurrentWindowAvailability merchantId driverId = Redis.withCrossAppRedis . withAvailabilityTimeWindowOption merchantId $ SWC.getCurrentWindowValues (mkAvailableTimeKey driverId.getId)
+
+mkQuotesCountKey :: Text -> Text
+mkQuotesCountKey driverId = "driver-offer:DriverPool:Total-quotes-sent:DriverId-" <> driverId
+
+getQuotesCount ::
+  ( L.MonadFlow m,
+    Redis.HedisFlow m r,
+    Reexport.HasDriverPoolConfig r,
+    FromJSON a,
+    Num a
+  ) =>
+  Id DP.Driver ->
+  m a
+getQuotesCount driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withMinQuotesToQualifyIntelligentPoolWindowOption $ SWC.getCurrentWindowValues (mkQuotesCountKey driverId.getId))
 
 calculateDriverPool ::
   ( EncFlow m r,

@@ -84,15 +84,15 @@ processData :: T.LocationUpdates -> Text -> Flow ()
 processData T.LocationUpdates {..} driverId = do
   let newUpdatedAt = ts
   timeBetweenUpdates <- asks (.timeBetweenUpdates)
-  windowOptions <- asks (.windowOptions)
+  availabilityTimeWindowOption <- asks (.availabilityTimeWindowOption)
   lastUpdatedAt <- fromMaybe newUpdatedAt <$> Redis.get (mkLastTimeStampKey driverId)
   unless (lastUpdatedAt > newUpdatedAt) $ do
     Redis.setExp (mkLastTimeStampKey driverId) newUpdatedAt 14400 -- 4 hours
-    let activeTimePairs = mkPairsWithLessThenThreshold timeBetweenUpdates lastUpdatedAt windowOptions.periodType [lastUpdatedAt, newUpdatedAt]
+    let activeTimePairs = mkPairsWithLessThenThreshold timeBetweenUpdates lastUpdatedAt availabilityTimeWindowOption.periodType [lastUpdatedAt, newUpdatedAt]
     mapM_
       ( \(startTime, endTime) -> do
           let valueToAdd = getTimeDiffInteger (startTime, endTime)
-          SW.incrementByValueInTimeBucket startTime valueToAdd (mkAvailableTimeKey driverId) windowOptions
+          SW.incrementByValueInTimeBucket startTime valueToAdd (mkAvailableTimeKey driverId) availabilityTimeWindowOption
       )
       activeTimePairs
   where

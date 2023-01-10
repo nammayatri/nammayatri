@@ -52,7 +52,7 @@ confirm transporterId (SignatureAuthResult _ subscriber _) req =
             BP.callOnConfirm dConfirmRes.transporter context $ ACL.mkOnConfirmMessage now dConfirmRes
           void $
             BP.sendRideAssignedUpdateToBAP dConfirmRes.booking dConfirmRes.ride
-      incrementTotalRidesCount driverQuote.driverId
+      incrementTotalRidesCount transporterId driverQuote.driverId
     pure Ack
   where
     errHandler dConfirmRes transporter driver exc

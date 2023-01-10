@@ -17,7 +17,6 @@ import Beckn.Types.Common
 import Beckn.Types.Credentials (PrivateKey)
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Registry
-import Beckn.Types.SlidingWindowCounters
 import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
@@ -28,7 +27,7 @@ import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Idfy.Types.IdfyConfig as Idfy
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
-import SharedLogic.DriverPool (DriverPoolConfig, OverrideDriverPoolConfig)
+import SharedLogic.DriverPool (DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
@@ -77,12 +76,12 @@ data AppCfg = AppCfg
     defaultWaitingTimeEstimatedThreshold :: Seconds,
     cacheConfig :: CacheConfig,
     metricsSearchDurationTimeout :: Seconds,
-    windowOptions :: SlidingWindowOptions,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
     driverReachedDistance :: HighPrecMeters,
     cacheTranslationConfig :: CacheTranslationConfig,
     driverPoolCfg :: DriverPoolConfig,
+    intelligentPoolConfig :: IntelligentPoolConfig,
     overrideDriverPoolCfg :: Maybe [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
@@ -135,12 +134,12 @@ data AppEnv = AppEnv
     defaultWaitingTimeEstimatedThreshold :: Seconds,
     cacheConfig :: CacheConfig,
     s3Env :: S3Env Flow,
-    windowOptions :: SlidingWindowOptions,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
     driverReachedDistance :: HighPrecMeters,
     cacheTranslationConfig :: CacheTranslationConfig,
     driverPoolCfg :: DriverPoolConfig,
+    intelligentPoolConfig :: IntelligentPoolConfig,
     overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,

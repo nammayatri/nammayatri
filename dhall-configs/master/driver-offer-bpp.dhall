@@ -89,16 +89,21 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
-let windowOptions = { period = +7, periodType = common.periodType.Days }
-
 let driverPoolCfg =
       { minRadiusOfSearch = +700
       , maxRadiusOfSearch = +1700
       , radiusStepSize = +500
       , driverPositionInfoExpiry = None Integer
+      , intelligentPoolPercentage = +50
       , actualDistanceThreshold = Some +2000
       , maxDriverQuotesRequired = +1
       , driverQuoteLimit = +2
+      }
+
+let intelligentPoolConfig =
+      { minQuotesToQualifyForIntelligentPool = +5
+      , minQuotesToQualifyForIntelligentPoolWindowOption =
+        { period = +24, periodType = common.periodType.Hours }
       }
 
 let overrideDriverPoolCfg =
@@ -183,7 +188,6 @@ in  { esqDBCfg
     , defaultRideTimeEstimatedThreshold = +900
     , defaultWaitingTimeEstimatedThreshold = +3
     , cacheConfig
-    , windowOptions
     , metricsSearchDurationTimeout = +45
     , dashboardToken = sec.dashboardToken
     , driverLocationUpdateRateLimitOptions
@@ -192,6 +196,7 @@ in  { esqDBCfg
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , cacheTranslationConfig
     , driverPoolCfg
+    , intelligentPoolConfig
     , overrideDriverPoolCfg = Some overrideDriverPoolCfg
     , sendSearchRequestJobCfg
     , driverLocationUpdateTopic = "location-updates-master"

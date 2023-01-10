@@ -29,14 +29,11 @@ let consumerProperties =
 let kafkaConsumerCfg =
       { topicNames = [ "location-updates-master" ], consumerProperties }
 
-let windowOptions = { period = +7, periodType = common.periodType.Days }
-
 in  { hedisCfg
     , esqDBCfg
     , dumpEvery = +30
     , kafkaConsumerCfg
     , timeBetweenUpdates = +60
-    , windowOptions
     , granualityPeriodType = common.periodType.Hours
     , loggerConfig =
             common.loggerConfig

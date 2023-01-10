@@ -15,7 +15,6 @@ import Beckn.Storage.Hedis (HedisEnv, connectHedis, disconnectHedis)
 import Beckn.Types.Base64 (Base64)
 import Beckn.Types.Common
 import Beckn.Types.Flow
-import Beckn.Types.SlidingWindowCounters (SlidingWindowOptions)
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
@@ -24,7 +23,7 @@ import Data.String.Conversions (cs)
 import "driver-offer-bpp" Environment (AppCfg (..))
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
-import SharedLogic.DriverPool (DriverPoolConfig, OverrideDriverPoolConfig)
+import SharedLogic.DriverPool (DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheConfig)
 import System.Environment (lookupEnv)
@@ -47,10 +46,10 @@ data HandlerEnv = HandlerEnv
     hedisEnv :: HedisEnv,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
-    windowOptions :: SlidingWindowOptions,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     coreMetrics :: CoreMetricsContainer,
+    intelligentPoolConfig :: IntelligentPoolConfig,
     driverPoolCfg :: DriverPoolConfig,
     overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
