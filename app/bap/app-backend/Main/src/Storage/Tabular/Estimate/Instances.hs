@@ -30,6 +30,7 @@ instance TType FullEstimateT Domain.Estimate where
           estimatedFare = roundToIntegral estimatedFare,
           discount = roundToIntegral <$> discount,
           estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          driversLocation = unPostgresList driversLocation,
           nightShiftRate =
             Just $
               Domain.NightShiftRate
@@ -53,6 +54,7 @@ instance TType FullEstimateT Domain.Estimate where
               nightShiftMultiplier = nightShiftRate >>= (.nightShiftMultiplier),
               nightShiftStart = nightShiftRate >>= (.nightShiftStart),
               nightShiftEnd = nightShiftRate >>= (.nightShiftEnd),
+              driversLocation = PostgresList driversLocation,
               ..
             }
     let mbTripTermsT = toTType <$> tripTerms

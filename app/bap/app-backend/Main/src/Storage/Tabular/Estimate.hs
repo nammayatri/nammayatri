@@ -7,6 +7,8 @@
 
 module Storage.Tabular.Estimate where
 
+import Beckn.External.Maps
+import qualified Beckn.External.Maps as Domain
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common hiding (id)
@@ -15,6 +17,8 @@ import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
 import qualified Storage.Tabular.SearchRequest as SSearchRequest
 import qualified Storage.Tabular.TripTerms as STripTerms
+
+derivePersistField "Domain.LatLong"
 
 mkPersist
   defaultSqlSettings
@@ -33,6 +37,7 @@ mkPersist
       providerMobileNumber Text
       providerCompletedRidesCount Int
       vehicleVariant VehVar.VehicleVariant
+      driversLocation (PostgresList LatLong)
       tripTermsId STripTerms.TripTermsTId Maybe
       nightShiftMultiplier Centesimal Maybe
       nightShiftStart TimeOfDay Maybe

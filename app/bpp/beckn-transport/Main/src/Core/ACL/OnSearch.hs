@@ -72,7 +72,8 @@ mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
           { distance_to_nearest_driver = Just $ realToFrac distanceToNearestDriver,
             night_shift_multiplier = Nothing,
             night_shift_start = Nothing,
-            night_shift_end = Nothing
+            night_shift_end = Nothing,
+            drivers_location = []
           }
   OnSearch.Item
     { category_id = OnSearch.ONE_WAY_TRIP,

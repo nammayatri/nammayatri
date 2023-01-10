@@ -2,7 +2,6 @@ module Utils where
 
 import Beckn.External.Encryption (EncTools (..), Encrypted (..))
 import Beckn.External.Maps
-import Beckn.External.Maps.OSRM.Config
 import Beckn.Prelude
 import Beckn.Storage.Hedis.Config
 import qualified Beckn.Storage.Hedis.Queries as Hedis

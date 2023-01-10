@@ -4,6 +4,7 @@ module Beckn.Types.Core.Taxi.OnSearch.Item
   )
 where
 
+import Beckn.External.Maps
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
@@ -91,7 +92,8 @@ data ItemTags = ItemTags
   { distance_to_nearest_driver :: Maybe DecimalValue,
     night_shift_multiplier :: Maybe DecimalValue,
     night_shift_start :: Maybe TimeOfDay,
-    night_shift_end :: Maybe TimeOfDay
+    night_shift_end :: Maybe TimeOfDay,
+    drivers_location :: [LatLong]
   }
   deriving (Generic, Show)
 

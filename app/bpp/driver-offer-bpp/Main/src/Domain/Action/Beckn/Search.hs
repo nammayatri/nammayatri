@@ -1,5 +1,6 @@
 module Domain.Action.Beckn.Search where
 
+import Beckn.External.Maps.Google.PolyLinePoints
 import Beckn.Prelude
 import Beckn.Serviceability
 import Beckn.Storage.Hedis
@@ -13,7 +14,7 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
 import Environment
 import qualified SharedLogic.CacheDistance as CD
-import SharedLogic.DriverPool
+import SharedLogic.DriverPool hiding (lat, lon)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
@@ -48,7 +49,8 @@ data EstimateItem = EstimateItem
     minFare :: Money,
     maxFare :: Money,
     estimateBreakupList :: [BreakupItem],
-    nightShiftRate :: Maybe NightShiftRate
+    nightShiftRate :: Maybe NightShiftRate,
+    driversLatLong :: [LatLong]
   }
 
 data NightShiftRate = NightShiftRate
@@ -116,8 +118,7 @@ handler merchantId sReq = do
 
         let listOfProtoQuotes = nubBy ((==) `on` (.variant)) driverPool
             filteredProtoQuotes = zipMatched farePolicies listOfProtoQuotes
-
-        estimates <- mapM (mkEstimate org sReq.pickupTime distance) filteredProtoQuotes
+        estimates <- mapM (mkEstimate org sReq.pickupTime distance driverPool) filteredProtoQuotes
         logDebug $ "bap uri: " <> show sReq.bapUri
         return estimates
 
@@ -143,13 +144,16 @@ mkEstimate ::
   DM.Merchant ->
   UTCTime ->
   Meters ->
+  [DriverPoolResult] ->
   (FarePolicy, DriverPoolResult) ->
   m EstimateItem
-mkEstimate org startTime dist (farePolicy, driverMetadata) = do
+mkEstimate org startTime dist driverpool (farePolicy, driverMetadata) = do
   fareParams <- calculateFare org.id farePolicy dist startTime Nothing
   let baseFare = fareSum fareParams
       currency = "INR"
       estimateBreakups = mkBreakupListItems (BreakupPrice currency) BreakupItem farePolicy
+  let filteredPoolByVehVariant = filter (\pool -> pool.variant == driverMetadata.variant) driverpool
+  let latlongList = map (\x -> LatLong x.lat x.lon) filteredPoolByVehVariant
   logDebug $ "baseFare: " <> show baseFare
   logDebug $ "distanceToPickup: " <> show driverMetadata.distanceToPickup
   pure
@@ -159,6 +163,7 @@ mkEstimate org startTime dist (farePolicy, driverMetadata) = do
         minFare = baseFare,
         maxFare = baseFare + farePolicy.driverExtraFee.maxFee,
         estimateBreakupList = estimateBreakups,
+        driversLatLong = latlongList,
         nightShiftRate =
           Just $
             NightShiftRate

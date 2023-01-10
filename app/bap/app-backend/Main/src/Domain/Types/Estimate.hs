@@ -1,8 +1,11 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.Estimate where
 
+import Beckn.External.Maps
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -27,9 +30,12 @@ data Estimate = Estimate
     tripTerms :: Maybe DTripTerms.TripTerms,
     createdAt :: UTCTime,
     estimateBreakupList :: [EstimateBreakup],
-    nightShiftRate :: Maybe NightShiftRate
+    nightShiftRate :: Maybe NightShiftRate,
+    driversLocation :: [LatLong]
   }
   deriving (Generic, Show)
+
+deriving instance Read LatLong
 
 data NightShiftRate = NightShiftRate
   { nightShiftMultiplier :: Maybe Centesimal,
@@ -71,7 +77,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     tripTerms :: [Text],
     createdAt :: UTCTime,
     estimateFareBreakup :: [EstimateBreakupAPIEntity],
-    nightShiftRate :: Maybe NightShiftRate
+    nightShiftRate :: Maybe NightShiftRate,
+    driversLatLong :: [LatLong]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -89,6 +96,7 @@ mkEstimateAPIEntity Estimate {..} = do
       agencyCompletedRidesCount = providerCompletedRidesCount,
       tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
       estimateFareBreakup = mkEstimateBreakupAPIEntity <$> estimateBreakupList,
+      driversLatLong = driversLocation,
       ..
     }
 

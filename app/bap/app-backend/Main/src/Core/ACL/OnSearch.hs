@@ -84,6 +84,7 @@ buildEstimateOrQuoteInfo item = do
       estimateBreakupList = buildEstimateBreakUpList <$> item.price.value_breakup
       descriptions = item.quote_terms
       nightShiftRate = buildNightShiftRate <$> item.tags
+      driversLocation = fromMaybe [] $ item.tags <&> (.drivers_location)
   validatePrices estimatedFare estimatedTotalFare
 
   let totalFareRange =

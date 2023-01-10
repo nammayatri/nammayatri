@@ -13,6 +13,7 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
+import Beckn.External.Maps
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
@@ -57,7 +58,8 @@ data EstimateInfo = EstimateInfo
     totalFareRange :: DEstimate.FareRange,
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
-    nightShiftRate :: Maybe NightShiftInfo
+    nightShiftRate :: Maybe NightShiftInfo,
+    driversLocation :: [LatLong]
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -147,6 +149,7 @@ buildEstimate requestId providerInfo now EstimateInfo {..} = do
         providerUrl = providerInfo.url,
         createdAt = now,
         estimateBreakupList = estimateBreakupList',
+        driversLocation = driversLocation,
         nightShiftRate =
           Just $
             DEstimate.NightShiftRate

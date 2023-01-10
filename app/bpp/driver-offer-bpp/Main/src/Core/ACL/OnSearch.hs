@@ -2,7 +2,6 @@ module Core.ACL.OnSearch where
 
 import Beckn.Prelude
 import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
-import Beckn.Types.Core.Taxi.OnSearch (Item (base_distance))
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
 import qualified Domain.Action.Beckn.Search as DSearch
@@ -120,7 +119,8 @@ mkQuoteEntities start end it = do
                   { distance_to_nearest_driver = Just $ OS.DecimalValue $ toRational it.distanceToPickup,
                     night_shift_multiplier = OS.DecimalValue . toRational <$> ((.nightShiftMultiplier) =<< it.nightShiftRate),
                     night_shift_start = (.nightShiftStart) =<< it.nightShiftRate,
-                    night_shift_end = (.nightShiftEnd) =<< it.nightShiftRate
+                    night_shift_end = (.nightShiftEnd) =<< it.nightShiftRate,
+                    drivers_location = it.driversLatLong
                   },
             base_distance = Nothing,
             base_duration = Nothing
