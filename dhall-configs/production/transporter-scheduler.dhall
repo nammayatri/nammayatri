@@ -2,8 +2,6 @@ let common = ../generic/common.dhall
 
 let sec = ./secrets/beckn-transport.dhall
 
-let JobType = < AllocateRental | FakeType >
-
 let postgresConfig =
       { connectHost = "adb.primary.beckn.juspay.net"
       , connectPort = 5432
@@ -44,7 +42,6 @@ in  { loggerConfig =
     , loopIntervalSec = +5
     , expirationTime = +60
     , waitBeforeRetry = +1
-    , jobType = None JobType
     , tasksPerIteration = +20
     , graceTerminationPeriod = +1
     }

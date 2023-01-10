@@ -2,14 +2,6 @@ let common = ../generic/common.dhall
 
 let sec = ./secrets/beckn-transport.dhall
 
-let JobType =
-      < PrintBananasCount
-      | PrintCurrentTimeWithErrorProbability
-      | IncorrectDataJobType
-      | FakeJobType
-      | TestTermination
-      >
-
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -43,8 +35,6 @@ in  { loggerConfig =
     , loopIntervalSec = +5
     , expirationTime = +600
     , waitBeforeRetry = +1
-    , --jobType = Some JobType.PrintBananasCount
-      jobType = None JobType
     , tasksPerIteration = +20
     , graceTerminationPeriod = +10
     }

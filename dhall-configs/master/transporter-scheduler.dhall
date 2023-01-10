@@ -4,8 +4,6 @@ let sec = ./secrets/beckn-transport.dhall
 
 let transporter = ./beckn-transport.dhall
 
-let JobType = < AllocateRental | FakeType >
-
 let rcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
       , connectPort = 6379
@@ -29,7 +27,6 @@ in  { loggerConfig =
     , loopIntervalSec = +5
     , expirationTime = +60
     , waitBeforeRetry = +1
-    , jobType = None JobType
     , tasksPerIteration = +20
     , graceTerminationPeriod = +1
     }
