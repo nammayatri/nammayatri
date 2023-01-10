@@ -110,6 +110,7 @@ let PoolSortingType = < Intelligent | Random >
 let driverPoolBatchesCfg =
       { driverBatchSize = +5
       , maxNumberOfBatches = +3
+      , minDriverBatchSize = +3
       , poolSortingType = PoolSortingType.Random
       }
 

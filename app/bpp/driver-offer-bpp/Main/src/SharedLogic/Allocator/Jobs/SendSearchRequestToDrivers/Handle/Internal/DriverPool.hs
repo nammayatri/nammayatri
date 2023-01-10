@@ -72,7 +72,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       driverPoolBatch <- getBatch onlyNewDriversPool
       logDebug $ "DriverPoolBatch-" <> show driverPoolBatch
       batchSize <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.driverBatchSize)
-      if length driverPoolBatch < batchSize
+      minBatchSize <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.minDriverBatchSize)
+      if length driverPoolBatch < minBatchSize
         then do
           isAtMaxRadiusStep' <- isAtMaxRadiusStep radiusStep
           if isAtMaxRadiusStep'
