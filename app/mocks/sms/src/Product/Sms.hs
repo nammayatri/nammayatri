@@ -1,7 +1,7 @@
 module Product.Sms where
 
 import App.Types
-import Beckn.External.MyValueFirst.Types
+import Beckn.External.SMS.MyValueFirst.Types
 import Beckn.Utils.Error.FlowHandling (withFlowHandler)
 import Control.Concurrent.MVar (modifyMVar, modifyMVar_)
 import qualified Data.Map as Map

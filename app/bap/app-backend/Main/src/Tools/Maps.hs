@@ -87,5 +87,4 @@ runWithServiceConfig func getCfg merchantId req = do
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId (getCfg merchantConfig))
   case merchantMapsServiceConfig.serviceConfig of
     DMSC.MapsServiceConfig msc -> func msc req
-
--- _ -> throwError $ InternalError "Impossible happened"
+    _ -> throwError $ InternalError "Unknown Service Config"

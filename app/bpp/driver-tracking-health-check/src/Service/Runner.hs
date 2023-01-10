@@ -6,7 +6,7 @@ import qualified API as HC
 import Beckn.External.Encryption (decrypt)
 import Beckn.External.FCM.Types (FCMNotificationType (TRIGGER_SERVICE))
 import qualified Beckn.External.FCM.Types as FCM
-import qualified Beckn.External.MyValueFirst.Flow as SF
+import qualified Beckn.External.SMS.MyValueFirst.Flow as SF
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis (lPush, rPop)

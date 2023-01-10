@@ -87,5 +87,4 @@ runWithServiceConfig func getCfg orgId req = do
       >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId (getCfg orgMapsConfig))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig msc -> func msc req
-
--- _ -> throwError $ InternalError "Impossible happened"
+    _ -> throwError $ InternalError "Unknown Service Config"

@@ -12,12 +12,12 @@ module Domain.Action.UI.Registration
 where
 
 import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
-import Beckn.External.FCM.Types
-import qualified Beckn.External.MyValueFirst.Flow as SF
+import Beckn.External.FCM.Types (FCMRecipientToken)
+-- import Beckn.External.SMS
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Esqueleto as DB
 import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.APISuccess
+import Beckn.Types.APISuccess as AP
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
@@ -47,6 +47,7 @@ import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
+import qualified Tools.SMS as Sms
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,
@@ -93,9 +94,9 @@ authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCount"
 
 auth ::
-  ( HasCacheConfig r,
-    HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
+  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
+    HasCacheConfig r,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
@@ -130,9 +131,13 @@ auth req mbBundleVersion mbClientVersion = do
       DB.runTransaction (RegistrationToken.create token)
       whenNothing_ useFakeOtpM $ do
         otpSmsTemplate <- asks (.otpSmsTemplate)
+        let otpCode = SR.authValueHash token
+        let otpHash = smsCfg.credConfig.otpHash
+            phoneNumber = countryCode <> mobileNumber
+            sender = smsCfg.sender
         withLogTag ("personId_" <> getId person.id) $
-          SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
-            >>= SF.checkSmsResult
+          Sms.sendSMS person.merchantId (Sms.constructSendSMSReq otpCode otpHash otpSmsTemplate phoneNumber sender)
+            >>= Sms.checkSmsResult
     else logInfo $ "Person " <> getId person.id <> " is not enabled. Skipping send OTP"
 
   let attempts = SR.attempts token
@@ -266,10 +271,11 @@ checkPersonExists entityId =
   Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
 
 resend ::
-  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
     EncFlow m r,
+    CacheFlow m r,
     CoreMetrics m
   ) =>
   Id SR.RegistrationToken ->
@@ -278,13 +284,17 @@ resend tokenId = do
   SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
-  smsCfg <- asks (.smsCfg)
   otpSmsTemplate <- asks (.otpSmsTemplate)
+  smsCfg <- asks (.smsCfg)
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  let otpCode = authValueHash
+  let otpHash = smsCfg.credConfig.otpHash
+      phoneNumber = countryCode <> mobileNumber
+      sender = smsCfg.sender
   withLogTag ("personId_" <> entityId) $
-    SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
-      >>= SF.checkSmsResult
+    Sms.sendSMS person.merchantId (Sms.constructSendSMSReq otpCode otpHash otpSmsTemplate phoneNumber sender)
+      >>= Sms.checkSmsResult
   DB.runTransaction $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
@@ -306,4 +316,4 @@ logout personId = do
   DB.runTransaction $ do
     Person.updateDeviceToken personId Nothing
     RegistrationToken.deleteByPersonId personId
-  pure Success
+  pure AP.Success

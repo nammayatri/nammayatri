@@ -9,6 +9,7 @@ module Storage.Tabular.Merchant.MerchantServiceConfig where
 
 import qualified Beckn.External.Maps.Interface.Types as Maps
 import qualified Beckn.External.Maps.Types as Maps
+import qualified Beckn.External.SMS.Interface as Sms
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
@@ -45,6 +46,8 @@ instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
       Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> decodeFromText configJSON
       Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> decodeFromText configJSON
       Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> decodeFromText configJSON
+      Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> decodeFromText configJSON
+      Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> decodeFromText configJSON
     return $
       Domain.MerchantServiceConfig
         { merchantId = fromKey merchantId,
@@ -61,3 +64,6 @@ instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
           Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, encodeToText cfg)
           Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, encodeToText cfg)
           Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, encodeToText cfg)
+        Domain.SmsServiceConfig smsCfg -> case smsCfg of
+          Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, encodeToText cfg)
+          Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, encodeToText cfg)

@@ -32,8 +32,7 @@ buildRideInterpolationHandler orgId isEndRide = do
       return $
         mkRideInterpolationHandler isEndRide cfg $
           \driverId dist -> Esq.runTransaction $ QRide.updateDistance driverId dist
-
--- _ -> throwError $ InternalError "Impossible happened"
+    _ -> throwError $ InternalError "Unknown Service Config"
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id DP.Person -> m () -> m ()
 whenWithLocationUpdatesLock driverId f = do

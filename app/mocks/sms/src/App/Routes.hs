@@ -6,7 +6,7 @@ module App.Routes
 where
 
 import App.Types
-import qualified Beckn.External.MyValueFirst.API as API
+import qualified Beckn.External.SMS.MyValueFirst.API as API
 import Beckn.Types.App (FlowServerR)
 import EulerHS.Prelude
 import qualified Product.Sms as P

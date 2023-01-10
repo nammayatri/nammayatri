@@ -17,7 +17,7 @@ import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
 import Beckn.External.Slack.Types (SlackConfig)
-import Beckn.Sms.Config (SmsConfig)
+import Beckn.Sms.Config
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis as Redis
 import Beckn.Storage.Hedis.AppPrefixes (appBackendPrefix)

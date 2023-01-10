@@ -33,10 +33,10 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.Maps as Maps
-import qualified Beckn.External.MyValueFirst.Flow as SF
-import qualified Beckn.External.MyValueFirst.Types as SMS
+import qualified Beckn.External.SMS.MyValueFirst.Flow as SF
+import qualified Beckn.External.SMS.MyValueFirst.Types as SMS
 import Beckn.Prelude (NominalDiffTime)
-import Beckn.Sms.Config (SmsConfig)
+import Beckn.Sms.Config
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Beckn.Storage.Esqueleto.Transactionable (runInReplica)

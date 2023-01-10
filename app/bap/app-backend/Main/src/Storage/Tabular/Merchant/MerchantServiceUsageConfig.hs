@@ -8,6 +8,7 @@
 module Storage.Tabular.Merchant.MerchantServiceUsageConfig where
 
 import Beckn.External.Maps (MapsService)
+import Beckn.External.SMS (SmsService)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
@@ -26,6 +27,7 @@ mkPersist
       getPlaceName MapsService
       getPlaceDetails MapsService
       autoComplete MapsService
+      sendSMS SmsService
       updatedAt UTCTime
       createdAt UTCTime
       Primary merchantId

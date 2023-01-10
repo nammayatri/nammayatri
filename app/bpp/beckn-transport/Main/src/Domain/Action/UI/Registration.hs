@@ -14,7 +14,6 @@ where
 
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
-import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Hedis as Redis
@@ -35,12 +34,13 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import SharedLogic.TransporterConfig
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
+import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Auth (authTokenCacheKey)
 import Tools.Error
 import qualified Tools.Notifications as Notify
+import Tools.SMS as Sms hiding (Success)
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,
@@ -86,12 +86,14 @@ authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BPP:Registration:auth" <> getId person.id <> ":hitsCount"
 
 auth ::
-  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
+  ( HasCacheConfig r,
+    HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    CacheFlow m r
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -112,11 +114,15 @@ auth req mbBundleVersion mbClientVersion = do
   Esq.runTransaction $ do
     QR.create token
     QP.updatePersonVersions person mbBundleVersion mbClientVersion
+  otpSmsTemplate <- asks (.otpSmsTemplate)
+  let otpHash = smsCfg.credConfig.otpHash
+  let otpCode = SR.authValueHash token
+      phoneNumber = countryCode <> mobileNumber
+      sender = smsCfg.sender
   whenNothing_ useFakeOtpM $ do
-    otpSmsTemplate <- asks (.otpSmsTemplate)
     withLogTag ("personId_" <> getId person.id) $
-      SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
-        >>= SF.checkSmsResult
+      Sms.sendSMS person.merchantId (Sms.constructSendSMSReq otpCode otpHash otpSmsTemplate phoneNumber sender)
+        >>= Sms.checkSmsResult
   let attempts = SR.attempts token
       authId = SR.id token
   return $ AuthRes {attempts, authId}
@@ -208,6 +214,7 @@ resend ::
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
     EncFlow m r,
+    CacheFlow m r,
     CoreMetrics m
   ) =>
   Id SR.RegistrationToken ->
@@ -216,13 +223,17 @@ resend tokenId = do
   SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
-  smsCfg <- asks (.smsCfg)
   otpSmsTemplate <- asks (.otpSmsTemplate)
+  smsCfg <- asks (.smsCfg)
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  let otpCode = authValueHash
+  let otpHash = smsCfg.credConfig.otpHash
+      phoneNumber = countryCode <> mobileNumber
+      sender = smsCfg.sender
   withLogTag ("personId_" <> entityId) $
-    SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
-      >>= SF.checkSmsResult
+    Sms.sendSMS person.merchantId (Sms.constructSendSMSReq otpCode otpHash otpSmsTemplate phoneNumber sender)
+      >>= Sms.checkSmsResult
   Esq.runTransaction $ QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 

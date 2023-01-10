@@ -8,6 +8,7 @@
 module Storage.Tabular.Merchant.MerchantServiceUsageConfig where
 
 import Beckn.External.Maps.Types
+import Beckn.External.SMS.Types
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
@@ -30,6 +31,7 @@ mkPersist
       createdAt UTCTime
       Primary merchantId
       deriving Generic
+      sendSMS SmsService
     |]
 
 instance TEntityKey MerchantServiceUsageConfigT where

@@ -1,6 +1,7 @@
 module Domain.Types.Merchant.MerchantServiceUsageConfig where
 
 import Beckn.External.Maps.Types
+import Beckn.External.SMS.Types
 import Beckn.Prelude
 import Beckn.Types.Id
 import Domain.Types.Common (UsageSafety (..))
@@ -14,6 +15,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getPlaceName :: MapsService,
     getPlaceDetails :: MapsService,
     autoComplete :: MapsService,
+    sendSMS :: SmsService,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
