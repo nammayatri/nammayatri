@@ -56,8 +56,9 @@ instance FromJSON BookingAPIDetails where
 instance ToSchema BookingAPIDetails where
   declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
 
-newtype OneWayBookingAPIDetails = OneWayBookingAPIDetails
-  { toLocation :: BookingLocationAPIEntity
+data OneWayBookingAPIDetails = OneWayBookingAPIDetails
+  { toLocation :: BookingLocationAPIEntity,
+    estimatedDistance :: HighPrecMeters
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -99,7 +100,8 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups = do
       where
         mkOneWayAPIDetails OneWayBookingDetails {..} =
           OneWayBookingAPIDetails
-            { toLocation = SLoc.makeBookingLocationAPIEntity toLocation
+            { toLocation = SLoc.makeBookingLocationAPIEntity toLocation,
+              estimatedDistance = distance
             }
 
 buildBookingAPIEntity :: EsqDBReplicaFlow m r => Booking -> m BookingAPIEntity
