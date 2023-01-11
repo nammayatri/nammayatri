@@ -106,6 +106,12 @@ let overrideDriverPoolCfg =
 
 let PoolSortingType = < Intelligent | Random >
 
+let rideRequestPopupConfig =
+      { defaultPopupDelay = +0
+      , popupDelayToAddAsPenalty = Some +5
+      , thresholdCancellationScore = Some +40
+      }
+
 let driverPoolBatchesCfg =
       { driverBatchSize = +5
       , maxNumberOfBatches = +3
@@ -176,6 +182,7 @@ in  { esqDBCfg
     , cacheTranslationConfig
     , driverPoolCfg
     , intelligentPoolConfig
+    , rideRequestPopupConfig
     , overrideDriverPoolCfg = Some overrideDriverPoolCfg
     , sendSearchRequestJobCfg
     , driverLocationUpdateTopic = "location-updates-sandbox"

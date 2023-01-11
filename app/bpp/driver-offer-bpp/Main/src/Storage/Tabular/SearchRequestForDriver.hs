@@ -43,6 +43,7 @@ mkPersist
       response Domain.SearchRequestForDriverResponse Maybe
       driverMinExtraFee Money
       driverMaxExtraFee Money
+      rideRequestPopupDelayDuration Seconds
       Primary id
       deriving Generic
     |]

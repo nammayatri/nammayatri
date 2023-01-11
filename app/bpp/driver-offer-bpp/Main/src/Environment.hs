@@ -27,7 +27,7 @@ import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Idfy.Types.IdfyConfig as Idfy
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
-import SharedLogic.DriverPool (DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig)
+import SharedLogic.DriverPool (DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig, RideRequestPopupConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
@@ -82,6 +82,7 @@ data AppCfg = AppCfg
     cacheTranslationConfig :: CacheTranslationConfig,
     driverPoolCfg :: DriverPoolConfig,
     intelligentPoolConfig :: IntelligentPoolConfig,
+    rideRequestPopupConfig :: RideRequestPopupConfig,
     overrideDriverPoolCfg :: Maybe [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
@@ -140,6 +141,7 @@ data AppEnv = AppEnv
     cacheTranslationConfig :: CacheTranslationConfig,
     driverPoolCfg :: DriverPoolConfig,
     intelligentPoolConfig :: IntelligentPoolConfig,
+    rideRequestPopupConfig :: RideRequestPopupConfig,
     overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,

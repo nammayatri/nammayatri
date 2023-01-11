@@ -23,7 +23,7 @@ import Data.String.Conversions (cs)
 import "driver-offer-bpp" Environment (AppCfg (..))
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
-import SharedLogic.DriverPool (DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig)
+import SharedLogic.DriverPool (DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig, RideRequestPopupConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheConfig)
 import System.Environment (lookupEnv)
@@ -51,6 +51,7 @@ data HandlerEnv = HandlerEnv
     coreMetrics :: CoreMetricsContainer,
     intelligentPoolConfig :: IntelligentPoolConfig,
     driverPoolCfg :: DriverPoolConfig,
+    rideRequestPopupConfig :: RideRequestPopupConfig,
     overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer

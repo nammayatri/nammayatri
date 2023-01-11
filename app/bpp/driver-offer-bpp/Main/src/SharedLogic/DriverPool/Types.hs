@@ -34,7 +34,8 @@ data DriverPoolResult = DriverPoolResult
 data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
   { driverPoolResult :: DriverPoolResult,
     actualDistanceToPickup :: Meters,
-    actualDurationToPickup :: Seconds
+    actualDurationToPickup :: Seconds,
+    rideRequestPopupDelayDuration :: Seconds
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

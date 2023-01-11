@@ -41,7 +41,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     createdAt :: UTCTime,
     response :: Maybe SearchRequestForDriverResponse,
     driverMinExtraFee :: Money,
-    driverMaxExtraFee :: Money
+    driverMaxExtraFee :: Money,
+    rideRequestPopupDelayDuration :: Seconds
   }
   deriving (Generic, Show, PrettyShow)
 
@@ -57,12 +58,13 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     distance :: Meters,
     driverLatLong :: LatLong,
     driverMinExtraFee :: Money,
-    driverMaxExtraFee :: Money
+    driverMaxExtraFee :: Money,
+    rideRequestPopupDelayDuration :: Seconds
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSReq.SearchRequest -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSReq.SearchRequest -> Seconds -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest delayDuration =
   SearchRequestForDriverAPIEntity
     { searchRequestId = searchRequest.id,
       startTime = nearbyReq.startTime,
@@ -79,5 +81,6 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest =
             lon = fromMaybe 0.0 nearbyReq.lon
           },
       driverMinExtraFee = nearbyReq.driverMinExtraFee,
-      driverMaxExtraFee = nearbyReq.driverMaxExtraFee
+      driverMaxExtraFee = nearbyReq.driverMaxExtraFee,
+      rideRequestPopupDelayDuration = delayDuration
     }

@@ -189,6 +189,7 @@ sortWithDriverScore ::
   ( Redis.HedisFlow m r,
     HasCacheConfig r,
     EsqDBFlow m r,
+    HasDriverPoolConfig r,
     MonadFlow m
   ) =>
   Id Merchant ->
@@ -199,7 +200,9 @@ sortWithDriverScore _ Nothing dp = logInfo "Weightages not available in DB, goin
 sortWithDriverScore merchantId (Just transporterConfig) dp = do
   logTagInfo "Weightage config for intelligent driver pool" $ show transporterConfig
   let driverIds = map (.driverPoolResult.driverId) dp
-  driverCancellationScore <- getScoreWithWeight (transporterConfig.cancellationRatioWeightage) <$> getRatios (getLatestCancellationRatio merchantId) driverIds
+  rideRequestPopupConfig <- asks (.rideRequestPopupConfig)
+  cancellationRatios <- getRatios (getLatestCancellationRatio merchantId) driverIds
+  let driverCancellationScore = getScoreWithWeight (transporterConfig.cancellationRatioWeightage) cancellationRatios
   driverAcceptanceScore <- getScoreWithWeight (transporterConfig.acceptanceRatioWeightage) <$> getRatios (getLatestAcceptanceRatio merchantId) driverIds
   driverAvailabilityScore <- getScoreWithWeight (transporterConfig.availabilityTimeWeightage) . map (second (sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
   let overallScore = calculateOverallScore [driverAcceptanceScore, driverAvailabilityScore, driverCancellationScore]
@@ -208,8 +211,14 @@ sortWithDriverScore merchantId (Just transporterConfig) dp = do
   logTagInfo "Driver Cancellation Score" $ show driverCancellationScore
   logTagInfo "Driver Availability Score" $ show driverAvailabilityScore
   logTagInfo "Overall Score" $ show (map (second getDriverId) overallScore)
-  pure $ map snd sortedDriverPool
+  pure $ map (delayGuysCancellingMore rideRequestPopupConfig $ HM.fromList cancellationRatios) sortedDriverPool
   where
+    delayGuysCancellingMore rideRequestPopupConfig cancellationRatioMap (_, dObj) =
+      maybe
+        dObj
+        (addDelay rideRequestPopupConfig dObj)
+        (HM.lookup (getDriverId dObj) cancellationRatioMap)
+    addDelay rideRequestPopupConfig dObj cancellationRatio = dObj {rideRequestPopupDelayDuration = rideRequestPopupConfig.defaultPopupDelay + getPopupDelayToAdd cancellationRatio rideRequestPopupConfig}
     calculateOverallScore scoresList = map (\dObj -> (,dObj) . sum $ mapMaybe (HM.lookup (getDriverId dObj)) scoresList) dp
     getRatios fn arr = mapM (\dId -> (dId.getId,) <$> fn dId) arr
     getDriverId = getId . (.driverPoolResult.driverId)

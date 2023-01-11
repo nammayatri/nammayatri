@@ -11,6 +11,7 @@ module SharedLogic.DriverPool
     getLatestCancellationRatio,
     getCurrentWindowAvailability,
     getQuotesCount,
+    getPopupDelayToAdd,
     module Reexport,
   )
 where
@@ -184,6 +185,13 @@ getQuotesCount ::
   m a
 getQuotesCount driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withMinQuotesToQualifyIntelligentPoolWindowOption $ SWC.getCurrentWindowValues (mkQuotesCountKey driverId.getId))
 
+getPopupDelayToAdd :: Double -> RideRequestPopupConfig -> Seconds
+getPopupDelayToAdd cancellationRatio rideRequestPopupConfig = do
+  let cancellationRatioThreshold = fromIntegral $ fromMaybe 40 rideRequestPopupConfig.thresholdCancellationScore
+  if 100 * cancellationRatio > cancellationRatioThreshold
+    then fromMaybe (Seconds 0) rideRequestPopupConfig.popupDelayToAddAsPenalty
+    else Seconds 0
+
 calculateDriverPool ::
   ( EncFlow m r,
     CacheFlow m r,
@@ -236,6 +244,7 @@ calculateDriverPoolWithActualDist ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
+    HasDriverPoolConfig r,
     HasCoordinates a
   ) =>
   DriverPoolConfig ->
@@ -264,6 +273,7 @@ computeActualDistance ::
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
+    HasDriverPoolConfig r,
     HasCoordinates a
   ) =>
   Id DM.Merchant ->
@@ -272,6 +282,7 @@ computeActualDistance ::
   m (NonEmpty DriverPoolWithActualDistResult)
 computeActualDistance orgId pickup driverPoolResults = do
   let pickupLatLong = getCoordinates pickup
+  rideRequestPopupConfig <- asks (.rideRequestPopupConfig)
   getDistanceResults <-
     Maps.getDistances orgId $
       Maps.GetDistancesReq
@@ -280,11 +291,12 @@ computeActualDistance orgId pickup driverPoolResults = do
           travelMode = Just Maps.CAR
         }
   logDebug $ "get distance results" <> show getDistanceResults
-  return $ mkDriverPoolWithActualDistResult <$> getDistanceResults
+  return $ mkDriverPoolWithActualDistResult rideRequestPopupConfig <$> getDistanceResults
   where
-    mkDriverPoolWithActualDistResult distDur = do
+    mkDriverPoolWithActualDistResult rideRequestPopupConfig distDur = do
       DriverPoolWithActualDistResult
         { driverPoolResult = distDur.origin,
           actualDistanceToPickup = distDur.distance,
-          actualDurationToPickup = distDur.duration
+          actualDurationToPickup = distDur.duration,
+          rideRequestPopupDelayDuration = rideRequestPopupConfig.defaultPopupDelay
         }

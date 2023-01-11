@@ -11,6 +11,13 @@ data IntelligentPoolConfig = IntelligentPoolConfig
   }
   deriving (Generic, FromDhall)
 
+data RideRequestPopupConfig = RideRequestPopupConfig
+  { popupDelayToAddAsPenalty :: Maybe Seconds,
+    defaultPopupDelay :: Seconds,
+    thresholdCancellationScore :: Maybe Int
+  }
+  deriving (Generic, FromDhall)
+
 data DriverPoolConfig = DriverPoolConfig
   { minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,
@@ -38,7 +45,8 @@ data OverrideDriverPoolConfig = OverrideDriverPoolConfig
 type HasDriverPoolConfig r =
   ( HasField "driverPoolCfg" r DriverPoolConfig,
     HasField "overrideDriverPoolConfig" r [OverrideDriverPoolConfig],
-    HasField "intelligentPoolConfig" r IntelligentPoolConfig
+    HasField "intelligentPoolConfig" r IntelligentPoolConfig,
+    HasField "rideRequestPopupConfig" r RideRequestPopupConfig
   )
 
 getDriverPoolConfig :: (MonadFlow m, MonadReader r m, HasDriverPoolConfig r) => Meters -> m DriverPoolConfig

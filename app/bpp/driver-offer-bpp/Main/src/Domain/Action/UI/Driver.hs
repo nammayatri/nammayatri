@@ -68,7 +68,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
-import SharedLogic.DriverPool (HasDriverPoolConfig, getDriverPoolConfig, incrementQuoteAcceptedCount)
+import SharedLogic.DriverPool (HasDriverPoolConfig, getDriverPoolConfig, getLatestCancellationRatio, getPopupDelayToAdd, incrementQuoteAcceptedCount)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
@@ -520,17 +520,28 @@ makeDriverInformationRes DriverEntityRes {..} org =
       ..
     }
 
-getNearbySearchRequests :: (EsqDBReplicaFlow m r) => Id SP.Person -> m GetNearbySearchRequestsRes
+getNearbySearchRequests ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    HasDriverPoolConfig r,
+    Redis.HedisFlow m r,
+    HasCacheConfig r
+  ) =>
+  Id SP.Person ->
+  m GetNearbySearchRequestsRes
 getNearbySearchRequests driverId = do
-  _ <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
-  searchRequestForDriverAPIEntity <- mapM buildSearchRequestForDriverAPIEntity nearbyReqs
+  cancellationRatio <- getLatestCancellationRatio person.merchantId (cast driverId)
+  searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio) nearbyReqs
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
-    buildSearchRequestForDriverAPIEntity nearbyReq = do
+    buildSearchRequestForDriverAPIEntity cancellationRatio nearbyReq = do
       let sId = nearbyReq.searchRequestId
       searchRequest <- runInReplica $ QSReq.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
-      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest
+      rideRequestPopupConfig <- asks (.rideRequestPopupConfig)
+      let popupDelaySeconds = rideRequestPopupConfig.defaultPopupDelay + getPopupDelayToAdd cancellationRatio rideRequestPopupConfig
+      return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest popupDelaySeconds
 
 isAllowedExtraFee :: ExtraFee -> Money -> Bool
 isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee

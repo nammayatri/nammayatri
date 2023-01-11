@@ -56,7 +56,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
     incrementTotalQuotesCount searchReq.providerId sReqFD.driverId
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq dPoolRes.rideRequestPopupDelayDuration
     Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where
     getSearchRequestValidTill = do
@@ -96,6 +96,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
                 response = Nothing,
                 driverMinExtraFee = driverMinExtraCharge,
                 driverMaxExtraFee = driverMaxExtraCharge,
+                rideRequestPopupDelayDuration = dpwRes.rideRequestPopupDelayDuration,
                 ..
               }
       pure searchRequestForDriver

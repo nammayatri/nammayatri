@@ -88,6 +88,12 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
+let rideRequestPopupConfig =
+      { defaultPopupDelay = +0
+      , popupDelayToAddAsPenalty = Some +5
+      , thresholdCancellationScore = Some +40
+      }
+
 let driverPoolCfg =
       { minRadiusOfSearch = +5000
       , maxRadiusOfSearch = +7000
@@ -180,6 +186,7 @@ in  { esqDBCfg
     , cacheTranslationConfig
     , driverPoolCfg
     , intelligentPoolConfig
+    , rideRequestPopupConfig
     , overrideDriverPoolCfg = Some overrideDriverPoolCfg
     , sendSearchRequestJobCfg
     , driverLocationUpdateTopic = "location-updates"
