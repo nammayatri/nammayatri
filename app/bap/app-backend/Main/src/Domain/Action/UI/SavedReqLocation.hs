@@ -14,6 +14,7 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Error
 import Beckn.Types.Id (Id)
 import Beckn.Utils.Common
+import Data.Text (pack)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SavedReqLocation as SavedReqLocation
 import qualified Storage.Queries.SavedReqLocation as QSavedReqLocation
@@ -42,6 +43,7 @@ newtype SavedReqLocationsListRes = SavedReqLocationsListRes
 createSavedReqLocation :: EsqDBFlow m r => Id Person.Person -> CreateSavedReqLocationReq -> m APISuccess.APISuccess
 createSavedReqLocation riderId sreq = do
   savedLocations <- QSavedReqLocation.findAllByRiderIdAndTag riderId sreq.tag
+  when (sreq.tag == pack "") $ throwError $ InvalidRequest "Location tag cannot be empty"
   unless (null savedLocations) $ throwError $ InvalidRequest "Location with this tag already exists"
   now <- getCurrentTime
   location <- buildSavedReqLocation sreq now riderId

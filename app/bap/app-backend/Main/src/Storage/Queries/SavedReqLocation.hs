@@ -16,6 +16,7 @@ findAllByRiderId perId =
     saveReqLocation <- from $ table @SavedReqLocationT
     where_ $
       saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId)
+    orderBy [desc $ saveReqLocation ^. SavedReqLocationUpdatedAt]
     return saveReqLocation
 
 deleteByRiderIdAndTag :: Id Person -> Text -> SqlDB ()
