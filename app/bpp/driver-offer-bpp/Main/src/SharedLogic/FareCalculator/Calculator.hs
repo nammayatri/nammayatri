@@ -1,7 +1,6 @@
 module SharedLogic.FareCalculator.Calculator
   ( mkBreakupList,
     fareSum,
-    getWaitingFare,
     baseFareSum,
     calculateFareParameters,
   )
@@ -48,10 +47,6 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
 fareSum :: FareParameters -> Money
 fareSum fareParams = do
   baseFareSum fareParams + fromMaybe 0 fareParams.driverSelectedFare
-
-getWaitingFare :: NominalDiffTime -> Maybe Money -> Money
-getWaitingFare fareableWaitingTime waitingChargePerMin = do
-  roundToIntegral fareableWaitingTime * fromMaybe 0 waitingChargePerMin
 
 baseFareSum :: FareParameters -> Money
 baseFareSum fareParams = roundToIntegral $ do

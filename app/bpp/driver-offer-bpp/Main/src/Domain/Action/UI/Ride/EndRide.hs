@@ -31,7 +31,6 @@ import qualified Lib.LocationUpdates as LocUpd
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.FareCalculator as Fare
-import qualified SharedLogic.FareCalculator.Calculator as Fare
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
@@ -216,20 +215,12 @@ endRide ServiceHandle {..} rideId req = do
               <> show actualRideDuration
           pure timeOutsideOfThreshold
 
-    waitingTimeOutsideOfThreshold <- do
-      fareableWaitingTime <- getWaitingTimeOutsideThreshold ride.tripStartTime ride.driverArrivalTime
-      logTagInfo "endRide" ("waitingOutsideOfThreshold: " <> show fareableWaitingTime)
-      logTagInfo "RideTime differences" $
-        " Driver arrival time: "
-          <> show ride.driverArrivalTime
-          <> ", Trip Start Time: "
-          <> show ride.tripStartTime
-      pure fareableWaitingTime
-
     (chargeableDistance, finalFare, updatedFareParams) <-
-      if not distanceCalculationFailed && (pickupDropOutsideOfThreshold || distanceOutsideOfThreshold || timeOutsideOfThreshold || (waitingTimeOutsideOfThreshold > 0))
+      if not distanceCalculationFailed && (pickupDropOutsideOfThreshold || distanceOutsideOfThreshold || timeOutsideOfThreshold)
         then recalculateFare booking ride
-        else pure (booking.estimatedDistance, booking.estimatedFare, booking.fareParams)
+        else do
+          waitingCharge <- getWaitingFare ride.tripStartTime ride.driverArrivalTime booking.fareParams.waitingChargePerMin
+          pure (booking.estimatedDistance, waitingCharge + booking.estimatedFare, booking.fareParams)
 
     let updRide =
           ride{tripEndTime = Just now,
@@ -251,11 +242,11 @@ endRide ServiceHandle {..} rideId req = do
       let estimatedFare = Fare.fareSum booking.fareParams
       farePolicy <- getFarePolicy transporterId booking.vehicleVariant >>= fromMaybeM NoFarePolicy
       fareParams <- calculateFare transporterId farePolicy actualDistance booking.startTime booking.fareParams.driverSelectedFare
-      fareableWaitingTime <- getWaitingTimeOutsideThreshold ride.tripStartTime ride.driverArrivalTime
+      waitingCharge <- getWaitingFare ride.tripStartTime ride.driverArrivalTime farePolicy.waitingChargePerMin
       let updatedFare = Fare.fareSum fareParams
-          finalFare = (Fare.getWaitingFare fareableWaitingTime farePolicy.waitingChargePerMin) + updatedFare
+          finalFare = updatedFare + waitingCharge
           distanceDiff = actualDistance - oldDistance
-          fareDiff = updatedFare - estimatedFare
+          fareDiff = finalFare - estimatedFare
       logTagInfo "Fare recalculation" $
         "Fare difference: "
           <> show (realToFrac @_ @Double fareDiff)
@@ -264,9 +255,10 @@ endRide ServiceHandle {..} rideId req = do
       putDiffMetric transporterId fareDiff distanceDiff
       return (actualDistance, finalFare, fareParams)
 
-    getWaitingTimeOutsideThreshold mbTripStartTime mbDriverArrivalTime = do
+    getWaitingFare mbTripStartTime mbDriverArrivalTime waitingChargePerMin = do
       mbThresholdConfig <- findConfig
       defaultThreshold <- getDefaultWaitingTimeEstimatedThreshold
       let waitingTimeThreshold = fromMaybe defaultThreshold . join $ mbThresholdConfig <&> (.waitingTimeEstimatedThreshold)
           driverWaitingTime = fromMaybe 0 (diffUTCTime <$> mbTripStartTime <*> mbDriverArrivalTime)
-      pure $ max 0 (driverWaitingTime / 60 - fromIntegral waitingTimeThreshold)
+          fareableWaitingTime = max 0 (driverWaitingTime / 60 - fromIntegral waitingTimeThreshold)
+      pure $ roundToIntegral fareableWaitingTime * fromMaybe 0 waitingChargePerMin

@@ -5,7 +5,6 @@ module SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
     TripEndTime,
     fareSum,
     fareSumWithDiscount,
-    getWaitingFare,
     calculateFareParameters,
   )
 where
@@ -38,10 +37,6 @@ data OneWayFareParameters = OneWayFareParameters
 fareSum :: OneWayFareParameters -> Money
 fareSum OneWayFareParameters {..} =
   roundToIntegral $ nightShiftRate * fromIntegral (baseFare + distanceFare)
-
-getWaitingFare :: NominalDiffTime -> Maybe Money -> Money
-getWaitingFare fareableWaitingTime waitingChargePerMin = do
-  roundToIntegral fareableWaitingTime * fromMaybe 0 waitingChargePerMin
 
 fareSumWithDiscount :: OneWayFareParameters -> Money
 fareSumWithDiscount fp@OneWayFareParameters {..} = do

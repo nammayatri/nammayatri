@@ -247,26 +247,13 @@ endRide handle@ServiceHandle {..} rideId req = do
                 <> show actualRideDuration
             pure timeOutsideOfThreshold
 
-      waitingTimeOutsideOfThreshold <- do
-        case ride.tripStartTime of
-          Nothing -> pure False
-          Just tripStartTime -> do
-            waitingOutsideOfThreshold <- getWaitingTimeOutsideThreshold ride.tripStartTime ride.driverArrivalTime
-            logTagInfo "endRide" ("waitingOutsideOfThreshold: " <> show waitingOutsideOfThreshold)
-            logTagInfo "RideTime differences" $
-              " Driver arrival time: "
-                <> show ride.driverArrivalTime
-                <> ", Trip Start Time: "
-                <> show tripStartTime
-            pure (waitingOutsideOfThreshold > 0)
-
-      if shouldRecalculateFare && not distanceCalculationFailed && (pickupDropOutsideOfThreshold || distanceOutsideOfThreshold || timeOutsideOfThreshold || waitingTimeOutsideOfThreshold)
+      if shouldRecalculateFare && not distanceCalculationFailed && (pickupDropOutsideOfThreshold || distanceOutsideOfThreshold || timeOutsideOfThreshold)
         then do
           fareParams <- calculateFare vehicleVariant actualDistance oneWayDetails.estimatedFinishTime
-          fareableWaitingTime <- getWaitingTimeOutsideThreshold ride.tripStartTime ride.driverArrivalTime
+          waitingCharge <- getWaitingFare ride.tripStartTime ride.driverArrivalTime fareParams.waitingChargePerMin
           let updatedFare = Fare.fareSum fareParams
               fareWithDiscount = Fare.fareSumWithDiscount fareParams
-              totalFare = (Fare.getWaitingFare fareableWaitingTime fareParams.waitingChargePerMin) + fareWithDiscount
+              totalFare = waitingCharge + fareWithDiscount
               distanceDiff = actualDistance - oldDistance
               fareDiff = updatedFare - estimatedFare
           logTagInfo "Fare recalculation" $
@@ -282,8 +269,9 @@ endRide handle@ServiceHandle {..} rideId req = do
             logWarning "Failed to calculate actual distance for this ride, using estimated distance"
           -- calculate fare again with old data for creating fare breakup
           fareParams <- calculateFare vehicleVariant oldDistance booking.startTime
+          waitingCharge <- getWaitingFare ride.tripStartTime ride.driverArrivalTime fareParams.waitingChargePerMin
           fareBreakups <- buildOneWayFareBreakups fareParams booking.id
-          pure (oldDistance, estimatedFare, booking.estimatedTotalFare, fareBreakups)
+          pure (oldDistance, waitingCharge + estimatedFare, booking.estimatedTotalFare, fareBreakups)
 
     calcRentalFare booking rentalDetails now ride driverId = do
       distanceCalculationFailed <- isDistanceCalculationFailed driverId
@@ -314,10 +302,11 @@ endRide handle@ServiceHandle {..} rideId req = do
       fareBreakups <- buildRentalFareBreakups fareParams booking.id
       pure (actualDistance, fare, totalFare, fareBreakups)
 
-    getWaitingTimeOutsideThreshold mbTripStartTime mbDriverArrivalTime = do
-      waitingThreshold <- getWaitingTimeThreshold handle
+    getWaitingFare mbTripStartTime mbDriverArrivalTime waitingChargePerMin = do
+      waitingTimeThreshold <- getWaitingTimeThreshold handle
       let driverWaitingTime = fromMaybe 0 (diffUTCTime <$> mbTripStartTime <*> mbDriverArrivalTime)
-      pure $ max 0 (driverWaitingTime / 60 - fromIntegral waitingThreshold)
+          fareableWaitingTime = max 0 (driverWaitingTime / 60 - fromIntegral waitingTimeThreshold)
+      pure $ roundToIntegral fareableWaitingTime * fromMaybe 0 waitingChargePerMin
 
 data Stop = PICKUP | DROP
 
