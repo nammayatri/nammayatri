@@ -36,15 +36,13 @@ import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 
-type API =
-  DeprecatedCallAPIs
-    :<|> CallAPIs
+type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI
 
 handler :: FlowServer API
-handler = deprecatedCallHandler :<|> callHandler
+handler = backendBasedCallHandler :<|> frontendBasedCallHandler
 
 -------- Initiate a call (Exotel) APIs --------
-type DeprecatedCallAPIs =
+type BackendBasedCallAPI =
   "ride"
     :> Capture "rideId" (Id SRide.Ride)
     :> "call"
@@ -60,13 +58,13 @@ type DeprecatedCallAPIs =
            :> Get '[JSON] DCall.GetCallStatusRes
        )
 
-deprecatedCallHandler :: FlowServer DeprecatedCallAPIs
-deprecatedCallHandler rideId =
+backendBasedCallHandler :: FlowServer BackendBasedCallAPI
+backendBasedCallHandler rideId =
   initiateCallToDriver rideId
     :<|> callStatusCallback rideId
     :<|> getCallStatus rideId
 
-type CallAPIs =
+type FrontendBasedCallAPI =
   "exotel"
     :> "call"
     :> ( "driver"
@@ -84,8 +82,8 @@ type CallAPIs =
            :> Get '[JSON] DCall.CallCallbackRes
        )
 
-callHandler :: FlowServer CallAPIs
-callHandler =
+frontendBasedCallHandler :: FlowServer FrontendBasedCallAPI
+frontendBasedCallHandler =
   getDriverMobileNumber
     :<|> directCallStatusCallback
 

@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.UI.Call (module Reexport, DeprecatedAPI, API, handler, deprecatedHandler) where
+module API.UI.Call (module Reexport, API, handler) where
 
 import Domain.Action.UI.Call as Reexport
   ( CallCallbackReq,
@@ -32,7 +32,9 @@ import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 
-type DeprecatedAPI =
+type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI
+
+type BackendBasedCallAPI =
   "driver" :> "ride"
     :> Capture "rideId" (Id SRide.Ride)
     :> "call"
@@ -49,7 +51,7 @@ type DeprecatedAPI =
        )
 
 -------- Direct call (Exotel) APIs
-type API =
+type FrontendBasedCallAPI =
   "exotel"
     :> "call"
     :> ( "customer"
@@ -67,8 +69,13 @@ type API =
            :> Get '[JSON] CallCallbackRes
        )
 
-deprecatedHandler :: FlowServer DeprecatedAPI
-deprecatedHandler rideId =
+handler :: FlowServer API
+handler =
+  backendBasedCallHandler
+    :<|> frontendBasedCallHandler
+
+backendBasedCallHandler :: FlowServer BackendBasedCallAPI
+backendBasedCallHandler rideId =
   initiateCallToCustomer rideId
     :<|> callStatusCallback rideId
     :<|> getCallStatus rideId
@@ -82,8 +89,8 @@ callStatusCallback _ = withFlowHandlerAPI . DCall.callStatusCallback
 getCallStatus :: Id SRide.Ride -> Id SCS.CallStatus -> Id SP.Person -> FlowHandler GetCallStatusRes
 getCallStatus _ callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStatusId
 
-handler :: FlowServer API
-handler =
+frontendBasedCallHandler :: FlowServer FrontendBasedCallAPI
+frontendBasedCallHandler =
   getCustomerMobileNumber
     :<|> directCallStatusCallback
 
