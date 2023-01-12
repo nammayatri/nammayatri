@@ -49,8 +49,8 @@ calculateAvailableTime merchantId driverId kc (fstTime : restTimeSeries, Just la
   let lastAvailableTime = fromMaybe fstTime $ mbLatestAvailabilityRecord <&> (.lastAvailableTime)
       activeTimePairs = mkPairsWithLessThenThreshold timeBetweenUpdates lastAvailableTime granualityPeriodType $ filter (> lastAvailableTime) (fstTime : restTimeSeries)
       availabilityInWindow =
-        foldr
-          ( \timePair acc -> do
+        foldl
+          ( \acc timePair -> do
               let bucketPair = getBucketPair granualityPeriodType timePair
               flip (M.insert bucketPair) acc $
                 case M.lookup bucketPair acc of
@@ -64,8 +64,8 @@ calculateAvailableTime merchantId driverId kc (fstTime : restTimeSeries, Just la
   void $ M.traverseWithKey (createOrUpdateDriverAvailability merchantId driverId) availabilityInWindow
   void $ Consumer.commitOffsetMessage Consumer.OffsetCommit kc lastCR
   where
-    getBucketPair periodType (_, endTime) = do
-      let bucketEndTime = SW.incrementPeriod periodType endTime
+    getBucketPair periodType (startTime, _) = do
+      let bucketEndTime = SW.incrementPeriod periodType startTime
       let bucketStartTime = flip addUTCTime bucketEndTime . fromInteger $ -1 * SW.convertPeriodTypeToSeconds periodType
       (bucketStartTime, bucketEndTime)
 
