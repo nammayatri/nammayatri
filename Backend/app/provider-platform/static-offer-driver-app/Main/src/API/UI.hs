@@ -44,7 +44,6 @@ type API =
            :<|> Booking.API
            :<|> FarePolicy.API
            :<|> Location.API
-           :<|> Call.DeprecatedAPI
            :<|> Call.API
            :<|> Route.API
            :<|> Ride.API
@@ -65,7 +64,6 @@ handler =
     :<|> Booking.handler
     :<|> FarePolicy.handler
     :<|> Location.handler
-    :<|> Call.deprecatedHandler
     :<|> Call.handler
     :<|> Route.handler
     :<|> Ride.handler

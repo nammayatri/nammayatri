@@ -46,25 +46,13 @@ type API =
            :> Get '[JSON] DCall.CallCallbackRes
        )
 
--- :<|> "ride"
---   :> Capture "rideId" (Id DRide.Ride)
---   :> "call"
---   :> "status"
---   :> TokenAuth
---   :> Get '[JSON] CallAPI.GetCallStatusRes
-
 handler :: FlowServer API
 handler =
   getCustomerMobileNumber
     :<|> directCallStatusCallback
-
--- :<|> getCallStatus
 
 directCallStatusCallback :: Text -> Text -> Text -> Maybe Int -> FlowHandler DCall.CallCallbackRes
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ = withFlowHandlerAPI . DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_
 
 getCustomerMobileNumber :: Text -> Text -> Text -> Text -> FlowHandler DCall.MobileNumberResp
 getCustomerMobileNumber callSid callFrom_ callTo_ = withFlowHandlerAPI .DCall.getCustomerMobileNumber callSid callFrom_ callTo_
-
--- getCallStatus :: Id SCS.CallStatus -> FlowHandler DCall.GetCallStatusRes
--- getCallStatus = withFlowHandlerAPI . DCall.getCallStatus
