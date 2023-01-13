@@ -27,6 +27,7 @@ mkPersist
       enabled Bool
       blocked Bool
       verified Bool
+      lastEnabledOn UTCTime Maybe
       createdAt UTCTime
       updatedAt UTCTime
       referralCode Text Maybe

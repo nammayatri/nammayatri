@@ -17,6 +17,7 @@ data DriverInformationE e = DriverInformation
     blocked :: Bool,
     verified :: Bool,
     referralCode :: Maybe (EncryptedHashedField e Text),
+    lastEnabledOn :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

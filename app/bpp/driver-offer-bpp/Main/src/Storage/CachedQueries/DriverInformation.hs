@@ -31,7 +31,7 @@ updateActivity driverId isActive = do
 updateEnabledState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
 updateEnabledState driverId isEnabled = do
   clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateEnabledState driverId isEnabled
+  Esq.runTransaction $ Queries.updateEnabledState driverId isEnabled 
 
 updateEnabledVerifiedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> Bool -> m ()
 updateEnabledVerifiedState driverId isEnabled isVerified = do

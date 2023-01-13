@@ -290,6 +290,7 @@ createDriverDetails personId adminId = do
             blocked = False,
             verified = False,
             referralCode = Nothing,
+            lastEnabledOn = Nothing,
             createdAt = now,
             updatedAt = now
           }
@@ -373,7 +374,7 @@ changeDriverEnableState admin personId isEnabled = do
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (person.merchantId == admin.merchantId) $ throwError Unauthorized
-  QDriverInformation.updateEnabledState driverId isEnabled
+  QDriverInformation.updateEnabledState driverId isEnabled 
   unless isEnabled $ QDriverInformation.updateActivity driverId False
   unless isEnabled $ do
     Notify.notifyDriver person.merchantId FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
