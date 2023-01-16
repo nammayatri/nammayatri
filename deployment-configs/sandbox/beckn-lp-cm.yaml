@@ -1,0 +1,12 @@
+apiVersion: v1
+data:
+  LP_EXTRA_ARGS: --extra-log-argument cluster=eks-oracle
+  LP_KAFKA_BROKERS: kafka.kafka.svc.cluster.local:9092
+  LP_KAFKA_PRODUCER_PROP: queue.buffering.max.messages=10000&queue.buffering.max.kbytes=1048576&queue.buffering.max.ms=100&message.send.max.retries=3&queue.buffering.backpressure.threshold=3&compression.codec=lz4&batch.num.messages=1000&partitioner=consistent_random
+  LP_PARTITION_KEY: x-request-id
+  LP_PRODUCER_TOPIC: beckn-logs
+  LP_PROMETHEUS_PORT: "7777"
+kind: ConfigMap
+metadata:
+  name: beckn-configs-lp
+  namespace: atlas

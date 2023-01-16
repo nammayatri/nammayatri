@@ -20,7 +20,6 @@ pipeline {
             branch "release-version-7"
             branch "sandbox"
             branch "production"
-            branch "feature/log-processor"
           }
           anyOf {
             changeset "Jenkinsfile"
@@ -51,7 +50,6 @@ pipeline {
           branch "release-version-7"
           branch "sandbox"
           branch "production"
-          branch "feature/log-processor"
           changeRequest()
         }
       }

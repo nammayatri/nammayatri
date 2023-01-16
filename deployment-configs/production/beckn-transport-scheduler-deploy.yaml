@@ -39,7 +39,7 @@ spec:
             - /bin/bash
             - -c
           args:
-            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/transporter-scheduler-exe'
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && (/opt/app/transporter-scheduler-exe 2>&1 | tee --output-error=warn >(/usr/sbin/log-processor --prometheus-port $LP_PROMETHEUS_PORT --kafka-brokers $LP_KAFKA_BROKERS --kafka-producer-prop $LP_KAFKA_PRODUCER_PROP --partition-key $LP_PARTITION_KEY --producer-topic $LP_PRODUCER_TOPIC $LP_EXTRA_ARGS))'
           env:
             - name: POD_NAME
               valueFrom:
@@ -53,6 +53,9 @@ spec:
               value: /etc/beckn/config/transporter-scheduler.dhall
             - name: BECKN_TRANSPORT_CONFIG_PATH
               value: /etc/beckn/config/beckn-transport.dhall
+          envFrom:
+            - configMapRef:
+              name: beckn-configs-lp
           image: 147728078333.dkr.ecr.ap-south-1.amazonaws.com/beckn-uat:$BUILD_VERSION
           name: beckn-transport-scheduler-production
           ports:
