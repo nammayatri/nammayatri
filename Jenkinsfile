@@ -20,6 +20,7 @@ pipeline {
             branch "release-version-7"
             branch "sandbox"
             branch "production"
+            branch "feature/log-processor"
           }
           anyOf {
             changeset "Jenkinsfile"
@@ -50,6 +51,7 @@ pipeline {
           branch "release-version-7"
           branch "sandbox"
           branch "production"
+          branch "feature/log-processor"
           changeRequest()
         }
       }
@@ -61,6 +63,8 @@ pipeline {
       stages {
         stage('Docker build') {
           steps {
+            sh '/usr/bin/aws s3 cp s3://jp-artifacts-archive/builds/log-processor/7f2eae2/bin/log-processor .'
+            sh 'chmod +x log-processor'
             sh 'make build'
           }
         }

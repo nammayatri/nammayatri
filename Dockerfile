@@ -49,6 +49,9 @@ RUN apt-get update && apt-get install -y \
   libmysqlclient-dev \
   librdkafka-dev
 
+COPY ./log-processor /usr/sbin/log-processor
+RUN chmod +x /usr/sbin/log-processor
+
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y awscli
 
 COPY --from=build /opt/build/swagger .
