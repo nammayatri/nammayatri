@@ -92,32 +92,30 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
             Intelligent -> makeIntelligentDriverPool batchSize searchReq.providerId onlyNewDrivers
             Random -> makeRandomDriverPool batchSize onlyNewDrivers
 
-        bimapM fna fnb (a, b) = (,) <$> fna a <*> fnb b
-
         makeIntelligentDriverPool batchSize merchantId onlyNewDrivers = do
           transporterConfig <- TC.findByMerchantId merchantId
           minQuotesToQualifyForIntelligentPool <- asks (.intelligentPoolConfig.minQuotesToQualifyForIntelligentPool)
           (sortedDriverPool, randomizedDriverPool) <-
             bimapM (sortWithDriverScore merchantId transporterConfig) randomizeAndLimitSelection
               =<< splitDriverPoolForSorting minQuotesToQualifyForIntelligentPool onlyNewDrivers
-          let intelligentPoolPercentage = fromMaybe 50 driverPoolCfg.intelligentPoolPercentage
-              intelligentCount = min (length sortedDriverPool) (batchSize * intelligentPoolPercentage `div` 100)
-              randomCount = batchSize - intelligentCount
-              (sortedPart, restSorted) = splitAt intelligentCount sortedDriverPool
-              (randomPart, restRandom) = splitAt randomCount randomizedDriverPool
-              poolBatch = sortedPart <> randomPart
-              batchSizeFormed = length poolBatch
-          logDebug $ "IntelligentDriverPool - SortedDriversCount " <> show (length sortedPart)
-          logDebug $ "IntelligentDriverPool - RandomizedDriversCount " <> show (length randomPart)
-          logDebug $ "IntelligentDriverPool - RestSorted " <> show (length restSorted)
-          logDebug $ "IntelligentDriverPool - RestRandom " <> show (length restRandom)
-          if batchSizeFormed < batchSize
-            then do
-              logDebug $ "IntelligentDriverPool - Driver Deficit, adding more from " <> if not (null restSorted) then " intelligent pool." else " randomized pool."
-              pure $ poolBatch <> take (batchSize - batchSizeFormed) (restSorted <> restRandom)
-            else pure poolBatch
+          takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) batchSize
 
         makeRandomDriverPool batchSize onlyNewDrivers = take batchSize <$> randomizeAndLimitSelection onlyNewDrivers
+
+    takeDriversUsingPoolPercentage :: (MonadFlow m) => ([a], [a]) -> Int -> m [a]
+    takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) driversCount = do
+      let intelligentPoolPercentage = fromMaybe 50 driverPoolCfg.intelligentPoolPercentage
+          intelligentCount = min (length sortedDriverPool) (driversCount * intelligentPoolPercentage `div` 100)
+          randomCount = driversCount - intelligentCount
+          (sortedPart, restSorted) = splitAt intelligentCount sortedDriverPool
+          (randomPart, restRandom) = splitAt randomCount randomizedDriverPool
+          poolBatch = sortedPart <> randomPart
+          driversFromRestCount = take (driversCount - length poolBatch) (restRandom <> restSorted) -- taking rest of drivers if poolBatch length is less then driverCount requried.
+          finalPoolBatch = poolBatch <> driversFromRestCount
+      logDebug $ "IntelligentDriverPool - SortedDriversCount " <> show (length sortedPart)
+      logDebug $ "IntelligentDriverPool - RandomizedDriversCount " <> show (length randomPart)
+      logDebug $ "IntelligentDriverPool - finalPoolBatch " <> show (length finalPoolBatch)
+      pure finalPoolBatch
 
     calcDriverPool radiusStep = do
       let vehicleVariant = searchReq.vehicleVariant
@@ -130,13 +128,15 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       let batchDriverIds = batch <&> (.driverPoolResult.driverId)
       let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) driverPool
       minQuotesToQualifyForIntelligentPool <- asks (.intelligentPoolConfig.minQuotesToQualifyForIntelligentPool)
-      (batch <>) . take (batchSize - length batch)
+      let fillSize = batchSize - length batch
+      (batch <>)
         <$> case sortingType of
           Intelligent -> do
-            (gtMinQ, ltMinQ) <- splitDriverPoolForSorting minQuotesToQualifyForIntelligentPool driversNotInBatch -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
-            sortedDrivers <- sortWithDriverScore merchantId transporterConfig gtMinQ
-            pure $ ltMinQ <> sortedDrivers
-          Random -> pure driversNotInBatch
+            (sortedDriverPool, randomizedDriverPool) <-
+              bimapM (sortWithDriverScore merchantId transporterConfig) randomizeAndLimitSelection
+                =<< splitDriverPoolForSorting minQuotesToQualifyForIntelligentPool driversNotInBatch -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
+            takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) fillSize
+          Random -> pure $ take fillSize driversNotInBatch
     cacheBatch batch = do
       logDebug $ "Caching batch-" <> show batch
       Redis.withCrossAppRedis $ Redis.setExp (driverPoolBatchKey searchReq.id batchNum) batch (60 * 10)
@@ -162,6 +162,8 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       batches <- forM [0 .. (batchNum - 1)] \num -> do
         getDriverPoolBatch searchReq.id num
       return $ (.driverPoolResult.driverId) <$> concat batches
+    -- util function
+    bimapM fna fnb (a, b) = (,) <$> fna a <*> fnb b
 
 getDriverPoolBatch ::
   ( Redis.HedisFlow m r

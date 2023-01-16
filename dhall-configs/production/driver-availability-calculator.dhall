@@ -27,11 +27,15 @@ let consumerProperties =
 let kafkaConsumerCfg =
       { topicNames = [ "location-updates" ], consumerProperties }
 
+let availabilityTimeWindowOption =
+      { period = +7, periodType = common.periodType.Days }
+
 in  { hedisCfg
     , esqDBCfg
     , dumpEvery = +30
     , kafkaConsumerCfg
     , timeBetweenUpdates = +10
+    , availabilityTimeWindowOption
     , granualityPeriodType = common.periodType.Hours
     , loggerConfig =
             common.loggerConfig
