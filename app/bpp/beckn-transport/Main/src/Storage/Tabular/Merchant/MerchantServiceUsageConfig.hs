@@ -31,7 +31,7 @@ mkPersist
       createdAt UTCTime
       Primary merchantId
       deriving Generic
-      sendSMS SmsService
+      smsProvidersPriorityList [SmsService]
     |]
 
 instance TEntityKey MerchantServiceUsageConfigT where

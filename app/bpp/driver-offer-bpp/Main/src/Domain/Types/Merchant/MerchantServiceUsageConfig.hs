@@ -15,7 +15,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getPlaceName :: MapsService,
     getPlaceDetails :: MapsService,
     autoComplete :: MapsService,
-    sendSMS :: SmsService,
+    smsProvidersPriorityList :: [SmsService],
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }

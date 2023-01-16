@@ -18,7 +18,6 @@ import Beckn.Utils.Common
   )
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
@@ -26,20 +25,20 @@ import Tools.Error
 import Tools.Metrics
 
 sendSMS :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> SendSMSReq -> m SendSMSRes
-sendSMS = runWithServiceConfig Sms.sendSMS (.sendSMS)
+sendSMS merchantId = Sms.sendSMS handler
+  where
+    handler = Sms.SmsHandler {..}
 
-runWithServiceConfig ::
-  (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) =>
-  (SmsServiceConfig -> req -> m resp) ->
-  (MerchantServiceUsageConfig -> SmsService) ->
-  Id Merchant ->
-  req ->
-  m resp
-runWithServiceConfig func getCfg merchantId req = do
-  merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  merchantSmsServiceConfig <-
-    QMSC.findByMerchantIdAndService merchantId (DMSC.SmsService $ getCfg merchantConfig)
-      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  case merchantSmsServiceConfig.serviceConfig of
-    DMSC.SmsServiceConfig msc -> func msc req
-    _ -> throwError $ InternalError "Unknown Service Config"
+    getProvidersPriorityList = do
+      merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+      let smsServiceProviders = merchantConfig.smsProvidersPriorityList
+      when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantId:" <> merchantId.getId)
+      pure smsServiceProviders
+
+    getProviderConfig provider = do
+      merchantSmsServiceConfig <-
+        QMSC.findByMerchantIdAndService merchantId (DMSC.SmsService provider)
+          >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+      case merchantSmsServiceConfig.serviceConfig of
+        DMSC.SmsServiceConfig msc -> pure msc
+        _ -> throwError $ InternalError "Unknown Service Config"
