@@ -206,14 +206,39 @@ sortWithDriverScore merchantId (Just transporterConfig) dp = do
   driverAcceptanceScore <- getScoreWithWeight (transporterConfig.acceptanceRatioWeightage) <$> getRatios (getLatestAcceptanceRatio merchantId) driverIds
   driverAvailabilityScore <- getScoreWithWeight (transporterConfig.availabilityTimeWeightage) . map (second (sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
   let overallScore = calculateOverallScore [driverAcceptanceScore, driverAvailabilityScore, driverCancellationScore]
-      sortedDriverPool = sortOn (Down . fst) overallScore
+  driverPoolWithoutTie <- breakSameScoreTies $ groupByScore overallScore
+  let sortedDriverPool = concatMap snd . sortOn (Down . fst) $ HM.toList driverPoolWithoutTie
   logTagInfo "Driver Acceptance Score" $ show driverAcceptanceScore
   logTagInfo "Driver Cancellation Score" $ show driverCancellationScore
   logTagInfo "Driver Availability Score" $ show driverAvailabilityScore
   logTagInfo "Overall Score" $ show (map (second getDriverId) overallScore)
   pure $ map (updateDriverPoolResult rideRequestPopupConfig $ HM.fromList cancellationRatios) sortedDriverPool
   where
-    updateDriverPoolResult rideRequestPopupConfig cancellationRatioMap (_, dObj) =
+    -- if two drivers have same score in the end then the driver who has less number of ride requests till now will be preffered.
+    breakSameScoreTies scoreMap = do
+      mapM
+        ( \dObjArr ->
+            if length dObjArr > 1
+              then do
+                map snd . sortOn (Down . Down . fst)
+                  <$> mapM
+                    ( \dObj -> do
+                        quotes <- getTotalQuotesSent merchantId (cast dObj.driverPoolResult.driverId)
+                        pure (quotes, dObj)
+                    )
+                    dObjArr
+              else pure dObjArr
+        )
+        scoreMap
+    groupByScore =
+      foldr'
+        ( \(score, dObj) scoreMap -> do
+            case HM.lookup score scoreMap of
+              Just res -> HM.insert score (dObj : res) scoreMap
+              Nothing -> HM.insert score [dObj] scoreMap
+        )
+        HM.empty
+    updateDriverPoolResult rideRequestPopupConfig cancellationRatioMap dObj =
       maybe
         dObj
         (addIntelligentPoolInfo rideRequestPopupConfig dObj)

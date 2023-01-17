@@ -5,6 +5,7 @@ module SharedLogic.DriverPool
     calculateDriverPoolWithActualDist,
     incrementTotalQuotesCount,
     incrementQuoteAcceptedCount,
+    getTotalQuotesSent,
     getLatestAcceptanceRatio,
     incrementTotalRidesCount,
     incrementCancellationCount,
@@ -119,6 +120,18 @@ incrementQuoteAcceptedCount ::
   Id DP.Person ->
   m ()
 incrementQuoteAcceptedCount merchantId driverId = Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantId $ SWC.incrementWindowCount (mkQuotesAcceptedKey driverId.getId)
+
+getTotalQuotesSent ::
+  ( Redis.HedisFlow m r,
+    Reexport.HasDriverPoolConfig r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DM.Merchant ->
+  Id DP.Person ->
+  m Int
+getTotalQuotesSent merchantId driverId =
+  sum . catMaybes <$> (Redis.withCrossAppRedis . withAcceptanceRatioWindowOption merchantId $ SWC.getCurrentWindowValues (mkTotalQuotesKey driverId.getId))
 
 getLatestAcceptanceRatio ::
   ( EsqDBFlow m r,
