@@ -69,9 +69,10 @@ listDriverRides ::
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
+  Maybe DRide.RideStatus ->
   m DriverRideListRes
-listDriverRides driverId mbLimit mbOffset mbOnlyActive = do
-  rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive
+listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus = do
+  rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus
   driverRideLis <- forM rides $ \(ride, booking) -> do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     driverNumber <- RD.getDriverNumber rideDetail

@@ -64,8 +64,9 @@ findAllByDriverId ::
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
+  Maybe Ride.RideStatus ->
   m [(Ride, Booking)]
-findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
+findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buildDType $ do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
@@ -80,6 +81,7 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     where_ $
       ride ^. RideDriverId ==. val (toKey driverId)
         &&. whenTrue_ isOnlyActive (not_ $ ride ^. RideStatus `in_` valList [Ride.COMPLETED, Ride.CANCELLED])
+        &&. whenJust_ mbRideStatus (\status -> ride ^. RideStatus ==. val status)
     orderBy [desc $ ride ^. RideCreatedAt]
     limit limitVal
     offset offsetVal
