@@ -9,6 +9,8 @@ where
 
 import Beckn.Prelude hiding (Handler)
 import qualified Beckn.Storage.Hedis as Redis
+import Beckn.Streaming.Kafka.Producer (produceMessage)
+import Beckn.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
@@ -18,6 +20,7 @@ import Beckn.Utils.Common hiding (id)
 import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.DriverLocation (DriverLocation)
+import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
@@ -43,7 +46,41 @@ data Waypoint = Waypoint
 
 type UpdateLocationRes = APISuccess
 
-updateLocationHandler :: (Redis.HedisFlow m r, MonadTime m) => Handler m -> Id Person.Person -> UpdateLocationReq -> m UpdateLocationRes
+data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
+  { rId :: Maybe Text,
+    mId :: Text,
+    ts :: UTCTime,
+    pt :: LatLong
+  }
+  deriving (Generic, FromJSON, ToJSON)
+
+streamLocationUpdates ::
+  ( MonadFlow m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text]
+  ) =>
+  Maybe (Id ride) ->
+  Maybe (Id DOrg.Organization) ->
+  Id Person.Person ->
+  LatLong ->
+  UTCTime ->
+  m ()
+streamLocationUpdates mbRideId mbOrganizationId driverId point timestamp = do
+  topicName <- asks (.driverLocationUpdateTopic)
+  produceMessage
+    (topicName, Just (encodeUtf8 $ getId driverId))
+    (DriverLocationUpdateStreamData (getId <$> mbRideId) (maybe "YATRI_MID" getId mbOrganizationId) timestamp point)
+
+updateLocationHandler ::
+  ( Redis.HedisFlow m r,
+    MonadTime m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text]
+  ) =>
+  Handler m ->
+  Id Person.Person ->
+  UpdateLocationReq ->
+  m UpdateLocationRes
 updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocationUpdate" $ do
   logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
   driver <-
@@ -60,10 +97,12 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
         let newWaypoints = a :| ax
             currPoint = NE.last newWaypoints
         upsertDriverLocation driver.id currPoint.pt currPoint.ts
-        getInProgressByDriverId driver.id
-          >>= maybe
-            (logInfo "No ride is assigned to driver, ignoring")
-            (\ride -> addIntermediateRoutePoints ride.id driver.id $ NE.map (.pt) newWaypoints)
+        mbRide <- getInProgressByDriverId driver.id
+        mapM_ (\point -> streamLocationUpdates ((.id) <$> mbRide) driver.organizationId driver.id point.pt point.ts) (a : ax)
+        maybe
+          (logInfo "No ride is assigned to driver, ignoring")
+          (\ride -> addIntermediateRoutePoints ride.id driver.id $ NE.map (.pt) newWaypoints)
+          mbRide
 
     Redis.unlockRedis lockKey
   pure Success

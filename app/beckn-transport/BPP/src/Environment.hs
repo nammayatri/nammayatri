@@ -84,7 +84,8 @@ data AppCfg = AppCfg
     dashboardToken :: Text,
     defaultPickupLocThreshold :: Meters,
     defaultDropLocThreshold :: Meters,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    driverLocationUpdateTopic :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -137,7 +138,8 @@ data AppEnv = AppEnv
     dashboardToken :: Text,
     defaultPickupLocThreshold :: Meters,
     defaultDropLocThreshold :: Meters,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    driverLocationUpdateTopic :: Text
   }
   deriving (Generic)
 

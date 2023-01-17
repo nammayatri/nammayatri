@@ -125,4 +125,5 @@ in
 , defaultPickupLocThreshold = +500
 , defaultDropLocThreshold = +500
 , cacheConfig = cacheConfig
+, driverLocationUpdateTopic = "location-updates"
 }
