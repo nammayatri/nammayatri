@@ -9,3 +9,4 @@ import Fixtures.RentalFarePolicy as Fixtures
 import Fixtures.Ride as Fixtures
 import Fixtures.SearchRequest as Fixtures
 import Fixtures.Time as Fixtures
+import Fixtures.TransporterConfig as Fixtures

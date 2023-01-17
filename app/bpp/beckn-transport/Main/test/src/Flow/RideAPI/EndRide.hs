@@ -83,7 +83,7 @@ handle =
       getDefaultRideTravelledDistanceThreshold = pure 700,
       getDefaultRideTimeEstimatedThreshold = pure 900,
       getDefaultWaitingTimeEstimatedThreshold = pure 3,
-      getConfig = pure Nothing,
+      getConfig = pure Fixtures.defaultTransporterConfig,
       whenWithLocationUpdatesLock = \_driverId action -> action
     }
 
