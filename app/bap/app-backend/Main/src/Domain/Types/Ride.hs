@@ -78,7 +78,8 @@ data RideAPIEntity = RideAPIEntity
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    bppRideId :: Id BPPRide
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
 
