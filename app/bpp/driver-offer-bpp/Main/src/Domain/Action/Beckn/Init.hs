@@ -50,6 +50,7 @@ cancelBooking ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m,
     HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
     HasCacheConfig r
   ) =>
   DRB.Booking ->

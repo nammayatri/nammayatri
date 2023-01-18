@@ -33,7 +33,7 @@ import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Servant.Client (HttpClientOptions)
+import Beckn.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import SharedLogic.GoogleTranslate
@@ -71,6 +71,8 @@ data AppCfg = AppCfg
     slackCfg :: SlackConfig,
     searchLimitExceedNotificationTemplate :: Text,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     authTokenCacheExpiry :: Seconds,
     registryUrl :: BaseUrl,
     signingKey :: PrivateKey,
@@ -108,6 +110,8 @@ data AppEnv = AppEnv
     slackCfg :: SlackConfig,
     searchLimitExceedNotificationTemplate :: Text,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     authTokenCacheExpiry :: Seconds,
     registryUrl :: BaseUrl,
     signingKey :: PrivateKey,

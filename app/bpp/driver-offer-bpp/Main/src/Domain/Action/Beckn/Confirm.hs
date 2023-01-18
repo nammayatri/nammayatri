@@ -71,7 +71,7 @@ handler ::
     CoreMetrics m,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasHttpClientOptions r c
+    HasLongDurationRetryCfg r c
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->
@@ -233,7 +233,7 @@ cancelBooking ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     CoreMetrics m,
-    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
     HasCacheConfig r
   ) =>
   DRB.Booking ->

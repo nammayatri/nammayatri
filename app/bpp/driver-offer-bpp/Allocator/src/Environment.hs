@@ -39,6 +39,8 @@ data HandlerEnv = HandlerEnv
   { signingKey :: Base64,
     signatureExpiry :: Seconds,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     loggerEnv :: LoggerEnv,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,

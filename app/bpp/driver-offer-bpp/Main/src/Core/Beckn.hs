@@ -20,10 +20,12 @@ import Servant
 import SharedLogic.CallBAP (buildBppUrl)
 
 withCallback ::
-  HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions] =>
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
+    HasShortDurationRetryCfg r c
+  ) =>
   DM.Merchant ->
   WithBecknCallbackMig api callback_success m
-withCallback = withCallback' withRetry
+withCallback = withCallback' withShortRetry
 
 withCallback' ::
   (m () -> m ()) ->

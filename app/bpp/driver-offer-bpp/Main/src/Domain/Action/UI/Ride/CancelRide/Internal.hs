@@ -31,7 +31,7 @@ cancelRideImpl ::
     HedisFlow m r,
     HasHttpClientOptions r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
     CoreMetrics m
   ) =>
   Id SRide.Ride ->

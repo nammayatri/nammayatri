@@ -161,6 +161,8 @@ in  { esqDBCfg
     , minimumDriverRatesCount = +5
     , disableSignatureAuth = False
     , httpClientOptions = common.httpClientOptions
+    , shortDurationRetryCfg = common.shortDurationRetryCfg
+    , longDurationRetryCfg = common.longDurationRetryCfg
     , apiRateLimitOptions
     , inviteSmsTemplate =
         "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"

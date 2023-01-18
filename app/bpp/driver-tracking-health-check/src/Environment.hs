@@ -9,7 +9,7 @@ import Beckn.Types.Flow (FlowR)
 import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall
 import Beckn.Utils.IOLogging
-import Beckn.Utils.Servant.Client (HttpClientOptions)
+import Beckn.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Beckn.Utils.Shutdown
 import EulerHS.Prelude
 import Storage.CachedQueries.CacheConfig
@@ -22,6 +22,8 @@ data AppCfg = AppCfg
     metricsPort :: Int,
     healthcheckPort :: Int,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     graceTerminationPeriod :: Seconds,
     hedisCfg :: Redis.HedisCfg,
     esqDBCfg :: EsqDBConfig,
@@ -38,6 +40,8 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     graceTerminationPeriod :: Seconds,
     encTools :: EncTools,
     driverAllowedDelay :: Seconds,

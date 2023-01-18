@@ -564,6 +564,7 @@ offerQuote ::
     DP.HasDriverPoolConfig r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
     CoreMetrics m,
     HasPrettyLogger m r
   ) =>
@@ -587,6 +588,7 @@ respondQuote ::
     DP.HasDriverPoolConfig r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
     CoreMetrics m,
     HasPrettyLogger m r
   ) =>

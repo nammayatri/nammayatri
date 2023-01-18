@@ -177,6 +177,7 @@ prepareS3AuthManager flowRt appEnv s3AwsConfig =
 
 modFlowRtWithS3AuthManagers ::
   ( HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
     MonadReader r m,
     HasLog r,
     MonadFlow m

@@ -54,6 +54,7 @@ prepareAuthManagersWithRegistryUrl flowRt appEnv allShortIds = do
 modFlowRtWithAuthManagersWithRegistryUrl ::
   ( AuthenticatingEntity r,
     HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
     MonadReader r m,
     HasLog r,
     MonadFlow m,

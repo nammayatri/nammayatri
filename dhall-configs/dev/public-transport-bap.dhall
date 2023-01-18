@@ -55,6 +55,8 @@ in  { esqDBCfg
     , disableSignatureAuth = False
     , hostName = "localhost"
     , httpClientOptions = common.httpClientOptions
+    , shortDurationRetryCfg = common.shortDurationRetryCfg
+    , longDurationRetryCfg = common.longDurationRetryCfg
     , registryUrl = common.registryUrl
     , kafkaProducerCfg
     }

@@ -6,7 +6,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Flow
 import Beckn.Utils.Dhall
 import Beckn.Utils.IOLogging
-import Beckn.Utils.Servant.Client (HttpClientOptions)
+import Beckn.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Beckn.Utils.Shutdown
 import qualified Data.Text as T
 import EulerHS.Prelude
@@ -18,6 +18,8 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     callbackWaitTimeMilliSec :: Milliseconds,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     graceTerminationPeriod :: Seconds,
     webhookUrl :: BaseUrl,
     secret :: Text,
@@ -37,6 +39,8 @@ data AppEnv = AppEnv
     webhookUrl :: BaseUrl,
     secret :: Text,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     accountId :: AccountId,
     apiKey :: ApiKey
   }

@@ -29,8 +29,17 @@ defaultConfig =
       secret = "xxxxxxx",
       httpClientOptions =
         HttpClientOptions
-          { timeoutMs = 2000,
-            maxRetries = 3
+          { timeoutMs = 2000
+          },
+      shortDurationRetryCfg =
+        RetryCfg
+          { maxRetries = 3,
+            baseCoefficient = 1
+          },
+      longDurationRetryCfg =
+        RetryCfg
+          { maxRetries = 3,
+            baseCoefficient = 2
           },
       loggerConfig =
         LoggerConfig

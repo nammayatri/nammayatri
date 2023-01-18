@@ -28,7 +28,7 @@ import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Servant.Client (HttpClientOptions)
+import Beckn.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
@@ -62,6 +62,8 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
@@ -106,6 +108,8 @@ data AppEnv = AppEnv
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,

@@ -112,6 +112,7 @@ oneWaySearch ::
     HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "gatewayUrl" ::: BaseUrl],
     HasBAPMetrics m r,
@@ -122,10 +123,10 @@ oneWaySearch ::
   m (Id SearchRequest, UTCTime)
 oneWaySearch personId req = do
   dSearchRes <- DOneWaySearch.oneWaySearch personId req
-  fork "search cabs" . withRetry $ do
+  fork "search cabs" . withShortRetry $ do
     becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
-  fork "search metro" . withRetry $ do
+  fork "search metro" . withShortRetry $ do
     becknMetroReq <- MetroACL.buildSearchReq dSearchRes
     CallBPP.searchMetro becknMetroReq
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
@@ -137,6 +138,7 @@ rentalSearch ::
     HedisFlow m r,
     HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "gatewayUrl" ::: BaseUrl],
     HasBAPMetrics m r
@@ -146,7 +148,7 @@ rentalSearch ::
   m (Id SearchRequest, UTCTime)
 rentalSearch personId req = do
   dSearchRes <- DRentalSearch.rentalSearch personId req
-  fork "search rental" . withRetry $ do
+  fork "search rental" . withShortRetry $ do
     -- do we need fork here?
     becknReq <- TaxiACL.buildRentalSearchReq dSearchRes
     void $ CallBPP.search dSearchRes.gatewayUrl becknReq

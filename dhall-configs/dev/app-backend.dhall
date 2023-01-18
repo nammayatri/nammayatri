@@ -128,6 +128,8 @@ in  { esqDBCfg
     , searchLimitExceedNotificationTemplate =
         "Customer with {#cust-id#} is exceeding the search limit."
     , httpClientOptions = common.httpClientOptions
+    , shortDurationRetryCfg = common.shortDurationRetryCfg
+    , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
     , registryUrl = common.registryUrl
     , gatewayUrl = gwUri

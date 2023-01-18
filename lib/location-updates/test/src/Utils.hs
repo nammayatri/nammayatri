@@ -44,8 +44,7 @@ runFlow tag appEnv flow = do
 defaultHttpClientOptions :: HttpClientOptions
 defaultHttpClientOptions =
   HttpClientOptions
-    { timeoutMs = 2000,
-      maxRetries = 3
+    { timeoutMs = 2000
     }
 
 wrapTests :: (AppEnv -> IO a) -> IO a

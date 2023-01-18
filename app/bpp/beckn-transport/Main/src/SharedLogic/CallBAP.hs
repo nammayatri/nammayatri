@@ -41,6 +41,7 @@ sendRideAssignedUpdateToBAP ::
     EsqDBFlow m r,
     HedisFlow m r,
     HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -56,7 +57,10 @@ sendRideAssignedUpdateToBAP booking ride = do
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
-  void $ callOnUpdate transporter booking rideAssignedMsg
+
+  retryConfig <- asks (.shortDurationRetryCfg)
+
+  void $ callOnUpdate transporter booking rideAssignedMsg retryConfig
 
 sendRideStartedUpdateToBAP ::
   ( HasCacheConfig r,
@@ -65,6 +69,7 @@ sendRideStartedUpdateToBAP ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -76,7 +81,10 @@ sendRideStartedUpdateToBAP booking ride = do
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   let rideStartedBuildReq = ACL.RideStartedBuildReq {..}
   rideStartedMsg <- ACL.buildOnUpdateMessage rideStartedBuildReq
-  void $ callOnUpdate transporter booking rideStartedMsg
+
+  retryConfig <- asks (.longDurationRetryCfg)
+
+  void $ callOnUpdate transporter booking rideStartedMsg retryConfig
 
 sendRideCompletedUpdateToBAP ::
   ( HasCacheConfig r,
@@ -85,6 +93,7 @@ sendRideCompletedUpdateToBAP ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -97,13 +106,17 @@ sendRideCompletedUpdateToBAP booking ride fareBreakups = do
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   let rideCompletedBuildReq = ACL.RideCompletedBuildReq {..}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
-  void $ callOnUpdate transporter booking rideCompletedMsg
+
+  retryConfig <- asks (.longDurationRetryCfg)
+
+  void $ callOnUpdate transporter booking rideCompletedMsg retryConfig
 
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -111,15 +124,18 @@ sendBookingCancelledUpdateToBAP ::
   SRBCR.CancellationSource ->
   m ()
 sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
+  retryConfig <- asks (.longDurationRetryCfg)
+
   let bookingCancelledBuildReq = ACL.BookingCancelledBuildReq {..}
   bookingCancelledMsg <- ACL.buildOnUpdateMessage bookingCancelledBuildReq
-  void $ callOnUpdate transporter booking bookingCancelledMsg
+  void $ callOnUpdate transporter booking bookingCancelledMsg retryConfig
 
 sendBookingReallocationUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -130,7 +146,10 @@ sendBookingReallocationUpdateToBAP ::
 sendBookingReallocationUpdateToBAP booking rideId transporter reallocationSource = do
   let bookingReallocationBuildReq = ACL.BookingReallocationBuildReq {..}
   bookingReallocationMsg <- ACL.buildOnUpdateMessage bookingReallocationBuildReq
-  void $ callOnUpdate transporter booking bookingReallocationMsg
+
+  retryConfig <- asks (.shortDurationRetryCfg)
+
+  void $ callOnUpdate transporter booking bookingReallocationMsg retryConfig
 
 callOnUpdate ::
   ( EsqDBFlow m r,
@@ -141,8 +160,9 @@ callOnUpdate ::
   DM.Merchant ->
   SRB.Booking ->
   OnUpdate.OnUpdateMessage ->
+  RetryCfg ->
   m ()
-callOnUpdate transporter booking content = do
+callOnUpdate transporter booking content retryConfig = do
   let bapId = booking.bapId
       bapUri = booking.bapUri
   let bppSubscriberId = getShortId $ transporter.subscriberId
@@ -150,7 +170,7 @@ callOnUpdate transporter booking content = do
   bppUri <- buildBppUrl transporter.id
   msgId <- generateGUID
   context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just bppSubscriberId) (Just bppUri)
-  void $ withRetry $ void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
+  void $ withRetryConfig retryConfig $ void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -168,6 +188,7 @@ sendDriverArrivalUpdateToBAP ::
     EncFlow m r,
     HedisFlow m r,
     HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -181,4 +202,7 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   let driverArrivedBuildReq = ACL.DriverArrivedBuildReq {ride, arrivalTime}
   driverArrivedMsg <- ACL.buildOnUpdateMessage driverArrivedBuildReq
-  void $ callOnUpdate transporter booking driverArrivedMsg
+
+  retryConfig <- asks (.shortDurationRetryCfg)
+
+  void $ callOnUpdate transporter booking driverArrivedMsg retryConfig

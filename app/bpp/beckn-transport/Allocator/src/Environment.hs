@@ -36,6 +36,8 @@ data AppCfg = AppCfg
     metricsPort :: Int,
     healthcheckPort :: Int,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     driverNotificationExpiry :: Seconds,
     rideAllocationExpiry :: Seconds,
     reallocationsLimit :: Int,
@@ -57,6 +59,8 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { appCfg :: App.AppCfg,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     driverNotificationExpiry :: Seconds,
     rideAllocationExpiry :: Seconds,
     reallocationsLimit :: Int,

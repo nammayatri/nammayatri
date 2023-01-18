@@ -16,4 +16,6 @@ in  { port = +8027
     , hostName = "localhost"
     , disableSignatureAuth = False
     , httpClientOptions = common.httpClientOptions
+    , shortDurationRetryCfg = common.shortDurationRetryCfg
+    , longDurationRetryCfg = common.longDurationRetryCfg
     }

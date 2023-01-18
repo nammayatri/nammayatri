@@ -20,6 +20,7 @@ run ::
     HasField "gatewayUrl" r BaseUrl,
     CoreMetrics m,
     HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
     MonadConsumer PublicTransportSearch m,
     EsqDBFlow m r,
     MonadFlow m
@@ -29,7 +30,7 @@ run = withLogTag "Service" $
   listenForMessages @PublicTransportSearch isRunning $ \searchReq -> withTransactionIdLogTag' searchReq.id $ do
     searchMessage <- DSearch.search searchReq
     becknSearchReq <- BecknACL.buildSearchReq searchMessage
-    fork "search" . withRetry $ do
+    fork "search" . withShortRetry $ do
       -- do we need fork here?
       ExternalAPI.search becknSearchReq
   where

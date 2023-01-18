@@ -14,7 +14,7 @@ import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Confirm as ACL
 import qualified Core.ACL.OnConfirm as ACL
-import Core.Beckn (withCallback)
+import Core.Beckn (withCallback')
 import Domain.Action.Beckn.Cancel
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types.Merchant (Merchant)
@@ -44,7 +44,7 @@ confirm transporterId (SignatureAuthResult _ subscriber _) req =
       dConfirmRes <- DConfirm.confirm transporterId subscriber dConfirmReq
       let cancelReq = makeCancelReq dConfirmRes.booking.id
       void . handle (errHandler cancelReq) $
-        withCallback dConfirmRes.transporter Context.CONFIRM OnConfirm.onConfirmAPI context context.bap_uri $
+        withCallback' withShortRetry dConfirmRes.transporter Context.CONFIRM OnConfirm.onConfirmAPI context context.bap_uri $
           -- there should be DOnConfirm.onConfirm, but it is empty anyway
           pure $ ACL.mkOnConfirmMessage dConfirmRes
       return ()

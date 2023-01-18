@@ -23,6 +23,8 @@ data AppCfg = AppCfg
     selfId :: Text,
     hostName :: Text,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     disableSignatureAuth :: Bool
   }
   deriving (Generic, FromDhall)
@@ -40,6 +42,8 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     hostName :: Text,
     disableSignatureAuth :: Bool
   }

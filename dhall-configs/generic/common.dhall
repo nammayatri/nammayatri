@@ -34,7 +34,11 @@ let loggerConfig =
 
 let ConsumerType = < AVAILABILITY_TIME | FEED_TO_CLICKHOUSE >
 
-let httpClientOptions = { timeoutMs = +2000, maxRetries = +3 }
+let httpClientOptions = { timeoutMs = +2000 }
+
+let shortDurationRetryCfg = { maxRetries = +3, baseCoefficient = +2 }
+
+let longDurationRetryCfg = { maxRetries = +3, baseCoefficient = +4 }
 
 let ServerName = < APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
 
@@ -46,6 +50,8 @@ in  { smsSessionConfig
     , signatureExpiry = +600
     , mkShard
     , httpClientOptions
+    , shortDurationRetryCfg
+    , longDurationRetryCfg
     , ServerName
     , S3Config
     , periodType = PeriodType

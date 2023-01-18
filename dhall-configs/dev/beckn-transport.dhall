@@ -102,6 +102,8 @@ in  { esqDBCfg
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
     , httpClientOptions = common.httpClientOptions
+    , shortDurationRetryCfg = common.shortDurationRetryCfg
+    , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
     , minimumDriverRatesCount = +5
     , recalculateFareEnabled = True

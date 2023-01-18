@@ -25,6 +25,8 @@ in  { appCfg
     , shards
     , healthcheckPort = +8114
     , httpClientOptions = appCfg.httpClientOptions
+    , shortDurationRetryCfg = appCfg.shortDurationRetryCfg
+    , longDurationRetryCfg = appCfg.longDurationRetryCfg
     , esqDBCfg = appCfg.esqDBCfg
     , hedisCfg = appCfg.hedisCfg
     , loggerConfig =

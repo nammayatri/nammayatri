@@ -14,7 +14,7 @@ import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Init as ACL
 import qualified Core.ACL.OnInit as ACL
-import Core.Beckn (withCallback)
+import Core.Beckn (withCallback')
 import Domain.Action.Beckn.Cancel
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Action.Beckn.Init as DInit
@@ -44,7 +44,7 @@ initImpl transporterId (SignatureAuthResult _ subscriber _) req =
       dInitRes <- DInit.init transporterId dInitReq
       let cancelReq = makeCancelReq dInitRes.booking.id
       void . handle (errHandler cancelReq) $
-        withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
+        withCallback' withShortRetry dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
           -- there should be DOnInit.onInit, but it is empty anyway
           pure $ ACL.mkOnInitMessage dInitRes
       return ()

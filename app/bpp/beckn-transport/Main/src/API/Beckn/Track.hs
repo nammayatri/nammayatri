@@ -9,7 +9,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnTrack as ACL
 import qualified Core.ACL.Track as ACL
-import Core.Beckn (withCallback)
+import Core.Beckn (withCallback')
 import qualified Domain.Action.Beckn.Track as DTrack
 import Domain.Types.Merchant (Merchant)
 import Environment
@@ -35,6 +35,6 @@ track transporterId (SignatureAuthResult _ subscriber _) req =
     dTrackReq <- ACL.buildTrackReq subscriber req
     let context = req.context
     dTrackRes <- DTrack.track transporterId dTrackReq
-    withCallback dTrackRes.transporter Context.TRACK OnTrack.onTrackAPI context context.bap_uri $
+    withCallback' withShortRetry dTrackRes.transporter Context.TRACK OnTrack.onTrackAPI context context.bap_uri $
       -- there should be DOnTrack.onTrack, but it is empty anyway
       pure $ ACL.mkOnTrackMessage dTrackRes

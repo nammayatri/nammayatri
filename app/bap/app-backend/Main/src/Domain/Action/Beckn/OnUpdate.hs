@@ -74,6 +74,7 @@ onUpdate ::
     CoreMetrics m,
     HasBapInfo r m,
     HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
     HasFlowEnv
       m
       r
@@ -96,7 +97,7 @@ onUpdate registryUrl RideAssignedReq {..} = do
     QRide.create ride
     QPFS.updateStatus booking.riderId DPFS.RIDE_ASSIGNED {rideId = ride.id}
   Notify.notifyOnRideAssigned booking ride
-  withRetry $ CallBPP.callTrack booking ride
+  withLongRetry $ CallBPP.callTrack booking ride
   where
     buildRide :: MonadFlow m => SRB.Booking -> m SRide.Ride
     buildRide booking = do

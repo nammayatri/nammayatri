@@ -66,7 +66,11 @@ let slackCfg =
       , slackToken = common.slackToken
       }
 
-let httpClientOptions = { timeoutMs = +10000, maxRetries = +3 }
+let httpClientOptions = { timeoutMs = +10000 }
+
+let shortDurationRetryCfg = { maxRetries = +3, baseCoefficient = +2 }
+
+let longDurationRetryCfg = { maxRetries = +3, baseCoefficient = +4 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
@@ -118,6 +122,8 @@ in  { esqDBCfg
     , searchLimitExceedNotificationTemplate =
         "Customer with {#cust-id#} is exceeding the search limit."
     , httpClientOptions
+    , shortDurationRetryCfg
+    , longDurationRetryCfg
     , authTokenCacheExpiry = +600
     , registryUrl = common.registryUrl
     , gatewayUrl = gwUri

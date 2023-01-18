@@ -42,7 +42,7 @@ cancel ::
     HasHttpClientOptions r c,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
     CoreMetrics m
   ) =>
   Id DM.Merchant ->

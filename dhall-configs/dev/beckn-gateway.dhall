@@ -26,6 +26,8 @@ in  { hedisCfg = rcfg
         common.loggerConfig // { logFilePath = "/tmp/beckn-gateway.log" }
     , graceTerminationPeriod = +90
     , httpClientOptions = common.httpClientOptions
+    , shortDurationRetryCfg = common.shortDurationRetryCfg
+    , longDurationRetryCfg = common.longDurationRetryCfg
     , registryUrl = common.registryUrl
     , disableSignatureAuth = False
     }

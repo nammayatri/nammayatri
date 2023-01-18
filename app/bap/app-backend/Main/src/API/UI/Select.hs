@@ -41,7 +41,7 @@ select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dSelectReq <- DSelect.select personId estimateId
   becknReq <- ACL.buildSelectReq dSelectReq
-  void $ withRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+  void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
 selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes

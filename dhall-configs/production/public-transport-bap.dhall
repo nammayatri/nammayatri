@@ -53,6 +53,8 @@ in  { esqDBCfg
     , metricsSearchDurationTimeout = +45
     , hostName = "localhost"
     , httpClientOptions = common.httpClientOptions
+    , shortDurationRetryCfg = common.shortDurationRetryCfg
+    , longDurationRetryCfg = common.longDurationRetryCfg
     , registryUrl = common.registryUrl
     , kafkaProducerCfg
     }

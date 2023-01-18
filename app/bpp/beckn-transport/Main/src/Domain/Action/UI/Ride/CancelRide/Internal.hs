@@ -36,6 +36,8 @@ cancelRideImpl ::
     HedisFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasDriverPoolConfig r,
     CoreMetrics m

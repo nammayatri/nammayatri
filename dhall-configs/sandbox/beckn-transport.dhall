@@ -58,7 +58,11 @@ let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 let driverLocationUpdateRateLimitOptions =
       { limit = +10, limitResetTimeInSec = +40 }
 
-let httpClientOptions = { timeoutMs = +2000, maxRetries = +3 }
+let httpClientOptions = { timeoutMs = +2000 }
+
+let shortDurationRetryCfg = { maxRetries = +3, baseCoefficient = +2 }
+
+let longDurationRetryCfg = { maxRetries = +3, baseCoefficient = +4 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
@@ -93,6 +97,8 @@ in  { esqDBCfg
     , graceTerminationPeriod = +90
     , apiRateLimitOptions
     , httpClientOptions = common.httpClientOptions
+    , shortDurationRetryCfg = common.shortDurationRetryCfg
+    , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
     , minimumDriverRatesCount = +5
     , recalculateFareEnabled = True

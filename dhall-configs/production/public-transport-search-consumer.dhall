@@ -23,6 +23,8 @@ in  { esqDBCfg = main.esqDBCfg
     , bapURI = main.selfURI
     , gatewayUrl = juspayGatewayUrl
     , httpClientOptions = main.httpClientOptions
+    , shortDurationRetryCfg = main.shortDurationRetryCfg
+    , longDurationRetryCfg = main.longDurationRetryCfg
     , authEntity = main.authEntity
     , kafkaConsumerCfgs
     }

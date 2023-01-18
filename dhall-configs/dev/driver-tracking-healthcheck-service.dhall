@@ -10,6 +10,8 @@ in  { driverAllowedDelay = +300
             appCfg.loggerConfig
         //  { logFilePath = "/tmp/driver-tracking-healthcheck.log" }
     , httpClientOptions = appCfg.httpClientOptions
+    , shortDurationRetryCfg = appCfg.shortDurationRetryCfg
+    , longDurationRetryCfg = appCfg.longDurationRetryCfg
     , graceTerminationPeriod = appCfg.graceTerminationPeriod
     , hedisCfg = appCfg.hedisCfg
     , esqDBCfg = appCfg.esqDBCfg

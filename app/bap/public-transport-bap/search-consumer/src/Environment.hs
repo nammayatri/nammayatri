@@ -6,7 +6,7 @@ import Beckn.Types.Common
 import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
-import Beckn.Utils.Servant.Client (HttpClientOptions)
+import Beckn.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
 import Tools.Metrics
@@ -21,6 +21,8 @@ data AppCfg = AppCfg
     bapURI :: BaseUrl,
     gatewayUrl :: BaseUrl,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     authEntity :: AuthenticatingEntity',
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
@@ -34,6 +36,8 @@ data AppEnv = AppEnv
     bapURI :: BaseUrl,
     gatewayUrl :: BaseUrl,
     httpClientOptions :: HttpClientOptions,
+    shortDurationRetryCfg :: RetryCfg,
+    longDurationRetryCfg :: RetryCfg,
     authEntity :: AuthenticatingEntity',
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,

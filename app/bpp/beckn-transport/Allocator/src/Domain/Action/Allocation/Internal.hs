@@ -284,6 +284,8 @@ cancelBooking ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasLongDurationRetryCfg r c,
     CoreMetrics m
   ) =>
   Id SRB.Booking ->

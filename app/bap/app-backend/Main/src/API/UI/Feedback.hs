@@ -33,5 +33,5 @@ feedback :: Id Person.Person -> DFeedback.FeedbackReq -> App.FlowHandler APISucc
 feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dFeedbackRes <- DFeedback.feedback request
   becknReq <- ACL.buildRatingReq dFeedbackRes
-  void $ withRetry $ CallBPP.feedback dFeedbackRes.providerUrl becknReq
+  void $ withLongRetry $ CallBPP.feedback dFeedbackRes.providerUrl becknReq
   pure Success

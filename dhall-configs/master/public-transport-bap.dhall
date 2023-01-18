@@ -55,6 +55,8 @@ in  { esqDBCfg
     , disableSignatureAuth = False
     , hostName = "juspay.in"
     , httpClientOptions = common.httpClientOptions
+    , shortDurationRetryCfg = common.shortDurationRetryCfg
+    , longDurationRetryCfg = common.longDurationRetryCfg
     , registryUrl = common.registryUrl
     , kafkaProducerCfg
     }
