@@ -349,4 +349,3 @@ getWaitingTimeThreshold ServiceHandle {..} = do
   transporterConfig <- getConfig
   (mbThresholdConfig, defaultThreshold) <- (transporterConfig.waitingTimeEstimatedThreshold,) <$> getDefaultRideTimeEstimatedThreshold
   pure $ fromMaybe defaultThreshold mbThresholdConfig
-
