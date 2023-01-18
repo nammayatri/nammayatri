@@ -6,6 +6,7 @@ module SharedLogic.CallBAP
     sendRideCompletedUpdateToBAP,
     sendBookingCancelledUpdateToBAP,
     sendBookingReallocationUpdateToBAP,
+    sendDriverArrivalUpdateToBAP,
     buildBppUrl,
   )
 where
@@ -160,3 +161,24 @@ buildBppUrl ::
 buildBppUrl (Id transporterId) =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
+
+sendDriverArrivalUpdateToBAP ::
+  ( HasCacheConfig r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HedisFlow m r,
+    HasHttpClientOptions r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  SRB.Booking ->
+  SRide.Ride ->
+  Maybe UTCTime ->
+  m ()
+sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
+  transporter <-
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  let driverArrivedBuildReq = ACL.DriverArrivedBuildReq {ride, arrivalTime}
+  driverArrivedMsg <- ACL.buildOnUpdateMessage driverArrivedBuildReq
+  void $ callOnUpdate transporter booking driverArrivedMsg

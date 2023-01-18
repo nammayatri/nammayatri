@@ -31,6 +31,7 @@ data Estimate = Estimate
     createdAt :: UTCTime,
     estimateBreakupList :: [EstimateBreakup],
     nightShiftRate :: Maybe NightShiftRate,
+    waitingCharges :: WaitingCharges,
     driversLocation :: [LatLong]
   }
   deriving (Generic, Show)
@@ -78,7 +79,14 @@ data EstimateAPIEntity = EstimateAPIEntity
     createdAt :: UTCTime,
     estimateFareBreakup :: [EstimateBreakupAPIEntity],
     nightShiftRate :: Maybe NightShiftRate,
+    waitingCharges :: WaitingCharges,
     driversLatLong :: [LatLong]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data WaitingCharges = WaitingCharges
+  { waitingTimeEstimatedThreshold :: Maybe Seconds,
+    waitingChargePerMin :: Maybe Money
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

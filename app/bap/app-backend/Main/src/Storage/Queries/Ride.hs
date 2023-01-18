@@ -95,3 +95,14 @@ findAllByRBId bookingId =
     where_ $ ride ^. RideBookingId ==. val (toKey bookingId)
     orderBy [desc $ ride ^. RideCreatedAt]
     return ride
+
+updateDriverArrival :: Id Ride -> SqlDB ()
+updateDriverArrival rideId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RideDriverArrivalTime =. val (Just now),
+        RideUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RideTId ==. val (toKey rideId)

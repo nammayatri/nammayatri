@@ -42,6 +42,8 @@ mkPersist
       nightShiftMultiplier Centesimal Maybe
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
+      waitingChargePerMin Money Maybe
+      waitingTimeEstimatedThreshold Seconds Maybe
       createdAt UTCTime
       Primary id
       deriving Generic

@@ -57,6 +57,11 @@ data OnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         reallocationSource :: SBCR.CancellationSource
       }
+  | DriverArrivedReq
+      { bppBookingId :: Id SRB.BPPBooking,
+        bppRideId :: Id SRide.BPPRide,
+        arrivalTime :: Maybe UTCTime
+      }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
   { amount :: HighPrecMoney,
@@ -107,6 +112,7 @@ onUpdate registryUrl RideAssignedReq {..} = do
             fare = Nothing,
             totalFare = Nothing,
             chargeableDistance = Nothing,
+            driverArrivalTime = Nothing,
             vehicleVariant = booking.vehicleVariant,
             createdAt = now,
             updatedAt = now,
@@ -207,6 +213,17 @@ onUpdate registryUrl BookingReallocationReq {..} = do
     QBCR.upsert bookingCancellationReason
   -- notify customer
   Notify.notifyOnBookingReallocated booking
+onUpdate registryUrl DriverArrivedReq {..} = do
+  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  merchant <- QMerch.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "The ride has already started."
+  unless (isJust ride.driverArrivalTime) $
+    DB.runTransaction $ do
+      QRide.updateDriverArrival ride.id
+  where
+    isValidRideStatus status = status == SRide.NEW
 
 buildBookingCancellationReason ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) =>

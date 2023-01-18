@@ -73,6 +73,8 @@ mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
             night_shift_multiplier = Nothing,
             night_shift_start = Nothing,
             night_shift_end = Nothing,
+            waiting_charge_per_min = Nothing, -- figure out how to send
+            waiting_time_estimated_threshold = Nothing,
             drivers_location = []
           }
   OnSearch.Item

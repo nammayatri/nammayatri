@@ -86,6 +86,13 @@ parseEvent (OnUpdate.BookingReallocation rbrEvent) =
         bppRideId = Id rbrEvent.fulfillment.id,
         reallocationSource = castCancellationSource rbrEvent.reallocation_reason
       }
+parseEvent (OnUpdate.DriverArrived daEvent) =
+  return $
+    DOnUpdate.DriverArrivedReq
+      { bppBookingId = Id daEvent.id,
+        bppRideId = Id daEvent.fulfillment.id,
+        arrivalTime = daEvent.arrival_time
+      }
 
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
 castCancellationSource = \case

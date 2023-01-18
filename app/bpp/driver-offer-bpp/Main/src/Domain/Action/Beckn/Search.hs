@@ -50,7 +50,13 @@ data EstimateItem = EstimateItem
     maxFare :: Money,
     estimateBreakupList :: [BreakupItem],
     nightShiftRate :: Maybe NightShiftRate,
+    waitingCharges :: WaitingCharges,
     driversLatLong :: [LatLong]
+  }
+
+data WaitingCharges = WaitingCharges
+  { waitingTimeEstimatedThreshold :: Maybe Seconds,
+    waitingChargePerMin :: Maybe Money
   }
 
 data NightShiftRate = NightShiftRate
@@ -170,7 +176,12 @@ mkEstimate org startTime dist driverpool (farePolicy, driverMetadata) = do
               { nightShiftMultiplier = fareParams.nightShiftRate,
                 nightShiftStart = farePolicy.nightShiftStart,
                 nightShiftEnd = farePolicy.nightShiftEnd
-              }
+              },
+        waitingCharges =
+          WaitingCharges
+            { waitingTimeEstimatedThreshold = farePolicy.waitingTimeEstimatedThreshold,
+              waitingChargePerMin = farePolicy.waitingChargePerMin
+            }
       }
 
 mkBreakupListItems ::

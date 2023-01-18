@@ -9,6 +9,7 @@ module Domain.Action.Beckn.OnSearch
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
     NightShiftInfo (..),
+    WaitingChargesInfo (..),
     onSearch,
   )
 where
@@ -59,6 +60,7 @@ data EstimateInfo = EstimateInfo
     descriptions :: [Text],
     estimateBreakupList :: [EstimateBreakupInfo],
     nightShiftRate :: Maybe NightShiftInfo,
+    waitingCharges :: Maybe WaitingChargesInfo,
     driversLocation :: [LatLong]
   }
 
@@ -66,6 +68,11 @@ data NightShiftInfo = NightShiftInfo
   { nightShiftMultiplier :: Maybe Centesimal,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay
+  }
+
+data WaitingChargesInfo = WaitingChargesInfo
+  { waitingTimeEstimatedThreshold :: Maybe Seconds,
+    waitingChargePerMin :: Maybe Money
   }
 
 data EstimateBreakupInfo = EstimateBreakupInfo
@@ -157,6 +164,11 @@ buildEstimate requestId providerInfo now EstimateInfo {..} = do
                 nightShiftStart = nightShiftRate >>= (.nightShiftStart),
                 nightShiftEnd = nightShiftRate >>= (.nightShiftEnd)
               },
+        waitingCharges =
+          DEstimate.WaitingCharges
+            { waitingChargePerMin = waitingCharges >>= (.waitingChargePerMin),
+              waitingTimeEstimatedThreshold = waitingCharges >>= (.waitingTimeEstimatedThreshold)
+            },
         ..
       }
 

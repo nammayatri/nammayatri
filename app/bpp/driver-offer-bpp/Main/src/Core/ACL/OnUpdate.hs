@@ -8,6 +8,7 @@ import Beckn.Prelude
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent as DriverArrivedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent as RideAssignedOU
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
@@ -38,6 +39,10 @@ data OnUpdateBuildReq
   | BookingCancelledBuildReq
       { booking :: SRB.Booking,
         cancellationSource :: SBCR.CancellationSource
+      }
+  | DriverArrivedBuildReq
+      { ride :: DRide.Ride,
+        arrivalTime :: Maybe UTCTime
       }
 
 buildOnUpdateMessage ::
@@ -133,6 +138,16 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
             state = "CANCELLED",
             update_target = "state,fufillment.state.code",
             cancellation_reason = castCancellationSource cancellationSource
+          }
+buildOnUpdateMessage DriverArrivedBuildReq {..} = do
+  return $
+    OnUpdate.OnUpdateMessage $
+      OnUpdate.DriverArrived
+        DriverArrivedOU.DriverArrivedEvent
+          { id = ride.bookingId.getId,
+            update_target = "state,fufillment.state.code",
+            fulfillment = DriverArrivedOU.FulfillmentInfo ride.id.getId,
+            arrival_time = arrivalTime
           }
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource

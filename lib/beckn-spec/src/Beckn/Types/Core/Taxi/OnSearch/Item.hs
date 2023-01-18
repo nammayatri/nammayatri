@@ -93,6 +93,8 @@ data ItemTags = ItemTags
     night_shift_multiplier :: Maybe DecimalValue,
     night_shift_start :: Maybe TimeOfDay,
     night_shift_end :: Maybe TimeOfDay,
+    waiting_time_estimated_threshold :: Maybe Seconds,
+    waiting_charge_per_min :: Maybe Money,
     drivers_location :: [LatLong]
   }
   deriving (Generic, Show)
@@ -114,5 +116,7 @@ itemTagsJSONOptions =
         "night_shift_multiplier" -> "./komn/night_shift_multiplier"
         "night_shift_start" -> "./komn/night_shift_start"
         "night_shift_end" -> "./komn/night_shift_end"
+        "waiting_time_estimated_threshold" -> "./komn/waiting_time_estimated_threshold"
+        "waiting_charge_per_min" -> "./komn/waiting_charge_per_min"
         a -> a
     }

@@ -36,6 +36,10 @@ instance TType FullEstimateT Domain.Estimate where
               Domain.NightShiftRate
                 { ..
                 },
+          waitingCharges =
+            Domain.WaitingCharges
+              { ..
+              },
           ..
         }
   toTType Domain.Estimate {..} = do
@@ -55,6 +59,8 @@ instance TType FullEstimateT Domain.Estimate where
               nightShiftStart = nightShiftRate >>= (.nightShiftStart),
               nightShiftEnd = nightShiftRate >>= (.nightShiftEnd),
               driversLocation = PostgresList driversLocation,
+              waitingChargePerMin = waitingCharges.waitingChargePerMin,
+              waitingTimeEstimatedThreshold = waitingCharges.waitingTimeEstimatedThreshold,
               ..
             }
     let mbTripTermsT = toTType <$> tripTerms

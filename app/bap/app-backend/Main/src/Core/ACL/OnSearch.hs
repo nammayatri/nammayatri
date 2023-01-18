@@ -84,6 +84,7 @@ buildEstimateOrQuoteInfo item = do
       estimateBreakupList = buildEstimateBreakUpList <$> item.price.value_breakup
       descriptions = item.quote_terms
       nightShiftRate = buildNightShiftRate <$> item.tags
+      waitingCharges = buildWaitingChargeInfo <$> item.tags
       driversLocation = fromMaybe [] $ item.tags <&> (.drivers_location)
   validatePrices estimatedFare estimatedTotalFare
 
@@ -163,4 +164,13 @@ buildNightShiftRate itemTags = do
     { nightShiftMultiplier = realToFrac <$> itemTags.night_shift_multiplier,
       nightShiftStart = itemTags.night_shift_start,
       nightShiftEnd = itemTags.night_shift_end
+    }
+
+buildWaitingChargeInfo ::
+  OnSearch.ItemTags ->
+  DOnSearch.WaitingChargesInfo
+buildWaitingChargeInfo itemTags = do
+  DOnSearch.WaitingChargesInfo
+    { waitingChargePerMin = itemTags.waiting_charge_per_min,
+      waitingTimeEstimatedThreshold = itemTags.waiting_time_estimated_threshold
     }

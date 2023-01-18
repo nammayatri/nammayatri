@@ -5,6 +5,7 @@ where
 
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingReallocationEvent
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
@@ -19,6 +20,7 @@ data OnUpdateEvent
   | RideCompleted RideCompletedEvent
   | BookingCancelled BookingCancelledEvent
   | BookingReallocation BookingReallocationEvent
+  | DriverArrived DriverArrivedEvent
   deriving (Generic, Show)
 
 instance ToJSON OnUpdateEvent where

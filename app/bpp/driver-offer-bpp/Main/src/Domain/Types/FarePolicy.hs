@@ -1,7 +1,7 @@
 module Domain.Types.FarePolicy where
 
 import Beckn.Prelude
-import Beckn.Types.Common (Centesimal, HighPrecMoney, Meters, Money)
+import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Domain.Types.Common
 import qualified Domain.Types.Merchant as DM
@@ -22,6 +22,7 @@ data FarePolicyD (s :: UsageSafety) = FarePolicy
     maxAllowedTripDistance :: Maybe Meters,
     minAllowedTripDistance :: Maybe Meters,
     waitingChargePerMin :: Maybe Money,
+    waitingTimeEstimatedThreshold :: Maybe Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

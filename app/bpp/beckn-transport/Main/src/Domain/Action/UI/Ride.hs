@@ -22,6 +22,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import Domain.Types.Vehicle as VD
+import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
@@ -111,7 +112,7 @@ mkDriverRideRes rideDetails driverNumber (ride, booking) = do
       chargeableDistance = ride.chargeableDistance
     }
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, CoreMetrics m, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
@@ -120,9 +121,10 @@ arrivedAtPickup rideId req = do
   let distance = distanceBetweenInMeters req pickupLoc
   driverReachedDistance <- asks (.driverReachedDistance)
   unless (distance < driverReachedDistance) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
-  unless (isJust ride.driverArrivalTime) $
+  unless (isJust ride.driverArrivalTime) $ do
     Esq.runTransaction $ do
       QRide.updateArrival rideId
+    BP.sendDriverArrivalUpdateToBAP booking ride ride.driverArrivalTime
   pure Success
   where
     isValidRideStatus status = status == DRide.NEW

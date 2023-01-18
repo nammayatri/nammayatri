@@ -120,6 +120,8 @@ mkQuoteEntities start end it = do
                     night_shift_multiplier = OS.DecimalValue . toRational <$> ((.nightShiftMultiplier) =<< it.nightShiftRate),
                     night_shift_start = (.nightShiftStart) =<< it.nightShiftRate,
                     night_shift_end = (.nightShiftEnd) =<< it.nightShiftRate,
+                    waiting_charge_per_min = it.waitingCharges.waitingChargePerMin,
+                    waiting_time_estimated_threshold = it.waitingCharges.waitingTimeEstimatedThreshold,
                     drivers_location = it.driversLatLong
                   },
             base_distance = Nothing,

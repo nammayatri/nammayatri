@@ -9,7 +9,7 @@ module Storage.Tabular.FarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Centesimal, HighPrecMoney, Meters, Money)
+import Beckn.Types.Common (Centesimal, HighPrecMoney, Meters, Money, Seconds)
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -39,6 +39,7 @@ mkPersist
       minAllowedTripDistance Meters Maybe
 
       waitingChargePerMin Money Maybe
+      waitingTimeEstimatedThreshold Seconds Maybe
 
       createdAt UTCTime
       updatedAt UTCTime

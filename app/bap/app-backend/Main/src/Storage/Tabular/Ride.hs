@@ -39,6 +39,7 @@ mkPersist
       fare HighPrecMoney Maybe
       totalFare HighPrecMoney Maybe
       chargeableDistance HighPrecMeters Maybe
+      driverArrivalTime UTCTime Maybe
       rideStartTime UTCTime Maybe
       rideEndTime UTCTime Maybe
       rideRating Int Maybe
