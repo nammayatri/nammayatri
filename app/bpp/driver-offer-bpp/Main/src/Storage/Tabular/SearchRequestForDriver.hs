@@ -44,6 +44,8 @@ mkPersist
       driverMinExtraFee Money
       driverMaxExtraFee Money
       rideRequestPopupDelayDuration Seconds
+      isPartOfIntelligentPool Bool
+      cancellationRatio Double Maybe
       Primary id
       deriving Generic
     |]

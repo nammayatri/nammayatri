@@ -97,6 +97,8 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
                 driverMinExtraFee = driverMinExtraCharge,
                 driverMaxExtraFee = driverMaxExtraCharge,
                 rideRequestPopupDelayDuration = dpwRes.rideRequestPopupDelayDuration,
+                isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,
+                cancellationRatio = dpwRes.cancellationRatio,
                 ..
               }
       pure searchRequestForDriver

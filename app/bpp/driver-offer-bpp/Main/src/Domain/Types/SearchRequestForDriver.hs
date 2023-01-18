@@ -42,7 +42,9 @@ data SearchRequestForDriver = SearchRequestForDriver
     response :: Maybe SearchRequestForDriverResponse,
     driverMinExtraFee :: Money,
     driverMaxExtraFee :: Money,
-    rideRequestPopupDelayDuration :: Seconds
+    rideRequestPopupDelayDuration :: Seconds,
+    isPartOfIntelligentPool :: Bool,
+    cancellationRatio :: Maybe Double
   }
   deriving (Generic, Show, PrettyShow)
 

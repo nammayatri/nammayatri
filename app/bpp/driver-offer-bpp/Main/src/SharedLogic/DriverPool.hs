@@ -298,5 +298,7 @@ computeActualDistance orgId pickup driverPoolResults = do
         { driverPoolResult = distDur.origin,
           actualDistanceToPickup = distDur.distance,
           actualDurationToPickup = distDur.duration,
-          rideRequestPopupDelayDuration = rideRequestPopupConfig.defaultPopupDelay
+          rideRequestPopupDelayDuration = rideRequestPopupConfig.defaultPopupDelay,
+          cancellationRatio = Nothing,
+          isPartOfIntelligentPool = False
         }

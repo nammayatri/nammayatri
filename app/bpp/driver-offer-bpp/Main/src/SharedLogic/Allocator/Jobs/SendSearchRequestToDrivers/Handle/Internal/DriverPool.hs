@@ -211,14 +211,19 @@ sortWithDriverScore merchantId (Just transporterConfig) dp = do
   logTagInfo "Driver Cancellation Score" $ show driverCancellationScore
   logTagInfo "Driver Availability Score" $ show driverAvailabilityScore
   logTagInfo "Overall Score" $ show (map (second getDriverId) overallScore)
-  pure $ map (delayGuysCancellingMore rideRequestPopupConfig $ HM.fromList cancellationRatios) sortedDriverPool
+  pure $ map (updateDriverPoolResult rideRequestPopupConfig $ HM.fromList cancellationRatios) sortedDriverPool
   where
-    delayGuysCancellingMore rideRequestPopupConfig cancellationRatioMap (_, dObj) =
+    updateDriverPoolResult rideRequestPopupConfig cancellationRatioMap (_, dObj) =
       maybe
         dObj
-        (addDelay rideRequestPopupConfig dObj)
+        (addIntelligentPoolInfo rideRequestPopupConfig dObj)
         (HM.lookup (getDriverId dObj) cancellationRatioMap)
-    addDelay rideRequestPopupConfig dObj cancellationRatio = dObj {rideRequestPopupDelayDuration = rideRequestPopupConfig.defaultPopupDelay + getPopupDelayToAdd cancellationRatio rideRequestPopupConfig}
+    addIntelligentPoolInfo rideRequestPopupConfig dObj cancellationRatio =
+      dObj
+        { rideRequestPopupDelayDuration = rideRequestPopupConfig.defaultPopupDelay + getPopupDelayToAdd cancellationRatio rideRequestPopupConfig,
+          isPartOfIntelligentPool = True,
+          cancellationRatio = Just cancellationRatio
+        }
     calculateOverallScore scoresList = map (\dObj -> (,dObj) . sum $ mapMaybe (HM.lookup (getDriverId dObj)) scoresList) dp
     getRatios fn arr = mapM (\dId -> (dId.getId,) <$> fn dId) arr
     getDriverId = getId . (.driverPoolResult.driverId)
