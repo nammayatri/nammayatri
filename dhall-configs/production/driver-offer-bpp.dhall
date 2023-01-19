@@ -78,7 +78,7 @@ let smsConfig =
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let driverLocationUpdateRateLimitOptions =
-      { limit = +8, limitResetTimeInSec = +40 }
+      { limit = +2, limitResetTimeInSec = +3 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
@@ -98,28 +98,61 @@ let driverPoolCfg =
       , radiusStepSize = +500
       , driverPositionInfoExpiry = Some +180
       , intelligentPoolPercentage = Some +50
-      , actualDistanceThreshold = Some +1900
+      , actualDistanceThreshold = Some +1750
       , maxDriverQuotesRequired = +1
       , driverQuoteLimit = +2
       }
 
 let overrideDriverPoolCfg =
-      [ { configRange = { startDistance = +0, endDistance = None Integer }
-        , driverPoolCfg
+      [ { configRange = { startDistance = +0, endDistance = Some +4000 }
+        , driverPoolCfg =
+          { minRadiusOfSearch = +250
+          , maxRadiusOfSearch = +1000
+          , radiusStepSize = +250
+          , driverPositionInfoExpiry = Some +180
+          , intelligentPoolPercentage = Some +50
+          , actualDistanceThreshold = Some +1000
+          , maxDriverQuotesRequired = +1
+          , driverQuoteLimit = +2
+          }
+        }
+      , { configRange = { startDistance = +4001, endDistance = Some +9000 }
+        , driverPoolCfg =
+          { minRadiusOfSearch = +300
+          , maxRadiusOfSearch = +1275
+          , radiusStepSize = +325
+          , driverPositionInfoExpiry = Some +180
+          , intelligentPoolPercentage = Some +50
+          , actualDistanceThreshold = Some +1250
+          , maxDriverQuotesRequired = +1
+          , driverQuoteLimit = +2
+          }
+        }
+      , { configRange = { startDistance = +9001, endDistance = Some +14000 }
+        , driverPoolCfg =
+          { minRadiusOfSearch = +400
+          , maxRadiusOfSearch = +1600
+          , radiusStepSize = +400
+          , driverPositionInfoExpiry = Some +180
+          , intelligentPoolPercentage = Some +50
+          , actualDistanceThreshold = Some +1500
+          , maxDriverQuotesRequired = +1
+          , driverQuoteLimit = +2
+          }
         }
       ]
 
 let PoolSortingType = < Intelligent | Random >
 
 let driverPoolBatchesCfg =
-      { driverBatchSize = +20
-      , maxNumberOfBatches = +1
+      { driverBatchSize = +10
+      , maxNumberOfBatches = +3
       , minDriverBatchSize = +3
       , poolSortingType = PoolSortingType.Random
       }
 
 let intelligentPoolConfig =
-      { minQuotesToQualifyForIntelligentPool = +5
+      { minQuotesToQualifyForIntelligentPool = +20
       , minQuotesToQualifyForIntelligentPoolWindowOption =
         { period = +24, periodType = common.periodType.Hours }
       }
@@ -127,7 +160,7 @@ let intelligentPoolConfig =
 let sendSearchRequestJobCfg =
       { driverPoolBatchesCfg, singleBatchProcessTime = +30 }
 
-let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
+let kafkaProducerCfg = { brokers = [] : List Text }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -184,6 +217,6 @@ in  { esqDBCfg
     , rideRequestPopupConfig
     , overrideDriverPoolCfg = Some overrideDriverPoolCfg
     , sendSearchRequestJobCfg
-    , driverLocationUpdateTopic = "location-updates"
+    , driverLocationUpdateTopic = "location-updates-production"
     , kafkaProducerCfg
     }
