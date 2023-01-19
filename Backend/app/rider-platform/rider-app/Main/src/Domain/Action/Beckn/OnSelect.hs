@@ -30,7 +30,6 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
@@ -73,19 +72,13 @@ data DriverOfferQuoteDetails = DriverOfferQuoteDetails
   deriving (Generic, Show)
 
 onSelect ::
-  BaseUrl ->
   DOnSelectReq ->
   Flow ()
-onSelect registryUrl DOnSelectReq {..} = do
+onSelect DOnSelectReq {..} = do
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   searchRequest <-
     QSR.findById estimate.requestId
       >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
-
-  -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
-  unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
-
   let personId = searchRequest.riderId
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime

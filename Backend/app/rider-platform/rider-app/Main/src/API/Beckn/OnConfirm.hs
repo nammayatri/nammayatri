@@ -33,11 +33,11 @@ onConfirm ::
   SignatureAuthResult ->
   OnConfirm.OnConfirmReq ->
   FlowHandler AckResponse
-onConfirm (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnConfirmReq <- ACL.buildOnConfirmReq req
   whenJust mbDOnConfirmReq $ \onConfirmReq ->
     Redis.whenWithLockRedis (onConfirmLockKey onConfirmReq.bppBookingId.getId) 60 $
-      DOnConfirm.onConfirm registryUrl onConfirmReq
+      DOnConfirm.onConfirm onConfirmReq
   pure Ack
 
 onConfirmLockKey :: Text -> Text

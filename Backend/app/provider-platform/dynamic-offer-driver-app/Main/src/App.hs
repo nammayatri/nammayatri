@@ -30,7 +30,7 @@ import Kernel.Utils.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
-import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt)
+import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -40,7 +40,6 @@ import Network.Wai.Handler.Warp
   )
 import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
-import Tools.SignatureAuth
 
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
@@ -75,7 +74,7 @@ runDynamicOfferDriverApp' appCfg = do
           addAuthManagersToFlowRt
             flowRt
             $ catMaybes
-              [ Just (Nothing, prepareAuthManagersWithRegistryUrl flowRt appEnv allSubscriberIds),
+              [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
                 (Nothing,) <$> mkS3MbManager flowRt appEnv appCfg.s3Config,
                 Just (Just 20000, prepareIdfyHttpManager 20000)
               ]

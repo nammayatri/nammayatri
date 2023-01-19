@@ -132,7 +132,7 @@ oneWaySearch ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
-    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "gatewayUrl" ::: BaseUrl],
+    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasBAPMetrics m r,
     MonadProducer PublicTransportSearch m
   ) =>
@@ -160,7 +160,7 @@ oneWaySearch personId bundleVersion clientVersion req = do
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
   fork "search metro" . withShortRetry $ do
     becknMetroReq <- MetroACL.buildSearchReq dSearchRes
-    CallBPP.searchMetro becknMetroReq
+    CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
   return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, shortestRouteInfo)
 
@@ -187,7 +187,7 @@ rentalSearch ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
-    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "gatewayUrl" ::: BaseUrl],
+    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
     HasBAPMetrics m r
   ) =>
   Id Person.Person ->

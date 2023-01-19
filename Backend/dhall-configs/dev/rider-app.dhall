@@ -63,8 +63,6 @@ let InfoBIPConfig =
 
 let WebengageConfig = { url = "https://st.in.webengage.com" }
 
-let gwUri = "http://localhost:8015/v1"
-
 let apiRateLimitOptions = { limit = +8000, limitResetTimeInSec = +1 }
 
 let searchRateLimitOptions = { limit = +8000, limitResetTimeInSec = +1 }
@@ -130,7 +128,6 @@ in  { esqDBCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
     , registryUrl = common.registryUrl
-    , gatewayUrl = gwUri
     , disableSignatureAuth = False
     , encTools
     , kafkaProducerCfg

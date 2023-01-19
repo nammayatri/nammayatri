@@ -36,10 +36,10 @@ onSearch ::
   SignatureAuthResult ->
   OnSearch.OnSearchReq ->
   FlowHandler AckResponse
-onSearch (SignatureAuthResult _ _ registryUrl) _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onSearch _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnSearchReq <- TaxiACL.buildOnSearchReq req
   Redis.whenWithLockRedis (onSearchLockKey req.context.message_id) 60 $
-    DOnSearch.onSearch registryUrl req.context.message_id mbDOnSearchReq
+    DOnSearch.onSearch req.context.message_id mbDOnSearchReq
   pure Ack
 
 onSearchLockKey :: Text -> Text

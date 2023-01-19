@@ -32,11 +32,11 @@ onUpdate ::
   SignatureAuthResult ->
   OnUpdate.OnUpdateReq ->
   FlowHandler AckResponse
-onUpdate (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onUpdate _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnUpdateReq <- ACL.buildOnUpdateReq req
   whenJust mbDOnUpdateReq $ \onUpdateReq ->
     Redis.whenWithLockRedis (onUpdateLockKey req.context.message_id) 60 $
-      DOnUpdate.onUpdate registryUrl onUpdateReq
+      DOnUpdate.onUpdate onUpdateReq
   pure Ack
 
 onUpdateLockKey :: Text -> Text
