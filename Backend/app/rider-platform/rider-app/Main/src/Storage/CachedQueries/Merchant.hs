@@ -17,6 +17,7 @@
 module Storage.CachedQueries.Merchant
   ( findById,
     findByShortId,
+    findBySubscriberId,
     findByExoPhone,
     update,
     clearCache,
@@ -30,6 +31,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
@@ -50,6 +52,17 @@ findByShortId shortId_ =
         Nothing -> findAndCache
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId_
+
+findBySubscriberId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId subscriberId =
+  Hedis.get (makeSubscriberIdKey subscriberId) >>= \case
+    Nothing -> findAndCache
+    Just id ->
+      Hedis.get (makeIdKey id) >>= \case
+        Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
+        Nothing -> findAndCache
+  where
+    findAndCache = flip whenJust cacheMerchant /=<< Queries.findBySubscriberId subscriberId
 
 findByExoPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Merchant)
 findByExoPhone exoPhone =
@@ -76,6 +89,7 @@ cacheMerchant merchant = do
   let idKey = makeIdKey merchant.id
   Hedis.setExp idKey (coerce @Merchant @(MerchantD 'Unsafe) merchant) expTime
   Hedis.setExp (makeShortIdKey merchant.shortId) idKey expTime
+  Hedis.setExp (makeSubscriberIdKey merchant.subscriberId) idKey expTime
   forM_ merchant.exoPhones $ \exoPhone ->
     Hedis.setExp (makeExoPhoneKey exoPhone) idKey expTime
 
@@ -87,6 +101,9 @@ makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 
 makeExoPhoneKey :: Text -> Text
 makeExoPhoneKey phone = "CachedQueries:Merchant:ExoPhone-" <> phone
+
+makeSubscriberIdKey :: ShortId Subscriber -> Text
+makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> subscriberId.getShortId
 
 update :: Merchant -> Esq.SqlDB ()
 update = Queries.update

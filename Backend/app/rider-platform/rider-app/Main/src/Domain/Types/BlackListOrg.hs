@@ -21,6 +21,7 @@ import qualified Data.Text.Encoding as DT
 import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Types.Registry (Subscriber)
 import Servant.API
 
 data BlackListOrgType
@@ -36,7 +37,7 @@ instance FromHttpApiData BlackListOrgType where
 
 data BlackListOrgD (s :: UsageSafety) = BlackListOrg
   { id :: Id BlackListOrg,
-    shortId :: ShortId BlackListOrg,
+    subscriberId :: ShortId Subscriber,
     _type :: BlackListOrgType
   }
   deriving (Generic)

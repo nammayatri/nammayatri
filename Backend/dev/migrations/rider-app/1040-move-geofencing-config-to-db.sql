@@ -5,5 +5,4 @@ ALTER TABLE atlas_app.merchant ADD COLUMN destination_restriction text[];
 UPDATE atlas_app.merchant
 SET
   origin_restriction = '{"Ernakulam"}',
-  destination_restriction = '{"Ernakulam", "Kerala"}'
-WHERE id = 'da4e23a5-3ce6-4c37-8b9b-41377c3c1a51';
+  destination_restriction = '{"Ernakulam", "Kerala"}';

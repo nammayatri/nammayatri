@@ -25,6 +25,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (findById)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
 import Storage.Tabular.Merchant
 
@@ -36,6 +37,13 @@ findByShortId shortId_ = do
   findOne $ do
     merchant <- from $ table @MerchantT
     where_ $ merchant ^. MerchantShortId ==. val (getShortId shortId_)
+    return merchant
+
+findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId subscriberId = do
+  findOne $ do
+    merchant <- from $ table @MerchantT
+    where_ $ merchant ^. MerchantSubscriberId ==. val (getShortId subscriberId)
     return merchant
 
 findByExoPhone :: Transactionable m => Text -> m (Maybe Merchant)

@@ -86,4 +86,6 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = (.authEntity.signatureExpiry)
 
 instance Registry Flow where
-  registryLookup = Registry.registryLookup
+  registryLookup sReq = do
+    registryUrl <- asks (.registryUrl)
+    Registry.registryLookup registryUrl sReq

@@ -7,7 +7,7 @@ x-client-version: 1.0.0
 {
   "mobileCountryCode": "+91",
   "mobileNumber" : "7777777777",
-  "merchantId" : "YATRI"
+  "merchantId" : "JUSPAY.CABS.BAP"
 }
 
 ###

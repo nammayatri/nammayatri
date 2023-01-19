@@ -32,8 +32,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant
 -- testing data for dev env
 UPDATE atlas_driver_offer_bpp.merchant SET
   short_id = 'NAMMA_YATRI_PARTNER'
-  WHERE subscriber_id = 'JUSPAY.MOBILITY.PROVIDER.UAT.3';
+  WHERE subscriber_id = 'NAMMA_YATRI';
 
 UPDATE atlas_driver_offer_bpp.merchant SET
   short_id = 'OTHER_MERCHANT_2'
-  WHERE subscriber_id = 'JUSPAY.MOBILITY.PROVIDER.UAT.4';
+  WHERE subscriber_id = 'NAMMA_YATRI_2';
