@@ -180,7 +180,9 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = (.signatureExpiry)
 
 instance Registry Flow where
-  registryLookup = Registry.withSubscriberCache Registry.registryLookup
+  registryLookup sReq = do
+    registryUrl <- asks (.registryUrl)
+    Registry.withSubscriberCache (Registry.registryLookup registryUrl) sReq
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest

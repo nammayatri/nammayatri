@@ -15,7 +15,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.BlackListOrg
-  ( findByShortId,
+  ( findBySubscriberId,
   )
 where
 
@@ -25,22 +25,23 @@ import Domain.Types.Common
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.BlackListOrg as Queries
 
-findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId BlackListOrg -> m (Maybe BlackListOrg)
-findByShortId shortId_ =
-  Hedis.safeGet (makeShortIdKey shortId_) >>= \case
+findBySubscriberId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe BlackListOrg)
+findBySubscriberId subscriberId =
+  Hedis.safeGet (makeShortIdKey subscriberId) >>= \case
     Just a -> return . Just $ coerce @(BlackListOrgD 'Unsafe) @BlackListOrg a
     Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheOrganization /=<< Queries.findByShortId shortId_
+    findAndCache = flip whenJust cacheOrganization /=<< Queries.findBySubscriberId subscriberId
 
 cacheOrganization :: (CacheFlow m r) => BlackListOrg -> m ()
 cacheOrganization org = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeShortIdKey org.shortId) (coerce @BlackListOrg @(BlackListOrgD 'Unsafe) org) expTime
+  Hedis.setExp (makeShortIdKey org.subscriberId) (coerce @BlackListOrg @(BlackListOrgD 'Unsafe) org) expTime
 
-makeShortIdKey :: ShortId BlackListOrg -> Text
-makeShortIdKey shortId = "CachedQueries:BlackListOrg:ShortId-" <> shortId.getShortId
+makeShortIdKey :: ShortId Subscriber -> Text
+makeShortIdKey subscriberId = "CachedQueries:BlackListOrg:SubscriberId-" <> subscriberId.getShortId

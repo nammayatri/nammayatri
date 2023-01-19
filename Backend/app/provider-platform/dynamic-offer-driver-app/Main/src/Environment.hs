@@ -220,7 +220,9 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance Registry Flow where
-  registryLookup = Registry.withSubscriberCache Registry.registryLookup
+  registryLookup sReq = do
+    registryUrl <- asks (.registryUrl)
+    Registry.withSubscriberCache (Registry.registryLookup registryUrl) sReq
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "dynamic-offer-driver-app:registry:"

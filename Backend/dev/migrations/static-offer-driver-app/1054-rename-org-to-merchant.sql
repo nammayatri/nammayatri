@@ -45,7 +45,7 @@ UPDATE atlas_transporter.merchant SET
   short_id = 'YATRI_PARTNER'
   WHERE subscriber_id
   IN (
-      'JUSPAY.MOBILITY.PROVIDER.UAT.1',
+      'YATRI',
       'api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/565db72a-04d4-4211-90ae-c956461397b2',
       'api.beckn.juspay.in/bpp/cab/v1/3c5fa6ae-2e90-4bb9-818e-7bb109b4cca3',
       'api.sandbox.beckn.juspay.in/bpp/cab/v1/3041599b-2fcf-45e1-bfd5-115db5cd1353'
@@ -53,4 +53,4 @@ UPDATE atlas_transporter.merchant SET
 
 UPDATE atlas_transporter.merchant SET
   short_id = 'OTHER_MERCHANT'
-  WHERE subscriber_id = 'another-test-cabs';
+  WHERE subscriber_id = 'YATRI_2';
