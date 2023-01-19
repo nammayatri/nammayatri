@@ -41,8 +41,7 @@ import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
 search ::
-  ( HasField "gatewayUrl" r BaseUrl,
-    MonadFlow m,
+  ( MonadFlow m,
     CoreMetrics m,
     HasBapInfo r m
   ) =>
@@ -53,16 +52,15 @@ search gatewayUrl req = do
   callBecknAPIWithSignature "search" API.searchAPI gatewayUrl req
 
 searchMetro ::
-  ( HasField "gatewayUrl" r BaseUrl,
-    MonadFlow m,
+  ( MonadFlow m,
     CoreMetrics m,
     HasBapInfo r m
   ) =>
+  BaseUrl ->
   BecknReq MigAPI.SearchIntent ->
   m ()
-searchMetro req = do
-  url <- asks (.gatewayUrl)
-  void $ callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI url req
+searchMetro gatewayUrl req = do
+  void $ callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI gatewayUrl req
 
 select ::
   ( MonadFlow m,

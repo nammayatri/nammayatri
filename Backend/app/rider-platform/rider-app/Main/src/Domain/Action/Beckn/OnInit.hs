@@ -24,7 +24,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -52,14 +51,8 @@ data OnInitRes = OnInitRes
   }
   deriving (Generic, Show, PrettyShow)
 
-onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => BaseUrl -> OnInitReq -> m OnInitRes
-onInit registryUrl req = do
-  bookingOld <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
-
-  -- TODO: this supposed to be temporary solution. Check if we still need it
-  merchant <- QMerch.findById bookingOld.merchantId >>= fromMaybeM (MerchantNotFound bookingOld.merchantId.getId)
-  unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
-
+onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => OnInitReq -> m OnInitRes
+onInit req = do
   DB.runTransaction $ do
     QRideB.updateBPPBookingId req.bookingId req.bppBookingId
     QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare

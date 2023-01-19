@@ -50,7 +50,7 @@ initImpl ::
   SignatureAuthResult ->
   Init.InitReq ->
   FlowHandler AckResponse
-initImpl transporterId (SignatureAuthResult _ subscriber _) req =
+initImpl transporterId (SignatureAuthResult _ subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     dInitReq <- ACL.buildInitReq subscriber req
     Redis.whenWithLockRedis (initLockKey dInitReq.transactionId) 60 $ do
