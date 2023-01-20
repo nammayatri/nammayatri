@@ -47,7 +47,12 @@ type HasDriverPoolConfig r =
   ( HasField "driverPoolCfg" r DriverPoolConfig,
     HasField "overrideDriverPoolConfig" r [OverrideDriverPoolConfig],
     HasField "intelligentPoolConfig" r IntelligentPoolConfig,
-    HasField "rideRequestPopupConfig" r RideRequestPopupConfig
+    HasField "rideRequestPopupConfig" r RideRequestPopupConfig,
+    HasMaxParallelSearchRequests r
+  )
+
+type HasMaxParallelSearchRequests r =
+  ( HasField "maxParallelSearchRequests" r Int
   )
 
 getDriverPoolConfig :: (MonadFlow m, MonadReader r m, HasDriverPoolConfig r) => Meters -> m DriverPoolConfig

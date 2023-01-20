@@ -54,6 +54,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     incrementTotalQuotesCount searchReq.providerId sReqFD.driverId
+    addSearchRequestValidTillToCache searchReq.id searchReq.providerId (cast sReqFD.driverId) validTill
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq dPoolRes.rideRequestPopupDelayDuration
@@ -99,6 +100,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
                 rideRequestPopupDelayDuration = dpwRes.rideRequestPopupDelayDuration,
                 isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,
                 cancellationRatio = dpwRes.cancellationRatio,
+                parallelSearchRequestCount = Just dpwRes.driverPoolResult.parallelSearchRequestCount,
                 ..
               }
       pure searchRequestForDriver

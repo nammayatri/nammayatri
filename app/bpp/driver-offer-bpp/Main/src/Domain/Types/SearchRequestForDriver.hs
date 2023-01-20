@@ -44,7 +44,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverMaxExtraFee :: Money,
     rideRequestPopupDelayDuration :: Seconds,
     isPartOfIntelligentPool :: Bool,
-    cancellationRatio :: Maybe Double
+    cancellationRatio :: Maybe Double,
+    parallelSearchRequestCount :: Maybe Int
   }
   deriving (Generic, Show, PrettyShow)
 

@@ -54,7 +54,8 @@ data HandlerEnv = HandlerEnv
     rideRequestPopupConfig :: RideRequestPopupConfig,
     overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
-    ssrMetrics :: SendSearchRequestToDriverMetricsContainer
+    ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
+    maxParallelSearchRequests :: Int
   }
   deriving (Generic)
 

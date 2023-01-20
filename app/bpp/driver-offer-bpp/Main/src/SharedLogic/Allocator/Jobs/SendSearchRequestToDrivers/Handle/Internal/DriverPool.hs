@@ -65,29 +65,35 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
   where
     prepareDriverPoolBatch' previousBatchesDrivers = do
       radiusStep <- getPoolRadiusStep searchReq.id
-      driverPool <- calcDriverPool radiusStep
+      allNearbyDrivers <- calcDriverPool radiusStep
       sortingType <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.poolSortingType)
       batchSize <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.driverBatchSize)
-      logDebug $ "DriverPool-" <> show driverPool
-      let onlyNewDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) driverPool
-      driverPoolBatch <- mkDriverPoolBatch batchSize sortingType onlyNewDrivers
-      logDebug $ "DriverPoolBatch-" <> show driverPoolBatch
-      if length driverPoolBatch < batchSize
+      logDebug $ "DriverPool-" <> show allNearbyDrivers
+      let onlyNewDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) allNearbyDrivers
+      if length onlyNewDrivers < batchSize
         then do
           isAtMaxRadiusStep' <- isAtMaxRadiusStep radiusStep
           if isAtMaxRadiusStep'
-            then do
-              filledBatch <- fillBatch searchReq.providerId sortingType batchSize driverPool driverPoolBatch
-              logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
-              cacheBatch filledBatch
-              return filledBatch
+            then calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers
             else do
               incrementPoolRadiusStep searchReq.id
               prepareDriverPoolBatch' previousBatchesDrivers
-        else do
-          cacheBatch driverPoolBatch
-          return driverPoolBatch
+        else calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers
       where
+        calculatePool batchSize sortingType onlyNewDrivers allNearbyDrivers = do
+          driverPoolBatch <- mkDriverPoolBatch batchSize sortingType onlyNewDrivers
+          logDebug $ "DriverPoolBatch-" <> show driverPoolBatch
+          finalPoolBatch <-
+            if length driverPoolBatch < batchSize
+              then do
+                filledBatch <- fillBatch searchReq.providerId sortingType batchSize allNearbyDrivers driverPoolBatch
+                logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
+                pure filledBatch
+              else do
+                pure driverPoolBatch
+          cacheBatch finalPoolBatch
+          pure finalPoolBatch
+
         mkDriverPoolBatch batchSize sortingType onlyNewDrivers = do
           case sortingType of
             Intelligent -> makeIntelligentDriverPool batchSize searchReq.providerId onlyNewDrivers
@@ -124,10 +130,10 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       let pickupLoc = searchReq.fromLocation
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
       calculateDriverPoolWithActualDist driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
-    fillBatch merchantId sortingType batchSize driverPool batch = do
+    fillBatch merchantId sortingType batchSize allNearbyDrivers batch = do
       transporterConfig <- TC.findByMerchantId merchantId
       let batchDriverIds = batch <&> (.driverPoolResult.driverId)
-      let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) driverPool
+      let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
       minQuotesToQualifyForIntelligentPool <- asks (.intelligentPoolConfig.minQuotesToQualifyForIntelligentPool)
       let fillSize = batchSize - length batch
       (batch <>)

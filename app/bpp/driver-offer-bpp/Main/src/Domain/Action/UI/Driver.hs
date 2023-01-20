@@ -68,7 +68,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
-import SharedLogic.DriverPool (HasDriverPoolConfig, getDriverPoolConfig, getLatestCancellationRatio, getPopupDelay, incrementQuoteAcceptedCount)
+import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
@@ -524,7 +524,7 @@ makeDriverInformationRes DriverEntityRes {..} org =
 getNearbySearchRequests ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    HasDriverPoolConfig r,
+    DP.HasDriverPoolConfig r,
     Redis.HedisFlow m r,
     HasCacheConfig r
   ) =>
@@ -533,7 +533,7 @@ getNearbySearchRequests ::
 getNearbySearchRequests driverId = do
   person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
-  cancellationRatio <- getLatestCancellationRatio person.merchantId (cast driverId)
+  cancellationRatio <- DP.getLatestCancellationRatio person.merchantId (cast driverId)
   searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio) nearbyReqs
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
@@ -541,7 +541,7 @@ getNearbySearchRequests driverId = do
       let sId = nearbyReq.searchRequestId
       searchRequest <- runInReplica $ QSReq.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
       rideRequestPopupConfig <- asks (.rideRequestPopupConfig)
-      popupDelaySeconds <- getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio rideRequestPopupConfig
+      popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio rideRequestPopupConfig
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest popupDelaySeconds
 
 isAllowedExtraFee :: ExtraFee -> Money -> Bool
@@ -561,7 +561,7 @@ offerQuote ::
     HasField "coreVersion" r Text,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
-    HasDriverPoolConfig r,
+    DP.HasDriverPoolConfig r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     CoreMetrics m,
@@ -584,7 +584,7 @@ respondQuote ::
     HasField "coreVersion" r Text,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
-    HasDriverPoolConfig r,
+    DP.HasDriverPoolConfig r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     CoreMetrics m,
@@ -603,6 +603,7 @@ respondQuote driverId req = do
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
     when driverInfo.onRide $ throwError DriverOnRide
+    DP.removeSearchReqIdFromMap sReq.providerId driverId sReq.id
     sReqFD <-
       QSRD.findByDriverAndSearchReq driverId sReq.id
         >>= fromMaybeM NoSearchRequestForDriver
@@ -623,7 +624,7 @@ respondQuote driverId req = do
         Esq.runTransaction $ do
           QDrQt.create driverQuote
           QSRD.updateDriverResponse sReqFD.id req.response
-        incrementQuoteAcceptedCount sReq.providerId driverId
+        DP.incrementQuoteAcceptedCount sReq.providerId driverId
         -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
         when ((quoteCount + 1) >= quoteLimit) $ sendRemoveRideRequestNotification organization.id driverQuote
         sendDriverOffer organization sReq driverQuote
@@ -668,11 +669,12 @@ respondQuote driverId req = do
       logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
       pure $ not $ null activeQuotes
     getQuoteLimit dist = do
-      driverPoolCfg <- getDriverPoolConfig dist
+      driverPoolCfg <- DP.getDriverPoolConfig dist
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification orgId driverQuote = do
       driverSearchReqs <- QSRD.findAllActiveWithoutRespByRequestId req.searchRequestId
       for_ driverSearchReqs $ \driverReq -> do
+        DP.removeSearchReqIdFromMap orgId driverReq.driverId driverReq.searchRequestId
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
 

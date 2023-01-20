@@ -87,7 +87,8 @@ data AppCfg = AppCfg
     overrideDriverPoolCfg :: Maybe [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
-    driverLocationUpdateTopic :: Text
+    driverLocationUpdateTopic :: Text,
+    maxParallelSearchRequests :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -148,7 +149,8 @@ data AppEnv = AppEnv
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
     kafkaProducerTools :: KafkaProducerTools,
-    driverLocationUpdateTopic :: Text
+    driverLocationUpdateTopic :: Text,
+    maxParallelSearchRequests :: Int
   }
   deriving (Generic)
 

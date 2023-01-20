@@ -189,4 +189,5 @@ in  { esqDBCfg
     , sendSearchRequestJobCfg
     , driverLocationUpdateTopic = "location-updates-sandbox"
     , kafkaProducerCfg
+    , maxParallelSearchRequests = +3
     }

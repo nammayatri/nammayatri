@@ -14,6 +14,9 @@ module SharedLogic.DriverPool
     getCurrentWindowAvailability,
     getQuotesCount,
     getPopupDelay,
+    addSearchRequestValidTillToCache,
+    getValidSearchRequestCount,
+    removeSearchReqIdFromMap,
     module Reexport,
   )
 where
@@ -27,10 +30,12 @@ import qualified Beckn.Utils.SlidingWindowCounters as SWC
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import Domain.Types.SearchRequest
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
 import Storage.CachedQueries.CacheConfig (CacheFlow)
@@ -111,6 +116,44 @@ incrementTotalQuotesCount merchantId driverId =
   Redis.withCrossAppRedis do
     withAcceptanceRatioWindowOption merchantId $ SWC.incrementWindowCount (mkTotalQuotesKey driverId.getId) -- for acceptance ratio calculation
     withMinQuotesToQualifyIntelligentPoolWindowOption $ SWC.incrementWindowCount (mkQuotesCountKey driverId.getId) -- total quotes sent count in different sliding window (used in driver pool for random vs intelligent filtering)
+
+mkParallelSearchRequestKey :: Id DM.Merchant -> Id DP.Driver -> Text
+mkParallelSearchRequestKey mId dId = "driver-offer:DriverPool:Search-Req-Validity-Map-" <> mId.getId <> dId.getId
+
+addSearchRequestValidTillToCache ::
+  ( Redis.HedisFlow m r,
+    HasSendSearchRequestJobConfig r
+  ) =>
+  Id SearchRequest ->
+  Id DM.Merchant ->
+  Id DP.Driver ->
+  UTCTime ->
+  m ()
+addSearchRequestValidTillToCache searchReqId merchantId driverId validTill = do
+  singleBatchProcessTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
+  Redis.withCrossAppRedis $ Redis.hSetExp (mkParallelSearchRequestKey merchantId driverId) searchReqId.getId validTill singleBatchProcessTime
+
+getValidSearchRequestCount ::
+  ( Redis.HedisFlow m r,
+    MonadReader r m
+  ) =>
+  Id DM.Merchant ->
+  Id DP.Driver ->
+  UTCTime ->
+  m Int
+getValidSearchRequestCount merchantId driverId now = do
+  searchRequestValidityMap :: [(Text, UTCTime)] <- Redis.withCrossAppRedis $ Redis.hGetAll (mkParallelSearchRequestKey merchantId driverId)
+  pure . length . filter ((> now) . snd) $ searchRequestValidityMap
+
+removeSearchReqIdFromMap ::
+  ( Redis.HedisFlow m r,
+    MonadTime m
+  ) =>
+  Id DM.Merchant ->
+  Id DP.Person ->
+  Id SearchRequest ->
+  m ()
+removeSearchReqIdFromMap merchantId driverId = Redis.hDel (mkParallelSearchRequestKey merchantId $ cast driverId) . (.getId)
 
 incrementQuoteAcceptedCount ::
   ( Redis.HedisFlow m r,
@@ -247,7 +290,8 @@ calculateDriverPool ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
-    HasCoordinates a
+    HasCoordinates a,
+    HasMaxParallelSearchRequests r
   ) =>
   DriverPoolConfig ->
   Maybe Variant ->
@@ -259,6 +303,7 @@ calculateDriverPool ::
 calculateDriverPool driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
+  now <- getCurrentTime
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
       Esq.runInReplica $
@@ -269,8 +314,13 @@ calculateDriverPool driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRad
           merchantId
           onlyNotOnRide
           driverPoolCfg.driverPositionInfoExpiry
-  return $ makeDriverPoolResult <$> approxDriverPool
+  maxParallelSearchRequests <- asks (.maxParallelSearchRequests)
+  driversWithLessThanNParallelRequests <- filter ((< maxParallelSearchRequests) . fst) <$> mapM (getParallelSearchRequestCount now) approxDriverPool
+  pure $ makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   where
+    getParallelSearchRequestCount now dObj = do
+      parallelSearchRequestCount <- getValidSearchRequestCount merchantId (cast dObj.driverId) now
+      pure (parallelSearchRequestCount, dObj)
     getRadius mRadiusStep_ = do
       let maxRadius = fromIntegral driverPoolCfg.maxRadiusOfSearch
       case mRadiusStep_ of
@@ -279,8 +329,8 @@ calculateDriverPool driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRad
           let radiusStepSize = fromIntegral driverPoolCfg.radiusStepSize
           min (minRadius + radiusStepSize * radiusStep) maxRadius
         Nothing -> maxRadius
-    makeDriverPoolResult :: QP.NearestDriversResult -> DriverPoolResult
-    makeDriverPoolResult QP.NearestDriversResult {..} = do
+    makeDriverPoolResult :: (Int, QP.NearestDriversResult) -> DriverPoolResult
+    makeDriverPoolResult (parallelSearchRequestCount, QP.NearestDriversResult {..}) = do
       DriverPoolResult
         { distanceToPickup = distanceToDriver,
           variant = variant,

@@ -46,6 +46,7 @@ mkPersist
       rideRequestPopupDelayDuration Seconds
       isPartOfIntelligentPool Bool
       cancellationRatio Double Maybe
+      parallelSearchRequestCount Int Maybe
       Primary id
       deriving Generic
     |]

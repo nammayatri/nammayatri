@@ -24,6 +24,7 @@ data DriverPoolResult = DriverPoolResult
     language :: Maybe Maps.Language,
     driverDeviceToken :: Maybe FCM.FCMRecipientToken,
     distanceToPickup :: Meters,
+    parallelSearchRequestCount :: Int,
     -- durationToPickup :: Seconds,
     variant :: Vehicle.Variant,
     lat :: Double,

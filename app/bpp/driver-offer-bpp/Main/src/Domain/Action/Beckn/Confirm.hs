@@ -39,6 +39,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Storage.Queries.Vehicle as QVeh
 import qualified Tools.Notifications as Notify
+import qualified SharedLogic.DriverPool as DP
 
 data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
@@ -113,6 +114,7 @@ handler subscriber transporterId req = do
   for_ driverSearchReqs $ \driverReq -> do
     let driverId = driverReq.driverId
     unless (driverId == driver.id) $ do
+      DP.removeSearchReqIdFromMap transporter.id driverId driverReq.searchRequestId
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare transporter.id driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
 
