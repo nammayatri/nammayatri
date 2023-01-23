@@ -116,7 +116,8 @@ in  { esqDBCfg
     , dashboardToken = sec.dashboardToken
     , defaultPickupLocThreshold = +500
     , defaultDropLocThreshold = +500
-    , defaultRideTravelledDistanceThreshold = +700
+    , defaultrideTravelledDistThresholdWhenPickupOrDestIsDiff = +700
+    , defaultrideTravelledDistThresholdWhenPickupAndDestIsSame = +1200
     , defaultRideTimeEstimatedThreshold = +900
     , defaultWaitingTimeEstimatedThreshold = +3
     , driverReachedDistance = +100

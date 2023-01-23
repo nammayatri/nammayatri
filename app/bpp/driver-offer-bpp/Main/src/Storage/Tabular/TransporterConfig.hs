@@ -25,7 +25,8 @@ mkPersist
       merchantId MerchantTId
       pickupLocThreshold Meters Maybe
       dropLocThreshold Meters Maybe
-      rideTravelledDistanceThreshold Meters Maybe
+      rideTravelledDistThresholdWhenPickupOrDestIsDiff Meters Maybe
+      rideTravelledDistThresholdWhenPickupAndDestIsSame Meters Maybe
       rideTimeEstimatedThreshold Seconds Maybe
       availabilityTimeWeightage Int
       availabilityTimeWindowOption SWC.SlidingWindowOptions

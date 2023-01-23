@@ -26,7 +26,8 @@ mkPersist
       merchantId MerchantTId
       pickupLocThreshold Meters Maybe
       dropLocThreshold Meters Maybe
-      rideTravelledDistanceThreshold Meters Maybe
+      rideTravelledDistThresholdWhenPickupOrDestIsDiff Meters Maybe
+      rideTravelledDistThresholdWhenPickupAndDestIsSame Meters Maybe
       rideTimeEstimatedThreshold Seconds Maybe
       waitingTimeEstimatedThreshold Seconds Maybe
       maxRadius Meters

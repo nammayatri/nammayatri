@@ -66,7 +66,8 @@ data ServiceHandle m = ServiceHandle
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
     getDefaultPickupLocThreshold :: m Meters,
     getDefaultDropLocThreshold :: m Meters,
-    getDefaultRideTravelledDistanceThreshold :: m Meters,
+    getDefaultrideTravelledDistThresholdWhenPickupOrDestIsDiff :: m Meters,
+    getDefaultrideTravelledDistThresholdWhenPickupAndDestIsSame :: m Meters,
     getDefaultRideTimeEstimatedThreshold :: m Seconds,
     getDefaultWaitingTimeEstimatedThreshold :: m Seconds,
     getConfig :: m DTConf.TransporterConfig,
@@ -106,7 +107,8 @@ buildEndRideHandle merchantId rideId = do
         isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
         getDefaultPickupLocThreshold = asks (.defaultPickupLocThreshold),
         getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
-        getDefaultRideTravelledDistanceThreshold = asks (.defaultRideTravelledDistanceThreshold),
+        getDefaultrideTravelledDistThresholdWhenPickupOrDestIsDiff = asks (.defaultrideTravelledDistThresholdWhenPickupOrDestIsDiff),
+        getDefaultrideTravelledDistThresholdWhenPickupAndDestIsSame = asks (.defaultrideTravelledDistThresholdWhenPickupAndDestIsSame),
         getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
         getDefaultWaitingTimeEstimatedThreshold = asks (.defaultWaitingTimeEstimatedThreshold),
         getConfig = QTConf.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId),
@@ -217,7 +219,10 @@ endRide handle@ServiceHandle {..} rideId req = do
           pure pickupDropOutsideOfThreshold
 
       distanceOutsideOfThreshold <- do
-        rideTravelledDistanceThreshold <- metersToHighPrecMeters <$> getRideDistanceThreshold handle
+        rideTravelledDistanceThreshold <-
+          if pickupDropOutsideOfThreshold
+            then metersToHighPrecMeters <$> getRideDistanceThresholdWhenPickupOrDestIsDiff handle
+            else metersToHighPrecMeters <$> getRideDistanceThresholdWhenPickupAndDestIsSame handle
         let rideDistanceDifference = ride.traveledDistance - metersToHighPrecMeters oneWayDetails.estimatedDistance
         let distanceOutsideOfThreshold = rideDistanceDifference >= rideTravelledDistanceThreshold
         logTagInfo "endRide" ("distanceOutsideOfThreshold: " <> show distanceOutsideOfThreshold)
@@ -247,7 +252,7 @@ endRide handle@ServiceHandle {..} rideId req = do
                 <> show actualRideDuration
             pure timeOutsideOfThreshold
 
-      if shouldRecalculateFare && not distanceCalculationFailed && (pickupDropOutsideOfThreshold || distanceOutsideOfThreshold || timeOutsideOfThreshold)
+      if shouldRecalculateFare && not distanceCalculationFailed && (distanceOutsideOfThreshold || timeOutsideOfThreshold)
         then do
           fareParams <- calculateFare vehicleVariant actualDistance oneWayDetails.estimatedFinishTime
           waitingCharge <- getWaitingFare ride.tripStartTime ride.driverArrivalTime fareParams.waitingChargePerMin
@@ -323,13 +328,22 @@ getLocThreshold ServiceHandle {..} stop = do
     DROP -> (transporterConfig.dropLocThreshold,) <$> getDefaultDropLocThreshold
   pure $ fromMaybe defaultThreshold mbThresholdConfig
 
-getRideDistanceThreshold ::
+getRideDistanceThresholdWhenPickupOrDestIsDiff ::
   (MonadThrow m, Log m) =>
   ServiceHandle m ->
   m Meters
-getRideDistanceThreshold ServiceHandle {..} = do
+getRideDistanceThresholdWhenPickupOrDestIsDiff ServiceHandle {..} = do
   transporterConfig <- getConfig
-  (mbThresholdConfig, defaultThreshold) <- (transporterConfig.rideTravelledDistanceThreshold,) <$> getDefaultRideTravelledDistanceThreshold
+  (mbThresholdConfig, defaultThreshold) <- (transporterConfig.rideTravelledDistThresholdWhenPickupOrDestIsDiff,) <$> getDefaultrideTravelledDistThresholdWhenPickupOrDestIsDiff
+  pure $ fromMaybe defaultThreshold mbThresholdConfig
+
+getRideDistanceThresholdWhenPickupAndDestIsSame ::
+  (MonadThrow m, Log m) =>
+  ServiceHandle m ->
+  m Meters
+getRideDistanceThresholdWhenPickupAndDestIsSame ServiceHandle {..} = do
+  transporterConfig <- getConfig
+  (mbThresholdConfig, defaultThreshold) <- (transporterConfig.rideTravelledDistThresholdWhenPickupAndDestIsSame,) <$> getDefaultrideTravelledDistThresholdWhenPickupAndDestIsSame
   pure $ fromMaybe defaultThreshold mbThresholdConfig
 
 getRideTimeThreshold ::
