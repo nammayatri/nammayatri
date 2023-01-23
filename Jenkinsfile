@@ -8,7 +8,7 @@ pipeline {
             returnStdout: true,
             script: 'git rev-parse --short HEAD'
         )}"""
-      DEPLOY_VARIANT = overrideBranchName()
+      DEPLOY_VARIANT = "${env.BRANCH_NAME}"
   }
 
   stages {
