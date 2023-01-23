@@ -297,7 +297,7 @@ computeActualDistance orgId pickup driverPoolResults = do
   let pickupLatLong = getCoordinates pickup
   rideRequestPopupConfig <- asks (.rideRequestPopupConfig)
   getDistanceResults <-
-    Maps.getDistances orgId $
+    Maps.getEstimatedPickupDistances orgId $
       Maps.GetDistancesReq
         { origins = driverPoolResults,
           destinations = pickupLatLong :| [],

@@ -3,6 +3,7 @@ module Tools.Maps
     autoComplete,
     getDistance,
     getDistances,
+    getEstimatedPickupDistances,
     getPlaceDetails,
     getPlaceName,
     getRoutes,
@@ -57,6 +58,19 @@ getDistances ::
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
 getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
+
+getEstimatedPickupDistances ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasCoordinates a,
+    HasCoordinates b
+  ) =>
+  Id Merchant ->
+  GetDistancesReq a b ->
+  m (GetDistancesResp a b)
+getEstimatedPickupDistances = runWithServiceConfig Maps.getDistances (.getEstimatedPickupDistances)
 
 getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
 getRoutes = runWithServiceConfig Maps.getRoutes (.getRoutes)

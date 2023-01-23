@@ -10,6 +10,7 @@ import Domain.Types.Merchant (Merchant)
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { merchantId :: Id Merchant,
     getDistances :: MapsService,
+    getEstimatedPickupDistances :: MapsService,
     getRoutes :: MapsService,
     snapToRoad :: MapsService,
     getPlaceName :: MapsService,

@@ -80,7 +80,7 @@ buildDriverPoolResults ::
   m (NonEmpty DriverPoolResult)
 buildDriverPoolResults orgId pickup ndResults = do
   distDurs <-
-    Maps.getDistances orgId $
+    Maps.getEstimatedPickupDistances orgId $
       Maps.GetDistancesReq
         { origins = ndResults,
           destinations = pickup :| [],

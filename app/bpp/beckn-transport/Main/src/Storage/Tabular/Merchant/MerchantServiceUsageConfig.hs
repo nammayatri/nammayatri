@@ -22,6 +22,7 @@ mkPersist
     MerchantServiceUsageConfigT sql=merchant_service_usage_config
       merchantId MerchantTId
       getDistances MapsService
+      getEstimatedPickupDistances MapsService
       getRoutes MapsService
       snapToRoad MapsService
       getPlaceName MapsService
