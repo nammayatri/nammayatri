@@ -1,6 +1,7 @@
 module API.Dashboard where
 
 import qualified API.Dashboard.Customer as Customer
+import qualified API.Dashboard.Merchant as Merchant
 import Beckn.Types.Id
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -12,11 +13,13 @@ type API =
     :> Capture "merchantId" (ShortId DM.Merchant)
     :> API'
 
--- TODO do we need different tokens for different merchants? now we have one common token
 type API' =
   DashboardTokenAuth
-    :> Customer.API
+    :> ( Customer.API
+           :<|> Merchant.API
+       )
 
 handler :: FlowServer API
 handler merchantId _dashboard =
   Customer.handler merchantId
+    :<|> Merchant.handler merchantId

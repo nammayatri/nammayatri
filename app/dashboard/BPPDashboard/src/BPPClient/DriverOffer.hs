@@ -12,9 +12,10 @@ import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import qualified Dashboard.Common.Driver as Common
-import qualified Dashboard.Common.Driver.Registration as Common
-import qualified Dashboard.Common.Ride as Common
+import qualified Dashboard.BPP.Driver as Common
+import qualified Dashboard.BPP.Driver.Registration as Common
+import qualified Dashboard.BPP.Merchant as Common
+import qualified Dashboard.BPP.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
@@ -25,7 +26,8 @@ import "lib-dashboard" Tools.Metrics
 
 data DriverOfferAPIs = DriverOfferAPIs
   { drivers :: DriversAPIs,
-    rides :: RidesAPIs
+    rides :: RidesAPIs,
+    merchant :: MerchantAPIs
   }
 
 data DriversAPIs = DriversAPIs
@@ -58,14 +60,22 @@ data RidesAPIs = RidesAPIs
     rideInfo :: Id Common.Ride -> Euler.EulerClient Common.RideInfoRes
   }
 
+data MerchantAPIs = MerchantAPIs
+  { merchantUpdate :: Common.MerchantUpdateReq -> Euler.EulerClient Common.MerchantUpdateRes,
+    merchantServiceConfigUpdate :: Common.MerchantServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    merchantServiceConfigUsageUpdate :: Common.MerchantServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
+  }
+
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
 mkDriverOfferAPIs merchantId token = do
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
+  let merchant = MerchantAPIs {..}
   DriverOfferAPIs {..}
   where
     driversClient
-      :<|> ridesClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+      :<|> ridesClient
+      :<|> merchantClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     driverDocumentsInfo
       :<|> listDrivers
@@ -94,6 +104,10 @@ mkDriverOfferAPIs merchantId token = do
       :<|> rideEnd
       :<|> rideCancel
       :<|> rideInfo = ridesClient
+
+    merchantUpdate
+      :<|> merchantServiceConfigUpdate
+      :<|> merchantServiceConfigUsageUpdate = merchantClient
 
 callDriverOfferBPP ::
   forall m r b c.

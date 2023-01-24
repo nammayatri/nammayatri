@@ -5,10 +5,13 @@ module Storage.CachedQueries.Merchant
   ( findById,
     findByShortId,
     findByExoPhone,
+    update,
+    clearCache,
   )
 where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -46,6 +49,14 @@ findByExoPhone countryCode exoPhone =
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findByExoPhone countryCode exoPhone
 
+-- Call it after any update
+clearCache :: Hedis.HedisFlow m r => Merchant -> m ()
+clearCache merchant = do
+  Hedis.del (makeIdKey merchant.id)
+  Hedis.del (makeShortIdKey merchant.shortId)
+  whenJust ((,) <$> merchant.exoPhoneCountryCode <*> merchant.exoPhone) $ \(exoPhoneCountryCode, exoPhone) ->
+    Hedis.del (makeExoPhoneKey exoPhoneCountryCode exoPhone)
+
 cacheMerchant :: (CacheFlow m r) => Merchant -> m ()
 cacheMerchant merchant = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -63,3 +74,6 @@ makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 
 makeExoPhoneKey :: Text -> Text -> Text
 makeExoPhoneKey countryCode phone = "CachedQueries:Merchant:ExoPhone-" <> countryCode <> phone
+
+update :: Merchant -> Esq.SqlDB ()
+update = Queries.update

@@ -5,6 +5,7 @@ module API.BPP.DriverOffer
 where
 
 import qualified API.BPP.DriverOffer.Driver as Driver
+import qualified API.BPP.DriverOffer.Merchant as Merchant
 import qualified API.BPP.DriverOffer.Ride as Ride
 import Beckn.Types.Id
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -16,9 +17,11 @@ type API =
     :> Capture "merchantId" (ShortId DM.Merchant)
     :> ( Driver.API
            :<|> Ride.API
+           :<|> Merchant.API
        )
 
 handler :: FlowServer API
 handler merchantId =
   Driver.handler merchantId
     :<|> Ride.handler merchantId
+    :<|> Merchant.handler merchantId

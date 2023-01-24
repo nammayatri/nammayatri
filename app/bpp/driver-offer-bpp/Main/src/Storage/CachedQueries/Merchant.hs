@@ -78,6 +78,5 @@ makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 update :: Merchant -> Esq.SqlDB ()
 update = Queries.update
 
--- why do we need this synonym?
 loadAllProviders :: Esq.Transactionable m => m [Merchant]
 loadAllProviders = Queries.loadAllProviders

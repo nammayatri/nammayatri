@@ -11,6 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (findById)
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Merchant as DOrg
 import Storage.Tabular.Merchant
 
@@ -32,3 +33,20 @@ findByExoPhone countryCode exoPhone = do
       merchant ^. MerchantExoPhoneCountryCode ==. val (Just countryCode)
         &&. merchant ^. MerchantExoPhone ==. val (Just exoPhone)
     return merchant
+
+update :: Merchant -> SqlDB ()
+update merchant = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ MerchantName =. val merchant.name,
+        MerchantFcmUrl =. val (showBaseUrl merchant.fcmConfig.fcmUrl),
+        MerchantFcmServiceAccount =. val merchant.fcmConfig.fcmServiceAccount,
+        MerchantExoPhone =. val merchant.exoPhone,
+        MerchantExoPhoneCountryCode =. val merchant.exoPhoneCountryCode,
+        MerchantGatewayUrl =. val (showBaseUrl merchant.gatewayUrl),
+        MerchantRegistryUrl =. val (showBaseUrl merchant.registryUrl),
+        MerchantUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. MerchantTId ==. val (toKey merchant.id)

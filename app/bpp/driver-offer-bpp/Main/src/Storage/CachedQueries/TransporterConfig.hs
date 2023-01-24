@@ -3,10 +3,13 @@
 
 module Storage.CachedQueries.TransporterConfig
   ( findByMerchantId,
+    clearCache,
+    updateFCMConfig,
   )
 where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -31,3 +34,10 @@ cacheTransporterConfig cfg = do
 
 makeMerchantIdKey :: Id Merchant -> Text
 makeMerchantIdKey id = "CachedQueries:TransporterConfig:MerchantId-" <> id.getId
+
+-- Call it after any update
+clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
+clearCache = Hedis.del . makeMerchantIdKey
+
+updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> Esq.SqlDB ()
+updateFCMConfig = Queries.updateFCMConfig

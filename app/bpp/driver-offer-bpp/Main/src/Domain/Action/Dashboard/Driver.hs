@@ -25,7 +25,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Validation (runRequestValidation)
 import Control.Applicative ((<|>))
-import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
+import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver as Common
 import Data.Coerce
 import Data.List.NonEmpty (nonEmpty)
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))

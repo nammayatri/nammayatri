@@ -11,8 +11,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
-import Dashboard.Common.Driver.Registration (GetDocumentResponse (imageBase64))
-import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver.Registration as Common
+import Dashboard.BPP.Driver.Registration (GetDocumentResponse (imageBase64))
+import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver.Registration as Common
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate

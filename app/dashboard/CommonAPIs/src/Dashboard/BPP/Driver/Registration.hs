@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Dashboard.Common.Driver.Registration
-  ( module Dashboard.Common.Driver.Registration,
+module Dashboard.BPP.Driver.Registration
+  ( module Dashboard.BPP.Driver.Registration,
     module Reexport,
   )
 where
@@ -71,7 +71,7 @@ data UploadDocumentReq = UploadDocumentReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-newtype UploadDocumentTransactionReq = UploadDocumentTransactionReq
+newtype UploadDocumentTReq = UploadDocumentTReq
   { imageType :: DocumentType
   }
   deriving (Generic, ToJSON, FromJSON)
@@ -80,6 +80,13 @@ newtype UploadDocumentResp = UploadDocumentResp
   { imageId :: Id Image
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UploadDocumentReq where
+  type ReqWithoutSecrets UploadDocumentReq = UploadDocumentTReq
+  hideSecrets UploadDocumentReq {..} = UploadDocumentTReq {..}
+
+instance HideSecrets UploadDocumentResp where
+  hideSecrets = identity
 
 -- register DL API ------------------------
 -- ----------------------------------------
@@ -101,6 +108,9 @@ data RegisterDLReq = RegisterDLReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+instance HideSecrets RegisterDLReq where
+  hideSecrets = identity
+
 -- register RC API ------------------------
 -- ----------------------------------------
 
@@ -118,3 +128,6 @@ data RegisterRCReq = RegisterRCReq
     dateOfRegistration :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets RegisterRCReq where
+  hideSecrets = identity

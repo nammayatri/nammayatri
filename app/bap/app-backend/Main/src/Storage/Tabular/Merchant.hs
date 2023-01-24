@@ -31,6 +31,8 @@ mkPersist
       destinationRestriction GeoRestriction
       gatewayUrl Text
       registryUrl Text
+      updatedAt UTCTime
+      createdAt UTCTime
       Primary id
       Unique MerchantShortId
       deriving Generic

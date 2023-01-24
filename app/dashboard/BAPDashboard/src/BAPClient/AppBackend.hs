@@ -11,8 +11,10 @@ where
 import qualified "app-backend" API.Dashboard as BAP
 import Beckn.Prelude
 import Beckn.Tools.Metrics.CoreMetrics
+import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Utils.Common hiding (callAPI)
+import qualified Dashboard.BAP.Merchant as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "app-backend" Domain.Types.Person as BAP
 import Domain.Types.ServerName
@@ -21,8 +23,9 @@ import Servant
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 
-newtype AppBackendAPIs = AppBackendAPIs
-  { customers :: CustomerAPIs
+data AppBackendAPIs = AppBackendAPIs
+  { customers :: CustomerAPIs,
+    merchant :: MerchantAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -30,13 +33,27 @@ data CustomerAPIs = CustomerAPIs
     customerUpdate :: Id BAP.Person -> Text -> Euler.EulerClient Text
   }
 
+data MerchantAPIs = MerchantAPIs
+  { merchantUpdate :: Common.MerchantUpdateReq -> Euler.EulerClient APISuccess,
+    merchantServiceConfigUpdate :: Common.MerchantServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    merchantServiceConfigUsageUpdate :: Common.MerchantServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
+  }
+
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId token = do
   let customers = CustomerAPIs {..}
+  let merchant = MerchantAPIs {..}
   AppBackendAPIs {..}
   where
+    customersClient
+      :<|> merchantClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
+
     customerList
-      :<|> customerUpdate = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
+      :<|> customerUpdate = customersClient
+
+    merchantUpdate
+      :<|> merchantServiceConfigUpdate
+      :<|> merchantServiceConfigUsageUpdate = merchantClient
 
 callAppBackendBAP ::
   forall m r b c.

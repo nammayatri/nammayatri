@@ -13,8 +13,9 @@ import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Utils.Common hiding (callAPI)
-import qualified Dashboard.Common.Driver as Common
-import qualified Dashboard.Common.Ride as Common
+import qualified Dashboard.BPP.Driver as Common
+import qualified Dashboard.BPP.Merchant as Common
+import qualified Dashboard.BPP.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
@@ -24,7 +25,8 @@ import Tools.Client
 
 data BecknTransportAPIs = BecknTransportAPIs
   { drivers :: DriversAPIs,
-    rides :: RidesAPIs
+    rides :: RidesAPIs,
+    merchant :: MerchantAPIs
   }
 
 data DriversAPIs = DriversAPIs
@@ -51,14 +53,22 @@ data RidesAPIs = RidesAPIs
     rideInfo :: Id Common.Ride -> Euler.EulerClient Common.RideInfoRes
   }
 
+data MerchantAPIs = MerchantAPIs
+  { merchantUpdate :: Common.MerchantUpdateReq -> Euler.EulerClient Common.MerchantUpdateRes,
+    merchantServiceConfigUpdate :: Common.MerchantServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    merchantServiceConfigUsageUpdate :: Common.MerchantServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
+  }
+
 mkBecknTransportAPIs :: CheckedShortId DM.Merchant -> Text -> BecknTransportAPIs
 mkBecknTransportAPIs merchantId token = do
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
+  let merchant = MerchantAPIs {..}
   BecknTransportAPIs {..}
   where
     driversClient
-      :<|> ridesClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+      :<|> ridesClient
+      :<|> merchantClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     listDrivers
       :<|> driverActivity
@@ -79,6 +89,10 @@ mkBecknTransportAPIs merchantId token = do
       :<|> rideEnd
       :<|> rideCancel
       :<|> rideInfo = ridesClient
+
+    merchantUpdate
+      :<|> merchantServiceConfigUpdate
+      :<|> merchantServiceConfigUsageUpdate = merchantClient
 
 callBecknTransportBPP ::
   forall m r b c.

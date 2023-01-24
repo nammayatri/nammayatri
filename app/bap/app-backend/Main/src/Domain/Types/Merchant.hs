@@ -15,7 +15,9 @@ data MerchantD (s :: UsageSafety) = Merchant
     fcmConfig :: FCMConfig,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,
-    registryUrl :: BaseUrl
+    registryUrl :: BaseUrl,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic)
 

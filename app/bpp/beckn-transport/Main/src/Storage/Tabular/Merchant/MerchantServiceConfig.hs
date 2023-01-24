@@ -53,16 +53,18 @@ instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
           ..
         }
   toTType Domain.MerchantServiceConfig {..} = do
+    let (serviceName, configJSON) = getServiceNameConfigJSON serviceConfig
     MerchantServiceConfigT
       { merchantId = toKey merchantId,
         ..
       }
-    where
-      (serviceName, configJSON) = case serviceConfig of
-        Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
-          Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, encodeToText cfg)
-          Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, encodeToText cfg)
-          Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, encodeToText cfg)
-        Domain.SmsServiceConfig smsCfg -> case smsCfg of
-          Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, encodeToText cfg)
-          Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, encodeToText cfg)
+
+getServiceNameConfigJSON :: Domain.ServiceConfig -> (Domain.ServiceName, Text)
+getServiceNameConfigJSON = \case
+  Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
+    Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, encodeToText cfg)
+    Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, encodeToText cfg)
+    Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, encodeToText cfg)
+  Domain.SmsServiceConfig smsCfg -> case smsCfg of
+    Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, encodeToText cfg)
+    Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, encodeToText cfg)

@@ -9,7 +9,7 @@ import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Utils.Common (MonadFlow, withFlowHandlerAPI)
-import qualified "dashboard-bpp-helper-api" Dashboard.Common.Ride as Common
+import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -57,7 +57,7 @@ handler merchantId =
 
 buildTransaction ::
   ( MonadFlow m,
-    ToJSON request
+    Common.HideSecrets request
   ) =>
   Common.RideEndpoint ->
   ApiTokenInfo ->

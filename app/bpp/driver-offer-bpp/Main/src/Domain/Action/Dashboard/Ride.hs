@@ -10,7 +10,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import qualified "dashboard-bpp-helper-api" Dashboard.Common.Ride as Common
+import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason

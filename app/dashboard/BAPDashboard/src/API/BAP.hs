@@ -5,6 +5,7 @@ module API.BAP
 where
 
 import qualified API.BAP.Customer as Customer
+import qualified API.BAP.Merchant as Merchant
 import Beckn.Types.Id
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
@@ -13,8 +14,11 @@ import Servant
 type API =
   "bap"
     :> Capture "merchantId" (ShortId DMerchant.Merchant)
-    :> Customer.API
+    :> ( Customer.API
+           :<|> Merchant.API
+       )
 
 handler :: FlowServer API
-handler =
-  Customer.handler
+handler merchantId =
+  Customer.handler merchantId
+    :<|> Merchant.handler merchantId

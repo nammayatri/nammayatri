@@ -47,6 +47,7 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - PackageImports
 
 dependencies:
   - aeson
@@ -79,6 +80,7 @@ dependencies:
   - persistent
   - extra
   - text-conversions
+  - dashboard-bpp-helper-api
 
 ghc-options:
   - -fwrite-ide-info

@@ -63,6 +63,7 @@ dependencies:
   - servant-server
   - servant-client
   - servant-openapi3
+  - openapi3
   - persistent
   - persistent-postgresql
   - esqueleto

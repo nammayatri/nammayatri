@@ -5,7 +5,7 @@ import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver.Registration as Common
+import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver.Registration as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -41,7 +41,7 @@ type RegisterRCAPI = ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS :> Common.
 
 buildTransaction ::
   ( MonadFlow m,
-    ToJSON request
+    Common.HideSecrets request
   ) =>
   Common.DriverRegistrationEndpoint ->
   ApiTokenInfo ->
@@ -67,9 +67,8 @@ uploadDocument :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Com
 uploadDocument merchantShortId apiTokenInfo driverId req =
   withFlowHandlerAPI $ do
     checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-    let transactionReq = Common.UploadDocumentTransactionReq req.imageType
-    transaction <- buildTransaction Common.UploadDocumentEndpoint apiTokenInfo driverId (Just transactionReq)
-    T.withResponseTransactionStoring (Just . identity) transaction $
+    transaction <- buildTransaction Common.UploadDocumentEndpoint apiTokenInfo driverId (Just req)
+    T.withResponseTransactionStoring transaction $
       Client.callDriverOfferBPP checkedMerchantId (.drivers.uploadDocument) driverId req
 
 registerDL :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterDLReq -> FlowHandler APISuccess

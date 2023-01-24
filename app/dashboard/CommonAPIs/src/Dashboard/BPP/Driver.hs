@@ -1,8 +1,8 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Dashboard.Common.Driver
-  ( module Dashboard.Common.Driver,
+module Dashboard.BPP.Driver
+  ( module Dashboard.BPP.Driver,
     module Reexport,
   )
 where
@@ -376,6 +376,9 @@ validateUpdatePhoneNumberReq UpdatePhoneNumberReq {..} =
       validateField "newCountryCode" newCountryCode P.mobileIndianCode
     ]
 
+instance HideSecrets UpdatePhoneNumberReq where
+  hideSecrets = identity
+
 ---------------------------------------------------------
 -- add vehicle ------------------------------------------
 
@@ -411,6 +414,9 @@ validateAddVehicleReq AddVehicleReq {..} =
         LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
     ]
 
+instance HideSecrets AddVehicleReq where
+  hideSecrets = identity
+
 ---------------------------------------------------------
 -- update driver name -----------------------------------
 
@@ -434,3 +440,6 @@ validateUpdateDriverNameReq UpdateDriverNameReq {..} =
       validateField "middleName" middleName $ InMaybe P.name,
       validateField "lastName" lastName $ InMaybe P.name
     ]
+
+instance HideSecrets UpdateDriverNameReq where
+  hideSecrets = identity

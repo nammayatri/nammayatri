@@ -70,6 +70,7 @@ dependencies:
   - containers
   - openapi3
   - servant-openapi3
+  - dashboard-bpp-helper-api
 
 ghc-options:
   - -Wall

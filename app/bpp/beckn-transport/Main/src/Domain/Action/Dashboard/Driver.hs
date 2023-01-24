@@ -24,7 +24,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Validation (runRequestValidation)
 import Control.Applicative ((<|>))
-import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
+import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver as Common
 import Data.Aeson (eitherDecode)
 import Data.Coerce
 import Data.Either.Combinators (mapLeft)
@@ -221,7 +221,6 @@ buildDriverLocationListItem f = do
       }
 
 ---------------------------------------------------------------------
--- FIXME Do we need to include mobileCountryCode into query params?
 mobileIndianCode :: Text
 mobileIndianCode = "+91"
 

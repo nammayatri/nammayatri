@@ -3,10 +3,13 @@
 
 module Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
   ( findByMerchantId,
+    clearCache,
+    updateMerchantServiceUsageConfig,
   )
 where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -31,3 +34,13 @@ cacheMerchantServiceUsageConfig orgServiceUsageConfig = do
 
 makeMerchantIdKey :: Id Merchant -> Text
 makeMerchantIdKey id = "CachedQueries:MerchantServiceUsageConfig:MerchantId-" <> id.getId
+
+-- Call it after any update
+clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
+clearCache merchantId = do
+  Hedis.del (makeMerchantIdKey merchantId)
+
+updateMerchantServiceUsageConfig ::
+  MerchantServiceUsageConfig ->
+  Esq.SqlDB ()
+updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig

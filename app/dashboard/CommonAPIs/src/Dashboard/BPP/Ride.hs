@@ -1,8 +1,8 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Dashboard.Common.Ride
-  ( module Dashboard.Common.Ride,
+module Dashboard.BPP.Ride
+  ( module Dashboard.BPP.Ride,
     module Reexport,
   )
 where
@@ -94,6 +94,9 @@ newtype StartRideReq = StartRideReq
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+instance HideSecrets StartRideReq where
+  hideSecrets = identity
+
 ---------------------------------------------------------
 -- ride end ---------------------------------------------
 
@@ -108,6 +111,9 @@ newtype EndRideReq = EndRideReq
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets EndRideReq where
+  hideSecrets = identity
 
 ---------------------------------------------------------
 -- ride cancel ------------------------------------------
@@ -128,6 +134,9 @@ data CancelRideReq = CancelRideReq
 newtype CancellationReasonCode = CancellationReasonCode Text
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CancelRideReq where
+  hideSecrets = identity
 
 ---------------------------------------------------------
 -- ride info --------------------------------------------

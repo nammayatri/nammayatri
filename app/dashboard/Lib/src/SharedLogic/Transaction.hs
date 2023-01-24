@@ -1,4 +1,11 @@
-module SharedLogic.Transaction where
+module SharedLogic.Transaction
+  ( emptyRequest,
+    emptyResponse,
+    buildTransaction,
+    withTransactionStoring,
+    withResponseTransactionStoring,
+  )
+where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
@@ -28,7 +35,7 @@ validateId (Just someId) domainName =
 
 buildTransaction ::
   ( MonadFlow m,
-    ToJSON request
+    Common.HideSecrets request
   ) =>
   DT.Endpoint ->
   ApiTokenInfo ->
@@ -46,7 +53,7 @@ buildTransaction endpoint apiTokenInfo commonDriverId commonRideId request = do
       { id = uid,
         requestorId = apiTokenInfo.personId,
         merchantId = Just apiTokenInfo.merchant.id,
-        request = encodeToText <$> request,
+        request = encodeToText . Common.hideSecrets <$> request,
         response = Nothing,
         responseError = Nothing,
         createdAt = now,
@@ -64,13 +71,24 @@ withTransactionStoring ::
   m response ->
   m response
 withTransactionStoring =
-  withResponseTransactionStoring (const emptyResponse)
+  withResponseTransactionStoring' (const emptyResponse)
 
 -- | Run client call and store transaction to DB.
 --
--- If client call successed, then write response to transaction, using response modifier.
+-- If client call successed, then write response to transaction, with secrets hiding
 -- Else write error code to transaction.
 withResponseTransactionStoring ::
+  ( Esq.EsqDBFlow m r,
+    MonadCatch m,
+    Common.HideSecrets response
+  ) =>
+  DT.Transaction ->
+  m response ->
+  m response
+withResponseTransactionStoring =
+  withResponseTransactionStoring' (Just . Common.hideSecrets)
+
+withResponseTransactionStoring' ::
   ( Esq.EsqDBFlow m r,
     MonadCatch m,
     ToJSON transactionResponse
@@ -79,7 +97,7 @@ withResponseTransactionStoring ::
   DT.Transaction ->
   m response ->
   m response
-withResponseTransactionStoring responseModifier transaction clientCall = handle errorHandler $ do
+withResponseTransactionStoring' responseModifier transaction clientCall = handle errorHandler $ do
   response <- clientCall
   Esq.runTransaction $
     QT.create $ transaction{response = encodeToText <$> responseModifier response}

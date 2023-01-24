@@ -11,7 +11,7 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
 import Beckn.Utils.Validation (runRequestValidation)
-import qualified "dashboard-bpp-helper-api" Dashboard.Common.Driver as Common
+import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -107,7 +107,7 @@ handler merchantId =
 
 buildTransaction ::
   ( MonadFlow m,
-    ToJSON request
+    Common.HideSecrets request
   ) =>
   Common.DriverEndpoint ->
   ApiTokenInfo ->
