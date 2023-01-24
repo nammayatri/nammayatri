@@ -48,14 +48,16 @@ instance TEntityKey CallStatusT where
   fromKey (CallStatusTKey _id) = Id _id
   toKey (Id id) = CallStatusTKey id
 
-instance TType CallStatusT Domain.CallStatus where
-  fromTType CallStatusT {..} = do
+instance FromTType CallStatusT Domain.CallStatus where
+  fromTType CallStatusT {..} =
     return $
       Domain.CallStatus
         { id = Id id,
           rideId = fromKey rideId,
           ..
         }
+
+instance ToTType CallStatusT Domain.CallStatus where
   toTType Domain.CallStatus {..} =
     CallStatusT
       { id = getId id,

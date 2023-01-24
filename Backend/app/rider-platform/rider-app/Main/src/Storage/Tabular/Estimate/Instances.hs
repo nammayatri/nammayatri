@@ -25,7 +25,7 @@ import qualified Storage.Tabular.TripTerms as STripTerms
 
 type FullEstimateT = (SEstimate.EstimateT, [ESB.EstimateBreakupT], Maybe STripTerms.TripTermsT)
 
-instance TType FullEstimateT Domain.Estimate where
+instance FromTType FullEstimateT Domain.Estimate where
   fromTType (SEstimate.EstimateT {..}, estimateBreakupListT, mbTripTermsT) = do
     pUrl <- parseBaseUrl providerUrl
     tripTerms <- forM mbTripTermsT fromTType
@@ -55,6 +55,8 @@ instance TType FullEstimateT Domain.Estimate where
               },
           ..
         }
+
+instance ToTType FullEstimateT Domain.Estimate where
   toTType Domain.Estimate {..} = do
     let estimateId = getId id
     let estimateT =

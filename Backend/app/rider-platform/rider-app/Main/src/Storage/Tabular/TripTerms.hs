@@ -40,13 +40,15 @@ instance TEntityKey TripTermsT where
   fromKey (TripTermsTKey _id) = Id _id
   toKey (Id id) = TripTermsTKey id
 
-instance TType TripTermsT Domain.TripTerms where
+instance FromTType TripTermsT Domain.TripTerms where
   fromTType TripTermsT {..} = do
     return $
       Domain.TripTerms
         { id = Id id,
           descriptions = Domain.splitDescriptions descriptions
         }
+
+instance ToTType TripTermsT Domain.TripTerms where
   toTType Domain.TripTerms {..} =
     TripTermsT
       { id = getId id,

@@ -56,7 +56,7 @@ instance TEntityKey BusinessEventT where
   fromKey (BusinessEventTKey _id) = Id _id
   toKey (Id id) = BusinessEventTKey id
 
-instance TType BusinessEventT Domain.BusinessEvent where
+instance FromTType BusinessEventT Domain.BusinessEvent where
   fromTType BusinessEventT {..} = do
     return $
       Domain.BusinessEvent
@@ -68,6 +68,8 @@ instance TType BusinessEventT Domain.BusinessEvent where
           duration = Seconds <$> duration,
           ..
         }
+
+instance ToTType BusinessEventT Domain.BusinessEvent where
   toTType Domain.BusinessEvent {..} =
     BusinessEventT
       { id = getId id,

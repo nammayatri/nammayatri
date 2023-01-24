@@ -68,7 +68,9 @@ instance TEntityKey BookingT where
   fromKey (BookingTKey _id) = Id _id
   toKey (Id id) = BookingTKey id
 
-instance TType (BookingT, BookingLocationT, BookingLocationT, Fare.FareParametersT) Domain.Booking where
+type FullBookingT = (BookingT, BookingLocationT, BookingLocationT, Fare.FareParametersT)
+
+instance FromTType FullBookingT Domain.Booking where
   fromTType (BookingT {..}, fromLoc, toLoc, fareParametersT) = do
     pUrl <- parseBaseUrl bapUri
     let fromLoc_ = mkDomainBookingLocation fromLoc
@@ -85,6 +87,8 @@ instance TType (BookingT, BookingLocationT, BookingLocationT, Fare.FareParameter
           riderId = fromKey <$> riderId,
           ..
         }
+
+instance ToTType FullBookingT Domain.Booking where
   toTType Domain.Booking {..} =
     ( BookingT
         { id = getId id,

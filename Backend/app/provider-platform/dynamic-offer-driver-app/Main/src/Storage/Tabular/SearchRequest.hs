@@ -62,7 +62,9 @@ instance TEntityKey SearchRequestT where
   fromKey (SearchRequestTKey _id) = Id _id
   toKey (Id id) = SearchRequestTKey id
 
-instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.SearchRequest where
+type FullSearchRequestT = (SearchRequestT, SearchReqLocationT, SearchReqLocationT)
+
+instance FromTType FullSearchRequestT Domain.SearchRequest where
   fromTType (SearchRequestT {..}, fromLoc, toLoc) = do
     pUrl <- parseBaseUrl bapUri
     let fromLoc_ = mkDomainSearchReqLocation fromLoc
@@ -77,6 +79,8 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
           bapUri = pUrl,
           ..
         }
+
+instance ToTType FullSearchRequestT Domain.SearchRequest where
   toTType Domain.SearchRequest {..} =
     ( SearchRequestT
         { id = getId id,

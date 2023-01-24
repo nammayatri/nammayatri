@@ -45,13 +45,15 @@ instance TEntityKey TagCategoryMappingT where
   fromKey (TagCategoryMappingTKey _id) = Id _id
   toKey (Id id) = TagCategoryMappingTKey id
 
-instance TType TagCategoryMappingT Domain.TagCategoryMapping where
-  fromTType TagCategoryMappingT {..} = do
+instance FromTType TagCategoryMappingT Domain.TagCategoryMapping where
+  fromTType TagCategoryMappingT {..} =
     return
       Domain.TagCategoryMapping
         { id = Id id,
           ..
         }
+
+instance ToTType TagCategoryMappingT Domain.TagCategoryMapping where
   toTType Domain.TagCategoryMapping {..} =
     TagCategoryMappingT
       { id = getId id,

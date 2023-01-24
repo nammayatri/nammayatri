@@ -56,7 +56,7 @@ instance TEntityKey SavedReqLocationT where
   fromKey (SavedReqLocationTKey _id) = Id _id
   toKey (Id id) = SavedReqLocationTKey id
 
-instance TType SavedReqLocationT Domain.SavedReqLocation where
+instance FromTType SavedReqLocationT Domain.SavedReqLocation where
   fromTType SavedReqLocationT {..} = do
     return $
       Domain.SavedReqLocation
@@ -64,6 +64,8 @@ instance TType SavedReqLocationT Domain.SavedReqLocation where
           riderId = fromKey riderId,
           ..
         }
+
+instance ToTType SavedReqLocationT Domain.SavedReqLocation where
   toTType Domain.SavedReqLocation {..} =
     SavedReqLocationT
       { id = getId id,

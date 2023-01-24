@@ -44,7 +44,7 @@ instance TEntityKey FareBreakupT where
   fromKey (FareBreakupTKey _id) = Id _id
   toKey (Id id) = FareBreakupTKey id
 
-instance TType FareBreakupT Domain.FareBreakup where
+instance FromTType FareBreakupT Domain.FareBreakup where
   fromTType FareBreakupT {..} = do
     return $
       Domain.FareBreakup
@@ -52,6 +52,8 @@ instance TType FareBreakupT Domain.FareBreakup where
           bookingId = fromKey bookingId,
           ..
         }
+
+instance ToTType FareBreakupT Domain.FareBreakup where
   toTType Domain.FareBreakup {..} =
     FareBreakupT
       { id = getId id,

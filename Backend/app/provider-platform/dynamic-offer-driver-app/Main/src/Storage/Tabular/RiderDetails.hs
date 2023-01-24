@@ -54,7 +54,7 @@ instance TEntityKey RiderDetailsT where
   fromKey (RiderDetailsTKey _id) = Id _id
   toKey (Id id) = RiderDetailsTKey id
 
-instance TType RiderDetailsT Domain.RiderDetails where
+instance FromTType RiderDetailsT Domain.RiderDetails where
   fromTType RiderDetailsT {..} = do
     return $
       Domain.RiderDetails
@@ -65,6 +65,8 @@ instance TType RiderDetailsT Domain.RiderDetails where
           merchantId = fromKey merchantId,
           ..
         }
+
+instance ToTType RiderDetailsT Domain.RiderDetails where
   toTType Domain.RiderDetails {..} =
     RiderDetailsT
       { id = getId id,
