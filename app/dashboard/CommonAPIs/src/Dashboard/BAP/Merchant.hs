@@ -46,7 +46,7 @@ data MerchantUpdateTReq = MerchantUpdateTReq
 
 validateMerchantUpdateReq :: Validate MerchantUpdateReq
 validateMerchantUpdateReq MerchantUpdateReq {..} =
-  sequenceA_ $
+  sequenceA_
     [ validateField "name" name $ InMaybe $ MinLength 3 `And` P.name,
       validateField "exoPhone" exoPhone $ InMaybe P.mobileNumber,
       validateField "exoPhoneCountryCode" exoPhoneCountryCode $ InMaybe P.mobileCountryCode,

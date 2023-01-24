@@ -25,6 +25,7 @@ import qualified Domain.Types.RiderDetails as DRD
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
+import qualified SharedLogic.DriverPool as DP
 import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
@@ -39,7 +40,6 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Storage.Queries.Vehicle as QVeh
 import qualified Tools.Notifications as Notify
-import qualified SharedLogic.DriverPool as DP
 
 data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
