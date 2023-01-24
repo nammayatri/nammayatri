@@ -12,6 +12,7 @@ import Beckn.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Control.Monad.Extra (maybeM)
 import qualified Data.HashMap as HM
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.SearchRequest as DSR
@@ -212,7 +213,7 @@ sortWithDriverScore merchantId (Just transporterConfig) dp = do
   logTagInfo "Driver Cancellation Score" $ show driverCancellationScore
   logTagInfo "Driver Availability Score" $ show driverAvailabilityScore
   logTagInfo "Overall Score" $ show (map (second getDriverId) overallScore)
-  pure $ map (updateDriverPoolResult rideRequestPopupConfig $ HM.fromList cancellationRatios) sortedDriverPool
+  mapM (updateDriverPoolResult rideRequestPopupConfig $ HM.fromList cancellationRatios) sortedDriverPool
   where
     -- if two drivers have same score in the end then the driver who has less number of ride requests till now will be preffered.
     breakSameScoreTies scoreMap = do
@@ -239,16 +240,18 @@ sortWithDriverScore merchantId (Just transporterConfig) dp = do
         )
         HM.empty
     updateDriverPoolResult rideRequestPopupConfig cancellationRatioMap dObj =
-      maybe
-        dObj
+      maybeM
+        (pure dObj)
         (addIntelligentPoolInfo rideRequestPopupConfig dObj)
-        (HM.lookup (getDriverId dObj) cancellationRatioMap)
-    addIntelligentPoolInfo rideRequestPopupConfig dObj cancellationRatio =
-      dObj
-        { rideRequestPopupDelayDuration = rideRequestPopupConfig.defaultPopupDelay + getPopupDelayToAdd cancellationRatio rideRequestPopupConfig,
-          isPartOfIntelligentPool = True,
-          cancellationRatio = Just cancellationRatio
-        }
+        (pure $ HM.lookup (getDriverId dObj) cancellationRatioMap)
+    addIntelligentPoolInfo rideRequestPopupConfig dObj cancellationRatio = do
+      popupDelay <- getPopupDelay merchantId dObj.driverPoolResult.driverId cancellationRatio rideRequestPopupConfig
+      pure $
+        dObj
+          { rideRequestPopupDelayDuration = popupDelay,
+            isPartOfIntelligentPool = True,
+            cancellationRatio = Just cancellationRatio
+          }
     calculateOverallScore scoresList = map (\dObj -> (,dObj) . sum $ mapMaybe (HM.lookup (getDriverId dObj)) scoresList) dp
     getRatios fn arr = mapM (\dId -> (dId.getId,) <$> fn dId) arr
     getDriverId = getId . (.driverPoolResult.driverId)

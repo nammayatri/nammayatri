@@ -8,11 +8,12 @@ module SharedLogic.DriverPool
     getTotalQuotesSent,
     getLatestAcceptanceRatio,
     incrementTotalRidesCount,
+    isThresholdRidesCompleted,
     incrementCancellationCount,
     getLatestCancellationRatio,
     getCurrentWindowAvailability,
     getQuotesCount,
-    getPopupDelayToAdd,
+    getPopupDelay,
     module Reexport,
   )
 where
@@ -153,6 +154,16 @@ incrementTotalRidesCount ::
   m ()
 incrementTotalRidesCount merchantId driverId = Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.incrementWindowCount (mkTotalRidesKey driverId.getId)
 
+getTotalRidesCount ::
+  ( Redis.HedisFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DM.Merchant ->
+  Id DP.Driver ->
+  m Int
+getTotalRidesCount merchantId driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withCancellationRatioWindowOption merchantId $ SWC.getCurrentWindowValues (mkTotalRidesKey driverId.getId))
+
 incrementCancellationCount ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
@@ -198,12 +209,37 @@ getQuotesCount ::
   m a
 getQuotesCount driverId = sum . catMaybes <$> (Redis.withCrossAppRedis . withMinQuotesToQualifyIntelligentPoolWindowOption $ SWC.getCurrentWindowValues (mkQuotesCountKey driverId.getId))
 
-getPopupDelayToAdd :: Double -> RideRequestPopupConfig -> Seconds
-getPopupDelayToAdd cancellationRatio rideRequestPopupConfig = do
+isThresholdRidesCompleted ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Reexport.HasDriverPoolConfig r
+  ) =>
+  Id DP.Driver ->
+  Id DM.Merchant ->
+  RideRequestPopupConfig ->
+  m Bool
+isThresholdRidesCompleted driverId merchantId rideRequestPopupConfig = do
+  let thresholdRidesCount = fromMaybe 5 rideRequestPopupConfig.thresholdRidesCount
+  totalRides <- getTotalRidesCount merchantId driverId
+  pure $ totalRides >= thresholdRidesCount
+
+getPopupDelay ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Reexport.HasDriverPoolConfig r
+  ) =>
+  Id DM.Merchant ->
+  Id DP.Driver ->
+  Double ->
+  RideRequestPopupConfig ->
+  m Seconds
+getPopupDelay merchantId driverId cancellationRatio rideRequestPopupConfig = do
   let cancellationRatioThreshold = fromIntegral $ fromMaybe 40 rideRequestPopupConfig.thresholdCancellationScore
-  if 100 * cancellationRatio > cancellationRatioThreshold
-    then fromMaybe (Seconds 0) rideRequestPopupConfig.popupDelayToAddAsPenalty
-    else Seconds 0
+  isThresholdRidesDone <- isThresholdRidesCompleted driverId merchantId rideRequestPopupConfig
+  pure . (rideRequestPopupConfig.defaultPopupDelay +) $
+    if isThresholdRidesDone && 100 * cancellationRatio > cancellationRatioThreshold
+      then fromMaybe (Seconds 0) rideRequestPopupConfig.popupDelayToAddAsPenalty
+      else Seconds 0
 
 calculateDriverPool ::
   ( EncFlow m r,

@@ -14,7 +14,8 @@ data IntelligentPoolConfig = IntelligentPoolConfig
 data RideRequestPopupConfig = RideRequestPopupConfig
   { popupDelayToAddAsPenalty :: Maybe Seconds,
     defaultPopupDelay :: Seconds,
-    thresholdCancellationScore :: Maybe Int
+    thresholdCancellationScore :: Maybe Int,
+    thresholdRidesCount :: Maybe Int
   }
   deriving (Generic, FromDhall)
 

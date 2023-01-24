@@ -68,7 +68,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import SharedLogic.CallBAP (sendDriverOffer)
-import SharedLogic.DriverPool (HasDriverPoolConfig, getDriverPoolConfig, getLatestCancellationRatio, getPopupDelayToAdd, incrementQuoteAcceptedCount)
+import SharedLogic.DriverPool (HasDriverPoolConfig, getDriverPoolConfig, getLatestCancellationRatio, getPopupDelay, incrementQuoteAcceptedCount)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
@@ -541,7 +541,7 @@ getNearbySearchRequests driverId = do
       let sId = nearbyReq.searchRequestId
       searchRequest <- runInReplica $ QSReq.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
       rideRequestPopupConfig <- asks (.rideRequestPopupConfig)
-      let popupDelaySeconds = rideRequestPopupConfig.defaultPopupDelay + getPopupDelayToAdd cancellationRatio rideRequestPopupConfig
+      popupDelaySeconds <- getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio rideRequestPopupConfig
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest popupDelaySeconds
 
 isAllowedExtraFee :: ExtraFee -> Money -> Bool

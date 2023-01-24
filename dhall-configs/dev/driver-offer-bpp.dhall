@@ -92,6 +92,7 @@ let rideRequestPopupConfig =
       { defaultPopupDelay = +0
       , popupDelayToAddAsPenalty = Some +5
       , thresholdCancellationScore = Some +40
+      , thresholdRidesCount = Some +5
       }
 
 let driverPoolCfg =
