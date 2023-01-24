@@ -7,7 +7,7 @@
 
 module Storage.Tabular.Estimate where
 
-import Beckn.External.Maps
+import Beckn.External.Maps hiding (status)
 import qualified Beckn.External.Maps as Domain
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
@@ -19,6 +19,7 @@ import qualified Storage.Tabular.SearchRequest as SSearchRequest
 import qualified Storage.Tabular.TripTerms as STripTerms
 
 derivePersistField "Domain.LatLong"
+derivePersistField "Domain.EstimateStatus"
 
 mkPersist
   defaultSqlSettings
@@ -42,9 +43,11 @@ mkPersist
       nightShiftMultiplier Centesimal Maybe
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
+      status Domain.EstimateStatus Maybe
       waitingChargePerMin Money Maybe
       waitingTimeEstimatedThreshold Seconds Maybe
       createdAt UTCTime
+      updatedAt UTCTime
       Primary id
       deriving Generic
     |]

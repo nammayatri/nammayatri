@@ -31,9 +31,14 @@ cancel ::
 cancel transporterId subscriber req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Cancel API Flow" "Reached"
-    dCancelReq <- ACL.buildCancelReq req
-    Redis.whenWithLockRedis (cancelLockKey dCancelReq.bookingId.getId) 60 $
-      DCancel.cancel transporterId subscriber dCancelReq
+    if req.message.item_id /= ""
+      then do
+        dCancelReq <- ACL.buildCancelSearchReq req
+        DCancel.cancelSearch transporterId subscriber dCancelReq
+      else do
+        dCancelReq <- ACL.buildCancelReq req
+        Redis.whenWithLockRedis (cancelLockKey dCancelReq.bookingId.getId) 60 $
+          DCancel.cancel transporterId subscriber dCancelReq
     return Ack
 
 cancelLockKey :: Text -> Text

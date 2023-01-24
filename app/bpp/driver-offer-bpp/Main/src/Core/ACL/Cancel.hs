@@ -20,3 +20,15 @@ buildCancelReq req = do
     DCancel.CancelReq
       { ..
       }
+
+buildCancelSearchReq ::
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
+  Cancel.CancelReq ->
+  m DCancel.CancelSearchReq
+buildCancelSearchReq req = do
+  validateContext Context.CANCEL req.context
+  let searchId = Id req.message.item_id
+  return $
+    DCancel.CancelSearchReq
+      { ..
+      }

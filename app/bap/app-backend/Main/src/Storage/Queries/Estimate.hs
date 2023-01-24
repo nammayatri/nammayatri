@@ -4,6 +4,7 @@ module Storage.Queries.Estimate where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Tuple.Extra
 import Domain.Types.Estimate
@@ -57,3 +58,42 @@ findAllByRequestId searchRequestId = Esq.buildDType $ do
     where_ $ estimate ^. EstimateRequestId ==. val (toKey searchRequestId)
     pure (estimate, mbTripTerms)
   mapM buildFullEstimate fullEstimateTs
+
+updateStatus ::
+  Id Estimate ->
+  Maybe EstimateStatus ->
+  SqlDB ()
+updateStatus estimateId status_ = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ EstimateUpdatedAt =. val now,
+        EstimateStatus =. val status_
+      ]
+    where_ $ tbl ^. EstimateId ==. val (getId estimateId)
+
+getStatus ::
+  (Transactionable m) =>
+  Id Estimate ->
+  m (Maybe (Maybe EstimateStatus))
+getStatus estimateId = do
+  findOne $ do
+    estimateT <- from $ table @EstimateT
+    where_ $
+      estimateT ^. EstimateId ==. val (getId estimateId)
+    return $ estimateT ^. EstimateStatus
+
+updateStatusbyRequestId ::
+  Id SearchRequest ->
+  Maybe EstimateStatus ->
+  SqlDB ()
+updateStatusbyRequestId searchId status_ = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ EstimateUpdatedAt =. val now,
+        EstimateStatus =. val status_
+      ]
+    where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)

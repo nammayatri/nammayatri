@@ -10,9 +10,14 @@ import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
+import Servant.API
 
 data Estimate = Estimate
   { id :: Id Estimate,
@@ -31,6 +36,8 @@ data Estimate = Estimate
     createdAt :: UTCTime,
     estimateBreakupList :: [EstimateBreakup],
     nightShiftRate :: Maybe NightShiftRate,
+    status :: Maybe EstimateStatus,
+    updatedAt :: UTCTime,
     waitingCharges :: WaitingCharges,
     driversLocation :: [LatLong]
   }
@@ -114,3 +121,16 @@ mkEstimateBreakupAPIEntity EstimateBreakup {..} = do
     { title = title,
       price = price.value
     }
+
+data EstimateStatus = NEW | DRIVER_QUOTE_REQUESTED | CANCELLED | GOT_DRIVER_QUOTE | DRIVER_QUOTE_CANCELLED | COMPLETED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance FromHttpApiData EstimateStatus where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData EstimateStatus where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode

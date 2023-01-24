@@ -1,4 +1,4 @@
-module Core.ACL.Cancel (buildCancelReq) where
+module Core.ACL.Cancel (buildCancelReq, buildCancelSearchReq) where
 
 import Beckn.Prelude
 import qualified Beckn.Types.Core.Context as Context
@@ -21,7 +21,7 @@ buildCancelReq res = do
   pure $ BecknReq context $ mkCancelMessage res
 
 mkCancelMessage :: DCancel.CancelRes -> Cancel.CancelMessage
-mkCancelMessage res = Cancel.CancelMessage res.bppBookingId.getId $ castCancellatonSource res.cancellationSource
+mkCancelMessage res = Cancel.CancelMessage res.bppBookingId.getId "" $ castCancellatonSource res.cancellationSource
   where
     castCancellatonSource = \case
       SBCR.ByUser -> Cancel.ByUser
@@ -29,3 +29,17 @@ mkCancelMessage res = Cancel.CancelMessage res.bppBookingId.getId $ castCancella
       SBCR.ByMerchant -> Cancel.ByMerchant
       SBCR.ByAllocator -> Cancel.ByAllocator
       SBCR.ByApplication -> Cancel.ByApplication
+
+buildCancelSearchReq ::
+  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
+  DCancel.CancelSearchRes ->
+  m (BecknReq Cancel.CancelMessage)
+buildCancelSearchReq res = do
+  bapURIs <- asks (.bapSelfURIs)
+  bapIDs <- asks (.bapSelfIds)
+  let messageId = res.estimateId.getId
+  context <- buildTaxiContext Context.CANCEL messageId Nothing bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl)
+  pure $ BecknReq context $ mkCancelSearchMessage res
+
+mkCancelSearchMessage :: DCancel.CancelSearchRes -> Cancel.CancelMessage
+mkCancelSearchMessage res = Cancel.CancelMessage "" res.searchReqId.getId Cancel.ByUser

@@ -10,7 +10,9 @@ import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import qualified Core.ACL.Cancel as CACL
 import qualified Core.ACL.Select as ACL
+import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
@@ -30,12 +32,17 @@ type API =
              :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "quotes"
              :> Get '[JSON] DSelect.SelectListRes
+           :<|> TokenAuth
+             :> Capture "estimateId" (Id DEstimate.Estimate)
+             :> "cancel"
+             :> Post '[JSON] APISuccess
        )
 
 handler :: FlowServer API
 handler =
   select
     :<|> selectList
+    :<|> cancelSearch
 
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
@@ -46,3 +53,9 @@ select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ 
 
 selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 selectList personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectList
+
+cancelSearch :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
+cancelSearch personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  dCancelRes <- DCancel.cancelSearch personId estimateId
+  void $ withShortRetry $ CallBPP.cancel dCancelRes.providerUrl =<< CACL.buildCancelSearchReq dCancelRes
+  pure Success

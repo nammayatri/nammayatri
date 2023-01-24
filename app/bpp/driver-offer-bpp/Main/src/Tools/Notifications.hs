@@ -351,3 +351,36 @@ notifyDriverClearedFare merchantId driverId sReqId fare mbToken = do
           fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CLEARED_FARE
         }
+
+notifyOnCancelSearchRequest ::
+  ( MonadFlow m,
+    HedisFlow m r,
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
+  ) =>
+  Id Merchant ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  Id SearchRequest ->
+  m ()
+notifyOnCancelSearchRequest merchantId personId mbDeviceToken searchRequestId = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notifType = FCM.CANCELLED_SEARCH_REQUEST
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.SearchRequest,
+          fcmEntityIds = searchRequestId.getId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+        }
+    title = FCMNotificationTitle "Search Request cancelled!"
+    body =
+      FCMNotificationBody $
+        unwords
+          [ "Search request has been cancelled by customer"
+          ]

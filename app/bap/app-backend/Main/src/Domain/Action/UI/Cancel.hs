@@ -2,20 +2,28 @@ module Domain.Action.UI.Cancel
   ( cancel,
     CancelReq (..),
     CancelRes (..),
+    CancelSearchRes (..),
+    cancelSearch,
   )
 where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
+import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
+import Domain.Types.SearchRequest (SearchRequest)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
 
@@ -31,6 +39,13 @@ data CancelRes = CancelRes
     bppId :: Text,
     bppUrl :: BaseUrl,
     cancellationSource :: SBCR.CancellationSource
+  }
+
+data CancelSearchRes = CancelSearchRes
+  { estimateId :: Id DEstimate.Estimate,
+    providerUrl :: BaseUrl,
+    providerId :: Text,
+    searchReqId :: Id SearchRequest
   }
 
 cancel :: (EncFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id Person.Person -> CancelReq -> m CancelRes
@@ -72,3 +87,31 @@ isBookingCancellable booking
     ride <- QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
     pure (ride.status == Ride.NEW)
   | otherwise = pure False
+
+cancelSearch ::
+  (EsqDBFlow m r) =>
+  Id Person.Person ->
+  Id DEstimate.Estimate ->
+  m CancelSearchRes
+cancelSearch personId estimateId = do
+  estStatus <- QEstimate.getStatus estimateId >>= fromMaybeM (EstimateStatusDoesNotExist estimateId.getId)
+  if estStatus == Just DEstimate.GOT_DRIVER_QUOTE
+    then Esq.runTransaction $ do
+      Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
+      QEstimate.updateStatus estimateId $ Just DEstimate.DRIVER_QUOTE_CANCELLED
+    else do
+      Esq.runTransaction $ do
+        Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
+        QEstimate.updateStatus estimateId $ Just DEstimate.CANCELLED
+  buildCancelReq estimateId
+  where
+    buildCancelReq estId = do
+      estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+      let searchRequestId = estimate.requestId
+      pure
+        CancelSearchRes
+          { estimateId = estId,
+            providerUrl = estimate.providerUrl,
+            providerId = estimate.providerId,
+            searchReqId = searchRequestId
+          }

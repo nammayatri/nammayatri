@@ -27,7 +27,8 @@ import Servant.Client
 
 selectQuote :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess
 selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectListRes
-selectQuote :<|> selectList = client (Proxy :: Proxy AppSelect.API)
+cancelSearch :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess
+selectQuote :<|> selectList :<|> cancelSearch = client (Proxy :: Proxy AppSelect.API)
 
 cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
 cancelRide = client (Proxy :: Proxy CancelAPI.API)

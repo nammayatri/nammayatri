@@ -1,6 +1,8 @@
 module Domain.Action.Beckn.Cancel
   ( cancel,
     CancelReq (..),
+    CancelSearchReq (..),
+    cancelSearch,
   )
 where
 
@@ -14,6 +16,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.SearchRequest as SR
 import EulerHS.Prelude
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
@@ -23,13 +26,19 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Person as QPers
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
 newtype CancelReq = CancelReq
   { bookingId :: Id SRB.Booking
+  }
+
+newtype CancelSearchReq = CancelSearchReq
+  { searchId :: Id SR.SearchRequest
   }
 
 cancel ::
@@ -86,3 +95,21 @@ cancel transporterId _ req = do
             additionalInfo = Nothing,
             ..
           }
+
+cancelSearch ::
+  ( HasCacheConfig r,
+    HedisFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  Id DM.Merchant ->
+  SignatureAuthResult ->
+  CancelSearchReq ->
+  m ()
+cancelSearch transporterId _ req = do
+  driverSearchReqs <- Esq.runInReplica $ QSRD.findAllActiveByRequestId req.searchId
+  for_ driverSearchReqs $ \driverReq -> do
+    logTagInfo ("searchId-" <> getId req.searchId) "Search Request Cancellation"
+    driver_ <- Esq.runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
+    Notify.notifyOnCancelSearchRequest transporterId driverReq.driverId driver_.deviceToken driverReq.searchRequestId

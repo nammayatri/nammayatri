@@ -10,6 +10,7 @@ import EulerHS.Prelude
 
 data CancelMessage = CancelMessage
   { order_id :: Text,
+    item_id :: Text,
     cancellation_reason_id :: CancellationSource
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

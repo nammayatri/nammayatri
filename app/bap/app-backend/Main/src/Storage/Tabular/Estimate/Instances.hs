@@ -61,6 +61,7 @@ instance TType FullEstimateT Domain.Estimate where
               driversLocation = PostgresList driversLocation,
               waitingChargePerMin = waitingCharges.waitingChargePerMin,
               waitingTimeEstimatedThreshold = waitingCharges.waitingTimeEstimatedThreshold,
+              status = status,
               ..
             }
     let mbTripTermsT = toTType <$> tripTerms

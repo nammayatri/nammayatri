@@ -82,6 +82,7 @@ onSelect registryUrl DOnSelectReq {..} = do
   DB.runTransaction $ do
     QQuote.createMany quotes
     QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
+    QEstimate.updateStatus estimateId $ Just DEstimate.GOT_DRIVER_QUOTE
   Notify.notifyOnDriverOfferIncoming estimateId quotes person
   where
     duplicateCheckCond :: EsqDBFlow m r => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
