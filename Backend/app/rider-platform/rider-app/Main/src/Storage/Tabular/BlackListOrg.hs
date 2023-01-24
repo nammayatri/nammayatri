@@ -44,7 +44,7 @@ instance TEntityKey BlackListOrgT where
   fromKey (BlackListOrgTKey _id) = Id _id
   toKey (Id id) = BlackListOrgTKey id
 
-instance TType BlackListOrgT Domain.BlackListOrg where
+instance FromTType BlackListOrgT Domain.BlackListOrg where
   fromTType BlackListOrgT {..} = do
     return $
       Domain.BlackListOrg
@@ -53,6 +53,8 @@ instance TType BlackListOrgT Domain.BlackListOrg where
           _type = orgType,
           ..
         }
+
+instance ToTType BlackListOrgT Domain.BlackListOrg where
   toTType Domain.BlackListOrg {..} =
     BlackListOrgT
       { id = getId id,

@@ -47,7 +47,7 @@ instance TEntityKey AllocationEventT where
   fromKey (AllocationEventTKey _id) = Id _id
   toKey (Id id) = AllocationEventTKey id
 
-instance TType AllocationEventT Domain.AllocationEvent where
+instance FromTType AllocationEventT Domain.AllocationEvent where
   fromTType AllocationEventT {..} = do
     return $
       Domain.AllocationEvent
@@ -56,6 +56,8 @@ instance TType AllocationEventT Domain.AllocationEvent where
           bookingId = fromKey bookingId,
           ..
         }
+
+instance ToTType AllocationEventT Domain.AllocationEvent where
   toTType Domain.AllocationEvent {..} =
     AllocationEventT
       { id = getId id,

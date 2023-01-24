@@ -52,7 +52,7 @@ instance TEntityKey MessageReportT where
   fromKey (MessageReportTKey _messageId _driverId) = (fromKey _messageId, cast (fromKey _driverId))
   toKey (messageId, driverId) = MessageReportTKey (toKey messageId) (toKey $ cast driverId)
 
-instance TType MessageReportT Domain.MessageReport where
+instance FromTType MessageReportT Domain.MessageReport where
   fromTType MessageReportT {..} = do
     return $
       Domain.MessageReport
@@ -60,6 +60,8 @@ instance TType MessageReportT Domain.MessageReport where
           driverId = cast $ fromKey driverId,
           ..
         }
+
+instance ToTType MessageReportT Domain.MessageReport where
   toTType Domain.MessageReport {..} =
     MessageReportT
       { messageId = toKey messageId,

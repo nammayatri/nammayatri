@@ -51,7 +51,7 @@ instance TEntityKey DriverInformationT where
   fromKey (DriverInformationTKey _id) = fromKey _id
   toKey id = DriverInformationTKey $ toKey id
 
-instance TType DriverInformationT Domain.DriverInformation where
+instance FromTType DriverInformationT Domain.DriverInformation where
   fromTType DriverInformationT {..} = do
     return $
       Domain.DriverInformation
@@ -59,6 +59,8 @@ instance TType DriverInformationT Domain.DriverInformation where
           adminId = fromKey <$> adminId,
           ..
         }
+
+instance ToTType DriverInformationT Domain.DriverInformation where
   toTType Domain.DriverInformation {..} =
     DriverInformationT
       { driverId = toKey driverId,

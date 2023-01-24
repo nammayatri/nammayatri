@@ -79,13 +79,13 @@ extra-deps:
   # - ../../beckn-gateway/app/gateway
   # - ../../beckn-gateway/app/mock-registry
   - git: https://github.com/nammayatri/beckn-gateway.git
-    commit: ec1d0cd507bccfc964ff6212e185da6c6d8f60ea
+    commit: 17c14267f36a597bfcf3562357d4b7c64c57b80c
     subdirs:
       - app/gateway
       - app/mock-registry
   # -  ../../shared-kernel/lib/mobility-core
   - git: https://github.com/nammayatri/shared-kernel.git
-    commit: f8029833e398e2c7ee24eae330cf2f592d74b54c
+    commit: 1b4f9a80d495b711141fc138e8674bf4e0e05b7f
     subdirs:
       - lib/mobility-core
   - git: https://github.com/piyushKumar-1/clickhouse-haskell.git

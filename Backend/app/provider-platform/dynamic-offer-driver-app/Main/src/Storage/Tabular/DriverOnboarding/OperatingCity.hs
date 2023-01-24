@@ -45,7 +45,7 @@ instance TEntityKey OperatingCityT where
   fromKey (OperatingCityTKey _id) = Id _id
   toKey (Id id) = OperatingCityTKey id
 
-instance TType OperatingCityT Domain.OperatingCity where
+instance FromTType OperatingCityT Domain.OperatingCity where
   fromTType OperatingCityT {..} = do
     return $
       Domain.OperatingCity
@@ -54,6 +54,7 @@ instance TType OperatingCityT Domain.OperatingCity where
           ..
         }
 
+instance ToTType OperatingCityT Domain.OperatingCity where
   toTType Domain.OperatingCity {..} =
     OperatingCityT
       { id = getId id,

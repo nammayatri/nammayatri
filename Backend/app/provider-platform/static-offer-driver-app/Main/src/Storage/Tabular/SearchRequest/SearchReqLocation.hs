@@ -43,13 +43,15 @@ instance TEntityKey SearchReqLocationT where
   fromKey (SearchReqLocationTKey _id) = Id _id
   toKey (Id id) = SearchReqLocationTKey id
 
-instance TType SearchReqLocationT Domain.SearchReqLocation where
+instance FromTType SearchReqLocationT Domain.SearchReqLocation where
   fromTType SearchReqLocationT {..} = do
     return $
       Domain.SearchReqLocation
         { id = Id id,
           ..
         }
+
+instance ToTType SearchReqLocationT Domain.SearchReqLocation where
   toTType Domain.SearchReqLocation {..} =
     SearchReqLocationT
       { id = getId id,

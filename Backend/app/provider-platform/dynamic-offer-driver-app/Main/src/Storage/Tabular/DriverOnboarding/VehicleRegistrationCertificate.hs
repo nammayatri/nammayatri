@@ -62,7 +62,7 @@ instance TEntityKey VehicleRegistrationCertificateT where
   fromKey (VehicleRegistrationCertificateTKey _id) = Id _id
   toKey (Id id) = VehicleRegistrationCertificateTKey id
 
-instance TType VehicleRegistrationCertificateT Domain.VehicleRegistrationCertificate where
+instance FromTType VehicleRegistrationCertificateT Domain.VehicleRegistrationCertificate where
   fromTType VehicleRegistrationCertificateT {..} = do
     return $
       Domain.VehicleRegistrationCertificate
@@ -72,6 +72,8 @@ instance TType VehicleRegistrationCertificateT Domain.VehicleRegistrationCertifi
           failedRules = unPostgresList failedRules,
           ..
         }
+
+instance ToTType VehicleRegistrationCertificateT Domain.VehicleRegistrationCertificate where
   toTType Domain.VehicleRegistrationCertificate {..} =
     VehicleRegistrationCertificateT
       { id = getId id,

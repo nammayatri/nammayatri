@@ -47,13 +47,15 @@ instance TEntityKey MerchantMessageT where
   fromKey (MerchantMessageTKey _id messageKey) = (fromKey _id, messageKey)
   toKey (id, messageKey) = MerchantMessageTKey (toKey id) messageKey
 
-instance TType MerchantMessageT Domain.MerchantMessage where
+instance FromTType MerchantMessageT Domain.MerchantMessage where
   fromTType MerchantMessageT {..} = do
     return $
       Domain.MerchantMessage
         { merchantId = fromKey merchantId,
           ..
         }
+
+instance ToTType MerchantMessageT Domain.MerchantMessage where
   toTType Domain.MerchantMessage {..} = do
     MerchantMessageT
       { merchantId = toKey merchantId,

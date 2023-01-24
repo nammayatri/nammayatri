@@ -45,13 +45,15 @@ instance TEntityKey OnSearchEventT where
   fromKey (OnSearchEventTKey _id) = Id _id
   toKey (Id id) = OnSearchEventTKey id
 
-instance TType OnSearchEventT Domain.OnSearchEvent where
+instance FromTType OnSearchEventT Domain.OnSearchEvent where
   fromTType OnSearchEventT {..} = do
     return $
       Domain.OnSearchEvent
         { id = Id id,
           ..
         }
+
+instance ToTType OnSearchEventT Domain.OnSearchEvent where
   toTType Domain.OnSearchEvent {..} =
     OnSearchEventT
       { id = getId id,

@@ -79,7 +79,7 @@ data BookingDetailsT = OneWayDetailsT SLoc.BookingLocationT | RentalDetailsT SRe
 
 type FullBookingT = (BookingT, SLoc.BookingLocationT, Maybe STripTerms.TripTermsT, BookingDetailsT)
 
-instance TType FullBookingT Domain.Booking where
+instance FromTType FullBookingT Domain.Booking where
   fromTType (BookingT {..}, fromLocT, mbTripTermsT, bookingDetailsT) = do
     pUrl <- parseBaseUrl providerUrl
     fromLocation <- fromTType fromLocT
@@ -111,6 +111,7 @@ instance TType FullBookingT Domain.Booking where
               distance = distance'
             }
 
+instance ToTType FullBookingT Domain.Booking where
   toTType Domain.Booking {..} = do
     let (fareProductType, bookingDetailsT, toLocationId, distance, rentalSlabId) = case bookingDetails of
           Domain.OneWayDetails details -> do

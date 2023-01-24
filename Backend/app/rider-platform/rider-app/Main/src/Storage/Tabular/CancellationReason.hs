@@ -46,13 +46,15 @@ instance TEntityKey CancellationReasonT where
   fromKey (CancellationReasonTKey _id) = Domain.CancellationReasonCode _id
   toKey (Domain.CancellationReasonCode id) = CancellationReasonTKey id
 
-instance TType CancellationReasonT Domain.CancellationReason where
+instance FromTType CancellationReasonT Domain.CancellationReason where
   fromTType CancellationReasonT {..} = do
     return $
       Domain.CancellationReason
         { reasonCode = Domain.CancellationReasonCode reasonCode,
           ..
         }
+
+instance ToTType CancellationReasonT Domain.CancellationReason where
   toTType Domain.CancellationReason {..} =
     CancellationReasonT
       { reasonCode = let (Domain.CancellationReasonCode rc) = reasonCode in rc,

@@ -43,13 +43,15 @@ instance TEntityKey TransportStationT where
   fromKey (TransportStationTKey _id) = Id _id
   toKey id = TransportStationTKey id.getId
 
-instance TType TransportStationT Domain.TransportStation where
+instance FromTType TransportStationT Domain.TransportStation where
   fromTType TransportStationT {..} = do
     return $
       Domain.TransportStation
         { id = Id id,
           ..
         }
+
+instance ToTType TransportStationT Domain.TransportStation where
   toTType Domain.TransportStation {..} =
     TransportStationT
       { id = id.getId,

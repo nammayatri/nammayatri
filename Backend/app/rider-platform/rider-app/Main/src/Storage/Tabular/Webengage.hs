@@ -46,13 +46,15 @@ instance TEntityKey WebengageT where
   fromKey (WebengageTKey _id) = Id _id
   toKey (Id id) = WebengageTKey id
 
-instance TType WebengageT Domain.Webengage where
+instance FromTType WebengageT Domain.Webengage where
   fromTType WebengageT {..} = do
     return $
       Domain.Webengage
         { id = Id id,
           ..
         }
+
+instance ToTType WebengageT Domain.Webengage where
   toTType Domain.Webengage {..} =
     WebengageT
       { id = getId id,

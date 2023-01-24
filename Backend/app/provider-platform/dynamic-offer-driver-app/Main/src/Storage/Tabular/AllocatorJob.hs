@@ -58,7 +58,7 @@ instance TEntityKey AllocatorJobT where
   fromKey (AllocatorJobTKey _id) = Id _id
   toKey (Id id) = AllocatorJobTKey id
 
-instance TType AllocatorJobT (ST.AnyJob AllocatorJobType) where
+instance FromTType AllocatorJobT (ST.AnyJob AllocatorJobType) where
   fromTType :: (MonadThrow m, Log m) => AllocatorJobT -> m (ST.AnyJob AllocatorJobType)
   fromTType AllocatorJobT {..} = do
     case toSing jobType of
@@ -76,6 +76,7 @@ instance TType AllocatorJobT (ST.AnyJob AllocatorJobType) where
                 ..
               }
 
+instance ToTType AllocatorJobT (ST.AnyJob AllocatorJobType) where
   toTType (ST.AnyJob job) = do
     let ST.Job {jobType} = job
     case jobType of

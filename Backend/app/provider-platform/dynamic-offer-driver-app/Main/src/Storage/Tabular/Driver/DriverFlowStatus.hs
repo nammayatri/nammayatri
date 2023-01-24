@@ -57,13 +57,15 @@ instance TEntityKey DriverFlowStatusT where
   fromKey (DriverFlowStatusTKey _id) = fromKey _id
   toKey id = DriverFlowStatusTKey $ toKey id
 
-instance TType DriverFlowStatusT Domain.DriverFlowStatus where
+instance FromTType DriverFlowStatusT Domain.DriverFlowStatus where
   fromTType DriverFlowStatusT {..} =
     return $
       Domain.DriverFlowStatus
         { personId = fromKey personId,
           ..
         }
+
+instance ToTType DriverFlowStatusT Domain.DriverFlowStatus where
   toTType Domain.DriverFlowStatus {..} =
     DriverFlowStatusT
       { personId = toKey personId,

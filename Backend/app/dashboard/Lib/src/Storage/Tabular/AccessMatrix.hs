@@ -48,7 +48,7 @@ instance TEntityKey AccessMatrixT where
   fromKey (AccessMatrixTKey _id) = Id _id
   toKey (Id id) = AccessMatrixTKey id
 
-instance TType AccessMatrixT Domain.AccessMatrixItem where
+instance FromTType AccessMatrixT Domain.AccessMatrixItem where
   fromTType AccessMatrixT {..} = do
     return $
       Domain.AccessMatrixItem
@@ -56,6 +56,8 @@ instance TType AccessMatrixT Domain.AccessMatrixItem where
           roleId = fromKey roleId,
           ..
         }
+
+instance ToTType AccessMatrixT Domain.AccessMatrixItem where
   toTType Domain.AccessMatrixItem {..} =
     AccessMatrixT
       { id = getId id,

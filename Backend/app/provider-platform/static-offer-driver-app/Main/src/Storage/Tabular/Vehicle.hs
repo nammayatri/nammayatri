@@ -62,7 +62,7 @@ instance TEntityKey VehicleT where
   fromKey (VehicleTKey _id) = fromKey _id
   toKey id = VehicleTKey $ toKey id
 
-instance TType VehicleT Domain.Vehicle where
+instance FromTType VehicleT Domain.Vehicle where
   fromTType VehicleT {..} = do
     return $
       Domain.Vehicle
@@ -70,6 +70,8 @@ instance TType VehicleT Domain.Vehicle where
           merchantId = fromKey merchantId,
           ..
         }
+
+instance ToTType VehicleT Domain.Vehicle where
   toTType Domain.Vehicle {..} =
     VehicleT
       { driverId = toKey driverId,

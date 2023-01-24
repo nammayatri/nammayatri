@@ -52,7 +52,7 @@ instance TEntityKey RentalFarePolicyT where
   fromKey (RentalFarePolicyTKey _id) = Id _id
   toKey (Id id) = RentalFarePolicyTKey id
 
-instance TType RentalFarePolicyT Domain.RentalFarePolicy where
+instance FromTType RentalFarePolicyT Domain.RentalFarePolicy where
   fromTType RentalFarePolicyT {..} = do
     let descriptions = Domain.mkDescriptions extraKmFare extraMinuteFare (roundToIntegral <$> driverAllowanceForDay)
     return $
@@ -65,6 +65,8 @@ instance TType RentalFarePolicyT Domain.RentalFarePolicy where
           driverAllowanceForDay = roundToIntegral <$> driverAllowanceForDay,
           ..
         }
+
+instance ToTType RentalFarePolicyT Domain.RentalFarePolicy where
   toTType Domain.RentalFarePolicy {..} =
     RentalFarePolicyT
       { id = getId id,
