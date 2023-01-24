@@ -53,7 +53,7 @@ data CreatePersonReq = CreatePersonReq
     email :: Text,
     mobileNumber :: Text,
     mobileCountryCode :: Text,
-    passwordHash :: Text
+    password :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -76,18 +76,16 @@ createPerson ::
   CreatePersonReq ->
   m CreatePersonRes
 createPerson _ personEntity = do
-  duplicateCheck
-    (QP.findByEmailAndPassword personEntity.email personEntity.passwordHash)
-    "Person already exists"
+  runRequestValidation validateCreatePerson personEntity
+  unlessM (isNothing <$> QP.findByEmail personEntity.email) $ throwError (InvalidRequest "Email already registered")
+  unlessM (isNothing <$> QP.findByMobileNumber personEntity.mobileNumber personEntity.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
   person <- buildPerson personEntity
-  Esq.runTransaction $ QP.create person
   decPerson <- decrypt person
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   let personAPIEntity = AP.makePersonAPIEntity decPerson role []
+  Esq.runTransaction $ QP.create person
   return $ CreatePersonRes personAPIEntity
-  where
-    duplicateCheck cond err = whenM (isJust <$> cond) $ throwError (InvalidRequest err)
 
 listPerson ::
   (EsqDBReplicaFlow m r, EncFlow m r) =>
@@ -225,7 +223,7 @@ buildPerson req = do
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
   email <- encrypt req.email
-  password <- getDbHash req.passwordHash
+  passwordHash <- getDbHash req.password
   return
     SP.Person
       { id = pid,
@@ -235,7 +233,7 @@ buildPerson req = do
         email = email,
         mobileNumber = mobileNumber,
         mobileCountryCode = req.mobileCountryCode,
-        passwordHash = password,
+        passwordHash = passwordHash,
         createdAt = now,
         updatedAt = now
       }

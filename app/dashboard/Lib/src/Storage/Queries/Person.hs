@@ -26,6 +26,18 @@ findById ::
   m (Maybe Person)
 findById = Esq.findById
 
+findByEmail ::
+  (Transactionable m, EncFlow m r) =>
+  Text ->
+  m (Maybe Person)
+findByEmail email = do
+  emailDbHash <- getDbHash email
+  findOne $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonEmailHash ==. val emailDbHash
+    return person
+
 findByEmailAndPassword ::
   (Transactionable m, EncFlow m r) =>
   Text ->
@@ -39,6 +51,20 @@ findByEmailAndPassword email password = do
     where_ $
       person ^. PersonEmailHash ==. val emailDbHash
         &&. person ^. PersonPasswordHash ==. val passwordDbHash
+    return person
+
+findByMobileNumber ::
+  (Transactionable m, EncFlow m r) =>
+  Text ->
+  Text ->
+  m (Maybe Person)
+findByMobileNumber mobileNumber mobileCountryCode = do
+  mobileDbHash <- getDbHash mobileNumber
+  findOne $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonMobileNumberHash ==. val mobileDbHash
+        &&. person ^. PersonMobileCountryCode ==. val mobileCountryCode
     return person
 
 -- TODO add filtering by role

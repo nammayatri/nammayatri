@@ -3,7 +3,7 @@ module API.Dashboard.Person where
 import Beckn.Prelude
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
-import Beckn.Utils.Common (withFlowHandler, withFlowHandlerAPI)
+import Beckn.Utils.Common (withFlowHandlerAPI)
 import qualified Domain.Action.Dashboard.Person as DPerson
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
@@ -71,7 +71,7 @@ listPerson tokenInfo mbSearchString mbLimit =
   withFlowHandlerAPI . DPerson.listPerson tokenInfo mbSearchString mbLimit
 
 createPerson :: TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
-createPerson tokenInfo = withFlowHandler . DPerson.createPerson tokenInfo
+createPerson tokenInfo = withFlowHandlerAPI . DPerson.createPerson tokenInfo
 
 assignRole :: TokenInfo -> Id DP.Person -> Id DRole.Role -> FlowHandler APISuccess
 assignRole tokenInfo personId =
