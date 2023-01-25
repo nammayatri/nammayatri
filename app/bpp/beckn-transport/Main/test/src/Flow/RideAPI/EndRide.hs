@@ -236,7 +236,7 @@ locationUpdatesSuccessHandle =
   where
     checkRide :: Ride.Ride -> IO ()
     checkRide rd =
-      when (rd.fare /= Just lufActFare || rd.totalFare /= Just lufActTotalFare) $
+      when (rd.fare /= Just lufEstFare || rd.totalFare /= Just lufEstTotalFare) $
         throwError $ InternalError $ "expected actual fares as final fares; fare = " <> show rd.fare <> ", totalFare = " <> show rd.totalFare
 
 locationUpdatesFailure :: TestTree
