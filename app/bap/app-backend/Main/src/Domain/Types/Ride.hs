@@ -75,6 +75,7 @@ data RideAPIEntity = RideAPIEntity
     rideOtp :: Text,
     computedPrice :: Maybe Money,
     chargeableRideDistance :: Maybe HighPrecMeters,
+    driverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
