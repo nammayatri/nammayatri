@@ -4,9 +4,8 @@
 module Storage.CachedQueries.Merchant.MerchantServiceConfig
   ( findByMerchantIdAndService,
     clearCache,
-    create,
-    updateMerchantServiceConfig,
     cacheMerchantServiceConfig,
+    upsertMerchantServiceConfig,
   )
 where
 
@@ -42,8 +41,5 @@ clearCache :: Hedis.HedisFlow m r => Id Merchant -> ServiceName -> m ()
 clearCache merchantId serviceName = do
   Hedis.del (makeMerchantIdAndServiceKey merchantId serviceName)
 
-create :: MerchantServiceConfig -> Esq.SqlDB ()
-create = Queries.create
-
-updateMerchantServiceConfig :: Id Merchant -> ServiceConfig -> Esq.SqlDB ()
-updateMerchantServiceConfig = Queries.updateMerchantServiceConfig
+upsertMerchantServiceConfig :: MerchantServiceConfig -> Esq.SqlDB ()
+upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig

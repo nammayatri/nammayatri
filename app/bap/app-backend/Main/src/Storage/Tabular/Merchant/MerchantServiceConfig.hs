@@ -31,14 +31,15 @@ mkPersist
       configJSON Text sql=config_json
       updatedAt UTCTime
       createdAt UTCTime
-      Primary merchantId
+      UniqueMerchantServiceConfigTId merchantId serviceName
+      Primary merchantId serviceName
       deriving Generic
     |]
 
 instance TEntityKey MerchantServiceConfigT where
-  type DomainKey MerchantServiceConfigT = Id Domain.Merchant
-  fromKey (MerchantServiceConfigTKey _id) = fromKey _id
-  toKey id = MerchantServiceConfigTKey $ toKey id
+  type DomainKey MerchantServiceConfigT = (Id Domain.Merchant, Domain.ServiceName)
+  fromKey (MerchantServiceConfigTKey _id serviceName) = (fromKey _id, serviceName)
+  toKey (id, serviceName) = MerchantServiceConfigTKey (toKey id) serviceName
 
 instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
   fromTType MerchantServiceConfigT {..} = do

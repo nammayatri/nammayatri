@@ -11,31 +11,23 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Types.Merchant as DOrg
-import Domain.Types.Merchant.MerchantServiceConfig (MerchantServiceConfig, ServiceConfig, ServiceName)
+import Domain.Types.Merchant.MerchantServiceConfig (MerchantServiceConfig, ServiceName)
 import Storage.Tabular.Merchant.MerchantServiceConfig
 
-create :: MerchantServiceConfig -> SqlDB ()
-create = Esq.create
-
 findByMerchantIdAndService :: Transactionable m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
-findByMerchantIdAndService orgId service =
+findByMerchantIdAndService merchantId serviceName =
   Esq.findOne $ do
-    orgMapsCfg <- from $ table @MerchantServiceConfigT
+    merchantServiceConfig <- from $ table @MerchantServiceConfigT
     where_ $
-      orgMapsCfg ^. MerchantServiceConfigTId ==. val (toKey orgId)
-        &&. orgMapsCfg ^. MerchantServiceConfigServiceName ==. val service
-    return orgMapsCfg
+      merchantServiceConfig ^. MerchantServiceConfigTId ==. val (toKey (merchantId, serviceName))
+    return merchantServiceConfig
 
-updateMerchantServiceConfig :: Id Merchant -> ServiceConfig -> SqlDB ()
-updateMerchantServiceConfig merchantId serviceConfig = do
+upsertMerchantServiceConfig :: MerchantServiceConfig -> SqlDB ()
+upsertMerchantServiceConfig merchantServiceConfig = do
   now <- getCurrentTime
-  let (serviceName, configJSON) = getServiceNameConfigJSON serviceConfig
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ MerchantServiceConfigConfigJSON =. val configJSON,
-        MerchantServiceConfigUpdatedAt =. val now
-      ]
-    where_ $
-      tbl ^. MerchantServiceConfigTId ==. val (toKey merchantId)
-        &&. tbl ^. MerchantServiceConfigServiceName ==. val serviceName
+  let (_serviceName, configJSON) = getServiceNameConfigJSON merchantServiceConfig.serviceConfig
+  Esq.upsert
+    merchantServiceConfig
+    [ MerchantServiceConfigConfigJSON =. val configJSON,
+      MerchantServiceConfigUpdatedAt =. val now
+    ]

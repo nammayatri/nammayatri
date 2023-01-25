@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingStrategies #-}
+
 module Domain.Types.Merchant.MerchantServiceConfig where
 
 import qualified Beckn.External.Maps as Maps
@@ -12,7 +14,8 @@ import Domain.Types.Merchant (Merchant)
 import qualified Text.Show as Show
 
 data ServiceName = MapsService Maps.MapsService | SmsService Sms.SmsService
-  deriving (Generic)
+  deriving stock (Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance Show ServiceName where
   show (MapsService s) = "Maps_" <> show s

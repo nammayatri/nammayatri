@@ -54,16 +54,10 @@ merchantServiceConfigUpdate merchantShortId req = do
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
-  mbMerchantServiceConfig <- CQMSC.findByMerchantIdAndService merchant.id serviceName
-  case mbMerchantServiceConfig of
-    Nothing -> do
-      merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-      Esq.runTransaction $ do
-        CQMSC.create merchantServiceConfig
-    Just _merchantServiceConfig -> do
-      Esq.runTransaction $ do
-        CQMSC.updateMerchantServiceConfig merchant.id serviceConfig
-      CQMSC.clearCache merchant.id serviceName
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
+  Esq.runTransaction $ do
+    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
+  CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> merchantServiceConfigUpdate : " (show merchant.id)
   pure Success
 
