@@ -6,6 +6,7 @@ module Storage.CachedQueries.Merchant.MerchantServiceConfig
     clearCache,
     create,
     updateMerchantServiceConfig,
+    cacheMerchantServiceConfig,
   )
 where
 

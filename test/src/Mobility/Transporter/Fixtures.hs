@@ -2,6 +2,7 @@ module Mobility.Transporter.Fixtures where
 
 import Beckn.Types.Id
 import Beckn.Types.Time (Seconds)
+import "beckn-transport" Domain.Types.Merchant as DM
 import qualified "app-backend" Domain.Types.Person as TPerson
 import EulerHS.Prelude
 import Utils
@@ -44,5 +45,8 @@ testDriverId1 = Id "6bc4bc84-2c43-425d-8853-22f47driver1"
 testDriverId2 :: Id TPerson.Person
 testDriverId2 = Id "6bc4bc84-2c43-425d-8853-22f47driver2"
 
-{-
--}
+yatriPartnerMerchantId :: Id DM.Merchant
+yatriPartnerMerchantId = "7f7896dd-787e-4a0b-8675-e9e6fe93bb8f"
+
+otherMerchantId :: Id DM.Merchant
+otherMerchantId = "e1f37274-f0aa-4bb3-93a0-2476349487b7"

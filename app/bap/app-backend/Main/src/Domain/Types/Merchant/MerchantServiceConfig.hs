@@ -4,6 +4,7 @@ import qualified Beckn.External.Maps as Maps
 import Beckn.External.Maps.Interface.Types
 import Beckn.External.SMS as Sms
 import Beckn.Prelude
+import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
@@ -68,3 +69,18 @@ getServiceName msc = case msc.serviceConfig of
   SmsServiceConfig smsCfg -> case smsCfg of
     Sms.ExotelSmsConfig _ -> SmsService Sms.ExotelSms
     Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
+
+buildMerchantServiceConfig ::
+  MonadTime m =>
+  Id Merchant ->
+  ServiceConfig ->
+  m MerchantServiceConfig
+buildMerchantServiceConfig merchantId serviceConfig = do
+  now <- getCurrentTime
+  pure
+    MerchantServiceConfig
+      { merchantId,
+        serviceConfig,
+        updatedAt = now,
+        createdAt = now
+      }

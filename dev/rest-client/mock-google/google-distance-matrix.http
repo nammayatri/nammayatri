@@ -1,0 +1,155 @@
+@google-maps-url = https://maps.googleapis.com/maps/api/
+
+# below posted all requests, that used in tests/rest-client requests and implemented in mock
+
+# @name route1
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=12.935200%2C77.624500
+  &destinations=12.906300%2C77.585700
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route2
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=10.021737%2C76.306198
+  &destinations=10.023880%2C76.302642
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route3
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=10.030061%2C76.309029
+  &destinations=10.044056%2C76.277771
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route4
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=14.467318%2C75.919232
+  &destinations=14.479898%2C75.915455
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route5
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=14.445983%2C75.947267
+  &destinations=14.472649%2C75.888420
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route6
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=10.073900%2C76.273300
+  &destinations=10.544900%2C76.435600
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route7
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=14.445332%2C75.919028
+  &destinations=14.441555%2C75.922259
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route8
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=14.445352%2C75.919028
+  &destinations=14.441555%2C75.922259
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route9
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=10.021737%2C76.306198
+  &destinations=10.021737%2C76.306198%7C10.021737%2C76.306198
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route10
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=10.030061%2C76.309029
+  &destinations=10.030061%2C76.309029%7C10.021737%2C76.306198
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route11
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=14.445332%2C75.919028
+  &destinations=14.467318%2C75.919232
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route12
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=10.073900%2C76.273300
+  &destinations=10.021737%2C76.306198
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route13
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=10.074100%2C76.273300
+  &destinations=10.021737%2C76.306198
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json
+
+###
+
+# @name route14
+
+POST {{google-maps-url}}distancematrix/json
+  ?origins=10.073900%2C76.273300
+  &destinations=10.030061%2C76.309029
+  &key={{google-key}}
+  &mode=driving
+content-type: application/json

@@ -4,6 +4,7 @@ import Beckn.Prelude
 import Beckn.Types.Common (Money)
 import Beckn.Types.Id
 import Beckn.Types.Time
+import "driver-offer-bpp" Domain.Types.Merchant as DM
 import Utils
 
 timeBetweenLocationUpdates :: Seconds
@@ -28,3 +29,9 @@ arduDriver2 =
 
 defaultAllowedDriverFee :: Money
 defaultAllowedDriverFee = 30
+
+nammaYatriPartnerMerchantId :: Id DM.Merchant
+nammaYatriPartnerMerchantId = "favorit0-0000-0000-0000-00000favorit"
+
+otherMerchant2Id :: Id DM.Merchant
+otherMerchant2Id = "nearest-drivers-testing-organization"

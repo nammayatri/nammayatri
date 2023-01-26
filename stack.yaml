@@ -48,6 +48,7 @@ packages:
   - app/mocks/bap
   - app/kafka-consumers
   - app/mocks/idfy
+  - app/mocks/google
   - app/bap/public-transport-bap/Main
   - app/bap/public-transport-bap/search-consumer
   - app/mocks/public-transport-bpp
@@ -80,7 +81,7 @@ extra-deps:
       - app/mock-registry
   # -  ../beckn-shared-kernel/lib/beckn-core
   - git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-shared-kernel.git
-    commit: 04c9ace83c7257714f7c4e8b13bd8c396ba0f98e
+    commit: f346a944055dbbce5f5b98dd1c488bf4ec26fa7e
     subdirs:
       - lib/beckn-core
   - git: ssh://git@bitbucket.org/juspay/passetto-hs

@@ -53,6 +53,7 @@ default-extensions:
 dependencies:
   - mock-sms
   - mock-fcm
+  - mock-google
   - app-backend
   - beckn-transport
   - beckn-gateway

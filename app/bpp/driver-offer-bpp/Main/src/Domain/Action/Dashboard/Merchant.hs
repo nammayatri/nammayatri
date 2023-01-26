@@ -74,7 +74,7 @@ merchantServiceConfigUpdate merchantShortId req = do
   mbMerchantServiceConfig <- CQMSC.findByMerchantIdAndService merchant.id serviceName
   case mbMerchantServiceConfig of
     Nothing -> do
-      merchantServiceConfig <- buildMerchantServiceConfig merchant.id serviceConfig
+      merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
       Esq.runTransaction $ do
         CQMSC.create merchantServiceConfig
     Just _merchantServiceConfig -> do
@@ -83,21 +83,6 @@ merchantServiceConfigUpdate merchantShortId req = do
       CQMSC.clearCache merchant.id serviceName
   logTagInfo "dashboard -> merchantServiceConfigUpdate : " (show merchant.id)
   pure Success
-
-buildMerchantServiceConfig ::
-  MonadTime m =>
-  Id DM.Merchant ->
-  DMSC.ServiceConfig ->
-  m DMSC.MerchantServiceConfig
-buildMerchantServiceConfig merchantId serviceConfig = do
-  now <- getCurrentTime
-  pure
-    DMSC.MerchantServiceConfig
-      { merchantId,
-        serviceConfig,
-        updatedAt = now,
-        createdAt = now
-      }
 
 ---------------------------------------------------------------------
 merchantServiceConfigUsageUpdate ::

@@ -92,15 +92,17 @@ groupingGen = GroupingList . take 50 <$> infiniteListOf groupingPointGen
 
 ------------------ debug functions ---------------------
 
-runOnce :: Integer -> Int -> [Int] -> IO ()
-runOnce batchSize numPoints groupingList =
-  wrapTests $ \appEnv ->
-    quickCheck $
-      withMaxSuccess 1 $
-        qcTest appEnv (BatchSize batchSize) (PointsNum numPoints) (GroupingList groupingList)
+-- not used anywhere
 
-runNtimes :: Int -> IO ()
-runNtimes num = wrapTests $ \appEnv -> quickCheck $ withMaxSuccess num $ qcTest appEnv
+-- runOnce :: Integer -> Int -> [Int] -> IO ()
+-- runOnce batchSize numPoints groupingList =
+--   wrapTests $ \appEnv ->
+--     quickCheck $
+--       withMaxSuccess 1 $
+--         qcTest appEnv (BatchSize batchSize) (PointsNum numPoints) (GroupingList groupingList)
+
+-- runNtimes :: Int -> IO ()
+-- runNtimes num = wrapTests $ \appEnv -> quickCheck $ withMaxSuccess num $ qcTest appEnv
 
 ---------------------------------------------------------
 --------------------- main test -------------------------

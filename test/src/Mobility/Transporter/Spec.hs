@@ -1,5 +1,6 @@
 module Mobility.Transporter.Spec where
 
+import qualified Beckn.External.Maps as Maps
 import EulerHS.Prelude
 import qualified Mobility.Transporter.AppCancelRide as CR
 import qualified Mobility.Transporter.DriverCancelRide as DCR
@@ -9,11 +10,12 @@ import qualified Mobility.Transporter.LocationUpdates as LU
 import qualified Mobility.Transporter.MapsConfig as MapsConfig
 import qualified Mobility.Transporter.NearestDrivers as ND
 import qualified Mobility.Transporter.Serviceability as SRV
+import qualified Mobility.Transporter.Utils as Utils
 import Test.Tasty
 import Test.Tasty.Hspec hiding (after)
 
-mkTestTree :: IO TestTree
-mkTestTree = do
+mkTestTree :: Maps.MapsServiceConfig -> IO TestTree
+mkTestTree googleCfg = do
   hcSpec <- testSpec "HealthCheck" HC.spec
   mapsCfgSpec <- testSpec "MapsConfig" MapsConfig.spec
   drrSpec <- testSpec "DriversRejectRide" DRR.spec
@@ -29,17 +31,25 @@ mkTestTree = do
       "Mobility"
       [ hcSpec,
         after AllSucceed "HealthCheck" $
-          testGroup
-            "Merchant configs"
-            [mapsCfgSpec],
+          withResource
+            Utils.clearCachedMapsConfig
+            (const $ pure ())
+            $ \_ ->
+              testGroup
+                "Merchant configs"
+                [mapsCfgSpec],
         after AllSucceed "Merchant configs" $
-          testGroup
-            "APIs"
-            [ ndSpec,
-              srvSpec,
-              drrSpec,
-              crSpec,
-              dcrSpec,
-              locationUpdatesSpec
-            ]
+          withResource
+            (Utils.changeCachedMapsConfig googleCfg)
+            (const Utils.clearCachedMapsConfig)
+            $ \_ ->
+              testGroup
+                "APIs"
+                [ ndSpec,
+                  srvSpec,
+                  drrSpec,
+                  crSpec,
+                  dcrSpec,
+                  locationUpdatesSpec
+                ]
       ]

@@ -1,0 +1,7 @@
+@google-maps-url = https://maps.googleapis.com/maps/api/
+
+GET {{google-maps-url}}geocode/json
+  ?key={{google-key}}
+  &latlng=14.467318%2C75.919232
+  content-type: application/json
+sessiontoken: 78990066-33f8-4545-a718-ed7957b95273

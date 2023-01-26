@@ -1,6 +1,6 @@
 module Utils where
 
-import Beckn.External.Encryption (EncTools (..), Encrypted (..))
+import Beckn.External.Encryption (EncTools (..))
 import Beckn.External.Maps
 import Beckn.Prelude
 import Beckn.Storage.Hedis.Config
@@ -13,6 +13,7 @@ import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map as Map
 import qualified EulerHS.Runtime as R
+import qualified "mock-google" Lib.IntegrationTests.Environment as Environment
 import Network.HTTP.Client
 
 data Person
@@ -22,8 +23,8 @@ data Person
 data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
-    encTools :: EncTools,
     hedisEnv :: HedisEnv,
+    encTools :: EncTools,
     coreMetrics :: Metrics.CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions
   }
@@ -47,19 +48,21 @@ defaultHttpClientOptions =
     { timeoutMs = 2000
     }
 
-wrapTests :: (AppEnv -> IO a) -> IO a
+wrapTests :: (Environment.AppCfg -> AppEnv -> IO a) -> IO a
 wrapTests func = do
   withHedisEnv defaultHedisCfg ("locationUpdatesTest:" <>) $ \hedisEnv -> do
     let loggerConfig = defaultLoggerConfig {logToFile = True, prettyPrinting = True}
-    let encTools =
-          EncTools
-            { service = ("localhost", 8021),
-              hashSalt = "How wonderful it is that nobody need wait a single moment before starting to improve the world"
-            }
     withLoggerEnv loggerConfig Nothing $ \loggerEnv -> do
       coreMetrics <- Metrics.registerCoreMetricsContainer
-      let appEnv = AppEnv loggerConfig loggerEnv encTools hedisEnv coreMetrics defaultHttpClientOptions
-      func appEnv
+      -- fetch google configs for using mock-google or real google
+      appCfg <- Environment.readConfig "../"
+      let appEnv =
+            AppEnv
+              { httpClientOptions = defaultHttpClientOptions,
+                encTools = appCfg.encTools,
+                ..
+              }
+      func appCfg appEnv
 
 ------------------- utility functions ---------------------
 
@@ -79,15 +82,6 @@ equalsEps :: Double -> Double -> Double -> Bool
 equalsEps eps x y = abs (x - y) < eps
 
 ----------------- fixtures ---------------------------------
-
-googleConfig :: MapsServiceConfig
-googleConfig =
-  GoogleConfig
-    GoogleCfg
-      { googleRoadsUrl = fromJust $ parseBaseUrl "https://roads.googleapis.com/",
-        googleMapsUrl = fromJust $ parseBaseUrl "https://maps.googleapis.com/maps/api/",
-        googleKey = Encrypted "0.1.0|2|S34+Lq69uC/hNeYSXr4YSjwwmaTS0jO/1ZGlAAwl72hBhgD9AAZhgI4o/6x3oi99KyJkQdt5UvgjlHyeEOuf1Z3xzOBqWBYVQM/RBggZ7NggTyIsDgiG5b3p"
-      }
 
 osrmConfig :: MapsServiceConfig
 osrmConfig =

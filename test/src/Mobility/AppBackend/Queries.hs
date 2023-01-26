@@ -4,14 +4,16 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding (findById)
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Geofencing (GeoRestriction (Regions))
+import Beckn.Types.Id
+import qualified "app-backend" Domain.Types.Merchant as DM
 import "app-backend" Storage.Tabular.Merchant
 
-updateOrigAndDestRestriction :: [Text] -> [Text] -> SqlDB ()
-updateOrigAndDestRestriction originList destinationList =
+updateOrigAndDestRestriction :: Id DM.Merchant -> [Text] -> [Text] -> SqlDB ()
+updateOrigAndDestRestriction merchantId originList destinationList =
   Esq.update $ \tbl -> do
     set
       tbl
       [ MerchantOriginRestriction =. val (Regions originList),
         MerchantDestinationRestriction =. val (Regions destinationList)
       ]
-    where_ $ tbl ^. MerchantId ==. val "da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
+    where_ $ tbl ^. MerchantTId ==. val (toKey merchantId)

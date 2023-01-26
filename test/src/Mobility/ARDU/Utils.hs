@@ -3,6 +3,7 @@ module Mobility.ARDU.Utils (module Mobility.ARDU.Utils) where
 import qualified "driver-offer-bpp" API.UI.Driver as TDriver
 import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
 import qualified "app-backend" API.UI.Search as AppSearch
+import qualified Beckn.External.Maps as Maps
 import Beckn.External.Maps.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
@@ -17,6 +18,7 @@ import qualified "app-backend" Domain.Types.CancellationReason as AppCR
 import qualified "driver-offer-bpp" Domain.Types.CancellationReason as SCR
 import qualified "driver-offer-bpp" Domain.Types.DriverInformation as TDrInfo
 import qualified "app-backend" Domain.Types.Estimate as AppEstimate
+import qualified "driver-offer-bpp" Domain.Types.Merchant.MerchantServiceConfig as TDMSC
 import "driver-offer-bpp" Domain.Types.Person as TPerson
 import qualified "app-backend" Domain.Types.Quote as AppQuote
 import qualified "app-backend" Domain.Types.Ride as BRide
@@ -26,10 +28,11 @@ import qualified "driver-offer-bpp" Domain.Types.SearchRequest as ArduSReq
 import Domain.Types.SearchRequestForDriver as SearchReqInfo
 import HSpec
 import qualified Mobility.ARDU.APICalls as API
-import Mobility.ARDU.Fixtures
+import Mobility.ARDU.Fixtures as Fixtures
 import Mobility.AppBackend.APICalls as BapAPI
 import Mobility.AppBackend.Fixtures
 import Servant.Client
+import qualified "driver-offer-bpp" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
 import qualified "app-backend" Storage.Queries.Booking as BQRB
 import qualified "driver-offer-bpp" Storage.Queries.Booking as TQRB
 import qualified "driver-offer-bpp" Storage.Queries.DriverInformation as QTDrInfo
@@ -294,3 +297,16 @@ search'Confirm appToken driver searchReq' = do
         bppBooking,
         ride
       }
+
+changeCachedMapsConfig :: Maps.MapsServiceConfig -> IO ()
+changeCachedMapsConfig googleCfg = runARDUFlow "change cached maps config" $ do
+  let serviceConfig = TDMSC.MapsServiceConfig googleCfg
+  nammaYatriPartnerServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.nammaYatriPartnerMerchantId serviceConfig
+  otherMerchant2ServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.otherMerchant2Id serviceConfig
+  TCQMSC.cacheMerchantServiceConfig nammaYatriPartnerServiceConfig
+  TCQMSC.cacheMerchantServiceConfig otherMerchant2ServiceConfig
+
+clearCachedMapsConfig :: IO ()
+clearCachedMapsConfig = runARDUFlow "clear cached maps config" do
+  TCQMSC.clearCache Fixtures.nammaYatriPartnerMerchantId (TDMSC.MapsService Maps.Google)
+  TCQMSC.clearCache Fixtures.otherMerchant2Id (TDMSC.MapsService Maps.Google)

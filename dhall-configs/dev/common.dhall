@@ -8,11 +8,23 @@ let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 
 let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
 
+let googleCfg =
+      { googleMapsUrl = "https://maps.googleapis.com/maps/api/"
+      , googleRoadsUrl = "https://roads.googleapis.com/"
+      , googleKey = sec.googleKey
+      }
+
+let mockGoogleCfg =
+      { googleMapsUrl = "http://localhost:8019/"
+      , googleRoadsUrl = "http://localhost:8019/"
+      , googleKey = "mock-google-key"
+      }
+
 in  { smsSessionConfig = globalCommon.smsSessionConfig
     , autoMigrate = globalCommon.autoMigrate
     , loggerConfig =
-            globalCommon.loggerConfig
-        //  { logToFile = True, logRawSql = True, prettyPrinting = True }
+          globalCommon.loggerConfig
+        // { logToFile = True, logRawSql = True, prettyPrinting = True }
     , LogLevel = globalCommon.LogLevel
     , ExotelCfg = globalCommon.ExotelCfg
     , exotelCfg = sec.exotelCfg
@@ -29,6 +41,8 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , smsPassword = sec.smsPassword
     , InfoBIPConfig = sec.InfoBIPConfig
     , passetto = { _1 = "localhost", _2 = 8021 }
+    , googleCfg = googleCfg
+    , mockGoogleCfg = mockGoogleCfg
     , googleTranslateUrl = "https://www.googleapis.com/"
     , googleTranslateKey = sec.googleTranslateKey
     , registryUrl = mockRegistryUrl

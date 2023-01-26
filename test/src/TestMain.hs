@@ -11,6 +11,7 @@ import qualified "beckn-transport-driver-tracking-health-check" App as DriverHC
 import qualified "driver-offer-allocator" App as ARDUAllocator
 import qualified "driver-offer-bpp" App as DriverOfferBpp
 import qualified "mock-fcm" App as MockFcm
+import qualified "mock-google" App as MockGoogle
 import qualified "mock-public-transport-bpp" App as MockPublicTransportBpp
 import qualified "mock-registry" App as MockRegistry
 import qualified "mock-sms" App as MockSms
@@ -18,6 +19,7 @@ import qualified "public-transport-bap" App as PublicTransport
 import qualified "public-transport-search-consumer" App as PublicTransportSearchConsumer
 import qualified "search-result-aggregator" App as SearchResultAggregator
 import Beckn.Exit (exitDBMigrationFailure)
+import qualified Beckn.External.Maps as Maps
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Esqueleto.Migration as Esq
 import Beckn.Utils.App (handleLeft)
@@ -28,8 +30,11 @@ import qualified "app-backend" Environment as AppBackend
 import qualified "beckn-transport" Environment as TransporterBackend
 import qualified "driver-offer-bpp" Environment as DriverOfferBpp
 import EulerHS.Prelude
+import qualified "mock-google" Lib.IntegrationTests.Environment as Environment
 import qualified Mobility.ARDU.Spec as Mobility.ARDU
+import qualified Mobility.AppBackend.Fixtures as Fixtures
 import Mobility.AppBackend.Queries
+import qualified Mobility.AppBackend.Utils as Utils
 import qualified Mobility.Transporter.Spec as Transporter.Mobility
 import PublicTransport.Common
 import qualified PublicTransport.Spec as PublicTransport
@@ -58,10 +63,14 @@ main = do
       "public-transport-search-consumer",
       "search-result-aggregator",
       "driver-offer-bpp",
-      "driver-offer-allocator"
+      "driver-offer-allocator",
+      "mock-google"
     ]
+  -- fetch google configs for using mock-google or real google
+  testCfg <- Environment.readConfig ""
+  googleCfgEncrypted <- Environment.buildGoogleConfig testCfg.encTools testCfg.googleCfg
   -- ... and run
-  defaultMain =<< specs
+  defaultMain =<< specs googleCfgEncrypted
   where
     setConfigEnv app = do
       Env.setEnv
@@ -73,16 +82,17 @@ main = do
 
     toEnvVar = T.toUpper . T.replace "-" "_"
 
-specs :: IO TestTree
-specs =
+specs :: Maps.MapsServiceConfig -> IO TestTree
+specs googleCfg =
   specs'
-    [ Transporter.Mobility.mkTestTree,
-      Mobility.ARDU.mkTestTree,
+    googleCfg
+    [ Transporter.Mobility.mkTestTree googleCfg,
+      Mobility.ARDU.mkTestTree googleCfg,
       PublicTransport.mkTestTree
     ]
 
-specs' :: [IO TestTree] -> IO TestTree
-specs' trees = do
+specs' :: Maps.MapsServiceConfig -> [IO TestTree] -> IO TestTree
+specs' googleCfg trees = do
   readyTests <- sequence trees
   return $
     withResource
@@ -101,7 +111,10 @@ specs' trees = do
         DriverHC.runDriverHealthcheck hideLogging,
         Gateway.runGateway hideLogging,
         do
-          runAppFlow "" $ Esq.runTransaction $ updateOrigAndDestRestriction ["Ernakulam", "Kochi", "Karnataka"] ["Kerala", "Kochi", "Karnataka"]
+          Utils.changeCachedMapsConfig googleCfg
+          runAppFlow "" $ do
+            Esq.runTransaction $ do
+              updateOrigAndDestRestriction Fixtures.yatriMerchantId ["Ernakulam", "Kochi", "Karnataka"] ["Kerala", "Kochi", "Karnataka"]
           AppBackend.runAppBackend $
             \cfg ->
               cfg & hideLogging,
@@ -128,7 +141,9 @@ specs' trees = do
         ARDUAllocator.runDriverOfferAllocator $ \cfg ->
           cfg{appCfg = cfg.appCfg & hideLogging,
               schedulerConfig = cfg.schedulerConfig & hideLogging
-             }
+             },
+        MockGoogle.runService $ \cfg ->
+          cfg & hideLogging
       ]
 
     startServers servers = do
@@ -140,6 +155,7 @@ specs' trees = do
       threadDelaySec 4
 
     cleanupServers _ = do
+      Utils.clearCachedMapsConfig
       releaseTestResources
       signalProcess sigINT =<< getProcessID
     migrateDB = do

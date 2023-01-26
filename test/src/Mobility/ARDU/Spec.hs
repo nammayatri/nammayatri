@@ -1,5 +1,6 @@
 module Mobility.ARDU.Spec where
 
+import qualified Beckn.External.Maps as Maps
 import EulerHS.Prelude
 import qualified Mobility.ARDU.CancelFlow as DC
 import Mobility.ARDU.DriverAcceptsNonrelevantQuote as NQ
@@ -8,11 +9,12 @@ import qualified Mobility.ARDU.HealthCheck as HC
 import qualified Mobility.ARDU.MapsConfig as MapsConfig
 import qualified Mobility.ARDU.NearestDrivers as ND
 import qualified Mobility.ARDU.SuccessFlow as SF
+import qualified Mobility.ARDU.Utils as Utils
 import Test.Tasty
 import Test.Tasty.Hspec hiding (after)
 
-mkTestTree :: IO TestTree
-mkTestTree = do
+mkTestTree :: Maps.MapsServiceConfig -> IO TestTree
+mkTestTree googleCfg = do
   hcSpec <- testSpec "HealthCheck" HC.spec
   mapsCfgSpec <- testSpec "MapsConfig" MapsConfig.spec
   sfSpec <- testSpec "SuccessFlow" SF.spec
@@ -26,16 +28,24 @@ mkTestTree = do
       "ARDU"
       [ hcSpec,
         after AllSucceed "HealthCheck" $
-          testGroup
-            "Merchant configs"
-            [mapsCfgSpec],
+          withResource
+            Utils.clearCachedMapsConfig
+            (const $ pure ())
+            $ \_ ->
+              testGroup
+                "Merchant configs"
+                [mapsCfgSpec],
         after AllSucceed "Merchant configs" $
-          testGroup
-            "APIs"
-            [ ndSpec,
-              nqSpec,
-              otSpec,
-              dcSpec,
-              sfSpec
-            ]
+          withResource
+            (Utils.changeCachedMapsConfig googleCfg)
+            (const Utils.clearCachedMapsConfig)
+            $ \_ ->
+              testGroup
+                "APIs"
+                [ ndSpec,
+                  nqSpec,
+                  otSpec,
+                  dcSpec,
+                  sfSpec
+                ]
       ]

@@ -5,6 +5,7 @@ import "beckn-transport" API.UI.Location as LocationAPI
 import "app-backend" API.UI.Quote
 import qualified "beckn-transport" API.UI.Ride as RideAPI
 import qualified "app-backend" API.UI.Search as AppSearch
+import qualified Beckn.External.Maps as Maps
 import Beckn.External.Maps.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
@@ -18,6 +19,7 @@ import qualified "beckn-transport" Domain.Types.Booking as TBooking
 import qualified "beckn-transport" Domain.Types.Booking as TRB
 import qualified "app-backend" Domain.Types.CancellationReason as AppCR
 import qualified "beckn-transport" Domain.Types.CancellationReason as SCR
+import qualified "beckn-transport" Domain.Types.Merchant.MerchantServiceConfig as TDMSC
 import "beckn-transport" Domain.Types.Person as TPerson
 import qualified "app-backend" Domain.Types.Quote as AppQuote
 import qualified "app-backend" Domain.Types.Ride as BRide
@@ -27,7 +29,8 @@ import HSpec
 import qualified Mobility.AppBackend.APICalls as API
 import Mobility.AppBackend.Fixtures
 import qualified Mobility.Transporter.APICalls as API
-import Mobility.Transporter.Fixtures
+import Mobility.Transporter.Fixtures as Fixtures
+import qualified "beckn-transport" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
 import qualified "app-backend" Storage.Queries.Booking as BQRB
 import qualified "beckn-transport" Storage.Queries.Booking as TQBooking
 import qualified "beckn-transport" Storage.Queries.Booking as TQRB
@@ -271,3 +274,16 @@ search'Confirm appToken searchReq' f = do
         { bapBookingId,
           bppBooking
         }
+
+changeCachedMapsConfig :: Maps.MapsServiceConfig -> IO ()
+changeCachedMapsConfig googleCfg = runTransporterFlow "change cached maps config" $ do
+  let serviceConfig = TDMSC.MapsServiceConfig googleCfg
+  yatriPartnerServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.yatriPartnerMerchantId serviceConfig
+  otherMerchantServiceConfig <- TDMSC.buildMerchantServiceConfig Fixtures.otherMerchantId serviceConfig
+  TCQMSC.cacheMerchantServiceConfig yatriPartnerServiceConfig
+  TCQMSC.cacheMerchantServiceConfig otherMerchantServiceConfig
+
+clearCachedMapsConfig :: IO ()
+clearCachedMapsConfig = runTransporterFlow "clear cached maps config" $ do
+  TCQMSC.clearCache Fixtures.yatriPartnerMerchantId (TDMSC.MapsService Maps.Google)
+  TCQMSC.clearCache Fixtures.otherMerchantId (TDMSC.MapsService Maps.Google)

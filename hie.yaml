@@ -114,6 +114,12 @@ cradle:
     - path: "app/dashboard/CommonAPIs/src"
       component: "dashboard-bpp-helper-api:lib"
 
+    - path: "app/mocks/google/src"
+      component: "mock-google:lib"
+
+    - path: "app/mocks/google/server/Main.hs"
+      component: "mock-google:exe:mock-google-exe"
+
     - path: "app/example-service/src"
       component: "example-service:lib"
 

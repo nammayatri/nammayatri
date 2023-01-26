@@ -16,11 +16,10 @@ import Mobility.Transporter.Fixtures
 import qualified Mobility.Transporter.Utils as Utils
 import Utils
 
--- these tests pass only when the real google maps api key is supplied
 spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
-  describe "Testing location updates (these tests pass only when the real google maps api key is supplied)"
+  describe "Testing location updates"
     . beforeAndAfter_
       ( do
           Utils.resetDriver transporterDriver1
