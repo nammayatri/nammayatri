@@ -28,7 +28,7 @@ mkPersist
       getPlaceName MapsService
       getPlaceDetails MapsService
       autoComplete MapsService
-      smsProvidersPriorityList [SmsService]
+      smsProvidersPriorityList (PostgresList SmsService)
       updatedAt UTCTime
       createdAt UTCTime
       Primary merchantId
@@ -45,10 +45,12 @@ instance TType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig whe
     return $
       Domain.MerchantServiceUsageConfig
         { merchantId = fromKey merchantId,
+          smsProvidersPriorityList = unPostgresList smsProvidersPriorityList,
           ..
         }
   toTType Domain.MerchantServiceUsageConfig {..} = do
     MerchantServiceUsageConfigT
       { merchantId = toKey merchantId,
+        smsProvidersPriorityList = PostgresList smsProvidersPriorityList,
         ..
       }

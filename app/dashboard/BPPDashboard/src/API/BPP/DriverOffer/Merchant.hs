@@ -22,27 +22,39 @@ import "lib-dashboard" Tools.Auth.Merchant
 type API =
   "merchant"
     :> ( MerchantUpdateAPI
-           :<|> MerchantServiceConfigUpdateAPI
-           :<|> MerchantServiceConfigUsageUpdateAPI
+           :<|> MapsServiceConfigUpdateAPI
+           :<|> MapsServiceUsageConfigUpdateAPI
+           :<|> SmsServiceConfigUpdateAPI
+           :<|> SmsServiceUsageConfigUpdateAPI
        )
 
 type MerchantUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
     :> Common.MerchantUpdateAPI
 
-type MerchantServiceConfigUpdateAPI =
+type MapsServiceConfigUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
-    :> Common.MerchantServiceConfigUpdateAPI
+    :> Common.MapsServiceConfigUpdateAPI
 
-type MerchantServiceConfigUsageUpdateAPI =
+type MapsServiceUsageConfigUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
-    :> Common.MerchantServiceConfigUsageUpdateAPI
+    :> Common.MapsServiceUsageConfigUpdateAPI
+
+type SmsServiceConfigUpdateAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+    :> Common.SmsServiceConfigUpdateAPI
+
+type SmsServiceUsageConfigUpdateAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+    :> Common.SmsServiceUsageConfigUpdateAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   merchantUpdate merchantId
-    :<|> merchantServiceConfigUpdate merchantId
-    :<|> merchantServiceConfigUsageUpdate merchantId
+    :<|> mapsServiceConfigUpdate merchantId
+    :<|> mapsServiceUsageConfigUpdate merchantId
+    :<|> smsServiceConfigUpdate merchantId
+    :<|> smsServiceUsageConfigUpdate merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -67,25 +79,48 @@ merchantUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.merchant.merchantUpdate) req
 
-merchantServiceConfigUpdate ::
+mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->
   ApiTokenInfo ->
-  Common.MerchantServiceConfigUpdateReq ->
+  Common.MapsServiceConfigUpdateReq ->
   FlowHandler APISuccess
-merchantServiceConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+mapsServiceConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  transaction <- buildTransaction Common.MerchantServiceConfigUpdateEndpoint apiTokenInfo (Just req)
+  transaction <- buildTransaction Common.MapsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (.merchant.merchantServiceConfigUpdate) req
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.mapsServiceConfigUpdate) req
 
-merchantServiceConfigUsageUpdate ::
+mapsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->
   ApiTokenInfo ->
-  Common.MerchantServiceUsageConfigUpdateReq ->
+  Common.MapsServiceUsageConfigUpdateReq ->
   FlowHandler APISuccess
-merchantServiceConfigUsageUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  runRequestValidation Common.validateMerchantServiceUsageConfigUpdateReq req
+mapsServiceUsageConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  transaction <- buildTransaction Common.MerchantServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
+  transaction <- buildTransaction Common.MapsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (.merchant.merchantServiceConfigUsageUpdate) req
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.mapsServiceUsageConfigUpdate) req
+
+smsServiceConfigUpdate ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Common.SmsServiceConfigUpdateReq ->
+  FlowHandler APISuccess
+smsServiceConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.SmsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.smsServiceConfigUpdate) req
+
+smsServiceUsageConfigUpdate ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Common.SmsServiceUsageConfigUpdateReq ->
+  FlowHandler APISuccess
+smsServiceUsageConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.SmsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.smsServiceUsageConfigUpdate) req

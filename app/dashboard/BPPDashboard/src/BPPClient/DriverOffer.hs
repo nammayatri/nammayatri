@@ -62,8 +62,10 @@ data RidesAPIs = RidesAPIs
 
 data MerchantAPIs = MerchantAPIs
   { merchantUpdate :: Common.MerchantUpdateReq -> Euler.EulerClient Common.MerchantUpdateRes,
-    merchantServiceConfigUpdate :: Common.MerchantServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    merchantServiceConfigUsageUpdate :: Common.MerchantServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
+    mapsServiceConfigUpdate :: Common.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    mapsServiceUsageConfigUpdate :: Common.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+    smsServiceConfigUpdate :: Common.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    smsServiceUsageConfigUpdate :: Common.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
   }
 
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
@@ -106,8 +108,10 @@ mkDriverOfferAPIs merchantId token = do
       :<|> rideInfo = ridesClient
 
     merchantUpdate
-      :<|> merchantServiceConfigUpdate
-      :<|> merchantServiceConfigUsageUpdate = merchantClient
+      :<|> mapsServiceConfigUpdate
+      :<|> mapsServiceUsageConfigUpdate
+      :<|> smsServiceConfigUpdate
+      :<|> smsServiceUsageConfigUpdate = merchantClient
 
 callDriverOfferBPP ::
   forall m r b c.

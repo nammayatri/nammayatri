@@ -1,11 +1,14 @@
 module Domain.Action.Dashboard.Merchant
-  ( merchantServiceConfigUpdate,
-    merchantServiceConfigUsageUpdate,
+  ( mapsServiceConfigUpdate,
+    mapsServiceUsageConfigUpdate,
     merchantUpdate,
+    smsServiceConfigUpdate,
+    smsServiceUsageConfigUpdate,
   )
 where
 
 import qualified Beckn.External.Maps as Maps
+import qualified Beckn.External.SMS as SMS
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess (..))
@@ -61,11 +64,11 @@ castMerchantStatus = \case
   DM.REJECTED -> Common.REJECTED
 
 ---------------------------------------------------------------------
-merchantServiceConfigUpdate ::
+mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->
-  Common.MerchantServiceConfigUpdateReq ->
+  Common.MapsServiceConfigUpdateReq ->
   Flow APISuccess
-merchantServiceConfigUpdate merchantShortId req = do
+mapsServiceConfigUpdate merchantShortId req = do
   merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
@@ -75,25 +78,43 @@ merchantServiceConfigUpdate merchantShortId req = do
   Esq.runTransaction $ do
     CQMSC.upsertMerchantServiceConfig merchantServiceConfig
   CQMSC.clearCache merchant.id serviceName
-  logTagInfo "dashboard -> merchantServiceConfigUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
   pure Success
 
 ---------------------------------------------------------------------
-merchantServiceConfigUsageUpdate ::
+smsServiceConfigUpdate ::
   ShortId DM.Merchant ->
-  Common.MerchantServiceUsageConfigUpdateReq ->
+  Common.SmsServiceConfigUpdateReq ->
   Flow APISuccess
-merchantServiceConfigUsageUpdate merchantShortId req = do
-  runRequestValidation Common.validateMerchantServiceUsageConfigUpdateReq req
+smsServiceConfigUpdate merchantShortId req = do
+  merchant <-
+    CQM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
+  serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
+  Esq.runTransaction $ do
+    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
+  CQMSC.clearCache merchant.id serviceName
+  logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
+  pure Success
+
+---------------------------------------------------------------------
+mapsServiceUsageConfigUpdate ::
+  ShortId DM.Merchant ->
+  Common.MapsServiceUsageConfigUpdateReq ->
+  Flow APISuccess
+mapsServiceUsageConfigUpdate merchantShortId req = do
+  runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   merchant <-
     CQM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
 
-  forM_ [Maps.Google, Maps.OSRM, Maps.MMI] $ \service -> do
-    when (Common.serviceUsedInReq req service) $ do
+  forM_ Maps.availableMapsServices $ \service -> do
+    when (Common.mapsServiceUsedInReq req service) $ do
       void $
         CQMSC.findByMerchantIdAndService merchant.id (DMSC.MapsService service)
-          >>= fromMaybeM (InvalidRequest $ "Merchant config for service " <> show service <> " is not provided")
+          >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantId merchant.id
@@ -110,5 +131,34 @@ merchantServiceConfigUsageUpdate merchantShortId req = do
   Esq.runTransaction $ do
     CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
-  logTagInfo "dashboard -> merchantServiceConfigUsageUpdate : " (show merchant.id)
+  logTagInfo "dashboard -> mapsServiceUsageConfigUpdate : " (show merchant.id)
+  pure Success
+
+---------------------------------------------------------------------
+smsServiceUsageConfigUpdate ::
+  ShortId DM.Merchant ->
+  Common.SmsServiceUsageConfigUpdateReq ->
+  Flow APISuccess
+smsServiceUsageConfigUpdate merchantShortId req = do
+  runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
+  merchant <-
+    CQM.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+  forM_ SMS.availableSmsServices $ \service -> do
+    when (Common.smsServiceUsedInReq req service) $ do
+      void $
+        CQMSC.findByMerchantIdAndService merchant.id (DMSC.SmsService service)
+          >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
+
+  merchantServiceUsageConfig <-
+    CQMSUC.findByMerchantId merchant.id
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchant.id.getId)
+  let updMerchantServiceUsageConfig =
+        merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
+                                  }
+  Esq.runTransaction $ do
+    CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
+  CQMSUC.clearCache merchant.id
+  logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
   pure Success

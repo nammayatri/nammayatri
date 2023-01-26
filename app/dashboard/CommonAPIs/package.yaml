@@ -72,6 +72,7 @@ dependencies:
   - singletons
   - euler-hs
   - deriving-aeson
+  - extra
 
 ghc-options:
   - -Wall

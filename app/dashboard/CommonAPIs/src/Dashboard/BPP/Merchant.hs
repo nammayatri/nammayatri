@@ -46,9 +46,6 @@ validateMerchantUpdateReq MerchantUpdateReq {..} =
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name,
       validateMbObject "fcmConfig" fcmConfig validateFCMConfigUpdateReq
     ]
-  where
-    validateMbObject _ Nothing _ = pure ()
-    validateMbObject fieldName (Just object) validator = validateObject fieldName object validator
 
 data MerchantUpdateRes = MerchantUpdateRes
   { name :: Text,

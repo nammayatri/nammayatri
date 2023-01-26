@@ -13,15 +13,19 @@ import Servant hiding (Unauthorized, throwError)
 type API =
   "merchant"
     :> ( Common.MerchantUpdateAPI
-           :<|> Common.MerchantServiceConfigUpdateAPI
-           :<|> Common.MerchantServiceConfigUsageUpdateAPI
+           :<|> Common.MapsServiceConfigUpdateAPI
+           :<|> Common.MapsServiceUsageConfigUpdateAPI
+           :<|> Common.SmsServiceConfigUpdateAPI
+           :<|> Common.SmsServiceUsageConfigUpdateAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   merchantUpdate merchantId
-    :<|> merchantServiceConfigUpdate merchantId
-    :<|> merchantServiceConfigUsageUpdate merchantId
+    :<|> mapsServiceConfigUpdate merchantId
+    :<|> mapsServiceUsageConfigUpdate merchantId
+    :<|> smsServiceConfigUpdate merchantId
+    :<|> smsServiceUsageConfigUpdate merchantId
 
 merchantUpdate ::
   ShortId DM.Merchant ->
@@ -29,14 +33,26 @@ merchantUpdate ::
   FlowHandler APISuccess
 merchantUpdate merchantShortId = withFlowHandlerAPI . DMerchant.merchantUpdate merchantShortId
 
-merchantServiceConfigUpdate ::
+mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->
-  Common.MerchantServiceConfigUpdateReq ->
+  Common.MapsServiceConfigUpdateReq ->
   FlowHandler APISuccess
-merchantServiceConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.merchantServiceConfigUpdate merchantShortId
+mapsServiceConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.mapsServiceConfigUpdate merchantShortId
 
-merchantServiceConfigUsageUpdate ::
+mapsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->
-  Common.MerchantServiceUsageConfigUpdateReq ->
+  Common.MapsServiceUsageConfigUpdateReq ->
   FlowHandler APISuccess
-merchantServiceConfigUsageUpdate merchantShortId = withFlowHandlerAPI . DMerchant.merchantServiceConfigUsageUpdate merchantShortId
+mapsServiceUsageConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.mapsServiceUsageConfigUpdate merchantShortId
+
+smsServiceConfigUpdate ::
+  ShortId DM.Merchant ->
+  Common.SmsServiceConfigUpdateReq ->
+  FlowHandler APISuccess
+smsServiceConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.smsServiceConfigUpdate merchantShortId
+
+smsServiceUsageConfigUpdate ::
+  ShortId DM.Merchant ->
+  Common.SmsServiceUsageConfigUpdateReq ->
+  FlowHandler APISuccess
+smsServiceUsageConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.smsServiceUsageConfigUpdate merchantShortId

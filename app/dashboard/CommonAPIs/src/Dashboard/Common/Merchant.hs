@@ -11,6 +11,8 @@ import Beckn.External.Encryption (encrypt)
 import qualified Beckn.External.FCM.Flow as FCM
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.Maps as Maps
+import qualified Beckn.External.SMS as SMS
+import qualified Beckn.External.SMS.ExotelSms.Types as Exotel
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto (derivePersistField)
 import Beckn.Types.APISuccess (APISuccess)
@@ -20,48 +22,79 @@ import Beckn.Utils.Validation
 import Dashboard.Common as Reexport
 import Data.Aeson
 import Data.Either (isRight)
-import Data.OpenApi hiding (description, name)
+import Data.List.Extra (anySame)
+import Data.OpenApi hiding (description, name, password, url)
 import Servant
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data MerchantEndpoint
   = MerchantUpdateEndpoint
-  | MerchantServiceConfigUpdateEndpoint
-  | MerchantServiceConfigUsageUpdateEndpoint
+  | MapsServiceConfigUpdateEndpoint
+  | MapsServiceConfigUsageUpdateEndpoint
+  | SmsServiceConfigUpdateEndpoint
+  | SmsServiceConfigUsageUpdateEndpoint
   deriving (Show, Read)
 
 derivePersistField "MerchantEndpoint"
 
 ---------------------------------------------------------
--- merchant service config update -----------------------
+-- merchant update --------------------------------------
 
-type MerchantServiceConfigUpdateAPI =
+data FCMConfigUpdateReq = FCMConfigUpdateReq
+  { fcmUrl :: BaseUrl,
+    fcmServiceAccount :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+mkFCMConfig :: Text -> FCMConfigUpdateReq -> FCM.FCMConfig
+mkFCMConfig fcmTokenKeyPrefix FCMConfigUpdateReq {..} = FCM.FCMConfig {..}
+
+newtype FCMConfigUpdateTReq = FCMConfigUpdateTReq
+  { fcmUrl :: BaseUrl
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance HideSecrets FCMConfigUpdateReq where
+  type ReqWithoutSecrets FCMConfigUpdateReq = FCMConfigUpdateTReq
+  hideSecrets FCMConfigUpdateReq {..} = FCMConfigUpdateTReq {..}
+
+validateFCMConfigUpdateReq :: Validate FCMConfigUpdateReq
+validateFCMConfigUpdateReq FCMConfigUpdateReq {..} = do
+  let mkMessage field = "Can't parse field " <> field
+  validateField "fcmServiceAccount" fcmServiceAccount $ PredicateFunc mkMessage $ isRight . FCM.parseFCMAccount
+
+---------------------------------------------------------
+-- merchant maps service config update ------------------
+
+type MapsServiceConfigUpdateAPI =
   "serviceConfig"
     :> "maps"
     :> "update"
-    :> ReqBody '[JSON] MerchantServiceConfigUpdateReq
+    :> ReqBody '[JSON] MapsServiceConfigUpdateReq
     :> Post '[JSON] APISuccess
 
-data MerchantServiceConfigUpdateReq
+data MapsServiceConfigUpdateReq
   = GoogleConfigUpdateReq GoogleCfgUpdateReq
   | OSRMConfigUpdateReq OSRMCfgUpdateReq
   | MMIConfigUpdateReq MMICfgUpdateReq
   deriving stock (Show, Generic)
 
-data MerchantServiceConfigUpdateTReq
+data MapsServiceConfigUpdateTReq
   = GoogleConfigUpdateTReq GoogleCfgUpdateTReq
   | OSRMConfigUpdateTReq OSRMCfgUpdateReq
   | MMIConfigUpdateTReq MMICfgUpdateTReq
   deriving stock (Generic)
 
-instance HideSecrets MerchantServiceConfigUpdateReq where
-  type ReqWithoutSecrets MerchantServiceConfigUpdateReq = MerchantServiceConfigUpdateTReq
+instance HideSecrets MapsServiceConfigUpdateReq where
+  type ReqWithoutSecrets MapsServiceConfigUpdateReq = MapsServiceConfigUpdateTReq
   hideSecrets = \case
     GoogleConfigUpdateReq req -> GoogleConfigUpdateTReq $ hideSecrets req
     OSRMConfigUpdateReq req -> OSRMConfigUpdateTReq req
     MMIConfigUpdateReq req -> MMIConfigUpdateTReq $ hideSecrets req
 
-getMapsServiceFromReq :: MerchantServiceConfigUpdateReq -> Maps.MapsService
+getMapsServiceFromReq :: MapsServiceConfigUpdateReq -> Maps.MapsService
 getMapsServiceFromReq = \case
   GoogleConfigUpdateReq _ -> Maps.Google
   OSRMConfigUpdateReq _ -> Maps.OSRM
@@ -69,7 +102,7 @@ getMapsServiceFromReq = \case
 
 buildMapsServiceConfig ::
   EncFlow m r =>
-  MerchantServiceConfigUpdateReq ->
+  MapsServiceConfigUpdateReq ->
   m Maps.MapsServiceConfig
 buildMapsServiceConfig = \case
   GoogleConfigUpdateReq GoogleCfgUpdateReq {..} -> do
@@ -82,33 +115,33 @@ buildMapsServiceConfig = \case
     mmiApiKey' <- encrypt mmiApiKey
     pure . Maps.MMIConfig $ Maps.MMICfg {mmiAuthSecret = mmiAuthSecret', mmiApiKey = mmiApiKey', ..}
 
-instance ToJSON MerchantServiceConfigUpdateReq where
-  toJSON = genericToJSON (updateReqOptions updateReqConstructorModifier)
+instance ToJSON MapsServiceConfigUpdateReq where
+  toJSON = genericToJSON (updateMapsReqOptions updateMapsReqConstructorModifier)
 
-instance FromJSON MerchantServiceConfigUpdateReq where
-  parseJSON = genericParseJSON (updateReqOptions updateReqConstructorModifier)
+instance FromJSON MapsServiceConfigUpdateReq where
+  parseJSON = genericParseJSON (updateMapsReqOptions updateMapsReqConstructorModifier)
 
-instance ToSchema MerchantServiceConfigUpdateReq where
-  declareNamedSchema = genericDeclareNamedSchema updateReqSchemaOptions
+instance ToSchema MapsServiceConfigUpdateReq where
+  declareNamedSchema = genericDeclareNamedSchema updateMapsReqSchemaOptions
 
-instance ToJSON MerchantServiceConfigUpdateTReq where
-  toJSON = genericToJSON (updateReqOptions updateTReqConstructorModifier)
+instance ToJSON MapsServiceConfigUpdateTReq where
+  toJSON = genericToJSON (updateMapsReqOptions updateMapsTReqConstructorModifier)
 
-instance FromJSON MerchantServiceConfigUpdateTReq where
-  parseJSON = genericParseJSON (updateReqOptions updateTReqConstructorModifier)
+instance FromJSON MapsServiceConfigUpdateTReq where
+  parseJSON = genericParseJSON (updateMapsReqOptions updateMapsTReqConstructorModifier)
 
-updateReqOptions :: (String -> String) -> Options
-updateReqOptions modifier =
+updateMapsReqOptions :: (String -> String) -> Options
+updateMapsReqOptions modifier =
   defaultOptions
     { sumEncoding = updateReqTaggedObject,
       constructorTagModifier = modifier
     }
 
-updateReqSchemaOptions :: SchemaOptions
-updateReqSchemaOptions =
+updateMapsReqSchemaOptions :: SchemaOptions
+updateMapsReqSchemaOptions =
   defaultSchemaOptions
     { sumEncoding = updateReqTaggedObject,
-      constructorTagModifier = updateReqConstructorModifier
+      constructorTagModifier = updateMapsReqConstructorModifier
     }
 
 updateReqTaggedObject :: SumEncoding
@@ -118,20 +151,21 @@ updateReqTaggedObject =
       contentsFieldName = "serviceConfig"
     }
 
-updateReqConstructorModifier :: String -> String
-updateReqConstructorModifier = \case
+updateMapsReqConstructorModifier :: String -> String
+updateMapsReqConstructorModifier = \case
   "GoogleConfigUpdateReq" -> show Maps.Google
   "OSRMConfigUpdateReq" -> show Maps.OSRM
   "MMIConfigUpdateReq" -> show Maps.MMI
   x -> x
 
-updateTReqConstructorModifier :: String -> String
-updateTReqConstructorModifier = \case
+updateMapsTReqConstructorModifier :: String -> String
+updateMapsTReqConstructorModifier = \case
   "GoogleConfigUpdateTReq" -> show Maps.Google
   "OSRMConfigUpdateTReq" -> show Maps.OSRM
   "MMIConfigUpdateTReq" -> show Maps.MMI
   x -> x
 
+-- Maps services
 -- Google
 
 data GoogleCfgUpdateReq = GoogleCfgUpdateReq
@@ -172,7 +206,7 @@ data MMICfgUpdateTReq = MMICfgUpdateTReq
     mmiKeyUrl :: BaseUrl,
     mmiNonKeyUrl :: BaseUrl
   }
-  deriving stock (Show, Generic)
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON)
 
 instance HideSecrets MMICfgUpdateReq where
@@ -189,16 +223,145 @@ data OSRMCfgUpdateReq = OSRMCfgUpdateReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
--- merchant service config usage update -----------------
+-- merchant sms service config update -------------------
 
-type MerchantServiceConfigUsageUpdateAPI =
+type SmsServiceConfigUpdateAPI =
+  "serviceConfig"
+    :> "sms"
+    :> "update"
+    :> ReqBody '[JSON] SmsServiceConfigUpdateReq
+    :> Post '[JSON] APISuccess
+
+data SmsServiceConfigUpdateReq
+  = MyValueFirstConfigUpdateReq MyValueFirstCfgUpdateReq
+  | ExotelSmsConfigUpdateReq ExotelSmsCfgUpdateReq
+  deriving stock (Show, Generic)
+
+data SmsServiceConfigUpdateTReq
+  = MyValueFirstConfigUpdateTReq MyValueFirstCfgUpdateTReq
+  | ExotelSmsConfigUpdateTReq ExotelSmsCfgUpdateTReq
+  deriving stock (Generic)
+
+instance HideSecrets SmsServiceConfigUpdateReq where
+  type ReqWithoutSecrets SmsServiceConfigUpdateReq = SmsServiceConfigUpdateTReq
+  hideSecrets = \case
+    MyValueFirstConfigUpdateReq req -> MyValueFirstConfigUpdateTReq $ hideSecrets req
+    ExotelSmsConfigUpdateReq req -> ExotelSmsConfigUpdateTReq $ hideSecrets req
+
+getSmsServiceFromReq :: SmsServiceConfigUpdateReq -> SMS.SmsService
+getSmsServiceFromReq = \case
+  MyValueFirstConfigUpdateReq _ -> SMS.MyValueFirst
+  ExotelSmsConfigUpdateReq _ -> SMS.ExotelSms
+
+buildSmsServiceConfig ::
+  EncFlow m r =>
+  SmsServiceConfigUpdateReq ->
+  m SMS.SmsServiceConfig
+buildSmsServiceConfig = \case
+  MyValueFirstConfigUpdateReq MyValueFirstCfgUpdateReq {..} -> do
+    username' <- encrypt username
+    password' <- encrypt password
+    pure . SMS.MyValueFirstConfig $ SMS.MyValueFirstCfg {username = username', password = password', ..}
+  ExotelSmsConfigUpdateReq ExotelSmsCfgUpdateReq {..} -> do
+    apiKey' <- encrypt apiKey
+    apiToken' <- encrypt apiToken
+    pure . SMS.ExotelSmsConfig $ SMS.ExotelSmsCfg {apiKey = apiKey', apiToken = apiToken', ..}
+
+instance ToJSON SmsServiceConfigUpdateReq where
+  toJSON = genericToJSON (updateSmsReqOptions updateSmsReqConstructorModifier)
+
+instance FromJSON SmsServiceConfigUpdateReq where
+  parseJSON = genericParseJSON (updateSmsReqOptions updateSmsReqConstructorModifier)
+
+instance ToSchema SmsServiceConfigUpdateReq where
+  declareNamedSchema = genericDeclareNamedSchema updateSmsReqSchemaOptions
+
+instance ToJSON SmsServiceConfigUpdateTReq where
+  toJSON = genericToJSON (updateSmsReqOptions updateSmsTReqConstructorModifier)
+
+instance FromJSON SmsServiceConfigUpdateTReq where
+  parseJSON = genericParseJSON (updateSmsReqOptions updateSmsTReqConstructorModifier)
+
+updateSmsReqOptions :: (String -> String) -> Options
+updateSmsReqOptions modifier =
+  defaultOptions
+    { sumEncoding = updateReqTaggedObject,
+      constructorTagModifier = modifier
+    }
+
+updateSmsReqSchemaOptions :: SchemaOptions
+updateSmsReqSchemaOptions =
+  defaultSchemaOptions
+    { sumEncoding = updateReqTaggedObject,
+      constructorTagModifier = updateSmsReqConstructorModifier
+    }
+
+updateSmsReqConstructorModifier :: String -> String
+updateSmsReqConstructorModifier = \case
+  "MyValueFirstConfigUpdateReq" -> show SMS.MyValueFirst
+  "ExotelSmsConfigUpdateReq" -> show SMS.ExotelSms
+  x -> x
+
+updateSmsTReqConstructorModifier :: String -> String
+updateSmsTReqConstructorModifier = \case
+  "MyValueFirstConfigUpdateTReq" -> show SMS.MyValueFirst
+  "ExotelSmsConfigUpdateTReq" -> show SMS.ExotelSms
+  x -> x
+
+-- SMS services
+-- MyValueFirst
+
+data MyValueFirstCfgUpdateReq = MyValueFirstCfgUpdateReq
+  { username :: Text,
+    password :: Text,
+    url :: BaseUrl
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype MyValueFirstCfgUpdateTReq = MyValueFirstCfgUpdateTReq
+  { url :: BaseUrl
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance HideSecrets MyValueFirstCfgUpdateReq where
+  type ReqWithoutSecrets MyValueFirstCfgUpdateReq = MyValueFirstCfgUpdateTReq
+  hideSecrets MyValueFirstCfgUpdateReq {..} = MyValueFirstCfgUpdateTReq {..}
+
+-- ExotelSms
+
+data ExotelSmsCfgUpdateReq = ExotelSmsCfgUpdateReq
+  { apiKey :: Text,
+    apiToken :: Text,
+    sid :: Exotel.ExotelSmsSID,
+    url :: Exotel.ExotelURL
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ExotelSmsCfgUpdateTReq = ExotelSmsCfgUpdateTReq
+  { sid :: Exotel.ExotelSmsSID,
+    url :: Exotel.ExotelURL
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance HideSecrets ExotelSmsCfgUpdateReq where
+  type ReqWithoutSecrets ExotelSmsCfgUpdateReq = ExotelSmsCfgUpdateTReq
+  hideSecrets ExotelSmsCfgUpdateReq {..} = ExotelSmsCfgUpdateTReq {..}
+
+---------------------------------------------------------
+-- merchant maps service config usage update ------------
+
+type MapsServiceUsageConfigUpdateAPI =
   "serviceUsageConfig"
     :> "maps"
     :> "update"
-    :> ReqBody '[JSON] MerchantServiceUsageConfigUpdateReq
+    :> ReqBody '[JSON] MapsServiceUsageConfigUpdateReq
     :> Post '[JSON] APISuccess
 
-data MerchantServiceUsageConfigUpdateReq = MerchantServiceUsageConfigUpdateReq
+data MapsServiceUsageConfigUpdateReq = MapsServiceUsageConfigUpdateReq
   { getDistances :: Maybe Maps.MapsService,
     getEstimatedPickupDistances :: Maybe Maps.MapsService,
     getRoutes :: Maybe Maps.MapsService,
@@ -210,14 +373,14 @@ data MerchantServiceUsageConfigUpdateReq = MerchantServiceUsageConfigUpdateReq
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-serviceUsedInReq :: MerchantServiceUsageConfigUpdateReq -> Maps.MapsService -> Bool
-serviceUsedInReq (MerchantServiceUsageConfigUpdateReq a b c d e f g) service = service `elem` catMaybes [a, b, c, d, e, f, g]
+mapsServiceUsedInReq :: MapsServiceUsageConfigUpdateReq -> Maps.MapsService -> Bool
+mapsServiceUsedInReq (MapsServiceUsageConfigUpdateReq a b c d e f g) service = service `elem` catMaybes [a, b, c, d, e, f, g]
 
-instance HideSecrets MerchantServiceUsageConfigUpdateReq where
+instance HideSecrets MapsServiceUsageConfigUpdateReq where
   hideSecrets = identity
 
-validateMerchantServiceUsageConfigUpdateReq :: Validate MerchantServiceUsageConfigUpdateReq
-validateMerchantServiceUsageConfigUpdateReq MerchantServiceUsageConfigUpdateReq {..} = do
+validateMapsServiceUsageConfigUpdateReq :: Validate MapsServiceUsageConfigUpdateReq
+validateMapsServiceUsageConfigUpdateReq MapsServiceUsageConfigUpdateReq {..} = do
   let mkMessage field = field <> " value is not allowed"
   sequenceA_
     [ validateField "getDistances" getDistances $ InMaybe $ PredicateFunc mkMessage Maps.getDistancesProvided,
@@ -229,39 +392,29 @@ validateMerchantServiceUsageConfigUpdateReq MerchantServiceUsageConfigUpdateReq 
       validateField "autoComplete" autoComplete $ InMaybe $ PredicateFunc mkMessage Maps.autoCompleteProvided
     ]
 
--- TODO move to lib
-data PredicateFunc a = PredicateFunc (Text -> Text) (a -> Bool)
-
-instance Predicate a (PredicateFunc a) where
-  pFun (PredicateFunc _ func) a = func a
-
-instance ShowablePredicate (PredicateFunc a) where
-  pShow (PredicateFunc mkMessage _) field = mkMessage field -- field <> " value is not allowed"
-
 ---------------------------------------------------------
--- merchant update --------------------------------------
+-- merchant sms service config usage update -------------
 
-data FCMConfigUpdateReq = FCMConfigUpdateReq
-  { fcmUrl :: BaseUrl,
-    fcmServiceAccount :: Text
+type SmsServiceUsageConfigUpdateAPI =
+  "serviceUsageConfig"
+    :> "sms"
+    :> "update"
+    :> ReqBody '[JSON] SmsServiceUsageConfigUpdateReq
+    :> Post '[JSON] APISuccess
+
+newtype SmsServiceUsageConfigUpdateReq = SmsServiceUsageConfigUpdateReq
+  { smsProvidersPriorityList :: [SMS.SmsService]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-mkFCMConfig :: Text -> FCMConfigUpdateReq -> FCM.FCMConfig
-mkFCMConfig fcmTokenKeyPrefix FCMConfigUpdateReq {..} = FCM.FCMConfig {..}
+smsServiceUsedInReq :: SmsServiceUsageConfigUpdateReq -> SMS.SmsService -> Bool
+smsServiceUsedInReq (SmsServiceUsageConfigUpdateReq list) service = service `elem` list
 
-newtype FCMConfigUpdateTReq = FCMConfigUpdateTReq
-  { fcmUrl :: BaseUrl
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+instance HideSecrets SmsServiceUsageConfigUpdateReq where
+  hideSecrets = identity
 
-instance HideSecrets FCMConfigUpdateReq where
-  type ReqWithoutSecrets FCMConfigUpdateReq = FCMConfigUpdateTReq
-  hideSecrets FCMConfigUpdateReq {..} = FCMConfigUpdateTReq {..}
-
-validateFCMConfigUpdateReq :: Validate FCMConfigUpdateReq
-validateFCMConfigUpdateReq FCMConfigUpdateReq {..} = do
-  let mkMessage field = "Can't parse field " <> field
-  validateField "fcmServiceAccount" fcmServiceAccount $ PredicateFunc mkMessage $ isRight . FCM.parseFCMAccount
+validateSmsServiceUsageConfigUpdateReq :: Validate SmsServiceUsageConfigUpdateReq
+validateSmsServiceUsageConfigUpdateReq SmsServiceUsageConfigUpdateReq {..} = do
+  let mkMessage field = "All values in list " <> field <> " should be unique"
+  validateField "smsProvidersPriorityList" smsProvidersPriorityList $ PredicateFunc mkMessage (not . anySame @SMS.SmsService)

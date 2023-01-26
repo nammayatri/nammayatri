@@ -37,6 +37,7 @@ updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
         MerchantServiceUsageConfigGetPlaceName =. val getPlaceName,
         MerchantServiceUsageConfigGetPlaceDetails =. val getPlaceDetails,
         MerchantServiceUsageConfigAutoComplete =. val autoComplete,
+        MerchantServiceUsageConfigSmsProvidersPriorityList =. val (PostgresList smsProvidersPriorityList),
         MerchantServiceUsageConfigUpdatedAt =. val now
       ]
     where_ $

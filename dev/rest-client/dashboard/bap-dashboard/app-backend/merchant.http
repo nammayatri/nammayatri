@@ -79,7 +79,7 @@ content-type: application/json
 
 ###
 
-# @name merchantServiceUsageConfigUpdate
+# @name mapsServiceUsageConfigUpdate
 
 POST {{bap-dashboard-host}}/bap/YATRI/merchant/serviceUsageConfig/maps/update
 token: {{juspay_admin}}
@@ -91,4 +91,48 @@ content-type: application/json
   "getPlaceName" : "Google",
   "getPlaceDetails" : "Google",
   "autoComplete" : "MMI"
+}
+
+###
+
+# @name merchantMyValueFirstConfigUpdate
+
+POST {{bap-dashboard-host}}/bap/YATRI/merchant/serviceConfig/sms/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "MyValueFirst",
+  "serviceConfig" : {
+      "username" : "username",
+      "password" : "password",
+      "url" : "http://localhost:4343/someUrl/"
+  }
+}
+
+###
+
+# @name merchantExotelSmsConfigUpdate
+
+POST {{bap-dashboard-host}}/bap/YATRI/merchant/serviceConfig/sms/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "ExotelSms",
+  "serviceConfig" : {
+      "apiKey" : "apiKey",
+      "apiToken" : "apiToken",
+      "sid" : "sid",
+      "url" : "url"
+  }
+}
+
+###
+
+# @name smsServiceUsageConfigUpdate
+
+POST {{bap-dashboard-host}}/bap/YATRI/merchant/serviceUsageConfig/sms/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "smsProvidersPriorityList" : ["ExotelSms","MyValueFirst"]
 }

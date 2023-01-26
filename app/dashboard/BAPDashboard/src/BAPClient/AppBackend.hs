@@ -35,8 +35,10 @@ data CustomerAPIs = CustomerAPIs
 
 data MerchantAPIs = MerchantAPIs
   { merchantUpdate :: Common.MerchantUpdateReq -> Euler.EulerClient APISuccess,
-    merchantServiceConfigUpdate :: Common.MerchantServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    merchantServiceConfigUsageUpdate :: Common.MerchantServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
+    mapsServiceConfigUpdate :: Common.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    mapsServiceUsageConfigUpdate :: Common.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+    smsServiceConfigUpdate :: Common.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    smsServiceUsageConfigUpdate :: Common.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
   }
 
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
@@ -52,8 +54,10 @@ mkAppBackendAPIs merchantId token = do
       :<|> customerUpdate = customersClient
 
     merchantUpdate
-      :<|> merchantServiceConfigUpdate
-      :<|> merchantServiceConfigUsageUpdate = merchantClient
+      :<|> mapsServiceConfigUpdate
+      :<|> mapsServiceUsageConfigUpdate
+      :<|> smsServiceConfigUpdate
+      :<|> smsServiceUsageConfigUpdate = merchantClient
 
 callAppBackendBAP ::
   forall m r b c.

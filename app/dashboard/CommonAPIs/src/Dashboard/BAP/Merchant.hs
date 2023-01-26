@@ -52,9 +52,6 @@ validateMerchantUpdateReq MerchantUpdateReq {..} =
       validateField "exoPhoneCountryCode" exoPhoneCountryCode $ InMaybe P.mobileCountryCode,
       validateMbObject "fcmConfig" fcmConfig validateFCMConfigUpdateReq
     ]
-  where
-    validateMbObject _ Nothing _ = pure ()
-    validateMbObject fieldName (Just object) validator = validateObject fieldName object validator
 
 instance HideSecrets MerchantUpdateReq where
   type ReqWithoutSecrets MerchantUpdateReq = MerchantUpdateTReq
