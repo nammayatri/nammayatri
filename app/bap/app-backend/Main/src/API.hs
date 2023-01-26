@@ -16,8 +16,9 @@ import qualified Data.ByteString as BS
 import Data.OpenApi
 import Environment
 import EulerHS.Prelude
+import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.HTML
-import Servant hiding (throwError)
+import Servant hiding (serveDirectoryWebApp, throwError)
 import Servant.OpenApi
 
 type API =

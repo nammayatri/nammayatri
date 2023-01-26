@@ -10,8 +10,9 @@ import qualified Data.ByteString as BS
 import Data.OpenApi
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.HTML
-import Servant
+import Servant hiding (serveDirectoryWebApp)
 import Servant.OpenApi
 
 type API =

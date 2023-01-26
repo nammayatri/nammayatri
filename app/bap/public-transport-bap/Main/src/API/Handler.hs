@@ -5,7 +5,8 @@ import qualified API.Swagger.Handler as Swagger
 import qualified API.Types as API
 import API.UI.Handler as UI
 import Environment
-import Servant
+import Kernel.Utils.Servant.Client
+import Servant hiding (serveDirectoryWebApp)
 
 handler :: FlowServer API.API
 handler =

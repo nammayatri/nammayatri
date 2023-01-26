@@ -12,8 +12,9 @@ import Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
 import Environment
 import EulerHS.Prelude
 import qualified Idfy.Flow as Idfy
+import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.HTML
-import Servant
+import Servant hiding (serveDirectoryWebApp)
 import Servant.OpenApi
 
 type DriverOfferAPI =
