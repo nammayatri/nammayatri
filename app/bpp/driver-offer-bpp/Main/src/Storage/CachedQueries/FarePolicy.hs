@@ -26,7 +26,7 @@ import qualified Storage.Queries.FarePolicy as Queries
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
 findById id =
-  Hedis.withCrossAppRedis (Hedis.get $ makeIdKey id) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
     Nothing -> flip whenJust cacheFarePolicy /=<< Queries.findById id
 
@@ -36,10 +36,10 @@ findByMerchantIdAndVariant ::
   Vehicle.Variant ->
   m (Maybe FarePolicy)
 findByMerchantIdAndVariant merchantId vehVar =
-  Hedis.withCrossAppRedis (Hedis.get $ makeMerchantIdVehVarKey merchantId vehVar) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdVehVarKey merchantId vehVar) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.withCrossAppRedis (Hedis.get $ makeIdKey id) >>= \case
+      Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
         Nothing -> findAndCache
   where
@@ -47,7 +47,7 @@ findByMerchantIdAndVariant merchantId vehVar =
 
 findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [FarePolicy]
 findAllByMerchantId merchantId =
-  Hedis.withCrossAppRedis (Hedis.get $ makeAllMerchantIdKey merchantId) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(FarePolicyD 'Unsafe) @FarePolicy) a
     Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
   where

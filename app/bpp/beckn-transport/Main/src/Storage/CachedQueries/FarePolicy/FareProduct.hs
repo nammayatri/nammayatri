@@ -28,7 +28,7 @@ findEnabledByMerchantId ::
   Id Merchant ->
   m [FareProduct]
 findEnabledByMerchantId id =
-  Hedis.get (makeAllMerchantIdKey id) >>= \case
+  Hedis.safeGet (makeAllMerchantIdKey id) >>= \case
     Just a -> return $ coerce @(FareProductD 'Unsafe) @FareProduct <$> a
     Nothing -> cacheRes /=<< Queries.findEnabledByMerchantId id
   where
@@ -42,7 +42,7 @@ findEnabledByMerchantIdAndType ::
   Id Merchant ->
   m [FareProduct]
 findEnabledByMerchantIdAndType mbFPType merchantId =
-  Hedis.get (makeAllMerchantIdTypeKey merchantId mbFPType) >>= \case
+  Hedis.safeGet (makeAllMerchantIdTypeKey merchantId mbFPType) >>= \case
     Just a -> return $ fmap (coerce @(FareProductD 'Unsafe) @FareProduct) a
     Nothing -> cacheRes /=<< Queries.findEnabledByMerchantIdAndType mbFPType merchantId
   where

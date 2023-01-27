@@ -19,7 +19,7 @@ create = Queries.create
 
 findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findById id =
-  Hedis.withCrossAppRedis (Hedis.get $ makeDriverInformationIdKey id) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeDriverInformationIdKey id) >>= \case
     Just a -> pure $ Just a
     Nothing -> flip whenJust (cacheDriverInformation id) /=<< Queries.findById id
 

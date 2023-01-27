@@ -25,16 +25,16 @@ import qualified Storage.Queries.Merchant as Queries
 
 findById :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
 findById id =
-  Hedis.withCrossAppRedis (Hedis.get $ makeIdKey id) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
 
 findBySubscriberId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
-  Hedis.withCrossAppRedis (Hedis.get $ makeSubscriberIdKey subscriberId) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeSubscriberIdKey subscriberId) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.withCrossAppRedis (Hedis.get $ makeIdKey id) >>= \case
+      Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
@@ -42,10 +42,10 @@ findBySubscriberId subscriberId =
 
 findByShortId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId =
-  Hedis.withCrossAppRedis (Hedis.get $ makeShortIdKey shortId) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeShortIdKey shortId) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.withCrossAppRedis (Hedis.get $ makeIdKey id) >>= \case
+      Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where

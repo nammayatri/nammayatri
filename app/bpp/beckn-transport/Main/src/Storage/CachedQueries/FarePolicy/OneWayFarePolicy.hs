@@ -26,7 +26,7 @@ import qualified Storage.Queries.FarePolicy.OneWayFarePolicy as Queries
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
 findById id =
-  Hedis.get (makeIdKey id) >>= \case
+  Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy a
     Nothing -> flip whenJust cacheOneWayFarePolicy /=<< Queries.findById id
 
@@ -36,10 +36,10 @@ findByMerchantIdAndVariant ::
   Vehicle.Variant ->
   m (Maybe OneWayFarePolicy)
 findByMerchantIdAndVariant merchantId vehVar =
-  Hedis.get (makeMerchantIdVehVarKey merchantId vehVar) >>= \case
+  Hedis.safeGet (makeMerchantIdVehVarKey merchantId vehVar) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.get (makeIdKey id) >>= \case
+      Hedis.safeGet (makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy a
         Nothing -> findAndCache
   where
@@ -47,7 +47,7 @@ findByMerchantIdAndVariant merchantId vehVar =
 
 findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [OneWayFarePolicy]
 findAllByMerchantId merchantId =
-  Hedis.get (makeAllMerchantIdKey merchantId) >>= \case
+  Hedis.safeGet (makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy) a
     Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
   where

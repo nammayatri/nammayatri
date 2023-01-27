@@ -18,7 +18,7 @@ import qualified Storage.Queries.BlackListOrg as Queries
 
 findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId BlackListOrg -> m (Maybe BlackListOrg)
 findByShortId shortId_ =
-  Hedis.get (makeShortIdKey shortId_) >>= \case
+  Hedis.safeGet (makeShortIdKey shortId_) >>= \case
     Just a -> return . Just $ coerce @(BlackListOrgD 'Unsafe) @BlackListOrg a
     Nothing -> findAndCache
   where

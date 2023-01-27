@@ -23,7 +23,7 @@ import qualified Storage.Queries.Merchant.MerchantServiceConfig as Queries
 
 findByMerchantIdAndService :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
 findByMerchantIdAndService id serviceName =
-  Hedis.withCrossAppRedis (Hedis.get $ makeMerchantIdAndServiceKey id serviceName) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndServiceKey id serviceName) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceConfigD 'Unsafe) @MerchantServiceConfig a
     Nothing -> flip whenJust cacheMerchantServiceConfig /=<< Queries.findByMerchantIdAndService id serviceName
 

@@ -23,16 +23,16 @@ import qualified Storage.Queries.Merchant as Queries
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
 findById id =
-  Hedis.get (makeIdKey id) >>= \case
+  Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
 
 findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ =
-  Hedis.get (makeShortIdKey shortId_) >>= \case
+  Hedis.safeGet (makeShortIdKey shortId_) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.get (makeIdKey id) >>= \case
+      Hedis.safeGet (makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
@@ -40,10 +40,10 @@ findByShortId shortId_ =
 
 findByExoPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Merchant)
 findByExoPhone countryCode exoPhone =
-  Hedis.get (makeExoPhoneKey countryCode exoPhone) >>= \case
+  Hedis.safeGet (makeExoPhoneKey countryCode exoPhone) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.get (makeIdKey id) >>= \case
+      Hedis.safeGet (makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where

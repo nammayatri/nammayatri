@@ -27,13 +27,13 @@ import qualified Storage.Queries.FarePolicy.Discount as Queries
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id Discount -> m (Maybe Discount)
 findById id =
-  Hedis.get (makeIdKey id) >>= \case
+  Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(DiscountD 'Unsafe) @Discount a
     Nothing -> flip whenJust cacheDiscount /=<< Queries.findById id
 
 findAllByMerchantIdAndVariant :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Vehicle.Variant -> m [Discount]
 findAllByMerchantIdAndVariant merchantId vehVar =
-  Hedis.get (makeAllMerchantIdVehVarKey merchantId vehVar) >>= \case
+  Hedis.safeGet (makeAllMerchantIdVehVarKey merchantId vehVar) >>= \case
     Just a -> return $ fmap (coerce @(DiscountD 'Unsafe) @Discount) a
     Nothing -> cacheRes /=<< Queries.findAllByMerchantIdAndVariant merchantId vehVar
   where

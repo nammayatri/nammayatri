@@ -28,7 +28,7 @@ import qualified Storage.Queries.FarePolicy.RentalFarePolicy as Queries
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
 findById id =
-  Hedis.get (makeIdKey id) >>= \case
+  Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy a
     Nothing -> flip whenJust cacheRentalFarePolicy /=<< Queries.findById id
 
@@ -40,10 +40,10 @@ findByOffer ::
   Hours ->
   m (Maybe RentalFarePolicy)
 findByOffer merchantId vehVar kms hours =
-  Hedis.get (makeMerchantIdVehVarKmHoursKey merchantId vehVar kms hours) >>= \case
+  Hedis.safeGet (makeMerchantIdVehVarKmHoursKey merchantId vehVar kms hours) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.get (makeIdKey id) >>= \case
+      Hedis.safeGet (makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy a
         Nothing -> findAndCache
   where
@@ -51,7 +51,7 @@ findByOffer merchantId vehVar kms hours =
 
 findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [RentalFarePolicy]
 findAllByMerchantId merchantId =
-  Hedis.get (makeAllMerchantIdKey merchantId) >>= \case
+  Hedis.safeGet (makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy) a
     Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
   where

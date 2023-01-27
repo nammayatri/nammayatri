@@ -22,7 +22,7 @@ import qualified Storage.Queries.TransporterConfig as Queries
 
 findByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe TransporterConfig)
 findByMerchantId id =
-  Hedis.get (makeMerchantIdKey id) >>= \case
+  Hedis.safeGet (makeMerchantIdKey id) >>= \case
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
     Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantId id
 
