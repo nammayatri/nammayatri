@@ -225,6 +225,23 @@ getCountByStatus merchantId = do
     groupBy $ ride ^. RideStatus
     return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))
 
+countRides :: Transactionable m => Id Merchant -> m Int
+countRides merchantId =
+  mkCount <$> do
+    Esq.findAll $ do
+      (_ride :& booking) <-
+        from $
+          table @RideT
+            `innerJoin` table @BookingT
+              `Esq.on` ( \(ride :& booking) ->
+                           ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                       )
+      where_ $ booking ^. BookingProviderId ==. val (toKey merchantId)
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
+
 getRidesForDate :: Transactionable m => Id Person -> Day -> m [Ride]
 getRidesForDate driverId date = Esq.buildDType $ do
   fullRideType <- Esq.findAll' $ do

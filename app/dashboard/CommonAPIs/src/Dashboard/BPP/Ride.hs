@@ -18,7 +18,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Servant
+import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data RideEndpoint
@@ -43,7 +43,8 @@ type RideListAPI =
     :> Get '[JSON] RideListRes
 
 data RideListRes = RideListRes
-  { totalItems :: Int,
+  { totalItems :: Int, -- for backward compatibility
+    summary :: Summary,
     rides :: [RideListItem]
   }
   deriving stock (Show, Generic)

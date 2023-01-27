@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Storage.Queries.Ride where
 
 import Beckn.External.Encryption
@@ -263,6 +261,23 @@ updateArrival rideId = do
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
+
+countRides :: Transactionable m => Id Merchant -> m Int
+countRides merchantId =
+  mkCount <$> do
+    Esq.findAll $ do
+      (_ride :& booking) <-
+        from $
+          table @RideT
+            `innerJoin` table @BookingT
+              `Esq.on` ( \(ride :& booking) ->
+                           ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                       )
+      where_ $ booking ^. BookingProviderId ==. val (toKey merchantId)
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
 
 data RideItem = RideItem
   { rideShortId :: ShortId Ride,

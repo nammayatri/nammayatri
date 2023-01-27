@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingStrategies #-}
+
 module Dashboard.Common where
 
 import Beckn.Prelude
@@ -23,3 +25,10 @@ class ToJSON (ReqWithoutSecrets req) => HideSecrets req where
 
 instance HideSecrets () where
   hideSecrets = identity
+
+data Summary = Summary
+  { totalCount :: Int, --TODO add db indexes
+    count :: Int
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

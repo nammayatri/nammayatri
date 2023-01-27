@@ -16,7 +16,7 @@ import Beckn.Types.Predicate
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Dashboard.Common as Reexport
-import Servant
+import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data DriverEndpoint
@@ -52,7 +52,8 @@ type DriverListAPI =
     :> Get '[JSON] DriverListRes
 
 data DriverListRes = DriverListRes
-  { totalItems :: Int,
+  { totalItems :: Int, -- for backward compatibility
+    summary :: Summary,
     drivers :: [DriverListItem]
   }
   deriving stock (Eq, Show, Generic)

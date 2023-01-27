@@ -92,6 +92,7 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbEnabled mbBlock
                      )
     where_ $
       person ^. PersonMerchantId ==. (val . toKey $ merchantId)
+        &&. person ^. PersonRole ==. val Person.DRIVER
         &&. maybe (val True) (\enabled -> info ^. DriverInformationEnabled ==. val enabled) mbEnabled
         &&. maybe (val True) (\blocked -> info ^. DriverInformationBlocked ==. val blocked) mbBlocked
         &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
@@ -99,6 +100,19 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbEnabled mbBlock
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
     pure (person, info, mbVeh)
+
+countDrivers :: Transactionable m => Id Merchant -> m Int
+countDrivers merchantId =
+  mkCount <$> do
+    Esq.findAll $ do
+      person <- from $ table @PersonT
+      where_ $
+        person ^. PersonMerchantId ==. val (toKey merchantId)
+          &&. person ^. PersonRole ==. val Person.DRIVER
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
 
 findAllDriversByIdsFirstNameAsc ::
   (Transactionable m, Functor m) =>

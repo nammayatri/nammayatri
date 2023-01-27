@@ -139,7 +139,11 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSe
   mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
   driversWithInfo <- Esq.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbVerified mbEnabled mbBlocked mbSearchPhoneDBHash
   items <- mapM buildDriverListItem driversWithInfo
-  pure $ Common.DriverListRes (length items) items
+  let count = length items
+  -- should we consider filters in totalCount, e.g. count all enabled drivers?
+  totalCount <- Esq.runInReplica $ QPerson.countDrivers merchant.id
+  let summary = Common.Summary {totalCount, count}
+  pure Common.DriverListRes {totalItems = count, summary, drivers = items}
   where
     maxLimit = 20
     defaultLimit = 10
