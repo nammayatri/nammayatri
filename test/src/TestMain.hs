@@ -150,6 +150,7 @@ specs' googleCfg trees = do
              },
         MockGoogle.runService $ \cfg ->
           cfg & hideLogging
+            & #mockDataPath .~ "../app/mocks/google/mock-data/"
       ]
 
     startServers servers = do
