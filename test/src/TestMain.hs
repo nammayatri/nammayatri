@@ -32,10 +32,12 @@ import qualified "driver-offer-bpp" Environment as DriverOfferBpp
 import EulerHS.Prelude
 import qualified "mock-google" Lib.IntegrationTests.Environment as Environment
 import qualified Mobility.ARDU.Spec as Mobility.ARDU
+import qualified Mobility.ARDU.Utils as DriverOfferBppUtils
 import qualified Mobility.AppBackend.Fixtures as Fixtures
 import Mobility.AppBackend.Queries
-import qualified Mobility.AppBackend.Utils as Utils
+import qualified Mobility.AppBackend.Utils as AppBackendUtils
 import qualified Mobility.Transporter.Spec as Transporter.Mobility
+import qualified Mobility.Transporter.Utils as TransporterUtils
 import PublicTransport.Common
 import qualified PublicTransport.Spec as PublicTransport
 import Resources
@@ -86,8 +88,8 @@ specs :: Maps.MapsServiceConfig -> IO TestTree
 specs googleCfg =
   specs'
     googleCfg
-    [ Transporter.Mobility.mkTestTree googleCfg,
-      Mobility.ARDU.mkTestTree googleCfg,
+    [ Transporter.Mobility.mkTestTree,
+      Mobility.ARDU.mkTestTree,
       PublicTransport.mkTestTree
     ]
 
@@ -111,16 +113,18 @@ specs' googleCfg trees = do
         DriverHC.runDriverHealthcheck hideLogging,
         Gateway.runGateway hideLogging,
         do
-          Utils.changeCachedMapsConfig googleCfg
+          AppBackendUtils.changeCachedMapsConfig googleCfg
           runAppFlow "" $ do
             Esq.runTransaction $ do
               updateOrigAndDestRestriction Fixtures.yatriMerchantId ["Ernakulam", "Kochi", "Karnataka"] ["Kerala", "Kochi", "Karnataka"]
           AppBackend.runAppBackend $
             \cfg ->
               cfg & hideLogging,
-        TransporterBackend.runTransporterBackendApp $
-          \cfg ->
-            cfg & hideLogging,
+        do
+          TransporterUtils.changeCachedMapsConfig googleCfg
+          TransporterBackend.runTransporterBackendApp $
+            \cfg ->
+              cfg & hideLogging,
         MockSms.runMockSms hideLogging,
         MockFcm.runMockFcm hideLogging,
         MockRegistry.runRegistryService hideLogging,
@@ -135,9 +139,11 @@ specs' googleCfg trees = do
         SearchResultAggregator.runSearchResultAggregator $ \cfg ->
           cfg & hideLogging
             & #kafkaConsumerCfgs . #publicTransportQuotes . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
-        DriverOfferBpp.runDriverOfferBpp $
-          \cfg ->
-            cfg & hideLogging,
+        do
+          DriverOfferBppUtils.changeCachedMapsConfig googleCfg
+          DriverOfferBpp.runDriverOfferBpp $
+            \cfg ->
+              cfg & hideLogging,
         ARDUAllocator.runDriverOfferAllocator $ \cfg ->
           cfg{appCfg = cfg.appCfg & hideLogging,
               schedulerConfig = cfg.schedulerConfig & hideLogging
@@ -155,7 +161,9 @@ specs' googleCfg trees = do
       threadDelaySec 4
 
     cleanupServers _ = do
-      Utils.clearCachedMapsConfig
+      AppBackendUtils.clearCachedMapsConfig
+      TransporterUtils.clearCachedMapsConfig
+      DriverOfferBppUtils.clearCachedMapsConfig
       releaseTestResources
       signalProcess sigINT =<< getProcessID
     migrateDB = do

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Mobility.ARDU.MapsConfig where
@@ -8,7 +9,7 @@ import Beckn.Types.Id
 import "driver-offer-bpp" Domain.Types.Merchant
 import "driver-offer-bpp" Domain.Types.Merchant.MerchantServiceConfig
 import qualified Mobility.ARDU.Fixtures as Fixtures
-import qualified "driver-offer-bpp" Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
+import qualified "driver-offer-bpp" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
 import Test.Hspec
 import "driver-offer-bpp" Tools.Maps
 import Utils
@@ -22,11 +23,12 @@ spec = describe "Merchant maps configs" $ do
     "Fetch OSRM config"
     fetchOSRMConfig
 
+-- We use direct calls to DB in this test because cache already changed for using mock-google
 fetchConfig :: forall b. (Show b, Eq b) => Id Merchant -> Maps.MapsService -> (ServiceConfig -> b) -> b -> IO ()
 fetchConfig merchantId serviceProvider getterFunc resultExpected = do
   Just cfg <-
     runARDUFlow "" $
-      QOMSC.findByMerchantIdAndService merchantId (MapsService serviceProvider)
+      QMSC.findByMerchantIdAndService merchantId (MapsService serviceProvider)
   getterFunc cfg.serviceConfig `shouldBe` resultExpected
 
 fetchGoogleConfig :: IO ()

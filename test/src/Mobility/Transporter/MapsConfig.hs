@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Mobility.Transporter.MapsConfig where
@@ -8,7 +9,7 @@ import Beckn.Types.Id
 import "beckn-transport" Domain.Types.Merchant
 import "beckn-transport" Domain.Types.Merchant.MerchantServiceConfig
 import qualified Mobility.Transporter.Fixtures as Fixtures
-import qualified "beckn-transport" Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
+import qualified "beckn-transport" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
 import Test.Hspec
 import "beckn-transport" Tools.Maps
 import Utils
@@ -22,11 +23,12 @@ spec = describe "Merchant maps configs" $ do
     "Fetch OSRM config"
     fetchOSRMConfig
 
+-- We use direct calls to DB in this test because cache already changed for using mock-google
 fetchConfig :: forall b. (Show b, Eq b) => Id Merchant -> Maps.MapsService -> (ServiceConfig -> b) -> b -> IO ()
 fetchConfig merchantId serviceProvider getterFunc resultExpected = do
   Just cfg <-
     runTransporterFlow "" $
-      QOMSC.findByMerchantIdAndService merchantId (MapsService serviceProvider)
+      QMSC.findByMerchantIdAndService merchantId (MapsService serviceProvider)
   getterFunc cfg.serviceConfig `shouldBe` resultExpected
 
 fetchGoogleConfig :: IO ()
