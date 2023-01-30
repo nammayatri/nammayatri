@@ -19,7 +19,7 @@ create = Queries.create
 
 findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findById id =
-  Hedis.get (makeDriverInformationIdKey id) >>= \case
+  Hedis.withCrossAppRedis (Hedis.get $ makeDriverInformationIdKey id) >>= \case
     Just a -> pure $ Just a
     Nothing -> flip whenJust (cacheDriverInformation id) /=<< Queries.findById id
 
@@ -82,12 +82,12 @@ countDrivers = Queries.countDrivers
 --------- Caching logic -------------------
 
 clearDriverInfoCache :: (CacheFlow m r) => Id Person.Driver -> m ()
-clearDriverInfoCache = Hedis.del . makeDriverInformationIdKey
+clearDriverInfoCache = Hedis.withCrossAppRedis . Hedis.del . makeDriverInformationIdKey
 
 cacheDriverInformation :: (CacheFlow m r) => Id Person.Driver -> DriverInformation -> m ()
 cacheDriverInformation driverId driverInfo = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeDriverInformationIdKey driverId) driverInfo expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeDriverInformationIdKey driverId) driverInfo expTime
 
 makeDriverInformationIdKey :: Id Person.Driver -> Text
-makeDriverInformationIdKey id = "CachedQueries:DriverInformation:DriverId-" <> id.getId
+makeDriverInformationIdKey id = "driver-offer:CachedQueries:DriverInformation:DriverId-" <> id.getId

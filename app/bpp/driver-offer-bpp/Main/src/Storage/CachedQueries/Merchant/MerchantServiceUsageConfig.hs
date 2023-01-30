@@ -22,7 +22,7 @@ import qualified Storage.Queries.Merchant.MerchantServiceUsageConfig as Queries
 
 findByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantId id =
-  Hedis.get (makeMerchantIdKey id) >>= \case
+  Hedis.withCrossAppRedis (Hedis.get $ makeMerchantIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig a
     Nothing -> flip whenJust cacheMerchantServiceUsageConfig /=<< Queries.findByMerchantId id
 
@@ -30,15 +30,15 @@ cacheMerchantServiceUsageConfig :: (CacheFlow m r) => MerchantServiceUsageConfig
 cacheMerchantServiceUsageConfig orgServiceUsageConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeMerchantIdKey orgServiceUsageConfig.merchantId
-  Hedis.setExp idKey (coerce @MerchantServiceUsageConfig @(MerchantServiceUsageConfigD 'Unsafe) orgServiceUsageConfig) expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp idKey (coerce @MerchantServiceUsageConfig @(MerchantServiceUsageConfigD 'Unsafe) orgServiceUsageConfig) expTime
 
 makeMerchantIdKey :: Id Merchant -> Text
-makeMerchantIdKey id = "CachedQueries:MerchantServiceUsageConfig:MerchantId-" <> id.getId
+makeMerchantIdKey id = "driver-offer:CachedQueries:MerchantServiceUsageConfig:MerchantId-" <> id.getId
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
 clearCache merchantId = do
-  Hedis.del (makeMerchantIdKey merchantId)
+  Hedis.withCrossAppRedis $ Hedis.del (makeMerchantIdKey merchantId)
 
 updateMerchantServiceUsageConfig ::
   MerchantServiceUsageConfig ->

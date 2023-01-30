@@ -25,16 +25,16 @@ import qualified Storage.Queries.Merchant as Queries
 
 findById :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
 findById id =
-  Hedis.get (makeIdKey id) >>= \case
+  Hedis.withCrossAppRedis (Hedis.get $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
 
 findBySubscriberId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
-  Hedis.get (makeSubscriberIdKey subscriberId) >>= \case
+  Hedis.withCrossAppRedis (Hedis.get $ makeSubscriberIdKey subscriberId) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.get (makeIdKey id) >>= \case
+      Hedis.withCrossAppRedis (Hedis.get $ makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
@@ -42,10 +42,10 @@ findBySubscriberId subscriberId =
 
 findByShortId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId =
-  Hedis.get (makeShortIdKey shortId) >>= \case
+  Hedis.withCrossAppRedis (Hedis.get $ makeShortIdKey shortId) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.get (makeIdKey id) >>= \case
+      Hedis.withCrossAppRedis (Hedis.get $ makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
@@ -54,26 +54,28 @@ findByShortId shortId =
 -- Call it after any update
 clearCache :: HedisFlow m r => Merchant -> m ()
 clearCache org = do
-  Hedis.del (makeIdKey org.id)
-  Hedis.del (makeShortIdKey org.shortId)
-  Hedis.del (makeSubscriberIdKey org.subscriberId)
+  Hedis.withCrossAppRedis $ do
+    Hedis.del (makeIdKey org.id)
+    Hedis.del (makeShortIdKey org.shortId)
+    Hedis.del (makeSubscriberIdKey org.subscriberId)
 
 cacheMerchant :: (HasCacheConfig r, HedisFlow m r) => Merchant -> m ()
 cacheMerchant org = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey org.id
-  Hedis.setExp idKey (coerce @Merchant @(MerchantD 'Unsafe) org) expTime
-  Hedis.setExp (makeShortIdKey org.shortId) idKey expTime
-  Hedis.setExp (makeSubscriberIdKey org.subscriberId) idKey expTime
+  Hedis.withCrossAppRedis $ do
+    Hedis.setExp idKey (coerce @Merchant @(MerchantD 'Unsafe) org) expTime
+    Hedis.setExp (makeShortIdKey org.shortId) idKey expTime
+    Hedis.setExp (makeSubscriberIdKey org.subscriberId) idKey expTime
 
 makeIdKey :: Id Merchant -> Text
-makeIdKey id = "CachedQueries:Merchant:Id-" <> id.getId
+makeIdKey id = "driver-offer:CachedQueries:Merchant:Id-" <> id.getId
 
 makeSubscriberIdKey :: ShortId Subscriber -> Text
-makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> subscriberId.getShortId
+makeSubscriberIdKey subscriberId = "driver-offer:CachedQueries:Merchant:SubscriberId-" <> subscriberId.getShortId
 
 makeShortIdKey :: ShortId Merchant -> Text
-makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
+makeShortIdKey shortId = "driver-offer:CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 
 update :: Merchant -> Esq.SqlDB ()
 update = Queries.update

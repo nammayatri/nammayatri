@@ -26,7 +26,7 @@ import qualified Storage.Queries.FarePolicy as Queries
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
 findById id =
-  Hedis.get (makeIdKey id) >>= \case
+  Hedis.withCrossAppRedis (Hedis.get $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
     Nothing -> flip whenJust cacheFarePolicy /=<< Queries.findById id
 
@@ -36,10 +36,10 @@ findByMerchantIdAndVariant ::
   Vehicle.Variant ->
   m (Maybe FarePolicy)
 findByMerchantIdAndVariant merchantId vehVar =
-  Hedis.get (makeMerchantIdVehVarKey merchantId vehVar) >>= \case
+  Hedis.withCrossAppRedis (Hedis.get $ makeMerchantIdVehVarKey merchantId vehVar) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.get (makeIdKey id) >>= \case
+      Hedis.withCrossAppRedis (Hedis.get $ makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
         Nothing -> findAndCache
   where
@@ -47,33 +47,34 @@ findByMerchantIdAndVariant merchantId vehVar =
 
 findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [FarePolicy]
 findAllByMerchantId merchantId =
-  Hedis.get (makeAllMerchantIdKey merchantId) >>= \case
+  Hedis.withCrossAppRedis (Hedis.get $ makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(FarePolicyD 'Unsafe) @FarePolicy) a
     Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
   where
     cacheRes fps = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-      Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[FarePolicy] @[FarePolicyD 'Unsafe] fps) expTime
+      Hedis.withCrossAppRedis $ Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[FarePolicy] @[FarePolicyD 'Unsafe] fps) expTime
 
 cacheFarePolicy :: (CacheFlow m r) => FarePolicy -> m ()
 cacheFarePolicy fp = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey fp.id
-  Hedis.setExp idKey (coerce @FarePolicy @(FarePolicyD 'Unsafe) fp) expTime
-  Hedis.setExp (makeMerchantIdVehVarKey fp.merchantId fp.vehicleVariant) idKey expTime
+  Hedis.withCrossAppRedis $ do
+    Hedis.setExp idKey (coerce @FarePolicy @(FarePolicyD 'Unsafe) fp) expTime
+    Hedis.setExp (makeMerchantIdVehVarKey fp.merchantId fp.vehicleVariant) idKey expTime
 
 makeIdKey :: Id FarePolicy -> Text
-makeIdKey id = "CachedQueries:FarePolicy:Id-" <> id.getId
+makeIdKey id = "driver-offer:CachedQueries:FarePolicy:Id-" <> id.getId
 
 makeMerchantIdVehVarKey :: Id Merchant -> Vehicle.Variant -> Text
-makeMerchantIdVehVarKey merchantId vehVar = "CachedQueries:FarePolicy:MerchantId-" <> merchantId.getId <> ":VehVar-" <> show vehVar
+makeMerchantIdVehVarKey merchantId vehVar = "driver-offer:CachedQueries:FarePolicy:MerchantId-" <> merchantId.getId <> ":VehVar-" <> show vehVar
 
 makeAllMerchantIdKey :: Id Merchant -> Text
-makeAllMerchantIdKey merchantId = "CachedQueries:FarePolicy:MerchantId-" <> merchantId.getId <> ":All"
+makeAllMerchantIdKey merchantId = "driver-offer:CachedQueries:FarePolicy:MerchantId-" <> merchantId.getId <> ":All"
 
 -- Call it after any update
 clearCache :: HedisFlow m r => FarePolicy -> m ()
-clearCache fp = do
+clearCache fp = Hedis.withCrossAppRedis $ do
   Hedis.del (makeIdKey fp.id)
   Hedis.del (makeMerchantIdVehVarKey fp.merchantId fp.vehicleVariant)
   Hedis.del (makeAllMerchantIdKey fp.merchantId)
