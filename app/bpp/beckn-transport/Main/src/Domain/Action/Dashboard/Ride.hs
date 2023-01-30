@@ -100,6 +100,9 @@ rideInfo merchantShortId reqRideId = do
   let cancellationReason =
         (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBCReason <&> (.reasonCode)
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
+  let cancelledTime = case ride.status of
+        DRide.CANCELLED -> Just ride.updatedAt
+        _ -> Nothing
 
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
@@ -108,6 +111,12 @@ rideInfo merchantShortId reqRideId = do
   let (mbToLocation, mbEstimatedDistance) = case booking.bookingDetails of
         DBooking.OneWayDetails details -> (Just details.toLocation, Just details.estimatedDistance)
         DBooking.RentalDetails _ -> (Nothing, Nothing)
+
+  let mbEstimatedDuration = case booking.bookingDetails of
+        DBooking.OneWayDetails details -> Just details.estimatedDuration
+        DBooking.RentalDetails _ -> Nothing
+
+  driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
   pure
     Common.RideInfoRes
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
@@ -123,13 +132,19 @@ rideInfo merchantShortId reqRideId = do
         driverStartLocation = ride.tripStartPos,
         driverCurrentLocation = getCoordinates driverLocation,
         rideBookingTime = booking.createdAt,
+        estimatedDriverArrivalTime = realToFrac driverEstimatedPickupDuration `addUTCTime` booking.startTime,
+        actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.tripStartTime,
         rideEndTime = ride.tripEndTime,
         rideDistanceEstimated = mbEstimatedDistance,
         rideDistanceActual = roundToIntegral ride.traveledDistance,
+        estimatedRideDuration = secondsToMinutes <$> mbEstimatedDuration,
+        estimatedFare = booking.estimatedFare,
+        actualFare = ride.fare,
         pickupDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just ride.createdAt),
         rideDuration = timeDiffInMinutes <$> ride.tripEndTime <*> ride.tripStartTime,
         bookingStatus = mkBookingStatus ride now,
+        cancelledTime,
         cancelledBy,
         cancellationReason,
         driverInitiatedCallCount,

@@ -24,6 +24,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverLocation as QDrLoc
+import qualified Storage.Queries.DriverQuote as DQ
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -82,6 +83,7 @@ rideInfo merchantShortId reqRideId = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   rideDetails <- runInReplica $ QRideDetails.findById rideId >>= fromMaybeM (RideNotFound rideId.getId) -- FIXME RideDetailsNotFound
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
+  quote <- runInReplica $ DQ.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
   let driverId = ride.driverId
 
   -- merchant access checking
@@ -99,7 +101,9 @@ rideInfo merchantShortId reqRideId = do
   let cancellationReason =
         (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBCReason <&> (.reasonCode)
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
-
+  let cancelledTime = case ride.status of
+        DRide.CANCELLED -> Just ride.updatedAt
+        _ -> Nothing
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
   now <- getCurrentTime
@@ -118,13 +122,19 @@ rideInfo merchantShortId reqRideId = do
         driverStartLocation = ride.tripStartPos,
         driverCurrentLocation = getCoordinates driverLocation,
         rideBookingTime = booking.createdAt,
+        estimatedDriverArrivalTime = realToFrac quote.durationToPickup `addUTCTime` ride.createdAt,
+        actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.tripStartTime,
         rideEndTime = ride.tripEndTime,
         rideDistanceEstimated = Just booking.estimatedDistance,
         rideDistanceActual = roundToIntegral ride.traveledDistance,
+        estimatedRideDuration = Just $ secondsToMinutes booking.estimatedDuration,
+        estimatedFare = booking.estimatedFare,
+        actualFare = ride.fare,
         pickupDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just ride.createdAt),
         rideDuration = timeDiffInMinutes <$> ride.tripEndTime <*> ride.tripStartTime,
         bookingStatus = mkBookingStatus ride now,
+        cancelledTime,
         cancelledBy,
         cancellationReason,
         driverInitiatedCallCount,
