@@ -75,10 +75,11 @@ updateEnabledVerifiedState driverId isEnabled isVerified = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ DriverInformationEnabled =. val isEnabled,
-        DriverInformationVerified =. val isVerified,
-        DriverInformationUpdatedAt =. val now
-      ]
+      $ [ DriverInformationEnabled =. val isEnabled,
+          DriverInformationVerified =. val isVerified,
+          DriverInformationUpdatedAt =. val now
+        ]
+      <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 updateBlockedState :: Id Person.Driver -> Bool -> SqlDB ()
@@ -100,7 +101,8 @@ verifyAndEnableDriver driverId = do
       tbl
       [ DriverInformationEnabled =. val True,
         DriverInformationVerified =. val True,
-        DriverInformationUpdatedAt =. val now
+        DriverInformationUpdatedAt =. val now,
+        DriverInformationLastEnabledOn =. val (Just now)
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey driverId)
 
@@ -117,9 +119,10 @@ updateEnabledStateReturningIds merchantId driverIds isEnabled =
       Esq.update $ \tbl -> do
         set
           tbl
-          [ DriverInformationEnabled =. val isEnabled,
-            DriverInformationUpdatedAt =. val now
+          $ [ DriverInformationEnabled =. val isEnabled,
+              DriverInformationUpdatedAt =. val now
           ]
+          <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
         where_ $ tbl ^. DriverInformationDriverId `in_` valList (map (toKey . cast) present)
 
 updateOnRide ::

@@ -300,7 +300,7 @@ createDriverDetails personId adminId = do
             blocked = False,
             verified = False,
             referralCode = Nothing,
-            lastEnabledOn = Nothing,
+            lastEnabledOn = Just now,
             createdAt = now,
             updatedAt = now
           }
