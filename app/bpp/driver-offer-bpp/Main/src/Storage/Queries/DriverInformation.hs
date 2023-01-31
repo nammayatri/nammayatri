@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.DriverInformation where
 
 import Beckn.External.Encryption
@@ -79,7 +81,7 @@ updateEnabledVerifiedState driverId isEnabled isVerified = do
           DriverInformationVerified =. val isVerified,
           DriverInformationUpdatedAt =. val now
         ]
-      <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
+        <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 updateBlockedState :: Id Person.Driver -> Bool -> SqlDB ()
@@ -121,8 +123,8 @@ updateEnabledStateReturningIds merchantId driverIds isEnabled =
           tbl
           $ [ DriverInformationEnabled =. val isEnabled,
               DriverInformationUpdatedAt =. val now
-          ]
-          <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
+            ]
+            <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
         where_ $ tbl ^. DriverInformationDriverId `in_` valList (map (toKey . cast) present)
 
 updateOnRide ::
