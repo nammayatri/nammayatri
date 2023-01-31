@@ -27,6 +27,8 @@ import Beckn.Types.Id
 import qualified Beckn.Types.SlidingWindowCounters as SWC
 import Beckn.Utils.Common
 import qualified Beckn.Utils.SlidingWindowCounters as SWC
+import Data.List (partition)
+import Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -141,9 +143,12 @@ getValidSearchRequestCount ::
   Id DP.Driver ->
   UTCTime ->
   m Int
-getValidSearchRequestCount merchantId driverId now = do
-  searchRequestValidityMap :: [(Text, UTCTime)] <- Redis.withCrossAppRedis $ Redis.hGetAll (mkParallelSearchRequestKey merchantId driverId)
-  pure . length . filter ((> now) . snd) $ searchRequestValidityMap
+getValidSearchRequestCount merchantId driverId now = Redis.withCrossAppRedis $ do
+  let key = mkParallelSearchRequestKey merchantId driverId
+  searchRequestValidityMap :: [(Text, UTCTime)] <- Redis.hGetAll key
+  let (valid, old) = partition ((> now) . snd) searchRequestValidityMap
+  when (notNull old) $ Redis.hDel key (map fst old)
+  pure $ length valid
 
 removeSearchReqIdFromMap ::
   ( Redis.HedisFlow m r,
@@ -153,7 +158,7 @@ removeSearchReqIdFromMap ::
   Id DP.Person ->
   Id SearchRequest ->
   m ()
-removeSearchReqIdFromMap merchantId driverId = Redis.hDel (mkParallelSearchRequestKey merchantId $ cast driverId) . (.getId)
+removeSearchReqIdFromMap merchantId driverId = Redis.withCrossAppRedis . Redis.hDel (mkParallelSearchRequestKey merchantId $ cast driverId) . (: []) .(.getId)
 
 incrementQuoteAcceptedCount ::
   ( Redis.HedisFlow m r,
