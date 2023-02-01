@@ -205,8 +205,8 @@ endRide handle@ServiceHandle {..} rideId req = do
         Just tripStartLoc -> do
           pickupLocThreshold <- metersToHighPrecMeters <$> getLocThreshold handle PICKUP
           dropLocThreshold <- metersToHighPrecMeters <$> getLocThreshold handle DROP
-          let pickupDifference = distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
-          let dropDifference = distanceBetweenInMeters (getCoordinates oneWayDetails.toLocation) point
+          let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
+          let dropDifference = abs $ distanceBetweenInMeters (getCoordinates oneWayDetails.toLocation) point
           let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
 
           logTagInfo "Locations differences" $
@@ -223,7 +223,7 @@ endRide handle@ServiceHandle {..} rideId req = do
           if pickupDropOutsideOfThreshold
             then metersToHighPrecMeters <$> getRideDistanceThresholdWhenPickupOrDestIsDiff handle
             else metersToHighPrecMeters <$> getRideDistanceThresholdWhenPickupAndDestIsSame handle
-        let rideDistanceDifference = ride.traveledDistance - metersToHighPrecMeters oneWayDetails.estimatedDistance
+        let rideDistanceDifference = abs $ ride.traveledDistance - metersToHighPrecMeters oneWayDetails.estimatedDistance
         let distanceOutsideOfThreshold = rideDistanceDifference >= rideTravelledDistanceThreshold
         logTagInfo "endRide" ("distanceOutsideOfThreshold: " <> show distanceOutsideOfThreshold)
         logTagInfo "RideDistance differences" $
