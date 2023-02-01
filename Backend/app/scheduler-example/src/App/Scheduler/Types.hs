@@ -32,9 +32,11 @@ data SchedulerJobType
   | IncorrectDataJobType
   | FakeJobType
   | TestTermination
-  deriving stock (Generic, Show, Eq, Ord)
+  deriving stock (Generic, Show, Read, Eq, Ord)
   deriving anyclass (FromJSON, ToJSON, FromDhall)
   deriving (PrettyShow) via Showable SchedulerJobType
+
+instance JobProcessor SchedulerJobType
 
 genSingletons [''SchedulerJobType]
 singEqInstances [''SchedulerJobType]
@@ -49,13 +51,19 @@ data BananasCount = BananasCount
   deriving stock (Generic, Show, Eq)
   deriving anyclass (FromJSON, ToJSON, PrettyShow)
 
+instance JobInfoProcessor 'PrintBananasCount
+
 type instance JobContent 'PrintBananasCount = BananasCount
 
 -----------------
 
+instance JobInfoProcessor 'PrintCurrentTimeWithErrorProbability
+
 type instance JobContent 'PrintCurrentTimeWithErrorProbability = ()
 
 -----------------
+instance JobInfoProcessor 'FakeJobType
+
 type instance JobContent 'FakeJobType = ()
 
 -----------------
@@ -67,6 +75,8 @@ data IncorrectlySerializable = IncSer
   deriving anyclass (ToJSON, PrettyShow)
   deriving (FromJSON) via JSONfail IncorrectlySerializable
 
+instance JobInfoProcessor 'IncorrectDataJobType
+
 type instance JobContent 'IncorrectDataJobType = IncorrectlySerializable
 
 newtype JSONfail a = JSONfail a
@@ -75,5 +85,7 @@ instance FromJSON (JSONfail a) where
   parseJSON _ = fail "fake fail"
 
 -----------------
+
+instance JobInfoProcessor 'TestTermination
 
 type instance JobContent 'TestTermination = ()

@@ -69,7 +69,7 @@ data LoggerResources = LoggerResources
 
 type SchedulerT = MockM LoggerResources
 
-makeTestJobEntry :: forall e. (JobTypeConstaints e) => JobContent e -> JobEntry e
+makeTestJobEntry :: forall e. (JobInfoProcessor e) => JobContent e -> JobEntry e
 makeTestJobEntry jData =
   JobEntry
     { jobData = jData,
@@ -78,7 +78,7 @@ makeTestJobEntry jData =
 
 -----------------
 
-createBananasCountingJob :: NominalDiffTime -> Flow (Id (AnyJob SchedulerJobType))
+createBananasCountingJob :: NominalDiffTime -> Flow (Id AnyJob)
 createBananasCountingJob scheduleIn = do
   now <- getCurrentTime
   bCount <- getRandomInRange (1, 10 :: Int)
@@ -93,12 +93,12 @@ createBananasCountingJob scheduleIn = do
 bananasCounterHandler :: Job 'PrintBananasCount -> SchedulerT ExecutionResult
 bananasCounterHandler job = do
   logInfo "job of type 1 is being executed: printing job data"
-  logPretty INFO "job data" job.jobData
+  logPretty INFO "job data" job.jobInfo.jobData
   pure Complete
 
 -----------------
 
-createTimePrinterJob :: NominalDiffTime -> Flow (Id (AnyJob SchedulerJobType))
+createTimePrinterJob :: NominalDiffTime -> Flow (Id AnyJob)
 createTimePrinterJob scheduleIn =
   createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'PrintCurrentTimeWithErrorProbability ()
 
@@ -115,13 +115,13 @@ timePrinterHandler _ = do
 
 -----------------
 
-createFakeJob :: NominalDiffTime -> Flow (Id (AnyJob SchedulerJobType))
+createFakeJob :: NominalDiffTime -> Flow (Id AnyJob)
 createFakeJob scheduleIn =
   createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'FakeJobType ()
 
 -----------------
 
-createIncorrectDataJob :: NominalDiffTime -> Flow (Id (AnyJob SchedulerJobType))
+createIncorrectDataJob :: NominalDiffTime -> Flow (Id AnyJob)
 createIncorrectDataJob scheduleIn =
   createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'IncorrectDataJobType val
   where
@@ -134,7 +134,7 @@ incorrectDataJobHandler _ = do
 
 -----------------
 
-createTestTerminationJob :: NominalDiffTime -> Flow (Id (AnyJob SchedulerJobType))
+createTestTerminationJob :: NominalDiffTime -> Flow (Id AnyJob)
 createTestTerminationJob scheduleIn =
   createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'TestTermination ()
 
