@@ -11,47 +11,61 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.Queries.SchedulerJob where
+module Lib.Scheduler.JobStorageType.DB.Queries where
 
+import Data.Singletons (SingI)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Lib.Scheduler.Environment
-import Lib.Scheduler.ScheduleJob
+import Lib.Scheduler.JobStorageType.DB.Table
+import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
 import Lib.Scheduler.Types
-import SharedLogic.Scheduler
-import Storage.Tabular.SchedulerJob
 
-createScheduleRentalRideRequestJob :: UTCTime -> AllocateRentalJobData -> Esq.SqlDB ()
-createScheduleRentalRideRequestJob scheduledAt jobData =
+createJob :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => JobContent e -> Esq.SqlDB ()
+createJob jobData = do
   void $
-    createJobByTime Storage.Queries.SchedulerJob.create scheduledAt jobEntry
-  where
-    jobEntry :: JobEntry 'AllocateRental =
+    ScheduleJob.createJob @t @e @Esq.SqlDB Esq.create $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
         }
 
-create :: AnyJob SchedulerJobType -> SqlDB ()
-create = Esq.create
+createJobIn :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => NominalDiffTime -> JobContent e -> Esq.SqlDB ()
+createJobIn inTime jobData = do
+  void $
+    ScheduleJob.createJobIn @t @e @Esq.SqlDB Esq.create inTime $
+      JobEntry
+        { jobData = jobData,
+          maxErrors = 5
+        }
 
-findAll :: SchedulerM [AnyJob SchedulerJobType]
+createJobByTime :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => UTCTime -> JobContent e -> Esq.SqlDB ()
+createJobByTime byTime jobData = do
+  void $
+    ScheduleJob.createJobByTime @t @e @Esq.SqlDB Esq.create byTime $
+      JobEntry
+        { jobData = jobData,
+          maxErrors = 5
+        }
+
+findAll :: FromTType SchedulerJobT (AnyJob t) => SchedulerM [AnyJob t]
 findAll = Esq.findAll $ from $ table @SchedulerJobT
 
-findById :: Id (AnyJob SchedulerJobType) -> SchedulerM (Maybe (AnyJob SchedulerJobType))
+findById :: FromTType SchedulerJobT (AnyJob t) => Id AnyJob -> SchedulerM (Maybe (AnyJob t))
 findById = Esq.findById
 
-getTasksById :: [Id (AnyJob SchedulerJobType)] -> SchedulerM [AnyJob SchedulerJobType]
+getTasksById :: FromTType SchedulerJobT (AnyJob t) => [Id AnyJob] -> SchedulerM [AnyJob t]
 getTasksById ids = Esq.findAll $ do
   job <- from $ table @SchedulerJobT
   where_ $ job ^. SchedulerJobId `in_` valList (map (.getId) ids)
   pure job
 
-getReadyTasks :: SchedulerM [AnyJob SchedulerJobType]
+getReadyTasks :: FromTType SchedulerJobT (AnyJob t) => SchedulerM [AnyJob t]
 getReadyTasks = do
   now <- getCurrentTime
   Esq.findAll $ do
@@ -62,41 +76,41 @@ getReadyTasks = do
     orderBy [asc $ job ^. SchedulerJobScheduledAt]
     pure job
 
-updateStatus :: JobStatus -> Id (AnyJob SchedulerJobType) -> SchedulerM ()
+updateStatus :: JobStatus -> Id AnyJob -> SchedulerM ()
 updateStatus newStatus jobId = do
   now <- getCurrentTime
   Esq.runTransaction . Esq.update $ \job -> do
     set job [SchedulerJobStatus =. val newStatus, SchedulerJobUpdatedAt =. val now]
     where_ $ job ^. SchedulerJobId ==. val jobId.getId
 
-markAsComplete :: Id (AnyJob SchedulerJobType) -> SchedulerM ()
+markAsComplete :: Id AnyJob -> SchedulerM ()
 markAsComplete = updateStatus Completed
 
-markAsFailed :: Id (AnyJob SchedulerJobType) -> SchedulerM ()
+markAsFailed :: Id AnyJob -> SchedulerM ()
 markAsFailed = updateStatus Failed
 
-updateErrorCountAndFail :: Id (AnyJob SchedulerJobType) -> Int -> SchedulerM ()
+updateErrorCountAndFail :: Id AnyJob -> Int -> SchedulerM ()
 updateErrorCountAndFail jobId fCount = do
   now <- getCurrentTime
   Esq.runTransaction . Esq.update $ \job -> do
     set job [SchedulerJobStatus =. val Failed, SchedulerJobCurrErrors =. val fCount, SchedulerJobUpdatedAt =. val now]
     where_ $ job ^. SchedulerJobId ==. val jobId.getId
 
-reSchedule :: Id (AnyJob SchedulerJobType) -> UTCTime -> SchedulerM ()
+reSchedule :: Id AnyJob -> UTCTime -> SchedulerM ()
 reSchedule jobId newScheduleTime = do
   now <- getCurrentTime
   Esq.runTransaction . Esq.update $ \job -> do
     set job [SchedulerJobScheduledAt =. val newScheduleTime, SchedulerJobUpdatedAt =. val now]
     where_ $ job ^. SchedulerJobId ==. val jobId.getId
 
-updateFailureCount :: Id (AnyJob SchedulerJobType) -> Int -> SchedulerM ()
+updateFailureCount :: Id AnyJob -> Int -> SchedulerM ()
 updateFailureCount jobId newCountValue = do
   now <- getCurrentTime
   Esq.runTransaction . Esq.update $ \job -> do
     set job [SchedulerJobCurrErrors =. val newCountValue, SchedulerJobUpdatedAt =. val now]
     where_ $ job ^. SchedulerJobId ==. val jobId.getId
 
-reScheduleOnError :: Id (AnyJob SchedulerJobType) -> Int -> UTCTime -> SchedulerM ()
+reScheduleOnError :: Id AnyJob -> Int -> UTCTime -> SchedulerM ()
 reScheduleOnError jobId newCountValue newScheduleTime = do
   now <- getCurrentTime
   Esq.runTransaction . Esq.update $ \job -> do

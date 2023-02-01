@@ -23,8 +23,8 @@ import Domain.Types.BlackListOrg
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.BlackListOrg
 import Kernel.Types.Registry.Subscriber (Subscriber)
+import Storage.Tabular.BlackListOrg
 
 findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe BlackListOrg)
 findBySubscriberId subscriberId = do

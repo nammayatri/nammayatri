@@ -5,9 +5,7 @@ let appCfg = ./static-offer-driver-app.dhall
 let SortMode = < ETA | IdleTime >
 
 let shards =
-      [ globalCommon.mkShard +0 "YATRI"
-      , globalCommon.mkShard +1 "YATRI_2"
-      ]
+      [ globalCommon.mkShard +0 "YATRI", globalCommon.mkShard +1 "YATRI_2" ]
 
 let driverPoolBatchesCfg = { driverBatchSize = +5, maxNumberOfBatches = +3 }
 

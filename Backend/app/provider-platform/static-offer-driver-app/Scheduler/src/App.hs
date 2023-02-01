@@ -24,9 +24,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging (LoggerEnv)
 import Lib.Scheduler
+import qualified Lib.Scheduler.JobStorageType.DB.Queries as QSJ
 import SharedLogic.Scheduler
 import qualified Storage.Queries.RideRequest as RideRequest
-import qualified Storage.Queries.SchedulerJob as QSJ
 
 schedulerHandle :: SchedulerHandle SchedulerJobType
 schedulerHandle =
@@ -69,12 +69,12 @@ allocateRentalRide job = C.handleAll (const $ pure Retry) $ do
         RideRequest.RideRequest
           { id = guid,
             createdAt = now,
-            bookingId = job.jobData.bookingId,
-            subscriberId = job.jobData.shortOrgId,
+            bookingId = job.jobInfo.jobData.bookingId,
+            subscriberId = job.jobInfo.jobData.shortOrgId,
             _type = RideRequest.ALLOCATION,
             info = Nothing
           }
-  logInfo $ "allocating rental ride for rideReqestId=" <> job.jobData.bookingId.getId
+  logInfo $ "allocating rental ride for rideReqestId=" <> job.jobInfo.jobData.bookingId.getId
   logPretty DEBUG "ride request" rideReq
   Esq.runTransaction $ RideRequest.create rideReq
   pure Complete

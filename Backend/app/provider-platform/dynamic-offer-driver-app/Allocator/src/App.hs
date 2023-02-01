@@ -26,10 +26,10 @@ import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
+import qualified Lib.Scheduler.JobStorageType.DB.Queries as QAllJ
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import qualified Storage.CachedQueries.Merchant as Storage
-import qualified Storage.Queries.AllocatorJob as QAllJ
 
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobType
 allocatorHandle flowRt env =

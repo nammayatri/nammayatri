@@ -83,10 +83,12 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
-let registryMap =  [{mapKey = "YATRI", mapValue = "http://localhost:8020/"},
-                    {mapKey = "YATRI_2", mapValue = "http://localhost:8020/"},
-                    {mapKey = "NAMMA_YATRI", mapValue = "http://localhost:8020/"},
-                    {mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/"}]
+let registryMap =
+      [ { mapKey = "YATRI", mapValue = "http://localhost:8020/" }
+      , { mapKey = "YATRI_2", mapValue = "http://localhost:8020/" }
+      , { mapKey = "NAMMA_YATRI", mapValue = "http://localhost:8020/" }
+      , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/" }
+      ]
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -99,9 +101,7 @@ in  { esqDBCfg
     , hostName = "localhost"
     , selfUIUrl = "http://localhost:8013/v2/"
     , bapSelfIds =
-      { cabs = "JUSPAY.CABS.BAP"
-      , metro = "JUSPAY.MOBILITY.APP.UAT.2"
-      }
+      { cabs = "JUSPAY.CABS.BAP", metro = "JUSPAY.MOBILITY.APP.UAT.2" }
     , bapSelfURIs =
       { cabs = "http://localhost:8013/cab/v1/"
       , metro = "http://localhost:8013/metro/v1/"
