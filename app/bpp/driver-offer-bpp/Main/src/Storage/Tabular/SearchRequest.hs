@@ -17,6 +17,8 @@ import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
 
+derivePersistField "Domain.SearchRequestStatus"
+
 mkPersist
   defaultSqlSettings
   [defaultQQ|
@@ -33,7 +35,9 @@ mkPersist
       bapUri Text
       estimatedDistance Meters
       estimatedDuration Seconds
+      status Domain.SearchRequestStatus
       createdAt UTCTime
+      updatedAt UTCTime
       vehicleVariant Variant.Variant
       Primary id
       deriving Generic

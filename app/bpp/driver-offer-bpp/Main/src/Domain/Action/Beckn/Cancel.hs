@@ -6,6 +6,7 @@ module Domain.Action.Beckn.Cancel
   )
 where
 
+import qualified Beckn.Storage.Esqueleto as DB
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Types.Common
@@ -31,6 +32,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import Storage.Queries.SearchRequest as SR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error
 import Tools.Metrics
@@ -115,8 +117,13 @@ cancelSearch ::
   CancelSearchReq ->
   m ()
 cancelSearch transporterId _ req = do
-  driverSearchReqs <- Esq.runInReplica $ QSRD.findAllActiveByRequestId req.searchId
+  let transactionId = req.searchId
+  searchID <- Esq.runInReplica $ SR.getRequestIdfromTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound transactionId.getId)
+  driverSearchReqs <- Esq.runInReplica $ QSRD.findAllActiveByRequestId searchID
   for_ driverSearchReqs $ \driverReq -> do
     logTagInfo ("searchId-" <> getId req.searchId) "Search Request Cancellation"
+    DB.runTransaction $ do
+      SR.updateStatus searchID SR.CANCELLED
+      QSRD.setInactiveByRequestId driverReq.searchRequestId
     driver_ <- Esq.runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
     Notify.notifyOnCancelSearchRequest transporterId driverReq.driverId driver_.deviceToken driverReq.searchRequestId

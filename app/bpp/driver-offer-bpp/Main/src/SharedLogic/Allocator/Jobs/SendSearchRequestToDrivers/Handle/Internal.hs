@@ -4,6 +4,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
     isReceivedMaxDriverQuotes,
     setBatchDurationLock,
     createRescheduleTime,
+    ifSearchRequestIsCancelled,
     module Reexport,
   )
 where
@@ -11,9 +12,10 @@ where
 import Beckn.Prelude
 import Beckn.Storage.Hedis (HedisFlow)
 import qualified Beckn.Storage.Hedis as Hedis
+import Beckn.Types.Error (SearchRequestError (SearchRequestDoesNotExist))
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Domain.Types.SearchRequest
+import Domain.Types.SearchRequest as SR
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as Reexport
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers as Reexport
@@ -21,6 +23,19 @@ import SharedLogic.DriverPool (DriverPoolConfig)
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.SearchRequest as SR
+
+ifSearchRequestIsCancelled ::
+  ( HasCacheConfig r,
+    HedisFlow m r,
+    EsqDBFlow m r,
+    Log m
+  ) =>
+  Id SearchRequest ->
+  m Bool
+ifSearchRequestIsCancelled searchReqId = do
+  searchReqStatus <- SR.getStatus searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
+  pure $ searchReqStatus == SR.CANCELLED
 
 isRideAlreadyAssigned ::
   ( HasCacheConfig r,

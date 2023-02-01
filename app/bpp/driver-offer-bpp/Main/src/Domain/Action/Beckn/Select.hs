@@ -127,7 +127,9 @@ buildSearchRequest from to merchantId sReq distance duration = do
         estimatedDistance = distance,
         estimatedDuration = duration,
         createdAt = now,
-        vehicleVariant = sReq.variant
+        vehicleVariant = sReq.variant,
+        status = DSearchReq.ACTIVE,
+        updatedAt = now
       }
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m DLoc.SearchReqLocation

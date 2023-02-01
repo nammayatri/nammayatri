@@ -29,7 +29,8 @@ data Handle m = Handle
     getRescheduleTime :: m UTCTime,
     metrics :: MetricsHandle m,
     setBatchDurationLock :: m (Maybe UTCTime),
-    createRescheduleTime :: UTCTime -> m UTCTime
+    createRescheduleTime :: UTCTime -> m UTCTime,
+    ifSearchRequestIsCancelled :: m Bool
   }
 
 handler :: HandleMonad m => Handle m -> m ExecutionResult
@@ -37,19 +38,25 @@ handler h@Handle {..} = do
   logInfo "Starting job execution"
   metrics.incrementTaskCounter
   measuringDuration (\ms _ -> metrics.putTaskDuration ms) $ do
-    isRideAssigned <- isRideAlreadyAssigned
+    isSearchRequestCancelled <- ifSearchRequestIsCancelled
     res <-
-      if isRideAssigned
+      if isSearchRequestCancelled
         then do
-          logInfo "Ride already assigned."
+          logInfo "Search request is cancelled."
           return Complete
         else do
-          isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
-          if isReceivedMaxDriverQuotes'
+          isRideAssigned <- isRideAlreadyAssigned
+          if isRideAssigned
             then do
-              logInfo "Received enough quotes from drivers."
+              logInfo "Ride already assigned."
               return Complete
-            else processRequestSending h
+            else do
+              isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
+              if isReceivedMaxDriverQuotes'
+                then do
+                  logInfo "Received enough quotes from drivers."
+                  return Complete
+                else processRequestSending h
     case res of
       Complete -> cleanupDriverPoolBatches
       _ -> return ()
