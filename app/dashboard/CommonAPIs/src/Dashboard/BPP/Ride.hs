@@ -215,8 +215,9 @@ type RideSyncAPI =
     :> "sync"
     :> Post '[JSON] RideSyncRes
 
-newtype RideSyncRes = RideSyncRes
-  { newStatus :: RideStatus
+data RideSyncRes = RideSyncRes
+  { newStatus :: RideStatus,
+    message :: Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -13,6 +13,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Common
 import Data.Coerce (coerce)
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
@@ -20,6 +21,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.Transporter (findMerchantByShortId)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
@@ -183,11 +185,22 @@ rideSync merchantShortId reqRideId = do
   unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
 
   logTagInfo "dashboard -> syncRide : " $ show rideId <> "; status: " <> show ride.status
-  error "TODO"
 
--- castRideStatus :: DRide.RideStatus -> Common.RideStatus
--- castRideStatus = \case
---   DRide.NEW -> Common.RIDE_NEW
---   DRide.INPROGRESS -> Common.RIDE_INPROGRESS
---   DRide.COMPLETED -> Common.RIDE_COMPLETED
---   DRide.CANCELLED -> Common.RIDE_CANCELLED
+  case ride.status of
+    DRide.NEW -> pure $ Common.RideSyncRes Common.RIDE_NEW "Nothing to sync, ignoring"
+    DRide.INPROGRESS -> pure $ Common.RideSyncRes Common.RIDE_INPROGRESS "Nothing to sync, ignoring"
+    DRide.COMPLETED -> pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Nothing to sync, ignoring"
+    DRide.CANCELLED -> syncCancelledRide rideId booking merchant
+
+syncCancelledRide :: Id DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.RideSyncRes
+syncCancelledRide rideId booking merchant = do
+  mbBookingCReason <- runInReplica $ QBCReason.findByRideId rideId
+  case mbBookingCReason of
+    Nothing -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "No cancellation reason found for ride. Nothing to sync, ignoring"
+    Just bookingCReason -> do
+      case bookingCReason.source of
+        DBCReason.ByUser -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Ride canceled by customer. Nothing to sync, ignoring"
+        source -> do
+          fork "cancelBooking" $ do
+            CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
+          pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
