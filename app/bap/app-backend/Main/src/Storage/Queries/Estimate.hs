@@ -97,3 +97,15 @@ updateStatusbyRequestId searchId status_ = do
         EstimateStatus =. val status_
       ]
     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
+
+getStatusbyRequestId ::
+  (Transactionable m) =>
+  Id SearchRequest ->
+  m (Maybe (Maybe EstimateStatus))
+getStatusbyRequestId searchId = do
+  findOne $ do
+    estimateT <- from $ table @EstimateT
+    where_ $
+      estimateT ^. EstimateRequestId ==. val (toKey searchId)
+    limit 1
+    return $ estimateT ^. EstimateStatus

@@ -45,7 +45,8 @@ data CancelSearchRes = CancelSearchRes
   { estimateId :: Id DEstimate.Estimate,
     providerUrl :: BaseUrl,
     providerId :: Text,
-    searchReqId :: Id SearchRequest
+    searchReqId :: Id SearchRequest,
+    sendToBpp :: Bool
   }
 
 cancel :: (EncFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id Person.Person -> CancelReq -> m CancelRes
@@ -95,6 +96,7 @@ cancelSearch ::
   m CancelSearchRes
 cancelSearch personId estimateId = do
   estStatus <- QEstimate.getStatus estimateId >>= fromMaybeM (EstimateStatusDoesNotExist estimateId.getId)
+  let sendToBpp = estStatus /= Just DEstimate.NEW
   if estStatus == Just DEstimate.GOT_DRIVER_QUOTE
     then Esq.runTransaction $ do
       Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
@@ -103,9 +105,9 @@ cancelSearch personId estimateId = do
       Esq.runTransaction $ do
         Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
         QEstimate.updateStatus estimateId $ Just DEstimate.CANCELLED
-  buildCancelReq estimateId
+  buildCancelReq estimateId sendToBpp
   where
-    buildCancelReq estId = do
+    buildCancelReq estId sendToBpp = do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
       let searchRequestId = estimate.requestId
       pure
@@ -113,5 +115,6 @@ cancelSearch personId estimateId = do
           { estimateId = estId,
             providerUrl = estimate.providerUrl,
             providerId = estimate.providerId,
-            searchReqId = searchRequestId
+            searchReqId = searchRequestId,
+            sendToBpp
           }

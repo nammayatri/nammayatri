@@ -57,9 +57,11 @@ data ConfirmQuoteDetails
   | ConfirmAutoDetails (Id DDriverOffer.BPPQuote)
   deriving (Show, Generic)
 
-confirm :: EsqDBFlow m r => Id DP.Person -> Id DQuote.Quote -> m DConfirmRes
+confirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DQuote.Quote -> m DConfirmRes
 confirm personId quoteId = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+  estimateStatus <- DB.runInReplica $ QEstimate.getStatusbyRequestId quote.requestId >>= fromMaybeM (EstimateStatusDoesNotExist quote.requestId.getId)
+  when (estimateStatus == Just DEstimate.CANCELLED || estimateStatus == Just DEstimate.DRIVER_QUOTE_CANCELLED) $ throwError $ EstimateCancelled quote.requestId.getId
   now <- getCurrentTime
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus

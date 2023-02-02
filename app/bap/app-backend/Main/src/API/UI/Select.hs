@@ -57,5 +57,6 @@ selectList personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect
 cancelSearch :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 cancelSearch personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   dCancelRes <- DCancel.cancelSearch personId estimateId
-  void $ withShortRetry $ CallBPP.cancel dCancelRes.providerUrl =<< CACL.buildCancelSearchReq dCancelRes
+  when (dCancelRes.sendToBpp) $
+    void $ withShortRetry $ CallBPP.cancel dCancelRes.providerUrl =<< CACL.buildCancelSearchReq dCancelRes
   pure Success
