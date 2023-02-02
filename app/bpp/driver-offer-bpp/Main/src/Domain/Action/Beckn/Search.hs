@@ -118,7 +118,7 @@ handler merchantId sReq = do
         return []
       else do
         driverPoolCfg <- getDriverPoolConfig distance
-        driverPool <- calculateDriverPool driverPoolCfg Nothing pickupLatLong org.id True Nothing
+        driverPool <- calculateDriverPool Estimate driverPoolCfg Nothing pickupLatLong org.id True Nothing
 
         logDebug $ "Search handler: driver pool " <> show driverPool
 

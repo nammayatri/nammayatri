@@ -17,6 +17,7 @@ module SharedLogic.DriverPool
     addSearchRequestValidTillToCache,
     getValidSearchRequestCount,
     removeSearchReqIdFromMap,
+    PoolCalculationStage (..),
     module Reexport,
   )
 where
@@ -45,6 +46,8 @@ import qualified Storage.CachedQueries.TransporterConfig as TC
 import qualified Storage.Queries.Person as QP
 import Tools.Maps as Maps
 import Tools.Metrics
+
+data PoolCalculationStage = Estimate | DriverSelection
 
 mkTotalQuotesKey :: Text -> Text
 mkTotalQuotesKey driverId = "driver-offer:DriverPool:Total-quotes:DriverId-" <> driverId
@@ -283,11 +286,15 @@ getPopupDelay ::
   m Seconds
 getPopupDelay merchantId driverId cancellationRatio rideRequestPopupConfig = do
   let cancellationRatioThreshold = fromIntegral $ fromMaybe 40 rideRequestPopupConfig.thresholdCancellationScore
-  isThresholdRidesDone <- isThresholdRidesCompleted driverId merchantId rideRequestPopupConfig
-  pure . (rideRequestPopupConfig.defaultPopupDelay +) $
-    if isThresholdRidesDone && 100 * cancellationRatio > cancellationRatioThreshold
-      then fromMaybe (Seconds 0) rideRequestPopupConfig.popupDelayToAddAsPenalty
-      else Seconds 0
+  (rideRequestPopupConfig.defaultPopupDelay +)
+    <$> if cancellationRatio * 100 > cancellationRatioThreshold
+      then do
+        isThresholdRidesDone <- isThresholdRidesCompleted driverId merchantId rideRequestPopupConfig
+        pure $
+          if isThresholdRidesDone
+            then fromMaybe (Seconds 0) rideRequestPopupConfig.popupDelayToAddAsPenalty
+            else Seconds 0
+      else pure $ Seconds 0
 
 calculateDriverPool ::
   ( EncFlow m r,
@@ -298,6 +305,7 @@ calculateDriverPool ::
     HasCoordinates a,
     HasMaxParallelSearchRequests r
   ) =>
+  PoolCalculationStage ->
   DriverPoolConfig ->
   Maybe Variant ->
   a ->
@@ -305,7 +313,7 @@ calculateDriverPool ::
   Bool ->
   Maybe PoolRadiusStep ->
   m [DriverPoolResult]
-calculateDriverPool driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
+calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
   now <- getCurrentTime
@@ -320,7 +328,9 @@ calculateDriverPool driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRad
           onlyNotOnRide
           driverPoolCfg.driverPositionInfoExpiry
   maxParallelSearchRequests <- asks (.maxParallelSearchRequests)
-  driversWithLessThanNParallelRequests <- filter ((< maxParallelSearchRequests) . fst) <$> mapM (getParallelSearchRequestCount now) approxDriverPool
+  driversWithLessThanNParallelRequests <- case poolStage of
+    DriverSelection -> filter ((< maxParallelSearchRequests) . fst) <$> mapM (getParallelSearchRequestCount now) approxDriverPool
+    Estimate -> pure $ map (0,) approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   pure $ makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   where
     getParallelSearchRequestCount now dObj = do
@@ -351,6 +361,7 @@ calculateDriverPoolWithActualDist ::
     HasDriverPoolConfig r,
     HasCoordinates a
   ) =>
+  PoolCalculationStage ->
   DriverPoolConfig ->
   Maybe Variant ->
   a ->
@@ -358,8 +369,8 @@ calculateDriverPoolWithActualDist ::
   Bool ->
   Maybe PoolRadiusStep ->
   m [DriverPoolWithActualDistResult]
-calculateDriverPoolWithActualDist driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
-  driverPool <- calculateDriverPool driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep
+calculateDriverPoolWithActualDist poolCalculationStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep = do
+  driverPool <- calculateDriverPool poolCalculationStage driverPoolCfg mbVariant pickup merchantId onlyNotOnRide mRadiusStep
   case driverPool of
     [] -> return []
     (a : pprox) -> do

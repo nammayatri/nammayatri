@@ -129,7 +129,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
           merchantId = searchReq.providerId
       let pickupLoc = searchReq.fromLocation
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-      calculateDriverPoolWithActualDist driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
+      calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
     fillBatch merchantId sortingType batchSize allNearbyDrivers batch = do
       transporterConfig <- TC.findByMerchantId merchantId
       let batchDriverIds = batch <&> (.driverPoolResult.driverId)
@@ -208,7 +208,15 @@ sortWithDriverScore merchantId (Just transporterConfig) dp = do
   logTagInfo "Weightage config for intelligent driver pool" $ show transporterConfig
   let driverIds = map (.driverPoolResult.driverId) dp
   rideRequestPopupConfig <- asks (.rideRequestPopupConfig)
-  cancellationRatios <- getRatios (getLatestCancellationRatio merchantId) driverIds
+  cancellationRatios <-
+    getRatios
+      ( \dId -> do
+          isThresholdRidesDone <- isThresholdRidesCompleted dId merchantId rideRequestPopupConfig
+          if isThresholdRidesDone
+            then getLatestCancellationRatio merchantId dId
+            else pure 0
+      )
+      driverIds
   let driverCancellationScore = getScoreWithWeight (transporterConfig.cancellationRatioWeightage) cancellationRatios
   driverAcceptanceScore <- getScoreWithWeight (transporterConfig.acceptanceRatioWeightage) <$> getRatios (getLatestAcceptanceRatio merchantId) driverIds
   driverAvailabilityScore <- getScoreWithWeight (transporterConfig.availabilityTimeWeightage) . map (second (sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
