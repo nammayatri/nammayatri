@@ -4,6 +4,8 @@ module Dashboard.Common where
 
 import Kernel.Prelude
 
+data Customer
+
 data Driver
 
 data Image

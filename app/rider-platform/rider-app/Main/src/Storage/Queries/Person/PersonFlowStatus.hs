@@ -32,3 +32,9 @@ updateStatus personId flowStatus = do
         PersonFlowStatusFlowStatus =. val flowStatus
       ]
     where_ $ tbl ^. PersonFlowStatusTId ==. val (toKey personId)
+
+deleteByPersonId :: Id Person -> SqlDB ()
+deleteByPersonId personId = do
+  Esq.delete $ do
+    personFlowStatus <- from $ table @PersonFlowStatusT
+    where_ (personFlowStatus ^. PersonFlowStatusTId ==. val (toKey personId))

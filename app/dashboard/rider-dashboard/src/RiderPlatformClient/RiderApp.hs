@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module RiderPlatformClient.RiderApp
-  ( callAppBackendBAP,
+  ( callRiderApp,
     CustomerAPIs (..),
     AppBackendAPIs (..),
   )
@@ -30,7 +30,8 @@ data AppBackendAPIs = AppBackendAPIs
 
 data CustomerAPIs = CustomerAPIs
   { customerList :: Maybe Integer -> Maybe Integer -> Euler.EulerClient Text,
-    customerUpdate :: Id BAP.Person -> Text -> Euler.EulerClient Text
+    customerUpdate :: Id BAP.Person -> Text -> Euler.EulerClient Text,
+    customerDelete :: Id Common.Customer -> Euler.EulerClient APISuccess
   }
 
 data MerchantAPIs = MerchantAPIs
@@ -51,7 +52,8 @@ mkAppBackendAPIs merchantId token = do
       :<|> merchantClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
 
     customerList
-      :<|> customerUpdate = customersClient
+      :<|> customerUpdate
+      :<|> customerDelete = customersClient
 
     merchantUpdate
       :<|> mapsServiceConfigUpdate
@@ -59,7 +61,7 @@ mkAppBackendAPIs merchantId token = do
       :<|> smsServiceConfigUpdate
       :<|> smsServiceUsageConfigUpdate = merchantClient
 
-callAppBackendBAP ::
+callRiderApp ::
   forall m r b c.
   ( CoreMetrics m,
     HasFlowEnv m r '["dataServers" ::: [DataServer]],
@@ -68,4 +70,4 @@ callAppBackendBAP ::
   CheckedShortId DM.Merchant ->
   (AppBackendAPIs -> b) ->
   c
-callAppBackendBAP merchantId = callServerAPI @_ @m @r APP_BACKEND (mkAppBackendAPIs merchantId) "callAppBackendBAP"
+callRiderApp merchantId = callServerAPI @_ @m @r APP_BACKEND (mkAppBackendAPIs merchantId) "callRiderApp"

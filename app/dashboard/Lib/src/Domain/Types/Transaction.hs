@@ -5,6 +5,7 @@ import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
@@ -29,5 +30,6 @@ data Endpoint
   | DriverAPI Common.DriverEndpoint
   | DriverRegistrationAPI Common.DriverRegistrationEndpoint
   | MerchantAPI Common.MerchantEndpoint
+  | CustomerAPI Common.CustomerEndpoint
   | MessageAPI Common.MessageEndpoint
   deriving (Show, Read)

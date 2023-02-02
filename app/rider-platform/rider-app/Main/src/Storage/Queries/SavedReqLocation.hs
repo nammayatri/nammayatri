@@ -35,3 +35,9 @@ findAllByRiderIdAndTag perId addressTag =
       (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId))
         &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
     return saveReqLocation
+
+deleteAllByRiderId :: Id Person -> SqlDB ()
+deleteAllByRiderId personId = do
+  Esq.delete $ do
+    saveReqLocation <- from $ table @SavedReqLocationT
+    where_ (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey personId))

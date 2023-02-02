@@ -78,7 +78,7 @@ merchantUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.MerchantUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callAppBackendBAP checkedMerchantId (.merchant.merchantUpdate) req
+    Client.callRiderApp checkedMerchantId (.merchant.merchantUpdate) req
 
 mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->
@@ -89,7 +89,7 @@ mapsServiceConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ 
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.MapsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callAppBackendBAP checkedMerchantId (.merchant.mapsServiceConfigUpdate) req
+    Client.callRiderApp checkedMerchantId (.merchant.mapsServiceConfigUpdate) req
 
 mapsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->
@@ -103,7 +103,7 @@ mapsServiceUsageConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerA
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.MapsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callAppBackendBAP checkedMerchantId (.merchant.mapsServiceUsageConfigUpdate) req
+    Client.callRiderApp checkedMerchantId (.merchant.mapsServiceUsageConfigUpdate) req
 
 smsServiceConfigUpdate ::
   ShortId DM.Merchant ->
@@ -114,7 +114,7 @@ smsServiceConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ d
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.SmsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callAppBackendBAP checkedMerchantId (.merchant.smsServiceConfigUpdate) req
+    Client.callRiderApp checkedMerchantId (.merchant.smsServiceConfigUpdate) req
 
 smsServiceUsageConfigUpdate ::
   ShortId DM.Merchant ->
@@ -126,4 +126,4 @@ smsServiceUsageConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAP
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.SmsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callAppBackendBAP checkedMerchantId (.merchant.smsServiceUsageConfigUpdate) req
+    Client.callRiderApp checkedMerchantId (.merchant.smsServiceUsageConfigUpdate) req

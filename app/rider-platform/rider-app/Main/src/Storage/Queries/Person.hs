@@ -172,3 +172,9 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbEncEmail mbDev
           <> updateWhenJust_ (\x -> PersonDeviceToken =. val (Just x)) mbDeviceToken
       )
     where_ $ tbl ^. PersonId ==. val (getId personId)
+
+deleteById :: Id Person -> SqlDB ()
+deleteById personId = do
+  Esq.delete $ do
+    person <- from $ table @PersonT
+    where_ (person ^. PersonId ==. val (getId personId))

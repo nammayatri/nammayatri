@@ -1,9 +1,12 @@
 module API.Dashboard.Customer where
 
+import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
+import qualified Domain.Action.Dashboard.Customer as DPerson
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
+import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
@@ -14,6 +17,7 @@ type API =
   "customer"
     :> ( CustomerListAPI
            :<|> CustomerUpdateAPI
+           :<|> CustomerDeleteAPI
        )
 
 type CustomerListAPI =
@@ -28,10 +32,13 @@ type CustomerUpdateAPI =
     :> ReqBody '[JSON] Text -- DProfile.UpdateProfileReq
     :> Post '[JSON] Text -- APISuccess
 
+type CustomerDeleteAPI = Common.CustomerDeleteAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   listCustomer merchantId
     :<|> updateCustomer merchantId
+    :<|> deleteCustomer merchantId
 
 listCustomer ::
   ShortId DM.Merchant ->
@@ -54,3 +61,9 @@ updateCustomer merchantShortId _personId _req = withFlowHandlerAPI $ do
     QM.findByShortId merchantShortId
       >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   pure "To be done"
+
+deleteCustomer ::
+  ShortId DM.Merchant ->
+  Id Common.Customer ->
+  FlowHandler APISuccess
+deleteCustomer merchantShortId personId = withFlowHandlerAPI $ DPerson.deleteCustomer merchantShortId personId

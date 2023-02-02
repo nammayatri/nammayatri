@@ -5,14 +5,18 @@ module API.RiderPlatform.Customer
 where
 
 import qualified "rider-app" API.Dashboard.Customer as BAP
+import qualified Dashboard.RiderPlatform.Customer as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as BAP
+import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant hiding (throwError)
+import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 
@@ -22,12 +26,26 @@ type API =
            :> BAP.CustomerListAPI
            :<|> ApiAuth 'APP_BACKEND 'WRITE_ACCESS 'CUSTOMERS
              :> BAP.CustomerUpdateAPI
+           :<|> ApiAuth 'APP_BACKEND 'WRITE_ACCESS 'CUSTOMERS
+             :> BAP.CustomerDeleteAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   listCustomer merchantId
     :<|> updateCustomer merchantId
+    :<|> deleteCustomer merchantId
+
+buildTransaction ::
+  ( MonadFlow m,
+    Common.HideSecrets request
+  ) =>
+  Common.CustomerEndpoint ->
+  ApiTokenInfo ->
+  Maybe request ->
+  m DT.Transaction
+buildTransaction endpoint apiTokenInfo =
+  T.buildTransaction (DT.CustomerAPI endpoint) apiTokenInfo Nothing Nothing
 
 listCustomer ::
   ShortId DM.Merchant ->
@@ -37,7 +55,7 @@ listCustomer ::
   FlowHandler Text
 listCustomer merchantShortId apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callAppBackendBAP checkedMerchantId (.customers.customerList) mbLimit mbOffset
+  Client.callRiderApp checkedMerchantId (.customers.customerList) mbLimit mbOffset
 
 updateCustomer ::
   ShortId DM.Merchant ->
@@ -49,4 +67,15 @@ updateCustomer merchantShortId apiTokenInfo customerId req = withFlowHandlerAPI 
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   -- transaction <- buildTransaction Common.UpdateCustomerEndpoint apiTokenInfo customerId (Just req)
   -- T.withTransactionStoring transaction $
-  Client.callAppBackendBAP checkedMerchantId (.customers.customerUpdate) customerId req
+  Client.callRiderApp checkedMerchantId (.customers.customerUpdate) customerId req
+
+deleteCustomer ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Id Common.Customer ->
+  FlowHandler APISuccess
+deleteCustomer merchantShortId apiTokenInfo customerId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.DeleteCustomerEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callRiderApp checkedMerchantId (.customers.customerDelete) customerId

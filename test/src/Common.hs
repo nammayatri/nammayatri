@@ -30,8 +30,8 @@ getAppBaseUrl =
 appBackendClientEnv :: ClientEnv
 appBackendClientEnv = mkClientEnv defaultManager getAppBaseUrl
 
-callAppBackend :: (Show a) => ClientM a -> IO a
-callAppBackend = runClient' appBackendClientEnv
+callRiderApp :: (Show a) => ClientM a -> IO a
+callRiderApp = runClient' appBackendClientEnv
 
 searchServices ::
   Text ->
