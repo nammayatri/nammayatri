@@ -75,3 +75,11 @@ token: {{customer_service}}
 
 GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{rideId}}/info
 token: {{customer_service}}
+
+###
+
+# @name rideSync
+
+POST {{bap-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{rideId}}/sync
+token: {{customer_service}}
+content-type: application/json

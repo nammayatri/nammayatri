@@ -25,6 +25,7 @@ type API =
            :<|> RideEndAPI
            :<|> RideCancelAPI
            :<|> RideInfoAPI
+           :<|> RideSyncAPI
        )
 
 type RideListAPI =
@@ -47,6 +48,10 @@ type RideInfoAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'RIDES
     :> Common.RideInfoAPI
 
+type RideSyncAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'RIDES
+    :> Common.RideSyncAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   rideList merchantId
@@ -54,6 +59,7 @@ handler merchantId =
     :<|> rideEnd merchantId
     :<|> rideCancel merchantId
     :<|> rideInfo merchantId
+    :<|> rideSync merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -106,3 +112,10 @@ rideInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Ride -> FlowHandler
 rideInfo merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callDriverOfferBPP checkedMerchantId (.rides.rideInfo) rideId
+
+rideSync :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Ride -> FlowHandler Common.RideSyncRes
+rideSync merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.RideSyncEndpoint apiTokenInfo rideId T.emptyRequest
+  T.withResponseTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.rides.rideSync) rideId

@@ -1,6 +1,7 @@
 module Domain.Action.Dashboard.Ride
   ( rideList,
     rideInfo,
+    rideSync,
   )
 where
 
@@ -169,3 +170,24 @@ mkBookingStatus ride now = do
     DRide.INPROGRESS -> Common.ONGOING_6HRS
     DRide.COMPLETED -> Common.COMPLETED
     DRide.CANCELLED -> Common.CANCELLED
+
+---------------------------------------------------------------------
+rideSync :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideSyncRes
+rideSync merchantShortId reqRideId = do
+  merchant <- findMerchantByShortId merchantShortId
+  let rideId = cast @Common.Ride @DRide.Ride reqRideId
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
+
+  -- merchant access checking
+  unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
+
+  logTagInfo "dashboard -> syncRide : " $ show rideId <> "; status: " <> show ride.status
+  error "TODO"
+
+-- castRideStatus :: DRide.RideStatus -> Common.RideStatus
+-- castRideStatus = \case
+--   DRide.NEW -> Common.RIDE_NEW
+--   DRide.INPROGRESS -> Common.RIDE_INPROGRESS
+--   DRide.COMPLETED -> Common.RIDE_COMPLETED
+--   DRide.CANCELLED -> Common.RIDE_CANCELLED

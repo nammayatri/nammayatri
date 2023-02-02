@@ -57,7 +57,8 @@ data RidesAPIs = RidesAPIs
     rideStart :: Id Common.Ride -> Common.StartRideReq -> Euler.EulerClient APISuccess,
     rideEnd :: Id Common.Ride -> Common.EndRideReq -> Euler.EulerClient APISuccess,
     rideCancel :: Id Common.Ride -> Common.CancelRideReq -> Euler.EulerClient APISuccess,
-    rideInfo :: Id Common.Ride -> Euler.EulerClient Common.RideInfoRes
+    rideInfo :: Id Common.Ride -> Euler.EulerClient Common.RideInfoRes,
+    rideSync :: Id Common.Ride -> Euler.EulerClient Common.RideSyncRes
   }
 
 data MerchantAPIs = MerchantAPIs
@@ -105,7 +106,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> rideStart
       :<|> rideEnd
       :<|> rideCancel
-      :<|> rideInfo = ridesClient
+      :<|> rideInfo
+      :<|> rideSync = ridesClient
 
     merchantUpdate
       :<|> mapsServiceConfigUpdate

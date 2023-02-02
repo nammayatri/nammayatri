@@ -25,6 +25,7 @@ data RideEndpoint
   = RideStartEndpoint
   | RideEndEndpoint
   | RideCancelEndpoint
+  | RideSyncEndpoint
   deriving (Show, Read)
 
 derivePersistField "RideEndpoint"
@@ -203,5 +204,30 @@ data CancellationSource
   | ByMerchant
   | ByAllocator
   | ByApplication
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---------------------------------------------------------
+-- ride sync ---------------------------------------------
+
+type RideSyncAPI =
+  Capture "rideId" (Id Ride)
+    :> "sync"
+    :> Post '[JSON] RideSyncRes
+
+newtype RideSyncRes = RideSyncRes
+  { newStatus :: RideStatus
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets RideSyncRes where
+  hideSecrets = identity
+
+data RideStatus
+  = RIDE_NEW
+  | RIDE_INPROGRESS
+  | RIDE_COMPLETED
+  | RIDE_CANCELLED
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
