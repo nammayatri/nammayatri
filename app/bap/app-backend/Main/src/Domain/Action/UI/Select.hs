@@ -23,6 +23,7 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
+import SharedLogic.Share (checkIfEstimateCancelled)
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
@@ -47,7 +48,7 @@ select :: Id DPerson.Person -> Id DEstimate.Estimate -> Flow DSelectRes
 select personId estimateId = do
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-  when (estimate.status == Just DEstimate.CANCELLED || estimate.status == Just DEstimate.DRIVER_QUOTE_CANCELLED) $ throwError $ EstimateCancelled estimateId.getId
+  checkIfEstimateCancelled estimate.id estimate.status
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   when ((searchRequest.validTill) < now) $
@@ -66,6 +67,6 @@ select personId estimateId = do
 selectList :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
   estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-  when (estimate.status == Just DEstimate.CANCELLED || estimate.status == Just DEstimate.DRIVER_QUOTE_CANCELLED) $ throwError $ EstimateCancelled estimateId.getId
+  checkIfEstimateCancelled estimate.id estimate.status
   selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
   pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes

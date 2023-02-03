@@ -25,6 +25,7 @@ import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Domain.Types.VehicleVariant (VehicleVariant)
+import SharedLogic.Share (checkIfEstimateCancelled)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -60,8 +61,8 @@ data ConfirmQuoteDetails
 confirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DQuote.Quote -> m DConfirmRes
 confirm personId quoteId = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
-  estimateStatus <- DB.runInReplica $ QEstimate.getStatusbyRequestId quote.requestId >>= fromMaybeM (EstimateStatusDoesNotExist quote.requestId.getId)
-  when (estimateStatus == Just DEstimate.CANCELLED || estimateStatus == Just DEstimate.DRIVER_QUOTE_CANCELLED) $ throwError $ EstimateCancelled quote.requestId.getId
+  estimate <- DB.runInReplica $ QEstimate.findOneEstimateByRequestId quote.requestId >>= fromMaybeM EstimateNotFound
+  checkIfEstimateCancelled estimate.id estimate.status
   now <- getCurrentTime
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus

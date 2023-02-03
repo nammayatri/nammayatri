@@ -21,7 +21,7 @@ instance IsHTTPError RatingError where
 
 instance IsAPIError RatingError
 
-data EstimateError = EstimateDoesNotExist Text | EstimateStatusDoesNotExist Text | EstimateCancelled Text
+data EstimateError = EstimateDoesNotExist Text | EstimateStatusDoesNotExist Text | EstimateCancelled Text | EstimateNotFound
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''EstimateError
@@ -30,6 +30,7 @@ instance IsBaseError EstimateError where
   toMessage (EstimateDoesNotExist estimateId) = Just $ "No estimate matches passed data \"" <> show estimateId <> "\" not exist. "
   toMessage (EstimateStatusDoesNotExist estimateId) = Just $ "Estimate status not found with estimate id : \"" <> show estimateId
   toMessage (EstimateCancelled estimateId) = Just $ "Estimate for the estimate id : \"" <> show estimateId <> "\" has been cancelled. "
+  toMessage EstimateNotFound = Just "Estimate not found. "
 
 instance IsHTTPError EstimateError where
   toErrorCode _ = "ESTIMATE_DOES_NOT_EXIST"

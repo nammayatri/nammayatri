@@ -22,7 +22,7 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
-import Servant
+import Servant hiding (throwError)
 import Tools.Metrics (CoreMetrics)
 
 search ::

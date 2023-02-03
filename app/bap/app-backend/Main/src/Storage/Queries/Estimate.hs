@@ -98,14 +98,11 @@ updateStatusbyRequestId searchId status_ = do
       ]
     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
 
-getStatusbyRequestId ::
-  (Transactionable m) =>
-  Id SearchRequest ->
-  m (Maybe (Maybe EstimateStatus))
-getStatusbyRequestId searchId = do
-  findOne $ do
-    estimateT <- from $ table @EstimateT
-    where_ $
-      estimateT ^. EstimateRequestId ==. val (toKey searchId)
+findOneEstimateByRequestId :: Transactionable m => Id SearchRequest -> m (Maybe Estimate)
+findOneEstimateByRequestId searchId = Esq.buildDType $ do
+  mbFullEstimateT <- Esq.findOne' $ do
+    (estimate :& mbTripTerms) <- from fullEstimateTable
+    where_ $ estimate ^. EstimateRequestId ==. val (toKey searchId)
     limit 1
-    return $ estimateT ^. EstimateStatus
+    pure (estimate, mbTripTerms)
+  mapM buildFullEstimate mbFullEstimateT
