@@ -18,17 +18,10 @@ import qualified "mock-sms" App as MockSms
 import qualified "public-transport-bap" App as PublicTransport
 import qualified "public-transport-search-consumer" App as PublicTransportSearchConsumer
 import qualified "search-result-aggregator" App as SearchResultAggregator
-import Beckn.Exit (exitDBMigrationFailure)
 import qualified Beckn.External.Maps as Maps
 import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Esqueleto.Migration as Esq
-import Beckn.Utils.App (handleLeft)
 import Beckn.Utils.Common hiding (id)
-import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Data.Text as T (replace, toUpper, unpack)
-import qualified "app-backend" Environment as AppBackend
-import qualified "beckn-transport" Environment as TransporterBackend
-import qualified "driver-offer-bpp" Environment as DriverOfferBpp
 import EulerHS.Prelude
 import qualified "mock-google" Lib.IntegrationTests.Environment as Environment
 import qualified Mobility.ARDU.Spec as Mobility.ARDU
@@ -98,7 +91,7 @@ specs' googleCfg trees = do
   readyTests <- sequence trees
   return $
     withResource
-      (startServers allServers)
+      (startServers >> onServersStarted)
       cleanupServers
       ( \_ ->
           testGroup
@@ -106,7 +99,41 @@ specs' googleCfg trees = do
             readyTests
       )
   where
-    allServers =
+    startServers = do
+      {- We need to run some servers separately because due to internal PostgreSQL mechanism if you
+         concurrently apply some queries to the same tables PostgreSQL fires pg_type_typname_nsp_index error.
+         Therefore we need to run Driver Offer Allocator and Public Transport Search Consumer only after
+         Driver Offer BPP and Public Trasport BAP applied their migrations since they apply migrations
+         to the same tables.
+         Details: https://www.postgresql.org/message-id/11235.1268149874%40sss.pgh.pa.us -}
+      prepareTestResources
+      threadDelaySec 1
+      traverse_ forkIO firstWaveServers
+      threadDelaySec 3
+      traverse_ forkIO secondWaveServers
+      -- Wait for servers to start up and migrations to run
+      threadDelaySec 4
+
+    onServersStarted = do
+      runAppFlow "" $ do
+        Esq.runTransaction $
+          updateOrigAndDestRestriction Fixtures.yatriMerchantId ["Ernakulam", "Kochi", "Karnataka"] ["Kerala", "Kochi", "Karnataka"]
+
+    cleanupServers _ = do
+      AppBackendUtils.clearCachedMapsConfig
+      TransporterUtils.clearCachedMapsConfig
+      DriverOfferBppUtils.clearCachedMapsConfig
+      releaseTestResources
+      signalProcess sigINT =<< getProcessID
+
+    firstWaveServers =
+      [ do
+          DriverOfferBppUtils.changeCachedMapsConfig googleCfg
+          DriverOfferBpp.runDriverOfferBpp hideLogging,
+        PublicTransport.runService hideLogging
+      ]
+
+    secondWaveServers =
       [ YatriAllocator.runAllocator \cfg ->
           cfg & hideLogging
             & #driverNotificationExpiry .~ 18,
@@ -114,9 +141,6 @@ specs' googleCfg trees = do
         Gateway.runGateway hideLogging,
         do
           AppBackendUtils.changeCachedMapsConfig googleCfg
-          runAppFlow "" $ do
-            Esq.runTransaction $ do
-              updateOrigAndDestRestriction Fixtures.yatriMerchantId ["Ernakulam", "Kochi", "Karnataka"] ["Kerala", "Kochi", "Karnataka"]
           AppBackend.runAppBackend $
             \cfg ->
               cfg & hideLogging,
@@ -128,8 +152,6 @@ specs' googleCfg trees = do
         MockSms.runMockSms hideLogging,
         MockFcm.runMockFcm hideLogging,
         MockRegistry.runRegistryService hideLogging,
-        PublicTransport.runService $ \cfg ->
-          cfg & hideLogging,
         MockPublicTransportBpp.runMock $ \cfg ->
           cfg & #statusWaitTimeSec .~ mockWaitTimeSeconds
             & hideLogging,
@@ -139,11 +161,6 @@ specs' googleCfg trees = do
         SearchResultAggregator.runSearchResultAggregator $ \cfg ->
           cfg & hideLogging
             & #kafkaConsumerCfgs . #publicTransportQuotes . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
-        do
-          DriverOfferBppUtils.changeCachedMapsConfig googleCfg
-          DriverOfferBpp.runDriverOfferBpp $
-            \cfg ->
-              cfg & hideLogging,
         ARDUAllocator.runDriverOfferAllocator $ \cfg ->
           cfg{appCfg = cfg.appCfg & hideLogging,
               schedulerConfig = cfg.schedulerConfig & hideLogging
@@ -152,33 +169,6 @@ specs' googleCfg trees = do
           cfg & hideLogging
             & #mockDataPath .~ "../app/mocks/google/mock-data/"
       ]
-
-    startServers servers = do
-      migrateDB
-      prepareTestResources
-      threadDelaySec 1
-      traverse_ forkIO servers
-      -- Wait for servers to start up and migrations to run
-      threadDelaySec 4
-
-    cleanupServers _ = do
-      AppBackendUtils.clearCachedMapsConfig
-      TransporterUtils.clearCachedMapsConfig
-      DriverOfferBppUtils.clearCachedMapsConfig
-      releaseTestResources
-      signalProcess sigINT =<< getProcessID
-    migrateDB = do
-      (appBackendCfg :: AppBackend.AppCfg) <- readDhallConfigDefault "app-backend"
-      Esq.migrateIfNeeded appBackendCfg.migrationPath True appBackendCfg.esqDBCfg
-        >>= handleLeft exitDBMigrationFailure "Couldn't migrate app-backend database: "
-
-      (transportCfg :: TransporterBackend.AppCfg) <- readDhallConfigDefault "beckn-transport"
-      Esq.migrateIfNeeded transportCfg.migrationPath True transportCfg.esqDBCfg
-        >>= handleLeft exitDBMigrationFailure "Couldn't migrate beckn-transporter database: "
-
-      (driverOfferCfg :: DriverOfferBpp.AppCfg) <- readDhallConfigDefault "driver-offer-bpp"
-      Esq.migrateIfNeeded driverOfferCfg.migrationPath True driverOfferCfg.esqDBCfg
-        >>= handleLeft exitDBMigrationFailure "Couldn't migrate driver-offer BPP database: "
 
 hideLogging :: HasField "loggerConfig" cfg LoggerConfig => cfg -> cfg
 hideLogging cfg =
