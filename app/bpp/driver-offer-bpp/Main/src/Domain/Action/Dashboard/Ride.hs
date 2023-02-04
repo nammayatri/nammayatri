@@ -28,6 +28,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.DriverQuote as DQ
+import qualified Storage.Queries.FareParameters as QFareParams
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -189,18 +190,28 @@ rideSync merchantShortId reqRideId = do
   case ride.status of
     DRide.NEW -> pure $ Common.RideSyncRes Common.RIDE_NEW "Nothing to sync, ignoring"
     DRide.INPROGRESS -> pure $ Common.RideSyncRes Common.RIDE_INPROGRESS "Nothing to sync, ignoring"
-    DRide.COMPLETED -> pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Nothing to sync, ignoring"
+    DRide.COMPLETED -> syncCompletedRide ride booking
     DRide.CANCELLED -> syncCancelledRide rideId booking merchant
 
 syncCancelledRide :: Id DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.RideSyncRes
 syncCancelledRide rideId booking merchant = do
   mbBookingCReason <- runInReplica $ QBCReason.findByRideId rideId
+  -- rides cancelled by bap no need to sync, and have mbBookingCReason = Nothing
   case mbBookingCReason of
     Nothing -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "No cancellation reason found for ride. Nothing to sync, ignoring"
     Just bookingCReason -> do
       case bookingCReason.source of
         DBCReason.ByUser -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Ride canceled by customer. Nothing to sync, ignoring"
         source -> do
-          fork "cancelBooking" $ do
-            CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
+          -- do we need fork here?
+          -- fork "cancelBooking" $ do
+          CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
           pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
+
+syncCompletedRide :: DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
+syncCompletedRide ride booking = do
+  -- for old rides fareParametersId = Nothing, so throw E400
+  fareParametersId <- ride.fareParametersId & fromMaybeM (FareParametersDoNotExist ride.id.getId)
+  fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
+  CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters
+  pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride complete update to bap"

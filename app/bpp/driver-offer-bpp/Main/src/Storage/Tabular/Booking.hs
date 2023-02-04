@@ -73,19 +73,18 @@ instance TType (BookingT, BookingLocationT, BookingLocationT, Fare.FareParameter
           ..
         }
   toTType Domain.Booking {..} =
-    let fareParamsId = cast id
-     in ( BookingT
-            { id = getId id,
-              quoteId = toKey quoteId,
-              providerId = toKey providerId,
-              fromLocationId = toKey fromLocation.id,
-              toLocationId = toKey toLocation.id,
-              bapUri = showBaseUrl bapUri,
-              riderId = toKey <$> riderId,
-              fareParametersId = toKey fareParamsId,
-              ..
-            },
-          mkTabularBookingLocation fromLocation,
-          mkTabularBookingLocation toLocation,
-          toTType fareParams
-        )
+    ( BookingT
+        { id = getId id,
+          quoteId = toKey quoteId,
+          providerId = toKey providerId,
+          fromLocationId = toKey fromLocation.id,
+          toLocationId = toKey toLocation.id,
+          bapUri = showBaseUrl bapUri,
+          riderId = toKey <$> riderId,
+          fareParametersId = toKey fareParams.id,
+          ..
+        },
+      mkTabularBookingLocation fromLocation,
+      mkTabularBookingLocation toLocation,
+      toTType fareParams
+    )

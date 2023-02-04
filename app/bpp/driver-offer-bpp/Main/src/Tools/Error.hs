@@ -211,3 +211,25 @@ instance IsHTTPError DriverQuoteError where
     UnexpectedResponseValue -> E400
 
 instance IsAPIError DriverQuoteError
+
+data FareParametersError
+  = FareParametersNotFound Text
+  | FareParametersDoNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FareParametersError
+
+instance IsHTTPError FareParametersError where
+  toErrorCode = \case
+    FareParametersNotFound _ -> "FARE_PARAMETERS_NOT_FOUND"
+    FareParametersDoNotExist _ -> "FARE_PARAMETERS_DO_NOT_EXIST"
+  toHttpCode = \case
+    FareParametersNotFound _ -> E500
+    FareParametersDoNotExist _ -> E400
+
+instance IsAPIError FareParametersError
+
+instance IsBaseError FareParametersError where
+  toMessage = \case
+    FareParametersNotFound fareParamsId -> Just $ "FareParameters with fareParametersId \"" <> show fareParamsId <> "\" not found."
+    FareParametersDoNotExist rideId -> Just $ "FareParameters for ride \"" <> show rideId <> "\" do not exist."

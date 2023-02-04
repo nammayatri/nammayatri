@@ -14,13 +14,13 @@ import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverQuote as DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 
+-- fareParams already created with driverQuote
 create :: Booking -> SqlDB ()
-create dsReq = Esq.runTransaction $
-  withFullEntity dsReq $ \(sReq, fromLoc, toLoc, fareParams) -> do
-    Esq.create' fareParams
+create dBooking = Esq.runTransaction $
+  withFullEntity dBooking $ \(booking, fromLoc, toLoc, _fareParams) -> do
     Esq.create' fromLoc
     Esq.create' toLoc
-    Esq.create' sReq
+    Esq.create' booking
 
 baseBookingTable ::
   From
