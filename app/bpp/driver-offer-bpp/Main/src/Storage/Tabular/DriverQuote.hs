@@ -51,25 +51,24 @@ instance TEntityKey DriverQuoteT where
   toKey (Id id) = DriverQuoteTKey id
 
 instance TType (DriverQuoteT, Fare.FareParametersT) Domain.DriverQuote where
-  fromTType (DriverQuoteT {..}, fareParams) = do
+  fromTType (DriverQuoteT {..}, fareParamsT) = do
+    fareParams <- fromTType fareParamsT
     return $
       Domain.DriverQuote
         { id = Id id,
           searchRequestId = fromKey searchRequestId,
           driverId = fromKey driverId,
           durationToPickup = roundToIntegral durationToPickup,
-          fareParams = Fare.mkDomainFromTabularFareParams fareParams,
           ..
         }
   toTType Domain.DriverQuote {..} =
-    let fareParamsId = cast id
-     in ( DriverQuoteT
-            { id = getId id,
-              searchRequestId = toKey searchRequestId,
-              driverId = toKey driverId,
-              durationToPickup = realToFrac durationToPickup,
-              fareParametersId = toKey fareParamsId,
-              ..
-            },
-          Fare.mkTabularFromDomainFareParams fareParamsId fareParams
-        )
+    ( DriverQuoteT
+        { id = getId id,
+          searchRequestId = toKey searchRequestId,
+          driverId = toKey driverId,
+          durationToPickup = realToFrac durationToPickup,
+          fareParametersId = toKey fareParams.id,
+          ..
+        },
+      toTType fareParams
+    )

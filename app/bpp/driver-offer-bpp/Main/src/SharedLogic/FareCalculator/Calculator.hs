@@ -67,11 +67,12 @@ calculateDayPartRate fareParams = do
     else defaultDayPartRate
 
 calculateFareParameters ::
+  MonadGuid m =>
   FarePolicy ->
   Meters ->
   UTCTime ->
   Maybe Money ->
-  FareParameters
+  m FareParameters
 calculateFareParameters fp distance time mbExtraFare = do
   let baseDistanceFare = roundToIntegral $ fp.baseDistanceFare
       mbExtraDistance =
@@ -80,14 +81,17 @@ calculateFareParameters fp distance time mbExtraFare = do
       mbExtraKmFare = mbExtraDistance <&> \ex -> roundToIntegral $ realToFrac (distanceToKm ex) * fp.perExtraKmFare
       nightCoefIncluded = defineWhetherNightCoefIncluded fp time
 
-  FareParameters
-    { baseFare = fp.deadKmFare + baseDistanceFare,
-      extraKmFare = mbExtraKmFare,
-      driverSelectedFare = mbExtraFare,
-      nightShiftRate = fp.nightShiftRate,
-      nightCoefIncluded,
-      waitingChargePerMin = fp.waitingChargePerMin
-    }
+  id <- generateGUID
+  pure
+    FareParameters
+      { id,
+        baseFare = fp.deadKmFare + baseDistanceFare,
+        extraKmFare = mbExtraKmFare,
+        driverSelectedFare = mbExtraFare,
+        nightShiftRate = fp.nightShiftRate,
+        nightCoefIncluded,
+        waitingChargePerMin = fp.waitingChargePerMin
+      }
 
 distanceToKm :: Meters -> Rational
 distanceToKm x = realToFrac x / 1000

@@ -52,7 +52,7 @@ data DashboardEndRideReq = DashboardEndRideReq
 data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
-    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters' -> m (),
+    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
     getFarePolicy :: Id DM.Merchant -> Variant -> m (Maybe FarePolicy),
     calculateFare ::
@@ -226,20 +226,16 @@ endRide handle@ServiceHandle {..} rideId req = do
           waitingCharge <- getWaitingFare ride.tripStartTime ride.driverArrivalTime booking.fareParams.waitingChargePerMin
           pure (booking.estimatedDistance, waitingCharge + booking.estimatedFare, Nothing)
 
-    mbUpdatedFareParams' <- traverse Fare.buildFareParameters' mbUpdatedFareParams
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
-    let newFareParamsId = case mbUpdatedFareParams' of
-          Nothing -> cast @SRB.Booking @Fare.FareParameters booking.id -- FIXME should be booking.fareParamsId
-          Just updatedFareParams' -> updatedFareParams'.id
     let updRide =
           ride{tripEndTime = Just now,
                chargeableDistance = Just chargeableDistance,
                fare = Just finalFare,
                tripEndPos = Just point,
-               fareParametersId = Just newFareParamsId
+               fareParametersId = Just newFareParams.id
               }
     -- we need to store fareParams only when they changed
-    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams'
+    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams
 
     notifyCompleteToBAP booking updRide newFareParams
   return APISuccess.Success

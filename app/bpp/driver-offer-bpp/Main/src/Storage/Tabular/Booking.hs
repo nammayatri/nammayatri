@@ -60,6 +60,7 @@ instance TType (BookingT, BookingLocationT, BookingLocationT, Fare.FareParameter
     pUrl <- parseBaseUrl bapUri
     let fromLoc_ = mkDomainBookingLocation fromLoc
         toLoc_ = mkDomainBookingLocation toLoc
+    fareParams <- fromTType fareParametersT
     return $
       Domain.Booking
         { id = Id id,
@@ -69,7 +70,6 @@ instance TType (BookingT, BookingLocationT, BookingLocationT, Fare.FareParameter
           toLocation = toLoc_,
           bapUri = pUrl,
           riderId = fromKey <$> riderId,
-          fareParams = Fare.mkDomainFromTabularFareParams fareParametersT,
           ..
         }
   toTType Domain.Booking {..} =
@@ -87,5 +87,5 @@ instance TType (BookingT, BookingLocationT, BookingLocationT, Fare.FareParameter
             },
           mkTabularBookingLocation fromLocation,
           mkTabularBookingLocation toLocation,
-          Fare.mkTabularFromDomainFareParams fareParamsId fareParams
+          toTType fareParams
         )

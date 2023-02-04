@@ -33,12 +33,12 @@ endRideTransaction ::
   Id DP.Driver ->
   Id SRB.Booking ->
   Ride.Ride ->
-  Maybe DFare.FareParameters' ->
+  Maybe DFare.FareParameters ->
   m ()
-endRideTransaction driverId bookingId ride mbFareParams' = do
+endRideTransaction driverId bookingId ride mbFareParams = do
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   Esq.runTransaction $ do
-    whenJust mbFareParams' QFare.create
+    whenJust mbFareParams QFare.create
     QRide.updateAll ride.id ride
     QRide.updateStatus ride.id Ride.COMPLETED
     QRB.updateStatus bookingId SRB.COMPLETED

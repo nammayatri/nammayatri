@@ -36,27 +36,14 @@ instance TEntityKey FareParametersT where
   fromKey (FareParametersTKey _id) = Id _id
   toKey (Id id) = FareParametersTKey id
 
-mkDomainFromTabularFareParams :: FareParametersT -> Domain.FareParameters
-mkDomainFromTabularFareParams FareParametersT {..} =
-  Domain.FareParameters
-    { ..
-    }
-
-mkTabularFromDomainFareParams :: Id Domain.FareParameters -> Domain.FareParameters -> FareParametersT
-mkTabularFromDomainFareParams id Domain.FareParameters {..} =
-  FareParametersT
-    { id = id.getId,
-      ..
-    }
-
-instance TType FareParametersT Domain.FareParameters' where
+instance TType FareParametersT Domain.FareParameters where
   fromTType FareParametersT {..} = do
     return $
-      Domain.FareParameters'
+      Domain.FareParameters
         { id = Id id,
           ..
         }
-  toTType Domain.FareParameters' {..} = do
+  toTType Domain.FareParameters {..} = do
     FareParametersT
       { id = getId id,
         ..
