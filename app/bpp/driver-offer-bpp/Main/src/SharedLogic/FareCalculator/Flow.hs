@@ -9,7 +9,7 @@ where
 
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Domain.Types.FareParams
+import Domain.Types.FareParameters
 import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)

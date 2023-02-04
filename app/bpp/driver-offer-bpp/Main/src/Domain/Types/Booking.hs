@@ -10,7 +10,7 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import Domain.Types.DriverQuote
-import Domain.Types.FareParams (FareParameters)
+import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle.Variant as DVeh

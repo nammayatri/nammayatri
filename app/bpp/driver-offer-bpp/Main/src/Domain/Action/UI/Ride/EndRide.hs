@@ -18,7 +18,7 @@ import Beckn.Utils.Common
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
-import Domain.Types.FareParams as Fare
+import Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (FarePolicy)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -52,7 +52,7 @@ data DashboardEndRideReq = DashboardEndRideReq
 data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
-    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> m (),
+    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters' -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
     getFarePolicy :: Id DM.Merchant -> Variant -> m (Maybe FarePolicy),
     calculateFare ::
@@ -102,7 +102,7 @@ buildEndRideHandle merchantId = do
       }
 
 driverEndRide ::
-  (MonadThrow m, Log m, MonadTime m) =>
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -110,7 +110,7 @@ driverEndRide ::
 driverEndRide handle rideId = endRide handle rideId . DriverReq
 
 dashboardEndRide ::
-  (MonadThrow m, Log m, MonadTime m) =>
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -118,7 +118,7 @@ dashboardEndRide ::
 dashboardEndRide handle rideId = endRide handle rideId . DashboardReq
 
 endRide ::
-  (MonadThrow m, Log m, MonadTime m) =>
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
@@ -219,22 +219,29 @@ endRide handle@ServiceHandle {..} rideId req = do
               <> show actualRideDuration
           pure timeOutsideOfThreshold
 
-    (chargeableDistance, finalFare, updatedFareParams) <-
+    (chargeableDistance, finalFare, mbUpdatedFareParams) <-
       if not distanceCalculationFailed && (distanceOutsideOfThreshold || timeOutsideOfThreshold)
         then recalculateFare booking ride
         else do
           waitingCharge <- getWaitingFare ride.tripStartTime ride.driverArrivalTime booking.fareParams.waitingChargePerMin
-          pure (booking.estimatedDistance, waitingCharge + booking.estimatedFare, booking.fareParams)
+          pure (booking.estimatedDistance, waitingCharge + booking.estimatedFare, Nothing)
 
+    mbUpdatedFareParams' <- traverse Fare.buildFareParameters' mbUpdatedFareParams
+    let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
+    let newFareParamsId = case mbUpdatedFareParams' of
+          Nothing -> cast @SRB.Booking @Fare.FareParameters booking.id -- FIXME should be booking.fareParamsId
+          Just updatedFareParams' -> updatedFareParams'.id
     let updRide =
           ride{tripEndTime = Just now,
                chargeableDistance = Just chargeableDistance,
                fare = Just finalFare,
-               tripEndPos = Just point
+               tripEndPos = Just point,
+               fareParametersId = Just newFareParamsId
               }
-    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide
+    -- we need to store fareParams only when they changed
+    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams'
 
-    notifyCompleteToBAP booking updRide updatedFareParams
+    notifyCompleteToBAP booking updRide newFareParams
   return APISuccess.Success
   where
     recalculateFare booking ride = do
@@ -257,7 +264,7 @@ endRide handle@ServiceHandle {..} rideId req = do
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric transporterId fareDiff distanceDiff
-      return (actualDistance, finalFare, fareParams)
+      return (actualDistance, finalFare, Just fareParams)
 
     getWaitingFare mbTripStartTime mbDriverArrivalTime waitingChargePerMin = do
       mbThresholdConfig <- findConfig

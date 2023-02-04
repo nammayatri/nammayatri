@@ -12,6 +12,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
 import Servant.API
@@ -50,6 +51,7 @@ data Ride = Ride
     tripStartPos :: Maybe LatLong,
     tripEndPos :: Maybe LatLong,
     rideRating :: Maybe RideRating,
+    fareParametersId :: Maybe (Id DFare.FareParameters),
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

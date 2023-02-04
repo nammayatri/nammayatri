@@ -173,6 +173,7 @@ handler subscriber transporterId req = do
             rideRating = Nothing,
             tripStartPos = Nothing,
             tripEndPos = Nothing,
+            fareParametersId = Nothing,
             createdAt = now,
             updatedAt = now
           }

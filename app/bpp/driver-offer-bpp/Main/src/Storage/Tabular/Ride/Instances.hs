@@ -29,6 +29,7 @@ instance TType FullRideT Domain.Ride where
           trackingUrl = tUrl,
           tripStartPos = mbTripStartLoc,
           tripEndPos = mbTripEndLoc,
+          fareParametersId = fromKey <$> fareParametersId,
           ..
         }
   toTType Domain.Ride {..} = do
@@ -43,6 +44,7 @@ instance TType FullRideT Domain.Ride where
               tripStartLon = tripStartPos <&> (.lon),
               tripEndLat = tripEndPos <&> (.lat),
               tripEndLon = tripEndPos <&> (.lon),
+              fareParametersId = toKey <$> fareParametersId,
               ..
             }
     let mbRatingT = mkRatingT driverId id <$> rideRating

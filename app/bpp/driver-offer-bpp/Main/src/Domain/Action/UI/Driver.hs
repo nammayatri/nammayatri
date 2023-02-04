@@ -55,7 +55,7 @@ import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
-import qualified Domain.Types.FareParams as Fare
+import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (ExtraFee)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Person, PersonAPIEntity)

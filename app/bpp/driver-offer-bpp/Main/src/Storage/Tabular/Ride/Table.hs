@@ -13,6 +13,7 @@ import Beckn.Types.Common (HighPrecMeters, Meters, Money)
 import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
 import Storage.Tabular.Booking (BookingTId)
+import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.RideStatus"
@@ -38,6 +39,7 @@ mkPersist
       tripStartLon Double Maybe
       tripEndLat Double Maybe
       tripEndLon Double Maybe
+      fareParametersId Fare.FareParametersTId Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

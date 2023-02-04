@@ -3,6 +3,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Tabular.FareParameters where
 
@@ -10,7 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common (Centesimal, Money)
 import Beckn.Types.Id
-import qualified Domain.Types.FareParams as Domain
+import qualified Domain.Types.FareParameters as Domain
 import Storage.Tabular.Vehicle ()
 
 mkPersist
@@ -47,3 +48,16 @@ mkTabularFromDomainFareParams id Domain.FareParameters {..} =
     { id = id.getId,
       ..
     }
+
+instance TType FareParametersT Domain.FareParameters' where
+  fromTType FareParametersT {..} = do
+    return $
+      Domain.FareParameters'
+        { id = Id id,
+          ..
+        }
+  toTType Domain.FareParameters' {..} = do
+    FareParametersT
+      { id = getId id,
+        ..
+      }

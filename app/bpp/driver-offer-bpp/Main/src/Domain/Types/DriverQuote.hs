@@ -6,7 +6,7 @@ import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
-import qualified Domain.Types.FareParams as Params
+import qualified Domain.Types.FareParameters as Params
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import qualified Domain.Types.Vehicle.Variant as Variant
