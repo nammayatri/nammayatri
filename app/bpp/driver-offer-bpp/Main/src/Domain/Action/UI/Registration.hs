@@ -28,6 +28,7 @@ import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation
 import Data.OpenApi hiding (info, url)
+import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Person as SP
@@ -36,6 +37,7 @@ import EulerHS.Prelude hiding (id)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QD
 import Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
@@ -113,7 +115,7 @@ auth req mbBundleVersion mbClientVersion = do
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   person <-
     QP.findByMobileNumber countryCode mobileNumberHash
-      >>= maybe (createDriverWhihDetails req mbBundleVersion mbClientVersion merchant.id) return
+      >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
@@ -222,14 +224,21 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWhihDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
-createDriverWhihDetails req mbBundleVersion mbClientVersion mercahntId = do
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
+createDriverWithDetails req mbBundleVersion mbClientVersion mercahntId = do
   person <- makePerson req mbBundleVersion mbClientVersion mercahntId
   DB.runTransaction $ do
     QP.create person
+    QDFS.create $ makeIdleDriverFlowStatus person
     createDriverDetails (person.id)
-
   pure person
+  where
+    makeIdleDriverFlowStatus person =
+      DDFS.DriverFlowStatus
+        { personId = person.id,
+          flowStatus = DDFS.IDLE,
+          updatedAt = person.updatedAt
+        }
 
 verify ::
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
