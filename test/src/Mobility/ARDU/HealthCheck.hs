@@ -34,7 +34,7 @@ spec = do
         it "Health Check API should return success" do
           appResult <- runClient appClientEnv healthCheckBackendC
           appResult `shouldBe` Right (DT.decodeUtf8 "App is UP")
-          driverOfferBppResult <- runClient driverFlowClientEnv healthCheckBackendC
+          driverOfferBppResult <- runClient driverFlowClientEnv API.ui.healthCheck
           driverOfferBppResult `shouldBe` Right (DT.decodeUtf8 "App is UP")
           gwResult <- runClient gatewayClientEnv healthCheckBackendC
           gwResult `shouldBe` Right (DT.decodeUtf8 "Gateway is UP")

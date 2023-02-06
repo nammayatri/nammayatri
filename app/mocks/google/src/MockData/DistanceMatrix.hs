@@ -40,7 +40,8 @@ distanceMatrixElements =
       (origin7, origin4, element11),
       (origin12, destination12, element12),
       (origin13, destination13, element13),
-      (origin14, destination14, element14)
+      (origin14, destination14, element14),
+      (origin15, destination15, element15)
     ]
 
 mkDefaultPlace :: Place -> DPlace.MockPlace
@@ -454,6 +455,32 @@ element14 =
           TextValue
             { text = "22 mins",
               value = 1319
+            },
+      status = "OK"
+    }
+
+-- route15
+
+origin15 :: DPlace.MockPlace
+origin15 = origin5
+
+destination15 :: DPlace.MockPlace
+destination15 = origin4
+
+element15 :: DistanceMatrixElement
+element15 =
+  DistanceMatrixElement
+    { distance =
+        Just
+          TextValue
+            { text = "4.0 km",
+              value = 4001
+            },
+      duration =
+        Just
+          TextValue
+            { text = "10 mins",
+              value = 596
             },
       status = "OK"
     }

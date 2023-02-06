@@ -35,11 +35,12 @@ content-type: application/json
 
 { "serviceName" : "Google",
   "serviceConfig" : {
-      "googleMapsUrl" : "googleMapsUrl",
-      "googleRoadsUrl" : "googleRoadsUrl",
-      "googleKey" : "googleKey"
+      "googleMapsUrl" : "http://localhost:8019/",
+      "googleRoadsUrl" : "http://localhost:8019/",
+      "googleKey" : "mock-google-key"
   }
 }
+
 
 ###
 

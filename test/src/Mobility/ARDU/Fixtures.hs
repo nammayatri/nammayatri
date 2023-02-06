@@ -33,5 +33,11 @@ defaultAllowedDriverFee = 30
 nammaYatriPartnerMerchantId :: Id DM.Merchant
 nammaYatriPartnerMerchantId = "favorit0-0000-0000-0000-00000favorit"
 
+nammaYatriPartnerMerchantShortId :: ShortId DM.Merchant
+nammaYatriPartnerMerchantShortId = "NAMMA_YATRI_PARTNER"
+
 otherMerchant2Id :: Id DM.Merchant
 otherMerchant2Id = "nearest-drivers-testing-organization"
+
+dashboardToken :: Text
+dashboardToken = "some-secret-dashboard-token-for-driver-offer-bpp"

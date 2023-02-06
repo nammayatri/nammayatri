@@ -18,6 +18,7 @@ import qualified "app-backend" Domain.Types.CancellationReason as AppCR
 import qualified "driver-offer-bpp" Domain.Types.CancellationReason as SCR
 import qualified "driver-offer-bpp" Domain.Types.DriverInformation as TDrInfo
 import qualified "app-backend" Domain.Types.Estimate as AppEstimate
+import qualified "driver-offer-bpp" Domain.Types.Merchant as TDM
 import qualified "driver-offer-bpp" Domain.Types.Merchant.MerchantServiceConfig as TDMSC
 import "driver-offer-bpp" Domain.Types.Person as TPerson
 import qualified "app-backend" Domain.Types.Quote as AppQuote
@@ -29,6 +30,7 @@ import Domain.Types.SearchRequestForDriver as SearchReqInfo
 import HSpec
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures as Fixtures
+import Mobility.ARDU.Queries as Queries
 import Mobility.AppBackend.APICalls as BapAPI
 import Mobility.AppBackend.Fixtures
 import Servant.Client
@@ -38,6 +40,7 @@ import qualified "driver-offer-bpp" Storage.Queries.Booking as TQRB
 import qualified "driver-offer-bpp" Storage.Queries.DriverInformation as QTDrInfo
 import "driver-offer-bpp" Storage.Queries.DriverLocation
 import qualified Storage.Queries.DriverQuote as TDQ
+import qualified "app-backend" Storage.Queries.Ride as BQRide
 import qualified "driver-offer-bpp" Storage.Queries.Ride as TQRide
 import qualified "driver-offer-bpp" Storage.Queries.SearchRequest as QSReq
 import Utils
@@ -72,6 +75,14 @@ getBPPRide rideBookingId = do
   mbRide `shouldSatisfy` isJust
   return $ fromJust mbRide
 
+getBAPRide ::
+  Id TRide.Ride ->
+  ClientsM BRide.Ride
+getBAPRide bppRideId = do
+  mbRide <- liftIO $ runAppFlow "" $ BQRide.findByBPPRideId (cast bppRideId)
+  mbRide `shouldSatisfy` isJust
+  return $ fromJust mbRide
+
 getBPPRideById ::
   Id TRide.Ride ->
   ClientsM TRide.Ride
@@ -102,11 +113,11 @@ getBPPDriverInformation driverId =
 -- driver setup/reset
 setupDriver :: DriverTestData -> LatLong -> ClientsM ()
 setupDriver driver initialPoint = do
-  void . callBPP $ API.setDriverOnline driver.token True
+  void . callBPP $ API.ui.driver.setDriverOnline driver.token True
   -- Moves driver to the pickup point
   preUpdate <- liftIO $ API.buildUpdateLocationRequest $ initialPoint :| []
   void . callBPP $
-    API.updateLocation driver.token preUpdate
+    API.ui.location.updateLocation driver.token preUpdate
 
 resetDriver :: DriverTestData -> IO ()
 resetDriver driver = runARDUFlow "" $ do
@@ -148,23 +159,23 @@ getNearbySearchRequestForDriver driver estimateId =
         mbSReq <- liftIO $ runARDUFlow "" $ QSReq.findById p.searchRequestId
         pure $ fmap (.messageId) mbSReq == Just estimateId.getId
     )
-    ((.searchRequestsForDriver) <$> callBPP (API.getNearbySearchRequests driver.token))
+    ((.searchRequestsForDriver) <$> callBPP (API.ui.driver.getNearbySearchRequests driver.token))
 
 respondQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM ()
 respondQuote driver fare bppSearchRequestId response =
-  void $ callBPP $ API.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
+  void $ callBPP $ API.ui.driver.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
 
 offerQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM ()
 offerQuote driver fare bppSearchRequestId =
-  void $ callBPP $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
+  void $ callBPP $ API.ui.driver.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
 respondQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM (Either ClientError APISuccess)
 respondQuoteEither driver fare bppSearchRequestId response =
-  callBppEither $ API.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
+  callBppEither $ API.ui.driver.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
 
 offerQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM (Either ClientError APISuccess)
 offerQuoteEither driver fare bppSearchRequestId =
-  callBppEither $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
+  callBppEither $ API.ui.driver.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
 getQuotesByEstimateId :: Text -> Id AppEstimate.Estimate -> ClientsM (NonEmpty AppQuote.QuoteAPIEntity)
 getQuotesByEstimateId appToken estimateId =
@@ -203,7 +214,7 @@ confirmWithCheck appToken quoteId = do
 startRide :: DriverTestData -> LatLong -> TRide.Ride -> Id AppRB.Booking -> ClientsM ()
 startRide driver origin tRide bBookingId = do
   void . callBPP $
-    API.rideStart driver.token tRide.id $
+    API.ui.ride.rideStart driver.token tRide.id $
       API.buildStartRideReq tRide.otp origin
 
   void . pollDesc "trip started" $ do
@@ -221,7 +232,7 @@ endRide ::
   Id AppRB.Booking ->
   ClientsM ()
 endRide driver destination tRide bBookingId = do
-  void . callBPP $ API.rideEnd driver.token tRide.id $ RideAPI.EndRideReq destination
+  void . callBPP $ API.ui.ride.rideEnd driver.token tRide.id $ RideAPI.EndRideReq destination
   void $
     pollDesc "ride completed" $ do
       completedRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)
@@ -247,7 +258,7 @@ cancellationChecks bapBookingId driver =
 cancelRideByDriver :: DriverTestData -> Id AppRB.Booking -> TRide.Ride -> ClientsM ()
 cancelRideByDriver driver bapBookingId tRide = do
   void . callBPP $
-    API.rideCancel driver.token tRide.id $
+    API.ui.ride.rideCancel driver.token tRide.id $
       RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing
   cancellationChecks bapBookingId driver
 
@@ -261,6 +272,27 @@ cancelRideByApp appToken driver bapBookingId = do
           additionalInfo = Nothing
         }
   cancellationChecks bapBookingId driver
+
+badCancelRideByDriver :: DriverTestData -> SearchConfirmResult -> ClientsM ()
+badCancelRideByDriver driver SearchConfirmResult {..} = do
+  withFakeBapUrl bppBooking $
+    void . callBPP $
+      API.ui.ride.rideCancel driver.token ride.id $
+        RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing
+  badCancellationChecks bapBookingId driver
+
+badCancellationChecks :: Id AppRB.Booking -> DriverTestData -> ClientsM ()
+badCancellationChecks bapBookingId driver =
+  void $
+    pollDesc "ride cancelled by driver" $ do
+      bapBooking <- getBAPBooking bapBookingId
+      bapBooking.status `shouldBe` AppRB.TRIP_ASSIGNED
+      bppBooking <- getBPPBooking bapBookingId
+      bppBooking.status `shouldBe` TRB.CANCELLED
+      driverInfo <- getBPPDriverInformation $ cast driver.driverId
+      driverInfo.onRide `shouldBe` False
+
+      pure $ Just ()
 
 -- aggregate functions
 
@@ -310,3 +342,20 @@ clearCachedMapsConfig :: IO ()
 clearCachedMapsConfig = runARDUFlow "clear cached maps config" do
   TCQMSC.clearCache Fixtures.nammaYatriPartnerMerchantId (TDMSC.MapsService Maps.Google)
   TCQMSC.clearCache Fixtures.otherMerchant2Id (TDMSC.MapsService Maps.Google)
+
+rideSync :: ShortId TDM.Merchant -> Id TRide.Ride -> ClientsM ()
+rideSync merchantId rideId = do
+  let dashboardAPI = API.dashboard merchantId Fixtures.dashboardToken
+  void . callBPP $ dashboardAPI.ride.rideSync (cast rideId)
+
+withFakeBapUrl :: TRB.Booking -> ClientsM () -> ClientsM ()
+withFakeBapUrl booking action = do
+  liftIO $
+    runARDUFlow "fake bap url" $ do
+      Esq.runTransaction $
+        Queries.updateBapUrlWithFake booking.id
+  action
+  liftIO $
+    runARDUFlow "update bap url" $ do
+      Esq.runTransaction $
+        Queries.updateBapUrl booking.bapUri booking.id

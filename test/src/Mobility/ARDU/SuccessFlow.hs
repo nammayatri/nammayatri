@@ -43,7 +43,7 @@ defaultSuccessFlow eps distance chargeableDistance updates clients = withBecknCl
   successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
     forM_ (NE.toList updates) $ \upd -> do
       updReq <- liftIO $ API.buildUpdateLocationRequest upd
-      void . callBPP $ API.updateLocation arduDriver1.token updReq
+      void . callBPP $ API.ui.location.updateLocation arduDriver1.token updReq
       liftIO $ threadDelay waitBetweenUpdates
 
 reversedPointsListSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
@@ -51,7 +51,7 @@ reversedPointsListSuccessFlow eps distance chargeableDistance updates clients = 
   successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
     forM_ (NE.toList updates) $ \upd -> do
       updReq <- liftIO $ API.buildUpdateLocationRequest upd
-      void . callBPP $ API.updateLocation arduDriver1.token $ NE.reverse updReq
+      void . callBPP $ API.ui.location.updateLocation arduDriver1.token $ NE.reverse updReq
       liftIO $ threadDelay waitBetweenUpdates
 
 -- There was a bug, when it was possible to update location multiple times if
@@ -61,7 +61,7 @@ outdatedPointsSuccessFlow eps distance chargeableDistance updates clients = with
   successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
     forM_ (NE.toList updates) $ \upd -> do
       updReq <- liftIO $ makePointsOutdated <$> API.buildUpdateLocationRequest upd
-      void . callBPP $ API.updateLocation arduDriver1.token updReq
+      void . callBPP $ API.ui.location.updateLocation arduDriver1.token updReq
       liftIO $ threadDelay waitBetweenUpdates
   where
     makePointsOutdated = fmap (\point -> point{ts = addUTCTime (negate 600) point.ts})
@@ -72,7 +72,7 @@ raceConditionSuccessFlow eps distance chargeableDistance updates clients = withB
     forM_ (NE.toList updates) $ \upd -> do
       void . forkMultipleThreads 5 $ do
         updReq <- liftIO $ API.buildUpdateLocationRequest upd
-        void . callBPP $ API.updateLocation arduDriver1.token updReq
+        void . callBPP $ API.ui.location.updateLocation arduDriver1.token updReq
       liftIO $ threadDelay waitBetweenUpdates
   where
     forkMultipleThreads a f = replicateM a . liftIO $ forkIO $ withBecknClients clients f

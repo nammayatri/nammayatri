@@ -8,6 +8,7 @@ import qualified Mobility.ARDU.HealthCheck as HC
 import qualified Mobility.ARDU.MapsConfig as MapsConfig
 import qualified Mobility.ARDU.NearestDrivers as ND
 import qualified Mobility.ARDU.SuccessFlow as SF
+import qualified Mobility.ARDU.SyncRide as SR
 import Test.Tasty
 import Test.Tasty.Hspec hiding (after)
 
@@ -20,6 +21,7 @@ mkTestTree = do
   otSpec <- testSpec "OffersTwice" OF.spec
   dcSpec <- testSpec "CancelFlow" DC.spec
   ndSpec <- testSpec "NearestDrivers" ND.spec
+  srSpec <- testSpec "SyncRide" SR.spec
   ------------------------------------------------------------------
   return $
     testGroup
@@ -36,6 +38,7 @@ mkTestTree = do
               nqSpec,
               otSpec,
               dcSpec,
-              sfSpec
+              sfSpec,
+              srSpec
             ]
       ]

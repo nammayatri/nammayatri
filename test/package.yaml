@@ -97,6 +97,7 @@ dependencies:
   - driver-offer-bpp
   - location-updates
   - driver-offer-allocator
+  - dashboard-bpp-helper-api
 
 ghc-options:
   - -fwrite-ide-info
