@@ -58,8 +58,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
       QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = sReqFD.searchRequestId, validTill = sReqFD.searchRequestValidTill}
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
-    incrementTotalQuotesCount searchReq.providerId sReqFD.driverId
-    addSearchRequestValidTillToCache searchReq.id searchReq.providerId (cast sReqFD.driverId) validTill
+    incrementTotalQuotesCount searchReq.providerId sReqFD.driverId searchReq.id validTill
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq dPoolRes.rideRequestPopupDelayDuration
@@ -104,7 +103,9 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
                 driverMaxExtraFee = driverMaxExtraCharge,
                 rideRequestPopupDelayDuration = dpwRes.rideRequestPopupDelayDuration,
                 isPartOfIntelligentPool = dpwRes.isPartOfIntelligentPool,
+                acceptanceRatio = dpwRes.acceptanceRatio,
                 cancellationRatio = dpwRes.cancellationRatio,
+                driverAvailableTime = dpwRes.driverAvailableTime,
                 parallelSearchRequestCount = Just dpwRes.driverPoolResult.parallelSearchRequestCount,
                 ..
               }

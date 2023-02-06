@@ -5,6 +5,7 @@ module SharedLogic.DriverPool
     calculateDriverPoolWithActualDist,
     incrementTotalQuotesCount,
     incrementQuoteAcceptedCount,
+    decrementTotalQuotesCount,
     getTotalQuotesSent,
     getLatestAcceptanceRatio,
     incrementTotalRidesCount,
@@ -14,7 +15,6 @@ module SharedLogic.DriverPool
     getCurrentWindowAvailability,
     getQuotesCount,
     getPopupDelay,
-    addSearchRequestValidTillToCache,
     getValidSearchRequestCount,
     removeSearchReqIdFromMap,
     PoolCalculationStage (..),
@@ -108,35 +108,66 @@ withMinQuotesToQualifyIntelligentPoolWindowOption ::
 withMinQuotesToQualifyIntelligentPoolWindowOption fn = do
   asks (.intelligentPoolConfig.minQuotesToQualifyForIntelligentPoolWindowOption) >>= fn
 
-incrementTotalQuotesCount ::
+decrementTotalQuotesCount ::
   ( Redis.HedisFlow m r,
     Reexport.HasDriverPoolConfig r,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
   Id DM.Merchant ->
-  Id DP.Person ->
+  Id DP.Driver ->
+  Id SearchRequest ->
   m ()
-incrementTotalQuotesCount merchantId driverId =
-  Redis.withCrossAppRedis do
-    withAcceptanceRatioWindowOption merchantId $ SWC.incrementWindowCount (mkTotalQuotesKey driverId.getId) -- for acceptance ratio calculation
-    withMinQuotesToQualifyIntelligentPoolWindowOption $ SWC.incrementWindowCount (mkQuotesCountKey driverId.getId) -- total quotes sent count in different sliding window (used in driver pool for random vs intelligent filtering)
+decrementTotalQuotesCount merchantId driverId sreqId = do
+  mbSreqCounted <- find (\(srId, (_, isCounted)) -> srId == sreqId.getId && isCounted) <$> getSearchRequestInfoMap merchantId driverId
+  whenJust mbSreqCounted $
+    const . Redis.withCrossAppRedis $ withAcceptanceRatioWindowOption merchantId $ SWC.decrementWindowCount (mkTotalQuotesKey driverId.getId)
+
+incrementTotalQuotesCount ::
+  ( Redis.HedisFlow m r,
+    Reexport.HasDriverPoolConfig r,
+    HasSendSearchRequestJobConfig r,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Id DM.Merchant ->
+  Id DP.Person ->
+  Id SearchRequest ->
+  UTCTime ->
+  m ()
+incrementTotalQuotesCount merchantId driverId searchReqId validTill = do
+  now <- getCurrentTime
+  srCount <- getValidSearchRequestCount merchantId (cast driverId) now
+  Redis.withCrossAppRedis $ withMinQuotesToQualifyIntelligentPoolWindowOption $ SWC.incrementWindowCount (mkQuotesCountKey driverId.getId) -- total quotes sent count in different sliding window (used in driver pool for random vs intelligent filtering)
+  let shouldCount = srCount < 1
+  addSearchRequestInfoToCache searchReqId merchantId (cast driverId) (validTill, shouldCount)
+  when shouldCount $
+    Redis.withCrossAppRedis $ withAcceptanceRatioWindowOption merchantId $ SWC.incrementWindowCount (mkTotalQuotesKey driverId.getId) -- for acceptance ratio calculation
 
 mkParallelSearchRequestKey :: Id DM.Merchant -> Id DP.Driver -> Text
 mkParallelSearchRequestKey mId dId = "driver-offer:DriverPool:Search-Req-Validity-Map-" <> mId.getId <> dId.getId
 
-addSearchRequestValidTillToCache ::
+addSearchRequestInfoToCache ::
   ( Redis.HedisFlow m r,
     HasSendSearchRequestJobConfig r
   ) =>
   Id SearchRequest ->
   Id DM.Merchant ->
   Id DP.Driver ->
-  UTCTime ->
+  (UTCTime, Bool) ->
   m ()
-addSearchRequestValidTillToCache searchReqId merchantId driverId validTill = do
+addSearchRequestInfoToCache searchReqId merchantId driverId valueToPut = do
   singleBatchProcessTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
-  Redis.withCrossAppRedis $ Redis.hSetExp (mkParallelSearchRequestKey merchantId driverId) searchReqId.getId validTill singleBatchProcessTime
+  Redis.withCrossAppRedis $ Redis.hSetExp (mkParallelSearchRequestKey merchantId driverId) searchReqId.getId valueToPut singleBatchProcessTime
+
+getSearchRequestInfoMap ::
+  ( Redis.HedisFlow m r,
+    MonadReader r m
+  ) =>
+  Id DM.Merchant ->
+  Id DP.Driver ->
+  m [(Text, (UTCTime, Bool))]
+getSearchRequestInfoMap mId dId = Redis.withCrossAppRedis $ Redis.hGetAll $ mkParallelSearchRequestKey mId dId
 
 getValidSearchRequestCount ::
   ( Redis.HedisFlow m r,
@@ -147,10 +178,9 @@ getValidSearchRequestCount ::
   UTCTime ->
   m Int
 getValidSearchRequestCount merchantId driverId now = Redis.withCrossAppRedis $ do
-  let key = mkParallelSearchRequestKey merchantId driverId
-  searchRequestValidityMap :: [(Text, UTCTime)] <- Redis.hGetAll key
-  let (valid, old) = partition ((> now) . snd) searchRequestValidityMap
-  when (notNull old) $ Redis.hDel key (map fst old)
+  searchRequestValidityMap <- getSearchRequestInfoMap merchantId driverId
+  let (valid, old) = partition ((> now) . fst . snd) searchRequestValidityMap
+  when (notNull old) $ Redis.hDel (mkParallelSearchRequestKey merchantId driverId) (map fst old)
   pure $ length valid
 
 removeSearchReqIdFromMap ::
@@ -415,5 +445,7 @@ computeActualDistance orgId pickup driverPoolResults = do
           actualDurationToPickup = distDur.duration,
           rideRequestPopupDelayDuration = rideRequestPopupConfig.defaultPopupDelay,
           cancellationRatio = Nothing,
+          acceptanceRatio = Nothing,
+          driverAvailableTime = Nothing,
           isPartOfIntelligentPool = False
         }

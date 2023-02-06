@@ -693,6 +693,7 @@ respondQuote driverId req = do
     sendRemoveRideRequestNotification orgId driverQuote = do
       driverSearchReqs <- QSRD.findAllActiveWithoutRespByRequestId req.searchRequestId
       for_ driverSearchReqs $ \driverReq -> do
+        DP.decrementTotalQuotesCount orgId (cast driverReq.driverId) driverReq.searchRequestId
         DP.removeSearchReqIdFromMap orgId driverReq.driverId driverReq.searchRequestId
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken

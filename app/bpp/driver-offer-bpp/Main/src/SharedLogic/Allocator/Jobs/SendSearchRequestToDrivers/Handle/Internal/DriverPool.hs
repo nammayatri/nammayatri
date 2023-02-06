@@ -217,9 +217,11 @@ sortWithDriverScore merchantId (Just transporterConfig) dp = do
             else pure 0
       )
       driverIds
+  acceptanceRatios <- getRatios (getLatestAcceptanceRatio merchantId) driverIds
+  driversAvailableTime <- map (second (sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
   let driverCancellationScore = getScoreWithWeight (transporterConfig.cancellationRatioWeightage) cancellationRatios
-  driverAcceptanceScore <- getScoreWithWeight (transporterConfig.acceptanceRatioWeightage) <$> getRatios (getLatestAcceptanceRatio merchantId) driverIds
-  driverAvailabilityScore <- getScoreWithWeight (transporterConfig.availabilityTimeWeightage) . map (second (sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
+  let driverAcceptanceScore = getScoreWithWeight (transporterConfig.acceptanceRatioWeightage) acceptanceRatios
+  let driverAvailabilityScore = getScoreWithWeight (transporterConfig.availabilityTimeWeightage) driversAvailableTime
   let overallScore = calculateOverallScore [driverAcceptanceScore, driverAvailabilityScore, driverCancellationScore]
   driverPoolWithoutTie <- breakSameScoreTies $ groupByScore overallScore
   let sortedDriverPool = concatMap snd . sortOn (Down . fst) $ HM.toList driverPoolWithoutTie
@@ -227,7 +229,7 @@ sortWithDriverScore merchantId (Just transporterConfig) dp = do
   logTagInfo "Driver Cancellation Score" $ show driverCancellationScore
   logTagInfo "Driver Availability Score" $ show driverAvailabilityScore
   logTagInfo "Overall Score" $ show (map (second getDriverId) overallScore)
-  mapM (updateDriverPoolResult rideRequestPopupConfig $ HM.fromList cancellationRatios) sortedDriverPool
+  mapM (updateDriverPoolResult rideRequestPopupConfig (HM.fromList cancellationRatios) (HM.fromList acceptanceRatios) (HM.fromList driversAvailableTime)) sortedDriverPool
   where
     -- if two drivers have same score in the end then the driver who has less number of ride requests till now will be preffered.
     breakSameScoreTies scoreMap = do
@@ -253,18 +255,20 @@ sortWithDriverScore merchantId (Just transporterConfig) dp = do
               Nothing -> HM.insert score [dObj] scoreMap
         )
         HM.empty
-    updateDriverPoolResult rideRequestPopupConfig cancellationRatioMap dObj =
+    updateDriverPoolResult rideRequestPopupConfig cancellationRatioMap acceptanceRatioMap driversAvailableTimeMap dObj =
       maybeM
         (pure dObj)
         (addIntelligentPoolInfo rideRequestPopupConfig dObj)
-        (pure $ HM.lookup (getDriverId dObj) cancellationRatioMap)
-    addIntelligentPoolInfo rideRequestPopupConfig dObj cancellationRatio = do
+        (pure $ (,,) <$> HM.lookup (getDriverId dObj) cancellationRatioMap <*> HM.lookup (getDriverId dObj) acceptanceRatioMap <*> HM.lookup (getDriverId dObj) driversAvailableTimeMap)
+    addIntelligentPoolInfo rideRequestPopupConfig dObj (cancellationRatio, acceptanceRatio, driverAvailableTime) = do
       popupDelay <- getPopupDelay merchantId dObj.driverPoolResult.driverId cancellationRatio rideRequestPopupConfig
       pure $
         dObj
           { rideRequestPopupDelayDuration = popupDelay,
             isPartOfIntelligentPool = True,
-            cancellationRatio = Just cancellationRatio
+            cancellationRatio = Just cancellationRatio,
+            acceptanceRatio = Just acceptanceRatio,
+            driverAvailableTime = Just driverAvailableTime
           }
     calculateOverallScore scoresList = map (\dObj -> (,dObj) . sum $ mapMaybe (HM.lookup (getDriverId dObj)) scoresList) dp
     getRatios fn arr = mapM (\dId -> (dId.getId,) <$> fn dId) arr

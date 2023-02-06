@@ -38,6 +38,8 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     actualDurationToPickup :: Seconds,
     rideRequestPopupDelayDuration :: Seconds,
     cancellationRatio :: Maybe Double,
+    acceptanceRatio :: Maybe Double,
+    driverAvailableTime :: Maybe Double,
     isPartOfIntelligentPool :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON)
