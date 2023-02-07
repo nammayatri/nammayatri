@@ -154,6 +154,7 @@ data RideInfoRes = RideInfoRes
     rideOtp :: Text,
     customerPickupLocation :: LocationAPIEntity,
     customerDropLocation :: Maybe LocationAPIEntity,
+    actualDropLocation :: Maybe LatLong,
     driverId :: Id Driver,
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
