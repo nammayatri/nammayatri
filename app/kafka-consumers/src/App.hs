@@ -16,7 +16,7 @@ import Data.Function
 import qualified Data.Map.Strict as Map
 import qualified DriverOfferBPP.Processor as DO
 import Environment
-import EulerHS.Runtime (withFlowRuntime)
+import qualified EulerHS.Runtime as L
 import Kafka.Consumer (ConsumerRecord (crKey, crValue))
 import qualified Kafka.Consumer as Consumer
 import qualified Streamly.Internal.Data.Fold as SF
@@ -34,10 +34,11 @@ startKafkaConsumer = do
   configFile <- getConfigNameFromConsumertype consumerType
   appCfg :: AppCfg <- readDhallConfigDefault configFile
   appEnv <- buildAppEnv appCfg consumerType
-  startConsumerWithEnv appEnv
+  flowRt <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)
+  startConsumerWithEnv flowRt appEnv
 
-startConsumerWithEnv :: AppEnv -> IO ()
-startConsumerWithEnv appEnv@AppEnv {..} = do
+startConsumerWithEnv :: L.FlowRuntime -> AppEnv -> IO ()
+startConsumerWithEnv flowRt appEnv@AppEnv {..} = do
   kafkaConsumer <- newKafkaConsumer
   processData kafkaConsumer
   where
@@ -79,7 +80,4 @@ startConsumerWithEnv appEnv@AppEnv {..} = do
         Consumer.closeConsumer
         (\kc -> S.repeatM (Consumer.pollMessage kc (Consumer.Timeout 500)))
 
-    withFlow fn = do
-      withFlowRuntime
-        (Just $ L.getEulerLoggerRuntime hostname loggerConfig)
-        \flowRt -> runFlowR flowRt appEnv fn
+    withFlow fn = runFlowR flowRt appEnv fn
