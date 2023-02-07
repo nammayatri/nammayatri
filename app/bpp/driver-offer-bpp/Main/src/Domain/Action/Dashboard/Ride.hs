@@ -11,6 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Types.Booking as DBooking
@@ -203,9 +204,8 @@ syncCancelledRide rideId booking merchant = do
       case bookingCReason.source of
         DBCReason.ByUser -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Ride canceled by customer. Nothing to sync, ignoring"
         source -> do
-          -- do we need fork here?
-          -- fork "cancelBooking" $ do
-          CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
+          handle (errHandler booking.status) $
+            CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
           pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
 
 syncCompletedRide :: DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
@@ -213,5 +213,14 @@ syncCompletedRide ride booking = do
   -- for old rides fareParametersId = Nothing, so throw E400
   fareParametersId <- ride.fareParametersId & fromMaybeM (FareParametersDoNotExist ride.id.getId)
   fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
-  CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters
+  handle (errHandler booking.status) $
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters
   pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride complete update to bap"
+
+errHandler :: DBooking.BookingStatus -> SomeException -> Flow ()
+errHandler status exc
+  | Just (BecknAPICallError _endpoint err) <- fromException @BecknAPICallError exc = do
+    if err.code == toErrorCode (BookingInvalidStatus "")
+      then throwError $ InvalidRequest $ "Bpp booking status: " <> show status <> ". Invalid bap booking status for sync" <> maybe "" (": " <>) err.message
+      else throwError $ InternalError $ "Bpp booking status: " <> show status <> ". Unable to sync ride"
+  | otherwise = throwError $ InternalError $ "Bpp booking status: " <> show status <> ". Unable to sync ride"

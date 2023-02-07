@@ -80,6 +80,7 @@ token: {{customer_service}}
 
 # @name rideSync
 
-POST {{bap-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{rideId}}/sync
+@rideId = {{rideList.response.body.rides[0].rideId}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{rideId}}/sync
 token: {{customer_service}}
-content-type: application/json
