@@ -20,6 +20,7 @@ data DriverSearchRequestStatus = Active | Inactive
 data SearchRequestForDriverResponse
   = Accept
   | Reject
+  | Pulled
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema, Read, Eq)
   deriving (PrettyShow) via Showable SearchRequestForDriverResponse
 

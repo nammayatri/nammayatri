@@ -626,6 +626,7 @@ respondQuote driverId req = do
       QSRD.findByDriverAndSearchReq driverId sReq.id
         >>= fromMaybeM NoSearchRequestForDriver
     case req.response of
+      Pulled -> throwError UnexpectedResponseValue
       Accept -> do
         logDebug $ "offered fare: " <> show req.offeredFare
         whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
@@ -695,6 +696,8 @@ respondQuote driverId req = do
       for_ driverSearchReqs $ \driverReq -> do
         DP.decrementTotalQuotesCount orgId (cast driverReq.driverId) driverReq.searchRequestId
         DP.removeSearchReqIdFromMap orgId driverReq.driverId driverReq.searchRequestId
+        Esq.runTransaction $ do
+          QSRD.updateDriverResponse driverReq.id Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
         Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
 

@@ -181,6 +181,7 @@ data DriverQuoteError
   | DriverQuoteExpired
   | NoSearchRequestForDriver
   | QuoteAlreadyRejected
+  | UnexpectedResponseValue
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverQuoteError
@@ -191,6 +192,7 @@ instance IsBaseError DriverQuoteError where
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
   toMessage QuoteAlreadyRejected = Just "Quote Aready Rejected"
+  toMessage UnexpectedResponseValue = Just "The response type is unexpected"
 
 instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
@@ -199,11 +201,13 @@ instance IsHTTPError DriverQuoteError where
     DriverQuoteExpired -> "QUOTE_EXPIRED"
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
     QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
+    UnexpectedResponseValue -> "UNEXPECTED_RESPONSE_VALUE"
   toHttpCode = \case
     FoundActiveQuotes -> E400
     DriverOnRide -> E400
     DriverQuoteExpired -> E400
     NoSearchRequestForDriver -> E400
     QuoteAlreadyRejected -> E400
+    UnexpectedResponseValue -> E400
 
 instance IsAPIError DriverQuoteError

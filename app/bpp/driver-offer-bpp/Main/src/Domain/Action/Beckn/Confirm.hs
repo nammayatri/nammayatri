@@ -23,6 +23,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as SRD
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Domain.Types.SearchRequestForDriver as SReqD
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
@@ -68,6 +69,7 @@ handler ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HedisFlow m r,
+    DP.HasDriverPoolConfig r,
     HasPrettyLogger m r,
     HasHttpClientOptions r c,
     EncFlow m r,
@@ -118,7 +120,10 @@ handler subscriber transporterId req = do
   for_ driverSearchReqs $ \driverReq -> do
     let driverId = driverReq.driverId
     unless (driverId == driver.id) $ do
+      DP.decrementTotalQuotesCount transporter.id (cast driverReq.driverId) driverReq.searchRequestId
       DP.removeSearchReqIdFromMap transporter.id driverId driverReq.searchRequestId
+      Esq.runTransaction $ do
+        QSRD.updateDriverResponse driverReq.id SReqD.Pulled
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare transporter.id driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
 
