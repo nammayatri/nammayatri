@@ -204,7 +204,7 @@ syncCancelledRide rideId booking merchant = do
       case bookingCReason.source of
         DBCReason.ByUser -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Ride canceled by customer. Nothing to sync, ignoring"
         source -> do
-          handle (errHandler booking.status) $
+          handle (errHandler booking.status "booking cancellation") $
             CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
           pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
 
@@ -213,14 +213,18 @@ syncCompletedRide ride booking = do
   -- for old rides fareParametersId = Nothing, so throw E400
   fareParametersId <- ride.fareParametersId & fromMaybeM (FareParametersDoNotExist ride.id.getId)
   fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
-  handle (errHandler booking.status) $
+  handle (errHandler booking.status "ride completed") $
     CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters
-  pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride complete update to bap"
+  pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"
 
-errHandler :: DBooking.BookingStatus -> SomeException -> Flow ()
-errHandler status exc
+errHandler :: DBooking.BookingStatus -> Text -> SomeException -> Flow ()
+errHandler status desc exc
   | Just (BecknAPICallError _endpoint err) <- fromException @BecknAPICallError exc = do
     if err.code == toErrorCode (BookingInvalidStatus "")
-      then throwError $ InvalidRequest $ "Bpp booking status: " <> show status <> ". Invalid bap booking status for sync" <> maybe "" (": " <>) err.message
-      else throwError $ InternalError $ "Bpp booking status: " <> show status <> ". Unable to sync ride"
-  | otherwise = throwError $ InternalError $ "Bpp booking status: " <> show status <> ". Unable to sync ride"
+      then
+        throwError $
+          InvalidRequest $ errMessage <> maybe "" (" Bap booking status: " <>) err.message
+      else throwError $ InternalError errMessage
+  | otherwise = throwError $ InternalError errMessage
+  where
+    errMessage = "Fail to send " <> desc <> " update. Bpp booking status: " <> show status <> "."

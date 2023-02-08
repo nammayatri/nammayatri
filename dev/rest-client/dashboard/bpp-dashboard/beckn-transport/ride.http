@@ -80,6 +80,7 @@ token: {{customer_service}}
 
 # @name rideSync
 
-POST {{bap-dashboard-host}}/bpp/app-backend/YATRI_PARTNER/ride/{{rideId}}/sync
+@rideId = 8f76beb3-bb3e-4c20-affc-2fd19650de70
+
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/ride/{{rideId}}/sync
 token: {{customer_service}}
-content-type: application/json

@@ -11,6 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Types.Booking as DBooking
@@ -21,11 +22,13 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.Transporter (findMerchantByShortId)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverLocation as QDrLoc
+import qualified Storage.Queries.FarePolicy.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -192,4 +195,46 @@ rideSync merchantShortId reqRideId = do
   unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
 
   logTagInfo "dashboard -> syncRide : " $ show rideId <> "; status: " <> show ride.status
-  error "TODO"
+
+  case ride.status of
+    DRide.NEW -> pure $ Common.RideSyncRes Common.RIDE_NEW "Nothing to sync, ignoring"
+    DRide.INPROGRESS -> pure $ Common.RideSyncRes Common.RIDE_INPROGRESS "Nothing to sync, ignoring"
+    DRide.COMPLETED -> syncCompletedRide ride booking
+    DRide.CANCELLED -> syncCancelledRide rideId booking merchant
+
+syncCancelledRide :: Id DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.RideSyncRes
+syncCancelledRide rideId booking merchant = do
+  mbBookingCReason <- runInReplica $ QBCReason.findByRideId rideId
+  -- rides cancelled by bap no need to sync, and have mbBookingCReason = Nothing
+  case mbBookingCReason of
+    Nothing -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "No cancellation reason found for ride. Nothing to sync, ignoring"
+    Just bookingCReason -> do
+      case bookingCReason.source of
+        DBCReason.ByUser -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Ride canceled by customer. Nothing to sync, ignoring"
+        DBCReason.ByDriver -> do
+          handle (errHandler booking.status "booking reallocation") $
+            CallBAP.sendBookingReallocationUpdateToBAP booking rideId merchant bookingCReason.source
+          pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking reallocation update to bap"
+        source -> do
+          handle (errHandler booking.status "booking cancellation") $
+            CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
+          pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
+
+syncCompletedRide :: DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
+syncCompletedRide ride booking = do
+  fareBreakup <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
+  handle (errHandler booking.status "ride completed") $
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareBreakup
+  pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"
+
+errHandler :: DBooking.BookingStatus -> Text -> SomeException -> Flow ()
+errHandler status desc exc
+  | Just (BecknAPICallError _endpoint err) <- fromException @BecknAPICallError exc = do
+    if err.code == toErrorCode (BookingInvalidStatus "")
+      then
+        throwError $
+          InvalidRequest $ errMessage <> maybe "" (" Bap booking status: " <>) err.message
+      else throwError $ InternalError errMessage
+  | otherwise = throwError $ InternalError errMessage
+  where
+    errMessage = "Fail to send " <> desc <> " update. Bpp booking status: " <> show status <> "."
