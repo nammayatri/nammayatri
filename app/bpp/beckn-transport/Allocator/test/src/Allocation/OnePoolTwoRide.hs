@@ -1,11 +1,11 @@
 module Allocation.OnePoolTwoRide where
 
 import Allocation.Internal
-import Beckn.Types.Id
 import qualified Data.Map as Map
 import Domain.Action.Allocation
 import qualified Domain.Types.Booking as SRB
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
 import Test.Tasty
 import Test.Tasty.HUnit
 

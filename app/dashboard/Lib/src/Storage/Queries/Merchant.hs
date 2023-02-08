@@ -1,9 +1,9 @@
 module Storage.Queries.Merchant where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.Merchant as DOrg
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.Merchant
 
 findById ::

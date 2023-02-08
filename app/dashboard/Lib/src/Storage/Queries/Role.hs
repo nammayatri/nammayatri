@@ -2,10 +2,10 @@
 
 module Storage.Queries.Role where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.Role as Role
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.Role
 
 create :: Role -> SqlDB ()

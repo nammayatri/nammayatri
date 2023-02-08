@@ -1,16 +1,16 @@
 module Domain.Action.UI.Location (Status (..), GetLocationRes (..), getLocation) where
 
-import qualified Beckn.External.Maps.HasCoordinates as GoogleMaps
-import Beckn.External.Maps.Types
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto (runInReplica)
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Types.Common
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
+import qualified Kernel.External.Maps.HasCoordinates as GoogleMaps
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto (runInReplica)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common hiding (id)
 import qualified SharedLogic.DriverLocation as DrLoc
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Person as Person

@@ -3,4 +3,4 @@ module Tools.Metrics.Types
   )
 where
 
-import Beckn.Tools.Metrics.CoreMetrics as CoreMetrics
+import Kernel.Tools.Metrics.CoreMetrics as CoreMetrics

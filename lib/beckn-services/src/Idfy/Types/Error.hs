@@ -4,9 +4,9 @@
 
 module Idfy.Types.Error where
 
-import Beckn.Types.Error.BaseError
-import Beckn.Types.Error.BaseError.HTTPError
-import Beckn.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (fromResponse))
+import Kernel.Types.Error.BaseError
+import Kernel.Types.Error.BaseError.HTTPError
+import Kernel.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (fromResponse))
 import Network.HTTP.Types (Status (statusCode))
 import Servant.Client (ResponseF (responseStatusCode))
 import Prelude

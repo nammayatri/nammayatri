@@ -4,12 +4,12 @@ module Domain.Action.UI.Frontend
   )
 where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Person as DP
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS

@@ -1,13 +1,13 @@
 module API.Dashboard.Driver where
 
-import Beckn.Prelude
-import Beckn.Types.APISuccess (APISuccess (..))
-import Beckn.Types.Id
-import Beckn.Utils.Common (withFlowHandlerAPI)
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Id
+import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 
 type API =

@@ -1,9 +1,9 @@
 module DriverOfferBPP.Storage.Queries where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
 import DriverOfferBPP.Storage.Tables
 import qualified DriverOfferBPP.Types as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
 
 create :: Domain.DriverAvailability -> Esq.SqlDB ()
 create = Esq.create

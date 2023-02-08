@@ -2,13 +2,13 @@
 
 module Storage.Queries.Booking where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Types.Time
 import Domain.Types.Booking
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchRequest as DSR
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Types.Time
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverQuote as DriverQuote

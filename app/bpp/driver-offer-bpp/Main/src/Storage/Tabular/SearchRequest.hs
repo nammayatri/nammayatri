@@ -7,12 +7,12 @@
 
 module Storage.Tabular.SearchRequest where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
-import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.SearchRequest as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
+import Kernel.Utils.Common hiding (id)
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()

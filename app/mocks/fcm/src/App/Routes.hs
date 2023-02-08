@@ -6,10 +6,10 @@ module App.Routes
 where
 
 import App.Types
-import Beckn.External.FCM.Flow as API
-import Beckn.Types.App (FlowServerR)
 import Data.Aeson
 import EulerHS.Prelude
+import Kernel.External.FCM.Flow as API
+import Kernel.Types.App (FlowServerR)
 import qualified Product.Fcm as P
 import Servant hiding (throwError)
 import Types.API.Fcm as API

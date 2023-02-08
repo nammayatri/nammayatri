@@ -1,7 +1,7 @@
 module Main where
 
 import App
-import Beckn.Prelude
+import Kernel.Prelude
 
 main :: IO ()
 main = runTransporterScheduler identity

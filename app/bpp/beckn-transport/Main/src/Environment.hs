@@ -11,27 +11,27 @@ module Environment
   )
 where
 
-import Beckn.External.Encryption (EncTools)
-import Beckn.External.Exotel.Types (ExotelCfg)
-import Beckn.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
-import Beckn.Sms.Config
-import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis as Redis
-import Beckn.Storage.Hedis.AppPrefixes
-import Beckn.Types.App
-import Beckn.Types.Cache
-import Beckn.Types.Common
-import Beckn.Types.Credentials (PrivateKey)
-import Beckn.Types.Flow
-import Beckn.Types.Registry
-import Beckn.Types.SlidingWindowLimiter
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Servant.Client (HttpClientOptions, RetryCfg)
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
+import Kernel.External.Encryption (EncTools)
+import Kernel.External.Exotel.Types (ExotelCfg)
+import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
+import Kernel.Sms.Config
+import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis.AppPrefixes
+import Kernel.Types.App
+import Kernel.Types.Cache
+import Kernel.Types.Common
+import Kernel.Types.Credentials (PrivateKey)
+import Kernel.Types.Flow
+import Kernel.Types.Registry
+import Kernel.Types.SlidingWindowLimiter
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import qualified Kernel.Utils.Registry as Registry
+import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
+import Kernel.Utils.Servant.SignatureAuth
 import SharedLogic.DriverPool (DriverPoolConfig)
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
@@ -156,7 +156,7 @@ buildAppEnv AppCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBPPKafkaEnvs
-  hedisEnv <- connectHedis hedisCfg becknTransportPrefix
+  hedisEnv <- connectHedis hedisCfg staticOfferDriverAppPrefix
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

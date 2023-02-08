@@ -7,15 +7,15 @@ module SharedLogic.Transaction
   )
 where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common (encodeToText, throwError)
 import qualified "dashboard-bpp-helper-api" Dashboard.Common as Common
 import qualified Data.Text as Text
 import qualified Domain.Types.Transaction as DT
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common (encodeToText, throwError)
 import qualified Storage.Queries.Transaction as QT
 import Tools.Auth
 import qualified Tools.Error as E

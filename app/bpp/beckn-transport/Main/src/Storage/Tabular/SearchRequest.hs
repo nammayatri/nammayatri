@@ -7,10 +7,10 @@
 
 module Storage.Tabular.SearchRequest where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationTId)
 import qualified Storage.Tabular.SearchRequest.SearchReqLocation as SLoc

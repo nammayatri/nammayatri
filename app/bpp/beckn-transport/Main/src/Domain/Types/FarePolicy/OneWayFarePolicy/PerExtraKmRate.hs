@@ -1,11 +1,11 @@
 module Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate where
 
-import Beckn.Types.Common (HighPrecMoney, Meters)
-import Beckn.Types.Predicate
-import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Common (HighPrecMoney, Meters)
+import Kernel.Types.Predicate
+import Kernel.Utils.Validation
 
 data PerExtraKmRateD (s :: UsageSafety) = PerExtraKmRate
   { distanceRangeStart :: Meters,

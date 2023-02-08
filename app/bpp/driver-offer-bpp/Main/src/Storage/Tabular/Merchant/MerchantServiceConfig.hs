@@ -7,16 +7,16 @@
 
 module Storage.Tabular.Merchant.MerchantServiceConfig where
 
-import qualified Beckn.External.Maps.Interface.Types as Maps
-import qualified Beckn.External.Maps.Types as Maps
-import qualified Beckn.External.SMS.Interface as Sms
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
-import Beckn.Utils.Common (decodeFromText, encodeToText)
-import Beckn.Utils.Error
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
+import qualified Kernel.External.Maps.Interface.Types as Maps
+import qualified Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.SMS.Interface as Sms
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
+import Kernel.Utils.Common (decodeFromText, encodeToText)
+import Kernel.Utils.Error
 import Storage.Tabular.Merchant (MerchantTId)
 import Tools.Error
 

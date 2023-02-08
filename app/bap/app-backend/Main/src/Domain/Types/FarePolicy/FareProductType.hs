@@ -6,8 +6,8 @@
 
 module Domain.Types.FarePolicy.FareProductType where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
 
 data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 

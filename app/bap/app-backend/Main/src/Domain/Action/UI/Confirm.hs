@@ -6,13 +6,6 @@ module Domain.Action.UI.Confirm
   )
 where
 
-import Beckn.External.Maps.Types (LatLong (..))
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -25,6 +18,13 @@ import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Domain.Types.VehicleVariant (VehicleVariant)
+import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.Share (checkIfEstimateCancelled)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRideB

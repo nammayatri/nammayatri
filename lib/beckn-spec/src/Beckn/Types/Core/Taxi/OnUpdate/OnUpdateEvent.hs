@@ -9,10 +9,10 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
-import qualified Beckn.Utils.JSON as J
-import qualified Beckn.Utils.Schema as S
 import Data.OpenApi
 import EulerHS.Prelude hiding ((.=))
+import qualified Kernel.Utils.JSON as J
+import qualified Kernel.Utils.Schema as S
 
 data OnUpdateEvent
   = RideAssigned RideAssignedEvent

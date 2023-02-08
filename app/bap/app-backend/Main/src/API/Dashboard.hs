@@ -2,9 +2,9 @@ module API.Dashboard where
 
 import qualified API.Dashboard.Customer as Customer
 import qualified API.Dashboard.Merchant as Merchant
-import Beckn.Types.Id
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.Types.Id
 import Servant hiding (throwError)
 import Tools.Auth (DashboardTokenAuth)
 

@@ -1,14 +1,14 @@
 module Environment where
 
-import Beckn.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
-import Beckn.Storage.Hedis.Config
-import Beckn.Types.SlidingWindowCounters
-import qualified Beckn.Types.SlidingWindowCounters as SWC
-import Beckn.Utils.Dhall
-import Beckn.Utils.IOLogging
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (show)
 import Kafka.Consumer
+import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
+import Kernel.Storage.Hedis.Config
+import Kernel.Types.SlidingWindowCounters
+import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Kernel.Utils.Dhall
+import Kernel.Utils.IOLogging
 import System.Environment (lookupEnv)
 import Prelude (show)
 

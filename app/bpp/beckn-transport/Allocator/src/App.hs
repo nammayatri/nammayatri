@@ -1,21 +1,21 @@
 module App where
 
 import API
-import Beckn.Exit
-import qualified Beckn.Tools.Metrics.Init as Metrics
-import qualified Beckn.Types.App as App
-import Beckn.Types.Flow
-import Beckn.Utils.App
-import Beckn.Utils.Common
-import Beckn.Utils.Dhall (readDhallConfigDefault)
-import qualified Beckn.Utils.FlowLogging as L
-import qualified Beckn.Utils.Servant.Server as Server
-import Beckn.Utils.Servant.SignatureAuth
 import Control.Concurrent
 import qualified Data.Map as Map
 import Environment
 import EulerHS.Prelude hiding (exitSuccess)
 import qualified EulerHS.Runtime as R
+import Kernel.Exit
+import qualified Kernel.Tools.Metrics.Init as Metrics
+import qualified Kernel.Types.App as App
+import Kernel.Types.Flow
+import Kernel.Utils.App
+import Kernel.Utils.Common
+import Kernel.Utils.Dhall (readDhallConfigDefault)
+import qualified Kernel.Utils.FlowLogging as L
+import qualified Kernel.Utils.Servant.Server as Server
+import Kernel.Utils.Servant.SignatureAuth
 import Network.Wai.Handler.Warp
 import Servant
 import qualified Service.Runner as Allocator

@@ -1,18 +1,18 @@
 module Environment where
 
-import Beckn.Prelude
-import Beckn.Tools.Metrics.CoreMetrics
-import Beckn.Types.App
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Flow
-import Beckn.Types.Registry
-import Beckn.Utils.App
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Servant.Client
-import Beckn.Utils.Servant.SignatureAuth
-import Beckn.Utils.Shutdown
+import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.App
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Flow
+import Kernel.Types.Registry
+import Kernel.Utils.App
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import qualified Kernel.Utils.Registry as Registry
+import Kernel.Utils.Servant.Client
+import Kernel.Utils.Servant.SignatureAuth
+import Kernel.Utils.Shutdown
 
 data AppCfg = AppCfg
   { port :: Int,

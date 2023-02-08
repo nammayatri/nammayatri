@@ -1,13 +1,13 @@
 module Fixtures.TransporterConfig (defaultTransporterConfig) where
 
-import qualified Beckn.External.FCM.Types as FCM (FCMConfig (..))
-import Beckn.Types.Common (Meters (..))
-import Beckn.Types.Time (Seconds (..))
 import qualified Domain.Types.TransporterConfig as DTConf
 import EulerHS.Prelude
 import qualified Fixtures.BaseUrl as Fixtures
 import qualified Fixtures.Person as Fixtures
 import qualified Fixtures.Time as Fixtures
+import qualified Kernel.External.FCM.Types as FCM (FCMConfig (..))
+import Kernel.Types.Common (Meters (..))
+import Kernel.Types.Time (Seconds (..))
 
 defaultTransporterConfig :: DTConf.TransporterConfig
 defaultTransporterConfig =

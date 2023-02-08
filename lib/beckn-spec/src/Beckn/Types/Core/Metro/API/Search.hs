@@ -1,10 +1,10 @@
 module Beckn.Types.Core.Metro.API.Search where
 
-import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.Metro.Search.Intent (Intent)
-import Beckn.Types.Core.ReqTypes (BecknReq)
-import Beckn.Utils.Example
 import EulerHS.Prelude
+import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.ReqTypes (BecknReq)
+import Kernel.Utils.Example
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchReq = BecknReq SearchIntent

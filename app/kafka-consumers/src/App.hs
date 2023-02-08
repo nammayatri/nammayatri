@@ -2,12 +2,6 @@
 
 module App (startKafkaConsumer) where
 
-import Beckn.Prelude
-import Beckn.Types.Error (GenericError (InternalError))
-import Beckn.Types.Flow
-import Beckn.Utils.Common (generateGUID, throwError, withLogTag)
-import Beckn.Utils.Dhall (readDhallConfigDefault)
-import qualified Beckn.Utils.FlowLogging as L
 import Control.Error.Util
 import Control.Exception (ErrorCall (ErrorCall))
 import qualified Data.Aeson as A
@@ -19,6 +13,12 @@ import Environment
 import qualified EulerHS.Runtime as L
 import Kafka.Consumer (ConsumerRecord (crKey, crValue))
 import qualified Kafka.Consumer as Consumer
+import Kernel.Prelude
+import Kernel.Types.Error (GenericError (InternalError))
+import Kernel.Types.Flow
+import Kernel.Utils.Common (generateGUID, throwError, withLogTag)
+import Kernel.Utils.Dhall (readDhallConfigDefault)
+import qualified Kernel.Utils.FlowLogging as L
 import qualified Streamly.Internal.Data.Fold as SF
 import qualified Streamly.Internal.Prelude as S
 import System.Environment (lookupEnv)

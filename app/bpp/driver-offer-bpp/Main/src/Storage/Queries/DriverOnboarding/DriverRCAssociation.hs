@@ -2,13 +2,13 @@
 
 module Storage.Queries.DriverOnboarding.DriverRCAssociation where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.DriverOnboarding.DriverRCAssociation
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Person (Person)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 

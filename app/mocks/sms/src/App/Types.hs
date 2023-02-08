@@ -1,14 +1,14 @@
 module App.Types where
 
-import Beckn.Types.App
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Flow
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import Beckn.Utils.Shutdown
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import EulerHS.Prelude
+import Kernel.Types.App
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Flow
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import Kernel.Utils.Shutdown
 import System.Environment (lookupEnv)
 
 data AppCfg = AppCfg

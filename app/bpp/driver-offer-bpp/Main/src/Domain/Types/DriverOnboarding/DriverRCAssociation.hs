@@ -1,9 +1,9 @@
 module Domain.Types.DriverOnboarding.DriverRCAssociation where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
 import Domain.Types.Person
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data DriverRCAssociation = DriverRCAssociation
   { id :: Id DriverRCAssociation,

@@ -3,16 +3,16 @@
 
 module Domain.Types.Quote where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 

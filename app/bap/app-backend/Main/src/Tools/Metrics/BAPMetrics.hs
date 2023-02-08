@@ -4,11 +4,11 @@ module Tools.Metrics.BAPMetrics
   )
 where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Common
 import Data.Time (diffUTCTime)
 import GHC.Records.Extra
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Common
 import Prometheus as P
 import Tools.Metrics.BAPMetrics.Types as Reexport
 

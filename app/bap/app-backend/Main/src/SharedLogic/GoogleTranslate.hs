@@ -6,16 +6,16 @@ module SharedLogic.GoogleTranslate
   )
 where
 
-import Beckn.External.Encryption
-import qualified Beckn.External.GoogleTranslate.Client as ClientGoogleTranslate
-import Beckn.External.GoogleTranslate.Types
-import qualified Beckn.External.GoogleTranslate.Types as GoogleTranslate
-import Beckn.Prelude (HasField (..))
-import Beckn.Storage.Hedis as Hedis
-import Beckn.Tools.Metrics.CoreMetrics.Types
-import Beckn.Utils.Common (BaseUrl, MonadFlow, Seconds, logDebug)
-import Beckn.Utils.Dhall
 import EulerHS.Prelude
+import Kernel.External.Encryption
+import qualified Kernel.External.GoogleTranslate.Client as ClientGoogleTranslate
+import Kernel.External.GoogleTranslate.Types
+import qualified Kernel.External.GoogleTranslate.Types as GoogleTranslate
+import Kernel.Prelude (HasField (..))
+import Kernel.Storage.Hedis as Hedis
+import Kernel.Tools.Metrics.CoreMetrics.Types
+import Kernel.Utils.Common (BaseUrl, MonadFlow, Seconds, logDebug)
+import Kernel.Utils.Dhall
 import Servant
 import qualified Tools.Maps as Maps
 

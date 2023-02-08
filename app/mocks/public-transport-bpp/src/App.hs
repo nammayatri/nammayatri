@@ -7,11 +7,11 @@ import API.Confirm
 import API.Search
 import API.Status
 import API.Types
-import Beckn.Mock.App hiding (runMock)
-import Beckn.Utils.App (logRequestAndResponseGeneric)
-import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.Logging
 import Environment
+import Kernel.Mock.App hiding (runMock)
+import Kernel.Utils.App (logRequestAndResponseGeneric)
+import Kernel.Utils.Dhall (readDhallConfigDefault)
+import Kernel.Utils.Logging
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,

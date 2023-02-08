@@ -6,11 +6,11 @@ where
 
 import qualified API.BPP as BPP
 import qualified "lib-dashboard" API.Dashboard as Dashboard
-import Beckn.Prelude
-import Beckn.Utils.Servant.HTML
 import qualified Data.ByteString as BS
 import Data.OpenApi
 import "lib-dashboard" Environment
+import Kernel.Prelude
+import Kernel.Utils.Servant.HTML
 import Servant
 import Servant.OpenApi
 

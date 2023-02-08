@@ -5,9 +5,9 @@ module Beckn.Types.Core.Taxi.Init.Descriptor
 where
 
 import Beckn.Types.Core.Taxi.Common.ItemCode as Reexport
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, id, state)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype Descriptor = Descriptor
   { code :: ItemCode

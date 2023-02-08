@@ -6,9 +6,9 @@ module Tools.Metrics.TransporterBPPMetrics.Types
   )
 where
 
-import Beckn.Tools.Metrics.CoreMetrics as CoreMetrics
-import Beckn.Utils.Common
 import EulerHS.Prelude
+import Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
+import Kernel.Utils.Common
 import Prometheus as P
 
 type HasBPPMetrics m r = (HasFlowEnv m r '["bppMetrics" ::: BPPMetricsContainer])

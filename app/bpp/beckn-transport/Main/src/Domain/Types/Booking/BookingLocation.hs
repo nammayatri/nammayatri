@@ -1,11 +1,11 @@
 module Domain.Types.Booking.BookingLocation where
 
-import Beckn.External.Maps.HasCoordinates (HasCoordinates)
-import Beckn.Types.Id
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
 import EulerHS.Prelude hiding (id, state)
+import Kernel.External.Maps.HasCoordinates (HasCoordinates)
+import Kernel.Types.Id
 
 data BookingLocation = BookingLocation
   { id :: Id BookingLocation,

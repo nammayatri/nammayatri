@@ -1,8 +1,8 @@
 module Beckn.Types.Core.Metro.Search.Scalar (Scalar (..), ScalarRange (..)) where
 
-import Beckn.Utils.JSON
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (max, min)
+import Kernel.Utils.JSON
 
 data Scalar = Scalar
   { _type :: Maybe ScalarType,

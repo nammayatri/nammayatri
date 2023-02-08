@@ -1,12 +1,6 @@
 module Service.Runner where
 
 import API (iAmAlive)
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import qualified Beckn.Utils.Logging as Log
-import Beckn.Utils.Shutdown
 import Control.Monad.Catch (Handler (..), catches)
 import qualified Data.Map as Map
 import qualified Domain.Action.Allocation as Allocation
@@ -14,6 +8,12 @@ import qualified Domain.Action.Allocation.Internal as I
 import Domain.Types.Merchant
 import Environment
 import EulerHS.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import qualified Kernel.Utils.Logging as Log
+import Kernel.Utils.Shutdown
 import Tools.Error
 import qualified Tools.Metrics as TMetrics
 

@@ -1,10 +1,10 @@
 module Domain.Types.DriverOffer where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty
 import qualified Domain.Types.Estimate as DEstimate
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 
 data BPPQuote
 

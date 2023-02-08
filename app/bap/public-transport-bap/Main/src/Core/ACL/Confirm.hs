@@ -1,9 +1,9 @@
 module Core.ACL.Confirm where
 
-import Beckn.Prelude
 import Core.Spec.Common
 import Core.Spec.Confirm
 import Domain.Action.UI.QuoteConfirm
+import Kernel.Prelude
 import Servant.Client
 
 mkConfirmMessage :: ConfirmMessageD -> Order

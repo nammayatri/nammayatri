@@ -1,12 +1,12 @@
 module Storage.Queries.Vehicle where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Vehicle
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.Vehicle
 
 create :: Vehicle -> SqlDB ()

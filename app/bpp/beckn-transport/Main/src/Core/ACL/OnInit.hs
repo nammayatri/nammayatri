@@ -1,9 +1,9 @@
 module Core.ACL.OnInit (mkOnInitMessage) where
 
-import Beckn.Prelude
-import Beckn.Types.Common (Money)
 import qualified Beckn.Types.Core.Taxi.OnInit as OnInit
 import qualified Domain.Action.Beckn.Init as DInit
+import Kernel.Prelude
+import Kernel.Types.Common (Money)
 
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
 mkOnInitMessage res =

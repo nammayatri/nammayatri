@@ -11,16 +11,6 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 where
 
 import AWS.S3 as S3
-import Beckn.External.Encryption
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto hiding (isNothing)
-import Beckn.Types.APISuccess
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Types.Predicate
-import Beckn.Utils.Common
-import Beckn.Utils.Predicates
-import Beckn.Utils.Validation
 import Control.Applicative ((<|>))
 import Data.Text as T hiding (null)
 import qualified Data.Time as DT
@@ -34,6 +24,16 @@ import qualified Domain.Types.Person as Person
 import Environment
 import qualified Idfy.Flow as Idfy
 import qualified Idfy.Types as Idfy
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto hiding (isNothing)
+import Kernel.Types.APISuccess
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Types.Predicate
+import Kernel.Utils.Common
+import Kernel.Utils.Predicates
+import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery

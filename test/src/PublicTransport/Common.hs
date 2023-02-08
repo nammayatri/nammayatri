@@ -1,11 +1,11 @@
 module PublicTransport.Common where
 
-import Beckn.Prelude
-import Beckn.Types.Time
-import Beckn.Utils.Dhall (readDhallConfig)
 import qualified "mock-public-transport-bpp" Environment as Bpp
 import qualified "public-transport-bap" Environment as Bap
 import GHC.IO (unsafePerformIO)
+import Kernel.Prelude
+import Kernel.Types.Time
+import Kernel.Utils.Dhall (readDhallConfig)
 import Servant.Client
 import Utils
 

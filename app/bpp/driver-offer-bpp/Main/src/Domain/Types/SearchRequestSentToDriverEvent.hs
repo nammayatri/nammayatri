@@ -1,10 +1,10 @@
 module Domain.Types.SearchRequestSentToDriverEvent where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Domain.Types.Person
 import Domain.Types.SearchRequest
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
 
 data SearchRequestSentToDriverEvent = SearchRequestSentToDriverEvent
   { id :: Id SearchRequestSentToDriverEvent,

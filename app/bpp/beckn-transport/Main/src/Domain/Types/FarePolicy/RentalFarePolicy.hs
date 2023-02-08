@@ -1,11 +1,11 @@
 module Domain.Types.FarePolicy.RentalFarePolicy where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id (Id)
 import Domain.Types.Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Vehicle
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id (Id)
 
 data RentalFarePolicyD (s :: UsageSafety) = RentalFarePolicy
   { id :: Id RentalFarePolicy,

@@ -2,13 +2,13 @@
 
 module SharedLogic.GoogleMaps where
 
-import Beckn.External.Maps.Interface.Types
-import Beckn.Prelude hiding (const, error, getField, setField)
-import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Beckn.Types.App (MonadFlow)
 import Control.Applicative ((<|>))
 import Data.HashMap.Strict as HashMap hiding (map)
 import Data.Text as T hiding (dropWhile, foldl, head, init, length, map, zip)
+import Kernel.External.Maps.Interface.Types
+import Kernel.Prelude hiding (const, error, getField, setField)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import Kernel.Types.App (MonadFlow)
 
 data Address = Address
   { street :: Maybe Text,

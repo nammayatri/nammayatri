@@ -4,10 +4,10 @@ module Beckn.Types.Core.Taxi.Confirm.Location
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.Address as Reexport
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype Location = Location
   { address :: Address

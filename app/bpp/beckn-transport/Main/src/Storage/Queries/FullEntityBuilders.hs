@@ -3,13 +3,13 @@
 
 module Storage.Queries.FullEntityBuilders where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.Booking.Type as Booking
 import qualified Domain.Types.FarePolicy.FareProduct as Domain
 import Domain.Types.FarePolicy.OneWayFarePolicy
 import Domain.Types.Quote as Quote
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import qualified Storage.Queries.FarePolicy.Discount as QDisc
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate as QExtraKmRate
 import qualified Storage.Queries.Quote.OneWayQuote as QOneWayQuote

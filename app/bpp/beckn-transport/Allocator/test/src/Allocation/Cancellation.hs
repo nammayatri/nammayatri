@@ -1,12 +1,12 @@
 module Allocation.Cancellation where
 
 import Allocation.Internal
-import Beckn.Types.Id
 import qualified Data.Map as Map
 import Domain.Action.Allocation
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.Person (Driver)
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
 import SharedLogic.DriverPool.Types
 import Test.Tasty
 import Test.Tasty.HUnit

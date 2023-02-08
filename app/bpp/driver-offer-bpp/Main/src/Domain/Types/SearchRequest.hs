@@ -2,10 +2,6 @@
 
 module Domain.Types.SearchRequest where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -13,6 +9,10 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 import Servant hiding (throwError)
 
 data SearchRequest = SearchRequest

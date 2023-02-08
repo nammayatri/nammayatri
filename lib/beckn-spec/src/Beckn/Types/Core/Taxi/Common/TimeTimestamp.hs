@@ -1,6 +1,6 @@
 module Beckn.Types.Core.Taxi.Common.TimeTimestamp where
 
-import Beckn.Prelude
+import Kernel.Prelude
 
 newtype TimeTimestamp = TimeTimestamp
   { timestamp :: UTCTime

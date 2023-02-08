@@ -7,11 +7,11 @@
 
 module Storage.Tabular.EstimateBreakup where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
 import qualified Domain.Types.Estimate as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
 import qualified Storage.Tabular.Estimate as SEstimate
 
 mkPersist

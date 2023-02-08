@@ -7,10 +7,10 @@
 
 module Storage.Tabular.Role where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.Role as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 
 derivePersistField "Domain.DashboardAccessType"
 

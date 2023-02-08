@@ -4,13 +4,6 @@ module DriverOfferBPP.Processor
   )
 where
 
-import qualified Beckn.Storage.Esqueleto as DB
-import qualified Beckn.Storage.Hedis as Redis
-import qualified Beckn.Types.Common as C
-import Beckn.Types.Flow (FlowR)
-import qualified Beckn.Types.SlidingWindowCounters as SWT
-import Beckn.Utils.Logging (logInfo)
-import qualified Beckn.Utils.SlidingWindowCounters as SW
 import qualified Data.Map as M
 import Data.Time (UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
 import qualified DriverOfferBPP.Storage.Queries as Q
@@ -18,6 +11,13 @@ import qualified DriverOfferBPP.Types as T
 import Environment (AppEnv)
 import EulerHS.Prelude
 import qualified Kafka.Consumer as Consumer
+import qualified Kernel.Storage.Esqueleto as DB
+import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Common as C
+import Kernel.Types.Flow (FlowR)
+import qualified Kernel.Types.SlidingWindowCounters as SWT
+import Kernel.Utils.Logging (logInfo)
+import qualified Kernel.Utils.SlidingWindowCounters as SW
 
 type Flow = FlowR AppEnv
 

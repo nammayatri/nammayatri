@@ -4,18 +4,18 @@
 
 module Tools.Servant.HeaderAuth where
 
-import Beckn.Prelude
-import Beckn.Tools.Metrics.CoreMetrics (HasCoreMetrics)
-import Beckn.Types.App
-import Beckn.Types.Error
-import Beckn.Types.Flow
-import Beckn.Utils.Common
-import Beckn.Utils.IOLogging (HasLog)
-import Beckn.Utils.Servant.HeaderAuth (VerificationMethod (..), addResponse401, addSecurityRequirement)
-import Beckn.Utils.Servant.Server
 import Data.Typeable (typeRep)
 import GHC.Base (Symbol)
 import GHC.TypeLits (KnownSymbol, symbolVal)
+import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (HasCoreMetrics)
+import Kernel.Types.App
+import Kernel.Types.Error
+import Kernel.Types.Flow
+import Kernel.Utils.Common
+import Kernel.Utils.IOLogging (HasLog)
+import Kernel.Utils.Servant.HeaderAuth (VerificationMethod (..), addResponse401, addSecurityRequirement)
+import Kernel.Utils.Servant.Server
 import Network.Wai (Request (..))
 import Servant hiding (ResponseHeader (..))
 import Servant.Client
@@ -52,8 +52,8 @@ data VerificationActionWithPayload verify m = VerificationMethodWithPayload veri
     runVerifyMethodWithPayload :: VerificationPayloadType verify -> Text -> m (VerificationResult verify)
   }
 
--- -- | This server part implementation accepts token in @token@ header,
--- -- verifies it and puts @'VerificationResult'@ to your endpoint.
+-- -- | This server part implementation accepts token in @token@header,
+-- -- verifies it and puts @'VerificationResult'@to your endpoint.
 instance
   ( HasServer api ctx,
     HasEnvEntry r ctx,

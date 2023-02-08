@@ -5,13 +5,6 @@ module Domain.Action.Dashboard.Ride
   )
 where
 
-import Beckn.External.Encryption (decrypt, getDbHash)
-import Beckn.External.Maps.HasCoordinates
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Types.Booking as DBooking
@@ -22,6 +15,13 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import Kernel.External.Encryption (decrypt, getDbHash)
+import Kernel.External.Maps.HasCoordinates
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.Transporter (findMerchantByShortId)
 import qualified Storage.Queries.Booking as QBooking

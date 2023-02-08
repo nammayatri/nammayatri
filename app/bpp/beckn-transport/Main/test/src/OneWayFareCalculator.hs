@@ -1,8 +1,5 @@
 module OneWayFareCalculator where
 
-import Beckn.Prelude (roundToIntegral)
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Data.Time hiding (parseTime)
 import Domain.Types.FarePolicy.Discount
 import Domain.Types.FarePolicy.FareProduct
@@ -11,6 +8,9 @@ import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude
+import Kernel.Prelude (roundToIntegral)
+import Kernel.Types.Common
+import Kernel.Types.Id
 import SharedLogic.FareCalculator.OneWayFareCalculator
 import Test.Hspec
 import Test.Tasty

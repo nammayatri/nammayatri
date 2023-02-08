@@ -3,29 +3,29 @@
 module Environment where
 
 import AWS.S3
-import Beckn.External.Encryption (EncTools)
-import Beckn.External.Slack.Types (SlackConfig)
-import Beckn.Prelude (NominalDiffTime)
-import Beckn.Sms.Config
-import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis as Redis
-import Beckn.Streaming.Kafka.Producer.Types
-import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
-import Beckn.Types.App
-import Beckn.Types.Cache
-import Beckn.Types.Common
-import Beckn.Types.Credentials (PrivateKey)
-import Beckn.Types.Flow (FlowR)
-import Beckn.Types.Registry
-import Beckn.Types.SlidingWindowLimiter
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Servant.Client
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Idfy.Types.IdfyConfig as Idfy
+import Kernel.External.Encryption (EncTools)
+import Kernel.External.Slack.Types (SlackConfig)
+import Kernel.Prelude (NominalDiffTime)
+import Kernel.Sms.Config
+import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Types.App
+import Kernel.Types.Cache
+import Kernel.Types.Common
+import Kernel.Types.Credentials (PrivateKey)
+import Kernel.Types.Flow (FlowR)
+import Kernel.Types.Registry
+import Kernel.Types.SlidingWindowLimiter
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import qualified Kernel.Utils.Registry as Registry
+import Kernel.Utils.Servant.Client
+import Kernel.Utils.Servant.SignatureAuth
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
 import SharedLogic.DriverPool (DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig, RideRequestPopupConfig)
 import SharedLogic.GoogleTranslate

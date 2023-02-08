@@ -2,11 +2,11 @@
 
 module Tools.Error where
 
-import Beckn.Prelude
-import Beckn.Types.Error.BaseError.HTTPError.FromResponse
-import Beckn.Types.Error.BaseError.HTTPError.HttpCode
-import Beckn.Utils.Common hiding (Error)
 import Data.Aeson (decode)
+import Kernel.Prelude
+import Kernel.Types.Error.BaseError.HTTPError.FromResponse
+import Kernel.Types.Error.BaseError.HTTPError.HttpCode
+import Kernel.Utils.Common hiding (Error)
 import Network.HTTP.Types.Status
 import Servant.Client
 

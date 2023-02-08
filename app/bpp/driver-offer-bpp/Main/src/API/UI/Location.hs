@@ -7,15 +7,15 @@ module API.UI.Location
   )
 where
 
-import Beckn.Prelude
-import Beckn.Types.APISuccess (APISuccess (..))
-import Beckn.Types.Id
-import Beckn.Utils.Common hiding (id)
 import qualified Domain.Action.UI.Location as DLocation
 import qualified Domain.Action.UI.Location.UpdateLocation as DLocation
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Id
+import Kernel.Utils.Common hiding (id)
 import Servant
 import Tools.Auth
 

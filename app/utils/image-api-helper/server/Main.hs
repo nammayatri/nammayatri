@@ -1,7 +1,7 @@
 module Main where
 
 import "image-api-helper" App
-import Beckn.Prelude
+import Kernel.Prelude
 
 main :: IO ()
 main = runMock identity

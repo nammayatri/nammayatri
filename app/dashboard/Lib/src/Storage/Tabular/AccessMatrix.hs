@@ -7,10 +7,10 @@
 
 module Storage.Tabular.AccessMatrix where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.AccessMatrix as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Role (RoleTId)
 
 derivePersistField "Domain.UserAccessType"

@@ -1,11 +1,11 @@
 module Domain.Action.Beckn.OnConfirm where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto (runTransaction)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.PaymentTransaction as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto (runTransaction)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PaymentTransaction as PaymentTransactionDB
 import Tools.Error

@@ -1,11 +1,11 @@
 module Storage.Queries.Driver.DriverFlowStatus where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Person
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Storage.Tabular.Driver.DriverFlowStatus
 
 create :: DDFS.DriverFlowStatus -> SqlDB ()

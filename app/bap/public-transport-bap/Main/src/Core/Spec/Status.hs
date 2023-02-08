@@ -1,9 +1,9 @@
 module Core.Spec.Status where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype StatusMessage = StatusMessage
   { order :: Order

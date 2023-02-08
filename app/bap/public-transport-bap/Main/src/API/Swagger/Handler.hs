@@ -2,10 +2,10 @@ module API.Swagger.Handler where
 
 import qualified API.Swagger.Types as Swagger
 import API.Types (MainAPI)
-import Beckn.Prelude
 import qualified Data.ByteString as BS
 import Data.OpenApi
 import Environment
+import Kernel.Prelude
 import Servant
 import Servant.OpenApi
 

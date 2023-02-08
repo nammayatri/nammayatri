@@ -2,13 +2,6 @@
 
 module Tools.Auth.Api (module Tools.Auth.Api, module Reexport) where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.Monitoring.Prometheus.Servant
-import Beckn.Utils.Servant.HeaderAuth
 import Data.Singletons.TH
 import Domain.Types.AccessMatrix as Reexport (ApiAccessType (..), ApiEntity (..))
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -16,6 +9,13 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Domain.Types.ServerName as Reexport (ServerName (..))
 import qualified Domain.Types.ServerName as DSN
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.Monitoring.Prometheus.Servant
+import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (throwError)
 import qualified Storage.Queries.AccessMatrix as QAccessMatrix
 import qualified Storage.Queries.Merchant as QM

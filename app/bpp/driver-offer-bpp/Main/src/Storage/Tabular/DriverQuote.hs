@@ -7,13 +7,13 @@
 
 module Storage.Tabular.DriverQuote where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Centesimal, Meters (..))
-import qualified Beckn.Types.Common as Common
-import Beckn.Types.Id
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (Centesimal, Meters (..))
+import qualified Kernel.Types.Common as Common
+import Kernel.Types.Id
 import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Person (PersonTId)
 import qualified Storage.Tabular.SearchRequest as SReq

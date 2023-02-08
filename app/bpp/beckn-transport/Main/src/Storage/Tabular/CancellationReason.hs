@@ -7,9 +7,9 @@
 
 module Storage.Tabular.CancellationReason where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
 import qualified Domain.Types.CancellationReason as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
 
 mkPersist
   defaultSqlSettings

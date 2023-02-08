@@ -5,8 +5,8 @@ module Tools.Metrics.BAPMetrics.Types
   )
 where
 
-import Beckn.Prelude
-import Beckn.Utils.Common
+import Kernel.Prelude
+import Kernel.Utils.Common
 import Prometheus as P
 
 type HasBAPMetrics m r = (HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer])

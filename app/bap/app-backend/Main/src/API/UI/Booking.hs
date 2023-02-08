@@ -5,14 +5,14 @@ module API.UI.Booking
   )
 where
 
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Booking as DBooking
 import Domain.Types.Booking (BookingAPIEntity)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

@@ -1,10 +1,6 @@
 module SharedLogic.CallBPP where
 
-import qualified Beckn.External.Maps.Types as MapSearch
-import Beckn.Prelude
-import Beckn.Storage.Hedis (HedisFlow)
 import qualified Beckn.Types.Core.Metro.API.Search as MigAPI
-import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Core.Taxi.API.Cancel as API
 import Beckn.Types.Core.Taxi.API.Confirm as API
 import qualified Beckn.Types.Core.Taxi.API.Init as API
@@ -12,16 +8,20 @@ import Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Track as API
-import Beckn.Types.Error
-import Beckn.Utils.Common
-import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Track as TrackACL
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
+import qualified Kernel.External.Maps.Types as MapSearch
+import Kernel.Prelude
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.Error
+import Kernel.Utils.Common
+import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
+import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Tools.Metrics (CoreMetrics)
 

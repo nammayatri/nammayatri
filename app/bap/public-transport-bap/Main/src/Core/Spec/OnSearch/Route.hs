@@ -1,8 +1,8 @@
 module Core.Spec.OnSearch.Route where
 
-import Beckn.Prelude
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi hiding (items)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Route = Route
   { id :: Text,

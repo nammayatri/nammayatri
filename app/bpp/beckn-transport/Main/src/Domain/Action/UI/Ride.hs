@@ -6,22 +6,22 @@ module Domain.Action.UI.Ride
   )
 where
 
-import Beckn.External.Maps
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
-import Beckn.Tools.Metrics.CoreMetrics
-import Beckn.Types.APISuccess
-import Beckn.Types.Id
-import Beckn.Utils.CalculateDistance (distanceBetweenInMeters)
-import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import Domain.Types.Vehicle as VD
+import Kernel.External.Maps
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.APISuccess
+import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
+import Kernel.Utils.Common
 import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Booking as QBooking

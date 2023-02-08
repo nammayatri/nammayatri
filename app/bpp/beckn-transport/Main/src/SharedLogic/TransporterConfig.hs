@@ -1,12 +1,12 @@
 module SharedLogic.TransporterConfig where
 
-import Beckn.External.FCM.Types
-import Beckn.Prelude
-import qualified Beckn.Storage.Hedis as Hedis
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Merchant as DM
+import Kernel.External.FCM.Types
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import Storage.CachedQueries.TransporterConfig
 

@@ -1,11 +1,11 @@
 module Common (sendDLVerification, sendRCVerification, buildMeaninglessIdfyResponse) where
 
 import App.Types
-import Beckn.Utils.Common hiding (Error)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Idfy.Flow
 import Idfy.Types.Response
+import Kernel.Utils.Common hiding (Error)
 import Types.Common
 
 sendVerification :: (ToJSON a) => Text -> a -> Flow AckResponse

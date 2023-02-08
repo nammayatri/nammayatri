@@ -1,7 +1,7 @@
 module Domain.Types.Webengage where
 
-import Beckn.Prelude
-import Beckn.Types.Id
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data Webengage = Webengage
   { id :: Id Webengage,

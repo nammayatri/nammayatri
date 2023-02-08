@@ -6,19 +6,19 @@ module Domain.Action.Beckn.Search
   )
 where
 
-import Beckn.External.Maps.HasCoordinates
-import Beckn.Prelude (ToSchema)
-import Beckn.Serviceability
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.Traversable
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Environment
 import EulerHS.Prelude hiding (id, state)
+import Kernel.External.Maps.HasCoordinates
+import Kernel.Prelude (ToSchema)
+import Kernel.Serviceability
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.SearchRequest as QSearchRequest

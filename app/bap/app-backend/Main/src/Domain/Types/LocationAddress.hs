@@ -1,7 +1,7 @@
 module Domain.Types.LocationAddress where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty (PrettyShow)
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty (PrettyShow)
 
 data LocationAddress = LocationAddress
   { street :: Maybe Text,

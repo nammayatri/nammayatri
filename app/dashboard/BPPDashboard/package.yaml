@@ -53,7 +53,7 @@ default-extensions:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - beckn-core
+  - mobility-core
   - beckn-spec
   - bytestring
   - record-dot-preprocessor
@@ -106,5 +106,5 @@ executables:
       - -Wincomplete-uni-patterns
     dependencies:
       - bpp-dashboard
-      - beckn-core
+      - mobility-core
       - beckn-spec

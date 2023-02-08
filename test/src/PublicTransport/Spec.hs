@@ -1,6 +1,6 @@
 module PublicTransport.Spec where
 
-import Beckn.Prelude
+import Kernel.Prelude
 import qualified PublicTransport.HealthCheck as HC
 import qualified PublicTransport.Search as Search
 import Test.Tasty

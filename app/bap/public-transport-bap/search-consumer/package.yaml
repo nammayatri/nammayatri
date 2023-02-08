@@ -54,7 +54,7 @@ dependencies:
   - aeson
   - base >= 4.7 && < 5
   - public-transport-bap
-  - beckn-core
+  - mobility-core
   - bytestring
   - record-dot-preprocessor
   - record-hasfield
@@ -95,4 +95,4 @@ executables:
     dependencies:
       - public-transport-search-consumer
       - public-transport-bap
-      - beckn-core
+      - mobility-core

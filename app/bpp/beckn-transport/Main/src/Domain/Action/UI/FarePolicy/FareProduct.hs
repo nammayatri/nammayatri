@@ -8,13 +8,13 @@ module Domain.Action.UI.FarePolicy.FareProduct
   )
 where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
-import Beckn.Types.APISuccess
-import Beckn.Utils.Common
 import Domain.Types.FarePolicy.FareProduct
 import qualified Domain.Types.Person as SP
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis
+import Kernel.Types.APISuccess
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.FareProduct as SFareProduct
 

@@ -6,11 +6,11 @@ module Dashboard.BPP.Merchant
   )
 where
 
-import Beckn.Prelude
-import Beckn.Types.Predicate
-import qualified Beckn.Utils.Predicates as P
-import Beckn.Utils.Validation
 import Dashboard.Common.Merchant as Reexport
+import Kernel.Prelude
+import Kernel.Types.Predicate
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Validation
 import Servant
 
 ---------------------------------------------------------

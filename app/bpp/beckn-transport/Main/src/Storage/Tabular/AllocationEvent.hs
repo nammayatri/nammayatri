@@ -7,10 +7,10 @@
 
 module Storage.Tabular.AllocationEvent where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.AllocationEvent as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.Person (PersonTId)
 

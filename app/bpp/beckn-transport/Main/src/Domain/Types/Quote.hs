@@ -1,7 +1,5 @@
 module Domain.Types.Quote where
 
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Data.Time
 import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
@@ -10,6 +8,8 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import GHC.Records.Extra
+import Kernel.Types.Common
+import Kernel.Types.Id
 
 data Quote = Quote
   { id :: Id Quote,

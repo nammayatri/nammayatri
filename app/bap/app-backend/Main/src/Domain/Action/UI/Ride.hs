@@ -4,14 +4,14 @@ module Domain.Action.UI.Ride
   )
 where
 
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRB

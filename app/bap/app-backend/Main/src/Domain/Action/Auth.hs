@@ -1,9 +1,9 @@
 module Domain.Action.Auth (auth) where
 
-import Beckn.InternalAPI.Auth.API
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Utils.Common
 import EulerHS.Prelude
+import Kernel.InternalAPI.Auth.API
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Utils.Common
 import Tools.Auth
 
 auth :: (EsqDBFlow m r, HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds) => Token -> m PersonId

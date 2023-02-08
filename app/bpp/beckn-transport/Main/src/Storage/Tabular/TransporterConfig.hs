@@ -7,14 +7,14 @@
 
 module Storage.Tabular.TransporterConfig where
 
-import qualified Beckn.External.FCM.Types as FCM
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Meters)
-import Beckn.Types.Id
-import Beckn.Types.Time
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.TransporterConfig as Domain
+import qualified Kernel.External.FCM.Types as FCM
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (Meters)
+import Kernel.Types.Id
+import Kernel.Types.Time
 import Storage.Tabular.Merchant (MerchantTId)
 
 derivePersistField "Domain.ConfigKey"

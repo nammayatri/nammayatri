@@ -17,14 +17,14 @@ module API.UI.Driver
   )
 where
 
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id, state)
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

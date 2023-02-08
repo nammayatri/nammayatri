@@ -1,11 +1,11 @@
 module Domain.Types.FarePolicy.FareProduct where
 
-import Beckn.Prelude
-import Beckn.Types.Id (Id)
-import Beckn.Utils.JSON
 import Data.OpenApi
 import Domain.Types.Common
 import qualified Domain.Types.Merchant as DM
+import Kernel.Prelude
+import Kernel.Types.Id (Id)
+import Kernel.Utils.JSON
 
 data FareProductType = ONE_WAY | RENTAL deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 

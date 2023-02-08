@@ -1,11 +1,5 @@
 module Storage.Queries.Ride where
 
-import Beckn.External.Encryption
-import Beckn.External.Maps.Types (LatLong)
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Common
 import Domain.Types.Booking.Type as Booking
 import Domain.Types.Merchant
@@ -13,6 +7,12 @@ import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
+import Kernel.External.Encryption
+import Kernel.External.Maps.Types (LatLong)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Queries.Booking
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking as Booking

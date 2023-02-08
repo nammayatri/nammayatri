@@ -1,7 +1,7 @@
 module Tools.JSON where
 
-import Beckn.Prelude
 import Data.Aeson
+import Kernel.Prelude
 
 -- FIXME: make generic instances more powerful to capture this case
 fareProductOptions :: Options

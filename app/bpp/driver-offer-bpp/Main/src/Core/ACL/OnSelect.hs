@@ -1,14 +1,14 @@
 module Core.ACL.OnSelect where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.Gps as Common
 import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Common
 import qualified Beckn.Types.Core.Taxi.OnSelect as OS
-import Beckn.Types.Id (ShortId)
 import Core.ACL.Common
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest
+import Kernel.Prelude
+import Kernel.Types.Id (ShortId)
 
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,

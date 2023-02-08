@@ -1,11 +1,11 @@
 module Storage.Queries.Rating where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Person
 import Domain.Types.Rating
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.Rating
 
 create :: Rating -> SqlDB ()

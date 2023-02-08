@@ -1,6 +1,6 @@
 module Beckn.Types.Core.Taxi.Common.FareProductType where
 
-import Beckn.Prelude hiding (show)
+import Kernel.Prelude hiding (show)
 
 -- TODO
 -- ONE_WAY_TRIP, RENTAL_TRIP, DRIVER_OFFER_ESTIMATE can be used in on_search,

@@ -2,12 +2,12 @@
 
 module Storage.Queries.DriverOnboarding.DriverLicense where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.Person (Person)
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.DriverLicense
 import Storage.Tabular.Person ()
 

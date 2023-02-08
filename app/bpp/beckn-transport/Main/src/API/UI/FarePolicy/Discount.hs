@@ -1,7 +1,5 @@
 module API.UI.FarePolicy.Discount (module Reexport, API, handler) where
 
-import Beckn.Types.Id (Id (..))
-import Beckn.Utils.Common (withFlowHandlerAPI)
 import Domain.Action.UI.FarePolicy.Discount as Reexport
   ( CreateFarePolicyDiscountReq,
     CreateFarePolicyDiscountRes,
@@ -15,6 +13,8 @@ import qualified Domain.Types.FarePolicy.Discount as DFPDiscount
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude
+import Kernel.Types.Id (Id (..))
+import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant
 import Tools.Auth
 

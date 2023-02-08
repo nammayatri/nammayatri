@@ -1,9 +1,9 @@
 module Beckn.Types.Core.Taxi.API.OnSelect where
 
-import Beckn.Prelude
-import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.ReqTypes (BecknCallbackReq)
 import Beckn.Types.Core.Taxi.OnSelect (OnSelectMessage)
+import Kernel.Prelude
+import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnSelectReq = BecknCallbackReq OnSelectMessage

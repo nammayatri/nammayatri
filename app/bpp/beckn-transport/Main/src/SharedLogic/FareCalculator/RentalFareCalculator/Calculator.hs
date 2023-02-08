@@ -8,9 +8,6 @@ module SharedLogic.FareCalculator.RentalFareCalculator.Calculator
   )
 where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Utils.Common
 import Data.Time
   ( LocalTime (localDay),
     TimeZone,
@@ -20,6 +17,9 @@ import Data.Time
   )
 import Domain.Types.FarePolicy.RentalFarePolicy (RentalFarePolicy)
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Utils.Common
 
 type TripStartTime = UTCTime
 

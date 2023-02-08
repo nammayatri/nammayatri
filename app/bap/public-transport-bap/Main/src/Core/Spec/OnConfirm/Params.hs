@@ -1,11 +1,11 @@
 module Core.Spec.OnConfirm.Params where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Schema
 import Core.Spec.Common.DecimalValue
 import Core.Spec.Common.Payment
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.Schema
 
 data Params = Params
   { transaction_id :: Text,

@@ -1,13 +1,13 @@
 module Domain.Types.Transaction where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver as Common
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver.Registration as Common
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Common
 import qualified "dashboard-bpp-helper-api" Dashboard.Common.Merchant as Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import Kernel.Prelude
+import Kernel.Types.Id
 
 -- request is raw Text here, because if some field will be changed, we can't parse it
 data Transaction = Transaction

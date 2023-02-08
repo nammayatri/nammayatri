@@ -6,9 +6,9 @@ where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Search.Fulfillment
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype Intent = Intent
   { fulfillment :: FulfillmentInfo

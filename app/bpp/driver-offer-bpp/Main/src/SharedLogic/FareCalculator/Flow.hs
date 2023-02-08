@@ -7,12 +7,12 @@ module SharedLogic.FareCalculator.Flow
   )
 where
 
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.FareParameters
 import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.FareCalculator.Calculator
   ( baseFareSum,
     calculateFareParameters,

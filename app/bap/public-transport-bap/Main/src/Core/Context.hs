@@ -1,12 +1,12 @@
 module Core.Context where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Predicate
-import Beckn.Types.TimeRFC339
-import Beckn.Utils.Validation
 import qualified Core.Spec.Common.Context as Context
 import qualified Core.Spec.Common.Domain as Domain
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Predicate
+import Kernel.Types.TimeRFC339
+import Kernel.Utils.Validation
 
 coreConfig :: CoreConfig
 coreConfig =

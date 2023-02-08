@@ -1,8 +1,8 @@
 module SharedLogic.DriverPool.Config where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Utils.Dhall (FromDhall)
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Utils.Dhall (FromDhall)
 
 data DriverPoolConfig = DriverPoolConfig
   { defaultRadiusOfSearch :: Meters,

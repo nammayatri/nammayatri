@@ -13,29 +13,29 @@ module Environment
   )
 where
 
-import Beckn.External.Encryption (EncTools)
-import Beckn.External.Exotel.Types (ExotelCfg)
-import Beckn.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
-import Beckn.External.Slack.Types (SlackConfig)
-import Beckn.Sms.Config
-import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis as Redis
-import Beckn.Storage.Hedis.AppPrefixes (appBackendPrefix)
-import Beckn.Types.App
-import Beckn.Types.Cache
-import Beckn.Types.Common
-import Beckn.Types.Credentials (PrivateKey)
-import Beckn.Types.Flow
-import Beckn.Types.Id (ShortId (..))
-import Beckn.Types.Registry
-import Beckn.Types.SlidingWindowLimiter
-import Beckn.Utils.App (getPodName)
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Servant.Client (HttpClientOptions, RetryCfg)
-import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
+import Kernel.External.Encryption (EncTools)
+import Kernel.External.Exotel.Types (ExotelCfg)
+import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
+import Kernel.External.Slack.Types (SlackConfig)
+import Kernel.Sms.Config
+import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
+import Kernel.Types.App
+import Kernel.Types.Cache
+import Kernel.Types.Common
+import Kernel.Types.Credentials (PrivateKey)
+import Kernel.Types.Flow
+import Kernel.Types.Id (ShortId (..))
+import Kernel.Types.Registry
+import Kernel.Types.SlidingWindowLimiter
+import Kernel.Utils.App (getPodName)
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import qualified Kernel.Utils.Registry as Registry
+import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
+import Kernel.Utils.Servant.SignatureAuth
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.BlackListOrg (findByShortId)
 import Storage.CachedQueries.CacheConfig
@@ -147,7 +147,7 @@ buildAppEnv AppCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
-  hedisEnv <- connectHedis hedisCfg appBackendPrefix
+  hedisEnv <- connectHedis hedisCfg riderAppPrefix
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

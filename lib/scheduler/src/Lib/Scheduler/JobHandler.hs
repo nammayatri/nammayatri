@@ -6,8 +6,8 @@ module Lib.Scheduler.JobHandler
   )
 where
 
-import Beckn.Prelude
 import Data.Singletons
+import Kernel.Prelude
 import Lib.Scheduler.Environment (SchedulerM)
 import Lib.Scheduler.Types
 import Unsafe.Coerce (unsafeCoerce)

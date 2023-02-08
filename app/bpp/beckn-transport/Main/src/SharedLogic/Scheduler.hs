@@ -4,12 +4,12 @@
 
 module SharedLogic.Scheduler where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty
 import Data.Singletons.TH
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 import Lib.Scheduler
 
 data SchedulerJobType

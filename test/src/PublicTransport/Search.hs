@@ -1,11 +1,6 @@
 module PublicTransport.Search where
 
 import API.UI.Quote (OfferRes (PublicTransport))
-import Beckn.Prelude hiding (Proxy)
-import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
-import Beckn.Types.Flow (FlowR)
-import Beckn.Types.Id
-import Beckn.Utils.Time (threadDelaySec)
 import Common
 import qualified Data.Text as T
 import Domain.Action.UI.QuoteConfirm
@@ -14,6 +9,11 @@ import Domain.Types.PaymentTransaction (PaymentStatus (FAILED, PENDING, SUCCESS)
 import qualified "app-backend" Domain.Types.SearchRequest as AppBE
 import qualified "public-transport-bap" Environment as Bap
 import HSpec
+import Kernel.Prelude hiding (Proxy)
+import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
+import Kernel.Types.Flow (FlowR)
+import Kernel.Types.Id
+import Kernel.Utils.Time (threadDelaySec)
 import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Routes
 import PublicTransport.API

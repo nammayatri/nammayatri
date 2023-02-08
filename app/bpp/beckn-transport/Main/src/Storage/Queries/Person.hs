@@ -2,16 +2,6 @@
 
 module Storage.Queries.Person where
 
-import Beckn.External.Encryption
-import Beckn.External.FCM.Types (FCMRecipientToken)
-import qualified Beckn.External.Maps.HasCoordinates as GoogleMaps
-import Beckn.External.Maps.Types (LatLong (..))
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Centesimal
-import Beckn.Types.Id
-import Beckn.Types.Version
-import Beckn.Utils.Common hiding (Value)
 import Control.Applicative ((<|>))
 import qualified Data.Maybe as Mb
 import Domain.Types.DriverInformation
@@ -21,6 +11,16 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as Vehicle
+import Kernel.External.Encryption
+import Kernel.External.FCM.Types (FCMRecipientToken)
+import qualified Kernel.External.Maps.HasCoordinates as GoogleMaps
+import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Centesimal
+import Kernel.Types.Id
+import Kernel.Types.Version
+import Kernel.Utils.Common hiding (Value)
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person as TPerson

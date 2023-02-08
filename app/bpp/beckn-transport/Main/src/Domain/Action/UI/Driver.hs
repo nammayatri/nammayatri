@@ -19,24 +19,6 @@ module Domain.Action.UI.Driver
   )
 where
 
-import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
-import qualified Beckn.External.FCM.Types as FCM
-import qualified Beckn.External.SMS.MyValueFirst.Flow as SF
-import qualified Beckn.External.SMS.MyValueFirst.Types as SMS
-import Beckn.Prelude
-import Beckn.Sms.Config
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.APISuccess (APISuccess (Success))
-import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Types.Predicate
-import Beckn.Utils.Common (fromMaybeM, logTagInfo, throwError, (:::))
-import qualified Beckn.Utils.Predicates as P
-import Beckn.Utils.Validation
 import Control.Applicative ((<|>))
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -44,6 +26,24 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as SV
 import GHC.Records.Extra
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
+import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
+import Kernel.Prelude
+import Kernel.Sms.Config
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Types.Predicate
+import Kernel.Utils.Common (fromMaybeM, logTagInfo, throwError, (:::))
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Validation
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant

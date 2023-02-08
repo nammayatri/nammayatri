@@ -1,7 +1,5 @@
 module Flow.RideAPI.CancelRide (cancelRide) where
 
-import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Id
 import qualified Domain.Action.UI.Ride.CancelRide as CancelRide
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Merchant as DM
@@ -9,6 +7,8 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Id
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit

@@ -75,15 +75,15 @@ extra-deps:
   # - ../beckn-gateway/app/gateway
   # - ../beckn-gateway/app/mock-registry
   - git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-gateway.git
-    commit: db44672e91a0529996053be178b60d39e2659f15
+    commit: 422e7276189fb3ea6b2ad9826e1b2baf73812c25
     subdirs:
       - app/gateway
       - app/mock-registry
-  # -  ../beckn-shared-kernel/lib/beckn-core
+  # -  ../beckn-shared-kernel/lib/mobility-core
   - git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-shared-kernel.git
-    commit: 0a2090b318e117ee1d787955bde6a48239a51690
+    commit: a0a03cb84f7948bb7f79efd5f198f5274c368a84
     subdirs:
-      - lib/beckn-core
+      - lib/mobility-core
   - git: ssh://git@bitbucket.org/juspay/passetto-hs
     commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
     subdirs:

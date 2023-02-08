@@ -7,19 +7,19 @@ module Domain.Action.Dashboard.Merchant
   )
 where
 
-import qualified Beckn.External.Maps as Maps
-import qualified Beckn.External.SMS as SMS
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.APISuccess (APISuccess (..))
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.Validation
 import Control.Applicative
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Merchant as Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
+import qualified Kernel.External.Maps as Maps
+import qualified Kernel.External.SMS as SMS
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.Validation
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC

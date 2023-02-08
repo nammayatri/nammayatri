@@ -5,14 +5,6 @@ module Domain.Action.UI.Quote
   )
 where
 
-import Beckn.Storage.Esqueleto (EsqDBReplicaFlow)
-import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
-import Beckn.Storage.Hedis as Hedis
-import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.JSON (objectWithSingleFieldParsing)
-import qualified Beckn.Utils.Schema as S
 import Data.Char (toLower)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Domain.Types.Estimate (EstimateAPIEntity)
@@ -23,6 +15,14 @@ import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.SearchRequest.SearchReqLocation (SearchReqLocationAPIEntity)
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import EulerHS.Prelude hiding (id)
+import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import Kernel.Storage.Hedis as Hedis
+import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.JSON (objectWithSingleFieldParsing)
+import qualified Kernel.Utils.Schema as S
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.PublicTransport as PublicTransport

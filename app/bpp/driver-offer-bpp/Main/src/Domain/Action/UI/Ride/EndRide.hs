@@ -8,13 +8,6 @@ module Domain.Action.UI.Ride.EndRide
   )
 where
 
-import Beckn.External.Maps
-import Beckn.Prelude (roundToIntegral)
-import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.CalculateDistance (distanceBetweenInMeters)
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
@@ -27,6 +20,13 @@ import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Vehicle.Variant (Variant)
 import Environment (Flow)
 import EulerHS.Prelude hiding (pi)
+import Kernel.External.Maps
+import Kernel.Prelude (roundToIntegral)
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
+import Kernel.Utils.Common
 import qualified Lib.LocationUpdates as LocUpd
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc

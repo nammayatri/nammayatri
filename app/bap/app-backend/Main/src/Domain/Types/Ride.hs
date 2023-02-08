@@ -2,15 +2,15 @@
 
 module Domain.Types.Ride where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.VehicleVariant (VehicleVariant)
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Servant.API
 
 data RideStatus

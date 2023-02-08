@@ -2,14 +2,14 @@
 
 module Tools.FlowHandling where
 
-import Beckn.Prelude
-import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
-import Beckn.Types.App
-import Beckn.Types.Common
-import Beckn.Types.Error.BaseError.HTTPError hiding (Error)
-import Beckn.Types.Flow
-import Beckn.Utils.Error.FlowHandling hiding (apiHandler, withFlowHandlerAPI)
-import Beckn.Utils.Logging
+import Kernel.Prelude
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Types.App
+import Kernel.Types.Common
+import Kernel.Types.Error.BaseError.HTTPError hiding (Error)
+import Kernel.Types.Flow
+import Kernel.Utils.Error.FlowHandling hiding (apiHandler, withFlowHandlerAPI)
+import Kernel.Utils.Logging
 import Types.Common
 
 toError :: Maybe Text -> Error

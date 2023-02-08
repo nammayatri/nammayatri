@@ -4,14 +4,14 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingReallocationEvent
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.CancellationSource as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_BOOKING_REALLOCATION))
-import Beckn.Utils.Schema
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name)
 import GHC.Exts (fromList)
+import Kernel.Prelude
+import Kernel.Utils.Schema
 
 data BookingReallocationEvent = BookingReallocationEvent
   { id :: Text,

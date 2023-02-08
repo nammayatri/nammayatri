@@ -1,6 +1,6 @@
 module MockData.Common where
 
-import Beckn.Prelude
+import Kernel.Prelude
 
 mockKey :: Text
 mockKey = "mock-google-key"

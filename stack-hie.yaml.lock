@@ -5,29 +5,29 @@
 
 packages:
 - completed:
-    commit: db44672e91a0529996053be178b60d39e2659f15
+    commit: 422e7276189fb3ea6b2ad9826e1b2baf73812c25
     git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-gateway.git
     name: beckn-gateway
     pantry-tree:
-      sha256: d84f56b29714771c4b3cfaf13a1c5ec3d81aa557f72a3e599e314e0b6e04d3f6
+      sha256: a2acc487f2056bee98a657404c4169be45aa08925ad20bb57d8a16e49053727d
       size: 1105
     subdir: app/gateway
     version: 0.1.0.0
   original:
-    commit: db44672e91a0529996053be178b60d39e2659f15
+    commit: 422e7276189fb3ea6b2ad9826e1b2baf73812c25
     git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-gateway.git
     subdir: app/gateway
 - completed:
-    commit: db44672e91a0529996053be178b60d39e2659f15
+    commit: 422e7276189fb3ea6b2ad9826e1b2baf73812c25
     git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-gateway.git
     name: mock-registry
     pantry-tree:
-      sha256: 511050142a6c0c77eb5bed6f668dc9bb1ce4f7f02108adeac2e88ff8b153a0e5
+      sha256: 7cf69c1184d5165c3ab2775c08247e816e64ddb84b9ec565910de9f0ed9455d0
       size: 662
     subdir: app/mock-registry
     version: 0.1.0.0
   original:
-    commit: db44672e91a0529996053be178b60d39e2659f15
+    commit: 422e7276189fb3ea6b2ad9826e1b2baf73812c25
     git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-gateway.git
     subdir: app/mock-registry
 - completed:

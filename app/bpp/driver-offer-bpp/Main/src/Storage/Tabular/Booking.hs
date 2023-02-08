@@ -7,12 +7,12 @@
 
 module Storage.Tabular.Booking where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.Vehicle.Variant as Veh
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
 import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
 import Storage.Tabular.DriverQuote (DriverQuoteTId)
 import qualified Storage.Tabular.FareParameters as Fare

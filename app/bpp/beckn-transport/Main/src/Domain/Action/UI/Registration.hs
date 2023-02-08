@@ -12,27 +12,27 @@ module Domain.Action.UI.Registration
   )
 where
 
-import Beckn.External.Encryption
-import Beckn.External.FCM.Types (FCMRecipientToken)
-import Beckn.Sms.Config
-import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Beckn.Types.APISuccess
-import Beckn.Types.Common as BC
-import Beckn.Types.Id
-import Beckn.Types.Predicate
-import Beckn.Types.SlidingWindowLimiter (APIRateLimitOptions)
-import Beckn.Types.Version
-import Beckn.Utils.Common
-import qualified Beckn.Utils.Predicates as P
-import Beckn.Utils.SlidingWindowLimiter
-import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption
+import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.Sms.Config
+import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import Kernel.Types.APISuccess
+import Kernel.Types.Common as BC
+import Kernel.Types.Id
+import Kernel.Types.Predicate
+import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
+import Kernel.Types.Version
+import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.SlidingWindowLimiter
+import Kernel.Utils.Validation
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.Queries.Person as QP

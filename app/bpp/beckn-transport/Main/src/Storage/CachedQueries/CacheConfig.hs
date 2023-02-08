@@ -1,9 +1,9 @@
 module Storage.CachedQueries.CacheConfig where
 
-import Beckn.Prelude
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Types.Common
-import Beckn.Utils.Dhall
+import Kernel.Prelude
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.Common
+import Kernel.Utils.Dhall
 
 newtype CacheConfig = CacheConfig
   { configsExpTime :: Seconds

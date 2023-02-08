@@ -7,14 +7,14 @@
 
 module Storage.Tabular.Person.PersonFlowStatus where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
-import Beckn.Utils.Text (encodeToText)
 import Data.Aeson
 import Data.ByteString.Lazy (fromStrict)
 import Domain.Types.Person (Person)
 import qualified Domain.Types.Person.PersonFlowStatus as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
+import Kernel.Utils.Text (encodeToText)
 import Storage.Tabular.Person (PersonTId)
 
 instance PersistField Domain.FlowStatus where

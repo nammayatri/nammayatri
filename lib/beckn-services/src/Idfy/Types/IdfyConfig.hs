@@ -1,10 +1,10 @@
 module Idfy.Types.IdfyConfig where
 
-import Beckn.Types.App
-import Beckn.Utils.Dhall (FromDhall)
 import Data.Aeson hiding (Error)
 import Data.OpenApi hiding (url)
 import EulerHS.Prelude hiding (state)
+import Kernel.Types.App
+import Kernel.Utils.Dhall (FromDhall)
 
 data IdfyConfig = IdfyConfig
   { account_id :: AccountId,

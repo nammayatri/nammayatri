@@ -1,7 +1,7 @@
 module Lib.GoogleConfig where
 
-import Beckn.Prelude
-import Beckn.Utils.Dhall (FromDhall)
+import Kernel.Prelude
+import Kernel.Utils.Dhall (FromDhall)
 
 data GoogleCfgUnencrypted = GoogleCfgUnencrypted
   { googleMapsUrl :: BaseUrl,

@@ -5,10 +5,10 @@ module API.UI.Webengage.Webengage
   )
 where
 
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Webengage.Webengage as WE
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Utils.Common
 import Servant
 
 type API =

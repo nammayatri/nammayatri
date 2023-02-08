@@ -1,10 +1,10 @@
 module Mobility.Fixtures.Routes where
 
 import "app-backend" API.UI.Search
-import Beckn.External.Maps.Types
-import Beckn.Prelude
 import Data.List.NonEmpty as NE
 import "app-backend" Domain.Types.LocationAddress
+import Kernel.External.Maps.Types
+import Kernel.Prelude
 
 defaultSearchReq :: SearchReq
 defaultSearchReq =

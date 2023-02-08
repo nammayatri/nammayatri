@@ -3,12 +3,6 @@
 
 module Domain.Types.Person where
 
-import Beckn.External.Encryption
-import qualified Beckn.External.FCM.Types as FCM
-import Beckn.External.Types (Language)
-import Beckn.Types.Id
-import Beckn.Types.Version
-import Beckn.Utils.Common (Centesimal, EsqDBFlow, maskText)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -17,6 +11,12 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption
+import qualified Kernel.External.FCM.Types as FCM
+import Kernel.External.Types (Language)
+import Kernel.Types.Id
+import Kernel.Types.Version
+import Kernel.Utils.Common (Centesimal, EsqDBFlow, maskText)
 import Servant.API
 
 data Driver -- = Person

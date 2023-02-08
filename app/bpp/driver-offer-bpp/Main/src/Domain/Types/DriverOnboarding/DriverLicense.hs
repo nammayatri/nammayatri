@@ -2,12 +2,12 @@
 
 module Domain.Types.DriverOnboarding.DriverLicense where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.IdfyVerification
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.Person (Person)
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data DriverLicenseE e = DriverLicense
   { id :: Id DriverLicense,

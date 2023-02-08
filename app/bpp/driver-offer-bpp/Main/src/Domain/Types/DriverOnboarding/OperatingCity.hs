@@ -1,8 +1,8 @@
 module Domain.Types.DriverOnboarding.OperatingCity where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import Domain.Types.Merchant
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data OperatingCity = OperatingCity
   { id :: Id OperatingCity,

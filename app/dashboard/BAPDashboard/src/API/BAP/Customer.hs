@@ -6,12 +6,12 @@ where
 
 import qualified "app-backend" API.Dashboard.Customer as BAP
 import qualified BAPClient.AppBackend as Client
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "app-backend" Domain.Types.Person as BAP
 import "lib-dashboard" Environment
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant hiding (throwError)
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant

@@ -2,12 +2,12 @@
 
 module Core.Beckn where
 
-import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Data.List (lookup)
 import qualified Data.Text.Encoding as T
 import Environment
 import EulerHS.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Queries.BecknRequest as QBR
 import qualified Network.Wai.Internal as Wai
 import Servant
 

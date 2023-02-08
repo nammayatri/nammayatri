@@ -7,12 +7,12 @@
 
 module Storage.Tabular.Ride where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Centesimal, HighPrecMeters, HighPrecMoney)
-import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (Centesimal, HighPrecMeters, HighPrecMoney)
+import Kernel.Types.Id
 import qualified Storage.Tabular.Booking as SRB
 
 derivePersistField "Domain.RideStatus"

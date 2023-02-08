@@ -6,16 +6,16 @@ module Domain.Action.UI.Search.Rental
   )
 where
 
-import Beckn.Prelude
-import Beckn.Serviceability
-import qualified Beckn.Storage.Esqueleto as DB
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
+import Kernel.Prelude
+import Kernel.Serviceability
+import qualified Kernel.Storage.Esqueleto as DB
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry

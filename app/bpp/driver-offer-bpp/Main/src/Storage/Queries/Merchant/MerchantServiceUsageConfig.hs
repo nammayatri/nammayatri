@@ -5,13 +5,13 @@ module Storage.Queries.Merchant.MerchantServiceUsageConfig
     #-}
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto hiding (findById)
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Domain.Types.Merchant as DOrg
 import Domain.Types.Merchant.MerchantServiceUsageConfig
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto hiding (findById)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Storage.Tabular.Merchant.MerchantServiceUsageConfig
 
 findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)

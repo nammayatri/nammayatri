@@ -3,13 +3,13 @@
 
 module Storage.Queries.DriverLocation where
 
-import Beckn.External.Maps.Types (LatLong (..))
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common (MonadTime (getCurrentTime))
-import Beckn.Types.Id
 import Domain.Types.DriverLocation
 import Domain.Types.Person
+import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Id
 import Storage.Tabular.DriverLocation
 
 create :: Id Person -> LatLong -> UTCTime -> SqlDB ()

@@ -9,11 +9,6 @@ module API.UI.Ride
   )
 where
 
-import Beckn.External.Maps.Types
-import Beckn.Prelude
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
@@ -22,6 +17,11 @@ import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import SharedLogic.Person (findPerson)
 import Tools.Auth

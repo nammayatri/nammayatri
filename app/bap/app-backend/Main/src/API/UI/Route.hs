@@ -6,13 +6,13 @@ module API.UI.Route
   )
 where
 
-import qualified Beckn.External.Maps as Maps
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Route as DRoute
 import qualified Domain.Types.Person as Person
 import Environment
+import qualified Kernel.External.Maps as Maps
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

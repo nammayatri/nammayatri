@@ -4,17 +4,17 @@
 
 module Domain.Types.Person where
 
-import Beckn.External.Encryption
-import qualified Beckn.External.FCM.Types as FCM
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Types.Version
-import Beckn.Utils.Common (maskText)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DMerchant
+import Kernel.External.Encryption
+import qualified Kernel.External.FCM.Types as FCM
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Types.Version
+import Kernel.Utils.Common (maskText)
 import Servant.API
 
 data Role

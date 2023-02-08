@@ -1,9 +1,9 @@
 module Mobility.ARDU.Queries where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import qualified "driver-offer-bpp" Domain.Types.Booking as DBooking
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import qualified Servant.Client as Servant
 import "driver-offer-bpp" Storage.Tabular.Booking
 

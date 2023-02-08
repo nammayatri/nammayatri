@@ -63,7 +63,7 @@ dependencies:
   - record-hasfield
   - record-dot-preprocessor
   - aeson
-  - beckn-core
+  - mobility-core
   - bytestring
   - clock
   - containers

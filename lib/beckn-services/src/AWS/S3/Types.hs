@@ -1,10 +1,10 @@
 module AWS.S3.Types where
 
-import Beckn.Prelude hiding (show)
-import Beckn.Utils.Dhall (FromDhall)
 import Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text.Encoding as T
+import Kernel.Prelude hiding (show)
+import Kernel.Utils.Dhall (FromDhall)
 import qualified Network.HTTP.Media as M
 import Network.HTTP.Types as HttpTypes
 import Servant

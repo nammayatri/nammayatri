@@ -7,12 +7,12 @@
 
 module Storage.Tabular.FarePolicy.RentalFarePolicy where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (HighPrecMoney, Hours (..), Kilometers (..))
-import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import qualified Domain.Types.Vehicle as Vehicle
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (HighPrecMoney, Hours (..), Kilometers (..))
+import Kernel.Types.Id
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 

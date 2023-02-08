@@ -1,9 +1,9 @@
 module Domain.Types.Issue where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data Issue = Issue
   { id :: Id Issue,

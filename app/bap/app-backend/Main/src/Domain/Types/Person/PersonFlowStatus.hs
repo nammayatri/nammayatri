@@ -4,8 +4,6 @@ module Domain.Types.Person.PersonFlowStatus
   )
 where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import Data.Aeson (Options (..), SumEncoding (..), defaultOptions)
 import Data.OpenApi
 import qualified Domain.Types.Booking as DB
@@ -13,6 +11,8 @@ import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
+import Kernel.Prelude
+import Kernel.Types.Id
 
 -- Warning: This whole thing is for frontend use only, don't make any backend logic based on this.
 data FlowStatus

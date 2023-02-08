@@ -3,18 +3,18 @@
 
 module Core.Beckn where
 
-import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Queries.BecknRequest as QBR
-import Beckn.Types.Id
-import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
-import Beckn.Utils.Common
-import Beckn.Utils.Servant.SignatureAuth
 import Control.Lens.Operators ((?~))
 import Data.List (lookup)
 import qualified Data.Text.Encoding as T
 import Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Queries.BecknRequest as QBR
+import Kernel.Types.Id
+import Kernel.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
+import Kernel.Utils.Common
+import Kernel.Utils.Servant.SignatureAuth
 import qualified Network.Wai.Internal as Wai
 import Servant
 import SharedLogic.CallBAP (buildBppUrl)

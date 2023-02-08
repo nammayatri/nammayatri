@@ -7,12 +7,12 @@
 
 module Storage.Tabular.Booking.OneWayBooking where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (HighPrecMeters)
-import Beckn.Types.Id
-import Beckn.Utils.Common (Seconds)
 import qualified Domain.Types.Booking.Type as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (HighPrecMeters)
+import Kernel.Types.Id
+import Kernel.Utils.Common (Seconds)
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.Booking.Table
 

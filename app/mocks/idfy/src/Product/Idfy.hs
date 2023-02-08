@@ -1,15 +1,15 @@
 module Product.Idfy (verifyDL, verifyRC, validateImage, extractDLImage, extractRCImage) where
 
 import App.Types
-import Beckn.Types.Error
-import Beckn.Types.Forkable
-import Beckn.Types.GuidLike
-import Beckn.Utils.Error.Throwing
-import Beckn.Utils.Time
 import Common
 import EulerHS.Prelude
 import Idfy.Types.Request
 import Idfy.Types.Response
+import Kernel.Types.Error
+import Kernel.Types.Forkable
+import Kernel.Types.GuidLike
+import Kernel.Utils.Error.Throwing
+import Kernel.Utils.Time
 import Tools.FlowHandling
 import Types.Common
 import Types.Webhook

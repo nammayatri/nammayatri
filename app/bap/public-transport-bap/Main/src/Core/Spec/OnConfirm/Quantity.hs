@@ -1,9 +1,9 @@
 module Core.Spec.OnConfirm.Quantity where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty
-import Beckn.Utils.Schema
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty
+import Kernel.Utils.Schema
 
 newtype Quantity = Quantity
   { count :: Int

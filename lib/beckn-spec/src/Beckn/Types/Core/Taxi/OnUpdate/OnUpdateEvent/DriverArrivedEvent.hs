@@ -4,15 +4,15 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent
   )
 where
 
-import Beckn.Prelude (UTCTime)
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (DRIVER_ARRIVED))
-import Beckn.Utils.Schema
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
 import EulerHS.Prelude hiding (id, (.=))
 import GHC.Exts (fromList)
+import Kernel.Prelude (UTCTime)
+import Kernel.Utils.Schema
 
 data DriverArrivedEvent = DriverArrivedEvent
   { id :: Text,

@@ -1,8 +1,8 @@
 module Domain.Types.Merchant where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import qualified Domain.Types.ServerName as DSN
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data Merchant = Merchant
   { id :: Id Merchant,

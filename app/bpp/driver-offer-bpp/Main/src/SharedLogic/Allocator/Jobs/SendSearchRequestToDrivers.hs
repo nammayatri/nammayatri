@@ -1,12 +1,12 @@
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 
-import Beckn.Prelude hiding (handle)
-import Beckn.Storage.Esqueleto (EsqDBReplicaFlow)
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Types.Error
-import Beckn.Utils.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.SearchRequest (SearchRequest)
+import Kernel.Prelude hiding (handle)
+import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.Error
+import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)

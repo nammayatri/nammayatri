@@ -3,12 +3,12 @@
 
 module Main where
 
-import Beckn.External.Encryption (DbHash (..), DbHashable (..))
 import Crypto.Saltine.Core.Box (newKeypair)
 import Crypto.Saltine.Core.SecretBox (newKey)
 import qualified Data.Aeson as A
 import Data.Binary (Binary, encode)
 import qualified Data.Vector as V (fromList)
+import Kernel.External.Encryption (DbHash (..), DbHashable (..))
 import Passetto.Crypto (encryptKey, encryptMasterKey, passwordFromText, sodiumInit)
 import Passetto.JsonEncryption (encryptPayload)
 import Passetto.KeysContext (mkKeysContext)

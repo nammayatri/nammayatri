@@ -1,9 +1,9 @@
 module Beckn.Types.Core.Taxi.OnSearch.Offer where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.OnSearch.Descriptor
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Offer = Offer
   { id :: Text,

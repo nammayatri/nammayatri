@@ -1,6 +1,5 @@
 module Beckn.Types.Core.Metro.Search.Intent where
 
-import Beckn.Types.Common (IdObject)
 import Beckn.Types.Core.Metro.Search.Category (Category)
 import Beckn.Types.Core.Metro.Search.Item (Item)
 import Beckn.Types.Core.Metro.Search.Location (Location)
@@ -9,9 +8,10 @@ import Beckn.Types.Core.Metro.Search.Payment (Payment)
 import Beckn.Types.Core.Metro.Search.Tags (Tags)
 import Beckn.Types.Core.Metro.Search.Time (Time)
 import Beckn.Types.Core.Metro.Search.Vehicle (Vehicle)
-import Beckn.Utils.Example
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Common (IdObject)
+import Kernel.Utils.Example
 
 data Intent = Intent
   { provider :: Maybe ProviderInfo,

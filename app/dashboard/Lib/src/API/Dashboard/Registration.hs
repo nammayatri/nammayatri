@@ -1,9 +1,9 @@
 module API.Dashboard.Registration where
 
-import Beckn.Prelude
-import Beckn.Utils.Common
 import qualified Domain.Action.Dashboard.Registration as DReg
 import Environment
+import Kernel.Prelude
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

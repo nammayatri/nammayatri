@@ -6,13 +6,13 @@ where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
-import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Schema
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
 import EulerHS.Prelude hiding (id, (.=))
 import GHC.Exts (fromList)
+import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.Schema
 
 data RideCompletedEvent = RideCompletedEvent
   { id :: Text,

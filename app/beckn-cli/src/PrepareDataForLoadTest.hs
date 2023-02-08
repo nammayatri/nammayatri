@@ -8,13 +8,8 @@ module PrepareDataForLoadTest
   )
 where
 
-import Beckn.Types.Base64
-import qualified Beckn.Types.Core.Context as API
-import qualified Beckn.Types.Core.ReqTypes as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import qualified Beckn.Types.Core.Taxi.Search as API
-import Beckn.Utils.Example (Example (example))
-import qualified Beckn.Utils.SignatureAuth as S
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Lazy as LBS
@@ -22,6 +17,11 @@ import qualified Data.Text as T
 import qualified Data.Time.Clock.POSIX as Time
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Kernel.Types.Base64
+import qualified Kernel.Types.Beckn.Context as API
+import qualified Kernel.Types.Beckn.ReqTypes as API
+import Kernel.Utils.Example (Example (example))
+import qualified Kernel.Utils.SignatureAuth as S
 import System.Directory (removeFile)
 
 data RequestForLoadTest = RequestForLoadTest

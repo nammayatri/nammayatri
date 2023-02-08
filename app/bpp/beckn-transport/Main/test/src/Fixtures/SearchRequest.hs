@@ -1,10 +1,10 @@
 module Fixtures.SearchRequest (defaultSearchRequest) where
 
-import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Loc
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
+import Kernel.Types.Id
 import Servant.Client
 
 defaultSearchRequest :: SearchRequest.SearchRequest

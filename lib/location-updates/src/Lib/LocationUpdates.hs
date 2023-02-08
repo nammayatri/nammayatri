@@ -8,11 +8,11 @@ module Lib.LocationUpdates
   )
 where
 
-import Beckn.External.Maps.Types
-import Beckn.Types.Common
-import Beckn.Types.Id (Id)
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
+import Kernel.External.Maps.Types
+import Kernel.Types.Common
+import Kernel.Types.Id (Id)
 import qualified Lib.LocationUpdates.Internal as I
 
 withRideIdLogTag :: (Log m) => Id ride -> m a -> m a

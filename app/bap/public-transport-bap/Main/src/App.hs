@@ -7,16 +7,16 @@ where
 
 import API.Handler
 import API.Types
-import Beckn.Exit
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
-import Beckn.Types.Flow (FlowR)
-import Beckn.Utils.App
-import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.Servant.Server (runServerWithHealthCheck)
-import Beckn.Utils.Servant.SignatureAuth (modFlowRtWithAuthManagers)
 import Core.Beckn (logBecknRequest)
 import Environment
+import Kernel.Exit
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import Kernel.Types.Flow (FlowR)
+import Kernel.Utils.App
+import Kernel.Utils.Dhall (readDhallConfigDefault)
+import Kernel.Utils.Servant.Server (runServerWithHealthCheck)
+import Kernel.Utils.Servant.SignatureAuth (modFlowRtWithAuthManagers)
 import Servant (Context (..))
 import Tools.Auth (verifyPersonAction)
 

@@ -8,14 +8,14 @@ module Domain.Action.UI.Frontend
   )
 where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.APISuccess (APISuccess)
-import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import Tools.Error
 

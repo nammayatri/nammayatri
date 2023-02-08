@@ -1,10 +1,10 @@
 module Beckn.Types.Core.Metro.Search.Descriptor (Descriptor (..), emptyDescriptor) where
 
-import Beckn.Types.App (BaseUrl)
 import Beckn.Types.Core.Metro.Search.Image (Image)
-import Beckn.Utils.JSON
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
+import Kernel.Types.App (BaseUrl)
+import Kernel.Utils.JSON
 
 data Descriptor = Descriptor
   { name :: Maybe Text,

@@ -96,7 +96,7 @@ library:
     - -fhide-source-paths
     - -Werror
   dependencies:
-    - beckn-core
+    - mobility-core
     - beckn-spec
 executables:
   app-backend-exe:
@@ -108,5 +108,5 @@ executables:
       - '"-with-rtsopts=-N -T"'
     dependencies:
       - app-backend
-      - beckn-core
+      - mobility-core
       - beckn-spec

@@ -7,9 +7,9 @@ where
 
 import App.Routes (mockSmsAPI, mockSmsServer)
 import App.Types
-import Beckn.Prelude
-import Beckn.Types.Logging
-import Beckn.Utils.Servant.Server
+import Kernel.Prelude
+import Kernel.Types.Logging
+import Kernel.Utils.Servant.Server
 import Servant
 
 runMockSms :: (AppCfg -> AppCfg) -> IO ()

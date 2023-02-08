@@ -1,11 +1,11 @@
 module Storage.Queries.Person.PersonFlowStatus where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Domain.Types.Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Storage.Tabular.Person.PersonFlowStatus
 
 create :: DPFS.PersonFlowStatus -> SqlDB ()

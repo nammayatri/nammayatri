@@ -2,7 +2,7 @@
 
 module Dashboard.Common where
 
-import Beckn.Prelude
+import Kernel.Prelude
 
 data Driver
 

@@ -1,7 +1,5 @@
 module Domain.Types.FarePolicy.Discount where
 
-import Beckn.Types.Common (Money)
-import Beckn.Types.Id (Id)
 import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import Domain.Types.Common
@@ -9,6 +7,8 @@ import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Common (Money)
+import Kernel.Types.Id (Id)
 
 data DiscountD (s :: UsageSafety) = Discount
   { id :: Id Discount,

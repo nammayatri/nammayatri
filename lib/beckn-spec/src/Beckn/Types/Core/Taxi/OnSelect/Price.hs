@@ -4,8 +4,8 @@ module Beckn.Types.Core.Taxi.OnSelect.Price
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+import Kernel.Prelude
 
 data Price = Price
   { currency :: Text,

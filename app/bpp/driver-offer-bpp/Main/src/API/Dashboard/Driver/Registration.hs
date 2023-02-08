@@ -1,13 +1,13 @@
 module API.Dashboard.Driver.Registration where
 
-import Beckn.Prelude
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver.Registration as Common
 import qualified Domain.Action.Dashboard.Driver.Registration as DReg
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 
 type API =

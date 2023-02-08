@@ -3,11 +3,11 @@
 
 module Domain.Types.MockPlace where
 
-import Beckn.External.Maps.Google.MapsClient
-import qualified Beckn.External.Maps.Google.RoadsClient as Roads
-import Beckn.Prelude
 import Control.Applicative
 import qualified Data.Map as Map
+import Kernel.External.Maps.Google.MapsClient
+import qualified Kernel.External.Maps.Google.RoadsClient as Roads
+import Kernel.Prelude
 
 type SnapToRoadResponse = Roads.SnapToRoadResponse' Roads.SPLocation
 

@@ -1,9 +1,9 @@
 module Beckn.Types.Core.Taxi.OnConfirm.Provider where
 
-import Beckn.Utils.Example (Example (..))
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude
+import Kernel.Utils.Example (Example (..))
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype Provider = Provider
   { name :: Text

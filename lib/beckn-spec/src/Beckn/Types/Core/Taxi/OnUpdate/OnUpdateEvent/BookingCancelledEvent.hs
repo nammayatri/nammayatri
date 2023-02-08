@@ -4,13 +4,13 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.CancellationSource as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_BOOKING_CANCELLED))
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name)
 import GHC.Exts (fromList)
+import Kernel.Prelude
 
 data BookingCancelledEvent = BookingCancelledEvent
   { id :: Text,

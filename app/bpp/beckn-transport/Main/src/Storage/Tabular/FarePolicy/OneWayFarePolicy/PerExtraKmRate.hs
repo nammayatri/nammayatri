@@ -7,13 +7,13 @@
 
 module Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (HighPrecMoney, Meters (..))
-import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate as Domain
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (HighPrecMoney, Meters (..))
+import Kernel.Types.Id
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 

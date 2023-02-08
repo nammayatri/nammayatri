@@ -1,13 +1,13 @@
 module API.Dashboard.Person where
 
-import Beckn.Prelude
-import Beckn.Types.APISuccess
-import Beckn.Types.Id
-import Beckn.Utils.Common (withFlowHandlerAPI)
 import qualified Domain.Action.Dashboard.Person as DPerson
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
 import Environment
+import Kernel.Prelude
+import Kernel.Types.APISuccess
+import Kernel.Types.Id
+import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 import Tools.Auth
 

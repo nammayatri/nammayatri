@@ -4,13 +4,13 @@ module Beckn.Types.Core.Taxi.OnInit.Payment
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
-import Beckn.Utils.JSON as JSON
-import Beckn.Utils.Schema
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
+import Kernel.Prelude
+import Kernel.Utils.JSON as JSON
+import Kernel.Utils.Schema
 
 data Payment = Payment
   { collected_by :: Text,

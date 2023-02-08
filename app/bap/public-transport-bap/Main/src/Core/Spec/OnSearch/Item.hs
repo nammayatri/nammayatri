@@ -1,8 +1,8 @@
 module Core.Spec.OnSearch.Item where
 
-import Beckn.Prelude
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi hiding (name)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Item = Item
   { departure_id :: Text,

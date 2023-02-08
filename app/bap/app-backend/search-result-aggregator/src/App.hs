@@ -3,13 +3,13 @@ module App
   )
 where
 
-import Beckn.Exit
-import Beckn.Prelude
-import Beckn.Types.Flow (runFlowR)
-import Beckn.Utils.App
-import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.Servant.Server (runHealthCheckServerWithService)
 import Environment
+import Kernel.Exit
+import Kernel.Prelude
+import Kernel.Types.Flow (runFlowR)
+import Kernel.Utils.App
+import Kernel.Utils.Dhall (readDhallConfigDefault)
+import Kernel.Utils.Servant.Server (runHealthCheckServerWithService)
 import Servant
 import qualified Service.Runner as Runner
 

@@ -12,17 +12,6 @@ module Domain.Action.UI.Call
   )
 where
 
-import Beckn.External.Encryption
-import Beckn.External.Exotel.Flow
-import Beckn.External.Exotel.Types
-import qualified Beckn.External.Exotel.Types as Call
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto (runInReplica, runTransaction)
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Types.Common
-import Beckn.Types.Core.Ack
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.Text
 import qualified Data.Text as T
 import Data.Text.Conversions
@@ -31,6 +20,17 @@ import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as DCS
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
+import Kernel.External.Encryption
+import Kernel.External.Exotel.Flow
+import Kernel.External.Exotel.Types
+import qualified Kernel.External.Exotel.Types as Call
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.Beckn.Ack
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant.Client (BaseUrl (..))
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as Merchant

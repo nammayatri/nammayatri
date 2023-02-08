@@ -57,7 +57,7 @@ dependencies:
   - app-backend
   - beckn-transport
   - beckn-gateway
-  - beckn-core
+  - mobility-core
   - mock-registry
   - aeson
   - base >= 4.7 && < 5

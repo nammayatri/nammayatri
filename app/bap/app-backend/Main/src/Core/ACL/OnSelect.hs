@@ -1,16 +1,16 @@
 module Core.ACL.OnSelect where
 
-import Beckn.Prelude
-import Beckn.Product.Validation.Context
-import Beckn.Types.Common
-import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Core.ACL.Common
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Domain.Types.VehicleVariant
+import Kernel.Prelude
+import Kernel.Product.Validation.Context
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Tools.Error
 
 buildOnSelectReq ::

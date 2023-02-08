@@ -1,9 +1,9 @@
 module MockData.DistanceMatrix where
 
-import Beckn.External.Maps.Google.MapsClient
-import Beckn.Prelude
 import qualified Data.Map as Map
 import qualified Domain.Types.MockPlace as DPlace
+import Kernel.External.Maps.Google.MapsClient
+import Kernel.Prelude
 import Servant
 
 availablePlaces :: Map.Map DPlace.PlaceId DPlace.MockPlace

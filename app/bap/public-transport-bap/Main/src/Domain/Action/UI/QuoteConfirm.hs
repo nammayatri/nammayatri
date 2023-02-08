@@ -1,13 +1,13 @@
 module Domain.Action.UI.QuoteConfirm where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.GenericPretty
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Quote as DQuote
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.GenericPretty
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Quote as QQuote
 import Tools.Auth

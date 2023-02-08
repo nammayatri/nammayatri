@@ -1,12 +1,12 @@
 module Tools.Client where
 
-import qualified Beckn.External.Maps.Google.RoadsClient as Roads
-import Beckn.Prelude
-import Beckn.Tools.Metrics.CoreMetrics as Metrics
-import Beckn.Types.Error (GenericError (InternalError))
-import Beckn.Utils.Common (MonadFlow, callAPI, fromEitherM)
 import qualified Domain.Types.MockPlace as DPlace
 import EulerHS.Types as Euler
+import qualified Kernel.External.Maps.Google.RoadsClient as Roads
+import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Types.Error (GenericError (InternalError))
+import Kernel.Utils.Common (MonadFlow, callAPI, fromEitherM)
 
 snapToRoad ::
   ( HasCallStack,

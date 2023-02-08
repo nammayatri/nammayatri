@@ -1,10 +1,10 @@
 module Storage.Queries.Quote where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.Quote
 import Domain.Types.SearchRequest
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Quote
 

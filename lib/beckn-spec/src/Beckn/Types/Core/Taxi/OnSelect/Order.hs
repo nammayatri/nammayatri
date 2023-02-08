@@ -1,10 +1,10 @@
 module Beckn.Types.Core.Taxi.OnSelect.Order where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.OnSelect.Provider
-import Beckn.Utils.JSON (slashedRecordFields)
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), fromAesonOptions)
+import Kernel.Prelude
+import Kernel.Utils.JSON (slashedRecordFields)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype Order = Order
   { provider :: Provider

@@ -96,7 +96,7 @@ library:
     - -Werror
   dependencies:
     - beckn-transport
-    - beckn-core
+    - mobility-core
     - beckn-spec
 
 executables:
@@ -109,4 +109,4 @@ executables:
       - '"-with-rtsopts=-N -T"'
     dependencies:
       - beckn-transport-scheduler
-      - beckn-core
+      - mobility-core

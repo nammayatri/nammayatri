@@ -4,14 +4,14 @@ module SharedLogic.DriverPool
   )
 where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as SV
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
 import Storage.CachedQueries.CacheConfig

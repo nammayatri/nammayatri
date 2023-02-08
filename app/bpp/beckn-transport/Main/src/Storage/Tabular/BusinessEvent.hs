@@ -7,12 +7,12 @@
 
 module Storage.Tabular.BusinessEvent where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
 import qualified Domain.Types.BusinessEvent as Domain
 import Domain.Types.Vehicle (Variant)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
 import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.Ride (RideTId)

@@ -1,9 +1,9 @@
 module Mobility.AppBackend.Fixtures where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Types.Version
 import "app-backend" Domain.Types.Merchant as DM
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Types.Version
 
 appRegistrationToken :: Text
 appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"

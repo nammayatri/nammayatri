@@ -2,12 +2,12 @@
 
 module Domain.Types.BookingCancellationReason where
 
-import Beckn.Types.Id
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.CancellationReason (CancellationReasonCode)
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
 
 data BookingCancellationReason = BookingCancellationReason
   { driverId :: Maybe (Id DP.Person),

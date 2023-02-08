@@ -1,7 +1,5 @@
 module API.UI.Vehicle (module Reexport, API, handler) where
 
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Action.UI.Vehicle as Reexport
   ( Driver (..),
     GetVehicleRes (..),
@@ -15,6 +13,8 @@ import Domain.Types.Person as SP
 import Domain.Types.Vehicle as SV
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth (AdminTokenAuth, TokenAuth)
 

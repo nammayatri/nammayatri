@@ -7,14 +7,14 @@
 
 module Storage.Tabular.Driver.DriverFlowStatus where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
-import Beckn.Utils.Text (encodeToText)
 import Data.Aeson
 import Data.ByteString.Lazy (fromStrict)
 import qualified Domain.Types.Driver.DriverFlowStatus as Domain
 import Domain.Types.Person (Person)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
+import Kernel.Utils.Text (encodeToText)
 import Storage.Tabular.Person (PersonTId)
 
 instance PersistField Domain.FlowStatus where

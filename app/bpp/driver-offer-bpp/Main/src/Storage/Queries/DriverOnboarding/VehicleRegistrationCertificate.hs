@@ -2,11 +2,11 @@
 
 module Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Tabular.Person ()
 

@@ -1,10 +1,10 @@
 module Storage.Queries.SavedReqLocation where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.Person (Person)
 import Domain.Types.SavedReqLocation
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.SavedReqLocation
 
 create :: SavedReqLocation -> SqlDB ()

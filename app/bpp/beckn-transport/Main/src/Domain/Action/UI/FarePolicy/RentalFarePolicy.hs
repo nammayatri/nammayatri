@@ -9,18 +9,18 @@ module Domain.Action.UI.FarePolicy.RentalFarePolicy
   )
 where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
-import Beckn.Types.APISuccess
-import Beckn.Types.Common
-import Beckn.Types.Id (Id (..))
-import Beckn.Types.Predicate
-import Beckn.Utils.Validation
 import Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Vehicle
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis
+import Kernel.Types.APISuccess
+import Kernel.Types.Common
+import Kernel.Types.Id (Id (..))
+import Kernel.Types.Predicate
+import Kernel.Utils.Validation
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as SRentalFarePolicy
 

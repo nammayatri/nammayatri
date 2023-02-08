@@ -4,12 +4,12 @@ module App
 where
 
 import API.Total
-import Beckn.Mock.App hiding (runMock)
-import Beckn.Prelude
-import Beckn.Types.Common (defaultLoggerConfig)
-import Beckn.Utils.App (logRequestAndResponseGeneric)
-import Beckn.Utils.Logging
 import Environment
+import Kernel.Mock.App hiding (runMock)
+import Kernel.Prelude
+import Kernel.Types.Common (defaultLoggerConfig)
+import Kernel.Utils.App (logRequestAndResponseGeneric)
+import Kernel.Utils.Logging
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,

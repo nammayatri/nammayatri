@@ -3,11 +3,11 @@ module Beckn.Types.Core.Taxi.OnConfirm.Fulfillment
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.OnConfirm.StartInfo
 import Beckn.Types.Core.Taxi.OnConfirm.StopInfo
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 -- If end = Nothing, then bpp sends quotes only for RENTAL
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY

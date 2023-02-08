@@ -1,11 +1,11 @@
 module Storage.Queries.Quote where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.Quote
 import Domain.Types.Search
 import Domain.Types.TransportStation
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.Quote
 import Storage.Tabular.TransportStation
 

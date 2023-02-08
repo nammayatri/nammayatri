@@ -1,9 +1,5 @@
 module API.UI.Driver (module Reexport, API, handler) where
 
-import Beckn.Types.APISuccess
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common (withFlowHandlerAPI)
 import Domain.Action.UI.Driver as Reexport
   ( CreatePerson (..),
     CreateVehicle (..),
@@ -20,6 +16,10 @@ import Domain.Types.Person as SP
 import Environment
 import qualified Environment as App
 import EulerHS.Prelude hiding (id, state)
+import Kernel.Types.APISuccess
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 import Tools.Auth (AdminTokenAuth, TokenAuth)
 

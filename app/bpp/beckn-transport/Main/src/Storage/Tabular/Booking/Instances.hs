@@ -3,10 +3,10 @@
 
 module Storage.Tabular.Booking.Instances where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.Booking.Type as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.Booking.OneWayBooking
 import Storage.Tabular.Booking.RentalBooking

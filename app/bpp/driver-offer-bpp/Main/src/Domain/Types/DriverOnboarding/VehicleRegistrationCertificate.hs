@@ -4,11 +4,11 @@
 
 module Domain.Types.DriverOnboarding.VehicleRegistrationCertificate where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.IdfyVerification
 import qualified Domain.Types.DriverOnboarding.Image as Image
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   { id :: Id VehicleRegistrationCertificate,

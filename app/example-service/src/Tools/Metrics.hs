@@ -3,4 +3,4 @@ module Tools.Metrics
   )
 where
 
-import Beckn.Tools.Metrics.CoreMetrics as Reexport
+import Kernel.Tools.Metrics.CoreMetrics as Reexport

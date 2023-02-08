@@ -7,11 +7,11 @@
 
 module Storage.Tabular.FareParameters where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Centesimal, Money)
-import Beckn.Types.Id
 import qualified Domain.Types.FareParameters as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (Centesimal, Money)
+import Kernel.Types.Id
 import Storage.Tabular.Vehicle ()
 
 mkPersist

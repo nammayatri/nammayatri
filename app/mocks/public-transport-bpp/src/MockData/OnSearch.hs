@@ -1,10 +1,10 @@
 module MockData.OnSearch where
 
-import Beckn.Types.Common
-import Beckn.Types.Core.Gps
 import "public-transport-bap" Core.Spec.Common.Price
 import "public-transport-bap" Core.Spec.OnSearch
 import Data.Time.Clock
+import Kernel.Types.Beckn.Gps
+import Kernel.Types.Common
 import Relude hiding (id, state)
 
 mockBppDescriptor :: Descriptor

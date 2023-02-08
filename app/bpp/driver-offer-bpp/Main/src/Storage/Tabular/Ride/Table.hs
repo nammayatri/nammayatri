@@ -7,11 +7,11 @@
 
 module Storage.Tabular.Ride.Table where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (HighPrecMeters, Meters, Money)
-import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (HighPrecMeters, Meters, Money)
+import Kernel.Types.Id
 import Storage.Tabular.Booking (BookingTId)
 import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Person (PersonTId)

@@ -1,9 +1,9 @@
 module Core.Spec.OnSearch.Fare where
 
-import Beckn.Prelude
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.Common.Price
 import Data.OpenApi hiding (name)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Fare = Fare
   { id :: Text,

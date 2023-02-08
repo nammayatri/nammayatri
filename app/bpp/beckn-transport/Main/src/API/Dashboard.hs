@@ -3,9 +3,9 @@ module API.Dashboard where
 import qualified API.Dashboard.Driver as Driver
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Ride as Ride
-import Beckn.Types.Id
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.Types.Id
 import Servant
 import Tools.Auth
 

@@ -1,8 +1,8 @@
 module API.UI.Booking.BookingList.Types where
 
-import Beckn.Prelude
 import Domain.Types.Booking.API
 import Domain.Types.Booking.Type
+import Kernel.Prelude
 import Servant
 import Tools.Auth
 

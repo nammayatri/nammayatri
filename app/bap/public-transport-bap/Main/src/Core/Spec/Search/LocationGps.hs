@@ -1,10 +1,10 @@
 module Core.Spec.Search.LocationGps where
 
-import Beckn.Types.Core.Gps
-import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Schema
 import Data.Aeson
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
+import Kernel.Types.Beckn.Gps
+import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.Schema
 import Relude hiding (id)
 
 newtype LocationGps = LocationGps {gps :: Gps}

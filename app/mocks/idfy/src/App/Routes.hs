@@ -1,9 +1,9 @@
 module App.Routes where
 
 import App.Types
-import Beckn.Types.App (FlowServerR)
 import EulerHS.Prelude
 import Idfy.External.Flow
+import Kernel.Types.App (FlowServerR)
 import qualified Product.Idfy as P
 import Servant hiding (throwError)
 

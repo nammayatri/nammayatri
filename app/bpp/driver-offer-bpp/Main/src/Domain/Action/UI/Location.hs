@@ -5,16 +5,16 @@ module Domain.Action.UI.Location
   )
 where
 
-import qualified Beckn.External.Maps.HasCoordinates as GoogleMaps
-import Beckn.External.Maps.Types (LatLong)
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
+import qualified Kernel.External.Maps.HasCoordinates as GoogleMaps
+import Kernel.External.Maps.Types (LatLong)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common hiding (id)
 import qualified SharedLogic.DriverLocation as DrLoc
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Person as Person

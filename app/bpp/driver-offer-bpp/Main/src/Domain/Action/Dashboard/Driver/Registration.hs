@@ -7,10 +7,6 @@ module Domain.Action.Dashboard.Driver.Registration
   )
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Id
 import Dashboard.BPP.Driver.Registration (GetDocumentResponse (imageBase64))
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver.Registration as Common
 import Domain.Action.UI.DriverOnboarding.DriverLicense
@@ -20,6 +16,10 @@ import Domain.Types.DriverOnboarding.Image
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Id
 import SharedLogic.Transporter (findMerchantByShortId)
 import Storage.Queries.DriverOnboarding.Image as QImage
 

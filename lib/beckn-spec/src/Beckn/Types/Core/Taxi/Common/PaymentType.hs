@@ -1,9 +1,9 @@
 module Beckn.Types.Core.Taxi.Common.PaymentType where
 
-import Beckn.Prelude
-import Beckn.Utils.JSON (constructorsWithHyphens)
-import Beckn.Utils.Schema
 import Data.OpenApi
+import Kernel.Prelude
+import Kernel.Utils.JSON (constructorsWithHyphens)
+import Kernel.Utils.Schema
 
 data PaymentType
   = ON_ORDER

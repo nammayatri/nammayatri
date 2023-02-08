@@ -5,13 +5,13 @@ module Storage.Queries.FarePolicy.OneWayFarePolicy
     #-}
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.FarePolicy.OneWayFarePolicy
 import Domain.Types.Merchant
 import Domain.Types.Vehicle as Vehicle
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate as QExtraKmRate
 import Storage.Queries.FullEntityBuilders (buildFullOneWayFarePolicy)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy

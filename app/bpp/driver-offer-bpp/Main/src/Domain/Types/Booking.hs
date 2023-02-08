@@ -1,7 +1,5 @@
 module Domain.Types.Booking where
 
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -15,6 +13,8 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
 import Servant.API
 
 data BookingStatus

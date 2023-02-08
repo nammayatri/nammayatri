@@ -1,11 +1,11 @@
 module API.Dashboard.Customer where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant as QM
 import Tools.Error

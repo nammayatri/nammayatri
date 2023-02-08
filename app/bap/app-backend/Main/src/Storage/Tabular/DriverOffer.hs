@@ -7,11 +7,11 @@
 
 module Storage.Tabular.DriverOffer where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
 import qualified Domain.Types.DriverOffer as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
 import qualified Storage.Tabular.Estimate as TEstimate
 
 mkPersist

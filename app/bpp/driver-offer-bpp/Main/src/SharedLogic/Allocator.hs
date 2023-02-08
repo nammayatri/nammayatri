@@ -4,12 +4,12 @@
 
 module SharedLogic.Allocator where
 
-import Beckn.Prelude
-import Beckn.Types.Common (Meters, Money)
-import Beckn.Types.Id
-import Beckn.Utils.Dhall (FromDhall)
 import Data.Singletons.TH
 import qualified Domain.Types.SearchRequest as DSR
+import Kernel.Prelude
+import Kernel.Types.Common (Meters, Money)
+import Kernel.Types.Id
+import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 
 data AllocatorJobType = SendSearchRequestToDriver

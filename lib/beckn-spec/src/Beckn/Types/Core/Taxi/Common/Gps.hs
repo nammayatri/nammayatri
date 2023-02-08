@@ -1,6 +1,5 @@
 module Beckn.Types.Core.Taxi.Common.Gps (Gps (..)) where
 
-import Beckn.Utils.Error.Throwing (fromEitherM')
 import Control.Arrow ((>>>))
 import Control.Lens
 import Data.Aeson
@@ -8,6 +7,7 @@ import Data.Aeson.Types (parseFail)
 import Data.OpenApi as OpenAPI hiding (Example)
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (many, try, (<|>))
+import Kernel.Utils.Error.Throwing (fromEitherM')
 import Text.Parsec
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as P

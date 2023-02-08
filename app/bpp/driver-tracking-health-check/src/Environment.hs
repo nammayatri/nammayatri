@@ -1,17 +1,17 @@
 module Environment where
 
-import Beckn.External.Encryption (EncTools)
-import Beckn.Sms.Config (SmsConfig)
-import Beckn.Storage.Esqueleto.Config
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Common
-import Beckn.Types.Flow (FlowR)
-import Beckn.Utils.App (getPodName)
-import Beckn.Utils.Dhall
-import Beckn.Utils.IOLogging
-import Beckn.Utils.Servant.Client (HttpClientOptions, RetryCfg)
-import Beckn.Utils.Shutdown
 import EulerHS.Prelude
+import Kernel.External.Encryption (EncTools)
+import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Common
+import Kernel.Types.Flow (FlowR)
+import Kernel.Utils.App (getPodName)
+import Kernel.Utils.Dhall
+import Kernel.Utils.IOLogging
+import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
+import Kernel.Utils.Shutdown
 import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
 

@@ -106,7 +106,7 @@ library:
     - -fhide-source-paths
     - -Werror
   dependencies:
-    - beckn-core
+    - mobility-core
     - beckn-spec
     - location-updates
 
@@ -121,6 +121,6 @@ executables:
       - '"-with-rtsopts=-N -T"'
     dependencies:
       - driver-offer-bpp
-      - beckn-core
+      - mobility-core
       - beckn-spec
       - beckn-services

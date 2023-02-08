@@ -2,8 +2,8 @@
 
 module Utils.SilentLogger where
 
-import Beckn.Types.Common
 import EulerHS.Prelude
+import Kernel.Types.Common
 
 instance Log IO where
   logOutput _logLevel _msg = pure ()

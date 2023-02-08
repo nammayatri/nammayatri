@@ -1,8 +1,8 @@
 module Domain.Types.SavedReqLocation where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import Domain.Types.Person (Person)
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data SavedReqLocation = SavedReqLocation
   { id :: Id SavedReqLocation,

@@ -1,8 +1,8 @@
 module Beckn.Types.Core.Metro.Search.Duration (Duration (..)) where
 
-import Beckn.Utils.GenericPretty
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
+import Kernel.Utils.GenericPretty
 
 -- Describes duration as per ISO8601 format
 newtype Duration = Duration Text

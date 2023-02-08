@@ -1,14 +1,14 @@
 module MockData.SnapToRoad where
 
-import Beckn.External.Maps.Google.MapsClient
-import Beckn.Prelude
-import Beckn.Types.Error
-import Beckn.Utils.Common
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as B
 import qualified Domain.Types.MockPlace as DPlace
 import qualified Domain.Types.MockRoute as DRoute
 import Environment
+import Kernel.External.Maps.Google.MapsClient
+import Kernel.Prelude
+import Kernel.Types.Error
+import Kernel.Utils.Common
 
 getFolderPath :: MockDataFlow m r => m String
 getFolderPath = asks (.mockDataPath) <&> (<> "snap-to-road/")

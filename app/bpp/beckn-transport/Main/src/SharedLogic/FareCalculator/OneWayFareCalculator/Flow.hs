@@ -9,16 +9,16 @@ module SharedLogic.FareCalculator.OneWayFareCalculator.Flow
   )
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Hedis
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Booking
 import Domain.Types.FarePolicy.FareBreakup
 import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
+import Kernel.Prelude
+import Kernel.Storage.Hedis
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
   ( OneWayFareParameters (..),
     TripEndTime,

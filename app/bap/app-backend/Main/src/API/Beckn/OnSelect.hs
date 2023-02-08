@@ -1,14 +1,14 @@
 module API.Beckn.OnSelect (API, handler) where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as OnSelect
-import Beckn.Utils.Common
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnSelect as ACL
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Environment
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Beckn.Ack
+import Kernel.Utils.Common
+import Kernel.Utils.Servant.SignatureAuth
 
 type API = OnSelect.OnSelectAPI
 

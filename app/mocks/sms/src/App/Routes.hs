@@ -6,9 +6,9 @@ module App.Routes
 where
 
 import App.Types
-import qualified Beckn.External.SMS.MyValueFirst.API as API
-import Beckn.Types.App (FlowServerR)
 import EulerHS.Prelude
+import qualified Kernel.External.SMS.MyValueFirst.API as API
+import Kernel.Types.App (FlowServerR)
 import qualified Product.Sms as P
 import Servant hiding (throwError)
 import qualified Types.API.Sms as API

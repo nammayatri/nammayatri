@@ -6,16 +6,16 @@ module Domain.Action.UI.DriverOnboarding.IdfyWebhook
   )
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Core.Ack
-import Beckn.Types.Error
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
 import Environment
 import Idfy.Types
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Beckn.Ack
+import Kernel.Types.Error
+import Kernel.Utils.Common
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 
 onVerify :: VerificationResponse -> Text -> Flow AckResponse

@@ -4,10 +4,6 @@ module Domain.Action.UI.Ride.EndRide.Internal
   )
 where
 
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FareParameters as DFare
@@ -15,6 +11,10 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig

@@ -1,17 +1,17 @@
 module Core.ACL.Confirm where
 
-import Beckn.Prelude
-import Beckn.Product.Validation.Context
-import Beckn.Types.App
-import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
-import Beckn.Types.Error
-import Beckn.Types.Field
-import Beckn.Types.Id
-import Beckn.Utils.Error.Throwing
 import Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
+import Kernel.Prelude
+import Kernel.Product.Validation.Context
+import Kernel.Types.App
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
+import Kernel.Types.Field
+import Kernel.Types.Id
+import Kernel.Utils.Error.Throwing
 
 buildConfirmReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>

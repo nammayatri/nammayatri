@@ -3,9 +3,6 @@
 
 module Core.Spec.OnConfirm.Order where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Schema
 import Core.Spec.Common.Billing
 import Core.Spec.Common.OrderState
 import Core.Spec.Common.Payment
@@ -14,6 +11,9 @@ import Core.Spec.Common.Quotation
 import Core.Spec.OnConfirm.Item
 import Core.Spec.OnConfirm.Params
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.Schema
 
 data Order = Order
   { id :: Text,

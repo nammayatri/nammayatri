@@ -1,17 +1,17 @@
 module API.Beckn.Rating (API, handler) where
 
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Rating as ACL
 import qualified Domain.Action.Beckn.Rating as DRating
 import Domain.Types.Merchant (Merchant)
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Beckn.Ack
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 
 type API =

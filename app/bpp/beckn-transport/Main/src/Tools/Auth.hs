@@ -1,18 +1,18 @@
 module Tools.Auth where
 
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.App
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common as CoreCommon
-import qualified Beckn.Utils.Common as Utils
-import Beckn.Utils.Monitoring.Prometheus.Servant
-import Beckn.Utils.Servant.HeaderAuth
 import Data.Text as T
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.App
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common as CoreCommon
+import qualified Kernel.Utils.Common as Utils
+import Kernel.Utils.Monitoring.Prometheus.Servant
+import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (throwError)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR

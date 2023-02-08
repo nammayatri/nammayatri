@@ -2,12 +2,12 @@
 
 module Storage.Tabular.Quote.Instances where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
-import Beckn.Utils.Error
 import qualified Domain.Types.FarePolicy.FareProductType as Domain
 import qualified Domain.Types.Quote as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
+import Kernel.Utils.Error
 import qualified Storage.Tabular.DriverOffer as SDriverOffer
 import Storage.Tabular.Quote
 import qualified Storage.Tabular.RentalSlab as SRentalSlab

@@ -4,11 +4,11 @@ module Tools.Metrics.TransporterBPPMetrics
   )
 where
 
-import Beckn.Types.Common
-import Beckn.Utils.Time (getClockTimeInMs)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import GHC.Records.Extra
+import Kernel.Types.Common
+import Kernel.Utils.Time (getClockTimeInMs)
 import Prometheus as P
 import Tools.Metrics.TransporterBPPMetrics.Types as Reexport
 

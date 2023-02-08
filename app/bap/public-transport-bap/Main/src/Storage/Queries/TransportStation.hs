@@ -2,10 +2,10 @@
 
 module Storage.Queries.TransportStation where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.TransportStation
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.TransportStation
 
 findByStationCode :: Transactionable m => Text -> m (Maybe TransportStation)

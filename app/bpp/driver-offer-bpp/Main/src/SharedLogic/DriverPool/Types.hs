@@ -6,13 +6,13 @@ module SharedLogic.DriverPool.Types
   )
 where
 
-import qualified Beckn.External.FCM.Types as FCM
-import qualified Beckn.External.Maps as Maps
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Maps as Maps
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Tools.Maps as Google
 
 type PoolBatchNum = Int

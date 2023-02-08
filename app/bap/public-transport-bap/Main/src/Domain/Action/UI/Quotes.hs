@@ -1,11 +1,11 @@
 module Domain.Action.UI.Quotes where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Search as DSearch
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty (PrettyShow)
 import Storage.Queries.Quote as QQuote
 
 newtype GetQuotesRes = GetQuotesRes

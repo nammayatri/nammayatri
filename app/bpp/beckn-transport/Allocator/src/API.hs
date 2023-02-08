@@ -1,10 +1,10 @@
 module API (healthCheckAPI, healthCheck, iAmAlive) where
 
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Common
-import Beckn.Utils.Common
-import Beckn.Utils.IOLogging (LoggerEnv)
 import EulerHS.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Common
+import Kernel.Utils.Common
+import Kernel.Utils.IOLogging (LoggerEnv)
 import Servant (Get, JSON)
 import Tools.Error
 import Tools.Metrics (CoreMetricsContainer)

@@ -1,12 +1,12 @@
 module Domain.Types.BlackListOrg where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Domain.Types.Common
+import Kernel.Prelude
+import Kernel.Types.Id
 import Servant.API
 
 data BlackListOrgType

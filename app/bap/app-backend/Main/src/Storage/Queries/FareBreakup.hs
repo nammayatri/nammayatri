@@ -2,12 +2,12 @@
 
 module Storage.Queries.FareBreakup where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Domain.Types.Booking.Type
 import Domain.Types.FarePolicy.FareBreakup
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Storage.Tabular.FarePolicy.FareBreakup
 
 createMany :: [FareBreakup] -> SqlDB ()

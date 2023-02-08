@@ -1,11 +1,11 @@
 module API.EncodeFile where
 
-import Beckn.Mock.App hiding (runMock)
-import Beckn.Prelude
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Base64 as B64
 import Data.String.Conversions
 import Environment
+import Kernel.Mock.App hiding (runMock)
+import Kernel.Prelude
 import Servant
 
 type EncodeFileAPI =

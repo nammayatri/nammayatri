@@ -8,19 +8,19 @@ module Environment
   )
 where
 
-import Beckn.External.Encryption (EncTools)
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis (HedisEnv, connectHedis, disconnectHedis)
-import Beckn.Types.Base64 (Base64)
-import Beckn.Types.Common
-import Beckn.Types.Flow
-import Beckn.Utils.Common
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import Beckn.Utils.Servant.SignatureAuth
 import Data.String.Conversions (cs)
 import "driver-offer-bpp" Environment (AppCfg (..))
+import Kernel.External.Encryption (EncTools)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis (HedisEnv, connectHedis, disconnectHedis)
+import Kernel.Types.Base64 (Base64)
+import Kernel.Types.Common
+import Kernel.Types.Flow
+import Kernel.Utils.Common
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
 import SharedLogic.DriverPool (DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig, RideRequestPopupConfig)

@@ -2,14 +2,14 @@
 
 module Domain.Types.DriverQuote where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty
 import qualified Domain.Types.FareParameters as Params
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 
 data DriverQuoteStatus = Active | Inactive
   deriving (Show, Read, Eq)

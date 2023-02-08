@@ -1,18 +1,18 @@
 module Utils where
 
-import Beckn.External.Encryption (EncTools (..))
-import Beckn.External.Maps
-import Beckn.Prelude
-import Beckn.Storage.Hedis.Config
-import qualified Beckn.Storage.Hedis.Queries as Hedis
-import qualified Beckn.Tools.Metrics.CoreMetrics.Types as Metrics
-import Beckn.Types.Flow
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.IOLogging
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map as Map
 import qualified EulerHS.Runtime as R
+import Kernel.External.Encryption (EncTools (..))
+import Kernel.External.Maps
+import Kernel.Prelude
+import Kernel.Storage.Hedis.Config
+import qualified Kernel.Storage.Hedis.Queries as Hedis
+import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Metrics
+import Kernel.Types.Flow
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.IOLogging
+import Kernel.Utils.Servant.SignatureAuth
 import qualified "mock-google" Lib.IntegrationTests.Environment as Environment
 import Network.HTTP.Client
 

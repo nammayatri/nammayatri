@@ -7,12 +7,12 @@
 
 module Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.Image (ImageTId)
 
 derivePersistField "Domain.VerificationStatus"

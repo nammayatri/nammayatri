@@ -1,9 +1,9 @@
 module Domain.Types.FarePolicy.FareBreakup where
 
-import Beckn.Prelude
-import Beckn.Types.Common (Centesimal)
-import Beckn.Types.Id
 import Domain.Types.Booking.Type
+import Kernel.Prelude
+import Kernel.Types.Common (Centesimal)
+import Kernel.Types.Id
 
 data FareBreakup = FareBreakup
   { id :: Id FareBreakup,

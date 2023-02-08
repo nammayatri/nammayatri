@@ -9,21 +9,6 @@ module API.UI.Search
   )
 where
 
-import qualified Beckn.External.Slack.Flow as SF
-import Beckn.External.Slack.Types (SlackConfig)
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Hedis (HedisFlow)
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
-import Beckn.Streaming.MonadProducer
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Types.SlidingWindowLimiter
-import Beckn.Types.Version
-import Beckn.Utils.Common
-import Beckn.Utils.SlidingWindowLimiter
 import qualified Core.ACL.Metro.Search as MetroACL
 import qualified Core.ACL.Search as TaxiACL
 import Data.Aeson
@@ -36,6 +21,21 @@ import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Environment
+import qualified Kernel.External.Slack.Flow as SF
+import Kernel.External.Slack.Types (SlackConfig)
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Hedis (HedisFlow)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Topic.PublicTransportSearch
+import Kernel.Streaming.MonadProducer
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Types.SlidingWindowLimiter
+import Kernel.Types.Version
+import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport

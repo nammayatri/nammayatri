@@ -5,16 +5,16 @@ module SharedLogic.PublicTransport
   )
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Hedis as Hedis
-import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
-import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
-import Beckn.Streaming.MonadProducer
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSR
+import Kernel.Prelude
+import Kernel.Storage.Hedis as Hedis
+import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
+import Kernel.Streaming.Kafka.Topic.PublicTransportSearch
+import Kernel.Streaming.MonadProducer
+import Kernel.Types.Id
+import Kernel.Utils.Common
 
 sendPublicTransportSearchRequest ::
   MonadProducer PublicTransportSearch m =>

@@ -1,13 +1,13 @@
 module Domain.Action.Search where
 
-import Beckn.External.Maps.Types (LatLong)
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Streaming.Kafka.Topic.PublicTransportSearch (PublicTransportSearch)
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Search as DSearch
+import Kernel.External.Maps.Types (LatLong)
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Streaming.Kafka.Topic.PublicTransportSearch (PublicTransportSearch)
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
 import qualified Storage.Queries.Search as QSearch
 
 type SearchReq = PublicTransportSearch

@@ -2,15 +2,15 @@
 
 module Flow.RideAPI.EndRide (endRideTests) where
 
-import Beckn.External.Maps.Types
-import Beckn.Types.APISuccess (APISuccess (Success))
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Action.UI.Ride.EndRide as Handle
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures
+import Kernel.External.Maps.Types
+import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
 import SharedLogic.FareCalculator.RentalFareCalculator.Calculator
 import Test.Hspec

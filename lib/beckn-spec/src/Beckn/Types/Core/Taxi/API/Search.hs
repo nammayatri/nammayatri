@@ -1,9 +1,9 @@
 module Beckn.Types.Core.Taxi.API.Search where
 
-import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.ReqTypes (BecknReq)
 import Beckn.Types.Core.Taxi.Search (SearchMessage)
 import EulerHS.Prelude
+import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.ReqTypes (BecknReq)
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchReq = BecknReq SearchMessage

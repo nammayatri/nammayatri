@@ -1,8 +1,8 @@
 module API.Swagger.Types where
 
-import Beckn.Utils.Servant.HTML
 import qualified Data.ByteString as BS
 import Data.OpenApi (OpenApi)
+import Kernel.Utils.Servant.HTML
 import Servant
 
 type API =

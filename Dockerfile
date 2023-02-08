@@ -23,7 +23,7 @@ ARG BUILD_ARGS
 
 RUN stack build --system-ghc ${BUILD_ARGS}
 
-RUN stack test ${BUILD_ARGS} beckn-core
+RUN stack test ${BUILD_ARGS} mobility-core
 
 RUN mv "$(stack path --local-install-root --system-ghc)/bin" /opt/build/bin
 

@@ -7,23 +7,23 @@ module Dashboard.Common.Merchant
   )
 where
 
-import Beckn.External.Encryption (encrypt)
-import qualified Beckn.External.FCM.Flow as FCM
-import qualified Beckn.External.FCM.Types as FCM
-import qualified Beckn.External.Maps as Maps
-import qualified Beckn.External.SMS as SMS
-import qualified Beckn.External.SMS.ExotelSms.Types as Exotel
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto (derivePersistField)
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Common
-import Beckn.Types.Predicate
-import Beckn.Utils.Validation
 import Dashboard.Common as Reexport
 import Data.Aeson
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
 import Data.OpenApi hiding (description, name, password, url)
+import Kernel.External.Encryption (encrypt)
+import qualified Kernel.External.FCM.Flow as FCM
+import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Maps as Maps
+import qualified Kernel.External.SMS as SMS
+import qualified Kernel.External.SMS.ExotelSms.Types as Exotel
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto (derivePersistField)
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Common
+import Kernel.Types.Predicate
+import Kernel.Utils.Validation
 import Servant
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs

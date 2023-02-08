@@ -3,16 +3,16 @@
 
 module Lib.Scheduler.Environment where
 
-import Beckn.Mock.App
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis (HedisCfg, HedisEnv, disconnectHedis)
-import Beckn.Types.Common
-import Beckn.Utils.App (Shutdown)
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
 import qualified Control.Monad.Catch as C
 import Control.Monad.IO.Unlift (MonadUnliftIO)
+import Kernel.Mock.App
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis (HedisCfg, HedisEnv, disconnectHedis)
+import Kernel.Types.Common
+import Kernel.Utils.App (Shutdown)
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
 import Lib.Scheduler.Metrics (SchedulerMetrics)
 
 data SchedulerConfig = SchedulerConfig

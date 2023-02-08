@@ -1,7 +1,7 @@
 module Storage.Queries.DiscountTransaction where
 
-import Beckn.Storage.Esqueleto as Esq
 import Domain.Types.DiscountTransaction
+import Kernel.Storage.Esqueleto as Esq
 import Storage.Tabular.DiscountTransaction ()
 
 create :: DiscountTransaction -> SqlDB ()

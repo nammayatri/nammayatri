@@ -1,10 +1,10 @@
 module Beckn.Types.Core.Taxi.OnSelect.Addon where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.OnSelect.Descriptor
 import Beckn.Types.Core.Taxi.OnSelect.Price
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Addon = Addon
   { id :: Text,

@@ -4,7 +4,6 @@ module Beckn.Types.Core.Taxi.OnSearch.Provider
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.OnSearch.Addon
 import Beckn.Types.Core.Taxi.OnSearch.Category
 import Beckn.Types.Core.Taxi.OnSearch.Descriptor
@@ -13,9 +12,10 @@ import Beckn.Types.Core.Taxi.OnSearch.Item
 import Beckn.Types.Core.Taxi.OnSearch.Offer
 import Beckn.Types.Core.Taxi.OnSearch.Payment
 import Beckn.Types.Core.Taxi.OnSearch.ProviderLocation
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), fromAesonOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Provider = Provider
   { id :: Text,

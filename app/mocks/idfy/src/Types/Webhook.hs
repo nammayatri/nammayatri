@@ -1,10 +1,10 @@
 module Types.Webhook where
 
-import Beckn.Randomizer
-import Beckn.Utils.Time
 import EulerHS.Prelude
 import Idfy.Types.Request
 import Idfy.Types.Response
+import Kernel.Randomizer
+import Kernel.Utils.Time
 
 buildSuccessRC :: (MonadIO m) => RCVerificationRequest -> Text -> UTCTime -> m VerificationResponse
 buildSuccessRC IdfyRequest {..} request_id now = do

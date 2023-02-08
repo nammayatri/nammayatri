@@ -6,14 +6,14 @@ module API.UI.Serviceability
   )
 where
 
-import Beckn.External.Maps.Types
-import Beckn.Prelude
-import Beckn.Types.Geofencing
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Serviceability as DServiceability
 import Domain.Types.Person as Person
 import Environment
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import Kernel.Types.Geofencing
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

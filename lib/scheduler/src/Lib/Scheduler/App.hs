@@ -3,17 +3,17 @@ module Lib.Scheduler.App
   )
 where
 
-import Beckn.Prelude hiding (mask, throwIO)
-import Beckn.Randomizer
-import Beckn.Storage.Esqueleto.Config (prepareEsqDBEnv)
-import Beckn.Storage.Hedis (connectHedis)
-import qualified Beckn.Tools.Metrics.Init as Metrics
-import Beckn.Types.Common (Seconds (..))
-import Beckn.Utils.App
-import Beckn.Utils.Common (threadDelaySec)
-import Beckn.Utils.IOLogging (prepareLoggerEnv)
-import Beckn.Utils.Servant.Server
-import Beckn.Utils.Shutdown
+import Kernel.Prelude hiding (mask, throwIO)
+import Kernel.Randomizer
+import Kernel.Storage.Esqueleto.Config (prepareEsqDBEnv)
+import Kernel.Storage.Hedis (connectHedis)
+import qualified Kernel.Tools.Metrics.Init as Metrics
+import Kernel.Types.Common (Seconds (..))
+import Kernel.Utils.App
+import Kernel.Utils.Common (threadDelaySec)
+import Kernel.Utils.IOLogging (prepareLoggerEnv)
+import Kernel.Utils.Servant.Server
+import Kernel.Utils.Shutdown
 import Lib.Scheduler.Environment
 import Lib.Scheduler.Handler (SchedulerHandle, handler)
 import Lib.Scheduler.Metrics

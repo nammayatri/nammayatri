@@ -7,11 +7,11 @@
 
 module Storage.Tabular.DriverInformation where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.DriverInformation as Domain
 import Domain.Types.Person (Person)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Person (PersonTId)
 
 mkPersist

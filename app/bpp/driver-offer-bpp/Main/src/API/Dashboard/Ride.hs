@@ -1,9 +1,5 @@
 module API.Dashboard.Ride where
 
-import Beckn.Prelude
-import Beckn.Types.APISuccess (APISuccess (..))
-import Beckn.Types.Id
-import Beckn.Utils.Common (withFlowHandlerAPI)
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Action.Dashboard.Ride as DRide
@@ -14,6 +10,10 @@ import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import Environment
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Id
+import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 import SharedLogic.Transporter (findMerchantByShortId)
 

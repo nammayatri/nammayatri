@@ -2,9 +2,9 @@ module API.Total where
 
 import API.DecodeFile
 import API.EncodeFile
-import Beckn.Mock.App
-import Beckn.Prelude
 import Environment
+import Kernel.Mock.App
+import Kernel.Prelude
 import Servant
 
 type TotalAPI = EncodeFileAPI :<|> DecodeFileAPI

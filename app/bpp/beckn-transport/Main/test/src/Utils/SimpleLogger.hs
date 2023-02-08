@@ -2,8 +2,8 @@
 
 module Utils.SimpleLogger where
 
-import Beckn.Types.Common
 import EulerHS.Prelude
+import Kernel.Types.Common
 import System.IO (hFlush)
 
 instance Log IO where

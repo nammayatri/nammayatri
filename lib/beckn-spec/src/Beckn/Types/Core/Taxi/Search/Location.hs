@@ -5,9 +5,9 @@ module Beckn.Types.Core.Taxi.Search.Location
 where
 
 import Beckn.Types.Core.Taxi.Common.Gps as Reexport
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype Location = Location
   { gps :: Gps

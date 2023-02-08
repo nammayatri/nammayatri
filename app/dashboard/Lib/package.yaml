@@ -53,7 +53,7 @@ default-extensions:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - beckn-core
+  - mobility-core
   - beckn-spec
   - bytestring
   - record-dot-preprocessor

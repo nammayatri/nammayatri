@@ -1,14 +1,14 @@
 module API.BPP.DriverOffer.Driver.Registration where
 
 import qualified BPPClient.DriverOffer as Client
-import Beckn.Prelude
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver.Registration as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)

@@ -17,8 +17,8 @@ import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
-import Beckn.Prelude
 import Environment
+import Kernel.Prelude
 import Servant
 
 type HealthCheckAPI = Get '[JSON] Text

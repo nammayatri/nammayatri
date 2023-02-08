@@ -1,8 +1,8 @@
 module API.UI.SearchId.Quotes.Types where
 
-import Beckn.Types.Id
 import Domain.Action.UI.Quotes as DQuotes
 import qualified Domain.Types.Search as DSearch
+import Kernel.Types.Id
 import Servant
 import Tools.Auth
 

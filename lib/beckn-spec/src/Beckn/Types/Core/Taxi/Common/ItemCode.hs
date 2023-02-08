@@ -4,8 +4,6 @@ module Beckn.Types.Core.Taxi.Common.ItemCode
   )
 where
 
-import Beckn.Prelude hiding (show)
-import Beckn.Types.Common
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.FareProductType as Reexport
 import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
@@ -14,6 +12,8 @@ import qualified Data.List as List
 import Data.OpenApi
 import qualified Data.Text as T
 import GHC.Show (show)
+import Kernel.Prelude hiding (show)
+import Kernel.Types.Common
 
 data ItemCode = ItemCode
   { fareProductType :: FareProductType,

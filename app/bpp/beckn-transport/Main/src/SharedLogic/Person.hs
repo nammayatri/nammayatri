@@ -1,10 +1,10 @@
 module SharedLogic.Person where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Person as DP
 import Environment
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 

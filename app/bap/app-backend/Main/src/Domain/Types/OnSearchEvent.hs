@@ -2,8 +2,8 @@
 
 module Domain.Types.OnSearchEvent where
 
-import Beckn.Prelude
-import Beckn.Types.Id
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data OnSearchEvent = OnSearchEvent
   { id :: Id OnSearchEvent,

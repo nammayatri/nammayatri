@@ -1,16 +1,16 @@
 module Core.ACL.Confirm (buildConfirmReq) where
 
-import Beckn.Prelude
-import Beckn.Product.Validation.Context
-import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import Beckn.Types.Core.Taxi.Confirm
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
-import Beckn.Types.Id
-import qualified Beckn.Types.Registry.Subscriber as Subscriber
-import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
+import Kernel.Prelude
+import Kernel.Product.Validation.Context
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Id
+import qualified Kernel.Types.Registry.Subscriber as Subscriber
+import Kernel.Utils.Common
 import Tools.Error
 
 buildConfirmReq ::

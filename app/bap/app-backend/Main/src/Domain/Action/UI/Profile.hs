@@ -6,15 +6,15 @@ module Domain.Action.UI.Profile
   )
 where
 
-import Beckn.External.Encryption
-import qualified Beckn.External.FCM.Types as FCM
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto (runInReplica, runTransaction)
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Person as Person
+import Kernel.External.Encryption
+import qualified Kernel.External.FCM.Types as FCM
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 

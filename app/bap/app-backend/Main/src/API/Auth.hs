@@ -4,11 +4,11 @@ module API.Auth
   )
 where
 
-import Beckn.InternalAPI.Auth.API
-import Beckn.Utils.Common
 import qualified Domain.Action.Auth as DAuth
 import Environment
 import EulerHS.Prelude
+import Kernel.InternalAPI.Auth.API
+import Kernel.Utils.Common
 
 handler :: FlowServer API
 handler = auth

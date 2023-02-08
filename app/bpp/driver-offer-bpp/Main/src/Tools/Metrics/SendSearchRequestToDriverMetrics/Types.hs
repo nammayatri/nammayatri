@@ -6,9 +6,9 @@ module Tools.Metrics.SendSearchRequestToDriverMetrics.Types
   )
 where
 
-import Beckn.Tools.Metrics.CoreMetrics as CoreMetrics
-import Beckn.Utils.Common
 import EulerHS.Prelude
+import Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
+import Kernel.Utils.Common
 import Prometheus as P
 
 type HasSendSearchRequestToDriverMetrics m r = (HasFlowEnv m r '["ssrMetrics" ::: SendSearchRequestToDriverMetricsContainer])

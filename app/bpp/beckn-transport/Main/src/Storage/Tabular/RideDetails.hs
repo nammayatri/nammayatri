@@ -7,13 +7,13 @@
 
 module Storage.Tabular.RideDetails where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.Ride as SR
 import qualified Domain.Types.RideDetails as Domain
 import qualified Domain.Types.Vehicle as SV
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Ride (RideTId)
 import Storage.Tabular.Vehicle ()
 

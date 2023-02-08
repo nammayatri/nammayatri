@@ -5,8 +5,8 @@ module Lib.Servant.MultipartFormData
   )
 where
 
-import Beckn.Prelude
-import Beckn.Utils.Monitoring.Prometheus.Servant
+import Kernel.Prelude
+import Kernel.Utils.Monitoring.Prometheus.Servant
 import Servant hiding (ResponseHeader (..))
 import Servant.Multipart
 import qualified Servant.OpenApi as S

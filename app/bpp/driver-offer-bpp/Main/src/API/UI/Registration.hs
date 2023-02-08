@@ -9,15 +9,15 @@ module API.UI.Registration
   )
 where
 
-import Beckn.Types.APISuccess
-import Beckn.Types.Id
-import Beckn.Types.Version
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Registration as DRegistration
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.APISuccess
+import Kernel.Types.Id
+import Kernel.Types.Version
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

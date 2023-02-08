@@ -4,14 +4,14 @@ module Beckn.Types.Core.Taxi.OnSearch.Item
   )
 where
 
-import Beckn.External.Maps
-import Beckn.Prelude
-import Beckn.Types.Common
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.ItemCode as Reexport
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
+import Kernel.External.Maps
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Item = Item
   { category_id :: FareProductType,

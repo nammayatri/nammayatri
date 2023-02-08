@@ -1,9 +1,9 @@
 module Domain.Action.UI.TriggerStatus where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Booking.Type as DBooking
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QBooking
 import Tools.Error
 

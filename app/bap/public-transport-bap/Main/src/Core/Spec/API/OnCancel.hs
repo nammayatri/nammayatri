@@ -1,9 +1,9 @@
 module Core.Spec.API.OnCancel where
 
-import Beckn.Prelude
-import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.ReqTypes
 import Core.Spec.OnCancel (OnCancelMessage)
+import Kernel.Prelude
+import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.ReqTypes
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnCancelAPI =

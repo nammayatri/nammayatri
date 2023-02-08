@@ -1,13 +1,13 @@
 module Environment where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Flow
-import Beckn.Utils.App (getPodName)
-import Beckn.Utils.Common
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import Beckn.Utils.Shutdown
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Flow
+import Kernel.Utils.App (getPodName)
+import Kernel.Utils.Common
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import Kernel.Utils.Shutdown
 import Lib.GoogleConfig (GoogleCfgUnencrypted)
 import Tools.Metrics
 

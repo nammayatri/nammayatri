@@ -5,10 +5,10 @@
 
 module Domain.Types.Person.Type where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import Beckn.Types.Id
 import qualified Domain.Types.Role as DRole
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data PersonE e = Person
   { id :: Id Person,

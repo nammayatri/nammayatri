@@ -1,9 +1,9 @@
 module Domain.Types.SearchRequest.SearchReqLocation where
 
-import Beckn.External.Maps.HasCoordinates (HasCoordinates)
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty (PrettyShow)
+import Kernel.External.Maps.HasCoordinates (HasCoordinates)
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty (PrettyShow)
 
 data SearchReqLocation = SearchReqLocation
   { id :: Id SearchReqLocation,

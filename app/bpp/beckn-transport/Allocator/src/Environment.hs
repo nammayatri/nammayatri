@@ -2,23 +2,23 @@
 
 module Environment where
 
-import Beckn.External.Encryption (EncTools)
-import Beckn.Storage.Esqueleto.Config
-import qualified Beckn.Storage.Hedis as Redis
-import qualified Beckn.Storage.Hedis.AppPrefixes as Redis
-import Beckn.Types.Common
-import Beckn.Types.Flow (FlowR)
-import Beckn.Types.Id (ShortId)
-import Beckn.Utils.App (getPodName)
-import Beckn.Utils.Common
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import Beckn.Utils.Servant.SignatureAuth
-import Beckn.Utils.Shutdown
 import Domain.Action.Allocation.Internal.DriverPool.Config (DriverPoolBatchesConfig)
 import Domain.Types.Merchant (Subscriber)
 import qualified "beckn-transport" Environment as App
 import EulerHS.Prelude
+import Kernel.External.Encryption (EncTools)
+import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.Hedis.AppPrefixes as Redis
+import Kernel.Types.Common
+import Kernel.Types.Flow (FlowR)
+import Kernel.Types.Id (ShortId)
+import Kernel.Utils.App (getPodName)
+import Kernel.Utils.Common
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import Kernel.Utils.Servant.SignatureAuth
+import Kernel.Utils.Shutdown
 import SharedLogic.DriverPool (DriverPoolConfig)
 import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
@@ -96,7 +96,7 @@ buildAppEnv AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
-  hedisEnv <- Redis.connectHedis hedisCfg Redis.becknTransportPrefix
+  hedisEnv <- Redis.connectHedis hedisCfg Redis.staticOfferDriverAppPrefix
   pure AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

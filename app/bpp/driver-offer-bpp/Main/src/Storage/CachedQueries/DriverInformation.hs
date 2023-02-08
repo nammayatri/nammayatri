@@ -3,14 +3,14 @@
 
 module Storage.CachedQueries.DriverInformation where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Hedis as Hedis
-import Beckn.Types.Id
 import Domain.Types.DriverInformation
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
+import Kernel.External.Encryption
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.DriverInformation as Queries
 

@@ -2,9 +2,9 @@
 
 module RouteExtractor where
 
-import Beckn.External.Maps.Types (LatLong (LatLong))
-import Beckn.Prelude
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import Kernel.External.Maps.Types (LatLong (LatLong))
+import Kernel.Prelude
 import RenderTrack
 import System.Environment
 import qualified Text.XML as XML

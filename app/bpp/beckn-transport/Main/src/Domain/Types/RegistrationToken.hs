@@ -4,10 +4,10 @@
 
 module Domain.Types.RegistrationToken where
 
-import Beckn.Types.Id
 import Data.Aeson
 import Data.Time
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
 
 data Medium
   = SMS

@@ -6,16 +6,16 @@ module App.Scheduler where
 -- TODO: move it to the integration tests when real usage of the scheduler library appears.
 
 import App.Scheduler.Types
-import Beckn.Mock.App (MockM, runMock)
-import Beckn.Prelude
-import Beckn.Randomizer
-import Beckn.Types.Error (GenericError (InternalError))
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.IOLogging (LoggerEnv, prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
 import Environment (Flow)
+import Kernel.Mock.App (MockM, runMock)
+import Kernel.Prelude
+import Kernel.Randomizer
+import Kernel.Types.Error (GenericError (InternalError))
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.Dhall (readDhallConfigDefault)
+import Kernel.Utils.IOLogging (LoggerEnv, prepareLoggerEnv)
 import Lib.Scheduler
 import Lib.Scheduler.ScheduleJob (createJobIn)
 import Storage as QSJ

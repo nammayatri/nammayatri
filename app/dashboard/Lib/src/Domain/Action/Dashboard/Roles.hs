@@ -1,15 +1,15 @@
 module Domain.Action.Dashboard.Roles where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Types.APISuccess (APISuccess (..))
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.AccessMatrix as DMatrix
 import Domain.Types.Role
 import qualified Domain.Types.Role as DRole
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth

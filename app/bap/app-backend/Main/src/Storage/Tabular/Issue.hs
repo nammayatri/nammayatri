@@ -7,10 +7,10 @@
 
 module Storage.Tabular.Issue where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.Issue as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import qualified Storage.Tabular.Person as SPerson
 import qualified Storage.Tabular.Quote as SQuote
 

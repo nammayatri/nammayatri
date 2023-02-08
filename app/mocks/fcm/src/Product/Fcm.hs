@@ -1,15 +1,15 @@
 module Product.Fcm where
 
 import App.Types
-import Beckn.External.FCM.Types
-import Beckn.Types.Error
-import Beckn.Utils.Error
-import Beckn.Utils.Logging
-import Beckn.Utils.Text
 import Control.Concurrent.MVar (modifyMVar, modifyMVar_)
 import Data.Aeson
 import qualified Data.Map as Map
 import EulerHS.Prelude
+import Kernel.External.FCM.Types
+import Kernel.Types.Error
+import Kernel.Utils.Error
+import Kernel.Utils.Logging
+import Kernel.Utils.Text
 import Types.API.Fcm
 
 sendFcm ::

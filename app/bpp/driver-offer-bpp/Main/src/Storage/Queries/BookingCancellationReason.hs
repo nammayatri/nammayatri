@@ -1,11 +1,11 @@
 module Storage.Queries.BookingCancellationReason where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
 import Domain.Types.Ride
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.BookingCancellationReason
 
 create :: BookingCancellationReason -> SqlDB ()

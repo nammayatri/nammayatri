@@ -1,11 +1,11 @@
 module Mobility.AppBackend.Queries where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto hiding (findById)
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Geofencing (GeoRestriction (Regions))
-import Beckn.Types.Id
 import qualified "app-backend" Domain.Types.Merchant as DM
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto hiding (findById)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Geofencing (GeoRestriction (Regions))
+import Kernel.Types.Id
 import "app-backend" Storage.Tabular.Merchant
 
 updateOrigAndDestRestriction :: Id DM.Merchant -> [Text] -> [Text] -> SqlDB ()

@@ -10,14 +10,6 @@ module Domain.Action.UI.FarePolicy.Discount
   )
 where
 
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Types.APISuccess
-import Beckn.Types.Common
-import Beckn.Types.Id (Id (..))
-import Beckn.Types.Predicate
-import Beckn.Utils.Common
-import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.FarePolicy.Discount as DFPDiscount
 import qualified Domain.Types.FarePolicy.FareProduct as DFProduct
@@ -25,6 +17,14 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Veh
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.APISuccess
+import Kernel.Types.Common
+import Kernel.Types.Id (Id (..))
+import Kernel.Types.Predicate
+import Kernel.Utils.Common
+import Kernel.Utils.Validation
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.Discount as QDisc

@@ -1,6 +1,6 @@
 module Beckn.Types.Core.Metro.OnSearch.Time where
 
-import Beckn.Prelude
+import Kernel.Prelude
 
 newtype Time = Time
   { timestamp :: UTCTime

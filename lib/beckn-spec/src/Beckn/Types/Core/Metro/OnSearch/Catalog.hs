@@ -2,9 +2,9 @@ module Beckn.Types.Core.Metro.OnSearch.Catalog where
 
 import Beckn.Types.Core.Metro.OnSearch.Descriptor (Descriptor)
 import Beckn.Types.Core.Metro.OnSearch.Provider
-import Beckn.Utils.JSON (slashedRecordFields)
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (exp, id)
+import Kernel.Utils.JSON (slashedRecordFields)
 
 data Catalog = Catalog
   { bpp_descriptor :: Descriptor,

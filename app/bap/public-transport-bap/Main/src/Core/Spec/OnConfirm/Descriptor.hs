@@ -1,8 +1,8 @@
 module Core.Spec.OnConfirm.Descriptor where
 
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.Aeson
 import Data.OpenApi
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 import Relude
 
 newtype DescriptorCode = DescriptorCode

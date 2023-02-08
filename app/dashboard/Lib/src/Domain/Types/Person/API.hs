@@ -1,10 +1,10 @@
 module Domain.Types.Person.API where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person.Type
 import qualified Domain.Types.Role as DRole
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data PersonAPIEntity = PersonAPIEntity
   { id :: Id Person,

@@ -1,8 +1,8 @@
 module API.UI.Booking.BookingId.TriggerStatus.Types where
 
-import Beckn.Types.APISuccess
-import Beckn.Types.Id
 import Domain.Types.Booking
+import Kernel.Types.APISuccess
+import Kernel.Types.Id
 import Servant
 import Tools.Auth
 

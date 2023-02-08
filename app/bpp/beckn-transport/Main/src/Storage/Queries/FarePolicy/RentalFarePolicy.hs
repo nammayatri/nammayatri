@@ -7,14 +7,14 @@ module Storage.Queries.FarePolicy.RentalFarePolicy
     #-}
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common (Hours, Kilometers)
-import Beckn.Types.Id
 import Domain.Types.FarePolicy.RentalFarePolicy
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import Domain.Types.Merchant
 import Domain.Types.Vehicle as Vehicle
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common (Hours, Kilometers)
+import Kernel.Types.Id
 import Storage.Tabular.FarePolicy.RentalFarePolicy
 
 create ::

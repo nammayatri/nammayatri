@@ -5,16 +5,16 @@ module Lib.LocationUpdates
   )
 where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis as Redis
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DOSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person as Person
 import Environment
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis as Redis
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC

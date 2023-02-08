@@ -7,12 +7,12 @@
 
 module Storage.Tabular.FarePolicy where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Centesimal, HighPrecMoney, Meters, Money, Seconds)
-import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (Centesimal, HighPrecMoney, Meters, Money, Seconds)
+import Kernel.Types.Id
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Vehicle ()
 

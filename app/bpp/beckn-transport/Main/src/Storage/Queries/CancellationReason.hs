@@ -1,8 +1,8 @@
 module Storage.Queries.CancellationReason where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
 import Domain.Types.CancellationReason
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
 import Storage.Tabular.CancellationReason
 
 findAll :: Transactionable m => m [CancellationReason]

@@ -53,7 +53,7 @@ default-extensions:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - beckn-core
+  - mobility-core
   - bytestring
   - euler-hs
   - record-dot-preprocessor
@@ -100,4 +100,4 @@ executables:
       - -Wincomplete-uni-patterns
     dependencies:
       - kafka-consumers
-      - beckn-core
+      - mobility-core

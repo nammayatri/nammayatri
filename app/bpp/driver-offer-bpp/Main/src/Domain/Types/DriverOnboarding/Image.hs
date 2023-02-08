@@ -1,10 +1,10 @@
 module Domain.Types.DriverOnboarding.Image where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.Error
 import Domain.Types.Merchant
 import Domain.Types.Person
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data ImageType = DriverLicense | VehicleRegistrationCertificate
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)

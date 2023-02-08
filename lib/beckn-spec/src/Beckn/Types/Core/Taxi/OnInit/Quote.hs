@@ -1,10 +1,10 @@
 module Beckn.Types.Core.Taxi.OnInit.Quote where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.DecimalValue
 import Beckn.Types.Core.Taxi.OnInit.BreakupItem
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Quote = Quote
   { price :: QuotePrice,

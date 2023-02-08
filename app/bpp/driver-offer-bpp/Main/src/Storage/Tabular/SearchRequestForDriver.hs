@@ -7,13 +7,13 @@
 
 module Storage.Tabular.SearchRequestForDriver where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Meters, Money)
-import Beckn.Types.Id
-import Beckn.Types.Time
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (Meters, Money)
+import Kernel.Types.Id
+import Kernel.Types.Time
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()

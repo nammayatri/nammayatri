@@ -4,7 +4,6 @@ module Beckn.Types.Core.Taxi.OnSelect
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.OnSelect.Addon as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Category as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Descriptor as Reexport
@@ -19,6 +18,7 @@ import Beckn.Types.Core.Taxi.OnSelect.Provider as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.ProviderLocation as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.StopInfo as Reexport
+import Kernel.Prelude
 
 newtype OnSelectMessage = OnSelectMessage
   { order :: Order

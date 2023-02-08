@@ -1,9 +1,9 @@
 module Beckn.Types.Core.Metro.OnSearch.Fulfillment where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Metro.OnSearch.Location (Location)
 import Beckn.Types.Core.Metro.OnSearch.Time (Time)
 import Beckn.Types.Core.Metro.OnSearch.Vehicle (Vehicle)
+import Kernel.Prelude
 
 data Fulfillment = Fulfillment
   { id :: Text,

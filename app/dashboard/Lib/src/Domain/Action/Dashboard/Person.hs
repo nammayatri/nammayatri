@@ -1,25 +1,25 @@
 module Domain.Action.Dashboard.Person where
 
-import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.APISuccess (APISuccess (..))
-import Beckn.Types.Common
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Types.Predicate
-import Beckn.Utils.Common
-import qualified Beckn.Utils.Predicates as P
-import Beckn.Utils.Validation
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.API as AP
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Types.Predicate
+import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Validation
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP

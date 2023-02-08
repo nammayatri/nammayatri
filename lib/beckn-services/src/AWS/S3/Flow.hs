@@ -3,13 +3,13 @@ module AWS.S3.Flow (get', put', get'', put'', mockGet, mockPut) where
 import AWS.S3.Error
 import AWS.S3.Types
 import AWS.S3.Utils
-import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Beckn.Utils.Common
 import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import EulerHS.Prelude hiding (decodeUtf8, get, put, show)
 import qualified EulerHS.Types as ET
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import Kernel.Utils.Common
 import Servant
 import Servant.Client
 import System.Directory (removeFile)

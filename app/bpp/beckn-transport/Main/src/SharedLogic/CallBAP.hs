@@ -11,16 +11,8 @@ module SharedLogic.CallBAP
   )
 where
 
-import Beckn.Storage.Hedis
-import Beckn.Types.Common
-import qualified Beckn.Types.Core.Context as Context
-import Beckn.Types.Core.ReqTypes (BecknCallbackReq (BecknCallbackReq))
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnUpdate as ACL
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
@@ -29,6 +21,14 @@ import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
+import Kernel.Storage.Hedis
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq (BecknCallbackReq))
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
+import Kernel.Utils.Servant.SignatureAuth
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QPerson

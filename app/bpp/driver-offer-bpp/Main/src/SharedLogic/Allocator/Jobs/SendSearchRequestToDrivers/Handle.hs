@@ -6,8 +6,8 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
   )
 where
 
-import Beckn.Prelude
-import Beckn.Utils.Common
+import Kernel.Prelude
+import Kernel.Utils.Common
 import Lib.Scheduler.Types (ExecutionResult (..))
 import SharedLogic.DriverPool
 

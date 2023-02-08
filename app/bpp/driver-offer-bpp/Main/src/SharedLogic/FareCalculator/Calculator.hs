@@ -6,8 +6,6 @@ module SharedLogic.FareCalculator.Calculator
   )
 where
 
-import Beckn.Prelude
-import Beckn.Utils.Common
 import Data.Time
   ( LocalTime (localTimeOfDay),
     TimeOfDay (..),
@@ -18,6 +16,8 @@ import Data.Time
   )
 import Domain.Types.FareParameters
 import Domain.Types.FarePolicy
+import Kernel.Prelude
+import Kernel.Utils.Common
 
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do

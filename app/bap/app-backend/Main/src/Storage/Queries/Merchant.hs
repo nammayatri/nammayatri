@@ -7,12 +7,12 @@ module Storage.Queries.Merchant
     #-}
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto hiding (findById)
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Merchant as DOrg
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto hiding (findById)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.Merchant
 
 findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)

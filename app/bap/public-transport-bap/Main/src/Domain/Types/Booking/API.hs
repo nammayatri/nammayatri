@@ -1,11 +1,11 @@
 module Domain.Types.Booking.API where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Domain.Types.Booking.Type
 import Domain.Types.PaymentTransaction
 import Domain.Types.TransportStation
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,

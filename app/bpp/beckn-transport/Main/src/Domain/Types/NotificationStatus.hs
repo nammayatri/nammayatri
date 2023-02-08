@@ -2,11 +2,11 @@
 
 module Domain.Types.NotificationStatus where
 
-import Beckn.Types.Id
 import Data.Time (UTCTime)
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Person (Driver)
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
 
 data AnswerStatus = NOTIFIED | REJECTED | IGNORED | ACCEPTED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)

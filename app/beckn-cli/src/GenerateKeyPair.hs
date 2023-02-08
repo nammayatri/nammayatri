@@ -2,10 +2,10 @@
 
 module GenerateKeyPair where
 
-import Beckn.Types.Credentials
-import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Kernel.Types.Credentials
+import qualified Kernel.Utils.SignatureAuth as HttpSig
 
 data GenerateKeyPairResponse = GenerateKeyPairResponse
   { privateKey :: PrivateKey,

@@ -4,15 +4,15 @@ module Core.ACL.Track
   )
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Hedis as Redis
-import qualified Beckn.Types.Core.Context as Context
-import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Track as Track
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Ride as DRide
 import Environment
+import Kernel.Prelude
+import Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.Id
+import Kernel.Utils.Common
 
 data TrackBuildReq = TrackBuildReq
   { bppRideId :: Id DRide.BPPRide,

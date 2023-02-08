@@ -10,15 +10,15 @@ module Idfy.Flow
   )
 where
 
-import Beckn.Tools.Metrics.CoreMetrics
-import Beckn.Types.Common
-import Beckn.Types.Flow
-import Beckn.Utils.Common hiding (Error)
-import Beckn.Utils.IOLogging
 import EulerHS.Prelude
 import Idfy.Types.IdfyConfig
 import Idfy.Types.Response
 import Idfy.WebhookHandler
+import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.Common
+import Kernel.Types.Flow
+import Kernel.Utils.Common hiding (Error)
+import Kernel.Utils.IOLogging
 import Servant hiding (throwError)
 
 type IdfyWebhookAPI =

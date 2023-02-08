@@ -7,10 +7,10 @@ module API.UI.Call
   )
 where
 
-import Beckn.Prelude
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Call as DCall
 import Environment
+import Kernel.Prelude
+import Kernel.Utils.Common
 import Servant
 
 -------- Direct call (Exotel) APIs

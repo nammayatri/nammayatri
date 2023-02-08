@@ -3,13 +3,13 @@
 
 module RedisAlgorithm where
 
-import Beckn.External.Maps.Types (LatLong (LatLong))
-import Beckn.Prelude
-import Beckn.Types.Id (Id (Id))
-import Beckn.Types.MonadGuid
-import Beckn.Utils.CalculateDistance
-import Beckn.Utils.Common
 import qualified Data.List.NonEmpty as NE
+import Kernel.External.Maps.Types (LatLong (LatLong))
+import Kernel.Prelude
+import Kernel.Types.Id (Id (Id))
+import Kernel.Types.MonadGuid
+import Kernel.Utils.CalculateDistance
+import Kernel.Utils.Common
 import Lib.LocationUpdates.Internal
 import Test.QuickCheck
 import Test.QuickCheck.Monadic

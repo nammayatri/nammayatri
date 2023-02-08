@@ -3,15 +3,15 @@
 
 module Domain.Action.UI.DriverOnboarding.Referral where
 
-import Beckn.External.Encryption (encrypt)
-import Beckn.Prelude
-import Beckn.Types.APISuccess
-import Beckn.Types.Id
-import Beckn.Types.Validation (Validate)
-import qualified Beckn.Utils.Predicates as P
-import Beckn.Utils.Validation (runRequestValidation, validateField)
 import qualified Domain.Types.Person as Person
 import Environment
+import Kernel.External.Encryption (encrypt)
+import Kernel.Prelude
+import Kernel.Types.APISuccess
+import Kernel.Types.Id
+import Kernel.Types.Validation (Validate)
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Validation (runRequestValidation, validateField)
 import qualified Storage.CachedQueries.DriverInformation as DriverInformation
 
 newtype ReferralReq = ReferralReq

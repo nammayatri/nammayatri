@@ -3,11 +3,11 @@
 
 module Storage.Queries.Booking.BookingLocation where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Booking.BookingLocation
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.Booking.BookingLocation
 
 updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()

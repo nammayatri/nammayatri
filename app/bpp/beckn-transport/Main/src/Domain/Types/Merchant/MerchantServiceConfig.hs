@@ -2,15 +2,15 @@
 
 module Domain.Types.Merchant.MerchantServiceConfig where
 
-import qualified Beckn.External.Maps as Maps
-import Beckn.External.Maps.Interface.Types
-import Beckn.External.SMS as Sms
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import qualified Kernel.External.Maps as Maps
+import Kernel.External.Maps.Interface.Types
+import Kernel.External.SMS as Sms
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
 import qualified Text.Show
 
 data ServiceName = MapsService Maps.MapsService | SmsService Sms.SmsService

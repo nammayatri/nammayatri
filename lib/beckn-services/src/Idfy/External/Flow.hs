@@ -13,9 +13,6 @@ module Idfy.External.Flow
   )
 where
 
-import Beckn.Tools.Metrics.CoreMetrics.Types
-import Beckn.Types.Common
-import Beckn.Utils.Common hiding (Error)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Idfy.Auth
@@ -23,6 +20,9 @@ import Idfy.Types.Error
 import Idfy.Types.IdfyConfig
 import Idfy.Types.Request
 import Idfy.Types.Response
+import Kernel.Tools.Metrics.CoreMetrics.Types
+import Kernel.Types.Common
+import Kernel.Utils.Common hiding (Error)
 import Servant (Get, Header, JSON, Post, ReqBody, (:>))
 
 type VerifyDLAPI =

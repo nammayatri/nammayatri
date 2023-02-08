@@ -1,10 +1,10 @@
 module API.Utils where
 
-import Beckn.Mock.App
-import Beckn.Types.Core.Context
-import Beckn.Types.Time
-import Beckn.Types.TimeRFC339
 import Environment
+import Kernel.Mock.App
+import Kernel.Types.Beckn.Context
+import Kernel.Types.Time
+import Kernel.Types.TimeRFC339
 import Relude
 
 buildOnActionContext :: Action -> Context -> MockM AppEnv Context

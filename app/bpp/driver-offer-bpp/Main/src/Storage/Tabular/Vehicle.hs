@@ -7,12 +7,12 @@
 
 module Storage.Tabular.Vehicle where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.Person as DPers
 import qualified Domain.Types.Vehicle as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import qualified Storage.Tabular.Merchant as TM
 import Storage.Tabular.Person (PersonTId)
 

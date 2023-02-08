@@ -1,7 +1,5 @@
 module API.UI.TranspAdmin (module Reexport, API, handler) where
 
-import Beckn.Prelude
-import Beckn.Utils.Common (withFlowHandlerAPI)
 import Domain.Action.UI.TranspAdmin as Reexport
   ( TranspAdminProfileRes (..),
     UpdateTranspAdminProfileReq (..),
@@ -10,6 +8,8 @@ import Domain.Action.UI.TranspAdmin as Reexport
 import qualified Domain.Action.UI.TranspAdmin as DTranspAdmin
 import qualified Domain.Types.Person as SP
 import Environment
+import Kernel.Prelude
+import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant
 import Tools.Auth (AdminTokenAuth)
 

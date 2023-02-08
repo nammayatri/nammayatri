@@ -4,11 +4,11 @@ module Beckn.Types.Core.Taxi.OnSelect.Category
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.FareProductType as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Descriptor
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Category = Category
   { id :: FareProductType,

@@ -3,11 +3,11 @@ module API where
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
 import qualified API.UI as UI
-import Beckn.Utils.Servant.HTML
 import qualified Data.ByteString as BS
 import Data.OpenApi
 import Environment
 import EulerHS.Prelude
+import Kernel.Utils.Servant.HTML
 import Servant
 import Servant.OpenApi
 

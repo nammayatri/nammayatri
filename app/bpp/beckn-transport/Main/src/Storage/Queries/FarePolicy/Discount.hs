@@ -5,13 +5,13 @@ module Storage.Queries.FarePolicy.Discount
     #-}
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.FarePolicy.Discount
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Vehicle as Vehicle
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.FarePolicy.Discount
 
 create :: Discount -> SqlDB ()

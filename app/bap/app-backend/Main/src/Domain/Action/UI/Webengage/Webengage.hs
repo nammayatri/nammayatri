@@ -1,14 +1,14 @@
 module Domain.Action.UI.Webengage.Webengage where
 
-import Beckn.External.Encryption (decrypt)
-import qualified Beckn.External.Infobip.Flow as IF
-import qualified Beckn.External.Infobip.Types as EIF hiding (id)
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Person as Person hiding (id)
 import Domain.Types.Webengage
+import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Infobip.Flow as IF
+import qualified Kernel.External.Infobip.Types as EIF hiding (id)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Webengage as QWeb
 import Tools.Error

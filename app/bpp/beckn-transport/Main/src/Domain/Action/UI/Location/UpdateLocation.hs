@@ -8,19 +8,6 @@ module Domain.Action.UI.Location.UpdateLocation
   )
 where
 
-import Beckn.External.Maps.Types
-import Beckn.Prelude hiding (Handler)
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Streaming.Kafka.Producer (produceMessage)
-import Beckn.Streaming.Kafka.Producer.Types (KafkaProducerTools)
-import Beckn.Types.APISuccess (APISuccess (..))
-import Beckn.Types.Common
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Types.SlidingWindowLimiter (APIRateLimitOptions)
-import Beckn.Utils.Common hiding (id)
-import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Merchant as DM
@@ -28,6 +15,19 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
 import GHC.Records.Extra
+import Kernel.External.Maps.Types
+import Kernel.Prelude hiding (Handler)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer (produceMessage)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
+import Kernel.Utils.Common hiding (id)
+import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import qualified Lib.LocationUpdates as LocUpd
 import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.Ride as SRide

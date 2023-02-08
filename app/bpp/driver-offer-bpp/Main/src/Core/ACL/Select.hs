@@ -1,15 +1,15 @@
 module Core.ACL.Select (buildSelectReq) where
 
-import qualified Beckn.External.Maps as Maps
-import Beckn.Prelude hiding (error, setField)
-import Beckn.Product.Validation.Context
-import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified Beckn.Types.Core.Taxi.Common.ItemCode as OS
-import qualified Beckn.Types.Registry.Subscriber as Subscriber
-import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Select as DSelect
 import Domain.Types.Vehicle.Variant
+import qualified Kernel.External.Maps as Maps
+import Kernel.Prelude hiding (error, setField)
+import Kernel.Product.Validation.Context
+import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Registry.Subscriber as Subscriber
+import Kernel.Utils.Common
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 

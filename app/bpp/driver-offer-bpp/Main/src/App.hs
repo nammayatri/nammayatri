@@ -2,21 +2,21 @@ module App where
 
 import AWS.S3
 import qualified App.Server as App
-import Beckn.Exit
-import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
-import qualified Beckn.Tools.Metrics.Init as Metrics
-import qualified Beckn.Types.App as App
-import Beckn.Types.Flow
-import Beckn.Utils.App
-import Beckn.Utils.Common
-import Beckn.Utils.Dhall
-import qualified Beckn.Utils.FlowLogging as L
-import Beckn.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt)
 import qualified Data.Text as T
 import Environment
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Idfy.Auth
+import Kernel.Exit
+import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import qualified Kernel.Tools.Metrics.Init as Metrics
+import qualified Kernel.Types.App as App
+import Kernel.Types.Flow
+import Kernel.Utils.App
+import Kernel.Utils.Common
+import Kernel.Utils.Dhall
+import qualified Kernel.Utils.FlowLogging as L
+import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt)
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,

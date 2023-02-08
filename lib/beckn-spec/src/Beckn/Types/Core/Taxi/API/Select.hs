@@ -1,9 +1,9 @@
 module Beckn.Types.Core.Taxi.API.Select where
 
-import Beckn.Prelude
-import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.ReqTypes (BecknReq)
 import Beckn.Types.Core.Taxi.Select (SelectMessage)
+import Kernel.Prelude
+import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.ReqTypes (BecknReq)
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SelectReq = BecknReq SelectMessage

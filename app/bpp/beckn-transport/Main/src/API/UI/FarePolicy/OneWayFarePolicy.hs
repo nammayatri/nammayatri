@@ -1,7 +1,5 @@
 module API.UI.FarePolicy.OneWayFarePolicy (module Reexport, API, handler) where
 
-import Beckn.Types.Id (Id (..))
-import Beckn.Utils.Common
 import Domain.Action.UI.FarePolicy.OneWayFarePolicy as Reexport
   ( ListOneWayFarePolicyRes (..),
     UpdateOneWayFarePolicyReq (..),
@@ -13,6 +11,8 @@ import qualified Domain.Types.FarePolicy.OneWayFarePolicy as DFarePolicy
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude
+import Kernel.Types.Id (Id (..))
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

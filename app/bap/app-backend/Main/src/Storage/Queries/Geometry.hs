@@ -1,9 +1,9 @@
 module Storage.Queries.Geometry where
 
-import Beckn.External.Maps.Types (LatLong)
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
 import Domain.Types.Geometry
+import Kernel.External.Maps.Types (LatLong)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
 import Storage.Tabular.Geometry
 
 findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]

@@ -3,9 +3,9 @@
 
 module Domain.Types.VehicleVariant where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Utils.GenericPretty
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Utils.GenericPretty
 
 data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW
   deriving

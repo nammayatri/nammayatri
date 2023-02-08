@@ -3,9 +3,10 @@ module Beckn.Types.Core.Taxi.Select.Order where
 import Beckn.Types.Core.Taxi.Select.Descriptor
 import Beckn.Types.Core.Taxi.Select.Fulfillment
 --import Beckn.Types.Core.Taxi.Select.Payment
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, id, state)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Order = Order
   { items :: [OrderItem],

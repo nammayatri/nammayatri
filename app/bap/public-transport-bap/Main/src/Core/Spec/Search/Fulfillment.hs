@@ -1,10 +1,10 @@
 module Core.Spec.Search.Fulfillment where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty
-import Beckn.Utils.Schema
 import Core.Spec.Search.LocationGps
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty
+import Kernel.Utils.Schema
 
 data Fulfillment = Fulfillment
   { start :: StartInfo,

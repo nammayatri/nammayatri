@@ -1,12 +1,12 @@
 module API.Dashboard.Roles where
 
-import Beckn.Prelude
-import Beckn.Types.APISuccess
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.Dashboard.Roles as DRoles
 import Domain.Types.Role as DRole
 import Environment
+import Kernel.Prelude
+import Kernel.Types.APISuccess
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

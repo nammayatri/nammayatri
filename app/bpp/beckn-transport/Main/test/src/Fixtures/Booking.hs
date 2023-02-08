@@ -1,6 +1,5 @@
 module Fixtures.Booking where
 
-import Beckn.Types.Id
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.BookingLocation as Loc
 import qualified Domain.Types.Vehicle as Veh
@@ -8,6 +7,7 @@ import EulerHS.Prelude
 import qualified Fixtures.BaseUrl as Fixtures
 import qualified Fixtures.Person as Fixtures
 import qualified Fixtures.Time as Fixtures
+import Kernel.Types.Id
 
 defaultBooking :: SRB.Booking
 defaultBooking = do

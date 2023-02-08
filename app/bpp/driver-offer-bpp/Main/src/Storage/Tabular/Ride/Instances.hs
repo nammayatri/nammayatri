@@ -3,12 +3,12 @@
 
 module Storage.Tabular.Ride.Instances (FullRideT) where
 
-import Beckn.External.Maps.Types (LatLong (..))
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.Person as Domain
 import qualified Domain.Types.Ride as Domain
+import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Rating
 import Storage.Tabular.Ride.Table
 

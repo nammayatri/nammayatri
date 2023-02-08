@@ -2,11 +2,11 @@
 
 module Domain.Types.BookingCancellationReason where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import Domain.Types.Booking (Booking)
 import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStage)
 import Domain.Types.Ride (Ride)
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data BookingCancellationReason = BookingCancellationReason
   { bookingId :: Id Booking,

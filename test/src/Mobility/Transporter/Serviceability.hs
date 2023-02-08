@@ -4,9 +4,9 @@ module Mobility.Transporter.Serviceability where
 
 import qualified "app-backend" API.UI.Search as AppBESearch
 import "app-backend" API.UI.Serviceability
-import Beckn.External.Maps.Types (LatLong (..))
 import Common
 import EulerHS.Prelude
+import Kernel.External.Maps.Types (LatLong (..))
 import Mobility.AppBackend.APICalls
 import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Routes

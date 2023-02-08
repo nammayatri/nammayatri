@@ -1,9 +1,9 @@
 module Core.Spec.Confirm.Item where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi hiding (items)
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Item = Item
   { route_code :: Text,

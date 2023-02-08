@@ -1,10 +1,10 @@
 module API.Types where
 
-import Beckn.Types.Core.Ack
-import Beckn.Types.Core.ReqTypes
 import "public-transport-bap" Core.Spec.Confirm
 import "public-transport-bap" Core.Spec.Search
 import "public-transport-bap" Core.Spec.Status
+import Kernel.Types.Beckn.Ack
+import Kernel.Types.Beckn.ReqTypes
 import Relude
 import Servant
 

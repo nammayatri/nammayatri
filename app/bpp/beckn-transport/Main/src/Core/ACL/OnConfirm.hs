@@ -1,12 +1,12 @@
 module Core.ACL.OnConfirm (mkOnConfirmMessage) where
 
-import Beckn.Prelude
-import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
-import Beckn.Types.Id
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.Vehicle as Veh
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
 
 mkOnConfirmMessage :: DConfirm.DConfirmRes -> OnConfirm.OnConfirmMessage
 mkOnConfirmMessage res = do

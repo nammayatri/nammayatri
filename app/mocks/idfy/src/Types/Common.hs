@@ -5,11 +5,11 @@
 
 module Types.Common where
 
-import Beckn.Types.Error.BaseError.HTTPError hiding (Error)
-import Beckn.Types.Error.BaseError.HTTPError.FromResponse
 import Data.Aeson hiding (Error)
 import Data.OpenApi
 import EulerHS.Prelude hiding (state)
+import Kernel.Types.Error.BaseError.HTTPError hiding (Error)
+import Kernel.Types.Error.BaseError.HTTPError.FromResponse
 
 type AccountId = Text
 

@@ -1,7 +1,7 @@
 module Storage.Queries.Issues (insertIssue) where
 
-import Beckn.Storage.Esqueleto
 import Domain.Types.Issue
+import Kernel.Storage.Esqueleto
 import Storage.Tabular.Issue ()
 
 insertIssue :: Issue -> SqlDB ()

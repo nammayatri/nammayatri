@@ -99,7 +99,7 @@ library:
     - -fhide-source-paths
     - -Werror
   dependencies:
-    - beckn-core
+    - mobility-core
     - beckn-spec
     - location-updates
 
@@ -113,7 +113,7 @@ executables:
       - '"-with-rtsopts=-N -T"'
     dependencies:
       - beckn-transport
-      - beckn-core
+      - mobility-core
       - beckn-spec
 
 tests:
@@ -124,7 +124,7 @@ tests:
       - test/src
     dependencies:
       - beckn-transport
-      - beckn-core
+      - mobility-core
       - beckn-spec
       - tasty
       - tasty-hunit

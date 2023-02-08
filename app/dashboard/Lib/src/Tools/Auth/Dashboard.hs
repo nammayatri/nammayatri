@@ -2,18 +2,18 @@
 
 module Tools.Auth.Dashboard (DashboardAuth, verifyDashboardAction, TokenInfo (..), module Reexport) where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.Monitoring.Prometheus.Servant
-import Beckn.Utils.Servant.HeaderAuth
 import Data.Singletons.TH
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import Domain.Types.Role as Reexport (DashboardAccessType (..))
 import qualified Domain.Types.Role as DRole
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.Monitoring.Prometheus.Servant
+import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (throwError)
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Role as QRole

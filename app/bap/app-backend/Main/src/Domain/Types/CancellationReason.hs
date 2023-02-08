@@ -1,9 +1,9 @@
 module Domain.Types.CancellationReason where
 
-import Beckn.Prelude
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
+import Kernel.Prelude
 import Servant
 
 data CancellationStage = OnSearch | OnConfirm | OnAssign

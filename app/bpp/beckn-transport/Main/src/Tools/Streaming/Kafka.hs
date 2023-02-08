@@ -4,10 +4,10 @@ module Tools.Streaming.Kafka
   )
 where
 
-import Beckn.Streaming.Kafka.Producer.Types as Reexport
-import Beckn.Streaming.Kafka.Topic.BusinessEvent.Environment
-import Beckn.Streaming.Kafka.Topic.BusinessEvent.Types as Reexport
 import EulerHS.Prelude
+import Kernel.Streaming.Kafka.Producer.Types as Reexport
+import Kernel.Streaming.Kafka.Topic.BusinessEvent.Environment
+import Kernel.Streaming.Kafka.Topic.BusinessEvent.Types as Reexport
 
 newtype BPPKafkaEnvs = BPPKafkaEnvs
   { businessEventEnv :: KafkaBEEnv

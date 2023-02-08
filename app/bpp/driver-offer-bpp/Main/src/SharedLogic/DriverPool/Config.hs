@@ -1,9 +1,9 @@
 module SharedLogic.DriverPool.Config where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import qualified Beckn.Types.SlidingWindowCounters as SWC
-import Beckn.Utils.Dhall (FromDhall)
+import Kernel.Prelude
+import Kernel.Types.Common
+import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Kernel.Utils.Dhall (FromDhall)
 
 data IntelligentPoolConfig = IntelligentPoolConfig
   { minQuotesToQualifyForIntelligentPool :: Int,

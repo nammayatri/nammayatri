@@ -1,9 +1,5 @@
 module Core.Spec.Common.Payment (module Core.Spec.Common.Payment, module Decimal) where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty (PrettyShow, Showable (..))
-import Beckn.Utils.JSON
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.Common.DecimalValue as Decimal (DecimalValue (..))
 import Data.Aeson
 import Data.Aeson.Types
@@ -12,6 +8,10 @@ import Data.OpenApi
     fromAesonOptions,
     genericDeclareNamedSchema,
   )
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty (PrettyShow, Showable (..))
+import Kernel.Utils.JSON
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Payment a = Payment
   { uri :: BaseUrl,

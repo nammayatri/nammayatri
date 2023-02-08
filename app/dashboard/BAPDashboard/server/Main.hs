@@ -1,7 +1,7 @@
 module Main where
 
 import App (runService)
-import Beckn.Prelude
+import Kernel.Prelude
 
 main :: IO ()
 main = runService identity

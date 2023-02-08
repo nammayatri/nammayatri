@@ -1,17 +1,17 @@
 module Domain.Action.Beckn.Rating where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.App
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified EulerHS.Language as L
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.App
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating

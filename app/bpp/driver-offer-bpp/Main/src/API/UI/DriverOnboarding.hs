@@ -1,7 +1,5 @@
 module API.UI.DriverOnboarding where
 
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DriverOnboarding
@@ -10,6 +8,8 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Lib.Servant.MultipartFormData
 import Servant
 import Tools.Auth (AdminTokenAuth, TokenAuth)

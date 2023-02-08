@@ -8,13 +8,6 @@ module Domain.Action.UI.Select
   )
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto (runInReplica)
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -23,6 +16,13 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto (runInReplica)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.Share (checkIfEstimateCancelled)
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS

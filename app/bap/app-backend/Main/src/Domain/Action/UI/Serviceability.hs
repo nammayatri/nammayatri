@@ -3,13 +3,13 @@ module Domain.Action.UI.Serviceability
   )
 where
 
-import Beckn.External.Maps.Types
-import Beckn.Prelude
-import Beckn.Storage.Hedis
-import Beckn.Types.Geofencing
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Person as Person
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import Kernel.Storage.Hedis
+import Kernel.Types.Geofencing
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry (someGeometriesContain)

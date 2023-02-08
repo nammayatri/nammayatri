@@ -1,9 +1,9 @@
 module Storage.Queries.FareParameters where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.FareParameters
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.FareParameters ()
 
 create :: FareParameters -> SqlDB ()

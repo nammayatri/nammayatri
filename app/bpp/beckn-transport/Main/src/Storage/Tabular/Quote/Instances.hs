@@ -3,11 +3,11 @@
 
 module Storage.Tabular.Quote.Instances where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import qualified Domain.Types.Quote as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.FarePolicy.FareProduct ()
 import Storage.Tabular.FarePolicy.RentalFarePolicy (RentalFarePolicyT)
 import Storage.Tabular.Quote.OneWayQuote

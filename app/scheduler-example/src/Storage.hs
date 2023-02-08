@@ -1,13 +1,13 @@
 module Storage where
 
 import App.Scheduler.Types
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Control.Concurrent
 import qualified Data.Map as Map
 import Environment (Flow)
 import GHC.IO.Unsafe (unsafePerformIO)
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Lib.Scheduler
 
 jobsList :: MVar (Map.Map (Id (AnyJob SchedulerJobType)) (AnyJob SchedulerJobType))

@@ -4,10 +4,10 @@ module Beckn.Types.Core.Taxi.OnSelect.ProviderLocation
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.Gps as Reexport
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data ProviderLocation = ProviderLocation
   { id :: Text,

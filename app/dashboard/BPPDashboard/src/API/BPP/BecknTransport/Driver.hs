@@ -5,16 +5,16 @@ module API.BPP.BecknTransport.Driver
 where
 
 import qualified BPPClient.BecknTransport as Client
-import Beckn.Prelude
-import Beckn.Types.APISuccess (APISuccess (..))
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
-import Beckn.Utils.Validation (runRequestValidation)
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
+import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth hiding (DRIVER_OFFER_BPP)

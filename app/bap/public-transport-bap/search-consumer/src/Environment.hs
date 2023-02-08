@@ -1,14 +1,14 @@
 module Environment where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config
-import Beckn.Types.Common
-import Beckn.Utils.App (getPodName)
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import Beckn.Utils.Servant.Client (HttpClientOptions, RetryCfg)
-import Beckn.Utils.Servant.SignatureAuth
-import Beckn.Utils.Shutdown
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
+import Kernel.Types.Common
+import Kernel.Utils.App (getPodName)
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
+import Kernel.Utils.Servant.SignatureAuth
+import Kernel.Utils.Shutdown
 import Tools.Metrics
 import Tools.Streaming.Kafka
 

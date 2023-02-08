@@ -6,16 +6,16 @@ module Beckn.Types.Core.Metro.Search.Payment
   )
 where
 
-import Beckn.Types.App (BaseUrl)
-import Beckn.Types.Core.DecimalValue (DecimalValue)
 import Beckn.Types.Core.Metro.Search.Time (Time)
-import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Aeson (Value (..), object, withObject, (.:), (.=))
 import Data.Aeson.Types (typeMismatch)
 import Data.HashMap.Strict (delete)
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State, (.=))
+import Kernel.Types.App (BaseUrl)
+import Kernel.Types.Beckn.DecimalValue (DecimalValue)
+import Kernel.Utils.Example
+import Kernel.Utils.JSON
 
 data Payment = Payment
   { uri :: Maybe BaseUrl,

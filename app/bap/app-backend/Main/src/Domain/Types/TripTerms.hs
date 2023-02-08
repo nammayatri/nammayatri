@@ -1,9 +1,9 @@
 module Domain.Types.TripTerms where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty (PrettyShow)
 import Data.Text as T
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty (PrettyShow)
 
 -- Non empty list here?
 data TripTerms = TripTerms

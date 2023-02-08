@@ -2,9 +2,9 @@
 
 module Domain.Types.Role where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import Data.Singletons.TH
+import Kernel.Prelude
+import Kernel.Types.Id
 
 -------- Required access levels for dashboard api --------
 

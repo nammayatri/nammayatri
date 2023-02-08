@@ -1,8 +1,5 @@
 module API.UI.Booking (module Reexport, API, handler) where
 
-import Beckn.Types.APISuccess
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Action.UI.Booking as Reexport
   ( BookingListRes (..),
     DriverResponse (..),
@@ -17,6 +14,9 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.APISuccess
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

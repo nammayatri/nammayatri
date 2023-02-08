@@ -1,15 +1,15 @@
 module Domain.Action.Dashboard.Registration where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as DB
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as DB
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP

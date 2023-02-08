@@ -1,12 +1,12 @@
 module Storage.Queries.AllocationEvent where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.AllocationEvent
 import Domain.Types.Booking
 import Domain.Types.Person (Driver, Person)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.AllocationEvent
 
 logAllocationEvent :: AllocationEventType -> Id Booking -> Maybe (Id Driver) -> SqlDB ()

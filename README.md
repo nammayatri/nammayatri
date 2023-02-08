@@ -190,7 +190,7 @@ Beckn provider (BPP), implementing mobility spec. This module contains two execu
 #### `beckn-gateway`
 Beckn gateway (BG)
 
-#### `beckn-core`
+#### `mobility-core`
 Common library where the API types, unified data models will be there
 
 ## Troubleshooting

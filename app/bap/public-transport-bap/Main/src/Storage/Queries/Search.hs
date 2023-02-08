@@ -1,9 +1,9 @@
 module Storage.Queries.Search where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.Search
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.Search
 
 findById :: Transactionable m => Id Search -> m (Maybe Search)

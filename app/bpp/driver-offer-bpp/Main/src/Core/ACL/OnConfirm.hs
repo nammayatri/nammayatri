@@ -1,11 +1,11 @@
 module Core.ACL.OnConfirm (mkOnConfirmMessage) where
 
-import Beckn.Prelude
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
-import Beckn.Types.Id
 import qualified Core.ACL.Common as Common
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
+import Kernel.Prelude
+import Kernel.Types.Id
 import SharedLogic.FareCalculator
 
 mkOnConfirmMessage :: UTCTime -> DConfirm.DConfirmRes -> OnConfirm.OnConfirmMessage

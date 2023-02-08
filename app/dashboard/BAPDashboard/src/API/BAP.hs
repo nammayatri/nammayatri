@@ -6,9 +6,9 @@ where
 
 import qualified API.BAP.Customer as Customer
 import qualified API.BAP.Merchant as Merchant
-import Beckn.Types.Id
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
+import Kernel.Types.Id
 import Servant
 
 type API =

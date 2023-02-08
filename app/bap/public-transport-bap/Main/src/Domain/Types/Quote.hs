@@ -2,12 +2,12 @@
 
 module Domain.Types.Quote where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty (PrettyShow)
 import Domain.Types.Search
 import Domain.Types.TransportStation
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty (PrettyShow)
 
 data Quote = Quote
   { id :: Id Quote,

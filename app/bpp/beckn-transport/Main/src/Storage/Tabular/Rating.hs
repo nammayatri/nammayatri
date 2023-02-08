@@ -7,10 +7,10 @@
 
 module Storage.Tabular.Rating where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.Rating as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.Ride.Table (RideTId)
 

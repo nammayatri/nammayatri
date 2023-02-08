@@ -100,7 +100,7 @@ library:
     - -Werror
   dependencies:
     - driver-offer-bpp
-    - beckn-core
+    - mobility-core
     - beckn-spec
 
 executables:
@@ -113,4 +113,4 @@ executables:
       - '"-with-rtsopts=-N -T"'
     dependencies:
       - driver-offer-allocator
-      - beckn-core
+      - mobility-core

@@ -1,10 +1,10 @@
 module Domain.Types.Rating where
 
-import Beckn.Types.Id
 import Data.Time (UTCTime)
 import Domain.Types.Person (Person)
 import Domain.Types.Ride (Ride)
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
 
 data Rating = Rating
   { id :: Id Rating,

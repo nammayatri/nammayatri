@@ -1,11 +1,11 @@
 module Core.ACL.OnSearch where
 
-import Beckn.Prelude
 import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.Prelude
 
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =

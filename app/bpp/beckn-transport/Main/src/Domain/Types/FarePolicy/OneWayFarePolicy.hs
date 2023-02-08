@@ -1,13 +1,13 @@
 module Domain.Types.FarePolicy.OneWayFarePolicy where
 
-import Beckn.Prelude
-import Beckn.Types.Common (Centesimal, Money)
-import Beckn.Types.Id (Id)
 import Domain.Types.Common
 import Domain.Types.FarePolicy.Discount
 import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Vehicle
+import Kernel.Prelude
+import Kernel.Types.Common (Centesimal, Money)
+import Kernel.Types.Id (Id)
 
 data OneWayFarePolicyD (s :: UsageSafety) = OneWayFarePolicy
   { id :: Id OneWayFarePolicy,

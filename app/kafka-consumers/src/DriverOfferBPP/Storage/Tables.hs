@@ -7,11 +7,11 @@
 
 module DriverOfferBPP.Storage.Tables where
 
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import Data.Time
 import qualified DriverOfferBPP.Types as Domain
 import EulerHS.Prelude hiding (id)
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 
 mkPersist
   defaultSqlSettings

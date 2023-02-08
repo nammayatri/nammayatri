@@ -1,11 +1,11 @@
 module Core.ACL.OnConfirm where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import Core.ACL.Common.MakeStatus (mkBookingStatus, mkPaymentStatus)
 import Core.Spec.OnConfirm
 import Domain.Action.Beckn.OnConfirm
 import qualified Domain.Types.Booking as Domain
+import Kernel.Prelude
+import Kernel.Types.Id
 
 mkDomainOnConfirm :: Id Domain.Booking -> OnConfirmMessage -> OnConfirmMessageD
 mkDomainOnConfirm bookingId msg = do

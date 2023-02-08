@@ -6,17 +6,17 @@ module Domain.Action.UI.Search.OneWay
   )
 where
 
-import Beckn.Prelude
-import Beckn.Serviceability
-import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
+import Kernel.Prelude
+import Kernel.Serviceability
+import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry

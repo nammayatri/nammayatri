@@ -7,11 +7,6 @@ module Domain.Action.UI.Ride.CancelRide
   )
 where
 
-import Beckn.Prelude
-import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
@@ -19,6 +14,11 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import Kernel.Prelude
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error

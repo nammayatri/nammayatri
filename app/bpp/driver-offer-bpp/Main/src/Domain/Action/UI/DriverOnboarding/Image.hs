@@ -4,13 +4,6 @@
 module Domain.Action.UI.DriverOnboarding.Image where
 
 import AWS.S3 as S3
-import Beckn.External.Encryption (decrypt, getDbHash)
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto hiding (isNothing)
-import Beckn.Types.Common
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Data.ByteString as BS
 import Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
@@ -22,6 +15,13 @@ import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
 import qualified Idfy.Flow as Idfy
+import Kernel.External.Encryption (decrypt, getDbHash)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto hiding (isNothing)
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant.Multipart
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Merchant as CQM

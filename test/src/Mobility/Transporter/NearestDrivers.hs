@@ -1,14 +1,14 @@
 module Mobility.Transporter.NearestDrivers (spec) where
 
-import Beckn.External.Maps.Types (LatLong (..))
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Flow (FlowR)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified "beckn-transport" Domain.Types.FarePolicy.FareProduct as SFP
 import "beckn-transport" Domain.Types.Vehicle
 import qualified "beckn-transport" Environment as BecknTransport
 import EulerHS.Prelude
+import Kernel.External.Maps.Types (LatLong (..))
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Flow (FlowR)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified "beckn-transport" Storage.Queries.DriverInformation as Q
 import qualified "beckn-transport" Storage.Queries.DriverLocation as QL
 import qualified "beckn-transport" Storage.Queries.Person as Q

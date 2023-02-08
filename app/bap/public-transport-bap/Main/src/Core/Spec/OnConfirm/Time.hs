@@ -1,9 +1,9 @@
 module Core.Spec.OnConfirm.Time where
 
-import Beckn.Utils.Schema
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Data.Time.Clock
+import Kernel.Utils.Schema
 import Relude
 
 data Time = Time

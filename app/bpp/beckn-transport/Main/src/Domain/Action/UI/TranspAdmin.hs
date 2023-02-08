@@ -7,18 +7,18 @@ module Domain.Action.UI.TranspAdmin
   )
 where
 
-import Beckn.External.Encryption (decrypt)
-import Beckn.External.FCM.Types (FCMRecipientToken)
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.Maybe
 import Data.OpenApi (ToSchema)
 import Domain.Types.Merchant (MerchantAPIEntity)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (decrypt)
+import Kernel.External.FCM.Types (FCMRecipientToken)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson

@@ -1,9 +1,5 @@
 module Domain.Action.Beckn.OnUpdate (onUpdate, OnUpdateReq (..), OnUpdateFareBreakup (..)) where
 
-import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Hedis.Config (HedisFlow)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
@@ -11,6 +7,10 @@ import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude hiding (state)
+import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Hedis.Config (HedisFlow)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerch

@@ -1,7 +1,7 @@
 module API.Types where
 
-import Beckn.Types.APISuccess
 import Data.Text (Text)
+import Kernel.Types.APISuccess
 import Servant
 
 type API = HelloAPI :<|> CreateJobAPI

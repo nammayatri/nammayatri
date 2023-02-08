@@ -4,13 +4,13 @@ module API.UI.GoogleTranslate
   )
 where
 
-import qualified Beckn.External.GoogleTranslate.Types as GoogleTranslate
-import Beckn.Types.App
-import Beckn.Types.Id
-import Beckn.Utils.Common (withFlowHandlerAPI, withPersonIdLogTag)
 import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
+import qualified Kernel.External.GoogleTranslate.Types as GoogleTranslate
+import Kernel.Types.App
+import Kernel.Types.Id
+import Kernel.Utils.Common (withFlowHandlerAPI, withPersonIdLogTag)
 import Servant
 import qualified SharedLogic.GoogleTranslate as GoogleTranslate
 import Tools.Auth

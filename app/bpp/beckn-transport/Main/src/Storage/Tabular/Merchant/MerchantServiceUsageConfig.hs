@@ -7,13 +7,13 @@
 
 module Storage.Tabular.Merchant.MerchantServiceUsageConfig where
 
-import Beckn.External.Maps.Types
-import Beckn.External.SMS.Types
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as Domain
+import Kernel.External.Maps.Types
+import Kernel.External.SMS.Types
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Merchant (MerchantTId)
 
 mkPersist

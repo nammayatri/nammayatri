@@ -1,11 +1,11 @@
 module Core.Spec.Common.Quotation where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.Common.Duration
 import Core.Spec.Common.Price
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Quotation = Quotation
   { price :: Price,

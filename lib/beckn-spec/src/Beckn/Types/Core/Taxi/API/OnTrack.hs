@@ -1,9 +1,9 @@
 module Beckn.Types.Core.Taxi.API.OnTrack where
 
-import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.ReqTypes (BecknCallbackReq)
 import Beckn.Types.Core.Taxi.OnTrack
 import EulerHS.Prelude
+import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnTrackReq = BecknCallbackReq OnTrackMessage

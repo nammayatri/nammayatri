@@ -2,10 +2,10 @@
 
 module Storage.Queries.SchedulerJob where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common (MonadTime (getCurrentTime))
-import Beckn.Types.Id
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.Id
 import Lib.Scheduler.Environment
 import Lib.Scheduler.ScheduleJob
 import Lib.Scheduler.Types

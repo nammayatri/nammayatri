@@ -7,14 +7,6 @@ module Domain.Action.UI.DriverOnboarding.Status
   )
 where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
-import Beckn.Types.Common
-import Beckn.Types.Error
-import Beckn.Types.Id (Id)
-import Beckn.Utils.Error
 import qualified Domain.Types.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.DriverOnboarding.Image as Image
@@ -24,6 +16,14 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Vehicle
 import Domain.Types.Vehicle.Variant
 import Environment
+import Kernel.External.Encryption
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Types.Id (Id)
+import Kernel.Utils.Error
 import qualified Storage.CachedQueries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery

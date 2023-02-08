@@ -3,14 +3,14 @@
 
 module Domain.Types.RideRequest where
 
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty
 import Data.OpenApi hiding (info)
 import Data.Time (UTCTime)
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Merchant
 import Domain.Types.Person (Driver)
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 
 data RideRequestType = ALLOCATION | CANCELLATION | DRIVER_RESPONSE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)

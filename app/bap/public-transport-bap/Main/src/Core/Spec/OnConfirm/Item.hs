@@ -1,10 +1,10 @@
 module Core.Spec.OnConfirm.Item where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.OnConfirm.Quantity
 import Data.OpenApi
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Item = Item
   { route_code :: Text,

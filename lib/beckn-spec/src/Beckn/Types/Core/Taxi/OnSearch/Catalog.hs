@@ -2,10 +2,10 @@ module Beckn.Types.Core.Taxi.OnSearch.Catalog where
 
 import Beckn.Types.Core.Taxi.OnSearch.Descriptor
 import Beckn.Types.Core.Taxi.OnSearch.Provider
-import Beckn.Utils.JSON (slashedRecordFields)
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), fromAesonOptions)
 import EulerHS.Prelude hiding (exp, id)
+import Kernel.Utils.JSON (slashedRecordFields)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Catalog = Catalog
   { bpp_descriptor :: Descriptor,

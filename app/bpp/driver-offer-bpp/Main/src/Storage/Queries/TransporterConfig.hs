@@ -5,12 +5,12 @@ module Storage.Queries.TransporterConfig
     #-}
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Merchant
 import Domain.Types.TransporterConfig
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.TransporterConfig
 
 findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe TransporterConfig)

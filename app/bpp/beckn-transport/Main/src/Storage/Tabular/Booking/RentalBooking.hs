@@ -7,10 +7,10 @@
 
 module Storage.Tabular.Booking.RentalBooking where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.Booking.Type as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Booking.Table
 import Storage.Tabular.FarePolicy.RentalFarePolicy (RentalFarePolicyTId)
 

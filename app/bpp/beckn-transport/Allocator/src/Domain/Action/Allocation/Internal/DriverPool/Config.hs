@@ -4,9 +4,9 @@ module Domain.Action.Allocation.Internal.DriverPool.Config
   )
 where
 
-import Beckn.Utils.Common
-import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude hiding (id)
+import Kernel.Utils.Common
+import Kernel.Utils.Dhall (FromDhall)
 
 data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,

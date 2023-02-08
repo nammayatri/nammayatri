@@ -4,8 +4,8 @@ module Beckn.Types.Core.Taxi.Common.Price
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+import Kernel.Prelude
 
 newtype Price = Price
   { value :: DecimalValue

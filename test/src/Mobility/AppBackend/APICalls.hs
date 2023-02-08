@@ -7,11 +7,6 @@ import qualified "app-backend" API.UI.Feedback as AppFeedback
 import qualified "app-backend" API.UI.Registration as Reg
 import qualified "app-backend" API.UI.Select as AppSelect
 import qualified "app-backend" API.UI.Serviceability as AppServ
-import Beckn.External.FCM.Types
-import Beckn.Types.APISuccess
-import Beckn.Types.App
-import Beckn.Types.Id
-import Beckn.Types.Version
 import qualified "app-backend" Domain.Action.UI.Cancel as CancelAPI
 import qualified "app-backend" Domain.Types.Booking as AbeBooking
 import qualified "app-backend" Domain.Types.Booking as BRB
@@ -21,6 +16,11 @@ import qualified "app-backend" Domain.Types.Quote as AbeQuote
 import qualified "app-backend" Domain.Types.RegistrationToken as AppSRT
 import qualified "app-backend" Domain.Types.Ride as BRide
 import EulerHS.Prelude
+import Kernel.External.FCM.Types
+import Kernel.Types.APISuccess
+import Kernel.Types.App
+import Kernel.Types.Id
+import Kernel.Types.Version
 import Mobility.AppBackend.Fixtures
 import Servant hiding (Context)
 import Servant.Client

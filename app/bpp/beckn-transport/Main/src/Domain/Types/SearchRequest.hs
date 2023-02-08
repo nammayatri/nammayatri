@@ -2,7 +2,6 @@
 
 module Domain.Types.SearchRequest where
 
-import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -11,6 +10,7 @@ import Data.Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
 import Servant
 import Servant.Client.Core (BaseUrl)
 

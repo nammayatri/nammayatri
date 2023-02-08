@@ -3,8 +3,6 @@
 
 module Domain.Types.Vehicle (module Domain.Types.Vehicle, module Reexport) where
 
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToParamSchema, ToSchema)
@@ -15,6 +13,8 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
 import Domain.Types.Vehicle.Variant as Reexport
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 import Servant.API
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY

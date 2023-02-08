@@ -2,13 +2,13 @@
 
 module Storage.Queries.Estimate where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Data.Tuple.Extra
 import Domain.Types.Estimate
 import Domain.Types.SearchRequest
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Storage.Queries.FullEntityBuilders (buildFullEstimate)
 import Storage.Tabular.Estimate
 import Storage.Tabular.TripTerms

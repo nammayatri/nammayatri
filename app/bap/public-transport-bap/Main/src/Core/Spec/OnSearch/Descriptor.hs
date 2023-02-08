@@ -1,9 +1,9 @@
 module Core.Spec.OnSearch.Descriptor where
 
-import Beckn.Prelude
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.OnSearch.Image (Image (..))
 import Data.OpenApi hiding (name)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Descriptor = Descriptor
   { name :: Text,

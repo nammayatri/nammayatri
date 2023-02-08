@@ -10,13 +10,13 @@ module API.UI.Maps
   )
 where
 
-import Beckn.Types.Id
-import Beckn.Utils.Common (withFlowHandlerAPI)
-import Beckn.Utils.Logging
 import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Utils.Logging
 import Servant
 import Tools.Auth
 

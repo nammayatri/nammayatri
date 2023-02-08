@@ -6,17 +6,17 @@ module API.UI.Confirm
   )
 where
 
-import Beckn.Prelude hiding (init)
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified Core.ACL.Init as ACL
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as Quote
 import Environment
+import Kernel.Prelude hiding (init)
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import Tools.Auth

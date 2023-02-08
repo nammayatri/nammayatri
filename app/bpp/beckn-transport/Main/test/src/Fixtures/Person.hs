@@ -1,11 +1,11 @@
 module Fixtures.Person where
 
-import Beckn.Types.Id
-import Beckn.Types.Version
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
+import Kernel.Types.Id
+import Kernel.Types.Version
 
 defaultVersion :: Version
 defaultVersion = Version 0 0 0

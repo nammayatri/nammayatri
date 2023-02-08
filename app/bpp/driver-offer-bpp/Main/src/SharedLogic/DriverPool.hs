@@ -22,12 +22,6 @@ module SharedLogic.DriverPool
   )
 where
 
-import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Id
-import qualified Beckn.Types.SlidingWindowCounters as SWC
-import Beckn.Utils.Common
-import qualified Beckn.Utils.SlidingWindowCounters as SWC
 import Data.List (partition)
 import Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
@@ -38,6 +32,12 @@ import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Kernel.Utils.Common
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport

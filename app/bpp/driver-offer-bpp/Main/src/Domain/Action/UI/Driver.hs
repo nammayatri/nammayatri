@@ -29,26 +29,6 @@ module Domain.Action.UI.Driver
   )
 where
 
-import Beckn.External.Encryption
-import Beckn.External.FCM.Types (FCMRecipientToken)
-import qualified Beckn.External.FCM.Types as FCM
-import qualified Beckn.External.Maps as Maps
-import qualified Beckn.External.SMS.MyValueFirst.Flow as SF
-import qualified Beckn.External.SMS.MyValueFirst.Types as SMS
-import Beckn.Prelude (NominalDiffTime)
-import Beckn.Sms.Config
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.APISuccess (APISuccess (Success))
-import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Id
-import Beckn.Types.Predicate
-import Beckn.Utils.Common
-import Beckn.Utils.GenericPretty (PrettyShow)
-import qualified Beckn.Utils.Predicates as P
-import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import Data.Time (Day)
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
@@ -68,6 +48,26 @@ import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
+import Kernel.External.Encryption
+import Kernel.External.FCM.Types (FCMRecipientToken)
+import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Maps as Maps
+import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
+import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
+import Kernel.Prelude (NominalDiffTime)
+import Kernel.Sms.Config
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Id
+import Kernel.Types.Predicate
+import Kernel.Utils.Common
+import Kernel.Utils.GenericPretty (PrettyShow)
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Validation
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator

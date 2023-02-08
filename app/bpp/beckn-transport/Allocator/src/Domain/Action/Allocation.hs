@@ -1,9 +1,5 @@
 module Domain.Action.Allocation where
 
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.NonEmpty
 import Data.Generics.Labels ()
 import qualified Data.Text as T
 import qualified Domain.Types.AllocationEvent as DAllocEvent (AllocationEventType (..))
@@ -14,6 +10,10 @@ import Domain.Types.Merchant
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.NonEmpty
 import SharedLogic.DriverPool.Types
 
 data RequestData

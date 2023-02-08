@@ -2,9 +2,9 @@
 
 module Lib.Scheduler.Error where
 
-import Beckn.Prelude
-import Beckn.Types.Error.BaseError
-import Beckn.Types.Error.BaseError.HTTPError
+import Kernel.Prelude
+import Kernel.Types.Error.BaseError
+import Kernel.Types.Error.BaseError.HTTPError
 
 data JobDecodeError
   = InvalidJobType Text

@@ -14,12 +14,6 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
-import Beckn.External.Maps
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
@@ -28,6 +22,12 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
+import Kernel.External.Maps
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS

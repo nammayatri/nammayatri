@@ -1,11 +1,11 @@
 module Storage.Queries.CallStatus where
 
-import Beckn.External.Exotel.Types (ExotelCallStatus)
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.CallStatus
 import Domain.Types.Ride
+import Kernel.External.Exotel.Types (ExotelCallStatus)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.CallStatus
 
 create :: CallStatus -> SqlDB ()

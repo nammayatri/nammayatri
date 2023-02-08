@@ -7,16 +7,16 @@ module Domain.Action.UI.SavedReqLocation
   )
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Storage.Esqueleto.Transactionable (runInReplica, runTransaction)
-import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Error
-import Beckn.Types.Id (Id)
-import Beckn.Utils.Common
 import Data.Text (pack)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SavedReqLocation as SavedReqLocation
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica, runTransaction)
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Error
+import Kernel.Types.Id (Id)
+import Kernel.Utils.Common
 import qualified Storage.Queries.SavedReqLocation as QSavedReqLocation
 
 data CreateSavedReqLocationReq = CreateSavedReqLocationReq

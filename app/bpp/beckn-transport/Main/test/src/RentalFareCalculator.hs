@@ -1,12 +1,12 @@
 module RentalFareCalculator where
 
-import Beckn.Prelude (roundToIntegral)
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Data.Time hiding (parseTime)
 import Domain.Types.FarePolicy.RentalFarePolicy
 import EulerHS.Prelude
 import qualified Fixtures.RentalFarePolicy as Fixtures
+import Kernel.Prelude (roundToIntegral)
+import Kernel.Types.Common
+import Kernel.Types.Id
 import SharedLogic.FareCalculator.RentalFareCalculator
 import Test.Hspec
 import Test.Tasty

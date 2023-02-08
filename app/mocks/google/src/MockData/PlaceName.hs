@@ -1,8 +1,8 @@
 module MockData.PlaceName (mkMockPlaceNameResp) where
 
-import Beckn.External.Maps.Google.MapsClient.Types as GoogleMaps
-import qualified Beckn.External.Maps.Types as Maps
-import Beckn.Prelude
+import Kernel.External.Maps.Google.MapsClient.Types as GoogleMaps
+import qualified Kernel.External.Maps.Types as Maps
+import Kernel.Prelude
 
 mkMockPlaceNameResp :: Maps.LatLong -> GoogleMaps.GetPlaceNameResp
 mkMockPlaceNameResp latLng =

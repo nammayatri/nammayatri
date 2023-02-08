@@ -3,9 +3,9 @@ module Beckn.Types.Core.Taxi.OnInit.Order where
 import Beckn.Types.Core.Taxi.OnInit.OrderState
 import Beckn.Types.Core.Taxi.OnInit.Payment
 import Beckn.Types.Core.Taxi.OnInit.Quote
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (State, id, state)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Order = Order
   { id :: Text,

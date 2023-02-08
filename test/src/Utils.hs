@@ -1,10 +1,5 @@
 module Utils where
 
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Error
-import Beckn.Types.Flow
-import Beckn.Types.Id (Id (Id))
-import Beckn.Utils.Common
 import Data.Aeson (decode)
 import Data.String.Conversions
 import qualified "app-backend" Domain.Types.Booking as BDB
@@ -16,6 +11,11 @@ import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.IO (unsafePerformIO)
 import HSpec
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Error
+import Kernel.Types.Flow
+import Kernel.Types.Id (Id (Id))
+import Kernel.Utils.Common
 import Network.HTTP.Client (Manager)
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)

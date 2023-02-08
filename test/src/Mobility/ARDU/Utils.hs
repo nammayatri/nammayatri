@@ -3,13 +3,6 @@ module Mobility.ARDU.Utils (module Mobility.ARDU.Utils) where
 import qualified "driver-offer-bpp" API.UI.Driver as TDriver
 import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
 import qualified "app-backend" API.UI.Search as AppSearch
-import qualified Beckn.External.Maps as Maps
-import Beckn.External.Maps.Types
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Common (Money)
-import Beckn.Types.Id
 import Common
 import qualified "app-backend" Domain.Action.UI.Cancel as AppCancel
 import qualified "app-backend" Domain.Types.Booking as AppRB
@@ -28,6 +21,13 @@ import qualified "app-backend" Domain.Types.SearchRequest as AppSearchReq
 import qualified "driver-offer-bpp" Domain.Types.SearchRequest as ArduSReq
 import Domain.Types.SearchRequestForDriver as SearchReqInfo
 import HSpec
+import qualified Kernel.External.Maps as Maps
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Common (Money)
+import Kernel.Types.Id
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures as Fixtures
 import Mobility.ARDU.Queries as Queries

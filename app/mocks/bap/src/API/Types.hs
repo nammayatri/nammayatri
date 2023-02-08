@@ -1,11 +1,11 @@
 module API.Types where
 
-import Beckn.Prelude
-import Beckn.Types.App
-import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Utils.Servant.JSONBS
-import Beckn.Utils.Servant.SignatureAuth
 import Data.ByteString
+import Kernel.Prelude
+import Kernel.Types.App
+import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Utils.Servant.JSONBS
+import Kernel.Utils.Servant.SignatureAuth
 import Servant
 
 type API =

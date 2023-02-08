@@ -1,6 +1,6 @@
 module Lib.Scheduler.Metrics where
 
-import Beckn.Prelude
+import Kernel.Prelude
 import qualified Prometheus as P
 
 newtype SchedulerMetrics = SchedulerMetrics

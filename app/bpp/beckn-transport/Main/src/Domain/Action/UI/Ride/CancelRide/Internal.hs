@@ -1,17 +1,17 @@
 module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Types.App
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.App
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as SDrLoc
 import SharedLogic.DriverPool

@@ -3,15 +3,15 @@ module App
   )
 where
 
-import Beckn.Exit
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
-import Beckn.Types.Flow (runFlowR)
-import Beckn.Utils.App
-import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.Servant.Server (runHealthCheckServerWithService)
-import Beckn.Utils.Servant.SignatureAuth (modFlowRtWithAuthManagers)
 import Environment
+import Kernel.Exit
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import Kernel.Types.Flow (runFlowR)
+import Kernel.Utils.App
+import Kernel.Utils.Dhall (readDhallConfigDefault)
+import Kernel.Utils.Servant.Server (runHealthCheckServerWithService)
+import Kernel.Utils.Servant.SignatureAuth (modFlowRtWithAuthManagers)
 import Servant
 import qualified Service.Runner as Runner
 

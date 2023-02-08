@@ -5,12 +5,12 @@ module Lib.Scheduler.ScheduleJob
   )
 where
 
-import Beckn.Prelude hiding (mask, throwIO)
-import Beckn.Types.Common
-import Beckn.Types.Error (GenericError (InternalError))
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.Singletons
+import Kernel.Prelude hiding (mask, throwIO)
+import Kernel.Types.Common
+import Kernel.Types.Error (GenericError (InternalError))
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Lib.Scheduler.Types
 
 createJob ::

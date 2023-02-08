@@ -1,8 +1,8 @@
 module Core.Spec.OnSearch.Departure where
 
-import Beckn.Prelude
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Departure = Departure
   { id :: Text,

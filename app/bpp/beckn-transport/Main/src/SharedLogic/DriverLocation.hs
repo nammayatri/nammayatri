@@ -1,16 +1,16 @@
 module SharedLogic.DriverLocation where
 
-import Beckn.External.Maps
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Beckn.Storage.Hedis as Hedis
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.DriverInformation
 import Domain.Types.DriverLocation
 import Domain.Types.Person as Person
+import Kernel.External.Maps
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.DriverInformation as Queries
 import qualified Storage.Queries.DriverLocation as DLQueries

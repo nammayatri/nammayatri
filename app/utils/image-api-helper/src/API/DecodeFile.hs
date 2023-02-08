@@ -1,13 +1,13 @@
 module API.DecodeFile where
 
-import Beckn.Mock.App hiding (runMock)
-import Beckn.Prelude
-import Beckn.Types.Error (GenericError (InvalidRequest))
-import Beckn.Utils.Common
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Base64 as B64
 import Data.String.Conversions
 import Environment
+import Kernel.Mock.App hiding (runMock)
+import Kernel.Prelude
+import Kernel.Types.Error (GenericError (InvalidRequest))
+import Kernel.Utils.Common
 import Servant
 
 type DecodeFileAPI =

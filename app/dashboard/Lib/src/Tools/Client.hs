@@ -3,13 +3,13 @@
 
 module Tools.Client (DataServer (..), CallServerAPI (..), clientWithMerchant) where
 
-import Beckn.Prelude
-import Beckn.Types.Error
-import Beckn.Utils.Common hiding (Error, callAPI)
-import Beckn.Utils.Dhall (FromDhall)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.ServerName as DSN
 import qualified EulerHS.Types as Euler
+import Kernel.Prelude
+import Kernel.Types.Error
+import Kernel.Utils.Common hiding (Error, callAPI)
+import Kernel.Utils.Dhall (FromDhall)
 import Servant hiding (throwError)
 import Servant.Client hiding (client)
 import Tools.Auth.Merchant

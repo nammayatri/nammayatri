@@ -6,14 +6,14 @@ import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
 import qualified "beckn-transport" API.UI.Driver as TbeDriverAPI
 import qualified "beckn-transport" API.UI.Location as TbeLocation
 import qualified "beckn-transport" API.UI.Ride as TbeRideAPI
-import Beckn.External.Maps.Types (LatLong (..))
-import Beckn.Types.APISuccess
-import Beckn.Types.App
-import Beckn.Types.Id
 import Data.Time
 import qualified "beckn-transport" Domain.Types.Booking as TRB
 import qualified "beckn-transport" Domain.Types.Ride as TRide
 import EulerHS.Prelude
+import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.Types.APISuccess
+import Kernel.Types.App
+import Kernel.Types.Id
 import Servant hiding (Context)
 import Servant.Client
 

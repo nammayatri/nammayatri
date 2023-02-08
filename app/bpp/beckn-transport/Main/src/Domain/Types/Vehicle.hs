@@ -2,7 +2,6 @@
 
 module Domain.Types.Vehicle where
 
-import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToParamSchema, ToSchema)
@@ -12,6 +11,7 @@ import Data.Time
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
 import Servant.API
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO

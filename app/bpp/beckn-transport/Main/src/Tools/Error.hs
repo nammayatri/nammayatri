@@ -3,9 +3,9 @@
 
 module Tools.Error (module Tools.Error) where
 
-import Beckn.Types.Error as Tools.Error
-import Beckn.Types.Error.BaseError.HTTPError
 import EulerHS.Prelude
+import Kernel.Types.Error as Tools.Error
+import Kernel.Types.Error.BaseError.HTTPError
 
 data FarePolicyError
   = NoFarePolicy

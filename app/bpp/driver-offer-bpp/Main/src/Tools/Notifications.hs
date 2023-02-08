@@ -1,12 +1,5 @@
 module Tools.Notifications where
 
-import qualified Beckn.External.FCM.Flow as FCM
-import Beckn.External.FCM.Types as FCM
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -16,6 +9,13 @@ import Domain.Types.RegistrationToken as RegToken
 import Domain.Types.SearchRequest
 import Domain.Types.SearchRequestForDriver
 import EulerHS.Prelude
+import qualified Kernel.External.FCM.Flow as FCM
+import Kernel.External.FCM.Types as FCM
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import Storage.CachedQueries.TransporterConfig
 

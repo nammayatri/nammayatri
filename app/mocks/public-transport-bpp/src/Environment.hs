@@ -1,12 +1,12 @@
 module Environment where
 
-import Beckn.Mock.ExternalAPI
-import Beckn.Storage.Hedis
-import Beckn.Types.Common
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import Beckn.Utils.Servant.SignatureAuth hiding (prepareAuthManager)
 import Control.Monad.Catch (bracket)
+import Kernel.Mock.ExternalAPI
+import Kernel.Storage.Hedis
+import Kernel.Types.Common
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import Kernel.Utils.Servant.SignatureAuth hiding (prepareAuthManager)
 import Network.HTTP.Client (Manager, newManager)
 import Relude
 

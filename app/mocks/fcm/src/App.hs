@@ -5,9 +5,9 @@ where
 
 import App.Routes (mockFcmAPI, mockFcmServer)
 import App.Types
-import Beckn.Prelude
-import Beckn.Types.Logging
-import Beckn.Utils.Servant.Server
+import Kernel.Prelude
+import Kernel.Types.Logging
+import Kernel.Utils.Servant.Server
 import Servant (Context (..))
 
 runMockFcm :: (AppCfg -> AppCfg) -> IO ()

@@ -2,11 +2,11 @@
 
 module Domain.Types.DriverInformation where
 
-import Beckn.External.Encryption
-import Beckn.Types.Id
 import Data.Time (UTCTime)
 import Domain.Types.Person (Person)
 import EulerHS.Prelude
+import Kernel.External.Encryption
+import Kernel.Types.Id
 
 data DriverInformationE e = DriverInformation
   { driverId :: Id Person,

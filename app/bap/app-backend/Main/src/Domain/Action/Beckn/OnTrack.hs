@@ -4,12 +4,12 @@ module Domain.Action.Beckn.OnTrack
   )
 where
 
-import qualified Beckn.Storage.Esqueleto as DB
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Ride
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRB

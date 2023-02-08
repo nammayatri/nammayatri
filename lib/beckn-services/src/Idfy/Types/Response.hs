@@ -2,11 +2,11 @@
 
 module Idfy.Types.Response where
 
-import Beckn.Utils.JSON
-import Beckn.Utils.Time
 import Data.Aeson hiding (Error)
 import Data.OpenApi hiding (name)
 import EulerHS.Prelude hiding (state)
+import Kernel.Utils.JSON
+import Kernel.Utils.Time
 
 type ImageValidateResponse = IdfyResponse ValidateResponse
 

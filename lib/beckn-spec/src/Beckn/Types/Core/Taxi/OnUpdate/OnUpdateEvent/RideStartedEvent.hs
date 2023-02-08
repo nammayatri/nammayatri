@@ -1,12 +1,12 @@
 module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent where
 
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_STARTED))
-import Beckn.Utils.Schema
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example)
 import EulerHS.Prelude hiding (id, (.=))
 import GHC.Exts (fromList)
+import Kernel.Utils.Schema
 
 data RideStartedEvent = RideStartedEvent
   { id :: Text,

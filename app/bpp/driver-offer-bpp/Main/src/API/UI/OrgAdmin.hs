@@ -7,11 +7,11 @@ module API.UI.OrgAdmin
   )
 where
 
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.OrgAdmin as DOrgAdmin
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

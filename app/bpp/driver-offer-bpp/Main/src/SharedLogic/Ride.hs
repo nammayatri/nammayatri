@@ -1,12 +1,12 @@
 module SharedLogic.Ride where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Beckn.Storage.Esqueleto.Transactionable as Esq
-import qualified Beckn.Storage.Hedis as Hedis
-import Beckn.Types.Id
 import Domain.Types.Person (Person)
 import Domain.Types.Ride
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
+import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Ride as RQueries
 

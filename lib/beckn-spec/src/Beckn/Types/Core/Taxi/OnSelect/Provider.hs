@@ -4,7 +4,6 @@ module Beckn.Types.Core.Taxi.OnSelect.Provider
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.OnSelect.Addon
 import Beckn.Types.Core.Taxi.OnSelect.Category
 import Beckn.Types.Core.Taxi.OnSelect.Descriptor
@@ -13,9 +12,10 @@ import Beckn.Types.Core.Taxi.OnSelect.Item
 import Beckn.Types.Core.Taxi.OnSelect.Offer
 import Beckn.Types.Core.Taxi.OnSelect.Payment
 import Beckn.Types.Core.Taxi.OnSelect.ProviderLocation
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), fromAesonOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Provider = Provider
   { id :: Text,

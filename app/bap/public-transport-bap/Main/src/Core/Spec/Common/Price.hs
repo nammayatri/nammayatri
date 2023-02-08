@@ -1,8 +1,8 @@
 module Core.Spec.Common.Price where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty
 import Core.Spec.Common.DecimalValue
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty
 
 data Price = Price
   { currency :: Text,

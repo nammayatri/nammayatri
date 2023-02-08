@@ -2,16 +2,16 @@
 
 module Domain.Types.SearchRequestForDriver where
 
-import Beckn.External.Maps.Google.PolyLinePoints
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Kernel.External.Maps.Google.PolyLinePoints
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 
 data DriverSearchRequestStatus = Active | Inactive
   deriving (Show, Read, Eq)

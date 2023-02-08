@@ -4,8 +4,8 @@ module Main where
 
 import API
 import qualified "mock-google" App as MockGoogle
-import Beckn.Utils.Common
 import EulerHS.Prelude
+import Kernel.Utils.Common
 import qualified "mock-google" Lib.IntegrationTests.Environment as Environment
 import RedisAlgorithm
 import System.Environment as Env (setEnv)

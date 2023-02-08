@@ -1,8 +1,5 @@
 module Core.Spec.OnSearch (module Core.Spec.OnSearch, module Reexport) where
 
-import Beckn.Prelude
-import Beckn.Utils.JSON (slashedRecordFields)
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.OnSearch.Departure as Reexport
 import Core.Spec.OnSearch.Descriptor as Reexport
 import Core.Spec.OnSearch.Fare as Reexport
@@ -11,6 +8,9 @@ import Core.Spec.OnSearch.LocationDetails as Reexport
 import Core.Spec.OnSearch.Provider as Reexport
 import Core.Spec.OnSearch.Route as Reexport
 import Data.OpenApi (ToSchema (declareNamedSchema), fromAesonOptions)
+import Kernel.Prelude
+import Kernel.Utils.JSON (slashedRecordFields)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype OnSearchCatalog = OnSearchCatalog
   { catalog :: Catalog

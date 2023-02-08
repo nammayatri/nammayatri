@@ -1,11 +1,11 @@
 module Core.Spec.Search (module Core.Spec.Search, module Reexport) where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Schema
 import Core.Spec.Search.Fulfillment as Reexport
 import Core.Spec.Search.LocationGps as Reexport
 import Data.OpenApi
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.Schema
 
 newtype SearchMessage = SearchMessage
   { intent :: Intent

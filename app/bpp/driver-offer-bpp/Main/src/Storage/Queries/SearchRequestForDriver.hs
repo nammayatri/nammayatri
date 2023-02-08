@@ -1,12 +1,12 @@
 module Storage.Queries.SearchRequestForDriver where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import Domain.Types.SearchRequestForDriver as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Storage.Tabular.SearchRequestForDriver
 
 createMany :: [SearchRequestForDriver] -> SqlDB ()

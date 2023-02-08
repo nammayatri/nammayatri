@@ -18,11 +18,11 @@ import qualified "mock-sms" App as MockSms
 import qualified "public-transport-bap" App as PublicTransport
 import qualified "public-transport-search-consumer" App as PublicTransportSearchConsumer
 import qualified "search-result-aggregator" App as SearchResultAggregator
-import qualified Beckn.External.Maps as Maps
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Utils.Common hiding (id)
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
+import qualified Kernel.External.Maps as Maps
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Utils.Common hiding (id)
 import qualified "mock-google" Lib.IntegrationTests.Environment as Environment
 import qualified Mobility.ARDU.Spec as Mobility.ARDU
 import qualified Mobility.ARDU.Utils as DriverOfferBppUtils

@@ -14,16 +14,16 @@ module Lib.LocationUpdates.Internal
   )
 where
 
-import Beckn.External.Maps as Maps
-import Beckn.Storage.Hedis
-import qualified Beckn.Storage.Hedis as Hedis
-import Beckn.Tools.Metrics.CoreMetrics as Metrics
-import Beckn.Types.Common
-import Beckn.Types.Id (Id)
-import Beckn.Utils.Logging
 import qualified Control.Monad.Catch as C
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
+import Kernel.External.Maps as Maps
+import Kernel.Storage.Hedis
+import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Types.Common
+import Kernel.Types.Id (Id)
+import Kernel.Utils.Logging
 
 data RideInterpolationHandler person m = RideInterpolationHandler
   { batchSize :: Integer,

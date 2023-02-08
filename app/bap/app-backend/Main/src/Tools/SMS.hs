@@ -4,20 +4,20 @@ module Tools.SMS
   )
 where
 
-import Beckn.External.SMS as Reexport hiding
+import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
   )
-import qualified Beckn.External.SMS as Sms
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.Common
+import qualified Kernel.External.SMS as Sms
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
   ( EncFlow,
     EsqDBFlow,
     fromMaybeM,
     throwError,
   )
-import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC

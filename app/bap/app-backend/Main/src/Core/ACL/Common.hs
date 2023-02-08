@@ -1,7 +1,7 @@
 module Core.ACL.Common where
 
-import Beckn.Prelude
-import Beckn.Utils.Common
+import Kernel.Prelude
+import Kernel.Utils.Common
 import Tools.Error
 
 validatePrices :: (MonadThrow m, Log m, Num a, Ord a) => a -> a -> m ()

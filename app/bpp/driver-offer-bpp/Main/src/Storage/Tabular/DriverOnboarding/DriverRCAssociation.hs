@@ -7,10 +7,10 @@
 
 module Storage.Tabular.DriverOnboarding.DriverRCAssociation where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.DriverOnboarding.DriverRCAssociation as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegistrationCertificateTId)
 import Storage.Tabular.Person (PersonTId)
 

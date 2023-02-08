@@ -1,8 +1,8 @@
 module Beckn.Types.Core.Taxi.Search.Address where
 
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id, state)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Address = Address
   { door :: Maybe Text,

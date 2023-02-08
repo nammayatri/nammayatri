@@ -1,15 +1,5 @@
 module Storage.Queries.Person where
 
-import Beckn.External.Encryption
-import Beckn.External.FCM.Types (FCMRecipientToken)
-import qualified Beckn.External.FCM.Types as FCM
-import Beckn.External.Maps as Maps
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Types.Version
-import Beckn.Utils.Common hiding (Value)
-import Beckn.Utils.GenericPretty
 import Control.Applicative ((<|>))
 import qualified Data.Maybe as Mb
 import Domain.Types.DriverInformation
@@ -18,6 +8,16 @@ import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as Vehicle
+import Kernel.External.Encryption
+import Kernel.External.FCM.Types (FCMRecipientToken)
+import qualified Kernel.External.FCM.Types as FCM
+import Kernel.External.Maps as Maps
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Types.Version
+import Kernel.Utils.Common hiding (Value)
+import Kernel.Utils.GenericPretty
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person as TPerson

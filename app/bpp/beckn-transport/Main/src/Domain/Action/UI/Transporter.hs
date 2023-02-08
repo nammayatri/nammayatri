@@ -7,17 +7,17 @@ module Domain.Action.UI.Transporter
   )
 where
 
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Types.Id (Id (..))
-import Beckn.Types.Predicate
-import Beckn.Utils.Common
-import qualified Beckn.Utils.Predicates as P
-import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.Id (Id (..))
+import Kernel.Types.Predicate
+import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Validation
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QP

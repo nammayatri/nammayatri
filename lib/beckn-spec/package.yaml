@@ -53,7 +53,7 @@ dependencies:
   - aeson
   - aeson-casing
   - base >= 4.7 && < 5
-  - beckn-core
+  - mobility-core
   - binary
   - bytestring
   - clock

@@ -1,7 +1,7 @@
 module Main where
 
 import "public-transport-search-consumer" App (runPublicTransportSearchConsumer)
-import Beckn.Prelude
+import Kernel.Prelude
 
 main :: IO ()
 main = runPublicTransportSearchConsumer identity

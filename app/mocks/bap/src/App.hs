@@ -5,12 +5,12 @@ where
 
 import API.Handler
 import API.Types
-import Beckn.Prelude
-import Beckn.Utils.App
-import Beckn.Utils.Dhall
-import Beckn.Utils.Servant.Server (runServer)
-import Beckn.Utils.Servant.SignatureAuth
 import Environment
+import Kernel.Prelude
+import Kernel.Utils.App
+import Kernel.Utils.Dhall
+import Kernel.Utils.Servant.Server (runServer)
+import Kernel.Utils.Servant.SignatureAuth
 import Servant (Context (..))
 
 runService :: (AppCfg -> AppCfg) -> IO ()

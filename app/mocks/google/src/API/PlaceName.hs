@@ -3,12 +3,12 @@ module API.PlaceName
   )
 where
 
-import Beckn.External.Maps.Google.MapsClient.Types as GoogleMaps
-import qualified Beckn.External.Maps.Types as Maps
-import Beckn.External.Types (Language)
-import Beckn.Prelude
-import Beckn.Utils.Common
 import Environment
+import Kernel.External.Maps.Google.MapsClient.Types as GoogleMaps
+import qualified Kernel.External.Maps.Types as Maps
+import Kernel.External.Types (Language)
+import Kernel.Prelude
+import Kernel.Utils.Common
 import qualified MockData.Common as Data
 import qualified MockData.PlaceName as Data
 import Tools.Error

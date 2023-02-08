@@ -1,14 +1,14 @@
 module Storage.Queries.DriverQuote where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common (addUTCTime, secondsToNominalDiffTime)
 import Data.Int (Int32)
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSReq
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
 import Storage.Tabular.DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 

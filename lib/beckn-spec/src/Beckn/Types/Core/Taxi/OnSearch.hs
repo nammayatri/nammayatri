@@ -4,7 +4,6 @@ module Beckn.Types.Core.Taxi.OnSearch
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.OnSearch.Addon as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Catalog as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Category as Reexport
@@ -19,6 +18,7 @@ import Beckn.Types.Core.Taxi.OnSearch.Provider as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.ProviderLocation as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StopInfo as Reexport
+import Kernel.Prelude
 
 newtype OnSearchMessage = OnSearchMessage
   { catalog :: Catalog

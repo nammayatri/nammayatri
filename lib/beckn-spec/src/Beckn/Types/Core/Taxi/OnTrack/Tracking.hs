@@ -3,10 +3,10 @@ module Beckn.Types.Core.Taxi.OnTrack.Tracking
   )
 where
 
-import Beckn.Prelude
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.Aeson as A
 import Data.OpenApi (ToSchema (..), fromAesonOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Tracking = Tracking
   { url :: BaseUrl,

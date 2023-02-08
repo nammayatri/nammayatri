@@ -1,13 +1,13 @@
 module Mobility.Transporter.LocationUpdates where
 
-import Beckn.Prelude (roundToIntegral)
-import Beckn.Types.Common (HighPrecMeters, Meters)
-import Beckn.Utils.Time
 import Common (getAppBaseUrl)
 import qualified Data.List.NonEmpty as NE
 import qualified "beckn-transport" Domain.Types.Booking as TRB
 import EulerHS.Prelude
 import HSpec
+import Kernel.Prelude (roundToIntegral)
+import Kernel.Types.Common (HighPrecMeters, Meters)
+import Kernel.Utils.Time
 import Mobility.AppBackend.APICalls
 import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Routes

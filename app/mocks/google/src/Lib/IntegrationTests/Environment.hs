@@ -1,9 +1,9 @@
 module Lib.IntegrationTests.Environment where
 
-import Beckn.External.Encryption (EncTools (..), encrypt')
-import Beckn.External.Maps
-import Beckn.Prelude
-import Beckn.Utils.Dhall (FromDhall, readDhallConfig)
+import Kernel.External.Encryption (EncTools (..), encrypt')
+import Kernel.External.Maps
+import Kernel.Prelude
+import Kernel.Utils.Dhall (FromDhall, readDhallConfig)
 import Lib.GoogleConfig (GoogleCfgUnencrypted (..))
 
 buildGoogleConfig :: MonadIO m => EncTools -> GoogleCfgUnencrypted -> m MapsServiceConfig

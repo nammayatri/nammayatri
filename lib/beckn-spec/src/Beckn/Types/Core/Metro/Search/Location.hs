@@ -7,10 +7,10 @@ import Beckn.Types.Core.Metro.Search.Country (Country)
 import Beckn.Types.Core.Metro.Search.Descriptor (Descriptor)
 import Beckn.Types.Core.Metro.Search.Gps (Gps)
 import Beckn.Types.Core.Metro.Search.Time (Time)
-import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
+import Kernel.Utils.Example
+import Kernel.Utils.JSON
 
 data Location = Location
   { id :: Maybe Text,

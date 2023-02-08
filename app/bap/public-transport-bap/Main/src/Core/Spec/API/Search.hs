@@ -1,9 +1,9 @@
 module Core.Spec.API.Search where
 
-import Beckn.Prelude
-import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.ReqTypes
 import Core.Spec.Search
+import Kernel.Prelude
+import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.ReqTypes
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchAPI =

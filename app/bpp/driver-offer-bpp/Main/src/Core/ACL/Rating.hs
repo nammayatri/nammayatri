@@ -1,13 +1,13 @@
 module Core.ACL.Rating where
 
-import Beckn.Prelude
-import Beckn.Product.Validation.Context
-import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
-import Beckn.Types.Id
-import qualified Beckn.Types.Registry.Subscriber as Subscriber
-import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Rating as DRating
+import Kernel.Prelude
+import Kernel.Product.Validation.Context
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Id
+import qualified Kernel.Types.Registry.Subscriber as Subscriber
+import Kernel.Utils.Common
 import Tools.Error
 
 buildRatingReq ::

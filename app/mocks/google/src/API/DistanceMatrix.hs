@@ -3,11 +3,11 @@ module API.DistanceMatrix
   )
 where
 
-import Beckn.External.Maps.Google.MapsClient.Types as GoogleMaps
-import Beckn.Prelude
-import Beckn.Utils.Common
 import qualified Domain.Types.MockPlace as DPlace
 import Environment
+import Kernel.External.Maps.Google.MapsClient.Types as GoogleMaps
+import Kernel.Prelude
+import Kernel.Utils.Common
 import qualified MockData.Common as Data
 import qualified MockData.DistanceMatrix as Data
 import Tools.Error

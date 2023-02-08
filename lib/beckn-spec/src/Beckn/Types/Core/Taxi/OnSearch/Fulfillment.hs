@@ -7,9 +7,9 @@ where
 import Beckn.Types.Core.Taxi.Common.VehicleVariant as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StartInfo
 import Beckn.Types.Core.Taxi.OnSearch.StopInfo
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,

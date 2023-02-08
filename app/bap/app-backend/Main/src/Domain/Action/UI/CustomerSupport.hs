@@ -11,17 +11,17 @@ module Domain.Action.UI.CustomerSupport
   )
 where
 
-import Beckn.External.Encryption (decrypt, getDbHash)
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
+import Kernel.External.Encryption (decrypt, getDbHash)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken

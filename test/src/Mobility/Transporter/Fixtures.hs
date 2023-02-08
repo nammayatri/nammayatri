@@ -1,10 +1,10 @@
 module Mobility.Transporter.Fixtures where
 
-import Beckn.Types.Id
-import Beckn.Types.Time (Seconds)
 import "beckn-transport" Domain.Types.Merchant as DM
 import qualified "app-backend" Domain.Types.Person as TPerson
 import EulerHS.Prelude
+import Kernel.Types.Id
+import Kernel.Types.Time (Seconds)
 import Utils
 
 timeBetweenLocationUpdates :: Seconds

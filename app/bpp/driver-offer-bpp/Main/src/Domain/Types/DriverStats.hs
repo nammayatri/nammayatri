@@ -1,8 +1,8 @@
 module Domain.Types.DriverStats where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import Domain.Types.Person
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data DriverStats = DriverStats
   { driverId :: Id Driver,

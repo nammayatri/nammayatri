@@ -7,17 +7,17 @@ module Dashboard.BPP.Ride
   )
 where
 
-import Beckn.External.Maps.Types
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Dashboard.Common as Reexport
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs

@@ -5,13 +5,13 @@ module API.UI.CancellationReason
   )
 where
 
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.CancellationReason as DCancellationReason
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

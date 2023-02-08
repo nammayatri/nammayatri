@@ -1,9 +1,9 @@
 module Core.Spec.Common.Billing where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi hiding (name)
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype Billing = Billing
   { name :: Text

@@ -1,13 +1,13 @@
 module Idfy.Auth where
 
-import Beckn.Tools.Metrics.CoreMetrics.Types
-import Beckn.Types.Error
-import Beckn.Types.Flow
-import Beckn.Utils.Common
-import Beckn.Utils.IOLogging
 import qualified Data.Map.Strict as Map
 import EulerHS.Prelude
 import Idfy.Types.IdfyConfig
+import Kernel.Tools.Metrics.CoreMetrics.Types
+import Kernel.Types.Error
+import Kernel.Types.Flow
+import Kernel.Utils.Common
+import Kernel.Utils.IOLogging
 import Network.HTTP.Client as Http
 import Network.HTTP.Client.TLS as Http
 

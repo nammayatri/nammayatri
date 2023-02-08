@@ -1,9 +1,9 @@
 module Domain.Types.FareParameters where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.GenericPretty (PrettyShow)
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.GenericPretty (PrettyShow)
 
 data FareParameters = FareParameters
   { id :: Id FareParameters,

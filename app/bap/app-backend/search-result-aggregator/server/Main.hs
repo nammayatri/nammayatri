@@ -1,7 +1,7 @@
 module Main where
 
 import App (runSearchResultAggregator)
-import Beckn.Prelude
+import Kernel.Prelude
 
 main :: IO ()
 main = runSearchResultAggregator identity

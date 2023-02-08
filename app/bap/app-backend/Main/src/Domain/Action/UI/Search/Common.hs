@@ -5,14 +5,14 @@ module Domain.Action.UI.Search.Common
   )
 where
 
-import Beckn.External.Maps.Types
-import Beckn.Prelude
-import Beckn.Utils.Common
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import Kernel.Utils.Common
 import Tools.Metrics (CoreMetrics)
 
 buildSearchRequest ::

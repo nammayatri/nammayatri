@@ -1,9 +1,9 @@
 module Domain.Types.Booking.BookingLocation where
 
-import Beckn.External.Maps.HasCoordinates
-import Beckn.Prelude
-import Beckn.Types.Id
 import Domain.Types.LocationAddress
+import Kernel.External.Maps.HasCoordinates
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data BookingLocation = BookingLocation
   { id :: Id BookingLocation,

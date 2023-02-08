@@ -4,12 +4,12 @@ module App
 where
 
 import API
-import Beckn.Prelude
-import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.Servant.Server (runServerWithHealthCheck)
 import qualified Data.Map.Strict as Map
 import Environment
 import qualified EulerHS.Runtime as R
+import Kernel.Prelude
+import Kernel.Utils.Dhall (readDhallConfigDefault)
+import Kernel.Utils.Servant.Server (runServerWithHealthCheck)
 import Servant (Context (..))
 
 runService :: (AppCfg -> AppCfg) -> IO ()

@@ -7,13 +7,13 @@
 
 module Storage.Tabular.Person where
 
-import Beckn.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
-import Beckn.External.FCM.Types (FCMRecipientToken)
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
-import Beckn.Utils.Version
 import qualified Domain.Types.Person as Domain
+import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
+import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
+import Kernel.Utils.Version
 import qualified Storage.Tabular.Merchant as SMerchant
 
 derivePersistField "Domain.Role"

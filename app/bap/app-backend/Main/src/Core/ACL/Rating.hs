@@ -1,13 +1,13 @@
 module Core.ACL.Rating (buildRatingReq) where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import qualified Beckn.Types.Core.Context as Context
-import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Rating as Rating
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Feedback as DFeedback
 import Environment
+import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.Common
+import Kernel.Utils.Common
 
 buildRatingReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>

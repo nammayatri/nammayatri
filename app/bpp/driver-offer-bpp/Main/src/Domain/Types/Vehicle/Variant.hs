@@ -2,13 +2,13 @@
 
 module Domain.Types.Vehicle.Variant where
 
-import Beckn.Prelude hiding (first)
-import Beckn.Utils.GenericPretty
 import Data.Aeson
 import Data.Bifunctor
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import Kernel.Prelude hiding (first)
+import Kernel.Utils.GenericPretty
 import Servant.API
 
 data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW

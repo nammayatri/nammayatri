@@ -2,13 +2,13 @@
 
 module Storage.Queries.Booking where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Domain.Types.Booking as DRB
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import Storage.Tabular.Booking
 import qualified Storage.Tabular.Booking as RB

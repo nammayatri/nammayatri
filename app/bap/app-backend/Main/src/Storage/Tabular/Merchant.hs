@@ -7,13 +7,13 @@
 
 module Storage.Tabular.Merchant where
 
-import qualified Beckn.External.FCM.Types as FCM
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Geofencing (GeoRestriction)
-import qualified Beckn.Types.Geofencing as Geo
-import Beckn.Types.Id
 import qualified Domain.Types.Merchant as Domain
+import qualified Kernel.External.FCM.Types as FCM
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Geofencing (GeoRestriction)
+import qualified Kernel.Types.Geofencing as Geo
+import Kernel.Types.Id
 
 mkPersist
   defaultSqlSettings

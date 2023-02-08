@@ -2,10 +2,10 @@ module API.Handler where
 
 import qualified API.Types as API
 import App.Scheduler
-import Beckn.Prelude
-import Beckn.Types.APISuccess (APISuccess (Success))
-import Beckn.Utils.Common
 import Environment
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Utils.Common
 import Servant
 
 handler :: FlowServer API.API

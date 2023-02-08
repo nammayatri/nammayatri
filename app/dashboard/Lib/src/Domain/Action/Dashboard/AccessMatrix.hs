@@ -1,12 +1,12 @@
 module Domain.Action.Dashboard.AccessMatrix where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Storage.Esqueleto.Transactionable (runInReplica)
-import Beckn.Types.Id
-import Beckn.Utils.Common (fromMaybeM)
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Role as DRole
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import Kernel.Types.Id
+import Kernel.Utils.Common (fromMaybeM)
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth

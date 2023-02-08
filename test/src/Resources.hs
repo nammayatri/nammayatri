@@ -1,11 +1,11 @@
 module Resources where
 
-import Beckn.Utils.Dhall (readDhallConfig)
 import qualified "app-backend" Environment as BecknApp
 import qualified "beckn-transport" Environment as BecknTransport
 import qualified "driver-offer-bpp" Environment as ARDU
 import EulerHS.Prelude
 import GHC.IO (unsafePerformIO)
+import Kernel.Utils.Dhall (readDhallConfig)
 
 {-# NOINLINE transporterAppEnv #-}
 transporterAppEnv :: BecknTransport.AppEnv

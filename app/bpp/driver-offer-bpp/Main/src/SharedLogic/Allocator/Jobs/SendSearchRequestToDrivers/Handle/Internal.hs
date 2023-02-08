@@ -9,13 +9,13 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
   )
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Hedis (HedisFlow)
-import qualified Beckn.Storage.Hedis as Hedis
-import Beckn.Types.Error (SearchRequestError (SearchRequestDoesNotExist))
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.SearchRequest as SR
+import Kernel.Prelude
+import Kernel.Storage.Hedis (HedisFlow)
+import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error (SearchRequestError (SearchRequestDoesNotExist))
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as Reexport
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers as Reexport

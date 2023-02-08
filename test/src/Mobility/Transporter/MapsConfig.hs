@@ -3,11 +3,11 @@
 
 module Mobility.Transporter.MapsConfig where
 
-import qualified Beckn.External.Maps as Maps
-import Beckn.Prelude
-import Beckn.Types.Id
 import "beckn-transport" Domain.Types.Merchant
 import "beckn-transport" Domain.Types.Merchant.MerchantServiceConfig
+import qualified Kernel.External.Maps as Maps
+import Kernel.Prelude
+import Kernel.Types.Id
 import qualified Mobility.Transporter.Fixtures as Fixtures
 import qualified "beckn-transport" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
 import Test.Hspec

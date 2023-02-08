@@ -1,10 +1,10 @@
 module Domain.Types.Merchant where
 
-import Beckn.External.FCM.Types
-import Beckn.Prelude
-import Beckn.Types.Geofencing
-import Beckn.Types.Id
 import Domain.Types.Common
+import Kernel.External.FCM.Types
+import Kernel.Prelude
+import Kernel.Types.Geofencing
+import Kernel.Types.Id
 
 data MerchantD (s :: UsageSafety) = Merchant
   { id :: Id Merchant,

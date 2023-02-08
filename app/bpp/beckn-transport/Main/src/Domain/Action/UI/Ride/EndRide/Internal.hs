@@ -1,15 +1,15 @@
 module Domain.Action.UI.Ride.EndRide.Internal where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import Domain.Types.Merchant
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Ride as SRide
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified SharedLogic.DriverLocation as SDrLoc
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig

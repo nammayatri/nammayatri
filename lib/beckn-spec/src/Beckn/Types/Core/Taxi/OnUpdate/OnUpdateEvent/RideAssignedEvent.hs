@@ -4,15 +4,15 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_ASSIGNED))
-import Beckn.Utils.JSON (stripPrefixUnderscoreIfAny)
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name, tags)
 import GHC.Exts (fromList)
+import Kernel.Prelude
+import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data RideAssignedEvent = RideAssignedEvent
   { id :: Text,

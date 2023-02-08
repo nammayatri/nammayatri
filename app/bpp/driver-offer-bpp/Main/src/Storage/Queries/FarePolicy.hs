@@ -5,13 +5,13 @@ module Storage.Queries.FarePolicy
     #-}
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.FarePolicy
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.FarePolicy
 
 findAllByMerchantId ::

@@ -1,7 +1,7 @@
 module Core.Spec.Common.OrderState where
 
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty (PrettyShow, Showable (..))
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty (PrettyShow, Showable (..))
 
 data State
   = ACTIVE

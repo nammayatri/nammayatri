@@ -2,17 +2,17 @@
 
 module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, AuthFlow) where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.App
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import qualified Beckn.Utils.Common as Utils
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.App
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import qualified Kernel.Utils.Common as Utils
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.RegistrationToken as QR
 

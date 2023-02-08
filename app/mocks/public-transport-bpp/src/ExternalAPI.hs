@@ -2,15 +2,15 @@
 
 module ExternalAPI where
 
-import Beckn.Mock.App
-import Beckn.Mock.ExternalAPI
-import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.ReqTypes
 import "public-transport-bap" Core.Spec.OnCancel
 import "public-transport-bap" Core.Spec.OnConfirm
 import "public-transport-bap" Core.Spec.OnSearch
 import "public-transport-bap" Core.Spec.OnStatus
 import Environment
+import Kernel.Mock.App
+import Kernel.Mock.ExternalAPI
+import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.ReqTypes
 import Servant
 import Servant.Client
 

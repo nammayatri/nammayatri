@@ -1,10 +1,10 @@
 module Core.Spec.OnSearch.LocationDetails where
 
-import Beckn.Prelude
-import Beckn.Types.Core.Gps
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.OnSearch.Descriptor
 import Data.OpenApi hiding (name)
+import Kernel.Prelude
+import Kernel.Types.Beckn.Gps
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data LocationDetails = LocationDetails
   { id :: Text,

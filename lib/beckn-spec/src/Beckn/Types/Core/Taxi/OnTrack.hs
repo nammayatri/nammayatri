@@ -4,8 +4,8 @@ module Beckn.Types.Core.Taxi.OnTrack
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.OnTrack.Tracking as Reexport
+import Kernel.Prelude
 
 newtype OnTrackMessage = OnTrackMessage
   { tracking :: Tracking

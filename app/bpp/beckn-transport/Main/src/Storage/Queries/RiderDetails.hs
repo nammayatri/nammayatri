@@ -1,11 +1,11 @@
 module Storage.Queries.RiderDetails where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Domain.Types.RiderDetails
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Storage.Tabular.RiderDetails
 
 create :: RiderDetails -> SqlDB ()

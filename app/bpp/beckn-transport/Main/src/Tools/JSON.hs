@@ -1,7 +1,7 @@
 module Tools.JSON where
 
-import Beckn.Prelude
 import Data.Aeson
+import Kernel.Prelude
 
 fareProductOptions :: Options
 fareProductOptions =

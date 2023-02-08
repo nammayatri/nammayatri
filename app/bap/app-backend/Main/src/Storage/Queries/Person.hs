@@ -1,15 +1,15 @@
 module Storage.Queries.Person where
 
-import Beckn.External.Encryption
-import Beckn.External.FCM.Types (FCMRecipientToken)
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Types.Version
 import Control.Applicative ((<|>))
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
+import Kernel.External.Encryption
+import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Types.Version
 import Storage.Tabular.Person
 
 create :: Person -> SqlDB ()

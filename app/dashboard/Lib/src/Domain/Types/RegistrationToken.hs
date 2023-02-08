@@ -1,9 +1,9 @@
 module Domain.Types.RegistrationToken where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.Type as DP
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data RegistrationToken = RegistrationToken
   { id :: Id RegistrationToken,

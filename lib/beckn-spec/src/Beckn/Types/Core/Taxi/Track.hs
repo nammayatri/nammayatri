@@ -4,8 +4,8 @@ module Beckn.Types.Core.Taxi.Track
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Track.Order as Reexport
+import Kernel.Prelude
 
 newtype TrackMessage = TrackMessage
   { order :: Order

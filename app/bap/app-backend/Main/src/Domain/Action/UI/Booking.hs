@@ -5,14 +5,14 @@ module Domain.Action.UI.Booking
   )
 where
 
-import Beckn.Storage.Esqueleto (runInReplica)
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.OpenApi (ToSchema (..))
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (id)
+import Kernel.Storage.Esqueleto (runInReplica)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QRB
 import Tools.Error
 

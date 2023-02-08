@@ -2,17 +2,17 @@
 
 module Storage.Queries.DriverOnboarding.Image where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
-import Beckn.Types.Field
-import Beckn.Types.Id
 import qualified Data.Time as DT
 import Domain.Types.DriverOnboarding.Error
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import Environment
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Field
+import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.Image
 
 create :: Image -> SqlDB ()

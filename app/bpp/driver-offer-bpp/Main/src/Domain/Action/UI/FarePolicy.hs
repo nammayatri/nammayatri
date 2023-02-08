@@ -7,18 +7,18 @@ module Domain.Action.UI.FarePolicy
   )
 where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Types.APISuccess
-import Beckn.Types.Id (Id (..))
-import Beckn.Types.Predicate
-import Beckn.Utils.Common
-import Beckn.Utils.Validation
 import Data.Time
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Person as SP
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.APISuccess
+import Kernel.Types.Id (Id (..))
+import Kernel.Types.Predicate
+import Kernel.Utils.Common
+import Kernel.Utils.Validation
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP

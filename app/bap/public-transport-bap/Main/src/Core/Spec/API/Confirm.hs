@@ -1,8 +1,8 @@
 module Core.Spec.API.Confirm where
 
-import Beckn.Types.Core.Ack
-import Beckn.Types.Core.ReqTypes
 import Core.Spec.Confirm
+import Kernel.Types.Beckn.Ack
+import Kernel.Types.Beckn.ReqTypes
 import Servant
 
 type ConfirmAPI =

@@ -53,7 +53,7 @@ default-extensions:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - beckn-core
+  - mobility-core
   - beckn-spec
   - bytestring
   - euler-hs
@@ -95,5 +95,5 @@ executables:
       - -Wincomplete-uni-patterns
     dependencies:
       - mock-google
-      - beckn-core
+      - mobility-core
       - beckn-spec

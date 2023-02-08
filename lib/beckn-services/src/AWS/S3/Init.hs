@@ -2,8 +2,8 @@ module AWS.S3.Init where
 
 import AWS.S3.Flow
 import AWS.S3.Types
-import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Beckn.Types.App (MonadFlow)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import Kernel.Types.App (MonadFlow)
 
 buildS3Env :: (MonadFlow m, CoreMetrics m) => S3Config -> S3Env m
 buildS3Env (S3MockConf m) = do

@@ -1,16 +1,16 @@
 module App where
 
-import Beckn.Exit
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Migration
-import Beckn.Types.Flow (runFlowR)
-import Beckn.Utils.App (getPodName, handleLeft)
-import Beckn.Utils.Common
-import Beckn.Utils.Dhall
-import qualified Beckn.Utils.FlowLogging as L
-import Beckn.Utils.Servant.SignatureAuth
 import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
 import qualified EulerHS.Runtime as R
+import Kernel.Exit
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Migration
+import Kernel.Types.Flow (runFlowR)
+import Kernel.Utils.App (getPodName, handleLeft)
+import Kernel.Utils.Common
+import Kernel.Utils.Dhall
+import qualified Kernel.Utils.FlowLogging as L
+import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)

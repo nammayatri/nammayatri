@@ -2,13 +2,13 @@
 
 module RenderTrack where
 
-import Beckn.External.Maps.Types (LatLong (..))
-import Beckn.Prelude
-import Beckn.Utils.GenericPretty
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Csv as Csv
 import qualified Data.Map.Strict as Map
 import qualified Data.Vector as Vector
+import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.Prelude
+import Kernel.Utils.GenericPretty
 import Text.XML
 
 type LocationUpdates = [[LatLong]]

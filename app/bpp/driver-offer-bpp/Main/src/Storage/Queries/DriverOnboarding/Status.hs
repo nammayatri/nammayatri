@@ -1,8 +1,5 @@
 module Storage.Queries.DriverOnboarding.Status where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Data.Coerce
 import Domain.Types.DriverInformation
 import Domain.Types.DriverOnboarding.DriverLicense
@@ -12,6 +9,9 @@ import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.DriverOnboarding.VehicleRegistrationCertificate (VehicleRegistrationCertificate)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverOnboarding.DriverLicense
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation

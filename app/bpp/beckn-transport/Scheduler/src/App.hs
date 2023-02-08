@@ -1,14 +1,14 @@
 module App where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBEnv)
-import Beckn.Types.Id (Id (Id))
-import Beckn.Utils.Common
-import Beckn.Utils.Dhall
-import Beckn.Utils.IOLogging (LoggerEnv)
 import qualified Control.Monad.Catch as C
 import qualified Domain.Types.RideRequest as RideRequest
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
+import Kernel.Types.Id (Id (Id))
+import Kernel.Utils.Common
+import Kernel.Utils.Dhall
+import Kernel.Utils.IOLogging (LoggerEnv)
 import Lib.Scheduler
 import SharedLogic.Scheduler
 import qualified Storage.Queries.RideRequest as RideRequest

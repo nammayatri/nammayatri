@@ -7,11 +7,11 @@
 
 module Storage.Tabular.Person where
 
-import Beckn.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.Person as Domain
+import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Role (RoleTId)
 
 mkPersist

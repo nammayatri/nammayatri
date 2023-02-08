@@ -2,16 +2,16 @@
 
 module Storage.Queries.Person where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Control.Applicative (liftA2)
 import Database.Esqueleto.PostgreSQL
 import Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Role as Role
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.Merchant as Merchant
 import Storage.Tabular.MerchantAccess as Access
 import Storage.Tabular.Person as Person

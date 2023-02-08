@@ -2,8 +2,6 @@
 
 module Domain.Types.Merchant where
 
-import Beckn.Types.Geofencing
-import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -12,6 +10,8 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import Domain.Types.Common
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Geofencing
+import Kernel.Types.Id
 import Servant.API
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED

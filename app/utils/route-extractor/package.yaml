@@ -101,7 +101,7 @@ library:
     - -fhide-source-paths
     - -Werror
   dependencies:
-    - beckn-core
+    - mobility-core
 
 executables:
   route-extractor-exe:
@@ -114,4 +114,4 @@ executables:
       - '"-with-rtsopts=-N -T"'
     dependencies:
       - route-extractor
-      - beckn-core
+      - mobility-core

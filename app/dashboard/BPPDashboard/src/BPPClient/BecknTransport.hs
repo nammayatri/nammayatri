@@ -8,17 +8,17 @@ module BPPClient.BecknTransport
 where
 
 import "beckn-transport" API.Dashboard as BPP
-import Beckn.Prelude
-import Beckn.Tools.Metrics.CoreMetrics
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Id
-import Beckn.Utils.Common hiding (callAPI)
 import qualified Dashboard.BPP.Driver as Common
 import qualified Dashboard.BPP.Merchant as Common
 import qualified Dashboard.BPP.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
+import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Id
+import Kernel.Utils.Common hiding (callAPI)
 import Servant
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client

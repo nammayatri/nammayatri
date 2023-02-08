@@ -5,15 +5,15 @@ where
 
 import API.Handler
 import API.Types
-import Beckn.Exit
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config (EsqDBConfig (..))
-import Beckn.Storage.Esqueleto.Logger
-import Beckn.Storage.Esqueleto.Migration
-import Beckn.Types.Logging
-import Beckn.Utils.App
-import Beckn.Utils.Servant.Server (runServer)
 import Environment
+import Kernel.Exit
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBConfig (..))
+import Kernel.Storage.Esqueleto.Logger
+import Kernel.Storage.Esqueleto.Migration
+import Kernel.Types.Logging
+import Kernel.Utils.App
+import Kernel.Utils.Servant.Server (runServer)
 import Servant (Context (..))
 
 runService :: (AppCfg -> AppCfg) -> IO ()

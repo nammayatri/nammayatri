@@ -3,10 +3,10 @@ module Domain.Action.UI.CancellationReason
   )
 where
 
-import Beckn.Storage.Esqueleto (runInReplica)
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Domain.Types.CancellationReason as DCR
 import EulerHS.Prelude hiding (id)
+import Kernel.Storage.Esqueleto (runInReplica)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Storage.Queries.CancellationReason as QCR
 
 list :: EsqDBReplicaFlow m r => DCR.CancellationStage -> m [DCR.CancellationReasonAPIEntity]

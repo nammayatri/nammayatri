@@ -1,7 +1,5 @@
 module API.UI.Transporter (module Reexport, API, handler) where
 
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Action.UI.Transporter as Reexport
   ( TransporterRec (..),
     UpdateTransporterReq (..),
@@ -13,6 +11,8 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth (AdminTokenAuth, TokenAuth)
 

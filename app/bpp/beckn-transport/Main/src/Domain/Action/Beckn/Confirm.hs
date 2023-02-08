@@ -7,13 +7,6 @@ module Domain.Action.Beckn.Confirm
   )
 where
 
-import Beckn.External.Encryption (encrypt)
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Types.Id
-import Beckn.Types.Registry (Subscriber (..))
-import Beckn.Utils.Common
 import Domain.Action.Beckn.Cancel (CancelReq)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.BookingLocation as SBL
@@ -22,6 +15,13 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RideRequest as RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.RiderDetails as SRD
+import Kernel.External.Encryption (encrypt)
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.Id
+import Kernel.Types.Registry (Subscriber (..))
+import Kernel.Utils.Common
 import SharedLogic.Scheduler
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP

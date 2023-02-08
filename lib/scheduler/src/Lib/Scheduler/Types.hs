@@ -5,11 +5,11 @@
 
 module Lib.Scheduler.Types where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty
 import Data.Singletons
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 
 -- Job initializer
 -- (here one can think of discarding outdated jobs,

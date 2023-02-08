@@ -1,9 +1,9 @@
 module Domain.Types.RentalSlab where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty (PrettyShow)
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty (PrettyShow)
 
 data RentalSlab = RentalSlab
   { id :: Id RentalSlab, --not used in domain layer

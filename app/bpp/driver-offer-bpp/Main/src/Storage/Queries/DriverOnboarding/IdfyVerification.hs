@@ -2,13 +2,13 @@
 
 module Storage.Queries.DriverOnboarding.IdfyVerification where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.DriverOnboarding.IdfyVerification
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person (Person)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.DriverOnboarding.IdfyVerification
 
 create :: IdfyVerification -> SqlDB ()

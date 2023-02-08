@@ -1,16 +1,16 @@
 module Service.Runner where
 
-import Beckn.Prelude
-import Beckn.Streaming.Kafka.Consumer
-import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
-import Beckn.Streaming.MonadConsumer
-import Beckn.Types.Logging
-import Beckn.Utils.Common
 import Control.Concurrent.STM.TMVar
 import qualified Core.ACL.Search as BecknACL
 import qualified Domain.Action.Search as DSearch
 import qualified ExternalAPI.Flow as ExternalAPI
 import GHC.Conc
+import Kernel.Prelude
+import Kernel.Streaming.Kafka.Consumer
+import Kernel.Streaming.Kafka.Topic.PublicTransportSearch
+import Kernel.Streaming.MonadConsumer
+import Kernel.Types.Logging
+import Kernel.Utils.Common
 import Tools.Metrics
 
 run ::

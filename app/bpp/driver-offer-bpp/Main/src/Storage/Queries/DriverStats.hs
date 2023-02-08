@@ -1,11 +1,11 @@
 module Storage.Queries.DriverStats where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.DriverStats
 import Domain.Types.Person (Driver)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.DriverStats
 
 createInitialDriverStats :: Id Driver -> SqlDB ()

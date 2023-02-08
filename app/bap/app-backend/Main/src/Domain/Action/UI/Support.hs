@@ -5,20 +5,20 @@ module Domain.Action.UI.Support
   )
 where
 
-import Beckn.Storage.Esqueleto (runTransaction)
-import Beckn.Types.APISuccess
-import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Types.Predicate
-import Beckn.Utils.Predicates
-import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Issue as DIssue
 import Domain.Types.Person as Person
 import Domain.Types.Quote (Quote)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import Kernel.Storage.Esqueleto (runTransaction)
+import Kernel.Types.APISuccess
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Types.Predicate
+import Kernel.Utils.Predicates
+import Kernel.Utils.Validation
 import qualified Storage.Queries.Issues as Queries
 
 data Issue = Issue

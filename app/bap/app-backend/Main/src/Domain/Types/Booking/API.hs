@@ -1,9 +1,5 @@
 module Domain.Types.Booking.API where
 
-import Beckn.Storage.Esqueleto (runInReplica)
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
 import qualified Domain.Types.Booking.BookingLocation as SLoc
@@ -14,6 +10,10 @@ import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
+import Kernel.Storage.Esqueleto (runInReplica)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.JSON as J

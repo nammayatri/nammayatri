@@ -2,14 +2,14 @@
 
 module Storage.Queries.Quote where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Data.Tuple.Extra
 import Domain.Types.DriverOffer
 import Domain.Types.Estimate
 import Domain.Types.Quote
 import Domain.Types.SearchRequest
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Queries.FullEntityBuilders (buildFullQuote)
 import Storage.Tabular.DriverOffer
 import Storage.Tabular.Quote

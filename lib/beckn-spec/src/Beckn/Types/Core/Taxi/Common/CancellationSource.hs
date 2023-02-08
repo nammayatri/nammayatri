@@ -2,10 +2,10 @@
 
 module Beckn.Types.Core.Taxi.Common.CancellationSource where
 
-import Beckn.Storage.Esqueleto
 import Data.Aeson
 import Data.OpenApi
 import EulerHS.Prelude
+import Kernel.Storage.Esqueleto
 
 data CancellationSource
   = ByUser

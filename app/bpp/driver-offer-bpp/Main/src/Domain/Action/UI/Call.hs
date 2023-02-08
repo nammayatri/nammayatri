@@ -8,16 +8,16 @@ module Domain.Action.UI.Call
   )
 where
 
-import Beckn.External.Encryption (decrypt, getDbHash)
-import Beckn.External.Exotel.Types
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica, runTransaction)
-import Beckn.Types.Core.Ack
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Data.Text as T
 import Data.Text.Conversions
 import qualified Domain.Types.CallStatus as SCS
+import Kernel.External.Encryption (decrypt, getDbHash)
+import Kernel.External.Exotel.Types
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica, runTransaction)
+import Kernel.Types.Beckn.Ack
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson

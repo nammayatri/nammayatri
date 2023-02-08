@@ -7,11 +7,11 @@
 
 module Storage.Tabular.RideRequest where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
-import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.RideRequest as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
+import Kernel.Utils.Common hiding (id)
 import Storage.Tabular.Booking (BookingTId)
 import Tools.Error
 

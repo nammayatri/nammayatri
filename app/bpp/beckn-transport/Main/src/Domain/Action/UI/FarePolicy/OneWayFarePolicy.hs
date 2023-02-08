@@ -7,13 +7,6 @@ module Domain.Action.UI.FarePolicy.OneWayFarePolicy
   )
 where
 
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Types.APISuccess
-import Beckn.Types.Id (Id (..))
-import Beckn.Types.Predicate
-import Beckn.Utils.Common
-import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import Data.Time (TimeOfDay (..))
 import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicyAPIEntity, makeOneWayFarePolicyAPIEntity)
@@ -22,6 +15,13 @@ import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateAP
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate as DPerExtraKmRate
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.APISuccess
+import Kernel.Types.Id (Id (..))
+import Kernel.Types.Predicate
+import Kernel.Utils.Common
+import Kernel.Utils.Validation
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.OneWayFarePolicy as SFarePolicy

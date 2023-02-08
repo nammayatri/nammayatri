@@ -1,8 +1,8 @@
 module Fixtures.DriverLocation where
 
-import Beckn.Types.Id
 import qualified Domain.Types.DriverLocation as DDrLoc
 import qualified Fixtures.Time as Fixtures
+import Kernel.Types.Id
 
 defaultDriverLocation :: DDrLoc.DriverLocation
 defaultDriverLocation =

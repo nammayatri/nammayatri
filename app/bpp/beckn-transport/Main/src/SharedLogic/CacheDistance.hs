@@ -1,8 +1,8 @@
 module SharedLogic.CacheDistance where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Common
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Common
 
 cacheDistance ::
   (Redis.HedisFlow m r, MonadTime m, MonadFlow m) =>

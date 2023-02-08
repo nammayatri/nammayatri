@@ -2,9 +2,9 @@
 
 module Domain.Types.TransportStation where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty (PrettyShow)
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty (PrettyShow)
 
 data TransportStation = TransportStation
   { id :: Id TransportStation,

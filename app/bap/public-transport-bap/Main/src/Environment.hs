@@ -1,20 +1,20 @@
 module Environment where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis as Redis
-import Beckn.Storage.Hedis.AppPrefixes (publicTransportBapPrefix)
-import Beckn.Types.Cache
-import Beckn.Types.Common
-import Beckn.Types.Flow
-import Beckn.Types.Registry
-import Beckn.Utils.App (getPodName)
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Servant.Client
-import Beckn.Utils.Servant.SignatureAuth
-import Beckn.Utils.Shutdown
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis.AppPrefixes (publicTransportBapPrefix)
+import Kernel.Types.Cache
+import Kernel.Types.Common
+import Kernel.Types.Flow
+import Kernel.Types.Registry
+import Kernel.Utils.App (getPodName)
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import qualified Kernel.Utils.Registry as Registry
+import Kernel.Utils.Servant.Client
+import Kernel.Utils.Servant.SignatureAuth
+import Kernel.Utils.Shutdown
 import Tools.Metrics.Types
 import Tools.Streaming.Kafka.Environment
 

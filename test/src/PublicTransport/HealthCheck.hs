@@ -1,8 +1,8 @@
 module PublicTransport.HealthCheck where
 
-import Beckn.Prelude
 import Common
 import HSpec
+import Kernel.Prelude
 import PublicTransport.Common (callMockPublicTransportBpp, callPublicTransportBap)
 import Servant hiding (Context)
 import Servant.Client

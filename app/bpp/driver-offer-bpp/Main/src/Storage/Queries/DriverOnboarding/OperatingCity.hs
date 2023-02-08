@@ -2,11 +2,11 @@
 
 module Storage.Queries.DriverOnboarding.OperatingCity where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.OperatingCity
 import Domain.Types.Merchant
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.OperatingCity
 
 create :: OperatingCity -> SqlDB ()

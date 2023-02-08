@@ -1,10 +1,10 @@
 module Mobility.ARDU.Fixtures where
 
-import Beckn.Prelude
-import Beckn.Types.Common (Money)
-import Beckn.Types.Id
-import Beckn.Types.Time
 import "driver-offer-bpp" Domain.Types.Merchant as DM
+import Kernel.Prelude
+import Kernel.Types.Common (Money)
+import Kernel.Types.Id
+import Kernel.Types.Time
 import Utils
 
 timeBetweenLocationUpdates :: Seconds

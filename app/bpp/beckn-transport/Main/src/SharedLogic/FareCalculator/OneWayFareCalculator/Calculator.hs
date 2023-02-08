@@ -9,8 +9,6 @@ module SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
   )
 where
 
-import Beckn.Prelude
-import Beckn.Types.Common
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Time
   ( LocalTime (localTimeOfDay),
@@ -22,6 +20,8 @@ import Data.Time
   )
 import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
 import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateD (..))
+import Kernel.Prelude
+import Kernel.Types.Common
 
 type TripEndTime = UTCTime
 

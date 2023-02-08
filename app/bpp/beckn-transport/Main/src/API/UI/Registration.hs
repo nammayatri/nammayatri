@@ -1,9 +1,5 @@
 module API.UI.Registration (module Reexport, API, handler) where
 
-import Beckn.Types.APISuccess
-import Beckn.Types.Id
-import Beckn.Types.Version
-import Beckn.Utils.Common
 import Domain.Action.UI.Registration as Reexport
   ( AuthReq (..),
     AuthRes (..),
@@ -17,6 +13,10 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified Domain.Types.RegistrationToken as SRT
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.APISuccess
+import Kernel.Types.Id
+import Kernel.Types.Version
+import Kernel.Utils.Common
 import Servant hiding (throwError)
 import Tools.Auth (TokenAuth)
 

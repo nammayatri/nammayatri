@@ -7,9 +7,9 @@
 
 module Storage.Tabular.BookingCancellationReason where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
 import qualified Domain.Types.BookingCancellationReason as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
 import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.CancellationReason (CancellationReasonTId)
 import Storage.Tabular.Person (PersonTId)

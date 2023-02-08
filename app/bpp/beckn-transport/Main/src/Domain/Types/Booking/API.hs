@@ -1,8 +1,5 @@
 module Domain.Types.Booking.API where
 
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.OpenApi
 import Domain.Types.Booking.BookingLocation
 import qualified Domain.Types.Booking.BookingLocation as DLoc
@@ -12,6 +9,9 @@ import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 

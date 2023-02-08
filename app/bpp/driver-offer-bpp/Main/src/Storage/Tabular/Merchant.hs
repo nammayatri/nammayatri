@@ -7,11 +7,11 @@
 
 module Storage.Tabular.Merchant where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Geofencing
-import Beckn.Types.Id
 import qualified Domain.Types.Merchant as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Geofencing
+import Kernel.Types.Id
 
 derivePersistField "Domain.Status"
 

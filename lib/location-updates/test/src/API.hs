@@ -1,12 +1,12 @@
 module API where
 
-import Beckn.External.Maps as Maps
-import Beckn.Prelude
-import Beckn.Randomizer
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Error.Throwing
 import qualified Data.List.NonEmpty as NE
+import Kernel.External.Maps as Maps
+import Kernel.Prelude
+import Kernel.Randomizer
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Error.Throwing
 import Lib.LocationUpdates as API
 import Lib.LocationUpdates.Internal as I
 import Routes

@@ -2,10 +2,6 @@
 
 module Domain.Types.Ride where
 
-import Beckn.External.Maps.Types
-import qualified Beckn.Prelude as BP
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -15,6 +11,10 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Maps.Types
+import qualified Kernel.Prelude as BP
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant.API
 
 data RideStatus

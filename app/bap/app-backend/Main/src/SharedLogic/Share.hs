@@ -1,9 +1,9 @@
 module SharedLogic.Share where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Estimate as DEstimate
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Tools.Error
 
 checkIfEstimateCancelled ::

@@ -1,12 +1,12 @@
 module API.Dashboard.AccessMatrix where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.Dashboard.AccessMatrix as DAccessMatrix
 import Domain.Types.AccessMatrix as DMatrix
 import Domain.Types.Role as DRole
 import Environment
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

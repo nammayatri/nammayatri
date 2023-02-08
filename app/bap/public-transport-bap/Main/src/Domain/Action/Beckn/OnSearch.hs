@@ -1,14 +1,14 @@
 module Domain.Action.Beckn.OnSearch where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList as Kafka
-import Beckn.Streaming.MonadProducer
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Search as DSearch
 import qualified Domain.Types.TransportStation as DStation
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList as Kafka
+import Kernel.Streaming.MonadProducer
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Search as QSearch
 import qualified Storage.Queries.TransportStation as QStation

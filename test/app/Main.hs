@@ -1,6 +1,6 @@
 module Main where
 
-import Beckn.Prelude
+import Kernel.Prelude
 import qualified TestMain as Test
 
 main :: IO ()

@@ -1,8 +1,5 @@
 module Domain.Types.Booking.Type where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -13,6 +10,9 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
 import Servant.API
 
 activeBookingStatus :: [BookingStatus]

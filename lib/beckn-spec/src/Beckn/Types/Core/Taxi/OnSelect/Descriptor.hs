@@ -1,8 +1,8 @@
 module Beckn.Types.Core.Taxi.OnSelect.Descriptor (Descriptor (..)) where
 
-import Beckn.Prelude
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype Descriptor = Descriptor
   { name :: Text

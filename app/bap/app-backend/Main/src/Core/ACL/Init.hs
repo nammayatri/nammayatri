@@ -1,16 +1,16 @@
 module Core.ACL.Init (buildInitReq) where
 
-import Beckn.External.Maps.Types (LatLong)
-import Beckn.Prelude
-import Beckn.Types.App
-import qualified Beckn.Types.Core.Context as Context
-import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Init as Init
-import Beckn.Types.Logging
-import Beckn.Utils.Context (buildTaxiContext)
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
+import Kernel.External.Maps.Types (LatLong)
+import Kernel.Prelude
+import Kernel.Types.App
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.Logging
+import Kernel.Utils.Context (buildTaxiContext)
 
 buildInitReq ::
   (HasBapInfo r m, MonadFlow m) =>

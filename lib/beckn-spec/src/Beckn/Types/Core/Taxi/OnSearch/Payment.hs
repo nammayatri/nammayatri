@@ -6,9 +6,9 @@ where
 
 import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
-import Beckn.Utils.JSON
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State, (.=))
+import Kernel.Utils.JSON
 
 data Payment = Payment
   { collected_by :: Text,

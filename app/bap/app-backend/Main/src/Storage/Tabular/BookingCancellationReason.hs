@@ -7,10 +7,10 @@
 
 module Storage.Tabular.BookingCancellationReason where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
 import qualified Domain.Types.BookingCancellationReason as Domain
 import qualified Domain.Types.CancellationReason as DCR
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
 import qualified Storage.Tabular.Booking as SRB
 import qualified Storage.Tabular.CancellationReason as SCR
 import qualified Storage.Tabular.Ride as SRide

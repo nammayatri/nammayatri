@@ -1,9 +1,9 @@
 module Beckn.Types.Core.Metro.API.OnSearch where
 
-import Beckn.Prelude
-import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.Metro.OnSearch.Catalog (Catalog)
-import Beckn.Types.Core.ReqTypes (BecknCallbackReq)
+import Kernel.Prelude
+import Kernel.Types.Beckn.Ack (AckResponse)
+import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnSearchReq = BecknCallbackReq OnSearchCatalog

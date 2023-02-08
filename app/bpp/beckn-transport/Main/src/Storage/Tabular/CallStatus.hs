@@ -7,11 +7,11 @@
 
 module Storage.Tabular.CallStatus where
 
-import Beckn.External.Exotel.Types (ExotelCallStatus)
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
 import qualified Domain.Types.CallStatus as Domain
+import Kernel.External.Exotel.Types (ExotelCallStatus)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 import Storage.Tabular.Ride (RideTId)
 
 mkPersist

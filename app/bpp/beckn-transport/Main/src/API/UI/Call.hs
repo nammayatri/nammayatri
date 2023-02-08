@@ -1,7 +1,5 @@
 module API.UI.Call (module Reexport, DeprecatedAPI, API, handler, deprecatedHandler) where
 
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Action.UI.Call as Reexport
   ( CallCallbackReq,
     CallCallbackRes,
@@ -15,6 +13,8 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

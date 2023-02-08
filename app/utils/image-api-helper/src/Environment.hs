@@ -2,11 +2,11 @@
 
 module Environment where
 
-import Beckn.Tools.Metrics.CoreMetrics.Types
-import Beckn.Types.Common
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
 import Control.Monad.Catch (bracket)
+import Kernel.Tools.Metrics.CoreMetrics.Types
+import Kernel.Types.Common
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
 import Relude
 
 data AppCfg = AppCfg

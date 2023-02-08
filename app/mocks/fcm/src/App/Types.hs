@@ -1,14 +1,14 @@
 module App.Types where
 
-import Beckn.External.FCM.Types
-import Beckn.Types.App
-import Beckn.Types.Common hiding (id)
-import Beckn.Utils.App (getPodName)
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import Beckn.Utils.Shutdown
 import qualified Data.Map as Map
 import EulerHS.Prelude
+import Kernel.External.FCM.Types
+import Kernel.Types.App
+import Kernel.Types.Common hiding (id)
+import Kernel.Utils.App (getPodName)
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import Kernel.Utils.Shutdown
 
 data AppCfg = AppCfg
   { port :: Int,

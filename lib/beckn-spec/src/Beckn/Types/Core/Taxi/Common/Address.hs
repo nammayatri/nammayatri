@@ -1,8 +1,8 @@
 module Beckn.Types.Core.Taxi.Common.Address where
 
-import Beckn.Prelude
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Address = Address
   { area :: Maybe Text,

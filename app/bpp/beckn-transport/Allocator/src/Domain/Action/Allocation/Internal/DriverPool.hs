@@ -5,15 +5,15 @@ module Domain.Action.Allocation.Internal.DriverPool
   )
 where
 
-import Beckn.Prelude
-import Beckn.Randomizer (randomizeList)
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Error
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Action.Allocation.Internal.DriverPool.Config
 import qualified Domain.Types.Booking as SRB
 import Environment (Flow)
+import Kernel.Prelude
+import Kernel.Randomizer (randomizeList)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.DriverPool (calculateDriverPool)
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport

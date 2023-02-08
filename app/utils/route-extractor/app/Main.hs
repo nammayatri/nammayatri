@@ -1,6 +1,6 @@
 module Main where
 
-import Beckn.Prelude
+import Kernel.Prelude
 import qualified RouteExtractor as RE
 
 main :: IO ()

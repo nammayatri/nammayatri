@@ -7,15 +7,15 @@ module Dashboard.BPP.Driver
   )
 where
 
-import Beckn.External.Maps.Types
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Id
-import Beckn.Types.Predicate
-import qualified Beckn.Utils.Predicates as P
-import Beckn.Utils.Validation
 import Dashboard.Common as Reexport
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Id
+import Kernel.Types.Predicate
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Validation
 import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs

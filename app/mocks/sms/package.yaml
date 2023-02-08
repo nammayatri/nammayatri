@@ -72,7 +72,7 @@ library:
     - -Wincomplete-uni-patterns
   dependencies:
     - aeson
-    - beckn-core
+    - mobility-core
     - bytestring
     - clock
     - containers

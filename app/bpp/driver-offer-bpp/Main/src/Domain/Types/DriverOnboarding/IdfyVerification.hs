@@ -2,11 +2,11 @@
 
 module Domain.Types.DriverOnboarding.IdfyVerification where
 
-import Beckn.External.Encryption
-import Beckn.Prelude
-import Beckn.Types.Id
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Person
+import Kernel.External.Encryption
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data VerificationStatus = PENDING | VALID | INVALID
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)

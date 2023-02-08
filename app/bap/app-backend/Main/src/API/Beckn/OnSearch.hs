@@ -1,13 +1,13 @@
 module API.Beckn.OnSearch (API, handler) where
 
-import Beckn.Prelude
-import qualified Beckn.Storage.Hedis as Redis
 import Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
-import Beckn.Utils.Common
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnSearch as TaxiACL
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Environment
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Utils.Common
+import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 
 type API =

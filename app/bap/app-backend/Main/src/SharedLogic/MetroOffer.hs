@@ -8,12 +8,12 @@ module SharedLogic.MetroOffer
   )
 where
 
-import Beckn.External.Maps.Types
-import Beckn.Prelude
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.Common
-import Beckn.Types.Id
 import Domain.Types.SearchRequest (SearchRequest)
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Common
+import Kernel.Types.Id
 
 data MetroOffer = MetroOffer
   { rideSearchId :: Id SearchRequest, -- search case id now

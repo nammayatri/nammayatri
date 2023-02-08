@@ -1,9 +1,9 @@
 module Domain.Types.CallStatus where
 
-import Beckn.External.Exotel.Types hiding (rideId)
-import Beckn.Prelude
-import Beckn.Types.Id
 import Domain.Types.Ride
+import Kernel.External.Exotel.Types hiding (rideId)
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data CallStatus = CallStatus
   { id :: Id CallStatus,

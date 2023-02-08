@@ -15,14 +15,6 @@ module Domain.Action.Dashboard.Driver
   )
 where
 
-import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
-import Beckn.External.Maps.Types
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.APISuccess (APISuccess (..))
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.Validation (runRequestValidation)
 import Control.Applicative ((<|>))
 import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver as Common
 import Data.Aeson (eitherDecode)
@@ -34,6 +26,14 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.Validation (runRequestValidation)
 import SharedLogic.Transporter (findMerchantByShortId)
 import qualified Storage.Queries.AllocationEvent as QAllocationEvent
 import qualified Storage.Queries.BusinessEvent as QBusinessEvent

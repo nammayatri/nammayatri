@@ -1,9 +1,9 @@
 module Domain.Types.MerchantAccess where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DPerson
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data MerchantAccess = MerchantAccess
   { id :: Id MerchantAccess,

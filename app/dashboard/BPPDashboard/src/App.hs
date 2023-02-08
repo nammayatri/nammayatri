@@ -6,16 +6,16 @@ module App
 where
 
 import API
-import Beckn.Exit
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
-import Beckn.Types.Flow
-import Beckn.Utils.App
-import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.Servant.Server (runServerWithHealthCheck)
 import qualified Data.Map.Strict as Map
 import "lib-dashboard" Environment
 import qualified EulerHS.Runtime as R
+import Kernel.Exit
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import Kernel.Types.Flow
+import Kernel.Utils.App
+import Kernel.Utils.Dhall (readDhallConfigDefault)
+import Kernel.Utils.Servant.Server (runServerWithHealthCheck)
 import Servant (Context (..))
 import qualified "lib-dashboard" Tools.Auth as Auth
 

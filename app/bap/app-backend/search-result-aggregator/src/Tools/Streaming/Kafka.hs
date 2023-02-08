@@ -1,9 +1,9 @@
 module Tools.Streaming.Kafka where
 
-import Beckn.Prelude
-import Beckn.Streaming.Kafka.Consumer.Types
-import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
-import Beckn.Utils.Dhall (FromDhall)
+import Kernel.Prelude
+import Kernel.Streaming.Kafka.Consumer.Types
+import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
+import Kernel.Utils.Dhall (FromDhall)
 
 newtype KafkaConsumerCfgs = KafkaConsumerCfgs
   { publicTransportQuotes :: KafkaConsumerCfg

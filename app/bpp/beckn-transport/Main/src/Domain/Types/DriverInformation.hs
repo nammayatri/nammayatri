@@ -1,9 +1,9 @@
 module Domain.Types.DriverInformation where
 
-import Beckn.Types.Id
 import Data.Time (UTCTime)
 import Domain.Types.Person (Person)
 import EulerHS.Prelude
+import Kernel.Types.Id
 
 data DriverInformation = DriverInformation
   { driverId :: Id Person,

@@ -1,13 +1,13 @@
 module Environment where
 
-import Beckn.Prelude
-import Beckn.Storage.Hedis (HedisCfg, HedisEnv, connectHedis)
-import Beckn.Storage.Hedis.AppPrefixes (appBackendPrefix)
-import Beckn.Types.Common
-import Beckn.Utils.App (getPodName)
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging
-import Beckn.Utils.Shutdown
+import Kernel.Prelude
+import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis)
+import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
+import Kernel.Types.Common
+import Kernel.Utils.App (getPodName)
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.IOLogging
+import Kernel.Utils.Shutdown
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -39,7 +39,7 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs
-  hedisEnv <- connectHedis hedisCfg appBackendPrefix
+  hedisEnv <- connectHedis hedisCfg riderAppPrefix
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

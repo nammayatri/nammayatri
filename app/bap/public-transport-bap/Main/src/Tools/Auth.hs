@@ -1,13 +1,13 @@
 module Tools.Auth where
 
-import Beckn.InternalAPI.Auth.Client
-import Beckn.Prelude
-import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Beckn.Types.App
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.Monitoring.Prometheus.Servant
-import Beckn.Utils.Servant.HeaderAuth
+import Kernel.InternalAPI.Auth.Client
+import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import Kernel.Types.App
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.Monitoring.Prometheus.Servant
+import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (Context)
 
 -- | Performs simple token verification.

@@ -1,12 +1,12 @@
 module Mobility.ARDU.SuccessFlow where
 
-import Beckn.Prelude (roundToIntegral)
-import Beckn.Types.Common (HighPrecMeters, Meters)
-import Beckn.Utils.Common (addUTCTime)
 import Common
 import qualified Data.List.NonEmpty as NE
 import EulerHS.Prelude
 import HSpec
+import Kernel.Prelude (roundToIntegral)
+import Kernel.Types.Common (HighPrecMeters, Meters)
+import Kernel.Utils.Common (addUTCTime)
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures
 import qualified Mobility.ARDU.Utils as Utils

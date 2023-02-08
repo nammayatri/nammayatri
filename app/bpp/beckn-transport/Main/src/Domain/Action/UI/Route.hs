@@ -5,10 +5,10 @@ module Domain.Action.UI.Route
   )
 where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Person as DP
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Person as QP
 import Tools.Error

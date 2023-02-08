@@ -34,13 +34,6 @@ module Domain.Action.Allocation.Internal
   )
 where
 
-import Beckn.External.Encryption
-import qualified Beckn.External.FCM.Types as FCM
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis as Redis
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Data.Text as T
 import qualified Domain.Action.Allocation as Alloc
 import Domain.Action.Allocation.Internal.DriverPool as Reexport
@@ -57,6 +50,13 @@ import qualified Domain.Types.RideDetails as SRD
 import qualified Domain.Types.RideRequest as SRR
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption
+import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis as Redis
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as SDrLoc

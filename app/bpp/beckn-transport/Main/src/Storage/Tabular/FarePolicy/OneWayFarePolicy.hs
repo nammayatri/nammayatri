@@ -7,13 +7,13 @@
 
 module Storage.Tabular.FarePolicy.OneWayFarePolicy where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common (Centesimal, HighPrecMoney, Money)
-import Beckn.Types.Id
-import Beckn.Utils.Error (throwError)
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy as Domain
 import qualified Domain.Types.Vehicle as Vehicle
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common (Centesimal, HighPrecMoney, Money)
+import Kernel.Types.Id
+import Kernel.Utils.Error (throwError)
 import Storage.Tabular.FarePolicy.Discount (DiscountT)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateT, getDomainPart)
 import Storage.Tabular.Merchant (MerchantTId)

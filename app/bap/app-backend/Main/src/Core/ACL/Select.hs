@@ -1,15 +1,15 @@
 module Core.ACL.Select (buildSelectReq) where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import qualified Beckn.Types.Core.Context as Context
-import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Common.ItemCode as Common
 import qualified Beckn.Types.Core.Taxi.Select as Select
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types.VehicleVariant
 import Environment
+import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.Common
+import Kernel.Utils.Common
 
 buildSelectReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>

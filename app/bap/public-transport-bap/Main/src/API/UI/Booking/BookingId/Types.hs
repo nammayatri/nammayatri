@@ -1,7 +1,7 @@
 module API.UI.Booking.BookingId.Types where
 
-import Beckn.Types.Id
 import Domain.Types.Booking (Booking, BookingAPIEntity)
+import Kernel.Types.Id
 import Servant
 import Tools.Auth
 

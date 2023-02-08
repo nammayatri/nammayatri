@@ -1,8 +1,8 @@
 module Beckn.Types.Core.Taxi.OnSearch.Descriptor (Descriptor (..)) where
 
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (exp, id)
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 newtype Descriptor = Descriptor
   { name :: Text

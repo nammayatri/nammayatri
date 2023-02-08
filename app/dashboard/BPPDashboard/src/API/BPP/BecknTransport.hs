@@ -7,9 +7,9 @@ where
 import qualified API.BPP.BecknTransport.Driver as Driver
 import qualified API.BPP.BecknTransport.Merchant as Merchant
 import qualified API.BPP.BecknTransport.Ride as Ride
-import Beckn.Types.Id
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
+import Kernel.Types.Id
 import Servant
 
 type API =

@@ -6,13 +6,13 @@ module API.UI.Profile
   )
 where
 
-import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Profile as DProfile
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude
+import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 

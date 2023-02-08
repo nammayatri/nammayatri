@@ -1,15 +1,14 @@
 module App.Types where
 
-import Beckn.Tools.Metrics.CoreMetrics
-import Beckn.Types.App
-import Beckn.Types.Common hiding (id)
-import Beckn.Types.Flow
-import Beckn.Utils.Dhall
-import Beckn.Utils.IOLogging
-import Beckn.Utils.Servant.Client (HttpClientOptions, RetryCfg)
-import Beckn.Utils.Shutdown
 import qualified Data.Text as T
 import EulerHS.Prelude
+import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.App
+import Kernel.Types.Common hiding (id)
+import Kernel.Types.Flow
+import Kernel.Utils.IOLogging
+import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
+import Kernel.Utils.Shutdown
 import System.Environment (lookupEnv)
 import Types.Common
 

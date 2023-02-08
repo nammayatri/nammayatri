@@ -3,15 +3,15 @@
 
 module Tools.SignatureAuth where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Utils.Common
-import Beckn.Utils.IOLogging (HasLog)
-import Beckn.Utils.Servant.SignatureAuth
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified EulerHS.Runtime as R
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Utils.Common
+import Kernel.Utils.IOLogging (HasLog)
+import Kernel.Utils.Servant.SignatureAuth
 import qualified Network.HTTP.Client as Http
 
 --TODO: Everything here supposed to be temporary solution. Check if we still need it

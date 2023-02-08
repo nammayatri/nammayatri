@@ -1,8 +1,8 @@
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config where
 
-import Beckn.Utils.Common
-import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude hiding (id)
+import Kernel.Utils.Common
+import Kernel.Utils.Dhall (FromDhall)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (DriverPoolBatchesConfig)
 
 data SendSearchRequestJobConfig = SendSearchRequestJobConfig

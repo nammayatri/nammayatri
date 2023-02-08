@@ -2,11 +2,11 @@
 
 module Domain.Types.AccessMatrix where
 
-import Beckn.Prelude
-import Beckn.Types.Id
 import Data.Singletons.TH
 import Domain.Types.Role as DRole
 import Domain.Types.ServerName as DSN
+import Kernel.Prelude
+import Kernel.Types.Id
 
 -------- Possible user access levels for helper API --------
 

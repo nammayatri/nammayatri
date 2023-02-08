@@ -7,11 +7,11 @@
 
 module Storage.Tabular.FarePolicy.FareBreakup where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Common (Centesimal)
-import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.FareBreakup as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Common (Centesimal)
+import Kernel.Types.Id
 import qualified Storage.Tabular.Booking as SBooking
 
 mkPersist

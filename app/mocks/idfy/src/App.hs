@@ -2,11 +2,11 @@ module App where
 
 import App.Routes (mockIdfyAPI, mockIdfyServer)
 import App.Types
-import Beckn.Prelude
-import Beckn.Types.Logging
-import Beckn.Utils.Servant.Client
-import Beckn.Utils.Servant.Server
 import qualified EulerHS.Runtime as R
+import Kernel.Prelude
+import Kernel.Types.Logging
+import Kernel.Utils.Servant.Client
+import Kernel.Utils.Servant.Server
 import Servant
 import Servant.Client.Core
 

@@ -8,10 +8,6 @@ module BPPClient.DriverOffer
 where
 
 import "driver-offer-bpp" API.Dashboard as BPP
-import Beckn.Prelude
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Dashboard.BPP.Driver as Common
 import qualified Dashboard.BPP.Driver.Registration as Common
 import qualified Dashboard.BPP.Merchant as Common
@@ -19,6 +15,10 @@ import qualified Dashboard.BPP.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Servant
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client

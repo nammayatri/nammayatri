@@ -1,12 +1,12 @@
 module Domain.Types.BusinessEvent where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id (Id)
 import Domain.Types.Booking (Booking)
 import Domain.Types.Person (Driver)
 import Domain.Types.Ride (Ride)
 import Domain.Types.Vehicle.Variant (Variant)
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id (Id)
 
 data BusinessEvent = BusinessEvent
   { id :: Id BusinessEvent,

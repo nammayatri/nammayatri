@@ -4,10 +4,10 @@ module Tools.Metrics.SendSearchRequestToDriverMetrics
   )
 where
 
-import Beckn.Types.Common (Milliseconds)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import GHC.Records.Extra
+import Kernel.Types.Common (Milliseconds)
 import Prometheus as P
 import Tools.Metrics.SendSearchRequestToDriverMetrics.Types as Reexport
 

@@ -1,17 +1,17 @@
 module Main where
 
-import Beckn.Types.Logging
-  ( LogLevel (DEBUG),
-    LoggerConfig (..),
-  )
-import Beckn.Utils.FlowLogging (getEulerLoggerRuntime)
-import Beckn.Utils.Logging
 import qualified Data.Aeson as J
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GenerateKeyPair (generateKeyPair)
+import Kernel.Types.Logging
+  ( LogLevel (DEBUG),
+    LoggerConfig (..),
+  )
+import Kernel.Utils.FlowLogging (getEulerLoggerRuntime)
+import Kernel.Utils.Logging
 import Options.Applicative
   ( Parser,
     auto,

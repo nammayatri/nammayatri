@@ -5,13 +5,6 @@ import "beckn-transport" API.UI.Location as LocationAPI
 import "app-backend" API.UI.Quote
 import qualified "beckn-transport" API.UI.Ride as RideAPI
 import qualified "app-backend" API.UI.Search as AppSearch
-import qualified Beckn.External.Maps as Maps
-import Beckn.External.Maps.Types
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Types.Time
-import Beckn.Utils.Common
 import Common
 import qualified "beckn-transport" Domain.Action.UI.Booking as DUB
 import qualified "app-backend" Domain.Types.Booking as BRB
@@ -26,6 +19,13 @@ import qualified "app-backend" Domain.Types.Ride as BRide
 import qualified "beckn-transport" Domain.Types.Ride as TRide
 import qualified "app-backend" Domain.Types.SearchRequest as AppSearchReq
 import HSpec
+import qualified Kernel.External.Maps as Maps
+import Kernel.External.Maps.Types
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Types.Time
+import Kernel.Utils.Common
 import qualified Mobility.AppBackend.APICalls as API
 import Mobility.AppBackend.Fixtures
 import qualified Mobility.Transporter.APICalls as API

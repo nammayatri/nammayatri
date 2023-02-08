@@ -1,11 +1,11 @@
 module Domain.Action.UI.Webengage.InfoBIPWebhook where
 
-import qualified Beckn.External.Infobip.Flow as IF
-import qualified Beckn.External.Infobip.Types as IT hiding (id)
-import Beckn.Prelude
-import Beckn.Types.APISuccess
-import Beckn.Utils.Common
-import Beckn.Utils.Dhall (FromDhall)
+import qualified Kernel.External.Infobip.Flow as IF
+import qualified Kernel.External.Infobip.Types as IT hiding (id)
+import Kernel.Prelude
+import Kernel.Types.APISuccess
+import Kernel.Utils.Common
+import Kernel.Utils.Dhall (FromDhall)
 import qualified Storage.Queries.Webengage as QW
 import Tools.Error
 import Tools.Metrics

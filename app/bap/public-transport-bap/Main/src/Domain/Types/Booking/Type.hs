@@ -2,10 +2,6 @@
 
 module Domain.Types.Booking.Type where
 
-import Beckn.Prelude hiding (first)
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -14,6 +10,10 @@ import Domain.Types.Quote (Quote)
 import Domain.Types.Search (Search)
 import Domain.Types.TransportStation (TransportStation)
 import EulerHS.Prelude (first)
+import Kernel.Prelude hiding (first)
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 import Servant.API
 import Tools.Auth
 

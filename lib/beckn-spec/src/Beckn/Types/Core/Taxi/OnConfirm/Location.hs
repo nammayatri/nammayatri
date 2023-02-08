@@ -4,11 +4,11 @@ module Beckn.Types.Core.Taxi.OnConfirm.Location
   )
 where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.Address as Reexport
 import Beckn.Types.Core.Taxi.Common.Gps as Reexport
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Kernel.Prelude
+import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Location = Location
   { gps :: Gps,

@@ -1,16 +1,16 @@
 module Core.ACL.Init where
 
-import Beckn.Prelude
-import qualified Beckn.Product.Validation.Context as Context
-import Beckn.Types.App
-import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
-import Beckn.Types.Error
-import Beckn.Types.Field
-import Beckn.Types.Id
-import qualified Beckn.Types.Registry.Subscriber as Subscriber
-import Beckn.Utils.Error.Throwing
 import qualified Domain.Action.Beckn.Init as DInit
+import Kernel.Prelude
+import qualified Kernel.Product.Validation.Context as Context
+import Kernel.Types.App
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
+import Kernel.Types.Field
+import Kernel.Types.Id
+import qualified Kernel.Types.Registry.Subscriber as Subscriber
+import Kernel.Utils.Error.Throwing
 
 buildInitReq ::
   ( MonadThrow m,

@@ -11,23 +11,8 @@ module Domain.Action.UI.Registration
   )
 where
 
-import Beckn.External.Encryption (decrypt, encrypt, getDbHash)
-import Beckn.External.FCM.Types (FCMRecipientToken)
--- import Beckn.External.SMS
-import Beckn.Sms.Config
-import qualified Beckn.Storage.Esqueleto as DB
-import qualified Beckn.Storage.Hedis as Redis
-import Beckn.Types.APISuccess as AP
-import Beckn.Types.Common hiding (id)
-import qualified Beckn.Types.Common as BC
-import Beckn.Types.Id
-import Beckn.Types.Predicate
-import Beckn.Types.SlidingWindowLimiter (APIRateLimitOptions)
-import Beckn.Types.Version (Version)
-import Beckn.Utils.Common
-import qualified Beckn.Utils.Predicates as P
-import Beckn.Utils.SlidingWindowLimiter
-import Beckn.Utils.Validation
+-- import Kernel.External.SMS
+
 import Data.OpenApi (ToSchema)
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
@@ -38,6 +23,22 @@ import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.Sms.Config
+import qualified Kernel.Storage.Esqueleto as DB
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.APISuccess as AP
+import Kernel.Types.Common hiding (id)
+import qualified Kernel.Types.Common as BC
+import Kernel.Types.Id
+import Kernel.Types.Predicate
+import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
+import Kernel.Types.Version (Version)
+import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.SlidingWindowLimiter
+import Kernel.Utils.Validation
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person

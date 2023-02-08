@@ -2,11 +2,11 @@
 
 module Domain.Types.PaymentTransaction where
 
-import Beckn.Prelude
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.GenericPretty
 import Domain.Types.Booking.Type
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.GenericPretty
 
 data PaymentStatus = PENDING | FAILED | SUCCESS
   deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema, Eq)

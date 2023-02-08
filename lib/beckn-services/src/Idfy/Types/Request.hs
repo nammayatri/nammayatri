@@ -2,13 +2,13 @@
 
 module Idfy.Types.Request where
 
-import Beckn.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Data.OpenApi
   ( ToSchema (..),
     fromAesonOptions,
     genericDeclareNamedSchema,
   )
 import EulerHS.Prelude
+import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 
 type ImageValidateRequest = IdfyRequest ValidateRequest
 

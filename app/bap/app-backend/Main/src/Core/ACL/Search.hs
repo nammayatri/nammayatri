@@ -1,17 +1,17 @@
 module Core.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
 
-import Beckn.Types.Common
-import qualified Beckn.Types.Core.Context as Context
-import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Search as Search
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Environment
 import EulerHS.Prelude hiding (state)
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 
 buildOneWaySearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>

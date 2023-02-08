@@ -2,13 +2,13 @@
 
 module Storage.Queries.FullEntityBuilders where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.Booking as Booking
 import Domain.Types.Estimate
 import Domain.Types.FarePolicy.FareProductType
 import Domain.Types.Quote as Quote
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Queries.EstimateBreakup as QEB
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Booking.BookingLocation

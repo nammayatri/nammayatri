@@ -1,12 +1,12 @@
 module Domain.Action.UI.BookingList where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto (runInReplica)
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Booking.API
 import Domain.Types.Booking.Type
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto (runInReplica)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Queries.Booking as QBooking
 import Storage.Queries.PaymentTransaction as QPT
 import qualified Storage.Queries.TransportStation as QTransportStation

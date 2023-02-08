@@ -2,8 +2,8 @@
 
 module Domain.Types.Search where
 
-import Beckn.Prelude
-import Beckn.Types.Id
+import Kernel.Prelude
+import Kernel.Types.Id
 import Tools.Auth
 
 data Search = Search

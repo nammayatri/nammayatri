@@ -1,10 +1,5 @@
 module Domain.Action.Beckn.OnSearch.Rental where
 
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Data.Traversable
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Merchant as DM
@@ -13,6 +8,11 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.DriverPool (HasDriverPoolConfig)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFarePolicy

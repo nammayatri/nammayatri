@@ -1,11 +1,5 @@
 module Domain.Action.Beckn.OnSearch.OneWay where
 
-import qualified Beckn.External.Maps.Types as MapSearch
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis
-import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Data.Text as T
 import Data.Traversable
 import qualified Domain.Types.BusinessEvent as SB
@@ -16,6 +10,12 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
+import qualified Kernel.External.Maps.Types as MapSearch
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified SharedLogic.CacheDistance as CD
 import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.FareCalculator.OneWayFareCalculator

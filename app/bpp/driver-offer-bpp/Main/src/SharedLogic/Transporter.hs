@@ -1,10 +1,10 @@
 module SharedLogic.Transporter where
 
-import Beckn.Prelude
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.Prelude
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Error
 

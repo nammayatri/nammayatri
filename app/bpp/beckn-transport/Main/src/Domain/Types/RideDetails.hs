@@ -3,11 +3,11 @@
 
 module Domain.Types.RideDetails where
 
-import Beckn.External.Encryption
-import Beckn.Types.Id
 import qualified Domain.Types.Ride as SR
 import qualified Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption
+import Kernel.Types.Id
 
 data RideDetailsE e = RideDetails
   { id :: Id SR.Ride,

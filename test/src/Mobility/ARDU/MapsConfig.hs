@@ -3,11 +3,11 @@
 
 module Mobility.ARDU.MapsConfig where
 
-import qualified Beckn.External.Maps as Maps
-import Beckn.Prelude
-import Beckn.Types.Id
 import "driver-offer-bpp" Domain.Types.Merchant
 import "driver-offer-bpp" Domain.Types.Merchant.MerchantServiceConfig
+import qualified Kernel.External.Maps as Maps
+import Kernel.Prelude
+import Kernel.Types.Id
 import qualified Mobility.ARDU.Fixtures as Fixtures
 import qualified "driver-offer-bpp" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
 import Test.Hspec

@@ -1,10 +1,10 @@
 module Storage.Queries.RideRequest where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
 import Domain.Types.Merchant
 import Domain.Types.RideRequest
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
 import Storage.Tabular.RideRequest
 
 create :: RideRequest -> SqlDB ()

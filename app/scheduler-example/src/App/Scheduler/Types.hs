@@ -7,10 +7,10 @@ module App.Scheduler.Types where
 -- FIXME: This entire module is just for example
 -- TODO: move it to the integration tests when real usage of the scheduler library appears.
 
-import Beckn.Prelude
-import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.GenericPretty (PrettyShow, Showable (..))
 import Data.Singletons.TH
+import Kernel.Prelude
+import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.GenericPretty (PrettyShow, Showable (..))
 import Lib.Scheduler
 
 data SchedulerJobType

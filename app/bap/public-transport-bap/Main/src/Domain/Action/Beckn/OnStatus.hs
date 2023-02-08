@@ -1,12 +1,12 @@
 module Domain.Action.Beckn.OnStatus where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto
-import Beckn.Types.Id
-import Beckn.Utils.Common
-import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.PaymentTransaction as DPaymentTransaction
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Kernel.Utils.GenericPretty (PrettyShow)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Tools.Error

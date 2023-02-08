@@ -9,16 +9,16 @@ module BAPClient.AppBackend
 where
 
 import qualified "app-backend" API.Dashboard as BAP
-import Beckn.Prelude
-import Beckn.Tools.Metrics.CoreMetrics
-import Beckn.Types.APISuccess (APISuccess)
-import Beckn.Types.Id
-import Beckn.Utils.Common hiding (callAPI)
 import qualified Dashboard.BAP.Merchant as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "app-backend" Domain.Types.Person as BAP
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
+import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Id
+import Kernel.Utils.Common hiding (callAPI)
 import Servant
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client

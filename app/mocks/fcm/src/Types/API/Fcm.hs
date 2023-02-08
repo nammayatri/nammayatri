@@ -1,7 +1,7 @@
 module Types.API.Fcm where
 
-import Beckn.External.FCM.Types
 import Data.Aeson
+import Kernel.External.FCM.Types
 import Servant
 
 type ReadFcmAPI =

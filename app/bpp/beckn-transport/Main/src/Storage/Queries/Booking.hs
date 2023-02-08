@@ -1,12 +1,12 @@
 module Storage.Queries.Booking where
 
-import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Booking.Type as Booking
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Booking.BookingLocation as Loc

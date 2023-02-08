@@ -7,15 +7,15 @@ module Domain.Action.UI.OrgAdmin
   )
 where
 
-import Beckn.External.Encryption (decrypt)
-import Beckn.External.FCM.Types
-import Beckn.Prelude
-import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Control.Applicative
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
+import Kernel.External.Encryption (decrypt)
+import Kernel.External.FCM.Types
+import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson

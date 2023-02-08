@@ -4,10 +4,10 @@ module Domain.Action.UI.CancellationReason
   )
 where
 
-import Beckn.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Beckn.Storage.Esqueleto.Transactionable
 import qualified Domain.Types.CancellationReason as SCR
 import EulerHS.Prelude hiding (id)
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable
 import qualified Storage.Queries.CancellationReason as QCR
 
 type ListRes = [SCR.CancellationReasonAPIEntity]

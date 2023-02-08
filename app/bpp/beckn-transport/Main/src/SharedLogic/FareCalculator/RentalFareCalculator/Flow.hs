@@ -9,14 +9,14 @@ module SharedLogic.FareCalculator.RentalFareCalculator.Flow
   )
 where
 
-import Beckn.Prelude
-import Beckn.Storage.Hedis
-import Beckn.Types.Id
-import Beckn.Utils.Common
 import Domain.Types.Booking (Booking)
 import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import EulerHS.Prelude hiding (id)
+import Kernel.Prelude
+import Kernel.Storage.Hedis
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import SharedLogic.FareCalculator.RentalFareCalculator.Calculator
   ( RentalFareParameters,
     calculateRentalFareParameters,
