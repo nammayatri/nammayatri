@@ -189,14 +189,26 @@ rideSync merchantShortId reqRideId = do
   logTagInfo "dashboard -> syncRide : " $ show rideId <> "; status: " <> show ride.status
 
   case ride.status of
-    DRide.NEW -> pure $ Common.RideSyncRes Common.RIDE_NEW "Nothing to sync, ignoring"
-    DRide.INPROGRESS -> pure $ Common.RideSyncRes Common.RIDE_INPROGRESS "Nothing to sync, ignoring"
+    DRide.NEW -> syncNewRide ride booking
+    DRide.INPROGRESS -> syncInProgressRide ride booking
     DRide.COMPLETED -> syncCompletedRide ride booking
-    DRide.CANCELLED -> syncCancelledRide rideId booking merchant
+    DRide.CANCELLED -> syncCancelledRide ride booking merchant
 
-syncCancelledRide :: Id DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.RideSyncRes
-syncCancelledRide rideId booking merchant = do
-  mbBookingCReason <- runInReplica $ QBCReason.findByRideId rideId
+syncNewRide :: DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
+syncNewRide ride booking = do
+  handle (errHandler ride.status booking.status "ride assigned") $
+    CallBAP.sendRideAssignedUpdateToBAP booking ride
+  pure $ Common.RideSyncRes Common.RIDE_NEW "Success. Sent ride started update to bap"
+
+syncInProgressRide :: DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
+syncInProgressRide ride booking = do
+  handle (errHandler ride.status booking.status "ride started") $
+    CallBAP.sendRideStartedUpdateToBAP booking ride
+  pure $ Common.RideSyncRes Common.RIDE_INPROGRESS "Success. Sent ride started update to bap"
+
+syncCancelledRide :: DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.RideSyncRes
+syncCancelledRide ride booking merchant = do
+  mbBookingCReason <- runInReplica $ QBCReason.findByRideId ride.id
   -- rides cancelled by bap no need to sync, and have mbBookingCReason = Nothing
   case mbBookingCReason of
     Nothing -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "No cancellation reason found for ride. Nothing to sync, ignoring"
@@ -204,7 +216,7 @@ syncCancelledRide rideId booking merchant = do
       case bookingCReason.source of
         DBCReason.ByUser -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Ride canceled by customer. Nothing to sync, ignoring"
         source -> do
-          handle (errHandler booking.status "booking cancellation") $
+          handle (errHandler ride.status booking.status "booking cancellation") $
             CallBAP.sendBookingCancelledUpdateToBAP booking merchant source
           pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
 
@@ -213,18 +225,20 @@ syncCompletedRide ride booking = do
   -- for old rides fareParametersId = Nothing, so throw E400
   fareParametersId <- ride.fareParametersId & fromMaybeM (FareParametersDoNotExist ride.id.getId)
   fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
-  handle (errHandler booking.status "ride completed") $
+  handle (errHandler ride.status booking.status "ride completed") $
     CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters
   pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"
 
-errHandler :: DBooking.BookingStatus -> Text -> SomeException -> Flow ()
-errHandler status desc exc
+errHandler :: DRide.RideStatus -> DBooking.BookingStatus -> Text -> SomeException -> Flow ()
+errHandler rideStatus bookingStatus desc exc
   | Just (BecknAPICallError _endpoint err) <- fromException @BecknAPICallError exc = do
-    if err.code == toErrorCode (BookingInvalidStatus "")
-      then
-        throwError $
-          InvalidRequest $ errMessage <> maybe "" (" Bap booking status: " <>) err.message
-      else throwError $ InternalError errMessage
-  | otherwise = throwError $ InternalError errMessage
+    case err.code of
+      code | code == toErrorCode (BookingInvalidStatus "") -> do
+        throwError $ InvalidRequest $ bookingErrMessage <> maybe "" (" Bap booking status: " <>) err.message
+      code | code == toErrorCode (RideInvalidStatus "") -> do
+        throwError $ InvalidRequest $ rideErrMessage <> maybe "" (" Bap ride status: " <>) err.message
+      _ -> throwError $ InternalError bookingErrMessage
+  | otherwise = throwError $ InternalError bookingErrMessage
   where
-    errMessage = "Fail to send " <> desc <> " update. Bpp booking status: " <> show status <> "."
+    bookingErrMessage = "Fail to send " <> desc <> " update. Bpp booking status: " <> show bookingStatus <> "."
+    rideErrMessage = "Fail to send " <> desc <> " update. Bpp ride status: " <> show rideStatus <> "."

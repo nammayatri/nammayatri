@@ -22,7 +22,6 @@ import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.BookingStatus"
 
--- fareParametersId the same as id
 mkPersist
   defaultSqlSettings
   [defaultQQ|
