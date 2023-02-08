@@ -7,7 +7,6 @@ import Control.Exception (ErrorCall (ErrorCall))
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function
-import qualified Data.Map.Strict as Map
 import qualified DriverOfferBPP.Processor as DO
 import Environment
 import qualified EulerHS.Runtime as L
@@ -58,13 +57,13 @@ startConsumerWithEnv flowRt appEnv@AppEnv {..} = do
     processStreamforAvailability kafkaConsumer =
       readMessages kafkaConsumer
         & S.mapMaybe hush
-        & S.mapMaybe ((\(ma, (mb, cr)) -> (\a b -> (a, b, cr)) <$> ma <*> mb) . ((A.decode . LBS.fromStrict <=< crValue) &&& (pure . decodeUtf8 <=< crKey) &&& id))
-        & S.mapM (\(a, b :: Text, cr) -> processRealtimeLocationUpdates a b $> (a, b, cr))
-        & S.intervalsOf (fromIntegral dumpEvery) (SF.lmap (\(a, b, cr) -> ((b, a.mId), (a, cr))) (SF.classify buildTimeSeries))
-        & S.mapM (Map.traverseWithKey (calculateAvailableTime kafkaConsumer))
+        & S.mapMaybe ((\(mbMessage, (mbMessageKey, cr)) -> (\message messageKey -> (message, messageKey, cr)) <$> mbMessage <*> mbMessageKey) . ((A.decode . LBS.fromStrict <=< crValue) &&& (pure . decodeUtf8 <=< crKey) &&& id))
+        & S.mapM (\(message, messageKey, cr) -> processRealtimeLocationUpdates message messageKey $> (message, messageKey, cr))
+        & S.intervalsOf (fromIntegral dumpEvery) (SF.lmap (\(message, messageKey, cr) -> ((messageKey, message.mId), (message, cr))) (SF.classify buildTimeSeries))
+        & S.mapM (calculateAvailableTime kafkaConsumer)
         & S.drain
 
-    calculateAvailableTime kafkaConsumer (driverId, merchantId) (timeSeries, mbCR) = withFlow . withLogTag driverId . DO.calculateAvailableTime merchantId driverId kafkaConsumer $ (reverse timeSeries, mbCR)
+    calculateAvailableTime kafkaConsumer driverLocationUpdatesMap = withFlow $ generateGUID >>= flip withLogTag (DO.calculateAvailableTime kafkaConsumer driverLocationUpdatesMap)
 
     processRealtimeLocationUpdates locationUpdate driverId = withFlow . withLogTag driverId $ generateGUID >>= flip withLogTag (DO.processData locationUpdate driverId)
 

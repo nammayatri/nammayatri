@@ -4,6 +4,7 @@ import Data.Time
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Types.Id (Id)
+import qualified Kafka.Consumer as C
 
 data DriverAvailability = DriverAvailability
   { id :: Id DriverAvailability,
@@ -25,3 +26,17 @@ data LocationUpdates = LocationUpdates
     mId :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+type BucketTimePair = (UTCTime, UTCTime)
+
+type MerchantId = Text
+
+type DriverId = Text
+
+type LastAvailableTime = UTCTime
+
+type SecondsActiveInBucket = Integer
+
+type AvailabilityBucket = Map BucketTimePair (SecondsActiveInBucket, LastAvailableTime)
+
+type ConsumerRecordD = C.ConsumerRecord (Maybe ByteString) (Maybe ByteString)

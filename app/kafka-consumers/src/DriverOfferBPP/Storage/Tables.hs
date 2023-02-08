@@ -28,6 +28,7 @@ mkPersist
       createdAt UTCTime
       updatedAt UTCTime
 
+      Unique (DriverAvailabilityBucketStartTime, DriverAvailabilityBucketEndTime, DriverAvailabilityDriverId, DriverAvailabilityMerchantId)
       Primary id
       deriving Generic
     |]

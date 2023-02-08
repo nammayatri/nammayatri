@@ -32,7 +32,7 @@ let availabilityTimeWindowOption =
 
 in  { hedisCfg
     , esqDBCfg
-    , dumpEvery = +30
+    , dumpEvery = +10
     , kafkaConsumerCfg
     , timeBetweenUpdates = +10
     , availabilityTimeWindowOption

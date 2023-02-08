@@ -4,18 +4,20 @@ module DriverOfferBPP.Processor
   )
 where
 
+import qualified Data.HashMap as HM
 import qualified Data.Map as M
 import Data.Time (UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
 import qualified DriverOfferBPP.Storage.Queries as Q
 import qualified DriverOfferBPP.Types as T
 import Environment (AppEnv)
 import EulerHS.Prelude
-import qualified Kafka.Consumer as Consumer
+import qualified Kafka.Consumer as C
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
-import qualified Kernel.Types.Common as C
+import qualified Kernel.Types.Common as C hiding (Offset)
 import Kernel.Types.Flow (FlowR)
 import qualified Kernel.Types.SlidingWindowCounters as SWT
+import Kernel.Utils.Common (withLogTag)
 import Kernel.Utils.Logging (logInfo)
 import qualified Kernel.Utils.SlidingWindowCounters as SW
 
@@ -24,25 +26,53 @@ type Flow = FlowR AppEnv
 getTimeDiffInteger :: SWT.TimePair -> Integer
 getTimeDiffInteger (startTime, endTime) = floor $ diffUTCTime endTime startTime
 
-createOrUpdateDriverAvailability :: Text -> Text -> SWT.TimePair -> (Integer, UTCTime) -> Flow ()
-createOrUpdateDriverAvailability merchantId driverId (bucketStartTime, bucketEndTime) (valToAdd, lastAvailableTime) = do
-  daId <- C.generateGUID
-  currTime <- liftIO getCurrentTime
-  let newAvailabilityEntry =
-        T.DriverAvailability
-          { id = daId,
-            createdAt = currTime,
-            updatedAt = currTime,
-            totalAvailableTime = fromInteger valToAdd,
-            ..
-          }
-  DB.runTransaction $ Q.createOrUpdateDriverAvailability newAvailabilityEntry
+calculateAvailableTime :: C.KafkaConsumer -> Map (T.MerchantId, T.DriverId) ([UTCTime], Maybe T.ConsumerRecordD) -> Flow ()
+calculateAvailableTime kafkaConsumer driverLocationUpdatesMap = do
+  newDriverAvaiabilityBuckets <- M.traverseWithKey calculateAvailableTime' driverLocationUpdatesMap
+  bucketAlreadyInDb <- Q.getAvailabilityInBucket newDriverAvaiabilityBuckets
+  udpatedDriverAvailabilityBuckets <- concatMapM (createUpdatedTimeBuckets (Q.makeMapWithUniqueFields bucketAlreadyInDb)) (M.toList newDriverAvaiabilityBuckets)
+  let crsToCommit = getLatestCRInEachPartition
+  DB.runTransaction $ Q.insertIntoDB bucketAlreadyInDb udpatedDriverAvailabilityBuckets
+  mapM_ (C.commitOffsetMessage C.OffsetCommit kafkaConsumer) crsToCommit
+  where
+    getLatestCRInEachPartition =
+      map snd
+        . HM.elems
+        . foldl'
+          ( \patitionOffsetMap cr -> do
+              let paritionId = C.unPartitionId $ C.crPartition cr
+                  currentOffset = C.unOffset $ C.crOffset cr
+                  latestOffsetInPartition = HM.lookup paritionId patitionOffsetMap
+              if (latestOffsetInPartition <&> fst) > Just currentOffset
+                then patitionOffsetMap
+                else HM.insert paritionId (currentOffset, cr) patitionOffsetMap
+          )
+          HM.empty
+        . mapMaybe (snd . snd)
+        $ M.toList driverLocationUpdatesMap
 
-calculateAvailableTime :: Text -> Text -> Consumer.KafkaConsumer -> ([UTCTime], Maybe (Consumer.ConsumerRecord (Maybe ByteString) (Maybe ByteString))) -> Flow ()
-calculateAvailableTime _ _ _ ([], Nothing) = pure ()
-calculateAvailableTime _ _ _ ([], Just lastCR) = logInfo $ "Should never reach here, no locationupdates but kafka consumer records , last consumer record: " <> show lastCR
-calculateAvailableTime _ _ _ (locationUpdatesTimeSeries, Nothing) = logInfo $ "Should never reach here, locationupdates but no kafka consumer record, time series: " <> show locationUpdatesTimeSeries
-calculateAvailableTime merchantId driverId kc (fstTime : restTimeSeries, Just lastCR) = do
+    calculateAvailableTime' (merchantId, driverId) (timeSeries, _) =
+      calculateAvailableTime'' merchantId driverId $ reverse timeSeries
+
+    createUpdatedTimeBuckets oldDriverAvaiabilityBuckets (key@(merchantId, driverId), newAvailabilityBuckets) =
+      withLogTag driverId $ traverse createUpdatedTimeBuckets' $ M.toList newAvailabilityBuckets
+      where
+        createUpdatedTimeBuckets' (innerKey@(bucketStartTime, bucketEndTime), (valToAdd, lastAvailableTime)) = do
+          let mbOldBucketAvailableTime = HM.lookup (key, show innerKey) oldDriverAvaiabilityBuckets
+          daId <- C.generateGUID
+          currTime <- liftIO getCurrentTime
+          pure $
+            T.DriverAvailability
+              { id = daId,
+                createdAt = currTime,
+                updatedAt = currTime,
+                totalAvailableTime = maybe 0 (.totalAvailableTime) mbOldBucketAvailableTime + fromInteger valToAdd,
+                ..
+              }
+
+calculateAvailableTime'' :: T.MerchantId -> T.DriverId -> [UTCTime] -> Flow T.AvailabilityBucket
+calculateAvailableTime'' _ _ [] = pure M.empty
+calculateAvailableTime'' merchantId driverId (fstTime : restTimeSeries) = do
   mbLatestAvailabilityRecord <- Q.findLatestByDriverIdAndMerchantId driverId merchantId
   timeBetweenUpdates <- asks (.timeBetweenUpdates)
   granualityPeriodType <- asks (.granualityPeriodType)
@@ -61,8 +91,7 @@ calculateAvailableTime merchantId driverId kc (fstTime : restTimeSeries, Just la
           activeTimePairs
   logInfo $ "ActiveTime pairs " <> show activeTimePairs
   logInfo $ "availabilityInWindow " <> show availabilityInWindow
-  void $ M.traverseWithKey (createOrUpdateDriverAvailability merchantId driverId) availabilityInWindow
-  void $ Consumer.commitOffsetMessage Consumer.OffsetCommit kc lastCR
+  pure availabilityInWindow
   where
     getBucketPair periodType (startTime, _) = do
       let bucketEndTime = SW.incrementPeriod periodType startTime

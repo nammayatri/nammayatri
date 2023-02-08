@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.driver_availability ADD CONSTRAINT unique_row_for_driver_availability
+UNIQUE(bucket_start_time, bucket_end_time, driver_id, merchant_id);
