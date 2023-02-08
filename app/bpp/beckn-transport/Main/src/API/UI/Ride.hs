@@ -37,6 +37,10 @@ type API =
            :> QueryParam "limit" Integer
            :> QueryParam "offset" Integer
            :> QueryParam "onlyActive" Bool
+           :> Summary "Driver rides list"
+           :> Description
+                "List all driver's \
+                \rides."
            :> Get '[JSON] DriverRideListRes
            :<|> TokenAuth
              :> Capture "rideId" (Id SRide.Ride)
