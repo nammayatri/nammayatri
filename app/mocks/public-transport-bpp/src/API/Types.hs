@@ -1,8 +1,8 @@
 module API.Types where
 
-import "public-transport-bap" Core.Spec.Confirm
-import "public-transport-bap" Core.Spec.Search
-import "public-transport-bap" Core.Spec.Status
+import "public-transport-bap" Beckn.Spec.Confirm
+import "public-transport-bap" Beckn.Spec.Search
+import "public-transport-bap" Beckn.Spec.Status
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Beckn.ReqTypes
 import Relude

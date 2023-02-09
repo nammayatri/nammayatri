@@ -2,10 +2,10 @@
 
 module ExternalAPI where
 
-import "public-transport-bap" Core.Spec.OnCancel
-import "public-transport-bap" Core.Spec.OnConfirm
-import "public-transport-bap" Core.Spec.OnSearch
-import "public-transport-bap" Core.Spec.OnStatus
+import "public-transport-bap" Beckn.Spec.OnCancel
+import "public-transport-bap" Beckn.Spec.OnConfirm
+import "public-transport-bap" Beckn.Spec.OnSearch
+import "public-transport-bap" Beckn.Spec.OnStatus
 import Environment
 import Kernel.Mock.App
 import Kernel.Mock.ExternalAPI

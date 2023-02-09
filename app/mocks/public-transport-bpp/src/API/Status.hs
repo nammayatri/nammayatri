@@ -3,9 +3,9 @@
 module API.Status where
 
 import API.Utils
+import "public-transport-bap" Beckn.Spec.OnStatus
+import "public-transport-bap" Beckn.Spec.Status
 import qualified Control.Monad.Catch as C
-import "public-transport-bap" Core.Spec.OnStatus
-import "public-transport-bap" Core.Spec.Status
 import Environment
 import ExternalAPI
 import Kernel.Mock.App

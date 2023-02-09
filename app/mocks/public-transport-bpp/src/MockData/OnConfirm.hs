@@ -1,8 +1,8 @@
 module MockData.OnConfirm where
 
-import "public-transport-bap" Core.Spec.Common
-import qualified "public-transport-bap" Core.Spec.Confirm as Confirm
-import "public-transport-bap" Core.Spec.OnConfirm
+import "public-transport-bap" Beckn.Spec.Common
+import qualified "public-transport-bap" Beckn.Spec.Confirm as Confirm
+import "public-transport-bap" Beckn.Spec.OnConfirm
 import Data.Either.Extra
 import Relude hiding (id, state)
 import Servant.Client

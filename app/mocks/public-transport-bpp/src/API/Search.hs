@@ -1,7 +1,7 @@
 module API.Search where
 
 import API.Utils (buildOnActionContext)
-import "public-transport-bap" Core.Spec.Search
+import "public-transport-bap" Beckn.Spec.Search
 import Environment
 import ExternalAPI
 import Kernel.Mock.App

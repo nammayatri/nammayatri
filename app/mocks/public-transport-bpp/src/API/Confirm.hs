@@ -1,11 +1,11 @@
 module API.Confirm where
 
 import API.Utils
-import "public-transport-bap" Core.Spec.Common
-import qualified "public-transport-bap" Core.Spec.Confirm as Confirm
-import "public-transport-bap" Core.Spec.OnCancel
-import "public-transport-bap" Core.Spec.OnConfirm
-import "public-transport-bap" Core.Spec.OnStatus
+import "public-transport-bap" Beckn.Spec.Common
+import qualified "public-transport-bap" Beckn.Spec.Confirm as Confirm
+import "public-transport-bap" Beckn.Spec.OnCancel
+import "public-transport-bap" Beckn.Spec.OnConfirm
+import "public-transport-bap" Beckn.Spec.OnStatus
 import Environment
 import ExternalAPI
 import Kernel.Mock.App

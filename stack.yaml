@@ -30,18 +30,18 @@ resolver: lts-16.31
 #   - wai
 packages:
   - app/beckn-cli
-  - app/bpp/beckn-transport/Main
-  - app/bpp/beckn-transport/Allocator
-  - app/bpp/driver-tracking-health-check
-  - app/bpp/beckn-transport/Scheduler
-  - app/bpp/driver-offer-bpp/Main
-  - app/bpp/driver-offer-bpp/Allocator
-  - app/bap/app-backend/Main
-  - app/bap/app-backend/search-result-aggregator
+  - app/provider-platform/static-offer-driver-app/Main
+  - app/provider-platform/static-offer-driver-app/Allocator
+  - app/provider-platform/driver-tracking-health-check
+  - app/provider-platform/static-offer-driver-app/Scheduler
+  - app/provider-platform/dynamic-offer-driver-app/Main
+  - app/provider-platform/dynamic-offer-driver-app/Allocator
+  - app/rider-platform/rider-app/Main
+  - app/rider-platform/rider-app/search-result-aggregator
   - app/mocks/sms
   - app/mocks/fcm
-  - app/dashboard/BAPDashboard
-  - app/dashboard/BPPDashboard
+  - app/dashboard/rider-dashboard
+  - app/dashboard/provider-dashboard
   - app/dashboard/Lib
   - app/dashboard/CommonAPIs
   - app/example-service
@@ -49,8 +49,8 @@ packages:
   - app/kafka-consumers
   - app/mocks/idfy
   - app/mocks/google
-  - app/bap/public-transport-bap/Main
-  - app/bap/public-transport-bap/search-consumer
+  - app/rider-platform/public-transport-bap/Main
+  - app/rider-platform/public-transport-bap/search-consumer
   - app/mocks/public-transport-bpp
   - app/scheduler-example
   - app/utils/route-extractor

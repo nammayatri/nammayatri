@@ -1,6 +1,6 @@
 module Redis where
 
-import "public-transport-bap" Core.Spec.OnConfirm.Order
+import "public-transport-bap" Beckn.Spec.OnConfirm.Order
 import Data.Aeson
 import Environment
 import GHC.Records.Extra

@@ -1,7 +1,7 @@
 module MockData.OnSearch where
 
-import "public-transport-bap" Core.Spec.Common.Price
-import "public-transport-bap" Core.Spec.OnSearch
+import "public-transport-bap" Beckn.Spec.Common.Price
+import "public-transport-bap" Beckn.Spec.OnSearch
 import Data.Time.Clock
 import Kernel.Types.Beckn.Gps
 import Kernel.Types.Common

@@ -54,7 +54,7 @@ dependencies:
   - mock-sms
   - mock-fcm
   - mock-google
-  - app-backend
+  - rider-app
   - beckn-transport
   - beckn-gateway
   - mobility-core
