@@ -1,6 +1,6 @@
 let common = ./common.dhall
 
-let main = ./public-transport-bap.dhall
+let main = ./public-transport-rider-platform.dhall
 
 let juspayGatewayUrl = "http://localhost:8015/v1"
 

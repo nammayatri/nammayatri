@@ -1,8 +1,8 @@
 module Resources where
 
-import qualified "app-backend" Environment as BecknApp
-import qualified "beckn-transport" Environment as BecknTransport
-import qualified "driver-offer-bpp" Environment as ARDU
+import qualified "dynamic-offer-driver-app" Environment as ARDU
+import qualified "rider-app" Environment as BecknApp
+import qualified "static-offer-driver-app" Environment as BecknTransport
 import EulerHS.Prelude
 import GHC.IO (unsafePerformIO)
 import Kernel.Utils.Dhall (readDhallConfig)
@@ -10,7 +10,7 @@ import Kernel.Utils.Dhall (readDhallConfig)
 {-# NOINLINE transporterAppEnv #-}
 transporterAppEnv :: BecknTransport.AppEnv
 transporterAppEnv = unsafePerformIO $ do
-  appCfg <- readDhallConfig "../dhall-configs/dev/beckn-transport.dhall"
+  appCfg <- readDhallConfig "../dhall-configs/dev/static-offer-driver-app.dhall"
   let updLogCfg =
         appCfg.loggerConfig{logToFile = False,
                             logToConsole = False
@@ -21,7 +21,7 @@ transporterAppEnv = unsafePerformIO $ do
 {-# NOINLINE appBackendEnv #-}
 appBackendEnv :: BecknApp.AppEnv
 appBackendEnv = unsafePerformIO $ do
-  appCfg <- readDhallConfig "../dhall-configs/dev/app-backend.dhall"
+  appCfg <- readDhallConfig "../dhall-configs/dev/rider-app.dhall"
   let updLogCfg =
         appCfg.loggerConfig{logToFile = False,
                             logToConsole = False
@@ -32,7 +32,7 @@ appBackendEnv = unsafePerformIO $ do
 {-# NOINLINE driverOfferBppEnv #-}
 driverOfferBppEnv :: ARDU.AppEnv
 driverOfferBppEnv = unsafePerformIO $ do
-  appCfg <- readDhallConfig "../dhall-configs/dev/driver-offer-bpp.dhall"
+  appCfg <- readDhallConfig "../dhall-configs/dev/dynamic-offer-driver-app.dhall"
   let updLogCfg =
         appCfg.loggerConfig{logToFile = False,
                             logToConsole = False

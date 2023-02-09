@@ -1,3 +1,3 @@
-# BAP Dashboard
+# Rider Dashboard
 
-This directory contains BAP specific dashboard.
+This directory contains rider specific dashboard.

@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-transport-allocation-service-production-$BUILD_VERSION
+  name: static-offer-driver-app-allocation-service-production-$BUILD_VERSION
   namespace: atlas
   labels:
     version: $BUILD_VERSION
@@ -9,7 +9,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: beckn-transport-allocation-service-production
+      app: static-offer-driver-app-allocation-service-production
   strategy:
     type: Recreate
   template:
@@ -17,7 +17,7 @@ spec:
       annotations:
         sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
       labels:
-        app: beckn-transport-allocation-service-production
+        app: static-offer-driver-app-allocation-service-production
         version: $BUILD_VERSION
     spec:
       affinity:
@@ -34,7 +34,7 @@ spec:
             - /bin/bash
             - -c
           args:
-            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && (/opt/app/bpp/beckn-transport-btm-exe 2>&1 | tee --output-error=warn >(/usr/sbin/log-processor --prometheus-port $LP_PROMETHEUS_PORT --kafka-brokers $LP_KAFKA_BROKERS --kafka-producer-prop $LP_KAFKA_PRODUCER_PROP --partition-key $LP_PARTITION_KEY --producer-topic $LP_PRODUCER_TOPIC $LP_EXTRA_ARGS))'
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && (/opt/app/provider-platform/static-offer-driver-app-btm-exe 2>&1 | tee --output-error=warn >(/usr/sbin/log-processor --prometheus-port $LP_PROMETHEUS_PORT --kafka-brokers $LP_KAFKA_BROKERS --kafka-producer-prop $LP_KAFKA_PRODUCER_PROP --partition-key $LP_PARTITION_KEY --producer-topic $LP_PRODUCER_TOPIC $LP_EXTRA_ARGS))'
           env:
             - name: POD_NAME
               valueFrom:
@@ -44,13 +44,13 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: BECKN_TRANSPORT_BTM_CONFIG_PATH
-              value: /etc/beckn/config/beckn-transport-btm.dhall
+            - name: STATIC_OFFER_DRIVER_APP_BTM_CONFIG_PATH
+              value: /etc/beckn/config/static-offer-driver-app-btm.dhall
           envFrom:
             - configMapRef:
               name: beckn-configs-lp
           image: 147728078333.dkr.ecr.ap-south-1.amazonaws.com/beckn-uat:$BUILD_VERSION
-          name: beckn-transport-allocation-service-production
+          name: static-offer-driver-app-allocation-service-production
           ports:
             - containerPort: 8114
               name: http-app
@@ -105,10 +105,10 @@ spec:
           configMap:
             name: beckn-dhall-config-production
             items:
-              - key: beckn-transport-btm.dhall
-                path: config/beckn-transport-btm.dhall
-              - key: beckn-transport.dhall
-                path: config/beckn-transport.dhall
+              - key: static-offer-driver-app-btm.dhall
+                path: config/static-offer-driver-app-btm.dhall
+              - key: static-offer-driver-app.dhall
+                path: config/static-offer-driver-app.dhall
               - key: common.dhall
                 path: config/common.dhall
               - key: globalCommon.dhall
@@ -117,8 +117,8 @@ spec:
           secret:
             secretName: beckn-dhall-secret-production
             items:
-              - key: beckn-transport.dhall
-                path: config/secrets/beckn-transport.dhall
+              - key: static-offer-driver-app.dhall
+                path: config/secrets/static-offer-driver-app.dhall
               - key: common.dhall
                 path: config/secrets/common.dhall
 status: {}
@@ -127,13 +127,13 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: beckn-transport-allocation-service-production
+  name: static-offer-driver-app-allocation-service-production
   labels:
-    app: beckn-transport-allocation-service-production
+    app: static-offer-driver-app-allocation-service-production
 spec:
   ports:
     - port: 8114
       targetPort: 8114
       name: http-app
   selector:
-    app: beckn-transport-allocation-service-production
+    app: static-offer-driver-app-allocation-service-production

@@ -1,23 +1,23 @@
 module Mobility.Transporter.Utils where
 
-import qualified "beckn-transport" API.UI.Booking as BookingAPI
-import "beckn-transport" API.UI.Location as LocationAPI
-import "app-backend" API.UI.Quote
-import qualified "beckn-transport" API.UI.Ride as RideAPI
-import qualified "app-backend" API.UI.Search as AppSearch
+import qualified "static-offer-driver-app" API.UI.Booking as BookingAPI
+import "static-offer-driver-app" API.UI.Location as LocationAPI
+import "rider-app" API.UI.Quote
+import qualified "static-offer-driver-app" API.UI.Ride as RideAPI
+import qualified "rider-app" API.UI.Search as AppSearch
 import Common
-import qualified "beckn-transport" Domain.Action.UI.Booking as DUB
-import qualified "app-backend" Domain.Types.Booking as BRB
-import qualified "beckn-transport" Domain.Types.Booking as TBooking
-import qualified "beckn-transport" Domain.Types.Booking as TRB
-import qualified "app-backend" Domain.Types.CancellationReason as AppCR
-import qualified "beckn-transport" Domain.Types.CancellationReason as SCR
-import qualified "beckn-transport" Domain.Types.Merchant.MerchantServiceConfig as TDMSC
-import "beckn-transport" Domain.Types.Person as TPerson
-import qualified "app-backend" Domain.Types.Quote as AppQuote
-import qualified "app-backend" Domain.Types.Ride as BRide
-import qualified "beckn-transport" Domain.Types.Ride as TRide
-import qualified "app-backend" Domain.Types.SearchRequest as AppSearchReq
+import qualified "static-offer-driver-app" Domain.Action.UI.Booking as DUB
+import qualified "rider-app" Domain.Types.Booking as BRB
+import qualified "static-offer-driver-app" Domain.Types.Booking as TBooking
+import qualified "static-offer-driver-app" Domain.Types.Booking as TRB
+import qualified "rider-app" Domain.Types.CancellationReason as AppCR
+import qualified "static-offer-driver-app" Domain.Types.CancellationReason as SCR
+import qualified "static-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig as TDMSC
+import "static-offer-driver-app" Domain.Types.Person as TPerson
+import qualified "rider-app" Domain.Types.Quote as AppQuote
+import qualified "rider-app" Domain.Types.Ride as BRide
+import qualified "static-offer-driver-app" Domain.Types.Ride as TRide
+import qualified "rider-app" Domain.Types.SearchRequest as AppSearchReq
 import HSpec
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types
@@ -30,14 +30,14 @@ import qualified Mobility.AppBackend.APICalls as API
 import Mobility.AppBackend.Fixtures
 import qualified Mobility.Transporter.APICalls as API
 import Mobility.Transporter.Fixtures as Fixtures
-import qualified "beckn-transport" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
-import qualified "app-backend" Storage.Queries.Booking as BQRB
-import qualified "beckn-transport" Storage.Queries.Booking as TQBooking
-import qualified "beckn-transport" Storage.Queries.Booking as TQRB
-import qualified "beckn-transport" Storage.Queries.DriverInformation as DriverInfo
-import "beckn-transport" Storage.Queries.DriverLocation
-import qualified "beckn-transport" Storage.Queries.NotificationStatus as QNS
-import qualified "beckn-transport" Storage.Queries.Ride as TQRide
+import qualified "static-offer-driver-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
+import qualified "rider-app" Storage.Queries.Booking as BQRB
+import qualified "static-offer-driver-app" Storage.Queries.Booking as TQBooking
+import qualified "static-offer-driver-app" Storage.Queries.Booking as TQRB
+import qualified "static-offer-driver-app" Storage.Queries.DriverInformation as DriverInfo
+import "static-offer-driver-app" Storage.Queries.DriverLocation
+import qualified "static-offer-driver-app" Storage.Queries.NotificationStatus as QNS
+import qualified "static-offer-driver-app" Storage.Queries.Ride as TQRide
 import Utils
 
 getFutureTime :: IO UTCTime

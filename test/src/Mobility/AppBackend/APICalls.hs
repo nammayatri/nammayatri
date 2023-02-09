@@ -1,20 +1,20 @@
 module Mobility.AppBackend.APICalls where
 
-import qualified "app-backend" API.UI.Booking as AppBooking
-import qualified "app-backend" API.UI.Cancel as CancelAPI
-import qualified "app-backend" API.UI.Confirm as ConfirmAPI
-import qualified "app-backend" API.UI.Feedback as AppFeedback
-import qualified "app-backend" API.UI.Registration as Reg
-import qualified "app-backend" API.UI.Select as AppSelect
-import qualified "app-backend" API.UI.Serviceability as AppServ
-import qualified "app-backend" Domain.Action.UI.Cancel as CancelAPI
-import qualified "app-backend" Domain.Types.Booking as AbeBooking
-import qualified "app-backend" Domain.Types.Booking as BRB
-import qualified "app-backend" Domain.Types.CancellationReason as AbeCRC
-import qualified "app-backend" Domain.Types.Estimate as AbeEstimate
-import qualified "app-backend" Domain.Types.Quote as AbeQuote
-import qualified "app-backend" Domain.Types.RegistrationToken as AppSRT
-import qualified "app-backend" Domain.Types.Ride as BRide
+import qualified "rider-app" API.UI.Booking as AppBooking
+import qualified "rider-app" API.UI.Cancel as CancelAPI
+import qualified "rider-app" API.UI.Confirm as ConfirmAPI
+import qualified "rider-app" API.UI.Feedback as AppFeedback
+import qualified "rider-app" API.UI.Registration as Reg
+import qualified "rider-app" API.UI.Select as AppSelect
+import qualified "rider-app" API.UI.Serviceability as AppServ
+import qualified "rider-app" Domain.Action.UI.Cancel as CancelAPI
+import qualified "rider-app" Domain.Types.Booking as AbeBooking
+import qualified "rider-app" Domain.Types.Booking as BRB
+import qualified "rider-app" Domain.Types.CancellationReason as AbeCRC
+import qualified "rider-app" Domain.Types.Estimate as AbeEstimate
+import qualified "rider-app" Domain.Types.Quote as AbeQuote
+import qualified "rider-app" Domain.Types.RegistrationToken as AppSRT
+import qualified "rider-app" Domain.Types.Ride as BRide
 import EulerHS.Prelude
 import Kernel.External.FCM.Types
 import Kernel.Types.APISuccess

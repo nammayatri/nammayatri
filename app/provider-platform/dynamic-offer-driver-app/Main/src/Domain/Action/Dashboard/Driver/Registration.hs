@@ -8,7 +8,7 @@ module Domain.Action.Dashboard.Driver.Registration
 where
 
 import Dashboard.BPP.Driver.Registration (GetDocumentResponse (imageBase64))
-import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver.Registration as Common
+import qualified "dashboard-helper-api" Dashboard.BPP.Driver.Registration as Common
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate

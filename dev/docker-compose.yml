@@ -12,21 +12,21 @@ services:
       - 5434:5432
     volumes:
       - ./sql-seed/pre-init.sql:/docker-entrypoint-initdb.d/0-pre-init.sql:Z
-      - ./sql-seed/app-backend-seed.sql:/docker-entrypoint-initdb.d/1-app-backend-seed.sql:Z
-      - ./local-testing-data/app-backend.sql:/docker-entrypoint-initdb.d/2-app-backend-testing-data.sql:Z
-      - ./sql-seed/transporter-backend-seed.sql:/docker-entrypoint-initdb.d/1-transporter-backend-seed.sql:Z
-      - ./local-testing-data/beckn-transport.sql:/docker-entrypoint-initdb.d/2-beckn-transport-testing-data.sql:Z
-      - ./sql-seed/public-transport-bap-seed.sql:/docker-entrypoint-initdb.d/1-public-transport-bap-seed.sql:Z
-      - ./local-testing-data/public-transport-bap.sql:/docker-entrypoint-initdb.d/2-public-transport-bap-testing-data.sql:Z
+      - ./sql-seed/rider-app-seed.sql:/docker-entrypoint-initdb.d/1-rider-app-seed.sql:Z
+      - ./local-testing-data/rider-app.sql:/docker-entrypoint-initdb.d/2-rider-app-testing-data.sql:Z
+      - ./sql-seed/static-offer-driver-app-seed.sql:/docker-entrypoint-initdb.d/1-static-offer-driver-app-seed.sql:Z
+      - ./local-testing-data/static-offer-driver-app.sql:/docker-entrypoint-initdb.d/2-static-offer-driver-app-testing-data.sql:Z
+      - ./sql-seed/public-transport-rider-platform-seed.sql:/docker-entrypoint-initdb.d/1-public-transport-rider-platform-seed.sql:Z
+      - ./local-testing-data/public-transport-rider-platform.sql:/docker-entrypoint-initdb.d/2-public-transport-rider-platform-testing-data.sql:Z
       - ./sql-seed/mock-registry-seed.sql:/docker-entrypoint-initdb.d/1-mock-registry-seed.sql:Z
       - ./local-testing-data/mock-registry.sql:/docker-entrypoint-initdb.d/2-mock-registry-testing-data.sql:Z
       - ./sql-seed/scheduler-example-seed.sql:/docker-entrypoint-initdb.d/1-scheduler-example-seed.sql:Z
-      - ./sql-seed/driver-offer-bpp-seed.sql:/docker-entrypoint-initdb.d/1-driver-offer-bpp-seed.sql:Z
-      - ./local-testing-data/driver-offer-bpp-testing-data.sql:/docker-entrypoint-initdb.d/2-driver-offer-bpp-testing-data.sql:Z
-      - ./sql-seed/bap-dashboard-seed.sql:/docker-entrypoint-initdb.d/1-bap-dashboard-seed.sql:Z
-      - ./local-testing-data/bap-dashboard.sql:/docker-entrypoint-initdb.d/2-bap-dashboard-testing-data.sql:Z
-      - ./sql-seed/bpp-dashboard-seed.sql:/docker-entrypoint-initdb.d/1-bpp-dashboard-seed.sql:Z
-      - ./local-testing-data/bpp-dashboard.sql:/docker-entrypoint-initdb.d/2-bpp-dashboard-testing-data.sql:Z
+      - ./sql-seed/dynamic-offer-driver-app-seed.sql:/docker-entrypoint-initdb.d/1-dynamic-offer-driver-app-seed.sql:Z
+      - ./local-testing-data/dynamic-offer-driver-app.sql:/docker-entrypoint-initdb.d/2-dynamic-offer-driver-app-testing-data.sql:Z
+      - ./sql-seed/rider-dashboard-seed.sql:/docker-entrypoint-initdb.d/1-rider-dashboard-seed.sql:Z
+      - ./local-testing-data/rider-dashboard.sql:/docker-entrypoint-initdb.d/2-rider-dashboard-testing-data.sql:Z
+      - ./sql-seed/provider-dashboard-seed.sql:/docker-entrypoint-initdb.d/1-provider-dashboard-seed.sql:Z
+      - ./local-testing-data/provider-dashboard.sql:/docker-entrypoint-initdb.d/2-provider-dashboard-testing-data.sql:Z
     environment:
       - BITNAMI_DEBUG=true
       - POSTGRESQL_INITSCRIPTS_USERNAME=postgres

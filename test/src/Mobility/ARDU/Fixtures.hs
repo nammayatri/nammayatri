@@ -1,6 +1,6 @@
 module Mobility.ARDU.Fixtures where
 
-import "driver-offer-bpp" Domain.Types.Merchant as DM
+import "dynamic-offer-driver-app" Domain.Types.Merchant as DM
 import Kernel.Prelude
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id

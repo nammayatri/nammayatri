@@ -16,7 +16,7 @@ module Domain.Action.Dashboard.Driver
 where
 
 import Control.Applicative ((<|>))
-import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.BPP.Driver as Common
 import Data.Aeson (eitherDecode)
 import Data.Coerce
 import Data.Either.Combinators (mapLeft)

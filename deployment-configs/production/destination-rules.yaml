@@ -1,10 +1,10 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
-  name: beckn-app-backend-production-destinations
+  name: rider-app-production-destinations
   namespace: atlas
 spec:
-  host: beckn-app-backend-production
+  host: rider-app-production
   trafficPolicy:
     loadBalancer:
       simple: LEAST_CONN
@@ -16,10 +16,10 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
-  name: beckn-transport-production-destinations
+  name: static-offer-driver-app-production-destinations
   namespace: atlas
 spec:
-  host: beckn-transport-production
+  host: static-offer-driver-app-production
   trafficPolicy:
     loadBalancer:
       simple: LEAST_CONN

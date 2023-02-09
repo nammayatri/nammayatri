@@ -7,7 +7,7 @@ module SharedLogic.Transaction
   )
 where
 
-import qualified "dashboard-bpp-helper-api" Dashboard.Common as Common
+import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified Data.Text as Text
 import qualified Domain.Types.Transaction as DT
 import Kernel.Prelude

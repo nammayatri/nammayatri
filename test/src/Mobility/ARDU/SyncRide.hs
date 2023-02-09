@@ -1,8 +1,8 @@
 module Mobility.ARDU.SyncRide where
 
 import Common (getAppBaseUrl)
-import qualified "app-backend" Domain.Types.Ride as DAppBackendRide
-import qualified "driver-offer-bpp" Domain.Types.Ride as DDriverOfferRide
+import qualified "dynamic-offer-driver-app" Domain.Types.Ride as DDriverOfferRide
+import qualified "rider-app" Domain.Types.Ride as DAppBackendRide
 import EulerHS.Prelude
 import HSpec
 import Mobility.ARDU.APICalls (getDriverOfferBppBaseUrl)
@@ -33,22 +33,22 @@ cancelSyncFlow = do
   -- lets simulate situation, when bpp send update to bap, but this update wasn't accepted by bap
   badCancelRideByDriver arduDriver1 scRes
 
-  let bppRideId = scRes.ride.id
-  bppRide <- getBPPRideById bppRideId
+  let providerPlatformRideId = scRes.ride.id
+  bppRide <- getBPPRideById providerPlatformRideId
   bppRide.status `shouldBeDesc` DDriverOfferRide.CANCELLED $
-    "bppRideId: " <> show bppRideId.getId <> "; bpp ride status:"
-  bapRide <- getBAPRide bppRideId
+    "providerPlatformRideId: " <> show providerPlatformRideId.getId <> "; bpp ride status:"
+  bapRide <- getBAPRide providerPlatformRideId
   bapRide.status `shouldBeDesc` DAppBackendRide.NEW $
-    "bppRideId: " <> show bppRideId.getId <> "; bap ride status:"
+    "providerPlatformRideId: " <> show providerPlatformRideId.getId <> "; bap ride status:"
 
-  rideSync nammaYatriPartnerMerchantShortId bppRideId
+  rideSync nammaYatriPartnerMerchantShortId providerPlatformRideId
 
-  syncRide <- getBPPRideById bppRideId
+  syncRide <- getBPPRideById providerPlatformRideId
   syncRide.status `shouldBeDesc` DDriverOfferRide.CANCELLED $
-    "bppRideId: " <> show bppRideId.getId <> "; bpp sync ride status:"
-  bapSyncRide <- getBAPRide bppRideId
+    "providerPlatformRideId: " <> show providerPlatformRideId.getId <> "; bpp sync ride status:"
+  bapSyncRide <- getBAPRide providerPlatformRideId
   bapSyncRide.status `shouldBeDesc` DAppBackendRide.CANCELLED $
-    "bppRideId: " <> show bppRideId.getId <> "; bap sync ride status:"
+    "providerPlatformRideId: " <> show providerPlatformRideId.getId <> "; bap sync ride status:"
   where
     shouldBeDesc a1 a2 desc =
       if a1 == a2

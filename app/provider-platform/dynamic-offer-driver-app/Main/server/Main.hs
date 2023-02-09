@@ -5,4 +5,4 @@ import EulerHS.Prelude
 import System.Environment
 
 main :: IO ()
-main = runDriverOfferBpp id
+main = runDynamicOfferDriverApp id

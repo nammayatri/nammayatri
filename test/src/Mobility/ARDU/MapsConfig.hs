@@ -3,15 +3,15 @@
 
 module Mobility.ARDU.MapsConfig where
 
-import "driver-offer-bpp" Domain.Types.Merchant
-import "driver-offer-bpp" Domain.Types.Merchant.MerchantServiceConfig
+import "dynamic-offer-driver-app" Domain.Types.Merchant
+import "dynamic-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Mobility.ARDU.Fixtures as Fixtures
-import qualified "driver-offer-bpp" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
+import qualified "dynamic-offer-driver-app" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
 import Test.Hspec
-import "driver-offer-bpp" Tools.Maps
+import "dynamic-offer-driver-app" Tools.Maps
 import Utils
 
 spec :: Spec

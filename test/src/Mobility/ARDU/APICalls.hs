@@ -1,13 +1,13 @@
 module Mobility.ARDU.APICalls where
 
-import qualified "driver-offer-bpp" API.Dashboard as DashboardAPI
-import qualified "driver-offer-bpp" API.UI.Driver as DriverAPI
-import "driver-offer-bpp" API.UI.Location as LocationAPI
-import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
-import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Dashboard
+import qualified "dynamic-offer-driver-app" API.Dashboard as DashboardAPI
+import qualified "dynamic-offer-driver-app" API.UI.Driver as DriverAPI
+import "dynamic-offer-driver-app" API.UI.Location as LocationAPI
+import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
+import qualified "dashboard-helper-api" Dashboard.BPP.Ride as Dashboard
 import Data.Time
-import qualified "driver-offer-bpp" Domain.Types.Merchant as TDM
-import qualified "driver-offer-bpp" Domain.Types.Ride as TRide
+import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
+import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
 import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Types.APISuccess

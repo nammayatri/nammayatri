@@ -1,6 +1,6 @@
 module API.Dashboard.Ride where
 
-import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.BPP.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler

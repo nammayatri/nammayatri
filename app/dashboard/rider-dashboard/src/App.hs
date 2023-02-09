@@ -21,7 +21,7 @@ import qualified "lib-dashboard" Tools.Auth as Auth
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
-  appCfg <- readDhallConfigDefault "bap-dashboard" <&> configModifier
+  appCfg <- readDhallConfigDefault "rider-dashboard" <&> configModifier
   appEnv <- buildAppEnv authTokenCacheKeyPrefix appCfg
   -- Metrics.serve (appCfg.metricsPort) --  do we need it?
   runServerWithHealthCheck appEnv (Proxy @API) handler identity identity context releaseAppEnv \flowRt -> do
@@ -36,4 +36,4 @@ runService configModifier = do
         :. EmptyContext
 
     authTokenCacheKeyPrefix :: Text
-    authTokenCacheKeyPrefix = "BAP-dashboard:authTokenCacheKey:"
+    authTokenCacheKeyPrefix = "rider-dashboard:authTokenCacheKey:"

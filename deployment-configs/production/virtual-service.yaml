@@ -58,7 +58,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-production
+        host: rider-app-production
         port:
           number: 8013
         subset: $BUILD_VERSION
@@ -71,7 +71,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-transport-production
+        host: static-offer-driver-app-production
         port:
           number: 8014
         subset: $BUILD_VERSION
@@ -79,12 +79,12 @@ spec:
     timeout: 40s
   - match:
     - uri:
-        prefix: /bap/
+        prefix: /rider-platform/
     rewrite:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-production
+        host: rider-app-production
         port:
           number: 8013
         subset: $BUILD_VERSION
@@ -109,7 +109,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-transport-production
+        host: static-offer-driver-app-production
         port:
           number: 8014
         subset: $BUILD_VERSION

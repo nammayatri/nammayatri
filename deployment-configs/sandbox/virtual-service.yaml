@@ -47,12 +47,12 @@ spec:
     timeout: 40s
   - match:
     - uri:
-        prefix: /bap/
+        prefix: /rider-platform/
     rewrite:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-sandbox
+        host: rider-app-sandbox
         port:
           number: 8013
     timeout: 40s
@@ -63,7 +63,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-sandbox
+        host: rider-app-sandbox
         port:
           number: 8013
     timeout: 40s
@@ -74,7 +74,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-transport-sandbox
+        host: static-offer-driver-app-sandbox
         port:
           number: 8014
     timeout: 40s
@@ -85,7 +85,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-transport-sandbox
+        host: static-offer-driver-app-sandbox
         port:
           number: 8014
     timeout: 40s
@@ -123,17 +123,17 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-release
+        host: rider-app-release
         port:
           number: 8013
   - match:
     - uri:
-        prefix: /release/bap/
+        prefix: /release/rider-platform/
     rewrite:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-release
+        host: rider-app-release
         port:
           number: 8013
   - match:
@@ -143,7 +143,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-transport-release
+        host: static-offer-driver-app-release
         port:
           number: 8014
     timeout: 40s
@@ -154,7 +154,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-transport-release
+        host: static-offer-driver-app-release
         port:
           number: 8014
     timeout: 40s
@@ -200,17 +200,17 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-master
+        host: rider-app-master
         port:
           number: 8013
   - match:
     - uri:
-        prefix: /dev/bap/
+        prefix: /dev/rider-platform/
     rewrite:
       uri: /
     route:
     - destination:
-        host: beckn-app-backend-master
+        host: rider-app-master
         port:
           number: 8013
   - match:
@@ -220,7 +220,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-transport-master
+        host: static-offer-driver-app-master
         port:
           number: 8014
     timeout: 40s
@@ -231,7 +231,7 @@ spec:
       uri: /
     route:
     - destination:
-        host: beckn-transport-master
+        host: static-offer-driver-app-master
         port:
           number: 8014
     timeout: 40s

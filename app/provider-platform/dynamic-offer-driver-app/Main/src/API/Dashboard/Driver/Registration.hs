@@ -1,6 +1,6 @@
 module API.Dashboard.Driver.Registration where
 
-import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver.Registration as Common
+import qualified "dashboard-helper-api" Dashboard.BPP.Driver.Registration as Common
 import qualified Domain.Action.Dashboard.Driver.Registration as DReg
 import qualified Domain.Types.Merchant as DM
 import Environment

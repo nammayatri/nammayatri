@@ -1,8 +1,8 @@
 let common = ../generic/common.dhall
 
-let sec = ./secrets/beckn-transport.dhall
+let sec = ./secrets/static-offer-driver-app.dhall
 
-let transporter = ./beckn-transport.dhall
+let transporter = ./static-offer-driver-app.dhall
 
 let rcfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"

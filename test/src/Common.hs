@@ -1,13 +1,13 @@
 module Common where
 
 import qualified API.UI.Quote as AbeQuoteAPI
-import qualified "app-backend" API.UI.Search as AppBESearch
+import qualified "rider-app" API.UI.Search as AppBESearch
 import qualified Data.Aeson as J
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.UTF8 as B
 import Data.Time.Clock.POSIX
-import qualified "app-backend" Domain.Types.SearchRequest as BSearchRequest
+import qualified "rider-app" Domain.Types.SearchRequest as BSearchRequest
 import EulerHS.Prelude
 import Kernel.Types.Base64
 import Kernel.Types.Id

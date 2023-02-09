@@ -1,8 +1,8 @@
 module Mobility.Fixtures.Routes where
 
-import "app-backend" API.UI.Search
+import "rider-app" API.UI.Search
 import Data.List.NonEmpty as NE
-import "app-backend" Domain.Types.LocationAddress
+import "rider-app" Domain.Types.LocationAddress
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 

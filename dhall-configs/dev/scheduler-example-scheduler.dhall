@@ -1,6 +1,6 @@
 let common = ../generic/common.dhall
 
-let sec = ./secrets/beckn-transport.dhall
+let sec = ./secrets/static-offer-driver-app.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"

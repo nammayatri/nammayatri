@@ -5,4 +5,4 @@ import EulerHS.Prelude
 import System.Environment
 
 main :: IO ()
-main = runTransporterBackendApp id
+main = runStaticOfferDriverApp id

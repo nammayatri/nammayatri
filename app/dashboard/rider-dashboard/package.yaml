@@ -70,7 +70,7 @@ dependencies:
   - containers
   - openapi3
   - servant-openapi3
-  - dashboard-bpp-helper-api
+  - dashboard-helper-api
 
 ghc-options:
   - -Wall
@@ -92,7 +92,7 @@ library:
     - rider-app
 
 executables:
-  bap-dashboard-exe:
+  rider-dashboard-exe:
     main: Main.hs
     source-dirs: server
     ghc-options:
@@ -101,6 +101,6 @@ executables:
       - '"-with-rtsopts=-N -T"'
       - -Wincomplete-uni-patterns
     dependencies:
-      - bap-dashboard
+      - rider-dashboard
       - mobility-core
       - beckn-spec

@@ -1,6 +1,6 @@
 let globalCommon = ../generic/common.dhall
 
-let appCfg = ./beckn-transport.dhall
+let appCfg = ./static-offer-driver-app.dhall
 
 let SortMode = < ETA | IdleTime >
 

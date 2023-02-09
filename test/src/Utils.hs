@@ -2,11 +2,11 @@ module Utils where
 
 import Data.Aeson (decode)
 import Data.String.Conversions
-import qualified "app-backend" Domain.Types.Booking as BDB
-import qualified "app-backend" Domain.Types.Ride as BDRide
-import qualified "app-backend" Environment as BecknApp
-import qualified "beckn-transport" Environment as BecknTransport
-import qualified "driver-offer-bpp" Environment as ARDU
+import qualified "rider-app" Domain.Types.Booking as BDB
+import qualified "rider-app" Domain.Types.Ride as BDRide
+import qualified "dynamic-offer-driver-app" Environment as ARDU
+import qualified "rider-app" Environment as BecknApp
+import qualified "static-offer-driver-app" Environment as BecknTransport
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.IO (unsafePerformIO)
@@ -21,9 +21,9 @@ import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Resources (appBackendEnv, driverOfferBppEnv, transporterAppEnv)
 import Servant.Client hiding (client)
-import qualified "app-backend" Storage.Queries.Booking as BQB
-import qualified "app-backend" Storage.Queries.RegistrationToken as BQRegToken
-import qualified "app-backend" Storage.Queries.Ride as BQRide
+import qualified "rider-app" Storage.Queries.Booking as BQB
+import qualified "rider-app" Storage.Queries.RegistrationToken as BQRegToken
+import qualified "rider-app" Storage.Queries.Ride as BQRide
 
 defaultTestLoggerConfig :: LoggerConfig
 defaultTestLoggerConfig =

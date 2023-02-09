@@ -57,4 +57,4 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y awscli
 COPY --from=build /opt/build/swagger .
 COPY --from=build /opt/build/bin .
 COPY --from=build /opt/build/swagger ./swagger
-CMD ["/opt/app/bap/app-backend-exe"]
+CMD ["/opt/app/rider-platform/rider-app-exe"]

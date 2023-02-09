@@ -4,10 +4,10 @@ module API.BAP.Customer
   )
 where
 
-import qualified "app-backend" API.Dashboard.Customer as BAP
+import qualified "rider-app" API.Dashboard.Customer as BAP
 import qualified BAPClient.AppBackend as Client
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "app-backend" Domain.Types.Person as BAP
+import qualified "rider-app" Domain.Types.Person as BAP
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.Id

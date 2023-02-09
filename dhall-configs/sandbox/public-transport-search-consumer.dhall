@@ -1,6 +1,6 @@
 let common = ./common.dhall
 
-let main = ./public-transport-bap.dhall
+let main = ./public-transport-rider-platform.dhall
 
 let juspayGatewayUrl = "https://api.sandbox.beckn.juspay.in/gateway/v1/"
 

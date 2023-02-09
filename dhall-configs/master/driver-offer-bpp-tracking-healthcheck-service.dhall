@@ -1,6 +1,6 @@
 let globalCommon = ../generic/common.dhall
 
-let appCfg = ./driver-offer-bpp.dhall
+let appCfg = ./dynamic-offer-driver-app.dhall
 
 in  { driverAllowedDelay = +300
     , notificationMinDelay = +50000

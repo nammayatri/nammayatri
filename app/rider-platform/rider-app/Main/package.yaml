@@ -80,7 +80,7 @@ dependencies:
   - persistent
   - extra
   - text-conversions
-  - dashboard-bpp-helper-api
+  - dashboard-helper-api
 
 ghc-options:
   - -fwrite-ide-info
@@ -99,7 +99,7 @@ library:
     - mobility-core
     - beckn-spec
 executables:
-  app-backend-exe:
+  rider-app-exe:
     main: Main.hs
     source-dirs: server
     ghc-options:

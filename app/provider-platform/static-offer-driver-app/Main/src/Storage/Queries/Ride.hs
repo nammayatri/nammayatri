@@ -1,6 +1,6 @@
 module Storage.Queries.Ride where
 
-import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.BPP.Ride as Common
 import Domain.Types.Booking.Type as Booking
 import Domain.Types.Merchant
 import Domain.Types.Person

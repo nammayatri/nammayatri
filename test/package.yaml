@@ -55,7 +55,7 @@ dependencies:
   - mock-fcm
   - mock-google
   - rider-app
-  - beckn-transport
+  - static-offer-driver-app
   - beckn-gateway
   - mobility-core
   - mock-registry
@@ -88,16 +88,16 @@ dependencies:
   - HUnit
   - unix
   - string-conversions
-  - public-transport-bap
-  - mock-public-transport-bpp
+  - public-transport-rider-platform
+  - mock-public-transport-provider-platform
   - search-result-aggregator
   - public-transport-search-consumer
-  - beckn-transport-allocator
-  - beckn-transport-driver-tracking-health-check
-  - driver-offer-bpp
+  - static-offer-driver-app-allocator
+  - static-offer-driver-app-driver-tracking-health-check
+  - dynamic-offer-driver-app
   - location-updates
   - driver-offer-allocator
-  - dashboard-bpp-helper-api
+  - dashboard-helper-api
 
 ghc-options:
   - -fwrite-ide-info

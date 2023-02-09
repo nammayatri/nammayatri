@@ -5,7 +5,7 @@ module API.BPP.DriverOffer.Merchant
 where
 
 import qualified BPPClient.DriverOffer as Client
-import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Merchant as Common
+import qualified "dashboard-helper-api" Dashboard.BPP.Merchant as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment

@@ -3,13 +3,13 @@ kind: Deployment
 metadata:
   labels:
     version: $BUILD_VERSION
-  name: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT-$BUILD_VERSION
+  name: static-offer-driver-app-driver-tracking-healthcheck-service-$DEPLOY_VARIANT-$BUILD_VERSION
   namespace: atlas
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
+      app: static-offer-driver-app-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,13 +21,13 @@ spec:
         iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role
         traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
       labels:
-        app: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
+        app: static-offer-driver-app-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
         version: $BUILD_VERSION
     spec:
       containers:
         - args:
             - mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/*
-              /etc/beckn/. && echo "starting app server" && (/opt/app/bpp/driver-tracking-healthcheck-exe 2>&1 | tee --output-error=warn >(/usr/sbin/log-processor --prometheus-port $LP_PROMETHEUS_PORT --kafka-brokers $LP_KAFKA_BROKERS --kafka-producer-prop $LP_KAFKA_PRODUCER_PROP --partition-key $LP_PARTITION_KEY --producer-topic $LP_PRODUCER_TOPIC $LP_EXTRA_ARGS))
+              /etc/beckn/. && echo "starting app server" && (/opt/app/provider-platform/driver-tracking-healthcheck-exe 2>&1 | tee --output-error=warn >(/usr/sbin/log-processor --prometheus-port $LP_PROMETHEUS_PORT --kafka-brokers $LP_KAFKA_BROKERS --kafka-producer-prop $LP_KAFKA_PRODUCER_PROP --partition-key $LP_PARTITION_KEY --producer-topic $LP_PRODUCER_TOPIC $LP_EXTRA_ARGS))
           command:
             - /bin/bash
             - -c
@@ -59,7 +59,7 @@ spec:
             periodSeconds: 20
             successThreshold: 1
             timeoutSeconds: 12
-          name: beckn-transport-$DEPLOY_VARIANT
+          name: static-offer-driver-app-$DEPLOY_VARIANT
           ports:
             - containerPort: 8115
               name: transport-http
@@ -115,8 +115,8 @@ spec:
             items:
               - key: driver-tracking-healthcheck-service.dhall
                 path: config/driver-tracking-healthcheck-service.dhall
-              - key: beckn-transport.dhall
-                path: config/beckn-transport.dhall
+              - key: static-offer-driver-app.dhall
+                path: config/static-offer-driver-app.dhall
               - key: common.dhall
                 path: config/common.dhall
               - key: globalCommon.dhall
@@ -126,8 +126,8 @@ spec:
         - name: dhall-secrets
           secret:
             items:
-              - key: beckn-transport.dhall
-                path: config/secrets/beckn-transport.dhall
+              - key: static-offer-driver-app.dhall
+                path: config/secrets/static-offer-driver-app.dhall
               - key: common.dhall
                 path: config/secrets/common.dhall
             secretName: beckn-dhall-secret-$DEPLOY_VARIANT
@@ -136,9 +136,9 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
+  name: static-offer-driver-app-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
   labels:
-    app: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
+    app: static-offer-driver-app-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
 spec:
   ports:
     - port: 8115
@@ -148,4 +148,4 @@ spec:
       targetPort: 9999
       name: http-prom
   selector:
-    app: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
+    app: static-offer-driver-app-driver-tracking-healthcheck-service-$DEPLOY_VARIANT

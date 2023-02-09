@@ -1,11 +1,11 @@
 module Mobility.ARDU.Queries where
 
-import qualified "driver-offer-bpp" Domain.Types.Booking as DBooking
+import qualified "dynamic-offer-driver-app" Domain.Types.Booking as DBooking
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Servant.Client as Servant
-import "driver-offer-bpp" Storage.Tabular.Booking
+import "dynamic-offer-driver-app" Storage.Tabular.Booking
 
 updateBapUrl :: BaseUrl -> Id DBooking.Booking -> Esq.SqlDB ()
 updateBapUrl bapUrl bookingId = do

@@ -4,7 +4,7 @@ module Environment where
 
 import Domain.Action.Allocation.Internal.DriverPool.Config (DriverPoolBatchesConfig)
 import Domain.Types.Merchant (Subscriber)
-import qualified "beckn-transport" Environment as App
+import qualified "static-offer-driver-app" Environment as App
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
 import Kernel.Storage.Esqueleto.Config

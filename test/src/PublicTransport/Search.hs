@@ -4,10 +4,10 @@ import API.UI.Quote (OfferRes (PublicTransport))
 import Common
 import qualified Data.Text as T
 import Domain.Action.UI.QuoteConfirm
-import qualified "public-transport-bap" Domain.Types.Booking as TB
+import qualified "public-transport-rider-platform" Domain.Types.Booking as TB
 import Domain.Types.PaymentTransaction (PaymentStatus (FAILED, PENDING, SUCCESS))
-import qualified "app-backend" Domain.Types.SearchRequest as AppBE
-import qualified "public-transport-bap" Environment as Bap
+import qualified "rider-app" Domain.Types.SearchRequest as AppBE
+import qualified "public-transport-rider-platform" Environment as Bap
 import HSpec
 import Kernel.Prelude hiding (Proxy)
 import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
@@ -18,12 +18,12 @@ import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Routes
 import PublicTransport.API
 import PublicTransport.Common
-import qualified "app-backend" Storage.Queries.SearchRequest as AppBE
+import qualified "rider-app" Storage.Queries.SearchRequest as AppBE
 import Utils
 
 {-
  - WARNING! This test is highly dependent on how the public transport bpp mock is working.
- - See app/mocks/public-transport-bpp/src/MockData/* for details
+ - See app/mocks/public-transport-provider-platform/src/MockData/* for details
  -}
 
 waitABit :: MonadIO m => m ()

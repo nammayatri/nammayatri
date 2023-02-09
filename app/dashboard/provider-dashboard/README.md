@@ -1,3 +1,3 @@
-# BPP Dashboard
+# Provider Dashboard
 
-This directory contains BPP specific dashboard.
+This directory contains provider specific dashboard.

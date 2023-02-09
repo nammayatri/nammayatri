@@ -25,14 +25,14 @@ import Network.Wai.Handler.Warp
 import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
 
-runTransporterBackendApp :: (AppCfg -> AppCfg) -> IO ()
-runTransporterBackendApp configModifier = do
-  appCfg <- configModifier <$> readDhallConfigDefault "beckn-transport"
+runStaticOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
+runStaticOfferDriverApp configModifier = do
+  appCfg <- configModifier <$> readDhallConfigDefault "static-offer-driver-app"
   Metrics.serve (appCfg.metricsPort)
-  runTransporterBackendApp' appCfg
+  runStaticOfferDriverApp' appCfg
 
-runTransporterBackendApp' :: AppCfg -> IO ()
-runTransporterBackendApp' appCfg = do
+runStaticOfferDriverApp' :: AppCfg -> IO ()
+runStaticOfferDriverApp' appCfg = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   appEnv <-

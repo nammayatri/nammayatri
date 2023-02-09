@@ -3,31 +3,31 @@ cradle:
     stackYaml: "./stack-hie.yaml"
 
     components:
-    - path: "app/bap/app-backend/Main/src"
-      component: "app-backend:lib"
+    - path: "app/rider-platform/rider-app/Main/src"
+      component: "rider-app:lib"
 
-    - path: "app/bap/app-backend/Main/server/Main.hs"
-      component: "app-backend:exe:app-backend-exe"
+    - path: "app/rider-platform/rider-app/Main/server/Main.hs"
+      component: "rider-app:exe:rider-app-exe"
 
-    - path: "app/bap/app-backend/Main/server/Paths_app_backend.hs"
-      component: "app-backend:exe:app-backend-exe"
+    - path: "app/rider-platform/rider-app/Main/server/Paths_app_backend.hs"
+      component: "rider-app:exe:rider-app-exe"
 
-    - path: "app/bap/app-backend/search-result-aggregator/src"
+    - path: "app/rider-platform/rider-app/search-result-aggregator/src"
       component: "search-result-aggregator:lib"
 
-    - path: "app/bap/app-backend/search-result-aggregator/server/Main.hs"
+    - path: "app/rider-platform/rider-app/search-result-aggregator/server/Main.hs"
       component: "search-result-aggregator:exe:search-result-aggregator-exe"
 
-    - path: "app/bap/app-backend/search-result-aggregator/server/Paths_search_result_aggregator.hs"
+    - path: "app/rider-platform/rider-app/search-result-aggregator/server/Paths_search_result_aggregator.hs"
       component: "search-result-aggregator:exe:search-result-aggregator-exe"
 
-    - path: "app/bap/public-transport-bap/search-consumer/src"
+    - path: "app/rider-platform/public-transport-rider-platform/search-consumer/src"
       component: "public-transport-search-consumer:lib"
 
-    - path: "app/bap/public-transport-bap/search-consumer/server/Main.hs"
+    - path: "app/rider-platform/public-transport-rider-platform/search-consumer/server/Main.hs"
       component: "public-transport-search-consumer:exe:public-transport-search-consumer-exe"
 
-    - path: "app/bap/public-transport-bap/search-consumer/server/Paths_public_transport_search_consumer.hs"
+    - path: "app/rider-platform/public-transport-rider-platform/search-consumer/server/Paths_public_transport_search_consumer.hs"
       component: "public-transport-search-consumer:exe:public-transport-search-consumer-exe"
 
     - path: "app/beckn-cli/src"
@@ -39,53 +39,53 @@ cradle:
     - path: "app/beckn-cli/app/Paths_beckn_cli.hs"
       component: "beckn-cli:exe:beckn-cli-exe"
 
-    - path: "app/bpp/driver-offer-bpp/Main/src"
-      component: "driver-offer-bpp:lib"
+    - path: "app/provider-platform/dynamic-offer-driver-app/Main/src"
+      component: "dynamic-offer-driver-app:lib"
 
-    - path: "app/bpp/driver-offer-bpp/Main/server/Main.hs"
-      component: "driver-offer-bpp:exe:driver-offer-bpp-exe"
+    - path: "app/provider-platform/dynamic-offer-driver-app/Main/server/Main.hs"
+      component: "dynamic-offer-driver-app:exe:dynamic-offer-driver-app-exe"
 
-    - path: "app/bpp/driver-offer-bpp/Allocator/src"
+    - path: "app/provider-platform/dynamic-offer-driver-app/Allocator/src"
       component: "driver-offer-allocator:lib"
 
-    - path: "app/bpp/driver-offer-bpp/Allocator/server/Main.hs"
+    - path: "app/provider-platform/dynamic-offer-driver-app/Allocator/server/Main.hs"
       component: "driver-offer-allocator:exe:driver-offer-allocator-exe"
 
-    - path: "app/bpp/beckn-transport/Allocator/src"
-      component: "beckn-transport-allocator:lib"
+    - path: "app/provider-platform/static-offer-driver-app/Allocator/src"
+      component: "static-offer-driver-app-allocator:lib"
 
-    - path: "app/bpp/beckn-transport/Allocator/server/Main.hs"
-      component: "beckn-transport-allocator:exe:beckn-transport-btm-exe"
+    - path: "app/provider-platform/static-offer-driver-app/Allocator/server/Main.hs"
+      component: "static-offer-driver-app-allocator:exe:static-offer-driver-app-btm-exe"
 
-    - path: "app/bpp/beckn-transport/Allocator/test/src"
-      component: "beckn-transport-allocator:test:beckn-transport-allocator-tests"
+    - path: "app/provider-platform/static-offer-driver-app/Allocator/test/src"
+      component: "static-offer-driver-app-allocator:test:static-offer-driver-app-allocator-tests"
 
-    - path: "app/bpp/beckn-transport/Scheduler/src"
-      component: "beckn-transport-scheduler:lib"
+    - path: "app/provider-platform/static-offer-driver-app/Scheduler/src"
+      component: "static-offer-driver-app-scheduler:lib"
 
-    - path: "app/bpp/beckn-transport/Scheduler/server/Main.hs"
-      component: "beckn-transport-scheduler:exe:transporter-scheduler-exe"
+    - path: "app/provider-platform/static-offer-driver-app/Scheduler/server/Main.hs"
+      component: "static-offer-driver-app-scheduler:exe:transporter-scheduler-exe"
 
-    - path: "app/bpp/driver-tracking-health-check/src"
-      component: "beckn-transport-driver-tracking-health-check:lib"
+    - path: "app/provider-platform/driver-tracking-health-check/src"
+      component: "static-offer-driver-app-driver-tracking-health-check:lib"
 
-    - path: "app/bpp/driver-tracking-health-check/server/Main.hs"
-      component: "beckn-transport-driver-tracking-health-check:exe:driver-tracking-healthcheck-exe"
+    - path: "app/provider-platform/driver-tracking-health-check/server/Main.hs"
+      component: "static-offer-driver-app-driver-tracking-health-check:exe:driver-tracking-healthcheck-exe"
 
-    - path: "app/bpp/beckn-transport/Main/src"
-      component: "beckn-transport:lib"
+    - path: "app/provider-platform/static-offer-driver-app/Main/src"
+      component: "static-offer-driver-app:lib"
 
-    - path: "app/bpp/beckn-transport/Main/server/Main.hs"
-      component: "beckn-transport:exe:beckn-transport-exe"
+    - path: "app/provider-platform/static-offer-driver-app/Main/server/Main.hs"
+      component: "static-offer-driver-app:exe:static-offer-driver-app-exe"
 
-    - path: "app/bpp/beckn-transport/server/Main.hs"
-      component: "beckn-transport:exe:transporter-scheduler-exe"
+    - path: "app/provider-platform/static-offer-driver-app/server/Main.hs"
+      component: "static-offer-driver-app:exe:transporter-scheduler-exe"
 
-    - path: "app/bpp/beckn-transport/Main/test/app"
-      component: "beckn-transport:test:beckn-transport-tests"
+    - path: "app/provider-platform/static-offer-driver-app/Main/test/app"
+      component: "static-offer-driver-app:test:static-offer-driver-app-tests"
 
-    - path: "app/bpp/beckn-transport/Main/test/src"
-      component: "beckn-transport:test:beckn-transport-tests"
+    - path: "app/provider-platform/static-offer-driver-app/Main/test/src"
+      component: "static-offer-driver-app:test:static-offer-driver-app-tests"
 
     - path: "app/gateway/src"
       component: "beckn-gateway:lib"
@@ -96,23 +96,23 @@ cradle:
     - path: "app/gateway/server/Paths_beckn_gateway.hs"
       component: "beckn-gateway:exe:beckn-gateway-exe"
 
-    - path: "app/dashboard/BAPDashboard/src"
-      component: "bap-dashboard:lib"
+    - path: "app/dashboard/rider-dashboard/src"
+      component: "rider-dashboard:lib"
 
-    - path: "app/dashboard/BAPDashboard/server/Main.hs"
-      component: "bap-dashboard:exe:bap-dashboard-exe"
+    - path: "app/dashboard/rider-dashboard/server/Main.hs"
+      component: "rider-dashboard:exe:rider-dashboard-exe"
 
-    - path: "app/dashboard/BPPDashboard/src"
-      component: "bpp-dashboard:lib"
+    - path: "app/dashboard/provider-dashboard/src"
+      component: "provider-dashboard:lib"
 
-    - path: "app/dashboard/BPPDashboard/server/Main.hs"
-      component: "bpp-dashboard:exe:bpp-dashboard-exe"
+    - path: "app/dashboard/provider-dashboard/server/Main.hs"
+      component: "provider-dashboard:exe:provider-dashboard-exe"
 
     - path: "app/dashboard/Lib/src"
       component: "lib-dashboard:lib"
 
     - path: "app/dashboard/CommonAPIs/src"
-      component: "dashboard-bpp-helper-api:lib"
+      component: "dashboard-helper-api:lib"
 
     - path: "app/mocks/google/src"
       component: "mock-google:lib"
@@ -129,14 +129,14 @@ cradle:
     - path: "app/example-service/server/Paths_example_service.hs"
       component: "example-service:exe:example-service-exe"
 
-    - path: "app/mocks/bap/src"
-      component: "mock-bap:lib"
+    - path: "app/mocks/rider-platform/src"
+      component: "mock-rider-platform:lib"
 
-    - path: "app/mocks/bap/server/Main.hs"
-      component: "mock-bap:exe:mock-bap-exe"
+    - path: "app/mocks/rider-platform/server/Main.hs"
+      component: "mock-rider-platform:exe:mock-rider-platform-exe"
 
-    - path: "app/mocks/bap/server/Paths_mock_bap.hs"
-      component: "mock-bap:exe:mock-bap-exe"
+    - path: "app/mocks/rider-platform/server/Paths_mock_rider_platform.hs"
+      component: "mock-rider-platform:exe:mock-rider-platform-exe"
 
     - path: "app/kafka-consumers/src"
       component: "kafka-consumers:lib"
@@ -147,14 +147,14 @@ cradle:
     - path: "app/kafka-consumers/app/Paths_kafka_consumers.hs"
       component: "kafka-consumers:exe:kafka-consumers-exe"
 
-    - path: "app/bap/public-transport-bap/Main/src"
-      component: "public-transport-bap:lib"
+    - path: "app/rider-platform/public-transport-rider-platform/Main/src"
+      component: "public-transport-rider-platform:lib"
 
-    - path: "app/bap/public-transport-bap/Main/server/Main.hs"
-      component: "public-transport-bap:exe:public-transport-bap-exe"
+    - path: "app/rider-platform/public-transport-rider-platform/Main/server/Main.hs"
+      component: "public-transport-rider-platform:exe:public-transport-rider-platform-exe"
 
-    - path: "app/bap/public-transport-bap/Main/server/Paths_public_transport_bap.hs"
-      component: "public-transport-bap:exe:public-transport-bap-exe"
+    - path: "app/rider-platform/public-transport-rider-platform/Main/server/Paths_public_transport_rider_platform.hs"
+      component: "public-transport-rider-platform:exe:public-transport-rider-platform-exe"
 
     - path: "app/mocks/sms/src"
       component: "mock-sms:lib"
@@ -192,14 +192,14 @@ cradle:
     - path: "app/mock-registry/server/Paths_mock_registry.hs"
       component: "mock-registry:exe:mock-registry-exe"
 
-    - path: "app/mocks/public-transport-bpp/src"
-      component: "mock-public-transport-bpp:lib"
+    - path: "app/mocks/public-transport-provider-platform/src"
+      component: "mock-public-transport-provider-platform:lib"
 
-    - path: "app/mocks/public-transport-bpp/server/Main.hs"
-      component: "mock-public-transport-bpp:exe:mock-public-transport-bpp-exe"
+    - path: "app/mocks/public-transport-provider-platform/server/Main.hs"
+      component: "mock-public-transport-provider-platform:exe:mock-public-transport-provider-platform-exe"
 
-    - path: "app/mocks/public-transport-bpp/server/Paths_mock_public_transport_bpp.hs"
-      component: "mock-public-transport-bpp:exe:mock-public-transport-bpp-exe"
+    - path: "app/mocks/public-transport-provider-platform/server/Paths_mock_public_transport_provider_platform.hs"
+      component: "mock-public-transport-provider-platform:exe:mock-public-transport-provider-platform-exe"
 
     - path: "test/src"
       component: "beckn-test:lib"

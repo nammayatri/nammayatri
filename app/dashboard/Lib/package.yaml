@@ -71,7 +71,7 @@ dependencies:
   - singletons
   - euler-hs
   - http-types
-  - dashboard-bpp-helper-api
+  - dashboard-helper-api
 
 ghc-options:
   - -Wall

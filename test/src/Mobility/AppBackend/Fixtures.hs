@@ -1,6 +1,6 @@
 module Mobility.AppBackend.Fixtures where
 
-import "app-backend" Domain.Types.Merchant as DM
+import "rider-app" Domain.Types.Merchant as DM
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Version

@@ -24,14 +24,14 @@ import Network.Wai.Handler.Warp
   )
 import System.Environment (lookupEnv)
 
-runAppBackend :: (AppCfg -> AppCfg) -> IO ()
-runAppBackend configModifier = do
-  appCfg <- configModifier <$> readDhallConfigDefault "app-backend"
+runRiderApp :: (AppCfg -> AppCfg) -> IO ()
+runRiderApp configModifier = do
+  appCfg <- configModifier <$> readDhallConfigDefault "rider-app"
   Metrics.serve (appCfg.metricsPort)
-  runAppBackend' appCfg
+  runRiderApp' appCfg
 
-runAppBackend' :: AppCfg -> IO ()
-runAppBackend' appCfg = do
+runRiderApp' :: AppCfg -> IO ()
+runRiderApp' appCfg = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   appEnv <-

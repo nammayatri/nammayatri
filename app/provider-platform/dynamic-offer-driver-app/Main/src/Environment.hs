@@ -187,7 +187,7 @@ buildAppEnv cfg@AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
-  let modifierFunc = ("driver-offer-bpp:" <>)
+  let modifierFunc = ("dynamic-offer-driver-app:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
@@ -216,7 +216,7 @@ instance Registry Flow where
   registryLookup registryUrl = Registry.withSubscriberCache $ Registry.registryLookup registryUrl
 
 cacheRegistryKey :: Text
-cacheRegistryKey = "driver-offer-bpp:registry:"
+cacheRegistryKey = "dynamic-offer-driver-app:registry:"
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest

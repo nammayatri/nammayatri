@@ -5,7 +5,7 @@ module API.BAP.Merchant
 where
 
 import qualified BAPClient.AppBackend as Client
-import qualified "dashboard-bpp-helper-api" Dashboard.BAP.Merchant as Common
+import qualified "dashboard-helper-api" Dashboard.BAP.Merchant as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment

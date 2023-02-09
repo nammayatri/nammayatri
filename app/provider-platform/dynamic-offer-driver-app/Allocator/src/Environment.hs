@@ -9,7 +9,7 @@ module Environment
 where
 
 import Data.String.Conversions (cs)
-import "driver-offer-bpp" Environment (AppCfg (..))
+import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config

@@ -8,10 +8,10 @@ module BAPClient.AppBackend
   )
 where
 
-import qualified "app-backend" API.Dashboard as BAP
+import qualified "rider-app" API.Dashboard as BAP
 import qualified Dashboard.BAP.Merchant as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "app-backend" Domain.Types.Person as BAP
+import qualified "rider-app" Domain.Types.Person as BAP
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude

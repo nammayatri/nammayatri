@@ -1,4 +1,4 @@
-name: beckn-transport-scheduler
+name: static-offer-driver-app-scheduler
 version: 0.1.0.0
 github: "juspay/beckn"
 license: AllRightsReserved
@@ -95,7 +95,7 @@ library:
     - -fhide-source-paths
     - -Werror
   dependencies:
-    - beckn-transport
+    - static-offer-driver-app
     - mobility-core
     - beckn-spec
 
@@ -108,5 +108,5 @@ executables:
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
     dependencies:
-      - beckn-transport-scheduler
+      - static-offer-driver-app-scheduler
       - mobility-core

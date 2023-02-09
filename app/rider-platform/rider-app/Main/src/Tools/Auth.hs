@@ -54,7 +54,7 @@ verifyPerson token = do
 
 authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =
-  "BAP:authTokenCacheKey:" <> regToken
+  "rider-platform:authTokenCacheKey:" <> regToken
 
 verifyPersonAction ::
   ( EsqDBFlow m r,
@@ -78,7 +78,7 @@ validateToken sr@SR.RegistrationToken {..} = do
   when expired $ Utils.throwError TokenExpired
   return sr
 
--- TODO Next logic is the same for app-backend, beckn-transport and driver-offer-bpp. Move it to Lib
+-- TODO Next logic is the same for rider-app, beckn-transport and driver-offer-bpp. Move it to Lib
 
 type DashboardTokenAuth = HeaderAuth "token" DashboardVerifyToken
 

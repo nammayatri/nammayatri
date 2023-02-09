@@ -4,4 +4,4 @@ import App
 import EulerHS.Prelude
 
 main :: IO ()
-main = runAppBackend id
+main = runRiderApp id

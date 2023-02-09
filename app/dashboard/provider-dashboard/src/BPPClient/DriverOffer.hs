@@ -7,7 +7,7 @@ module BPPClient.DriverOffer
   )
 where
 
-import "driver-offer-bpp" API.Dashboard as BPP
+import "dynamic-offer-driver-app" API.Dashboard as BPP
 import qualified Dashboard.BPP.Driver as Common
 import qualified Dashboard.BPP.Driver.Registration as Common
 import qualified Dashboard.BPP.Merchant as Common

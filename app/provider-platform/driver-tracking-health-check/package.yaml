@@ -1,4 +1,4 @@
-name: beckn-transport-driver-tracking-health-check
+name: static-offer-driver-app-driver-tracking-health-check
 version: 0.1.0.0
 github: "juspay/beckn"
 license: AllRightsReserved
@@ -93,7 +93,7 @@ library:
     - -fhide-source-paths
     - -Werror
   dependencies:
-    - beckn-transport
+    - static-offer-driver-app
     - mobility-core
     - beckn-spec
 
@@ -107,6 +107,6 @@ executables:
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
     dependencies:
-      - beckn-transport-driver-tracking-health-check
+      - static-offer-driver-app-driver-tracking-health-check
       - mobility-core
       - beckn-spec

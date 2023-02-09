@@ -1,17 +1,17 @@
 module Mobility.Transporter.NearestDrivers (spec) where
 
-import qualified "beckn-transport" Domain.Types.FarePolicy.FareProduct as SFP
-import "beckn-transport" Domain.Types.Vehicle
-import qualified "beckn-transport" Environment as BecknTransport
+import qualified "static-offer-driver-app" Domain.Types.FarePolicy.FareProduct as SFP
+import "static-offer-driver-app" Domain.Types.Vehicle
+import qualified "static-offer-driver-app" Environment as BecknTransport
 import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified "beckn-transport" Storage.Queries.DriverInformation as Q
-import qualified "beckn-transport" Storage.Queries.DriverLocation as QL
-import qualified "beckn-transport" Storage.Queries.Person as Q
+import qualified "static-offer-driver-app" Storage.Queries.DriverInformation as Q
+import qualified "static-offer-driver-app" Storage.Queries.DriverLocation as QL
+import qualified "static-offer-driver-app" Storage.Queries.Person as Q
 import Test.Hspec
 import Utils
 

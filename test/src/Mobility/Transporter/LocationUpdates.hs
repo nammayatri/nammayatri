@@ -2,7 +2,7 @@ module Mobility.Transporter.LocationUpdates where
 
 import Common (getAppBaseUrl)
 import qualified Data.List.NonEmpty as NE
-import qualified "beckn-transport" Domain.Types.Booking as TRB
+import qualified "static-offer-driver-app" Domain.Types.Booking as TRB
 import EulerHS.Prelude
 import HSpec
 import Kernel.Prelude (roundToIntegral)

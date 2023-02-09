@@ -1,24 +1,24 @@
 module Mobility.ARDU.Utils (module Mobility.ARDU.Utils) where
 
-import qualified "driver-offer-bpp" API.UI.Driver as TDriver
-import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
-import qualified "app-backend" API.UI.Search as AppSearch
+import qualified "dynamic-offer-driver-app" API.UI.Driver as TDriver
+import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
+import qualified "rider-app" API.UI.Search as AppSearch
 import Common
-import qualified "app-backend" Domain.Action.UI.Cancel as AppCancel
-import qualified "app-backend" Domain.Types.Booking as AppRB
-import qualified "driver-offer-bpp" Domain.Types.Booking as TRB
-import qualified "app-backend" Domain.Types.CancellationReason as AppCR
-import qualified "driver-offer-bpp" Domain.Types.CancellationReason as SCR
-import qualified "driver-offer-bpp" Domain.Types.DriverInformation as TDrInfo
-import qualified "app-backend" Domain.Types.Estimate as AppEstimate
-import qualified "driver-offer-bpp" Domain.Types.Merchant as TDM
-import qualified "driver-offer-bpp" Domain.Types.Merchant.MerchantServiceConfig as TDMSC
-import "driver-offer-bpp" Domain.Types.Person as TPerson
-import qualified "app-backend" Domain.Types.Quote as AppQuote
-import qualified "app-backend" Domain.Types.Ride as BRide
-import qualified "driver-offer-bpp" Domain.Types.Ride as TRide
-import qualified "app-backend" Domain.Types.SearchRequest as AppSearchReq
-import qualified "driver-offer-bpp" Domain.Types.SearchRequest as ArduSReq
+import qualified "rider-app" Domain.Action.UI.Cancel as AppCancel
+import qualified "dynamic-offer-driver-app" Domain.Types.Booking as TRB
+import qualified "rider-app" Domain.Types.Booking as AppRB
+import qualified "dynamic-offer-driver-app" Domain.Types.CancellationReason as SCR
+import qualified "rider-app" Domain.Types.CancellationReason as AppCR
+import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDrInfo
+import qualified "rider-app" Domain.Types.Estimate as AppEstimate
+import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
+import qualified "dynamic-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig as TDMSC
+import "dynamic-offer-driver-app" Domain.Types.Person as TPerson
+import qualified "rider-app" Domain.Types.Quote as AppQuote
+import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
+import qualified "rider-app" Domain.Types.Ride as BRide
+import qualified "dynamic-offer-driver-app" Domain.Types.SearchRequest as ArduSReq
+import qualified "rider-app" Domain.Types.SearchRequest as AppSearchReq
 import Domain.Types.SearchRequestForDriver as SearchReqInfo
 import HSpec
 import qualified Kernel.External.Maps as Maps
@@ -34,15 +34,15 @@ import Mobility.ARDU.Queries as Queries
 import Mobility.AppBackend.APICalls as BapAPI
 import Mobility.AppBackend.Fixtures
 import Servant.Client
-import qualified "driver-offer-bpp" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
-import qualified "app-backend" Storage.Queries.Booking as BQRB
-import qualified "driver-offer-bpp" Storage.Queries.Booking as TQRB
-import qualified "driver-offer-bpp" Storage.Queries.DriverInformation as QTDrInfo
-import "driver-offer-bpp" Storage.Queries.DriverLocation
+import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
+import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as TQRB
+import qualified "rider-app" Storage.Queries.Booking as BQRB
+import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as QTDrInfo
+import "dynamic-offer-driver-app" Storage.Queries.DriverLocation
 import qualified Storage.Queries.DriverQuote as TDQ
-import qualified "app-backend" Storage.Queries.Ride as BQRide
-import qualified "driver-offer-bpp" Storage.Queries.Ride as TQRide
-import qualified "driver-offer-bpp" Storage.Queries.SearchRequest as QSReq
+import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as TQRide
+import qualified "rider-app" Storage.Queries.Ride as BQRide
+import qualified "dynamic-offer-driver-app" Storage.Queries.SearchRequest as QSReq
 import Utils
 
 -- database calls

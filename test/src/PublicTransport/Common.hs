@@ -1,7 +1,7 @@
 module PublicTransport.Common where
 
-import qualified "mock-public-transport-bpp" Environment as Bpp
-import qualified "public-transport-bap" Environment as Bap
+import qualified "mock-public-transport-provider-platform" Environment as Bpp
+import qualified "public-transport-rider-platform" Environment as Bap
 import GHC.IO (unsafePerformIO)
 import Kernel.Prelude
 import Kernel.Types.Time
@@ -48,7 +48,7 @@ mockWaitTimeSeconds = 1
 {-# NOINLINE publicTransportBapEnv #-}
 publicTransportBapEnv :: Bap.AppEnv
 publicTransportBapEnv = unsafePerformIO $ do
-  appCfg <- readDhallConfig "../dhall-configs/dev/public-transport-bap.dhall"
+  appCfg <- readDhallConfig "../dhall-configs/dev/public-transport-rider-platform.dhall"
   let updLogCfg =
         appCfg.loggerConfig{logToFile = False,
                             logToConsole = False
@@ -59,7 +59,7 @@ publicTransportBapEnv = unsafePerformIO $ do
 {-# NOINLINE mockBppEnv #-}
 mockBppEnv :: Bpp.AppEnv
 mockBppEnv = unsafePerformIO $ do
-  appCfg <- readDhallConfig "../dhall-configs/dev/mock-public-transport-bpp.dhall"
+  appCfg <- readDhallConfig "../dhall-configs/dev/mock-public-transport-provider-platform.dhall"
   let updLogCfg =
         appCfg.loggerConfig{logToFile = False,
                             logToConsole = False

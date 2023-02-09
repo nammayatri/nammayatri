@@ -2,23 +2,23 @@
 apps () {
 cat << EOF
 allocation-service
-app-backend
+rider-app
 beckn-gateway
-beckn-transport
+static-offer-driver-app
 driver-tracking-healthcheck
 mock-fcm
 mock-registry
 mock-sms
 mock-idfy
-public-transport-bap
+public-transport-rider-platform
 public-transport-search-consumer
 search-result-aggregator
 transporter-scheduler
 scheduler-example-app
 scheduler-example-scheduler
-driver-offer-bpp
-bap-dashboard
-bpp-dashboard
+dynamic-offer-driver-app
+rider-dashboard
+provider-dashboard
 image-api-helper
 driver-offer-allocator
 kafka-consumers

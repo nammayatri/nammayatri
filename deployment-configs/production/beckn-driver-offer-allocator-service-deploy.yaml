@@ -104,10 +104,10 @@ spec:
           items:
           - key: driver-offer-allocator.dhall
             path: config/driver-offer-allocator.dhall
-          - key: driver-offer-bpp.dhall
-            path: config/driver-offer-bpp.dhall
-          - key: beckn-transport.dhall
-            path: config/beckn-transport.dhall
+          - key: dynamic-offer-driver-app.dhall
+            path: config/dynamic-offer-driver-app.dhall
+          - key: static-offer-driver-app.dhall
+            path: config/static-offer-driver-app.dhall
           - key: common.dhall
             path: config/common.dhall
           - key: globalCommon.dhall
@@ -118,10 +118,10 @@ spec:
         secret:
           defaultMode: 420
           items:
-          - key: driver-offer-bpp.dhall
-            path: config/secrets/driver-offer-bpp.dhall
-          - key: beckn-transport.dhall
-            path: config/secrets/beckn-transport.dhall
+          - key: dynamic-offer-driver-app.dhall
+            path: config/secrets/dynamic-offer-driver-app.dhall
+          - key: static-offer-driver-app.dhall
+            path: config/secrets/static-offer-driver-app.dhall
           - key: common.dhall
             path: config/secrets/common.dhall
           secretName: beckn-dhall-secret-production-pilot

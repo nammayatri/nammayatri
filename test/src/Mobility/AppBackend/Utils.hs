@@ -1,10 +1,10 @@
 module Mobility.AppBackend.Utils where
 
-import qualified "app-backend" Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified "rider-app" Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Mobility.AppBackend.Fixtures as Fixtures
-import qualified "app-backend" Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified "rider-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Utils (runAppFlow)
 
 changeCachedMapsConfig :: Maps.MapsServiceConfig -> IO ()

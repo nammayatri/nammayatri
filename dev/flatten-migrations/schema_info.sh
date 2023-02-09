@@ -4,15 +4,15 @@ ACTION=$2
 
 if [ $ACTION = test_data_file ] ; then
   if [ $SCHEMA = atlas_app ] ; then
-    echo "app-backend.sql"
+    echo "rider-app.sql"
   elif [ $SCHEMA = atlas_transporter ] ; then
-    echo "beckn-transport.sql"
+    echo "static-offer-driver-app.sql"
   elif [ $SCHEMA = atlas_fmd_wrapper ] ; then
     echo "fmd-wrapper.sql"
   elif [ $SCHEMA = atlas_registry ] ; then
     echo "mock-registry.sql"
   elif [ $SCHEMA = atlas_public_transport ] ; then
-    echo "public-transport-bap.sql"
+    echo "public-transport-rider-platform.sql"
   fi
 fi
 
@@ -32,29 +32,29 @@ fi
 
 if [ $ACTION = seed_file ] ; then
   if [ $SCHEMA = atlas_app ] ; then
-    echo 'app-backend-seed.sql'
+    echo 'rider-app-seed.sql'
   elif [ $SCHEMA = atlas_transporter ] ; then
-    echo 'transporter-backend-seed.sql'
+    echo 'static-offer-driver-app-seed.sql'
   elif [ $SCHEMA = atlas_fmd_wrapper ] ; then
     echo 'fmd-wrapper-backend-seed.sql'
   elif [ $SCHEMA = atlas_registry ] ; then
     echo 'mock-registry-seed.sql'
   elif [ $SCHEMA = atlas_public_transport ] ; then
-    echo 'public-transport-bap-seed.sql'
+    echo 'public-transport-rider-platform-seed.sql'
   fi
 fi
 
 if [ $ACTION = migration_dir ] ; then
   if [ $SCHEMA = atlas_app ] ; then
-    echo 'app-backend'
+    echo 'rider-app'
   elif [ $SCHEMA = atlas_transporter ] ; then
-    echo 'beckn-transport'
+    echo 'static-offer-driver-app'
   elif [ $SCHEMA = atlas_fmd_wrapper ] ; then
     echo 'fmd-wrapper'
   elif [ $SCHEMA = atlas_registry ] ; then
     echo 'mock-registry'
   elif [ $SCHEMA = atlas_public_transport ] ; then
-    echo 'public-transport-bap'
+    echo 'public-transport-rider-platform'
   fi
 fi
 

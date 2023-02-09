@@ -3,15 +3,15 @@
 
 module Mobility.Transporter.MapsConfig where
 
-import "beckn-transport" Domain.Types.Merchant
-import "beckn-transport" Domain.Types.Merchant.MerchantServiceConfig
+import "static-offer-driver-app" Domain.Types.Merchant
+import "static-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Mobility.Transporter.Fixtures as Fixtures
-import qualified "beckn-transport" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
+import qualified "static-offer-driver-app" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
 import Test.Hspec
-import "beckn-transport" Tools.Maps
+import "static-offer-driver-app" Tools.Maps
 import Utils
 
 spec :: Spec

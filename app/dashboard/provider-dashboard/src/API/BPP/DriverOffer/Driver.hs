@@ -6,7 +6,7 @@ where
 
 import qualified API.BPP.DriverOffer.Driver.Registration as Reg
 import qualified BPPClient.DriverOffer as Client
-import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.BPP.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment

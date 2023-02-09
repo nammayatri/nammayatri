@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-driver-offer-bpp-production-$BUILD_VERSION
+  name: dynamic-offer-driver-app-production-$BUILD_VERSION
   namespace: atlas
   labels:
     version: $BUILD_VERSION
@@ -9,7 +9,7 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: beckn-driver-offer-bpp-production
+      app: dynamic-offer-driver-app-production
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,7 +21,7 @@ spec:
         iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
         sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
       labels:
-        app: beckn-driver-offer-bpp-production
+        app: dynamic-offer-driver-app-production
         version: $BUILD_VERSION
     spec:
       affinity:
@@ -41,7 +41,7 @@ spec:
                     - key: app
                       operator: In
                       values:
-                        - beckn-driver-offer-bpp-production
+                        - dynamic-offer-driver-app-production
                 topologyKey: kubernetes.io/hostname
               weight: 100
       containers:
@@ -49,7 +49,7 @@ spec:
             - /bin/bash
             - -c
           args:
-            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && (/opt/app/bpp/driver-offer-bpp-exe 2>&1 | tee --output-error=warn >(/usr/sbin/log-processor --prometheus-port $LP_PROMETHEUS_PORT --kafka-brokers $LP_KAFKA_BROKERS --kafka-producer-prop $LP_KAFKA_PRODUCER_PROP --partition-key $LP_PARTITION_KEY --producer-topic $LP_PRODUCER_TOPIC $LP_EXTRA_ARGS))'
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && (/opt/app/provider-platform/dynamic-offer-driver-app-exe 2>&1 | tee --output-error=warn >(/usr/sbin/log-processor --prometheus-port $LP_PROMETHEUS_PORT --kafka-brokers $LP_KAFKA_BROKERS --kafka-producer-prop $LP_KAFKA_PRODUCER_PROP --partition-key $LP_PARTITION_KEY --producer-topic $LP_PRODUCER_TOPIC $LP_EXTRA_ARGS))'
           env:
             - name: POD_NAME
               valueFrom:
@@ -59,13 +59,13 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: DRIVER_OFFER_BPP_CONFIG_PATH
-              value: /etc/beckn/config/driver-offer-bpp.dhall
+            - name: DYNAMIC_OFFER_DRIVER_APP_CONFIG_PATH
+              value: /etc/beckn/config/dynamic-offer-driver-app.dhall
           envFrom:
             - configMapRef:
               name: beckn-configs-lp
           image: 147728078333.dkr.ecr.ap-south-1.amazonaws.com/beckn-uat:$BUILD_VERSION
-          name: beckn-driver-offer-bpp-production
+          name: dynamic-offer-driver-app-production
           ports:
             - containerPort: 8016
               name: transport-http
@@ -122,8 +122,8 @@ spec:
           configMap:
             name: beckn-dhall-config-production
             items:
-              - key: driver-offer-bpp.dhall
-                path: config/driver-offer-bpp.dhall
+              - key: dynamic-offer-driver-app.dhall
+                path: config/dynamic-offer-driver-app.dhall
               - key: common.dhall
                 path: config/common.dhall
               - key: globalCommon.dhall
@@ -132,8 +132,8 @@ spec:
           secret:
             secretName: beckn-dhall-secret-production
             items:
-              - key: driver-offer-bpp.dhall
-                path: config/secrets/driver-offer-bpp.dhall
+              - key: dynamic-offer-driver-app.dhall
+                path: config/secrets/dynamic-offer-driver-app.dhall
               - key: common.dhall
                 path: config/secrets/common.dhall
 status: {}
@@ -142,9 +142,9 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: beckn-driver-offer-bpp-production
+  name: dynamic-offer-driver-app-production
   labels:
-    app: beckn-driver-offer-bpp-production
+    app: dynamic-offer-driver-app-production
 spec:
   ports:
     - port: 8016
@@ -154,4 +154,4 @@ spec:
       targetPort: 9999
       name: http-prom
   selector:
-    app: beckn-driver-offer-bpp-production
+    app: dynamic-offer-driver-app-production

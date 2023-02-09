@@ -2,8 +2,8 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    k8s-app: beckn-app-backend-production
-  name: beckn-app-backend-production
+    k8s-app: rider-app-production
+  name: rider-app-production
   namespace: monitoring
 spec:
   endpoints:
@@ -22,7 +22,7 @@ spec:
       - atlas
   selector:
     matchLabels:
-      app: beckn-app-backend-production
+      app: rider-app-production
 
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -56,8 +56,8 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    k8s-app: beckn-transport-production
-  name: beckn-transport-production
+    k8s-app: static-offer-driver-app-production
+  name: static-offer-driver-app-production
   namespace: monitoring
 spec:
   endpoints:
@@ -76,15 +76,15 @@ spec:
       - atlas
   selector:
     matchLabels:
-      app: beckn-transport-production
+      app: static-offer-driver-app-production
 
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    k8s-app: beckn-transport-allocation-service-production
-  name: beckn-transport-allocation-service-production
+    k8s-app: static-offer-driver-app-allocation-service-production
+  name: static-offer-driver-app-allocation-service-production
   namespace: monitoring
 spec:
   endpoints:
@@ -103,14 +103,14 @@ spec:
       - atlas
   selector:
     matchLabels:
-      app: beckn-transport-allocation-service-production
+      app: static-offer-driver-app-allocation-service-production
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    k8s-app: beckn-driver-offer-bpp-production
-  name: beckn-driver-offer-bpp-production
+    k8s-app: dynamic-offer-driver-app-production
+  name: dynamic-offer-driver-app-production
   namespace: monitoring
 spec:
   endpoints:
@@ -129,4 +129,4 @@ spec:
       - atlas
   selector:
     matchLabels:
-      app: beckn-driver-offer-bpp-production
+      app: dynamic-offer-driver-app-production

@@ -94,7 +94,7 @@ verifyPerson token = do
 
 authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =
-  "BPP:authTokenCacheKey:" <> regToken
+  "providerPlatform:authTokenCacheKey:" <> regToken
 
 validateAdminAction :: forall m r. (HasEsqEnv m r, EncFlow m r) => VerificationAction AdminVerifyToken m
 validateAdminAction = VerificationAction validateAdmin
@@ -107,7 +107,7 @@ validateToken sr@SR.RegistrationToken {..} = do
   when expired $ Utils.throwError TokenExpired
   return sr
 
--- TODO Next logic is the same for app-backend, beckn-transport and driver-offer-bpp. Move it to Lib
+-- TODO Next logic is the same for rider-app, beckn-transport and driver-offer-bpp. Move it to Lib
 
 type DashboardTokenAuth = HeaderAuth "token" DashboardVerifyToken
 

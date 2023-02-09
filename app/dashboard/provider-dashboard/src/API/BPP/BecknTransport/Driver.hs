@@ -5,7 +5,7 @@ module API.BPP.BecknTransport.Driver
 where
 
 import qualified BPPClient.BecknTransport as Client
-import qualified "dashboard-bpp-helper-api" Dashboard.BPP.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.BPP.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment

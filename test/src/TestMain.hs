@@ -3,21 +3,21 @@
 
 module TestMain where
 
-import qualified "app-backend" App as AppBackend
 import qualified "beckn-gateway" App as Gateway
-import qualified "beckn-transport" App as TransporterBackend
-import qualified "beckn-transport-allocator" App as YatriAllocator
-import qualified "beckn-transport-driver-tracking-health-check" App as DriverHC
 import qualified "driver-offer-allocator" App as ARDUAllocator
-import qualified "driver-offer-bpp" App as DriverOfferBpp
+import qualified "dynamic-offer-driver-app" App as DriverOfferBpp
 import qualified "mock-fcm" App as MockFcm
 import qualified "mock-google" App as MockGoogle
-import qualified "mock-public-transport-bpp" App as MockPublicTransportBpp
+import qualified "mock-public-transport-provider-platform" App as MockPublicTransportBpp
 import qualified "mock-registry" App as MockRegistry
 import qualified "mock-sms" App as MockSms
-import qualified "public-transport-bap" App as PublicTransport
+import qualified "public-transport-rider-platform" App as PublicTransport
 import qualified "public-transport-search-consumer" App as PublicTransportSearchConsumer
+import qualified "rider-app" App as AppBackend
 import qualified "search-result-aggregator" App as SearchResultAggregator
+import qualified "static-offer-driver-app" App as TransporterBackend
+import qualified "static-offer-driver-app-allocator" App as YatriAllocator
+import qualified "static-offer-driver-app-driver-tracking-health-check" App as DriverHC
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
 import qualified Kernel.External.Maps as Maps
@@ -48,16 +48,16 @@ main = do
   mapM_
     setConfigEnv
     [ "allocation-service",
-      "app-backend",
+      "rider-app",
       "beckn-gateway",
-      "beckn-transport",
+      "static-offer-driver-app",
       "driver-tracking-healthcheck-service",
       "mock-registry",
-      "public-transport-bap",
-      "mock-public-transport-bpp",
+      "public-transport-rider-platform",
+      "mock-public-transport-provider-platform",
       "public-transport-search-consumer",
       "search-result-aggregator",
-      "driver-offer-bpp",
+      "dynamic-offer-driver-app",
       "driver-offer-allocator",
       "mock-google"
     ]
@@ -129,7 +129,7 @@ specs' googleCfg trees = do
     firstWaveServers =
       [ do
           DriverOfferBppUtils.changeCachedMapsConfig googleCfg
-          DriverOfferBpp.runDriverOfferBpp hideLogging,
+          DriverOfferBpp.runDynamicOfferDriverApp hideLogging,
         PublicTransport.runService hideLogging
       ]
 
@@ -141,12 +141,12 @@ specs' googleCfg trees = do
         Gateway.runGateway hideLogging,
         do
           AppBackendUtils.changeCachedMapsConfig googleCfg
-          AppBackend.runAppBackend $
+          AppBackend.runRiderApp $
             \cfg ->
               cfg & hideLogging,
         do
           TransporterUtils.changeCachedMapsConfig googleCfg
-          TransporterBackend.runTransporterBackendApp $
+          TransporterBackend.runStaticOfferDriverApp $
             \cfg ->
               cfg & hideLogging,
         MockSms.runMockSms hideLogging,

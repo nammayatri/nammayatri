@@ -7,7 +7,7 @@ module BPPClient.BecknTransport
   )
 where
 
-import "beckn-transport" API.Dashboard as BPP
+import "static-offer-driver-app" API.Dashboard as BPP
 import qualified Dashboard.BPP.Driver as Common
 import qualified Dashboard.BPP.Merchant as Common
 import qualified Dashboard.BPP.Ride as Common

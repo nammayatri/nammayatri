@@ -145,11 +145,11 @@ Each of the application has particular set of defined APIs and Schemas. To get a
 
 | Application                              | Port   |
 | -----------------------------------------|--------|
-| app-backend                              | `8013` |
-| beckn-transport                          | `8014` |
+| rider-app                                | `8013` |
+| static-offer-driver-app                  | `8014` |
 | beckn-gateway                            | `8015` |
 | mock-registry                            | `8020` |
-| public-transport-bap                     | `8023` |
+| public-transport-rider-platform          | `8023` |
 | public-transport-search-consumer         | `8024` |
 | search-result-aggregator                 | `8025` |
 | scheduler-example-scheduler              | `8051` |
@@ -181,11 +181,11 @@ Alternatively see the GitHub documentation on [creating a pull request](https://
 ### Modules
 <hr style="height: 1px; margin-top:-10px;"></hr>
 
-#### `app-backend`
-Frontend facing APIs (BAP), has more end-user specific implementations.
+#### `rider-app`
+Frontend facing APIs (Rider platform), has more end-user specific implementations.
 #### `beckn-transport`
-Beckn provider (BPP), implementing mobility spec. This module contains two executables:
- * `beckn-transport-exe`:  BPP server
+Beckn provider (Provider platform), implementing mobility spec. This module contains two executables:
+ * `beckn-transport-exe`:  Provider platform server
  * `beckn-transport-btm-exe`:  background task manager. This component runs the allocation service responsible for allocating rides to drivers.
 #### `beckn-gateway`
 Beckn gateway (BG)

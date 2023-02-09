@@ -1,6 +1,6 @@
 let common = ./common.dhall
 
-let sec = ./secrets/driver-offer-bpp.dhall
+let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let esqDBCfg =
       { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"

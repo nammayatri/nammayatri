@@ -1,10 +1,10 @@
 let common = ../generic/common.dhall
 
-let appCfg = ./driver-offer-bpp.dhall
+let appCfg = ./dynamic-offer-driver-app.dhall
 
-let sec = ./secrets/beckn-transport.dhall
+let sec = ./secrets/static-offer-driver-app.dhall
 
-let transporter = ./beckn-transport.dhall
+let transporter = ./static-offer-driver-app.dhall
 
 let schedulerConfig =
       { loggerConfig =

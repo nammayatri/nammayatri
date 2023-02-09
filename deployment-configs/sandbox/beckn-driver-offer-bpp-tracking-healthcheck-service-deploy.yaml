@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT-$BUILD_VERSION
+  name: dynamic-offer-driver-app-tracking-healthcheck-service-$DEPLOY_VARIANT-$BUILD_VERSION
   namespace: atlas
   labels:
     version: $BUILD_VERSION
@@ -10,7 +10,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT
+      app: dynamic-offer-driver-app-tracking-healthcheck-service-$DEPLOY_VARIANT
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,7 +21,7 @@ spec:
       annotations:
         traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
       labels:
-        app: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT
+        app: dynamic-offer-driver-app-tracking-healthcheck-service-$DEPLOY_VARIANT
         version: $BUILD_VERSION
     spec:
       containers:
@@ -59,7 +59,7 @@ spec:
             periodSeconds: 20
             successThreshold: 1
             timeoutSeconds: 12
-          name: beckn-driver-offer-bpp-$DEPLOY_VARIANT
+          name: dynamic-offer-driver-app-$DEPLOY_VARIANT
           ports:
             - containerPort: 8115
               name: transport-http
@@ -115,10 +115,10 @@ spec:
         - configMap:
             defaultMode: 420
             items:
-              - key: driver-offer-bpp-tracking-healthcheck-service.dhall
+              - key: dynamic-offer-driver-app-tracking-healthcheck-service.dhall
                 path: config/driver-tracking-healthcheck-service.dhall
-              - key: driver-offer-bpp.dhall
-                path: config/driver-offer-bpp.dhall
+              - key: dynamic-offer-driver-app.dhall
+                path: config/dynamic-offer-driver-app.dhall
               - key: common.dhall
                 path: config/common.dhall
               - key: globalCommon.dhall
@@ -129,8 +129,8 @@ spec:
           secret:
             defaultMode: 420
             items:
-              - key: driver-offer-bpp.dhall
-                path: config/secrets/driver-offer-bpp.dhall
+              - key: dynamic-offer-driver-app.dhall
+                path: config/secrets/dynamic-offer-driver-app.dhall
               - key: common.dhall
                 path: config/secrets/common.dhall
             secretName: beckn-dhall-secret-$DEPLOY_VARIANT
@@ -139,9 +139,9 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT
+  name: dynamic-offer-driver-app-tracking-healthcheck-service-$DEPLOY_VARIANT
   labels:
-    app: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT
+    app: dynamic-offer-driver-app-tracking-healthcheck-service-$DEPLOY_VARIANT
 spec:
   ports:
     - port: 8115
@@ -151,4 +151,4 @@ spec:
       targetPort: 9999
       name: http-prom
   selector:
-    app: beckn-driver-offer-bpp-tracking-healthcheck-service-$DEPLOY_VARIANT
+    app: dynamic-offer-driver-app-tracking-healthcheck-service-$DEPLOY_VARIANT

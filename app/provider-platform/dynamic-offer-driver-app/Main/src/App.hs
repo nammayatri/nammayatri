@@ -28,14 +28,14 @@ import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
 import Tools.SignatureAuth
 
-runDriverOfferBpp :: (AppCfg -> AppCfg) -> IO ()
-runDriverOfferBpp configModifier = do
-  appCfg <- configModifier <$> readDhallConfigDefault "driver-offer-bpp"
+runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
+runDynamicOfferDriverApp configModifier = do
+  appCfg <- configModifier <$> readDhallConfigDefault "dynamic-offer-driver-app"
   Metrics.serve (appCfg.metricsPort)
-  runDriverOfferBpp' appCfg
+  runDynamicOfferDriverApp' appCfg
 
-runDriverOfferBpp' :: AppCfg -> IO ()
-runDriverOfferBpp' appCfg = do
+runDynamicOfferDriverApp' :: AppCfg -> IO ()
+runDynamicOfferDriverApp' appCfg = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   appEnv <-

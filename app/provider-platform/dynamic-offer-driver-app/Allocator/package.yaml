@@ -99,7 +99,7 @@ library:
     - -fhide-source-paths
     - -Werror
   dependencies:
-    - driver-offer-bpp
+    - dynamic-offer-driver-app
     - mobility-core
     - beckn-spec
 

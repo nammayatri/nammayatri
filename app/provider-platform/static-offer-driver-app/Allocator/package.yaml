@@ -1,4 +1,4 @@
-name: beckn-transport-allocator
+name: static-offer-driver-app-allocator
 version: 0.1.0.0
 github: "juspay/beckn"
 license: AllRightsReserved
@@ -97,7 +97,7 @@ library:
   dependencies:
     - mobility-core
     - beckn-spec
-    - beckn-transport
+    - static-offer-driver-app
 
 executables:
   allocation-service-exe:
@@ -109,19 +109,19 @@ executables:
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
     dependencies:
-      - beckn-transport-allocator
+      - static-offer-driver-app-allocator
       - mobility-core
       - beckn-spec
 
 tests:
-  beckn-transport-allocator-tests:
+  static-offer-driver-app-allocator-tests:
     main: Main.hs
     source-dirs:
       - test/app
       - test/src
     dependencies:
-      - beckn-transport-allocator
-      - beckn-transport
+      - static-offer-driver-app-allocator
+      - static-offer-driver-app
       - mobility-core
       - beckn-spec
       - tasty

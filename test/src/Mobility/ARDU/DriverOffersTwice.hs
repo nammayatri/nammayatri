@@ -9,7 +9,7 @@ import Mobility.ARDU.Fixtures
 import qualified Mobility.ARDU.Utils as Utils
 import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Routes
-import qualified "driver-offer-bpp" Storage.Queries.DriverQuote as QDrQuote
+import qualified "dynamic-offer-driver-app" Storage.Queries.DriverQuote as QDrQuote
 import Utils
 
 spec :: Spec

@@ -2,8 +2,8 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    k8s-app: beckn-app-backend-master
-  name: beckn-app-backend-master
+    k8s-app: rider-app-master
+  name: rider-app-master
   namespace: monitoring
 spec:
   endpoints:
@@ -22,14 +22,14 @@ spec:
       - atlas
   selector:
     matchLabels:
-      app: beckn-app-backend-master
+      app: rider-app-master
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    k8s-app: beckn-app-backend-sandbox
-  name: beckn-app-backend-sandbox
+    k8s-app: rider-app-sandbox
+  name: rider-app-sandbox
   namespace: monitoring
 spec:
   endpoints:
@@ -48,7 +48,7 @@ spec:
       - atlas
   selector:
     matchLabels:
-      app: beckn-app-backend-sandbox
+      app: rider-app-sandbox
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -106,8 +106,8 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    k8s-app: beckn-transport-master
-  name: beckn-transport-master
+    k8s-app: static-offer-driver-app-master
+  name: static-offer-driver-app-master
   namespace: monitoring
 spec:
   endpoints:
@@ -126,14 +126,14 @@ spec:
       - atlas
   selector:
     matchLabels:
-      app: beckn-transport-master
+      app: static-offer-driver-app-master
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    k8s-app: beckn-transport-sandbox
-  name: beckn-transport-sandbox
+    k8s-app: static-offer-driver-app-sandbox
+  name: static-offer-driver-app-sandbox
   namespace: monitoring
 spec:
   endpoints:
@@ -152,14 +152,14 @@ spec:
       - atlas
   selector:
     matchLabels:
-      app: beckn-transport-sandbox
+      app: static-offer-driver-app-sandbox
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    k8s-app: beckn-driver-offer-bpp-master
-  name: beckn-driver-offer-bpp-master
+    k8s-app: dynamic-offer-driver-app-master
+  name: dynamic-offer-driver-app-master
   namespace: monitoring
 spec:
   endpoints:
@@ -178,14 +178,14 @@ spec:
       - atlas
   selector:
     matchLabels:
-      app: beckn-driver-offer-bpp-master
+      app: dynamic-offer-driver-app-master
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    k8s-app: beckn-driver-offer-bpp-sandbox
-  name: beckn-driver-offer-bpp-sandbox
+    k8s-app: dynamic-offer-driver-app-sandbox
+  name: dynamic-offer-driver-app-sandbox
   namespace: monitoring
 spec:
   endpoints:
@@ -204,4 +204,4 @@ spec:
       - atlas
   selector:
     matchLabels:
-      app: beckn-driver-offer-bpp-sandbox
+      app: dynamic-offer-driver-app-sandbox

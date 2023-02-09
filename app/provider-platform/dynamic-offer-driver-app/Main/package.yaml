@@ -87,7 +87,7 @@ dependencies:
   - esqueleto
   - beckn-services
   - unordered-containers
-  - dashboard-bpp-helper-api
+  - dashboard-helper-api
   - extra
   - scheduler
   - singletons
@@ -111,7 +111,7 @@ library:
     - location-updates
 
 executables:
-  driver-offer-bpp-exe:
+  dynamic-offer-driver-app-exe:
     main: Main.hs
     source-dirs: server
     other-modules: []
@@ -120,7 +120,7 @@ executables:
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
     dependencies:
-      - driver-offer-bpp
+      - dynamic-offer-driver-app
       - mobility-core
       - beckn-spec
       - beckn-services

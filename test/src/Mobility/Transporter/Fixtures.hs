@@ -1,7 +1,7 @@
 module Mobility.Transporter.Fixtures where
 
-import "beckn-transport" Domain.Types.Merchant as DM
-import qualified "app-backend" Domain.Types.Person as TPerson
+import "static-offer-driver-app" Domain.Types.Merchant as DM
+import qualified "rider-app" Domain.Types.Person as TPerson
 import EulerHS.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Time (Seconds)

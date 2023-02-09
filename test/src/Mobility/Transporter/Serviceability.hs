@@ -2,8 +2,8 @@
 
 module Mobility.Transporter.Serviceability where
 
-import qualified "app-backend" API.UI.Search as AppBESearch
-import "app-backend" API.UI.Serviceability
+import qualified "rider-app" API.UI.Search as AppBESearch
+import "rider-app" API.UI.Serviceability
 import Common
 import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))

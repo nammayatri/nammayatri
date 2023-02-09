@@ -68,7 +68,7 @@ dependencies:
   - template-haskell
   - euler-hs
   - containers
-  - dashboard-bpp-helper-api
+  - dashboard-helper-api
   - http-client
   - http-client-tls
   - servant-client
@@ -92,11 +92,11 @@ library:
     - -Wincomplete-uni-patterns
   dependencies:
     - lib-dashboard
-    - beckn-transport
-    - driver-offer-bpp
+    - static-offer-driver-app
+    - dynamic-offer-driver-app
 
 executables:
-  bpp-dashboard-exe:
+  provider-dashboard-exe:
     main: Main.hs
     source-dirs: server
     ghc-options:
@@ -105,6 +105,6 @@ executables:
       - '"-with-rtsopts=-N -T"'
       - -Wincomplete-uni-patterns
     dependencies:
-      - bpp-dashboard
+      - provider-dashboard
       - mobility-core
       - beckn-spec
