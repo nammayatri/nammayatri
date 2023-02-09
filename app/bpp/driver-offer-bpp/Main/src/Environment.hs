@@ -27,7 +27,7 @@ import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
-import SharedLogic.DriverPool (DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig, RideRequestPopupConfig)
+import SharedLogic.DriverPool (CancellationScoreRelatedConfig, DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
@@ -85,7 +85,8 @@ data AppCfg = AppCfg
     cacheTranslationConfig :: CacheTranslationConfig,
     driverPoolCfg :: DriverPoolConfig,
     intelligentPoolConfig :: IntelligentPoolConfig,
-    rideRequestPopupConfig :: RideRequestPopupConfig,
+    defaultPopupDelay :: Seconds,
+    cancellationScoreRelatedConfig :: CancellationScoreRelatedConfig,
     overrideDriverPoolCfg :: Maybe [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
@@ -148,7 +149,8 @@ data AppEnv = AppEnv
     cacheTranslationConfig :: CacheTranslationConfig,
     driverPoolCfg :: DriverPoolConfig,
     intelligentPoolConfig :: IntelligentPoolConfig,
-    rideRequestPopupConfig :: RideRequestPopupConfig,
+    defaultPopupDelay :: Seconds,
+    cancellationScoreRelatedConfig :: CancellationScoreRelatedConfig,
     overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,

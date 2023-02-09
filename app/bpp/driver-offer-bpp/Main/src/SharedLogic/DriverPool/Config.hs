@@ -11,9 +11,8 @@ data IntelligentPoolConfig = IntelligentPoolConfig
   }
   deriving (Generic, FromDhall)
 
-data RideRequestPopupConfig = RideRequestPopupConfig
+data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
   { popupDelayToAddAsPenalty :: Maybe Seconds,
-    defaultPopupDelay :: Seconds,
     thresholdCancellationScore :: Maybe Int,
     thresholdRidesCount :: Maybe Int
   }
@@ -47,7 +46,8 @@ type HasDriverPoolConfig r =
   ( HasField "driverPoolCfg" r DriverPoolConfig,
     HasField "overrideDriverPoolConfig" r [OverrideDriverPoolConfig],
     HasField "intelligentPoolConfig" r IntelligentPoolConfig,
-    HasField "rideRequestPopupConfig" r RideRequestPopupConfig,
+    HasField "cancellationScoreRelatedConfig" r CancellationScoreRelatedConfig,
+    HasField "defaultPopupDelay" r Seconds,
     HasMaxParallelSearchRequests r
   )
 

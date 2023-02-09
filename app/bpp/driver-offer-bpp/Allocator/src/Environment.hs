@@ -23,7 +23,7 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
-import SharedLogic.DriverPool (DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig, RideRequestPopupConfig)
+import SharedLogic.DriverPool (CancellationScoreRelatedConfig, DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheConfig)
 import System.Environment (lookupEnv)
@@ -53,7 +53,8 @@ data HandlerEnv = HandlerEnv
     coreMetrics :: CoreMetricsContainer,
     intelligentPoolConfig :: IntelligentPoolConfig,
     driverPoolCfg :: DriverPoolConfig,
-    rideRequestPopupConfig :: RideRequestPopupConfig,
+    defaultPopupDelay :: Seconds,
+    cancellationScoreRelatedConfig :: CancellationScoreRelatedConfig,
     overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,

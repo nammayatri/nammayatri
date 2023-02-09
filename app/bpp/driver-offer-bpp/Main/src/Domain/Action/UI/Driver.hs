@@ -556,8 +556,8 @@ getNearbySearchRequests driverId = do
     buildSearchRequestForDriverAPIEntity cancellationRatio nearbyReq = do
       let sId = nearbyReq.searchRequestId
       searchRequest <- runInReplica $ QSReq.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
-      rideRequestPopupConfig <- asks (.rideRequestPopupConfig)
-      popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio rideRequestPopupConfig
+      cancellationScoreRelatedConfig <- asks (.cancellationScoreRelatedConfig)
+      popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest popupDelaySeconds
 
 isAllowedExtraFee :: ExtraFee -> Money -> Bool

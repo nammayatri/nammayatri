@@ -86,9 +86,8 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
-let rideRequestPopupConfig =
-      { defaultPopupDelay = +0
-      , popupDelayToAddAsPenalty = Some +5
+let cancellationScoreRelatedConfig =
+      { popupDelayToAddAsPenalty = Some +5
       , thresholdCancellationScore = Some +40
       , thresholdRidesCount = Some +5
       }
@@ -173,6 +172,7 @@ in  { esqDBCfg
     , nwAddress = "https://api.beckn.juspay.in/dobpp/beckn"
     , selfUIUrl = "https://api.beckn.juspay.in/dobpp/ui"
     , signingKey = sec.signingKey
+    , defaultPopupDelay = +0
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
     , migrationPath = None Text
@@ -219,7 +219,7 @@ in  { esqDBCfg
     , cacheTranslationConfig
     , driverPoolCfg
     , intelligentPoolConfig
-    , rideRequestPopupConfig
+    , cancellationScoreRelatedConfig
     , overrideDriverPoolCfg = Some overrideDriverPoolCfg
     , sendSearchRequestJobCfg
     , driverLocationUpdateTopic = "location-updates-production"

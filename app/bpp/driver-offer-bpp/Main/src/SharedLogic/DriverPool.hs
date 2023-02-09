@@ -297,10 +297,10 @@ isThresholdRidesCompleted ::
   ) =>
   Id DP.Driver ->
   Id DM.Merchant ->
-  RideRequestPopupConfig ->
+  CancellationScoreRelatedConfig ->
   m Bool
-isThresholdRidesCompleted driverId merchantId rideRequestPopupConfig = do
-  let thresholdRidesCount = fromMaybe 5 rideRequestPopupConfig.thresholdRidesCount
+isThresholdRidesCompleted driverId merchantId cancellationScoreRelatedConfig = do
+  let thresholdRidesCount = fromMaybe 5 cancellationScoreRelatedConfig.thresholdRidesCount
   totalRides <- getTotalRidesCount merchantId driverId
   pure $ totalRides >= thresholdRidesCount
 
@@ -312,17 +312,18 @@ getPopupDelay ::
   Id DM.Merchant ->
   Id DP.Driver ->
   Double ->
-  RideRequestPopupConfig ->
+  CancellationScoreRelatedConfig ->
   m Seconds
-getPopupDelay merchantId driverId cancellationRatio rideRequestPopupConfig = do
-  let cancellationRatioThreshold = fromIntegral $ fromMaybe 40 rideRequestPopupConfig.thresholdCancellationScore
-  (rideRequestPopupConfig.defaultPopupDelay +)
+getPopupDelay merchantId driverId cancellationRatio cancellationScoreRelatedConfig = do
+  defaultPopupDelay <- asks (.defaultPopupDelay)
+  let cancellationRatioThreshold = fromIntegral $ fromMaybe 40 cancellationScoreRelatedConfig.thresholdCancellationScore
+  (defaultPopupDelay +)
     <$> if cancellationRatio * 100 > cancellationRatioThreshold
       then do
-        isThresholdRidesDone <- isThresholdRidesCompleted driverId merchantId rideRequestPopupConfig
+        isThresholdRidesDone <- isThresholdRidesCompleted driverId merchantId cancellationScoreRelatedConfig
         pure $
           if isThresholdRidesDone
-            then fromMaybe (Seconds 0) rideRequestPopupConfig.popupDelayToAddAsPenalty
+            then fromMaybe (Seconds 0) cancellationScoreRelatedConfig.popupDelayToAddAsPenalty
             else Seconds 0
       else pure $ Seconds 0
 
@@ -425,7 +426,7 @@ computeActualDistance ::
   m (NonEmpty DriverPoolWithActualDistResult)
 computeActualDistance orgId pickup driverPoolResults = do
   let pickupLatLong = getCoordinates pickup
-  rideRequestPopupConfig <- asks (.rideRequestPopupConfig)
+  defaultPopupDelay <- asks (.defaultPopupDelay)
   getDistanceResults <-
     Maps.getEstimatedPickupDistances orgId $
       Maps.GetDistancesReq
@@ -434,14 +435,14 @@ computeActualDistance orgId pickup driverPoolResults = do
           travelMode = Just Maps.CAR
         }
   logDebug $ "get distance results" <> show getDistanceResults
-  return $ mkDriverPoolWithActualDistResult rideRequestPopupConfig <$> getDistanceResults
+  return $ mkDriverPoolWithActualDistResult defaultPopupDelay <$> getDistanceResults
   where
-    mkDriverPoolWithActualDistResult rideRequestPopupConfig distDur = do
+    mkDriverPoolWithActualDistResult defaultPopupDelay distDur = do
       DriverPoolWithActualDistResult
         { driverPoolResult = distDur.origin,
           actualDistanceToPickup = distDur.distance,
           actualDurationToPickup = distDur.duration,
-          rideRequestPopupDelayDuration = rideRequestPopupConfig.defaultPopupDelay,
+          rideRequestPopupDelayDuration = defaultPopupDelay,
           cancellationRatio = Nothing,
           acceptanceRatio = Nothing,
           driverAvailableTime = Nothing,
