@@ -359,13 +359,11 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
           driverPoolCfg.driverPositionInfoExpiry
   maxParallelSearchRequests <- asks (.maxParallelSearchRequests)
   driversWithLessThanNParallelRequests <- case poolStage of
-    DriverSelection -> filter ((< maxParallelSearchRequests) . fst) <$> mapM (getParallelSearchRequestCount now) approxDriverPool
-    Estimate -> pure $ map (0,) approxDriverPool --estimate stage we dont need to consider actual parallel request counts
+    DriverSelection -> filterM (\dObj -> (< maxParallelSearchRequests) <$> getParallelSearchRequestCount now dObj) approxDriverPool
+    Estimate -> pure $ approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   pure $ makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   where
-    getParallelSearchRequestCount now dObj = do
-      parallelSearchRequestCount <- getValidSearchRequestCount merchantId (cast dObj.driverId) now
-      pure (parallelSearchRequestCount, dObj)
+    getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
     getRadius mRadiusStep_ = do
       let maxRadius = fromIntegral driverPoolCfg.maxRadiusOfSearch
       case mRadiusStep_ of
@@ -374,8 +372,8 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
           let radiusStepSize = fromIntegral driverPoolCfg.radiusStepSize
           min (minRadius + radiusStepSize * radiusStep) maxRadius
         Nothing -> maxRadius
-    makeDriverPoolResult :: (Int, QP.NearestDriversResult) -> DriverPoolResult
-    makeDriverPoolResult (parallelSearchRequestCount, QP.NearestDriversResult {..}) = do
+    makeDriverPoolResult :: QP.NearestDriversResult -> DriverPoolResult
+    makeDriverPoolResult QP.NearestDriversResult {..} = do
       DriverPoolResult
         { distanceToPickup = distanceToDriver,
           variant = variant,

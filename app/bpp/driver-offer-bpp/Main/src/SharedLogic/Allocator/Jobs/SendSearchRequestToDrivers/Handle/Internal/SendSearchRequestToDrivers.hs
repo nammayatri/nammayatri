@@ -48,8 +48,10 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchReq.id
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
+  forM_ driverPool $ \dPoolRes -> do
+    incrementTotalQuotesCount searchReq.providerId (cast dPoolRes.driverPoolResult.driverId) searchReq.id validTill
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   Esq.runTransaction $ do
     QSRD.setInactiveByRequestId searchReq.id -- inactive previous request by drivers so that they can make new offers.
@@ -58,7 +60,6 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
       QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = sReqFD.searchRequestId, validTill = sReqFD.searchRequestValidTill}
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
-    incrementTotalQuotesCount searchReq.providerId sReqFD.driverId searchReq.id validTill
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
     let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq dPoolRes.rideRequestPopupDelayDuration
@@ -69,7 +70,10 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
       singleBatchProcessTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
       return $ singleBatchProcessTime `addUTCTime` now
     buildSearchRequestForDriver ::
-      (MonadFlow m) =>
+      ( MonadFlow m,
+        Redis.HedisFlow m r,
+        MonadReader r m
+      ) =>
       Int ->
       DSearchReq.SearchRequest ->
       Money ->
@@ -82,6 +86,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
+      parallelSearchRequestCount <- Just <$> getValidSearchRequestCount searchReq.providerId dpRes.driverId now
       let searchRequestForDriver =
             SearchRequestForDriver
               { id = guid,
@@ -106,7 +111,6 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
                 acceptanceRatio = dpwRes.acceptanceRatio,
                 cancellationRatio = dpwRes.cancellationRatio,
                 driverAvailableTime = dpwRes.driverAvailableTime,
-                parallelSearchRequestCount = Just dpwRes.driverPoolResult.parallelSearchRequestCount,
                 ..
               }
       pure searchRequestForDriver
