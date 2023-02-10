@@ -33,7 +33,7 @@ fetchConfig merchantId serviceProvider getterFunc resultExpected = do
 
 fetchGoogleConfig :: IO ()
 fetchGoogleConfig = do
-  fetchConfig Fixtures.nammaYatriPartnerMerchantId Google func (fromJust $ parseBaseUrl "https://maps.googleapis.com/maps/api/")
+  fetchConfig Fixtures.nammaYatriPartnerMerchantId Google func (fromJust $ parseBaseUrl "http://localhost:8019/")
   where
     func (MapsServiceConfig (GoogleConfig cfg)) = cfg.googleMapsUrl
 
