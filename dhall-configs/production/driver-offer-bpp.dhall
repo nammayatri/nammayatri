@@ -161,7 +161,8 @@ let intelligentPoolConfig =
 let sendSearchRequestJobCfg =
       { driverPoolBatchesCfg, singleBatchProcessTime = +30 }
 
-let kafkaProducerCfg = { brokers = [] : List Text }
+let kafkaProducerCfg =
+      { brokers = [ "atlas-c2-kafka-brokers.kafka-cluster:9092" ] : List Text }
 
 in  { esqDBCfg
     , esqDBReplicaCfg

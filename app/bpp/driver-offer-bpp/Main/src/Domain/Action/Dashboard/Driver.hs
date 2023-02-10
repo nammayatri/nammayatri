@@ -41,7 +41,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import SharedLogic.Transporter (findMerchantByShortId)
-import qualified Storage.CachedQueries.DriverInformation as QDriverInfo
+import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
+import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
@@ -170,7 +171,7 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
 driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
 driverActivity merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
-  Common.mkDriverActivityRes <$> Esq.runInReplica (QDriverInfo.countDrivers merchant.id)
+  Common.mkDriverActivityRes <$> Esq.runInReplica (CQDriverInfo.countDrivers merchant.id)
 
 ---------------------------------------------------------------------
 enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
@@ -187,7 +188,7 @@ enableDriver merchantShortId reqDriverId = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   _vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-  QDriverInfo.updateEnabledState driverId True
+  CQDriverInfo.updateEnabledState driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
   pure Success
 
@@ -205,7 +206,7 @@ disableDriver merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  QDriverInfo.updateEnabledState driverId False
+  CQDriverInfo.updateEnabledState driverId False
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -225,7 +226,7 @@ blockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  QDriverInfo.updateBlockedState driverId True
+  CQDriverInfo.updateBlockedState driverId True
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -244,7 +245,7 @@ unblockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  QDriverInfo.updateBlockedState driverId False
+  CQDriverInfo.updateBlockedState driverId False
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -388,13 +389,12 @@ deleteDriver merchantShortId reqDriverId = do
   unless (isNothing ride) $
     throwError $ InvalidRequest "Unable to delete driver, which have at least one ride"
 
-  driverInformation <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  driverInformation <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when driverInformation.enabled $
     throwError $ InvalidRequest "Driver should be disabled before deletion"
 
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
-  QDriverInfo.deleteById driverId
   Esq.runTransaction $ do
     QIV.deleteByPersonId personId
     QImage.deleteByPersonId personId
@@ -407,6 +407,8 @@ deleteDriver merchantShortId reqDriverId = do
     QR.deleteByPersonId personId
     QVehicle.deleteById personId
     QPerson.deleteById personId
+    QDriverInfo.deleteById driverId
+  CQDriverInfo.clearDriverInfoCache driverId
   logTagInfo "dashboard -> deleteDriver : " (show driverId)
   return Success
 
@@ -427,7 +429,7 @@ unlinkVehicle merchantShortId reqDriverId = do
   Esq.runTransaction $ do
     QVehicle.deleteById personId
     QRCAssociation.endAssociation personId
-  QDriverInfo.updateEnabledVerifiedState driverId False False
+  CQDriverInfo.updateEnabledVerifiedState driverId False False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 
