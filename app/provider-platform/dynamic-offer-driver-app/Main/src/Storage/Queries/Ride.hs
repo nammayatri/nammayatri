@@ -2,7 +2,7 @@
 
 module Storage.Queries.Ride where
 
-import qualified "dashboard-helper-api" Dashboard.BPP.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import Data.Time hiding (getCurrentTime)
 import Domain.Types.Booking as Booking
 import Domain.Types.Merchant

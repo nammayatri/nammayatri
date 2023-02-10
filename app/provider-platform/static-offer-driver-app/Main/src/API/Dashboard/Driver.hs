@@ -1,6 +1,6 @@
 module API.Dashboard.Driver where
 
-import qualified "dashboard-helper-api" Dashboard.BPP.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Types.Merchant as DM
 import Environment

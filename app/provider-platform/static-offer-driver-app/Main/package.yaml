@@ -106,7 +106,7 @@ library:
 executables:
   static-offer-driver-app-exe:
     main: Main.hs
-    source-dirs: server/BPP
+    source-dirs: server/ProviderPlatform
     ghc-options:
       - -threaded
       - -rtsopts

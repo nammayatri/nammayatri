@@ -8,7 +8,7 @@ module Domain.Action.Dashboard.Merchant
 where
 
 import Control.Applicative ((<|>))
-import qualified "dashboard-helper-api" Dashboard.BAP.Merchant as Common
+import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment

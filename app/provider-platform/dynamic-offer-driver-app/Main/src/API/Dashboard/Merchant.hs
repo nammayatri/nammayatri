@@ -1,6 +1,6 @@
 module API.Dashboard.Merchant where
 
-import qualified "dashboard-helper-api" Dashboard.BPP.Merchant as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import qualified Domain.Action.Dashboard.Merchant as DMerchant
 import qualified Domain.Types.Merchant as DM
 import Environment

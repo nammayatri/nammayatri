@@ -4,8 +4,8 @@ module API
   )
 where
 
-import qualified API.BPP as BPP
 import qualified "lib-dashboard" API.Dashboard as Dashboard
+import qualified API.ProviderPlatform as BPP
 import qualified Data.ByteString as BS
 import Data.OpenApi
 import "lib-dashboard" Environment

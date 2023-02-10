@@ -4,7 +4,7 @@ import qualified "dynamic-offer-driver-app" API.Dashboard as DashboardAPI
 import qualified "dynamic-offer-driver-app" API.UI.Driver as DriverAPI
 import "dynamic-offer-driver-app" API.UI.Location as LocationAPI
 import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
-import qualified "dashboard-helper-api" Dashboard.BPP.Ride as Dashboard
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Dashboard
 import Data.Time
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide

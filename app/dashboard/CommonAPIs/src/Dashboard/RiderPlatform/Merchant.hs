@@ -1,0 +1,62 @@
+{-# LANGUAGE DerivingStrategies #-}
+
+module Dashboard.RiderPlatform.Merchant
+  ( module Dashboard.RiderPlatform.Merchant,
+    module Reexport,
+  )
+where
+
+import Dashboard.Common.Merchant as Reexport
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Predicate
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Validation
+import Servant
+
+---------------------------------------------------------
+-- merchant update --------------------------------------
+
+type MerchantUpdateAPI =
+  "update"
+    :> ReqBody '[JSON] MerchantUpdateReq
+    :> Post '[JSON] APISuccess
+
+data MerchantUpdateReq = MerchantUpdateReq
+  { name :: Maybe Text,
+    exoPhone :: Maybe Text,
+    exoPhoneCountryCode :: Maybe Text,
+    fcmConfig :: Maybe FCMConfigUpdateReq,
+    gatewayUrl :: Maybe BaseUrl,
+    registryUrl :: Maybe BaseUrl
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MerchantUpdateTReq = MerchantUpdateTReq
+  { name :: Maybe Text,
+    exoPhone :: Maybe Text,
+    exoPhoneCountryCode :: Maybe Text,
+    fcmConfig :: Maybe FCMConfigUpdateTReq,
+    gatewayUrl :: Maybe BaseUrl,
+    registryUrl :: Maybe BaseUrl
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+validateMerchantUpdateReq :: Validate MerchantUpdateReq
+validateMerchantUpdateReq MerchantUpdateReq {..} =
+  sequenceA_
+    [ validateField "name" name $ InMaybe $ MinLength 3 `And` P.name,
+      validateField "exoPhone" exoPhone $ InMaybe P.mobileNumber,
+      validateField "exoPhoneCountryCode" exoPhoneCountryCode $ InMaybe P.mobileCountryCode,
+      validateMbObject "fcmConfig" fcmConfig validateFCMConfigUpdateReq
+    ]
+
+instance HideSecrets MerchantUpdateReq where
+  type ReqWithoutSecrets MerchantUpdateReq = MerchantUpdateTReq
+  hideSecrets MerchantUpdateReq {..} =
+    MerchantUpdateTReq
+      { fcmConfig = hideSecrets <$> fcmConfig,
+        ..
+      }

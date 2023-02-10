@@ -7,7 +7,7 @@ import Control.Exception (ErrorCall (ErrorCall))
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function
-import qualified DriverOfferBPP.Processor as DO
+import qualified DynamicOfferDriverApp.Processor as DO
 import Environment
 import qualified EulerHS.Runtime as L
 import Kafka.Consumer (ConsumerRecord (crKey, crValue))

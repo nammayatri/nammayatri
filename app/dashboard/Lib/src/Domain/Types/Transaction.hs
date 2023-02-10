@@ -1,9 +1,9 @@
 module Domain.Types.Transaction where
 
-import qualified "dashboard-helper-api" Dashboard.BPP.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.BPP.Driver.Registration as Common
-import qualified "dashboard-helper-api" Dashboard.BPP.Ride as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude

@@ -5,7 +5,7 @@ module Domain.Action.Dashboard.Ride
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.BPP.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Booking.BookingLocation as DBLoc

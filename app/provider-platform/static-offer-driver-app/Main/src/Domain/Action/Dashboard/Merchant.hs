@@ -8,7 +8,7 @@ module Domain.Action.Dashboard.Merchant
 where
 
 import Control.Applicative
-import qualified "dashboard-helper-api" Dashboard.BPP.Merchant as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
