@@ -15,6 +15,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import EulerHS.Prelude (whenNothing_)
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude
@@ -222,8 +223,10 @@ syncCancelledRide ride booking merchant = do
 
 syncCompletedRide :: DRide.Ride -> DBooking.Booking -> Flow Common.RideSyncRes
 syncCompletedRide ride booking = do
-  -- for old rides fareParametersId = Nothing, so throw E400
-  fareParametersId <- ride.fareParametersId & fromMaybeM (FareParametersDoNotExist ride.id.getId)
+  whenNothing_ ride.fareParametersId $ do
+    -- only for old rides
+    logWarning "No fare params linked to ride. Using fare params linked to booking, they may be not actual"
+  let fareParametersId = fromMaybe booking.fareParams.id ride.fareParametersId
   fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
   handle (errHandler ride.status booking.status "ride completed") $
     CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters
