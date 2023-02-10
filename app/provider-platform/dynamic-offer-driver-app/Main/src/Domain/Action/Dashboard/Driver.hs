@@ -42,6 +42,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import SharedLogic.Transporter (findMerchantByShortId)
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
+import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
@@ -406,8 +407,9 @@ deleteDriver merchantShortId reqDriverId = do
     QDriverLocation.deleteById personId
     QR.deleteByPersonId personId
     QVehicle.deleteById personId
-    QPerson.deleteById personId
     QDriverInfo.deleteById driverId
+    QDriverFlowStatus.deleteById personId
+    QPerson.deleteById personId
   CQDriverInfo.clearDriverInfoCache driverId
   logTagInfo "dashboard -> deleteDriver : " (show driverId)
   return Success

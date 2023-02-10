@@ -11,6 +11,9 @@ import Storage.Tabular.Driver.DriverFlowStatus
 create :: DDFS.DriverFlowStatus -> SqlDB ()
 create = Esq.create
 
+deleteById :: Id Person -> SqlDB ()
+deleteById = Esq.deleteByKey @DriverFlowStatusT
+
 getStatus ::
   (Transactionable m) =>
   Id Person ->
