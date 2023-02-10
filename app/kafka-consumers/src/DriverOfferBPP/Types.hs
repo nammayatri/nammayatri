@@ -2,9 +2,9 @@ module DriverOfferBPP.Types where
 
 import Data.Time
 import EulerHS.Prelude hiding (id)
+import qualified Kafka.Consumer as C
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Types.Id (Id)
-import qualified Kafka.Consumer as C
 
 data DriverAvailability = DriverAvailability
   { id :: Id DriverAvailability,
