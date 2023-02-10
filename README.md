@@ -159,7 +159,7 @@ Each of the application has particular set of defined APIs and Schemas. To get a
 | -----------------------------------------|--------|
 | rider-app                                | `8013` |
 | static-offer-driver-app                  | `8014` |
-| beckn-gateway                            | `8015` |
+| mobility-gateway                         | `8015` |
 | mock-registry                            | `8020` |
 | public-transport-rider-platform          | `8023` |
 | public-transport-search-consumer         | `8024` |
@@ -179,49 +179,49 @@ The entire project is structured as a collection of smaller focused packages, wh
 
 Each package has clear separation of focuses w.r.t the functionality it provides, which helps with maintenance and development and provides clear designated areas to look at for a specific desired behavior and functionality. A good overview of the app structure be found in the table below:- 
 
-| S.no | Module                         | Executable                           | Function                                                               |
-|:-----|:-------------------------------|--------------------------------------|:-----------------------------------------------------------------------|
-| 1.   | bap                            |                                      |                                                                        |
-| 1.1  | - app-backend -> rider-app     | app-backend-exe                      | Frontend facing APIs (BAP), has more end-user specific implementations |
-|      |                                |                                      |                                                                        |
-| 1.2  | - public-transport             |                                      |                                                                        |
-|      | * Main                         | public-transport-bap-exe             |                                                                        |
-|      | * search-consumer              | public-transport-search-consumer-exe | This app receives and processes search requests from app-backend       |
-|      |                                |                                      |                                                                        |
-| 2.   | bpp                            |                                      |                                                                        |
-| 2.1  | - beckn-transport              |                                      |                                                                        |
-|      | * Allocator                    | allocation-service-exe               |                                                                        |
-|      | * Main                         | beckn-transport-exe                  |                                                                        |
-|      | * Scheduler                    | transporter-scheduler-exe            |                                                                        |
-|      |                                |                                      |                                                                        |
-| 2.2  | - driver-offer-bpp             |                                      |                                                                        |
-|      | * Allocator                    | driver-offer-allocator-exe           |                                                                        |
-|      | * Main                         | driver-offer-bpp-exe                 |                                                                        |
-|      |                                |                                      |                                                                        |
-| 2.3  | - driver-tracking-health-check | driver-tracking-healthcheck-exe      |                                                                        |
-|      |                                |                                      |                                                                        |
-| 3.   | dashboard                      |                                      |                                                                        |
-| 3.1  | - BAPDashboard                 | bap-dashboard-exe                    | BAP specific dashboard                                                 |
-| 3.2  | - BPPDashboard                 | bpp-dashboard-exe                    | BPP specific dashboard                                                 |
-|      |                                |                                      |                                                                        |
-| 4.   | example-service                | example-service-exe                  | Example (template) of a service for faster service creation.           |
-|      |                                |                                      |                                                                        |
-| 5.   | kafka-consumers                | kafka-consumers-exe                  |                                                                        |
-|      |                                |                                      |                                                                        |
-| 6.   | mocks                          |                                      |                                                                        |
-| 6.1  | - bap                          | mock-bap-exe                         | Mock bap to trigger bpp endpoints, receive responces and log them      |
-| 6.2  | - fcm                          | mock-fcm-exe                         | Mock FCM                                                               |
-| 6.3  | - google                       | mock-google-exe                      | Mock for Google with hardcoded values for using in stack test          |
-| 6.4  | - idfy                         | mock-idfy-exe                        |                                                                        |
-| 6.5  | - public-transport-bpp         | mock-public-transport-bpp-exe        |                                                                        |
-| 6.6  | - sms                          | mock-sms-exe                         | Mock Sms                                                               |
-|      |                                |                                      |                                                                        |
-| 7.   | scheduler-example              | scheduler-example-app-exe            | example applications that uses the scheduler library                   |
-|      |                                | scheduler-example-scheduler-exe      |                                                                        |
-| 8.   | utils                          |                                      |                                                                        |
-| 8.1  | - image-api-helper             | image-api-helper-exe                 |                                                                        |
-| 8.2  | - route-extractor              | route-extractor-exe                  |                                                                        |
-|      |                                |                                      |                                                                        |
+| S.no | Module                               | Executable                                  | Function                                                                                   |
+|:-----|:-------------------------------------|---------------------------------------------|:-------------------------------------------------------------------------------------------|
+| 1.   | rider-platform                       |                                             |                                                                                            |
+| 1.1  | - rider-app                          | rider-app-exe                               | Frontend facing APIs (rider-platform), has more end-user specific implementations          |
+|      |                                      |                                             |                                                                                            |
+| 1.2  | - public-transport                   |                                             |                                                                                            |
+|      | * Main                               | public-transport-rider-platform-exe         |                                                                                            |
+|      | * search-consumer                    | public-transport-search-consumer-exe        | This app receives and processes search requests from rider-app                             |
+|      |                                      |                                             |                                                                                            |
+| 2.   | provider-platform                    |                                             |                                                                                            |
+| 2.1  | - static-offer-driver-app            |                                             |                                                                                            |
+|      | * Allocator                          | allocation-service-exe                      |                                                                                            |
+|      | * Main                               | static-offer-driver-app-exe                 |                                                                                            |
+|      | * Scheduler                          | transporter-scheduler-exe                   |                                                                                            |
+|      |                                      |                                             |                                                                                            |
+| 2.2  | - dynamic-offer-driver-app           |                                             |                                                                                            |
+|      | * Allocator                          | driver-offer-allocator-exe                  |                                                                                            |
+|      | * Main                               | dynamic-offer-driver-app-exe                |                                                                                            |
+|      |                                      |                                             |                                                                                            |
+| 2.3  | - driver-tracking-health-check       | driver-tracking-healthcheck-exe             |                                                                                            |
+|      |                                      |                                             |                                                                                            |
+| 3.   | dashboard                            |                                             |                                                                                            |
+| 3.1  | - rider-dashboard                    | rider-dashboard-exe                         | rider specific dashboard                                                                   |
+| 3.2  | - provider-dashboard                 | provider-dashboard-exe                      | provider specific dashboard                                                                |
+|      |                                      |                                             |                                                                                            |
+| 4.   | example-service                      | example-service-exe                         | Example (template) of a service for faster service creation.                               |
+|      |                                      |                                             |                                                                                            |
+| 5.   | kafka-consumers                      | kafka-consumers-exe                         |                                                                                            |
+|      |                                      |                                             |                                                                                            |
+| 6.   | mocks                                |                                             |                                                                                            |
+| 6.1  | - rider-platform                     | mock-rider-platform-exe                     | Mock rider-platform to trigger provider-platform endpoints, receive responces and log them |
+| 6.2  | - fcm                                | mock-fcm-exe                                | Mock FCM                                                                                   |
+| 6.3  | - google                             | mock-google-exe                             | Mock for Google with hardcoded values for using in stack test                              |
+| 6.4  | - idfy                               | mock-idfy-exe                               |                                                                                            |
+| 6.5  | - public-transport-provider-platform | mock-public-transport-provider-platform-exe |                                                                                            |
+| 6.6  | - sms                                | mock-sms-exe                                | Mock Sms                                                                                   |
+|      |                                      |                                             |                                                                                            |
+| 7.   | scheduler-example                    | scheduler-example-app-exe                   | example applications that uses the scheduler library                                       |
+|      |                                      | scheduler-example-scheduler-exe             |                                                                                            |
+| 8.   | utils                                |                                             |                                                                                            |
+| 8.1  | - image-api-helper                   | image-api-helper-exe                        |                                                                                            |
+| 8.2  | - route-extractor                    | route-extractor-exe                         |                                                                                            |
+|      |                                      |                                             |                                                                                            |
 
 
 ## Contributing
