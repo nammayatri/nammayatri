@@ -1,78 +1,52 @@
-# Atlas
-<hr style="height: 1px; margin-top:-15px;">
+# Juspay Mobility
 
-Atlas is a set of mobility application running on the top of beckn. Beckn is an open protocol that enables location-aware, local commerce across industries. Know more about [beckn](https://beckn.org/).
+## Introduction
 
+This is the code repository for the open mobility platform developed by Juspay.
+The mobility platform is powering the next-generation of mobility applications in India, it is based on open protocols with the goal of empowering and enabling the end-users.
 
-## Table of Contents
-<hr style="height: 1px; margin-top:-15px;"></hr>
-
-  * [Getting Started](#getting-started)
-    + [Pre-requisite to get started](#pre-requisite-to-get-started)
-    + [Installation](#installation)
-    + [Compilation](#compilation)
-    + [Running the services](#running-the-services)
-    + [Running the applications](#running-the-applications)
-  * [Usage](#usage)
-  * [Contribution](#contribution)
-  * [Project structure](#project-structure)
-    + [Modules](#modules)
-    + [Flow](#flow)
-  * [Troubleshooting](#troubleshooting)
-  * [Contact](#contact)
-  * [License](#license)
+The code in this repository powers the entire "Namma Yatri" platform, application & services.
 
 ## Getting Started
-<hr style="height: 1px; margin-top:-15px;"></hr>
 
-### Pre-requisite to get started
+Getting Started with building and running the project.
 
-1. [Docker](https://www.docker.com/products/docker-desktop/)
+### Pre-requisites
 
-2. [Stack](https://docs.haskellstack.org/en/stable/install_and_upgrade/)
+Before we can build the mobility project, there are some pre-requisites in the form of external dependencies which you must install, depending on you OS.
 
-For Mac
+#### Haskell language toolchain
+
+You'd need the Haskell language toolchain (GHC, cabal) installed in order build the project.
+
+[GHCup](https://https://www.haskell.org/ghcup) is the preferred method to install Haskell.
+
+
+#### Tools
+
+These tools are required when working with the mobility repository:-
+
+1. [Docker](https://www.docker.com/products/docker-desktop/) - we use docker and docker-compose for containers.
+2. [Stack](https://docs.haskellstack.org/en/stable/install_and_upgrade/) - we use the stack build tool for building and running the entire project. ([GHCup](https://https://www.haskell.org/ghcup) can also be used to install Stack)
+
+For Mac users, some additional tools may be required:-
 
 1. [Xcode](https://developer.apple.com/xcode/)
-
 2. [Home brew](https://brew.sh)
 
-### M1 Mac setup (using rosetta)
+#### Linters and formatters
 
-Brew setup:
-
-1. In Finder, Right click on Terminal application and click on GetInfo, enable open using Rosetta.
-2. Open Finder.
-3. Run the following commands :
-  - softwareupdate --install-rosetta
-  - arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-
-Haskell:
-
-1. arch -x86_64 /usr/local/bin/brew install haskell-stack
-
-### Installation
-
-To set up your development environment, from project root run
+Install haskell linter and formatter by running this command in home directory, after you have stack installed.
 
 ```
-$ ./dev/setup.sh
+$ stack install hlint ormolu
 ```
 
-Install haskell linter and formatter by running this command in home directory [intel machine]
+#### Extra Dependencies
 
-```
-$ stack install hlint-3.2.7 ormolu-0.1.4.1
-```
+Depending on your OS, you'd need install these dependencies or their equivalents.
 
-Note :- For M1 Machine Setup, add the installation path `/Users/{username}/.local/bin` in the  environment variable with the following command:-
-
-```
-$ echo 'export PATH="/Users/shailesh.gahlawat/.local/bin:$PATH"' >> ~/.zshrc
-$ source ~/.zshrc
-```
-
-Mac (other dependencies)
+For Mac
 
 ```
 $ brew install libpq
@@ -83,7 +57,7 @@ $ brew install jq
 $ brew install parallel
 ```
 
-M1 - Mac (other dependencies)
+For M1 or newer Macs (other dependencies)
 
 ```
 arch -x86_64 /usr/local/bin/brew install libpq
@@ -94,7 +68,7 @@ arch -x86_64 /usr/local/bin/brew install jq
 arch -x86_64 /usr/local/bin/brew install parallel
 ```
 
-Linux (other dependencies)
+For Linux (other dependencies) or your package-manager equivalents
 
 ```
 $ sudo apt-get install libpq-dev
@@ -105,20 +79,51 @@ $ sudo apt-get install jq
 $ sudo apt-get install parallel
 ```
 
-### Compilation
+### Building and Development
 
-Compile the project with
+After you've all the pre-requisite tools & dependencies installed, we can build the project for development.
+
+#### Building
+
+To build the project for development, we should compile the project with the command
+
 ```
 $ stack build --fast
 ```
+
+The `--fast` flag disables some compile-time optimizations for faster compile times and should only be used for development builds.
+
 > **_Note:_**  For deployment, `stack build` command should be used to compile with optimizations.
 
-### Running the services
+This should start building the project and all it's dependencies.
 
- For running the database, redis, passetto and kafka run this command
+#### Development
+
+Once the above build command completes successfully, we can run the project for development.
+
+The `dev/` folder at the project top-level contains all the relevant files and configs, should you need to change or inspect them.
+
+##### Setting up development environment
+
+To set up your development environment, from project root run
+
+```
+$ ./dev/setup.sh
+```
+
+
+##### Running the services
+To run the project, we'd first need to run some services. These are provided via helpful `make` commands.
+
+
+For running the database, redis, passetto and kafka run this command
 ```
 $ make run-svc
 ```
+
+That should run most of the services required.
+
+More services, if needed, can be run with the following commands.
 
 For running pgadmin run this command
 ```
@@ -130,14 +135,21 @@ For running monitoring services like prometheus and grafana use this command
 $ make run-monitoring
 ```
 
-### Running the applications
-For running all the applications use this command
+
+### Testing
+
+The project comes with a range of tests in it's test-suites. These tests should pass for each correct build.
+
+To run the test-suite for the project, first ensure you have the services running (see [running servcies section](#running-the-services)).
+
+Run the following command in the project root folder after the services are up and running:-
+
 ```
-$ make run-mobility-stack
+$ stack test
 ```
 
+
 ## Usage
-<hr style="height: 1px; margin-top:-15px;"></hr>
 
 Each of the application has particular set of defined APIs and Schemas. To get available APIs/Schemas of any particular application, follow these steps
 
@@ -159,92 +171,116 @@ Each of the application has particular set of defined APIs and Schemas. To get a
 2. Paste the copied swagger json inside https://editor.swagger.io/
 3. To run the requests one can use the Postman or any other API platform.
 
-## Contribution
-<hr style="height: 1px; margin-top:-15px;"></hr>
+## Project Structure
 
-To contribute, follow these steps:
+The top level of the project has a very descriptive folder structure with helpful names.
 
-1. Fork this repository.
-2. Create a branch: `git checkout -b <branch_name>`. Branch name should consists of two or three parts, separated by /:
-   1. Either of three: _feature_, _fix_, _refactor_
-   2. Task code, e.g. BKN-123
-   3. Human readable description in kebab case
-3. Make your changes and commit them: `git commit -m '<commit_message>'`. A good practice is to prefix commit with task code, like `[BKN-1037] Replace Proxy-Authorization -> X-Gateway-Authorization` it also becomes clickable and this commit is added to task even if it is in some branch that is not directly related to a PR. But this is not mandatory.
-4. Push to the original branch: `git push origin <project_name>/<location>`
-5. Create the pull request.
+The entire project is structured as a collection of smaller focused packages, which can be found listed in the top level `stack.yaml` file, under the _packages_ section.
 
-Alternatively see the GitHub documentation on [creating a pull request](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request).
+Each package has clear separation of focuses w.r.t the functionality it provides, which helps with maintenance and development and provides clear designated areas to look at for a specific desired behavior and functionality. A good overview of the app structure be found in the table below:- 
 
-## Project structure
-<hr style="height: 1px; margin-top:-15px;"></hr>
+| S.no | Module                         | Executable                           | Function                                                               |
+|:-----|:-------------------------------|--------------------------------------|:-----------------------------------------------------------------------|
+| 1.   | bap                            |                                      |                                                                        |
+| 1.1  | - app-backend -> rider-app     | app-backend-exe                      | Frontend facing APIs (BAP), has more end-user specific implementations |
+|      |                                |                                      |                                                                        |
+| 1.2  | - public-transport             |                                      |                                                                        |
+|      | * Main                         | public-transport-bap-exe             |                                                                        |
+|      | * search-consumer              | public-transport-search-consumer-exe | This app receives and processes search requests from app-backend       |
+|      |                                |                                      |                                                                        |
+| 2.   | bpp                            |                                      |                                                                        |
+| 2.1  | - beckn-transport              |                                      |                                                                        |
+|      | * Allocator                    | allocation-service-exe               |                                                                        |
+|      | * Main                         | beckn-transport-exe                  |                                                                        |
+|      | * Scheduler                    | transporter-scheduler-exe            |                                                                        |
+|      |                                |                                      |                                                                        |
+| 2.2  | - driver-offer-bpp             |                                      |                                                                        |
+|      | * Allocator                    | driver-offer-allocator-exe           |                                                                        |
+|      | * Main                         | driver-offer-bpp-exe                 |                                                                        |
+|      |                                |                                      |                                                                        |
+| 2.3  | - driver-tracking-health-check | driver-tracking-healthcheck-exe      |                                                                        |
+|      |                                |                                      |                                                                        |
+| 3.   | dashboard                      |                                      |                                                                        |
+| 3.1  | - BAPDashboard                 | bap-dashboard-exe                    | BAP specific dashboard                                                 |
+| 3.2  | - BPPDashboard                 | bpp-dashboard-exe                    | BPP specific dashboard                                                 |
+|      |                                |                                      |                                                                        |
+| 4.   | example-service                | example-service-exe                  | Example (template) of a service for faster service creation.           |
+|      |                                |                                      |                                                                        |
+| 5.   | kafka-consumers                | kafka-consumers-exe                  |                                                                        |
+|      |                                |                                      |                                                                        |
+| 6.   | mocks                          |                                      |                                                                        |
+| 6.1  | - bap                          | mock-bap-exe                         | Mock bap to trigger bpp endpoints, receive responces and log them      |
+| 6.2  | - fcm                          | mock-fcm-exe                         | Mock FCM                                                               |
+| 6.3  | - google                       | mock-google-exe                      | Mock for Google with hardcoded values for using in stack test          |
+| 6.4  | - idfy                         | mock-idfy-exe                        |                                                                        |
+| 6.5  | - public-transport-bpp         | mock-public-transport-bpp-exe        |                                                                        |
+| 6.6  | - sms                          | mock-sms-exe                         | Mock Sms                                                               |
+|      |                                |                                      |                                                                        |
+| 7.   | scheduler-example              | scheduler-example-app-exe            | example applications that uses the scheduler library                   |
+|      |                                | scheduler-example-scheduler-exe      |                                                                        |
+| 8.   | utils                          |                                      |                                                                        |
+| 8.1  | - image-api-helper             | image-api-helper-exe                 |                                                                        |
+| 8.2  | - route-extractor              | route-extractor-exe                  |                                                                        |
+|      |                                |                                      |                                                                        |
 
-### Modules
-<hr style="height: 1px; margin-top:-10px;"></hr>
 
-#### `rider-app`
-Frontend facing APIs (Rider platform), has more end-user specific implementations.
-#### `beckn-transport`
-Beckn provider (Provider platform), implementing mobility spec. This module contains two executables:
- * `beckn-transport-exe`:  Provider platform server
- * `beckn-transport-btm-exe`:  background task manager. This component runs the allocation service responsible for allocating rides to drivers.
-#### `beckn-gateway`
-Beckn gateway (BG)
+## Contributing
 
-#### `mobility-core`
-Common library where the API types, unified data models will be there
+We strongly believe in the power of open-source. The main purpose of this repository is that the development of the mobility stack happens at an open-to-all platform, where anyone can inspect and contribute. The repository should evolve, adding more features and make existing features faster, correct and easy to use.
+We welcome contributions to the repository in the form of bug-reports, code patches, documentation updates and feature requests or heads-up for breaking changes in any of the dependencies.
 
-## Troubleshooting
-<hr style="height: 1px; margin-top:-15px;"></hr>
+### Code of Conduct
 
-If you are facing any issue with the application, you can debug it through logs
+TBD (add a link to the complete code of conduct)
 
-#### Application logs
+### Guidelines
 
-Every log line consists of the following sections - timestamp, log level (INFO, WARNING, ERROR, DEBUG), host name, log tags and log data.
+In order to keep the project healthy and the load on the maintainers in check, please have a look at our general contribution guidelines.
 
-Application logs are under beckn index in Kibana
+[TBD a link to a full guidelines & CONTRIBUTING list, but general points can include:- ]
 
-<i>Sample application log line</i>
-```
-2022-06-06 10:55:24.854380462 UTC INFO> @beckn-transport-sandbox-fd6c557fc-qp5xs [requestId-6d567ca3-3a86-424c-8a59-55335eb8e605,
-driverLocationUpdate] |> got location updates: 6f7ecd55-0be2-45aa-8fa3-779c6e07b0d9 [{"ts":"2022-06-06T10:55:24.938Z","pt":{"lat":9.9816358,"lon":76.2998842},"acc":6}]
-```
+#### When opening an issue
 
-Details of sections in the above log line example
+    1. When opening an issue, please mention the problem encountered in detail, steps to reproduce the issue, tooling & compiler versions used as well as your OS or linux distro version.
 
-* <b>Timestamp</b>: `2022-06-06 10:55:24.854380462 UTC`
-* <b>Log level</b>: `INFO`
-* <b>Host name</b>: `beckn-transport-sandbox-fd6c557fc-qp5xs`
-* <b>Log tags</b>: `requestId-6d567ca3-3a86-424c-8a59-55335eb8e605, driverLocationUpdate`
-* <b>Log data</b>:
-    ```
-    got location updates: 6f7ecd55-0be2-45aa-8fa3-779c6e07b0d9
-    [{"ts":"2022-06-06T10:55:24.938Z","pt":{"lat":9.9816358,"lon":76.2998842},"acc":6}]
-    ```
+    2. Please ensure that you have all the dependencies installed as per the instructions before opening a build-error issue.
 
-Depending on the log defined in code, log tags and log data will change, rest of the sections values will depend on the runtime environment.
+#### When opening a pull-request
 
-For logs related to incoming requests, log tags will include request-id generated by the load balancer, using which we can track the logs for a particular request. In the above example, we can search for requestId-6d567ca3-3a86-424c-8a59-55335eb8e605 in Kibana (beckn index) to get logs related to that API.
+When contributing to mobility, it's a good idea to follow the following general guidelines.
 
-Some logs are tagged with transaction-ids or person-ids. You can search for relevant log tags and view logs related to that. To see all tags being used, check for withLogTag function usage in code.
-
-**Commonly used log search keywords**
-
-| Keyword | Detail |
-|---------|--------|
-|`Beckn-[deployment-name]-[master|sandbox]` | To view all logs related to that deployment. Replace [deployment-name] with its value and [master\|sandbox] depending on which environment you are looking for
-|`"UTC ERROR"` | To look for all errors
-|`"Request&Response"` | Application incoming API log. Contains all header information along with response status code
-|`txnId` |  To get transactionIds tagged to incoming Beckn APIs. Useful to check APIs related to one transaction.
-
-Any of the above keywords can be combined with operators like AND, NOT, OR etc. (see KQL doc for more info) to refine logs further.
-
-## Contact
-<hr style="height: 1px; margin-top:-15px;"></hr>
-
-// TODO
+1. Fork the repository.
+2. Create your branch from `master`.
+3. If you've added some code which would need to be tested or fixed a bug, consider adding tests for it if required.
+4. Please ensure that all tests in the test-suite pass after running `stack test`.
+5. Consider fixing all linting issues as suggested by the linter we use - hlint.
+6. Format your code with the code formatter we use for the project - Ormolu.
+7. Raise a pull request, referring the issue it solves.
+8. More points TBD ...
 
 ## License
-<hr style="height: 1px; margin-top:-15px;"></hr>
 
-// TODO
+TBD: The type of license for mobility.
+
+## FAQs
+
+1. My project doesn't build.
+
+    This could be because of a number of reasons. Most commonly though, we've found that more often than not it's because of the following reasons:-
+
+    * We're missing a (OS specific) dependency.
+    * Have an older or really new version of a required dependency.
+    * Missing a required tool like stack or GHC.
+    * Have incompatible version of the above tools like stack or GHC (though using stack minimizes this)
+    * Our PATH environment/shell variable is not correctly configured.
+    * We're running an incompatible, older or unsupported OS or OS version.
+
+2. I can't run the services correctly.
+
+    To make sure you can run the services correctly for development and testing, please ensure that you have Docker & Docker-compose installed correctly, are configured correctly in you PATH variable and you have the required permissions to run them.
+
+3. I can't figure out the project structure.
+
+    Please refer to the [Project Structure Section](#project-structure)
+
+4. TBD...
