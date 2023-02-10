@@ -1,4 +1,4 @@
-module SharedLogic.Share where
+module SharedLogic.Estimate where
 
 import qualified Domain.Types.Estimate as DEstimate
 import Kernel.Prelude

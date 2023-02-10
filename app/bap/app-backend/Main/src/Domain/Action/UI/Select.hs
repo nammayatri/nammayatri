@@ -23,7 +23,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.Share (checkIfEstimateCancelled)
+import SharedLogic.Estimate (checkIfEstimateCancelled)
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote

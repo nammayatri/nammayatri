@@ -25,7 +25,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.Share (checkIfEstimateCancelled)
+import SharedLogic.Estimate (checkIfEstimateCancelled)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -61,18 +61,18 @@ data ConfirmQuoteDetails
 confirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DQuote.Quote -> m DConfirmRes
 confirm personId quoteId = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
-  estimate <- DB.runInReplica $ QEstimate.findOneEstimateByRequestId quote.requestId >>= fromMaybeM EstimateNotFound
-  checkIfEstimateCancelled estimate.id estimate.status
   now <- getCurrentTime
-  searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus
-  unless (null activeBooking) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   case quote.quoteDetails of
     DQuote.OneWayDetails _ -> pure ()
     DQuote.RentalDetails _ -> pure ()
     DQuote.DriverOfferDetails driverOffer -> do
+      estimate <- DB.runInReplica $ QEstimate.findOneEstimateByRequestId quote.requestId >>= fromMaybeM EstimateNotFound
+      checkIfEstimateCancelled estimate.id estimate.status
       when (driverOffer.validTill < now) $
         throwError $ QuoteExpired quote.id.getId
+  searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
+  activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus
+  unless (null activeBooking) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
