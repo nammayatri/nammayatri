@@ -20,8 +20,9 @@ content-type: application/json
 [
     {
         "pt": {
-            "lon": 76.308364,
-            "lat": 10.025263
+            "lat": 14.445332,
+            "lon": 75.919028
+
         },
         "ts": "{{$localDatetime iso8601}}"
     }
@@ -71,34 +72,34 @@ token: {{app-token}}
   "contents" : {
     "origin": {
       "address": {
-          "street": "Edapally Metro Station",
-          "state": "Kerala",
+          "street": "60 Feet Rd",
+          "state": "Karnataka",
           "door": "",
           "country": "India",
-          "city": "Kochi",
+          "city": "Davanagere",
           "building": " ",
           "areaCode": "",
-          "area": "Edappally"
+          "area": "Vidyanagar"
       },
       "gps": {
-          "lon": 76.308364,
-          "lat": 10.025263
+          "lat": 14.445332,
+          "lon": 75.919028
       }
     },
     "destination": {
       "address": {
-              "street": "Ambattukavu",
-              "state": "Kerala",
+              "street": "Hadadi Rd",
+              "state": "Karnataka",
               "door": "",
               "country": "India",
-              "city": "Aluva",
-              "building": "Ambattukavu metro station",
+              "city": "Davanagere",
+              "building": "207",
               "areaCode": "",
-              "area": "Choornikkara"
+              "area": "Nituvalli"
           },
       "gps": {
-          "lon": 76.3388894,
-          "lat": 10.0792806
+          "lat": 14.441555,
+          "lon": 75.922259
       }
     }
   }
@@ -207,13 +208,14 @@ content-type: application/json
 {
     "rideOtp": "{{otp}}",
     "point": {
-            "lon": 76.308364,
-            "lat": 10.025263
+            "lat": 14.445332,
+            "lon": 75.919028
     }
 }
 
-# 76.308364, 10.025263
 ###
+
+# location updates taken from karnatakaLocationUpdates, so mock-google could handle it
 
 # @name update1
 POST {{driver-offer-bpp-host}}/ui/driver/location
@@ -223,34 +225,36 @@ content-type: application/json
 [
     {
         "pt": {
-            "lon": 76.308364,
-            "lat": 10.025263
+            "lat": 14.445332,
+            "lon": 75.919028
+
         },
         "ts": "{{$localDatetime iso8601}}"
     },
     {
         "pt": {
-            "lat": 10.036754844278509,
-            "lon": 76.31406568451686
+            "lat": 14.445488,
+            "lon": 75.919687
+
         },
         "ts": "{{$localDatetime iso8601}}",
-        "aux": "Pathadippalam metro"
+        "aux": "Tharalabalu Badavane"
     },
     {
         "pt": {
-            "lat": 10.047446731143813,
-            "lon": 76.3182331061409
+            "lat": 14.445093,
+            "lon": 75.919955
+
         },
-        "ts": "{{$localDatetime iso8601}}",
-        "aux": "Cochi university metro"
+        "ts": "{{$localDatetime iso8601}}"
     },
     {
         "pt": {
-            "lat": 10.059363529228063,
-            "lon": 76.32187725922056
+            "lat": 14.444636,
+            "lon": 75.920288
         },
         "ts": "{{$localDatetime iso8601}}",
-        "aux": "Kalamassery metro"
+        "aux": "1st Main Rd"
     }
 ]
 
@@ -264,19 +268,27 @@ content-type: application/json
 [
     {
         "pt": {
-            "lat": 10.072808633266954,
-            "lon": 76.33348375279246
+            "lat": 14.444491,
+            "lon": 75.920846
         },
         "ts": "{{$localDatetime iso8601}}",
-        "aux": "Muttom metro"
+        "aux": "2nd Cross Rd"
     },
     {
         "pt": {
-            "lat": 10.080241882783683,
-            "lon": 76.33893232031218
+            "lat": 14.443816,
+            "lon": 75.921533
         },
         "ts": "{{$localDatetime iso8601}}",
-        "aux": "Ambattukavu metro"
+        "aux": "1, Hadadi Rd"
+    },
+    {
+        "pt": {
+            "lat": 14.441555,
+            "lon": 75.922259
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1, Hadadi Rd"
     }
 ]
 
@@ -294,8 +306,8 @@ content-type: application/json
 
 {
   "point": {
-    "lat": 10.0812806,
-    "lon": 76.3388894
+    "lat": 14.441555,
+    "lon": 75.922259
   }
 }
 
