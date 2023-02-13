@@ -24,8 +24,8 @@ import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
-import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis

@@ -13,8 +13,8 @@ import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
 import qualified Kernel.External.FCM.Types as FCM
-import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.External.Types (Language)
+import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (Centesimal, EsqDBFlow, maskText)

@@ -75,7 +75,7 @@ extra-deps:
   # - ../beckn-gateway/app/gateway
   # - ../beckn-gateway/app/mock-registry
   - git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-gateway.git
-    commit: 3fddc0552291ff761048ab067c18b778434a2144
+    commit: 580217a5701209ff0a20c5ba2295584b38e46bdc
     subdirs:
       - app/gateway
       - app/mock-registry
