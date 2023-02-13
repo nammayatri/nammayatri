@@ -10,6 +10,12 @@ data Image
 
 data Ride
 
+data Message
+
+data File
+
+data Receiver
+
 -- | Hide secrets before storing request (or response) to DB.
 --
 -- By default considered that request type has no secrets.

@@ -15,6 +15,7 @@ import qualified API.UI.OrgAdmin as OrgAdmin
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
+import qualified API.UI.Message as Message
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
 import qualified API.UI.Whatsapp as Whatsapp
@@ -41,6 +42,7 @@ type API =
            :<|> Call.API
            :<|> CancellationReason.API
            :<|> Whatsapp.API
+           :<|> Message.API
        )
 
 handler :: FlowServer API
@@ -60,3 +62,5 @@ handler =
     :<|> Call.handler
     :<|> CancellationReason.handler
     :<|> Whatsapp.handler
+    :<|> Message.handler
+

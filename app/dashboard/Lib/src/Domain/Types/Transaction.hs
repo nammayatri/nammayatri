@@ -1,6 +1,7 @@
 module Domain.Types.Transaction where
 
 import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
+import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
@@ -28,4 +29,5 @@ data Endpoint
   | DriverAPI Common.DriverEndpoint
   | DriverRegistrationAPI Common.DriverRegistrationEndpoint
   | MerchantAPI Common.MerchantEndpoint
+  | MessageAPI Common.MessageEndpoint
   deriving (Show, Read)

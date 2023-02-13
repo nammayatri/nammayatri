@@ -96,7 +96,7 @@ dashboard merchantId token = do
   let ride = DashboardRideAPIs {..}
   DashboardAPIs {..}
   where
-    _ :<|> rideClient :<|> _ = client (Proxy :: Proxy DashboardAPI.API) merchantId token
+    _ :<|> rideClient :<|> _ :<|> _ = client (Proxy :: Proxy DashboardAPI.API) merchantId token
 
     _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> rideSync = rideClient
 

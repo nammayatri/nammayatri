@@ -23,7 +23,7 @@ data ApiAccessType = READ_ACCESS | WRITE_ACCESS
 
 genSingletons [''ApiAccessType]
 
-data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT
+data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''ApiEntity]

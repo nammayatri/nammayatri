@@ -56,13 +56,27 @@ instance
     let driverOfferAPIs = mkAPIs dataServer.token
     callApiUnwrappingApiError (identity @Error) Nothing Nothing dataServer.url (f driverOfferAPIs) descr
 
+--instance
+--  ( CoreMetrics m,
+--    HasFlowEnv m k '["dataServers" ::: [DataServer]],
+--    MonadFlow m,
+--    CallServerAPI apis m k d r1,
+--    FromJSON a, 
+--    ToJSON a,
+--    r ~ ((LBS.ByteString, a) -> r1)
+--  ) =>
+--  CallServerAPI apis m k ((LBS.ByteString, a) -> d) r
+--  where
+--  callServerAPI serverName mkAPIs descr f c =
+--    callServerAPI @_ @m serverName mkAPIs descr (`f` c)
+
+
 instance
   ( CoreMetrics m,
     HasFlowEnv m k '["dataServers" ::: [DataServer]],
     MonadFlow m,
     CallServerAPI apis m k d r1,
-    r ~ (c -> r1)
-  ) =>
+    r ~ (c -> r1)) =>
   CallServerAPI apis m k (c -> d) r
   where
   callServerAPI serverName mkAPIs descr f c =

@@ -10,7 +10,7 @@ import Environment
 import EulerHS.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Servant.MultipartFormData
+import Kernel.ServantMultipart
 import Servant
 import Tools.Auth (AdminTokenAuth, TokenAuth)
 

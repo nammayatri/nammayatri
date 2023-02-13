@@ -73,6 +73,7 @@ dependencies:
   - euler-hs
   - deriving-aeson
   - extra
+  - servant-multipart
 
 ghc-options:
   - -Wall

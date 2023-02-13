@@ -6,6 +6,7 @@ where
 
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
 import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
+import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
 import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
@@ -18,6 +19,7 @@ type API =
     :> ( Driver.API
            :<|> Ride.API
            :<|> Merchant.API
+           :<|> Message.API
        )
 
 handler :: FlowServer API
@@ -25,3 +27,4 @@ handler merchantId =
   Driver.handler merchantId
     :<|> Ride.handler merchantId
     :<|> Merchant.handler merchantId
+    :<|> Message.handler merchantId

@@ -3,6 +3,7 @@ module API.Dashboard where
 import qualified API.Dashboard.Driver as Driver
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Ride as Ride
+import qualified API.Dashboard.Message as Message
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Id
@@ -19,6 +20,7 @@ type API' =
     :> ( Driver.API
            :<|> Ride.API
            :<|> Merchant.API
+           :<|> Message.API
        )
 
 handler :: FlowServer API
@@ -26,3 +28,4 @@ handler merchantId _dashboard =
   Driver.handler merchantId
     :<|> Ride.handler merchantId
     :<|> Merchant.handler merchantId
+    :<|> Message.handler merchantId

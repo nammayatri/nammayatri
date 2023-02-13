@@ -11,6 +11,7 @@ import "dynamic-offer-driver-app" API.Dashboard as BPP
 import qualified Dashboard.ProviderPlatform.Driver as Common
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified Dashboard.ProviderPlatform.Merchant as Common
+import qualified Dashboard.ProviderPlatform.Message as Common
 import qualified Dashboard.ProviderPlatform.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
@@ -20,6 +21,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Data.ByteString.Lazy as LBS
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 import "lib-dashboard" Tools.Metrics
@@ -27,7 +29,8 @@ import "lib-dashboard" Tools.Metrics
 data DriverOfferAPIs = DriverOfferAPIs
   { drivers :: DriversAPIs,
     rides :: RidesAPIs,
-    merchant :: MerchantAPIs
+    merchant :: MerchantAPIs,
+    message :: MessageAPIs
   }
 
 data DriversAPIs = DriversAPIs
@@ -69,16 +72,28 @@ data MerchantAPIs = MerchantAPIs
     smsServiceUsageConfigUpdate :: Common.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
   }
 
+data MessageAPIs = MessageAPIs
+  { uploadFile :: (LBS.ByteString, Common.UploadFileRequest) -> Euler.EulerClient Common.UploadFileResponse,
+    addMessage :: Common.AddMessageRequest -> Euler.EulerClient Common.AddMessageResponse,
+    sendMessage :: (LBS.ByteString, Common.SendMessageRequest) -> Euler.EulerClient APISuccess,
+    messageList :: Maybe Int -> Maybe Int -> Euler.EulerClient Common.MessageListResponse,
+    messageInfo :: Id Common.Message -> Euler.EulerClient Common.MessageInfoResponse,
+    messageDeliveryInfo :: Id Common.Message -> Euler.EulerClient Common.MessageDeliveryInfoResponse,
+    messageReceiverList :: Id Common.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Euler.EulerClient Common.MessageReceiverListResponse
+  }
+
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
 mkDriverOfferAPIs merchantId token = do
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
   let merchant = MerchantAPIs {..}
+  let message = MessageAPIs {..}
   DriverOfferAPIs {..}
   where
     driversClient
       :<|> ridesClient
-      :<|> merchantClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+      :<|> merchantClient 
+      :<|> messageClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     driverDocumentsInfo
       :<|> listDrivers
@@ -114,6 +129,14 @@ mkDriverOfferAPIs merchantId token = do
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate
       :<|> smsServiceUsageConfigUpdate = merchantClient
+
+    uploadFile
+      :<|> addMessage 
+      :<|> sendMessage 
+      :<|> messageList 
+      :<|> messageInfo
+      :<|> messageDeliveryInfo
+      :<|> messageReceiverList = messageClient
 
 callDriverOfferBPP ::
   forall m r b c.

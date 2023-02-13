@@ -91,6 +91,8 @@ dependencies:
   - extra
   - scheduler
   - singletons
+  - cassava
+  - vector
 
 ghc-options:
   - -fwrite-ide-info
