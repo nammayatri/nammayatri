@@ -19,7 +19,7 @@ content-type: application/json
     "subscriber_url": "https://test-bap-id",
     "type": "BAP",
     "domain": "nic2004:55204",
-    "signing_public_key": "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E=",
+    "signing_public_key": "1tRC4LHVKWeGikY5C8T1FYI9t3oacpa3IFvj8e7aGws=",
     "status": "SUBSCRIBED",
     "created": "{{$datetime iso8601}}",
     "updated": "{{$datetime iso8601}}"

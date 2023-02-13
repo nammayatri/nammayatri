@@ -1,4 +1,4 @@
 { dbUserId = "atlas"
 , dbPassword = "atlas"
-, signingKey = "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
+, signingKey = "Lw9M+SHLY+yyTmqPVlbKxgvktZRfuIT8nHyE89Jmf+o="
 }

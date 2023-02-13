@@ -69,7 +69,7 @@ verifyError expectedCode expectedMessage serverResponse = do
     _ -> expectationFailure ("Expected " <> B.toString expectedMessage <> " error.")
 
 privateKey :: Base64
-privateKey = "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
+privateKey = "Lw9M+SHLY+yyTmqPVlbKxgvktZRfuIT8nHyE89Jmf+o="
 
 signRequest :: ToJSON req => req -> POSIXTime -> Text -> Text -> ByteString
 signRequest req now orgId keyId =
