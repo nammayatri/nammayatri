@@ -298,9 +298,7 @@ callWhatsappOptApi ::
   Maybe Whatsapp.OptApiMethods ->
   m ()
 callWhatsappOptApi mobileNo merchantId personId hasOptedIn = do
-  let status = case hasOptedIn of
-        Nothing -> Whatsapp.OPT_IN
-        Just wSNotificationEnroll -> wSNotificationEnroll
+  let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
   void $ Whatsapp.whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
   DB.runTransaction $
     QP.updateWhatsappNotificationEnrollStatus personId $ Just status
