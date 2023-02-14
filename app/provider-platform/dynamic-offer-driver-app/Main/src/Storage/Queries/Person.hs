@@ -4,6 +4,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Maybe as Mb
 import Domain.Types.DriverInformation
 import Domain.Types.DriverLocation
+import Domain.Types.DriverOnboarding.DriverLicense
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
@@ -21,6 +22,7 @@ import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
+import Storage.Tabular.DriverOnboarding.DriverLicense
 import Storage.Tabular.Person as TPerson
 import Storage.Tabular.Ride
 import Storage.Tabular.Vehicle as Vehicle
@@ -134,11 +136,12 @@ data DriverWithRidesCount = DriverWithRidesCount
   { person :: Person,
     info :: DriverInformation,
     vehicle :: Maybe Vehicle,
+    license :: Maybe DriverLicense,
     ridesCount :: Maybe Int
   }
 
-mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
-mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
+mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe DriverLicense, Maybe Int) -> DriverWithRidesCount
+mkDriverWithRidesCount (person, info, vehicle, license, ridesCount) = DriverWithRidesCount {..}
 
 ridesCountAggTable :: SqlQuery (From (SqlExpr (Value PersonTId), SqlExpr (Value Int)))
 ridesCountAggTable = with $ do
@@ -147,11 +150,11 @@ ridesCountAggTable = with $ do
   groupBy $ ride ^. RideDriverId
   pure (ride ^. RideDriverId, count @Int $ ride ^. RideId)
 
-fetchDriverInfoWithRidesCount :: Transactionable m => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> m (Maybe DriverWithRidesCount)
-fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber = fmap (fmap mkDriverWithRidesCount) $ do
+fetchDriverInfoWithRidesCount :: Transactionable m => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash = fmap (fmap mkDriverWithRidesCount) $ do
   Esq.findOne $ do
     ridesCountAggQuery <- ridesCountAggTable
-    person :& driverInfo :& mbVehicle :& (_, mbRidesCount) <-
+    person :& driverInfo :& mbVehicle :& mbDriverLicense :& (_, mbRidesCount) <-
       from $
         table @PersonT
           `innerJoin` table @DriverInformationT
@@ -162,8 +165,12 @@ fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleN
           `Esq.on` ( \(person :& _ :& mbVehicle) ->
                        just (person ^. PersonTId) ==. mbVehicle ?. VehicleDriverId
                    )
+          `leftJoin` table @DriverLicenseT
+          `Esq.on` ( \(person :& _ :& _ :& mbDriverLicense) ->
+                       just (person ^. PersonTId) ==. mbDriverLicense ?. DriverLicenseDriverId
+                   )
           `leftJoin` ridesCountAggQuery
-          `Esq.on` ( \(person :& _ :& _ :& (mbPersonId, _mbRidesCount)) ->
+          `Esq.on` ( \(person :& _ :& _ :& _ :& (mbPersonId, _mbRidesCount)) ->
                        just (person ^. PersonTId) ==. mbPersonId
                    )
     where_ $
@@ -176,7 +183,8 @@ fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleN
                 &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
           )
         &&. whenJust_ mbVehicleNumber (\vehicleNumber -> mbVehicle ?. VehicleRegistrationNo ==. just (val vehicleNumber))
-    pure (person, driverInfo, mbVehicle, mbRidesCount)
+        &&. whenJust_ mbDlNumberHash (\dlNumberHash -> mbDriverLicense ?. DriverLicenseLicenseNumberHash ==. just (val dlNumberHash))
+    pure (person, driverInfo, mbVehicle, mbDriverLicense, mbRidesCount)
 
 findByIdAndRoleAndMerchantId ::
   Transactionable m =>

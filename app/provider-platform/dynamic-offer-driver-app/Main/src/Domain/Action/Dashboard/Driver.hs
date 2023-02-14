@@ -10,6 +10,7 @@ module Domain.Action.Dashboard.Driver
     driverInfo,
     deleteDriver,
     unlinkVehicle,
+    unlinkDL,
     updatePhoneNumber,
     addVehicle,
     updateDriverName,
@@ -284,22 +285,27 @@ buildDriverLocationListItem f = do
 mobileIndianCode :: Text
 mobileIndianCode = "+91"
 
-driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
-driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber = do
+driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.DriverInfoRes
+driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDriverLicenseNumber = do
   merchant <- findMerchantByShortId merchantShortId
 
-  driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber) of
-    (Just mobileNumber, Nothing) -> do
+  driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDriverLicenseNumber) of
+    (Just mobileNumber, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
       Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing
+        QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
-    (Nothing, Just vehicleNumber) ->
+    (Nothing, Just vehicleNumber, Nothing) -> do
       Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber)
+        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing
           >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
-    _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
+    (Nothing, Nothing, Just driverLicenseNumber) -> do
+      dlNumberHash <- getDbHash driverLicenseNumber
+      Esq.runInReplica $
+        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash)
+          >>= fromMaybeM (InvalidRequest "License does not exist.")
+    _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"driverLicenseNumber\" is required"
   let driverId = driverWithRidesCount.person.id
   mbDriverLicense <- Esq.runInReplica $ QDriverLicense.findByDriverId driverId
   rcAssociationHistory <- Esq.runInReplica $ QRCAssociation.findAllByDriverId driverId
@@ -548,4 +554,22 @@ updateDriverName merchantShortId reqDriverId req = do
     QPerson.updatePersonRec personId updDriver
 
   logTagInfo "dashboard -> updateDriverName : " (show personId)
+  pure Success
+
+---------------------------------------------------------------------
+unlinkDL :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+unlinkDL merchantShortId driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  let driverId_ = cast @Common.Driver @DP.Driver driverId
+  let personId = cast @Common.Driver @DP.Person driverId
+
+  driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  Esq.runTransaction $ do
+    QDriverLicense.deleteByDriverId personId
+  CQDriverInfo.updateEnabledVerifiedState driverId_ False False
+  logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success

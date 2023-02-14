@@ -65,8 +65,8 @@ unblockDriver merchantShortId = withFlowHandlerAPI . DDriver.unblockDriver merch
 driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
 driverLocation merchantShortId mbLimit mbOffset = withFlowHandlerAPI . DDriver.driverLocation merchantShortId mbLimit mbOffset
 
-driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
-driverInfo merchantShortId mbMobileNumber mbMobileCountryCode = withFlowHandlerAPI . DDriver.driverInfo merchantShortId mbMobileNumber mbMobileCountryCode
+driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
+driverInfo merchantShortId mbMobileNumber mbMobileCountryCode _ = withFlowHandlerAPI . DDriver.driverInfo merchantShortId mbMobileNumber mbMobileCountryCode Nothing
 
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 deleteDriver merchantShortId = withFlowHandlerAPI . DDriver.deleteDriver merchantShortId

@@ -24,6 +24,7 @@ type API =
            :<|> Common.DriverInfoAPI
            :<|> Common.DeleteDriverAPI
            :<|> Common.UnlinkVehicleAPI
+           :<|> Common.UnlinkDLAPI
            :<|> Common.UpdatePhoneNumberAPI
            :<|> Common.AddVehicleAPI
            :<|> Common.UpdateDriverNameAPI
@@ -43,6 +44,7 @@ handler merchantId =
     :<|> driverInfo merchantId
     :<|> deleteDriver merchantId
     :<|> unlinkVehicle merchantId
+    :<|> unlinkDL merchantId
     :<|> updatePhoneNumber merchantId
     :<|> addVehicle merchantId
     :<|> updateDriverName merchantId
@@ -73,14 +75,17 @@ unblockDriver merchantShortId = withFlowHandlerAPI . DDriver.unblockDriver merch
 driverLocation :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
 driverLocation merchantShortId mbLimit mbOffset = withFlowHandlerAPI . DDriver.driverLocation merchantShortId mbLimit mbOffset
 
-driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
-driverInfo merchantShortId mbMobileNumber mbMobileCountryCode = withFlowHandlerAPI . DDriver.driverInfo merchantShortId mbMobileNumber mbMobileCountryCode
+driverInfo :: ShortId DM.Merchant -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
+driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber = withFlowHandlerAPI $ DDriver.driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber
 
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 deleteDriver merchantShortId = withFlowHandlerAPI . DDriver.deleteDriver merchantShortId
 
 unlinkVehicle :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
 unlinkVehicle merchantShortId = withFlowHandlerAPI . DDriver.unlinkVehicle merchantShortId
+
+unlinkDL :: ShortId DM.Merchant -> Id Common.Driver -> FlowHandler APISuccess
+unlinkDL merchantShortId = withFlowHandlerAPI . DDriver.unlinkDL merchantShortId
 
 updatePhoneNumber :: ShortId DM.Merchant -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> FlowHandler APISuccess
 updatePhoneNumber merchantShortId driverId = withFlowHandlerAPI . DDriver.updatePhoneNumber merchantShortId driverId

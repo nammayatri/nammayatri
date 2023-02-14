@@ -43,7 +43,7 @@ data DriversAPIs = DriversAPIs
     blockDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
     unblockDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
     driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> Euler.EulerClient Common.DriverLocationRes,
-    driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Common.DriverInfoRes,
+    driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Common.DriverInfoRes,
     deleteDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
     documentsList :: Id Common.Driver -> Euler.EulerClient Common.DocumentsListResponse,
     getDocument :: Id Common.Image -> Euler.EulerClient Common.GetDocumentResponse,
@@ -51,6 +51,7 @@ data DriversAPIs = DriversAPIs
     registerDL :: Id Common.Driver -> Common.RegisterDLReq -> Euler.EulerClient APISuccess,
     registerRC :: Id Common.Driver -> Common.RegisterRCReq -> Euler.EulerClient APISuccess,
     unlinkVehicle :: Id Common.Driver -> Euler.EulerClient APISuccess,
+    unlinkDL :: Id Common.Driver -> Euler.EulerClient APISuccess,
     updatePhoneNumber :: Id Common.Driver -> Common.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
     addVehicle :: Id Common.Driver -> Common.AddVehicleReq -> Euler.EulerClient APISuccess,
     updateDriverName :: Id Common.Driver -> Common.UpdateDriverNameReq -> Euler.EulerClient APISuccess
@@ -107,6 +108,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> driverInfo
       :<|> deleteDriver
       :<|> unlinkVehicle
+      :<|> unlinkDL
       :<|> updatePhoneNumber
       :<|> addVehicle
       :<|> updateDriverName

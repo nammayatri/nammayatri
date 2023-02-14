@@ -26,6 +26,7 @@ data DriverEndpoint
   | UnblockDriverEndpoint
   | DeleteDriverEndpoint
   | UnlinkVehicleEndpoint
+  | UnlinkDLEndpoint
   | UpdatePhoneNumberEndpoint
   | AddVehicleEndpoint
   | UpdateDriverNameEndpoint
@@ -259,6 +260,7 @@ type DriverInfoAPI =
     :> QueryParam "mobileNumber" Text
     :> QueryParam "mobileCountryCode" Text
     :> QueryParam "vehicleNumber" Text
+    :> QueryParam "dlNumber" Text
     :> Get '[JSON] DriverInfoRes
 
 data DriverInfoRes = DriverInfoRes
@@ -352,6 +354,14 @@ type DeleteDriverAPI =
 type UnlinkVehicleAPI =
   Capture "driverId" (Id Driver)
     :> "unlinkVehicle"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- unlink dl ---------------------------------------
+
+type UnlinkDLAPI =
+  Capture "driverId" (Id Driver)
+    :> "unlinkDL"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
