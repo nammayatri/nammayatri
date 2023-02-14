@@ -169,8 +169,10 @@ mkBookingStatus :: DRide.Ride -> UTCTime -> Common.BookingStatus
 mkBookingStatus ride now = do
   let sixHours = secondsToNominalDiffTime $ Seconds 21600
   let ongoing6HrsCond = maybe True (\tripStartTime -> diffUTCTime now tripStartTime >= sixHours) ride.tripStartTime
+  let upcoming6HrsCond = diffUTCTime now ride.createdAt >= sixHours
   case ride.status of
-    DRide.NEW -> Common.UPCOMING
+    DRide.NEW | not upcoming6HrsCond -> Common.UPCOMING
+    DRide.NEW -> Common.UPCOMING_6HRS
     DRide.INPROGRESS | not ongoing6HrsCond -> Common.ONGOING
     DRide.INPROGRESS -> Common.ONGOING_6HRS
     DRide.COMPLETED -> Common.COMPLETED

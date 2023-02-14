@@ -64,7 +64,7 @@ data RideListItem = RideListItem
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data BookingStatus = UPCOMING | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED
+data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED
   deriving stock (Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 

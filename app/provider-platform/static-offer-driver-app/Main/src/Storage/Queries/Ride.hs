@@ -334,13 +334,16 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
       )
   pure $ mkRideItem <$> res
   where
-    -- ride considered as ONGOING_6HRS if ride.status = INPROGRESS, but somehow ride.tripStartTime = Nothing
-    ongoing6HrsCond ride =
-      ride ^. Ride.RideTripStartTime +. just (Esq.interval [Esq.HOUR 6]) <=. val (Just now)
-    mkBookingStatusVal ride =
+    mkBookingStatusVal ride = do
+      -- ride considered as ONGOING_6HRS if ride.status = INPROGRESS, but somehow ride.tripStartTime = Nothing
+      let ongoing6HrsCond =
+            ride ^. Ride.RideTripStartTime +. just (Esq.interval [Esq.HOUR 6]) <=. val (Just now)
+      let upcoming6HrsCond =
+            ride ^. Ride.RideCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
       case_
-        [ when_ (ride ^. Ride.RideStatus ==. val Ride.NEW) then_ $ val Common.UPCOMING,
-          when_ (ride ^. Ride.RideStatus ==. val Ride.INPROGRESS &&. not_ (ongoing6HrsCond ride)) then_ $ val Common.ONGOING,
+        [ when_ (ride ^. Ride.RideStatus ==. val Ride.NEW &&. not_ upcoming6HrsCond) then_ $ val Common.UPCOMING,
+          when_ (ride ^. Ride.RideStatus ==. val Ride.NEW &&. upcoming6HrsCond) then_ $ val Common.UPCOMING_6HRS,
+          when_ (ride ^. Ride.RideStatus ==. val Ride.INPROGRESS &&. not_ ongoing6HrsCond) then_ $ val Common.ONGOING,
           when_ (ride ^. Ride.RideStatus ==. val Ride.COMPLETED) then_ $ val Common.COMPLETED,
           when_ (ride ^. Ride.RideStatus ==. val Ride.CANCELLED) then_ $ val Common.CANCELLED
         ]
