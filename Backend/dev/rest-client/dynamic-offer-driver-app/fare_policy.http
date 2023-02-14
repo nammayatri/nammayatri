@@ -1,0 +1,43 @@
+@driver-offer-bpp-host = http://localhost:8016
+@adminToken = ea37f941-427a-4085-a7d0-96240f166672
+
+###
+# @name profile
+GET {{driver-offer-bpp-host}}/ui/orgAdmin/profile
+token: {{adminToken}}
+
+###
+# @name listFarePolicies
+GET {{driver-offer-bpp-host}}/ui/org/farePolicy
+token: {{adminToken}}
+
+###
+@farePolicyToUpdate = {{listFarePolicies.response.body.oneWayFarePolicies[0].id}}
+
+
+# @name updateSuv
+POST {{driver-offer-bpp-host}}/ui/org/farePolicy/{{farePolicyToUpdate}}
+Content-Type: application/json
+token: {{adminToken}}
+
+{
+    "baseDistancePerKmFare": 11,
+    "baseDistance": 3050,
+    "extraKmFare": 13,
+    "deadKmFare": 125,
+    "driverExtraFeeList": [10, 20, 40]
+}
+
+###
+# @name updateSuv2
+POST {{driver-offer-bpp-host}}/ui/org/farePolicy/{{farePolicyToUpdate}}
+Content-Type: application/json
+token: {{adminToken}}
+
+{
+    "baseDistancePerKmFare": 13,
+    "baseDistance": 4000,
+    "extraKmFare": 30,
+    "deadKmFare": 130,
+    "driverExtraFeeList": [11, 21, 41]
+}

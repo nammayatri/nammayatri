@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN acceptance_ratio real NULL;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_available_time real NULL;

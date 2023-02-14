@@ -1,0 +1,29 @@
+# @name login
+POST {{app-host}}/auth
+content-type: application/json
+x-bundle-version: 1.0.1
+x-client-version: 1.0.0
+
+{
+  "mobileCountryCode": "+91",
+  "mobileNumber" : "7777777777",
+  "merchantId" : "YATRI"
+}
+
+###
+
+@authToken = {{login.response.body.authId}}
+
+# @name verify
+
+POST {{app-host}}/auth/{{authToken}}/verify
+content-type: application/json
+
+{
+  "otp": "7891",
+  "deviceToken": ""
+}
+
+###
+
+@token = {{verify.response.body.token}}

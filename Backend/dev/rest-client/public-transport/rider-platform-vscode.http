@@ -1,0 +1,92 @@
+###
+# @name hellomock
+GET {{mock-public-transport-bpp-host}}
+
+###
+# @name hellobap
+GET {{public-transport-bap-host}}
+
+###
+
+@token = {{app-token}}
+
+# @name search
+POST {{app-host}}/rideSearch
+content-type: application/json
+token: {{token}}
+
+{
+  "origin": {
+    "address": {
+        "street": "Edapally Metro Station",
+        "state": "Kerala",
+        "door": "",
+        "country": "India",
+        "city": "Kochi",
+        "building": " ",
+        "areaCode": "",
+        "area": "Edappally"
+    },
+    "gps": {
+        "lon": 76.308364,
+        "lat": 10.025263
+    }
+  },
+  "destination": {
+    "address": {
+            "street": "Ambattukavu",
+            "state": "Kerala",
+            "door": "",
+            "country": "India",
+            "city": "Aluva",
+            "building": "Ambattukavu metro station",
+            "areaCode": "",
+            "area": "Choornikkara"
+        },
+    "gps": {
+        "lon": 76.3388894,
+        "lat": 10.0792806
+    }
+  }
+}
+
+###
+
+@searchId = {{search.response.body.searchId}}
+
+# @name quotes
+GET {{app-host}}/rideSearch/{{searchId}}/quotes
+content-type: application/json
+token: {{token}}
+
+###
+@quoteId = {{quotes.response.body.quotes[0].publicTransport.id}}
+
+# @name confirm
+POST {{public-transport-bap-host}}/ui/quotes/{{quoteId}}/confirm
+content-type: application/json
+token: ea37f941-427a-4085-a7d0-96240f166672
+
+{
+    "quantity": 1,
+    "requestorName": "Yuri"
+}
+
+###
+@bookingId = {{confirm.response.body.booking_id}}
+GET {{public-transport-bap-host}}/ui/booking/{{bookingId}}
+token: ea37f941-427a-4085-a7d0-96240f166672
+###
+GET {{public-transport-bap-host}}/ui/booking/list?limit=30&offset=0
+token: ea37f941-427a-4085-a7d0-96240f166672
+
+###
+
+
+GET {{public-transport-bap-host}}/ui/booking/list
+?limit=30
+&offset=0
+&status="CONFIRMED"
+token: ea37f941-427a-4085-a7d0-96240f166672
+
+###

@@ -1,0 +1,192 @@
+# $swtd-bpp-host = http://localhost:8091
+
+GET $swtd-bpp-host/
+
+###
+
+POST $swtd-bpp-host/search
+content-type: application/json
+{
+    "context": {
+        "domain": "nic2004:60221",
+        "country": "IND",
+        "city": "std:080",
+        "action": "search",
+        "core_version": "0.9.1",
+        "bap_id": "http://box.beckn.org",
+        "bap_uri": "http://localhost:10666",
+        "transaction_id": "919213b9-4a3b-42d6-8597-2ad977cf67f1",
+        "message_id": "c15d823e-c2d9-4eb9-9515-029d37ac22df",
+        "timestamp": "2021-10-27T06:44:26.114244Z"
+    },
+    "message": {
+        "intent": {
+            "fulfillment": {
+                "start": {
+                    "location": {
+                        "gps": "9.898056, 76.324047"
+                    },
+                    "time": {
+                        "range": {
+                            "start": "2021-11-17T12:00:00.000Z",
+                            "end": "2021-11-17T18:00:00.000Z"
+                        }
+                    }
+                },
+                "end": {
+                    "location": {
+                        "gps": "10.898056, 76.324047"
+                    }
+                }
+            }
+        }
+    }
+}
+
+### for this quote there will be a successful payment
+POST $swtd-bpp-host/confirm
+content-type: application/json
+{
+    "context": {
+        "domain": "nic2004:60221",
+        "country": "IND",
+        "city": "std:080",
+        "action": "search",
+        "core_version": "0.9.1",
+        "bap_id": "http://box.beckn.org",
+        "bap_uri": "http://localhost:10666",
+        "transaction_id": "919213b9-4a3b-42d6-8597-2ad977cf67f1",
+        "message_id": "c15d823e-c2d9-4eb9-9515-029d37ac22df",
+        "timestamp": "2021-10-27T06:44:26.114244Z"
+    },
+    "message": {
+        "order": {
+            "provider": {
+                "id": "KMRL"
+            },
+            "items": [
+                {
+                    "route_code": "RouteCode-EKM-ABC",
+                    "start_stop": "EKM",
+                    "end_stop": "ABC",
+                    "start_time": "2021-11-17T12:00:00.000Z",
+                    "end_time": "2021-11-17T18:00:00.000Z"
+                }
+            ],
+            "billing": {
+                "name": "User Name"
+            },
+            "quote": {
+                "price": {
+                    "currency": "INR",
+                    "value": "60"
+                },
+                "breakup": [
+                    {
+                        "title": "One Way Ticket",
+                        "price": {
+                            "currency": "INR",
+                            "value": "60"
+                        }
+                    }
+                ]
+            },
+            "payment": {
+                "uri": "http://fake.org",
+                "tl_method": "http/get",
+                "params": {
+                    "amount": "60",
+                    "currency": "INR"
+                },
+                "type": "PRE-FULFILLMENT",
+                "status": "PAID"
+            }
+        }
+    }
+}
+
+### for this quote the payment link will expire
+POST $swtd-bpp-host/confirm
+content-type: application/json
+{
+    "context": {
+        "domain": "nic2004:60221",
+        "country": "IND",
+        "city": "std:080",
+        "action": "search",
+        "core_version": "0.9.1",
+        "bap_id": "http://box.beckn.org",
+        "bap_uri": "http://localhost:10666",
+        "transaction_id": "919213b9-4a3b-42d6-8597-2ad977cf67f1",
+        "message_id": "c15d823e-c2d9-4eb9-9515-029d37ac22df",
+        "timestamp": "2021-10-27T06:44:26.114244Z"
+    },
+    "message": {
+        "order": {
+            "provider": {
+                "id": "KMRL"
+            },
+            "items": [
+                {
+                    "route_code": "RouteCode-EKM-EMB",
+                    "start_stop": "EKM",
+                    "end_stop": "EMB",
+                    "start_time": "2021-11-17T12:00:00.000Z",
+                    "end_time": "2021-11-17T18:00:00.000Z"
+                }
+            ],
+            "billing": {
+                "name": "User Name"
+            },
+            "quote": {
+                "price": {
+                    "currency": "INR",
+                    "value": "30"
+                },
+                "breakup": [
+                    {
+                        "title": "One Way Ticket",
+                        "price": {
+                            "currency": "INR",
+                            "value": "30"
+                        }
+                    }
+                ]
+            },
+            "payment": {
+                "uri": "http://fake.org",
+                "tl_method": "http/get",
+                "params": {
+                    "amount": "30",
+                    "currency": "INR"
+                },
+                "type": "PRE-FULFILLMENT",
+                "status": "PAID"
+            }
+        }
+    }
+}
+
+###
+# $order_id = 1777114
+POST $swtd-bpp-host/status
+content-type: application/json
+{
+    "context": {
+        "domain": "nic2004:60221",
+        "country": "IND",
+        "city": "std:080",
+        "action": "search",
+        "core_version": "0.9.1",
+        "bap_id": "http://box.beckn.org",
+        "bap_uri": "http://localhost:10666",
+        "transaction_id": "919213b9-4a3b-42d6-8597-2ad977cf67f1",
+        "message_id": "c15d823e-c2d9-4eb9-9515-029d37ac22df",
+        "timestamp": "2021-10-27T06:44:26.114244Z"
+    },
+    "message": {
+        "order": {
+            "id": "$order_id"
+        }
+    }
+}

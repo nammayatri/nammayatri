@@ -1,0 +1,24 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name stuckBookingsCancel
+
+POST {{bpp-dashboard-host}}/bpp/beckn-transport/YATRI_PARTNER/booking/cancel/allStuck
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "bookingIds" : [
+        "18c3f501-77f2-47c7-a16e-2969d6c32b9c",
+        "b8996371-68d9-427d-87c7-91adc12f35f6"
+        ]
+}

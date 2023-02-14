@@ -1,0 +1,86 @@
+@token = {{app-token}}
+
+# @name search
+POST {{app-host}}/rideSearch
+content-type: application/json
+x-bundle-version: 1.0.0
+x-client-version: 1.0.0
+token: {{token}}
+
+{
+  "fareProductType" : "ONE_WAY",
+  "contents" : {
+    "origin": {
+      "address": {
+          "street": "Edapally Metro Station",
+          "state": "Kerala",
+          "door": "",
+          "country": "India",
+          "city": "Kochi",
+          "building": " ",
+          "areaCode": "",
+          "area": "Edappally"
+      },
+      "gps": {
+          "lon": 76.308364,
+          "lat": 10.025263
+      }
+    },
+    "destination": {
+      "address": {
+              "street": "Ambattukavu",
+              "state": "Kerala",
+              "door": "",
+              "country": "India",
+              "city": "Aluva",
+              "building": "Ambattukavu metro station",
+              "areaCode": "",
+              "area": "Choornikkara"
+          },
+      "gps": {
+          "lon": 76.3388894,
+          "lat": 10.0792806
+      }
+    }
+  }
+}
+
+###
+
+@searchId = {{search.response.body.searchId}}
+
+# @name quotes
+GET {{app-host}}/rideSearch/{{searchId}}/quotes
+content-type: application/json
+token: {{token}}
+
+###
+# @name confirm
+@quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
+
+POST {{app-host}}/rideSearch/quotes/{{quoteId}}/confirm HTTP/1.1
+content-type: application/json
+token: {{token}}
+
+###
+@quoteId = {{quotes.response.body.quotes[0].publicTransport.id}}
+
+POST {{app-host}}/rideSearch/quotes/{{quoteId}}/confirm HTTP/1.1
+content-type: application/json
+token: {{token}}
+
+###
+
+GET {{app-host}}/booking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{token}}
+
+###
+@bookingId = {{confirm.response.body.bookingId}}
+POST {{app-host}}/booking/{{bookingId}}
+token: {{token}}
+
+###

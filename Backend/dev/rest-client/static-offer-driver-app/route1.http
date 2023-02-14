@@ -1,0 +1,88 @@
+
+
+###
+
+# @name updateInitial
+POST {{transporter-host}}/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.30833070042235,
+            "lat": 10.025196668204602
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+
+###
+
+# @name update1
+POST {{transporter-host}}/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 10.036754844278509,
+            "lon": 76.31406568451686
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Pathadippalam metro"
+    },
+    {
+        "pt": {
+            "lat": 10.047446731143813,
+            "lon": 76.3182331061409
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Cochi university metro"
+    },
+    {
+        "pt": {
+            "lat": 10.059363529228063,
+            "lon": 76.32187725922056
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Kalamassery metro"
+    }
+]
+
+###
+
+# @name update2
+POST {{transporter-host}}/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 10.072808633266954,
+            "lon": 76.33348375279246
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Muttom metro"
+    },
+    {
+        "pt": {
+            "lat": 10.080241882783683,
+            "lon": 76.33893232031218
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Ambattukavu metro"
+    }
+]
+
+###
+# 10.025196668204602, 76.30833070042235 -- Edapally metro
+# 10.036754844278509, 76.31406568451686 -- Pathadippalam metro
+# 10.047446731143813, 76.3182331061409 -- Cochi University
+# 10.059363529228063, 76.32187725922056 -- Kalamassery
+# 10.072808633266954, 76.33348375279246 -- Muttom
+# 10.080241882783683, 76.33893232031218 -- Ambattukavu
+
+###

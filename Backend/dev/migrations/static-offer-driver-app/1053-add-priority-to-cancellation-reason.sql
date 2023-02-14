@@ -1,0 +1,1 @@
+ALTER TABLE atlas_transporter.cancellation_reason ADD COLUMN priority smallint NOT NULL DEFAULT 0;

@@ -1,0 +1,25 @@
+###
+
+# @name getPlaceName
+GET {{transporter-host}}/googleMaps/getPlaceName?latlng=9.936007187830079,76.37624065846641
+token: {{driver-token}}
+
+###
+# @name testSnapToRoad
+GET https://roads.googleapis.com/v1/snapToRoads
+  ?interpolate=true
+  &path=-35.27801,149.12958|-35.28032,149.12907|-35.28099,149.12929|-35.28144,149.12984|-35.28194,149.13003|-35.28282,149.12956|-35.28302,149.12881|-35.28473,149.12836
+  &key={{str-key}}
+
+###
+# @name testSnapToRoad
+GET https://roads.googleapis.com/v1/snapToRoads
+  ?interpolate=true
+  &path=-35.27801,149.12958|-35.28473,149.12836
+  &key={{str-key}}
+###
+# @name testSnapToRoad
+GET https://roads.googleapis.com/v1/snapToRoads
+  ?interpolate=true
+  &path=-35.27801,149.12958|35.27801,149.12958|70.27801,149.12958
+  &key={{str-key}}

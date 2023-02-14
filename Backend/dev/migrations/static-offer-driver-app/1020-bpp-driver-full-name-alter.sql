@@ -1,0 +1,1 @@
+ALTER TABLE atlas_transporter.person DROP COLUMN full_name;

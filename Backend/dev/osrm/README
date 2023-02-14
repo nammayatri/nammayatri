@@ -1,0 +1,13 @@
+Usage:
+1. Download required openstreet data file
+   (for example, http://download.geofabrik.de/asia/india/southern-zone-latest.osm.pbf for the southern India zone)
+   to this directory (/dev/osrm)
+   example: wget http://download.geofabrik.de/asia/india/southern-zone-latest.osm.pbf
+2. `docker run -t -v "${PWD}:/data" osrm/osrm-backend osrm-extract -p /opt/car.lua /data/southern-zone-latest.osm.pbf`
+3. `docker run -t -v "${PWD}:/data" osrm/osrm-backend osrm-partition /data/southern-zone-latest.osrm`
+4. `docker run -t -v "${PWD}:/data" osrm/osrm-backend osrm-customize /data/southern-zone-latest.osrm`
+5. Run docker containers from the docker-compose file as usual
+
+Generating Docker image
+1. Download the openstreet data file as mentioned above
+2. `docker build . -f Dockerfile.osrm  -t osrm-custom`

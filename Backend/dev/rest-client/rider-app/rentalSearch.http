@@ -1,0 +1,154 @@
+@token = {{app-token}}
+
+###
+# @name setActive
+POST {{transporter-host}}/driver/setActivity?active=true
+content-type: application/json
+token: {{driver-token}}
+
+###
+# @name updateInitial
+POST {{transporter-host}}/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.308364,
+            "lat": 10.025263
+        },
+        "ts": "{{baseTime}}:01.114244Z"
+    }
+]
+
+###
+@baseTime = 2022-05-19T18:35
+
+# @name search
+POST {{app-host}}/rideSearch
+content-type: application/json
+x-bundle-version: 1.0.0
+x-client-version: 1.0.0
+token: {{token}}
+
+{
+  "fareProductType" : "RENTAL",
+  "contents" : {
+    "startTime": "{{baseTime}}:01.114244Z",
+    "origin": {
+      "address": {
+          "street": "Edapally Metro Station",
+          "state": "Kerala",
+          "door": "",
+          "country": "India",
+          "city": "Kochi",
+          "building": " ",
+          "areaCode": "",
+          "area": "Edappally"
+      },
+      "gps": {
+          "lon": 76.308364,
+          "lat": 10.025263
+      }
+    }
+  }
+}
+
+###
+
+@searchId = {{search.response.body.searchId}}
+
+# @name quotes
+GET {{app-host}}/rideSearch/{{searchId}}/quotes
+content-type: application/json
+token: {{token}}
+
+###
+# @name confirm
+@quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
+
+POST {{app-host}}/rideSearch/quotes/{{quoteId}}/confirm HTTP/1.1
+content-type: application/json
+token: {{token}}
+
+###
+@bookingId = {{confirm.response.body.bookingId}}
+POST {{app-host}}/booking/{{bookingId}}
+token: {{token}}
+
+###
+# @name cancel
+POST {{app-host}}/booking/{{bookingId}}/cancel
+content-type: application/json
+token: {{token}}
+
+{
+  "reasonCode": "OTHER",
+  "reasonStage": "OnConfirm",
+  "additionalInfo": "driver is late"
+}
+
+### OnSearch | OnConfirm | OnAssign
+###
+
+@bppBookingId = be602249-e241-4744-8e31-3e41d9ea6acc
+# this was taken from the database
+
+# @name notif-info
+GET {{transporter-host}}/driver/booking/{{bppBookingId}}/notification
+token: {{driver-token}}
+
+###
+
+# @name accept
+
+POST {{transporter-host}}/driver/booking/{{bppBookingId}}/notification/respond
+token: {{driver-token}}
+content-type: application/json
+
+{
+    "response": "ACCEPT"
+}
+
+###
+# @name list2
+GET {{app-host}}/booking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{token}}
+
+###
+# @name driverList
+GET {{transporter-host}}/driver/ride/list?limit=100&offset=0
+token: {{driver-token}}
+
+###
+@rideId = {{driverList.response.body.list[0].id}}
+@otp = {{list2.response.body.list[0].rideList[0].rideOtp}}
+
+# @name startRide
+POST {{transporter-host}}/driver/ride/{{rideId}}/start
+token: {{driver-token}}
+content-type: application/json
+
+{
+    "rideOtp": "{{otp}}"
+}
+
+###
+
+# @name rideEnd
+POST {{transporter-host}}/driver/ride/{{rideId}}/end
+token: {{driver-token}}
+
+###
+# @name list3
+GET {{app-host}}/booking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{token}}

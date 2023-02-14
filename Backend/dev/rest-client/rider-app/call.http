@@ -1,0 +1,6 @@
+@token = {{app-token}}
+
+@rideId = 7f340796-7df7-4756-a3f9-9004898b2678
+POST {{app-host}}/ride/{{rideId}}/call/driver
+content-type: application/json
+token: {{token}}

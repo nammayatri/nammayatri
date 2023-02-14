@@ -1,0 +1,102 @@
+name: beckn-services
+version: 0.1.0.0
+github: "nammayatri/nammayatri"
+license: AllRightsReserved
+author: "nammayatri"
+maintainer: "nammayatri"
+copyright: "2023 Juspay Technologies Private Limited"
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description: Please see the README on GitHub
+
+default-extensions:
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveGeneric
+  - DuplicateRecordFields
+  - ExplicitNamespaces
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - PatternSynonyms
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - ViewPatterns
+  - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
+
+dependencies:
+  - base >= 4.7 && < 5
+  - record-dot-preprocessor
+  - record-hasfield
+  - uri-encode
+  - base16-bytestring
+  - base64-bytestring
+  - bytestring
+  - cryptohash
+  - text
+  - time
+  - aeson
+  - servant-client
+  - servant
+  - servant-server
+  - euler-hs
+  - http-types
+  - case-insensitive
+  - http-client-tls
+  - http-client
+  - containers
+  - http-media
+  - servant-openapi3
+  - openapi3
+  - process
+  - directory
+  - unix
+  - string-conversions
+  - filepath
+
+ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -fhide-source-paths
+  - -Werror
+  - -fplugin=RecordDotPreprocessor
+
+library:
+  source-dirs:
+    - src
+  ghc-options:
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+    - -Werror
+  dependencies:
+    - mobility-core
+    - openapi3

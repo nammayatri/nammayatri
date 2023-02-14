@@ -1,0 +1,10 @@
+
+
+# @name testTranslation
+GET {{app-host}}/language/translate
+  ?source=en
+  &target=hi
+  &q=Jackdaws love my big sphinx of quartz.
+content-type: application/json
+token: {{app-token}}
+###

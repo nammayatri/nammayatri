@@ -1,0 +1,106 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+@image-api-helper-host = http://localhost:8099
+@fileFolder = ./dev/rest-client/dashboard/bpp-dashboard/driver-offer-bpp/image
+@fileOriginal = leo.jpg
+@fileCopy = leo2.jpg
+
+
+###
+# @name healthcheck
+
+GET {{image-api-helper-host}}
+
+###
+# @name encodeFile
+
+GET {{image-api-helper-host}}/encode
+Content-Type: application/json
+
+{
+    "filePath": "{{fileFolder}}/{{fileOriginal}}"
+}
+
+###
+@encodedFile = {{encodeFile.response.body.base64}}
+#@driverId = favorit-hatchback-000000000000000000
+@driverId = favorit-sedan-0000000000000000000000
+
+###
+
+# @name uploadDoc
+@docType = DriverLicense
+# @docType = VehicleRegistrationCertificate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId}}/document/upload
+token: {{juspay_ops}}
+content-type: application/json
+
+{
+    "imageBase64": "{{encodedFile}}",
+    "imageType": "{{docType}}"
+}
+
+###
+
+# @name getDocs
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId}}/documents/list
+token: {{juspay_admin}}
+
+
+###
+
+@imageId = {{getDocs.response.body.driverLicense[0]}}
+#@imageId = {{getDocs.response.body.vehicleRegistrationCertificate[0]}}
+
+# @name fetchImage
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/getDocument/{{imageId}}
+token: {{juspay_admin}}
+
+###
+@fetchedEncodedFile = {{fetchImage.response.body.imageBase64}}
+###
+# @name decodeFile
+
+POST {{image-api-helper-host}}/decode
+Content-Type: application/json
+
+{
+    "filePath": "{{fileFolder}}/{{fileCopy}}",
+    "base64": "{{fetchedEncodedFile}}"
+}
+
+###
+
+# @name registerDL
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId}}/register/dl
+token: {{juspay_admin}}
+Content-Type: application/json
+
+{
+    "driverLicenseNumber": "12345",
+    "driverDateOfBirth": "2000-10-25T14:01:41.092848055Z",
+    "imageId1": "{{imageId}}",
+    "operatingCity": "Bangalore"
+}
+
+###
+
+# @name registerRC
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId}}/register/rc
+token: {{juspay_admin}}
+Content-Type: application/json
+
+{
+    "vehicleRegistrationCertNumber": "KAE4R2,231",
+    "imageId": "{{imageId}}",
+    "operatingCity": "Bangalore"
+}

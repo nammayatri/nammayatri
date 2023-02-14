@@ -1,0 +1,5 @@
+set da4e23a5-3ce6-4c37-8b9b-41377c3c1a51:beckn:fcm_token "{\"access_token\":\"token\",\"expires_in\":3000000000,\"token_type\":\"tokenType\"}"
+set transporter-healthcheck:beckn:fcm_token "{\"access_token\":\"token\",\"expires_in\":3000000000,\"token_type\":\"tokenType\"}"
+set transporter-allocator:beckn:fcm_token "{\"access_token\":\"token\",\"expires_in\":3000000000,\"token_type\":\"tokenType\"}"
+set transporter-bpp:beckn:fcm_token "{\"access_token\":\"token\",\"expires_in\":3000000000,\"token_type\":\"tokenType\"}"
+set ardu-bpp:beckn:fcm_token "{\"access_token\":\"token\",\"expires_in\":3000000000,\"token_type\":\"tokenType\"}"

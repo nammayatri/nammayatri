@@ -1,0 +1,305 @@
+@token1 = {{driver-offer-bpp-auto-token1}}
+@token2 = {{driver-offer-bpp-auto-token2}}
+@driver-offer-bpp-host = http://localhost:8016
+
+# @name healthcheck
+GET {{driver-offer-bpp-host}}/ui
+
+###
+
+# @name updateInitial1
+POST {{driver-offer-bpp-host}}/ui/driver/location
+token: {{token1}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.31742659311804,
+            "lat": 10.041437092019764
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+
+###
+
+# @name updateInitial2
+POST {{driver-offer-bpp-host}}/ui/driver/location
+token: {{token2}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.31742659311804,
+            "lat": 10.041437092019764
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+###
+
+# @name setActive
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
+content-type: application/json
+token: {{token1}}
+###
+
+# @name setActive2
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
+content-type: application/json
+token: {{token2}}
+###
+
+###
+
+# @name search
+POST {{app-host}}/rideSearch
+content-type: application/json
+token: {{app-token}}
+
+{
+  "fareProductType" : "ONE_WAY",
+  "contents" : {
+    "origin": {
+      "address": {
+          "street": "Edapally Metro Station",
+          "state": "Kerala",
+          "door": "",
+          "country": "India",
+          "city": "Kochi",
+          "building": " ",
+          "areaCode": "",
+          "area": "Edappally"
+      },
+      "gps": {
+          "lon": 76.31642659311804,
+          "lat": 10.041437092019764
+      }
+    },
+    "destination": {
+      "address": {
+              "street": "Ambattukavu",
+              "state": "Kerala",
+              "door": "",
+              "country": "India",
+              "city": "Aluva",
+              "building": "Ambattukavu metro station",
+              "areaCode": "",
+              "area": "Choornikkara"
+          },
+      "gps": {
+          "lon": 76.3388894,
+          "lat": 10.0792806
+      }
+    }
+  }
+}
+
+###
+
+@searchId = {{search.response.body.searchId}}
+
+# @name quotes
+GET {{app-host}}/rideSearch/{{searchId}}/results
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name select
+@estimateId = {{quotes.response.body.estimates[0].id}}
+
+POST {{app-host}}/estimate/{{estimateId}}/select HTTP/1.1
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name nearbySearchRequest1
+GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
+token: {{token1}}
+
+###
+
+# @name offerQuote1
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+token: {{token1}}
+content-type: application/json
+
+{
+    "offeredFare": 30.5,
+    "searchRequestId": "{{nearbySearchRequest1.response.body.searchRequests[0].searchRequestId}}"
+}
+
+###
+
+
+# @name selectedQuotes
+GET {{app-host}}/rideSearch/quotes/{{estimateId}}/select/list
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name initQuote
+@selectedQuoteId = {{selectedQuotes.response.body.selectedQuotes[0].id}}
+
+POST {{app-host}}/rideInit
+content-type: application/json
+token: {{app-token}}
+
+{
+  "selected": true,
+  "quoteId": "{{selectedQuoteId}}"
+}
+
+###
+
+# @name confirmQuote
+@bookingId = {{initQuote.response.body.bookingId}}
+
+POST {{app-host}}/rideSearch/confirm
+content-type: application/json
+token: {{app-token}}
+
+{
+  "bookingId": "{{bookingId}}",
+  "fromLocation": {
+    "door": "2"
+  },
+  "toLocation": {
+    "door": "3"
+  }
+}
+
+###
+# @name nearbySearchRequest2
+GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
+token: {{token2}}
+
+###
+
+# @name offerQuote2
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+token: {{token2}}
+content-type: application/json
+
+{
+    "offeredFare": 30.5,
+    "searchRequestId": "{{nearbySearchRequest2.response.body.searchRequests[0].searchRequestId}}"
+}
+###
+
+# @name list2
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{app-token}}
+
+###
+# @name driverList
+GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
+token: {{token1}}
+
+###
+@rideId = {{driverList.response.body.list[0].id}}
+@otp = {{list2.response.body.list[0].rideList[0].rideOtp}}
+
+# @name startRide
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/start
+token: {{token1}}
+content-type: application/json
+
+{
+    "rideOtp": "{{otp}}",
+    "point": {
+            "lon": 76.308364,
+            "lat": 10.025263
+    }
+}
+
+# 76.308364, 10.025263
+###
+
+# @name update1
+POST {{driver-offer-bpp-host}}/ui/driver/location
+token: {{token1}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.308364,
+            "lat": 10.025263
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 10.036754844278509,
+            "lon": 76.31406568451686
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Pathadippalam metro"
+    },
+    {
+        "pt": {
+            "lat": 10.047446731143813,
+            "lon": 76.3182331061409
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Cochi university metro"
+    },
+    {
+        "pt": {
+            "lat": 10.059363529228063,
+            "lon": 76.32187725922056
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Kalamassery metro"
+    }
+]
+
+###
+
+# @name update2
+POST {{driver-offer-bpp-host}}/ui/driver/location
+token: {{token1}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 10.072808633266954,
+            "lon": 76.33348375279246
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Muttom metro"
+    },
+    {
+        "pt": {
+            "lat": 10.080241882783683,
+            "lon": 76.33893232031218
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Ambattukavu metro"
+    }
+]
+
+###
+
+# @name rideEnd
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
+token: {{token1}}
+content-type: application/json
+
+{
+  "point": {
+    "lat": 10.080241882783683,
+    "lon": 76.33893232031218
+  }
+}

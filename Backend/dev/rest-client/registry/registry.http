@@ -1,0 +1,37 @@
+@registry-host = {{rg/url}}
+
+POST {{registry-host}}/lookup
+content-type: application/json
+
+{
+    "type": "BAP",
+    "domain": "{{fmd/domain}}"
+}
+
+###
+
+POST {{registry-host}}/create
+content-type: application/json
+
+{
+    "ukId": "test-bap-unique-key-id",
+    "subscriber_id": "test-bap-id",
+    "subscriber_url": "https://test-bap-id",
+    "type": "BAP",
+    "domain": "nic2004:55204",
+    "signing_public_key": "1tRC4LHVKWeGikY5C8T1FYI9t3oacpa3IFvj8e7aGws=",
+    "status": "SUBSCRIBED",
+    "created": "{{$datetime iso8601}}",
+    "updated": "{{$datetime iso8601}}"
+}
+
+###
+
+POST {{registry-host}}/delete
+    ?unique_key_id=test-bap-unique-key-id
+    &subscriber_id=test-bap-id
+content-type: application/json
+
+{
+
+}

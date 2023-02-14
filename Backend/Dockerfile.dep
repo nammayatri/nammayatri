@@ -1,0 +1,31 @@
+FROM fpco/stack-build:lts-16.31
+RUN mkdir /opt/build
+WORKDIR /opt/build
+
+# Updating confluence public key:
+RUN sudo apt-key del 41468433 \
+  && wget -qO - https://packages.confluent.io/deb/5.5/archive.key | sudo apt-key add -
+
+# Updating nvidia cuda public key
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+
+# GHC dynamically links its compilation targets to lib gmp
+RUN apt-get update \
+  && apt-get download libgmp10 \
+  && apt-get install -y \
+  && apt install libtinfo5 -y \
+  openssh-client \
+  librdkafka-dev
+RUN mv libgmp*.deb libgmp.deb
+
+# Dependencies for checks
+RUN stack install --resolver lts-17.6 hlint ormolu
+
+# Docker build should not use cached layer if any of these is modified
+COPY . /opt/build/
+
+RUN stack build --system-ghc --dependencies-only
+
+# Remove src code to avoid caching it
+RUN ls | grep -vE ".stack|libgmp.deb" | xargs rm -rf
+

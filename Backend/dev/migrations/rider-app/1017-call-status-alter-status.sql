@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.call_status ALTER COLUMN status TYPE varchar(255) USING status::varchar;

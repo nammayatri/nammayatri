@@ -1,0 +1,17 @@
+@app-token = ea37f941-427a-4085-a7d0-96240f166672
+@app-host = http://localhost:8013/v2
+@token = {{app-token}}
+
+# @name search
+POST {{app-host}}/route
+content-type: application/json
+token: {{token}}
+
+{
+  "waypoints" : [
+    {"lat": 27.7564327, "lon": -17.9710269},
+    {"lat": 27.6410709, "lon":-18.0480846}],
+  "calcPoints" : true
+}
+
+

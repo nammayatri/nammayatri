@@ -1,0 +1,89 @@
+
+# with snapToRoads:
+# without         :
+
+#10.021737163149579, 76.30619847435514 1
+#10.022594311263232, 76.30556874855885 2
+#10.022551155038336, 76.30441176779023 3
+#10.022896404676642, 76.30350020718463 4
+#10.023494484407422, 76.30321503690381 5
+#10.023880128960258, 76.30264171106143 6
+
+
+###
+
+# @name updateInitial
+POST {{transporter-host}}/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 10.021737163149579,
+            "lon": 76.30619847435514
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+
+###
+#10.022594311263232, 76.30556874855885
+#10.022551155038336, 76.30441176779023
+#10.022896404676642, 76.30350020718463
+# @name update1
+POST {{transporter-host}}/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 10.022594311263232,
+            "lon": 76.30556874855885
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 10.022551155038336,
+            "lon": 76.30441176779023
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 10.022896404676642,
+            "lon": 76.30350020718463
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+
+###
+
+#10.023494484407422, 76.30321503690381
+#10.023880128960258, 76.30264171106143
+# @name update2
+POST {{transporter-host}}/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 10.023494484407422,
+            "lon": 76.30321503690381
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 10.023880128960258,
+            "lon": 76.30264171106143
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+
+###

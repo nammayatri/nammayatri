@@ -1,0 +1,26 @@
+@token = {{driver-token}}
+
+GET {{transporter-host}}/driver/booking/list?limit=10&offset=0&onlyActive=true
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name setActive
+POST {{transporter-host}}/driver/setActivity?active=true
+content-type: application/json
+token: {{token}}
+
+
+###
+@ride = {{rideList.response.body.list[0]}}
+
+# @name startRide
+POST {{transporter-host}}/
+
+###
+
+# @name rideList
+
+GET {{transporter-host}}/driver/ride/list?limit=100&offset=0&onlyActive=False
+token: {{token}}

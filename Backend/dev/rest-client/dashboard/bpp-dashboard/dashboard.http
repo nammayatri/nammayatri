@@ -1,0 +1,210 @@
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# use this creds for testing different roles:
+# name = customer, driver, juspay_ops, juspay_admin, customer_service
+# email = name@dashboard.com, password = name
+
+# @name login
+
+POST {{bpp-dashboard-host}}/user/login
+content-type: application/json
+
+{
+  "email" : "juspay_admin@dashboard.com",
+  "password" : "juspay_admin",
+  "merchantId" : "YATRI_PARTNER"
+}
+
+###
+
+# @name createPerson
+POST {{bpp-dashboard-host}}/admin/person/create
+content-type: application/json
+token: {{token}}
+
+{
+  "firstName" : "unknown",
+  "lastName" : "known",
+  "roleId" : "508a0bac-258d-44a6-ac55-aef57ab87a76",
+  "email" : "xyzss@gmail.com",
+  "mobileNumber" : "9876543200",
+  "mobileCountryCode" : "+91",
+  "passwordHash" : "juspay@adminadad"
+}
+
+###
+
+# @name personList
+
+@token = {{login.response.body.authToken}}
+
+GET {{bpp-dashboard-host}}/admin/person/list
+  ?limit=10
+  &offset=0
+  # &searchString=customer
+  # &searchString=7777777781
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name getAccessMatrix
+
+GET {{bpp-dashboard-host}}/admin/accessMatrix
+  ?limit=10
+  &offset=0
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name getAccessMatrixByRole
+
+@roleId = {{getAccessMatrix.response.body.accessMatrix[0].role.id}}
+
+GET {{bpp-dashboard-host}}/admin/accessMatrix/role/{{roleId}}
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name createRole
+
+POST {{bpp-dashboard-host}}/admin/roles/create
+content-type: application/json
+token: {{token}}
+
+{ "name" : "DEVELOPER",
+  "description" : "developer"
+}
+
+###
+
+# @name assignRole
+
+# assign new "DEVELOPER" role to person with name "customer"
+@customerPersonId = 25e77f37-75e5-4665-8ed0-4be2af35940a
+
+@developerRoleId = {{createRole.response.body.id}}
+
+POST {{bpp-dashboard-host}}/admin/person/{{customerPersonId}}/assignRole/{{developerRoleId}}
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name assignAccessLevel
+
+POST {{bpp-dashboard-host}}/admin/roles/{{developerRoleId}}/assignAccessLevel
+content-type: application/json
+token: {{token}}
+
+{ "apiEntity" : "DRIVERS",
+  "userAccessType" : "USER_FULL_ACCESS"
+}
+
+###
+
+# @name roleslist
+
+GET {{bpp-dashboard-host}}/admin/roles/list
+  ?searchString=ADMIN
+  &limit=5
+  &offset=0
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name resetMerchantAccess
+
+POST {{bpp-dashboard-host}}/admin/person/{{customerPersonId}}/resetMerchantAccess
+content-type: application/json
+token: {{token}}
+
+{
+  "merchantId" : "NAMMA_YATRI_PARTNER"
+}
+
+###
+
+# @name assignMerchantAccess
+
+POST {{bpp-dashboard-host}}/admin/person/{{customerPersonId}}/assignMerchantAccess
+content-type: application/json
+token: {{token}}
+
+{
+  "merchantId" : "NAMMA_YATRI_PARTNER"
+}
+
+###
+
+# @name profile
+
+@yatriPartnerCustomerToken = {{bpp-dashboard/token/YATRI_PARTNER/customer}}
+
+GET {{bpp-dashboard-host}}/user/profile
+content-type: application/json
+token: {{yatriPartnerCustomerToken}}
+
+###
+
+# @name driverOfferCustomerLogin
+
+# name = customer, driver, juspay_ops, juspay_admin, customer_service
+@customerLogin = customer_service
+
+POST {{bpp-dashboard-host}}/user/login
+content-type: application/json
+
+{
+  "email" : "{{customerLogin}}@dashboard.com",
+  "password" : "{{customerLogin}}",
+  "merchantId" : "NAMMA_YATRI_PARTNER"
+}
+
+###
+
+# @name getCurrentMerchant
+
+@driverOfferCustomerToken = {{driverOfferCustomerLogin.response.body.authToken}}
+
+GET {{bpp-dashboard-host}}/user/getCurrentMerchant
+content-type: application/json
+token: {{driverOfferCustomerToken}}
+
+###
+
+# check access level for new role "DEVELOPER"
+
+# @name driverList
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/list
+  ?limit=10
+  &offset=0
+content-type: application/json
+token: {{driverOfferCustomerToken}}
+
+###
+
+# @name logout
+
+# this endpoint should remove only one token for YATRI_PARTNER merchant
+
+POST {{bpp-dashboard-host}}/user/logout
+content-type: application/json
+token: {{yatriPartnerCustomerToken}}
+
+###
+
+# @name logoutAllMerchants
+
+# this endpoint should remove all tokens for customer
+
+POST {{bpp-dashboard-host}}/user/logoutAllMerchants
+content-type: application/json
+token: {{driverOfferCustomerToken}}

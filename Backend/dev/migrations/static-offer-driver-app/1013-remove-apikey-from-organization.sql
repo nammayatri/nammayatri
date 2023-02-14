@@ -1,0 +1,1 @@
+ALTER TABLE atlas_transporter.organization DROP COLUMN api_key;

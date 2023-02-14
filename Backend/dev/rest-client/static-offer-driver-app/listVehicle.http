@@ -1,0 +1,8 @@
+@transporter-host = http://localhost:8014/v2
+@token = ea37f941-427a-4085-a7d0-96240f166672
+GET {{transporter-host}}/org/vehicle/list
+?registrationNo=1
+&variant="SUV"
+content-type: application/json
+token: {{token}}
+

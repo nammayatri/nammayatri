@@ -1,0 +1,5 @@
+@token = {{coordinator-token}}
+
+GET {{transporter-host}}/org/driver/list
+content-type: application/json
+token: {{token}}

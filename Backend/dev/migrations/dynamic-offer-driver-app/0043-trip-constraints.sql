@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN min_allowed_trip_distance integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN max_allowed_trip_distance integer;

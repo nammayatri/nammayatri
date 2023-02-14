@@ -1,0 +1,51 @@
+ {-
+ Copyright 2022-23, Juspay India Pvt Ltd
+ 
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License 
+ 
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program 
+ 
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
+ 
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of 
+ 
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
+module Domain.Types.Transaction where
+
+import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
+import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
+import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DP
+import Kernel.Prelude
+import Kernel.Types.Id
+
+-- request is raw Text here, because if some field will be changed, we can't parse it
+data Transaction = Transaction
+  { id :: Id Transaction,
+    requestorId :: Id DP.Person,
+    merchantId :: Maybe (Id DM.Merchant), -- will be Nothing for admin apis
+    endpoint :: Endpoint, -- Text?
+    commonDriverId :: Maybe (Id Common.Driver),
+    commonRideId :: Maybe (Id Common.Ride),
+    request :: Maybe Text,
+    response :: Maybe Text,
+    responseError :: Maybe Text,
+    createdAt :: UTCTime
+  }
+
+data Endpoint
+  = RideAPI Common.RideEndpoint
+  | BookingAPI Common.BookingEndpoint
+  | DriverAPI Common.DriverEndpoint
+  | DriverRegistrationAPI Common.DriverRegistrationEndpoint
+  | MerchantAPI Common.MerchantEndpoint
+  | CustomerAPI Common.CustomerEndpoint
+  | MessageAPI Common.MessageEndpoint
+  deriving (Show, Read)

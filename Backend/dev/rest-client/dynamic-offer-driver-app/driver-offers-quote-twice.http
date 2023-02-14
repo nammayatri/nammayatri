@@ -1,0 +1,189 @@
+@token1 = {{driver-offer-bpp-auto-token1}}
+@driver-offer-bpp-host = http://localhost:8016
+@custToken = {{app-token}}
+@custToken2 = {{app-token2}}
+
+# @name healthcheck
+GET {{driver-offer-bpp-host}}/ui
+
+###
+
+# @name updateInitial
+POST {{driver-offer-bpp-host}}/ui/driver/location
+token: {{token1}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.31742659311804,
+            "lat": 10.041437092019764
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+
+###
+
+# @name setActive
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
+content-type: application/json
+token: {{token1}}
+###
+
+###
+
+# @name search
+POST {{app-host}}/rideSearch
+content-type: application/json
+token: {{custToken}}
+
+{
+  "fareProductType" : "ONE_WAY",
+  "contents" : {
+    "origin": {
+      "address": {
+          "street": "Edapally Metro Station",
+          "state": "Kerala",
+          "door": "",
+          "country": "India",
+          "city": "Kochi",
+          "building": " ",
+          "areaCode": "",
+          "area": "Edappally"
+      },
+      "gps": {
+          "lon": 76.31642659311804,
+          "lat": 10.041437092019764
+      }
+    },
+    "destination": {
+      "address": {
+              "street": "Ambattukavu",
+              "state": "Kerala",
+              "door": "",
+              "country": "India",
+              "city": "Aluva",
+              "building": "Ambattukavu metro station",
+              "areaCode": "",
+              "area": "Choornikkara"
+          },
+      "gps": {
+          "lon": 76.3388894,
+          "lat": 10.0792806
+      }
+    }
+  }
+}
+
+###
+
+@searchId = {{search.response.body.searchId}}
+
+# @name quotes
+GET {{app-host}}/rideSearch/{{searchId}}/results
+content-type: application/json
+token: {{custToken}}
+
+###
+
+# @name select
+@estimateId = {{quotes.response.body.estimates[0].id}}
+
+POST {{app-host}}/estimate/{{estimateId}}/select HTTP/1.1
+content-type: application/json
+token: {{custToken}}
+
+###
+
+###
+
+# @name search2
+POST {{app-host}}/rideSearch
+content-type: application/json
+token: {{custToken2}}
+
+{
+  "fareProductType" : "ONE_WAY",
+  "contents" : {
+    "origin": {
+      "address": {
+          "street": "Edapally Metro Station",
+          "state": "Kerala",
+          "door": "",
+          "country": "India",
+          "city": "Kochi",
+          "building": " ",
+          "areaCode": "",
+          "area": "Edappally"
+      },
+      "gps": {
+          "lon": 76.31642659311804,
+          "lat": 10.041437092019764
+      }
+    },
+    "destination": {
+      "address": {
+              "street": "Ambattukavu",
+              "state": "Kerala",
+              "door": "",
+              "country": "India",
+              "city": "Aluva",
+              "building": "Ambattukavu metro station",
+              "areaCode": "",
+              "area": "Choornikkara"
+          },
+      "gps": {
+          "lon": 76.3388894,
+          "lat": 10.0792806
+      }
+    }
+  }
+}
+
+###
+
+@searchId = {{search2.response.body.searchId}}
+
+# @name quotes2
+GET {{app-host}}/rideSearch/{{searchId}}/results
+content-type: application/json
+token: {{custToken2}}
+
+###
+
+# @name select2
+@estimateId = {{quotes2.response.body.estimates[0].id}}
+
+POST {{app-host}}/estimate/{{estimateId}}/select HTTP/1.1
+content-type: application/json
+token: {{custToken2}}
+
+###
+
+# @name nearbySearchRequest
+GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
+token: {{token1}}
+
+###
+
+# @name offerQuote
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+token: {{token1}}
+content-type: application/json
+
+{
+    "offeredFare": 30,
+    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequests[0].searchRequestId}}"
+}
+
+###
+# @name offerQuote
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+token: {{token1}}
+content-type: application/json
+
+{
+    "offeredFare": 30,
+    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequests[1].searchRequestId}}"
+}

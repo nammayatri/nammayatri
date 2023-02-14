@@ -1,0 +1,52 @@
+ {-
+ Copyright 2022-23, Juspay India Pvt Ltd
+ 
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License 
+ 
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program 
+ 
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
+ 
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of 
+ 
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
+module Domain.Types.Message.Message where
+
+import Data.OpenApi hiding (description, title)
+import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Message.MediaFile as MF
+import Kernel.External.Types (Language)
+import Kernel.Prelude
+import Kernel.Types.Id
+
+data MessageType = Action Text | Read deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+
+data Message = Message
+  { id :: Id Message,
+    _type :: MessageType,
+    title :: Text,
+    description :: Text,
+    mediaFiles :: [Id MF.MediaFile],
+    messageTranslations :: [MessageTranslation],
+    merchantId :: Id Merchant,
+    createdAt :: UTCTime
+  }
+
+data MessageTranslation = MessageTranslation
+  { language :: Language,
+    title :: Text,
+    description :: Text,
+    createdAt :: UTCTime
+  }
+
+data RawMessage = RawMessage
+  { id :: Id Message,
+    _type :: MessageType,
+    title :: Text,
+    description :: Text,
+    mediaFiles :: [Id MF.MediaFile],
+    merchantId :: Id Merchant,
+    createdAt :: UTCTime
+  }

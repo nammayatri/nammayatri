@@ -1,0 +1,136 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name merchantUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "name" : "merchantName",
+  "description" : "merchantDescription",
+  "enabled" : true,
+  "fcmConfig" :
+    { "fcmUrl" : "http://localhost:4545/someUrl/",
+      "fcmServiceAccount" : "ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAianAtYmVja24tZGV2IiwKICAicHJpdmF0ZV9rZXlfaWQiOiAieHh4eHh4eHh4eHh4eHh4eHh4eCIsCiAgInByaXZhdGVfa2V5IjogIi0tLS0tQkVHSU4gUFJJVkFURSBLRVktLS0tLXh4eHh4eHh4eHh4eHh4eHh4eHgtLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tXG4iLAogICJjbGllbnRfZW1haWwiOiAiYmVja24tZmNtQGpwLWJlY2tuLWRldi5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsCiAgImNsaWVudF9pZCI6ICJ4eHh4eHh4eHh4IiwKICAiYXV0aF91cmkiOiAiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tL28vb2F1dGgyL2F1dGgiLAogICJ0b2tlbl91cmkiOiAiaHR0cHM6Ly9vYXV0aDIuZ29vZ2xlYXBpcy5jb20vdG9rZW4iLAogICJhdXRoX3Byb3ZpZGVyX3g1MDlfY2VydF91cmwiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vb2F1dGgyL3YxL2NlcnRzIiwKICAiY2xpZW50X3g1MDlfY2VydF91cmwiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vcm9ib3QvdjEvbWV0YWRhdGEveDUwOS9iZWNrbi1mY20lNDBqcC1iZWNrbi1kZXYuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iCn0="
+    }
+}
+
+###
+
+# @name merchantGoogleConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/serviceConfig/maps/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "Google",
+  "serviceConfig" : {
+      "googleMapsUrl" : "http://localhost:8019/",
+      "googleRoadsUrl" : "http://localhost:8019/",
+      "googleKey" : "mock-google-key"
+  }
+}
+
+###
+
+# @name merchantOSRMConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/serviceConfig/maps/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "OSRM",
+  "serviceConfig" : {
+      "osrmUrl" : "osrmUrl",
+      "radiusDeviation" : 30
+  }
+}
+
+###
+
+# @name merchantMMIConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/serviceConfig/maps/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "MMI",
+  "serviceConfig" : {
+    "mmiAuthUrl" : "mmiAuthUrl",
+    "mmiAuthId" : "mmiAuthId",
+    "mmiAuthSecret" : "mmiAuthSecret",
+    "mmiApiKey" : "mmiApiKey",
+    "mmiKeyUrl" : "mmiKeyUrl",
+    "mmiNonKeyUrl" : "mmiNonKeyUrl"
+  }
+}
+
+###
+
+# @name mapsServiceUsageConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/serviceUsageConfig/maps/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "getDistances" : "Google",
+  "getEstimatedPickupDistances" : "Google",
+  "getRoutes" : "Google",
+  "snapToRoad" : "OSRM",
+  "getPlaceName" : "Google",
+  "getPlaceDetails" : "Google",
+  "autoComplete" : "MMI"
+}
+###
+
+# @name merchantMyValueFirstConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/serviceConfig/sms/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "MyValueFirst",
+  "serviceConfig" : {
+      "username" : "username",
+      "password" : "password",
+      "url" : "http://localhost:4343/someUrl/"
+  }
+}
+
+###
+
+# @name merchantExotelSmsConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/serviceConfig/sms/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "serviceName" : "ExotelSms",
+  "serviceConfig" : {
+      "apiKey" : "apiKey",
+      "apiToken" : "apiToken",
+      "sid" : "sid",
+      "url" : "url"
+  }
+}
+
+###
+
+# @name smsServiceUsageConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/serviceUsageConfig/sms/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "smsProvidersPriorityList" : ["ExotelSms","MyValueFirst"]
+}
