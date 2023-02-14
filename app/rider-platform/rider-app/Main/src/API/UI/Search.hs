@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLists #-}
+
 module API.UI.Search
   ( SearchReq (..),
     SearchRes (..),
@@ -43,6 +45,7 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J
+import qualified Tools.Maps as Maps
 import Tools.Metrics
 
 -------- Search Flow --------
@@ -86,7 +89,8 @@ fareProductSchemaOptions =
 
 data SearchRes = SearchRes
   { searchId :: Id SearchRequest,
-    searchExpiry :: UTCTime
+    searchExpiry :: UTCTime,
+    routeInfo :: Maybe Maps.RouteInfo
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -100,10 +104,10 @@ search :: Id Person.Person -> SearchReq -> Maybe Version -> Maybe Version -> Flo
 search personId req mbBundleVersion mbClientVersion = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion
-  (searchId, searchExpiry) <- case req of
+  (searchId, searchExpiry, routeInfo) <- case req of
     OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion oneWay
     RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion rental
-  return $ SearchRes searchId searchExpiry
+  return $ SearchRes searchId searchExpiry routeInfo
 
 oneWaySearch ::
   ( HasCacheConfig r,
@@ -122,17 +126,43 @@ oneWaySearch ::
   Maybe Version ->
   Maybe Version ->
   DOneWaySearch.OneWaySearchReq ->
-  m (Id SearchRequest, UTCTime)
+  m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
 oneWaySearch personId bundleVersion clientVersion req = do
   dSearchRes <- DOneWaySearch.oneWaySearch personId req bundleVersion clientVersion
+  let sourceLatlong = req.origin.gps
+  let destinationLatLong = req.destination.gps
+  let request =
+        Maps.GetRoutesReq
+          { waypoints = [sourceLatlong, destinationLatLong],
+            calcPoints = True,
+            mode = Just Maps.CAR
+          }
+  person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist $ show personId)
+  routeResponse <- Maps.getRoutes person.merchantId request
+  let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
   fork "search cabs" . withShortRetry $ do
-    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
+    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes shortestRouteInfo
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
   fork "search metro" . withShortRetry $ do
     becknMetroReq <- MetroACL.buildSearchReq dSearchRes
     CallBPP.searchMetro becknMetroReq
   fork "search public-transport" $ PublicTransport.sendPublicTransportSearchRequest personId dSearchRes
-  return (dSearchRes.searchId, dSearchRes.searchRequestExpiry)
+  return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, shortestRouteInfo)
+
+getRouteInfoWithShortestDuration :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
+getRouteInfoWithShortestDuration (routeInfo : routeInfoArray) =
+  if null routeInfoArray
+    then Just routeInfo
+    else do
+      restRouteresult <- getRouteInfoWithShortestDuration routeInfoArray
+      Just $ comparator routeInfo restRouteresult
+getRouteInfoWithShortestDuration [] = Nothing
+
+comparator :: Maps.RouteInfo -> Maps.RouteInfo -> Maps.RouteInfo
+comparator route1 route2 =
+  if route1.duration < route2.duration
+    then route1
+    else route2
 
 rentalSearch ::
   ( HasCacheConfig r,
@@ -149,14 +179,14 @@ rentalSearch ::
   Maybe Version ->
   Maybe Version ->
   DRentalSearch.RentalSearchReq ->
-  m (Id SearchRequest, UTCTime)
+  m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
 rentalSearch personId bundleVersion clientVersion req = do
   dSearchRes <- DRentalSearch.rentalSearch personId bundleVersion clientVersion req
   fork "search rental" . withShortRetry $ do
     -- do we need fork here?
     becknReq <- TaxiACL.buildRentalSearchReq dSearchRes
     void $ CallBPP.search dSearchRes.gatewayUrl becknReq
-  pure (dSearchRes.searchId, dSearchRes.searchRequestExpiry)
+  pure (dSearchRes.searchId, dSearchRes.searchRequestExpiry, Nothing)
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,

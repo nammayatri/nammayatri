@@ -31,7 +31,8 @@ data DSearchReq = DSearchReq
     bapUri :: BaseUrl,
     pickupLocation :: DLoc.SearchReqLocationAPIEntity,
     pickupTime :: UTCTime,
-    dropLocation :: DLoc.SearchReqLocationAPIEntity
+    dropLocation :: DLoc.SearchReqLocationAPIEntity,
+    routeInfo :: Maybe Maps.RouteInfo
   }
 
 data DSearchRes = DSearchRes
@@ -84,6 +85,35 @@ data BreakupPrice = BreakupPrice
     value :: Money
   }
 
+data DistanceAndDuration = DistanceAndDuration
+  { distance :: Meters,
+    duration :: Seconds
+  }
+
+getDistanceAndDuration :: Id DM.Merchant -> DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> Maybe Maps.RouteInfo -> Flow DistanceAndDuration
+getDistanceAndDuration merchantId fromLocation toLocation routeInfo = case routeInfo of
+  (Just infoElement) ->
+    if isJust infoElement.distance && isJust infoElement.duration
+      then return DistanceAndDuration {distance = fromMaybe 0 infoElement.distance, duration = fromMaybe 0 infoElement.duration}
+      else do
+        response <-
+          Maps.getDistance merchantId $
+            Maps.GetDistanceReq
+              { origin = fromLocation,
+                destination = toLocation,
+                travelMode = Just Maps.CAR
+              }
+        return DistanceAndDuration {distance = response.distance, duration = response.duration}
+  Nothing -> do
+    response <-
+      Maps.getDistance merchantId $
+        Maps.GetDistanceReq
+          { origin = fromLocation,
+            destination = toLocation,
+            travelMode = Just Maps.CAR
+          }
+    return DistanceAndDuration {distance = response.distance, duration = response.duration}
+
 handler :: Id DM.Merchant -> DSearchReq -> Flow DSearchRes
 handler merchantId sReq = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
@@ -95,21 +125,12 @@ handler merchantId sReq = do
   let mbDropoffLatLong = Just $ Maps.getCoordinates toLocation
   unlessM (rideServiceable org.geofencingConfig QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
     throwError RideNotServiceable
+  result <- getDistanceAndDuration merchantId fromLocation toLocation sReq.routeInfo
+  CD.cacheDistance sReq.transactionId (result.distance, result.duration)
+  logDebug $ "distance: " <> show result.distance
 
-  distRes <-
-    Maps.getDistance merchantId $
-      Maps.GetDistanceReq
-        { origin = fromLocation,
-          destination = toLocation,
-          travelMode = Just Maps.CAR
-        }
-  let distance = distRes.distance
-  let duration = distRes.duration
-  CD.cacheDistance sReq.transactionId (distance, duration)
-  logDebug $ "distance: " <> show distance
-
-  allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just distance)
-  let farePolicies = filter (checkTripConstraints distance) allFarePolicies
+  allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
+  let farePolicies = filter (checkTripConstraints result.distance) allFarePolicies
 
   estimates <-
     if null farePolicies
@@ -117,14 +138,14 @@ handler merchantId sReq = do
         logDebug "Trip doesnot match any fare policy constraints."
         return []
       else do
-        driverPoolCfg <- getDriverPoolConfig distance
+        driverPoolCfg <- getDriverPoolConfig result.distance
         driverPool <- calculateDriverPool Estimate driverPoolCfg Nothing pickupLatLong org.id True Nothing
 
         logDebug $ "Search handler: driver pool " <> show driverPool
 
         let listOfProtoQuotes = nubBy ((==) `on` (.variant)) driverPool
             filteredProtoQuotes = zipMatched farePolicies listOfProtoQuotes
-        estimates <- mapM (mkEstimate org sReq.pickupTime distance driverPool) filteredProtoQuotes
+        estimates <- mapM (mkEstimate org sReq.pickupTime result.distance driverPool) filteredProtoQuotes
         logDebug $ "bap uri: " <> show sReq.bapUri
         return estimates
 

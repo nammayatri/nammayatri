@@ -90,6 +90,7 @@ generateSearchRequest = do
                             },
                         end = Nothing
                       }
-                }
+                },
+            routeInfo = Nothing
           }
   pure $ API.BecknReq context intent

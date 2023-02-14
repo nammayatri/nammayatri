@@ -36,7 +36,8 @@ buildSearchReq subscriber req = do
         bapUri = subscriber.subscriber_url,
         pickupLocation = mkLocation pickup.location,
         pickupTime = pickup.time.timestamp,
-        dropLocation = mkLocation dropOff.location
+        dropLocation = mkLocation dropOff.location,
+        routeInfo = req.message.routeInfo
       }
 
 mkLocation :: Search.Location -> Location.SearchReqLocationAPIEntity

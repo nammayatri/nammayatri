@@ -12,10 +12,12 @@ import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Tools.Maps as Maps
 
 buildOneWaySearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DOneWaySearch.OneWaySearchRes ->
+  Maybe Maps.RouteInfo ->
   m (BecknReq Search.SearchMessage)
 buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} = buildSearchReq origin (Just destination) searchId now
 
@@ -23,7 +25,7 @@ buildRentalSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
-buildRentalSearchReq DRentalSearch.RentalSearchRes {..} = buildSearchReq origin Nothing searchId startTime
+buildRentalSearchReq DRentalSearch.RentalSearchRes {..} = buildSearchReq origin Nothing searchId startTime Nothing
 
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
@@ -31,14 +33,16 @@ buildSearchReq ::
   Maybe DSearchCommon.SearchReqLocation ->
   Id DSearchReq.SearchRequest ->
   UTCTime ->
+  Maybe Maps.RouteInfo ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime = do
+buildSearchReq origin mbDestination searchId startTime mbRouteInfo = do
   let messageId = getId searchId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SEARCH messageId (Just messageId) bapIDs.cabs bapURIs.cabs Nothing Nothing
   let intent = mkIntent origin mbDestination startTime
-  pure $ BecknReq context $ Search.SearchMessage intent
+  let searchMessage = Search.SearchMessage intent mbRouteInfo
+  pure $ BecknReq context searchMessage
 
 mkIntent ::
   DSearchCommon.SearchReqLocation ->
