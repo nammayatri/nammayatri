@@ -217,4 +217,5 @@ in  { esqDBCfg
     , driverLocationUpdateTopic = "location-updates-master"
     , kafkaProducerCfg
     , maxParallelSearchRequests = +3
+    , snapToRoadSnippetThreshold = common.snapToRoadSnippetThreshold
     }

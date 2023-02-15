@@ -26,7 +26,8 @@ data AppEnv = AppEnv
     hedisEnv :: HedisEnv,
     encTools :: EncTools,
     coreMetrics :: Metrics.CoreMetricsContainer,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    snapToRoadSnippetThreshold :: HighPrecMeters
   }
   deriving (Generic)
 
@@ -60,6 +61,7 @@ wrapTests func = do
             AppEnv
               { httpClientOptions = defaultHttpClientOptions,
                 encTools = appCfg.encTools,
+                snapToRoadSnippetThreshold = appCfg.snapToRoadSnippetThreshold,
                 ..
               }
       func appCfg appEnv

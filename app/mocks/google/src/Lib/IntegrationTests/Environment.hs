@@ -3,6 +3,7 @@ module Lib.IntegrationTests.Environment where
 import Kernel.External.Encryption (EncTools (..), encrypt')
 import Kernel.External.Maps
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMeters)
 import Kernel.Utils.Dhall (FromDhall, readDhallConfig)
 import Lib.GoogleConfig (GoogleCfgUnencrypted (..))
 
@@ -18,7 +19,8 @@ buildGoogleConfig encTools GoogleCfgUnencrypted {..} = do
 
 data AppCfg = AppCfg
   { googleCfg :: GoogleCfgUnencrypted,
-    encTools :: EncTools
+    encTools :: EncTools,
+    snapToRoadSnippetThreshold :: HighPrecMeters
   }
   deriving (Generic, FromDhall)
 

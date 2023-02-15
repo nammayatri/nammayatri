@@ -115,7 +115,8 @@ mkRideInterpolationHandler ::
     HasPrettyLogger m env,
     HasCallStack,
     Metrics.CoreMetrics m,
-    EncFlow m env
+    EncFlow m env,
+    HasField "snapToRoadSnippetThreshold" env HighPrecMeters
   ) =>
   Bool ->
   MapsServiceConfig ->
@@ -164,7 +165,8 @@ deleteFirstNwaypointsImplementation driverId numToDel = lTrim (makeWaypointsRedi
 interpolatePointsAndCalculateDistanceImplementation ::
   ( HasCallStack,
     EncFlow m r,
-    Metrics.CoreMetrics m
+    Metrics.CoreMetrics m,
+    HasField "snapToRoadSnippetThreshold" r HighPrecMeters
   ) =>
   Bool ->
   MapsServiceConfig ->

@@ -91,7 +91,8 @@ data AppCfg = AppCfg
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
     driverLocationUpdateTopic :: Text,
-    maxParallelSearchRequests :: Int
+    maxParallelSearchRequests :: Int,
+    snapToRoadSnippetThreshold :: HighPrecMeters
   }
   deriving (Generic, FromDhall)
 
@@ -156,7 +157,8 @@ data AppEnv = AppEnv
     kafkaProducerCfg :: KafkaProducerCfg,
     kafkaProducerTools :: KafkaProducerTools,
     driverLocationUpdateTopic :: Text,
-    maxParallelSearchRequests :: Int
+    maxParallelSearchRequests :: Int,
+    snapToRoadSnippetThreshold :: HighPrecMeters
   }
   deriving (Generic)
 

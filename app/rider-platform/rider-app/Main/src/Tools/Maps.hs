@@ -61,7 +61,16 @@ getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
 getRoutes :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
 getRoutes = runWithServiceConfig Maps.getRoutes (.getRoutes)
 
-snapToRoad :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> SnapToRoadReq -> m SnapToRoadResp
+snapToRoad ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    CoreMetrics m,
+    HasField "snapToRoadSnippetThreshold" r HighPrecMeters
+  ) =>
+  Id Merchant ->
+  SnapToRoadReq ->
+  m SnapToRoadResp
 snapToRoad = runWithServiceConfig Maps.snapToRoad (.snapToRoad)
 
 autoComplete :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> AutoCompleteReq -> m AutoCompleteResp

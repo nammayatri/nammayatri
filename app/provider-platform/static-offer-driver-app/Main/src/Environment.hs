@@ -87,7 +87,8 @@ data AppCfg = AppCfg
     driverLocationUpdateNotificationTemplate :: Text,
     driverReachedDistance :: HighPrecMeters,
     driverPoolCfg :: DriverPoolConfig,
-    driverLocationUpdateTopic :: Text
+    driverLocationUpdateTopic :: Text,
+    snapToRoadSnippetThreshold :: HighPrecMeters
   }
   deriving (Generic, FromDhall)
 
@@ -141,7 +142,8 @@ data AppEnv = AppEnv
     driverLocationUpdateNotificationTemplate :: Text,
     driverReachedDistance :: HighPrecMeters,
     driverPoolCfg :: DriverPoolConfig,
-    driverLocationUpdateTopic :: Text
+    driverLocationUpdateTopic :: Text,
+    snapToRoadSnippetThreshold :: HighPrecMeters
   }
   deriving (Generic)
 
