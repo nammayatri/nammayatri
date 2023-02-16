@@ -36,7 +36,7 @@ import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.FareParameters as Fare
-import Domain.Types.FarePolicy (ExtraFee)
+import Domain.Types.FarePolicy.FarePolicy (ExtraFee)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Person, PersonAPIEntity)
 import qualified Domain.Types.Person as SP
@@ -635,7 +635,7 @@ respondQuote driverId req = do
         quoteLimit <- getQuoteLimit sReq.estimatedDistance
         quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
         when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-        farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
+        farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
         whenJust mbOfferedFare $ \off ->
           unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
             throwError $ NotAllowedExtraFee $ show off

@@ -8,7 +8,7 @@ module SharedLogic.FareCalculator.Flow
 where
 
 import Domain.Types.FareParameters
-import Domain.Types.FarePolicy (FarePolicy)
+import Domain.Types.FarePolicy.FarePolicy (FarePolicy)
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id

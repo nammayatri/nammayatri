@@ -48,7 +48,6 @@ handler merchantId sReq = do
   sessiontoken <- generateGUIDText
   fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupLocation
   toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropLocation
-  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId sReq.variant >>= fromMaybeM NoFarePolicy
   mbDistRes <- CD.getCacheDistance sReq.transactionId
   logInfo $ "Fetching cached distance and duration" <> show mbDistRes
   (distance, duration) <-
@@ -63,6 +62,7 @@ handler merchantId sReq = do
               }
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
+  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
   fareParams <- calculateFare merchantId farePolicy distance sReq.pickupTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration
   let driverExtraFare = farePolicy.driverExtraFee

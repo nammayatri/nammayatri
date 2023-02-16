@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.FarePolicy
@@ -12,7 +13,7 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.FarePolicy
+import Domain.Types.FarePolicy.FarePolicy
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Prelude
@@ -22,7 +23,22 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.Queries.FarePolicy as Queries
+import Storage.CachedQueries.RestrictedExtraFare (findRestrictedFareListByMerchant, findRestrictedFareListByMerchantAndVehicle)
+import qualified Storage.Queries.FarePolicy.FarePolicy as Queries
+
+getUpdatedFarePolicy :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Vehicle.Variant -> Meters -> FarePolicy -> m FarePolicy
+getUpdatedFarePolicy mId varId distance farePolicy = do
+  restrictedPolicy <-
+    case varId of
+      Just var -> findRestrictedFareListByMerchantAndVehicle mId var
+      Nothing -> findRestrictedFareListByMerchant mId
+  pure $ maybe farePolicy (updateMaxExtraFare farePolicy) (restrictedFair restrictedPolicy)
+  where
+    updateMaxExtraFare FarePolicy {..} maxFee = FarePolicy {driverExtraFee = driverExtraFee {maxFee}, ..}
+    restrictedFair fares =
+      case find (\fare -> fare.minTripDistance <= distance) fares of
+        Just fare -> Just (fare.driverMaxExtraFare)
+        Nothing -> Nothing
 
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
 findById id =
@@ -34,23 +50,32 @@ findByMerchantIdAndVariant ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   Vehicle.Variant ->
+  Maybe Meters ->
   m (Maybe FarePolicy)
-findByMerchantIdAndVariant merchantId vehVar =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdVehVarKey merchantId vehVar) >>= \case
-    Nothing -> findAndCache
-    Just id ->
-      Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
-        Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
-        Nothing -> findAndCache
+findByMerchantIdAndVariant merchantId vehVar mRideDistance =
+  case mRideDistance of
+    Just distance -> mapM (getUpdatedFarePolicy merchantId (Just vehVar) distance) =<< getFarePolicy
+    Nothing -> getFarePolicy
   where
+    getFarePolicy = do
+      Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdVehVarKey merchantId vehVar) >>= \case
+        Nothing -> findAndCache
+        Just id ->
+          Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
+            Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
+            Nothing -> findAndCache
     findAndCache = flip whenJust cacheFarePolicy /=<< Queries.findByMerchantIdAndVariant merchantId vehVar
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [FarePolicy]
-findAllByMerchantId merchantId =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeAllMerchantIdKey merchantId) >>= \case
-    Just a -> return $ fmap (coerce @(FarePolicyD 'Unsafe) @FarePolicy) a
-    Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
+findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Meters -> m [FarePolicy]
+findAllByMerchantId merchantId mRideDistance =
+  case mRideDistance of
+    Just distance -> traverse (getUpdatedFarePolicy merchantId Nothing distance) =<< getFarePolicy
+    Nothing -> getFarePolicy
   where
+    getFarePolicy = do
+      Hedis.withCrossAppRedis (Hedis.safeGet $ makeAllMerchantIdKey merchantId) >>= \case
+        Just a -> return $ fmap (coerce @(FarePolicyD 'Unsafe) @FarePolicy) a
+        Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
     cacheRes fps = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.withCrossAppRedis $ Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[FarePolicy] @[FarePolicyD 'Unsafe] fps) expTime

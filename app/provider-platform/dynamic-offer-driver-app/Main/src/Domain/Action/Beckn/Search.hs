@@ -1,7 +1,7 @@
 module Domain.Action.Beckn.Search where
 
 import Data.List
-import Domain.Types.FarePolicy (FarePolicy)
+import Domain.Types.FarePolicy.FarePolicy (FarePolicy)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
@@ -108,7 +108,7 @@ handler merchantId sReq = do
   CD.cacheDistance sReq.transactionId (distance, duration)
   logDebug $ "distance: " <> show distance
 
-  allFarePolicies <- FarePolicyS.findAllByMerchantId org.id
+  allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just distance)
   let farePolicies = filter (checkTripConstraints distance) allFarePolicies
 
   estimates <-

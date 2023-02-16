@@ -8,8 +8,8 @@ module Domain.Action.UI.FarePolicy
 where
 
 import Data.Time
-import Domain.Types.FarePolicy
-import qualified Domain.Types.FarePolicy as DFarePolicy
+import Domain.Types.FarePolicy.FarePolicy
+import qualified Domain.Types.FarePolicy.FarePolicy as DFarePolicy
 import qualified Domain.Types.Person as SP
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -62,7 +62,7 @@ validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
 
 listFarePolicies :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> m ListFarePolicyRes
 listFarePolicies person = do
-  oneWayFarePolicies <- SFarePolicy.findAllByMerchantId person.merchantId
+  oneWayFarePolicies <- SFarePolicy.findAllByMerchantId person.merchantId Nothing
   pure $
     ListFarePolicyRes
       { oneWayFarePolicies = map makeFarePolicyAPIEntity oneWayFarePolicies

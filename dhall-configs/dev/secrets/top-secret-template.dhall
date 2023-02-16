@@ -1,3 +1,1 @@
-{ googleTranslateKey = "google-translate-key"
-, googleKey = "google-key"
-}
+{ googleTranslateKey = "google-translate-key", googleKey = "google-key" }

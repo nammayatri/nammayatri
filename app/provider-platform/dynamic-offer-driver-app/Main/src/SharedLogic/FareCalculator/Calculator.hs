@@ -15,7 +15,7 @@ import Data.Time
     utcToLocalTime,
   )
 import Domain.Types.FareParameters
-import Domain.Types.FarePolicy
+import Domain.Types.FarePolicy.FarePolicy
 import Kernel.Prelude
 import Kernel.Utils.Common
 

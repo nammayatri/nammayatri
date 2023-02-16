@@ -1,18 +1,18 @@
-module Storage.Queries.FarePolicy
+module Storage.Queries.FarePolicy.FarePolicy
   {-# WARNING
     "This module contains direct calls to the table. \
   \ But most likely you need a version from CachedQueries with caching results feature."
     #-}
 where
 
-import Domain.Types.FarePolicy
+import Domain.Types.FarePolicy.FarePolicy
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.FarePolicy
+import Storage.Tabular.FarePolicy.FarePolicy
 
 findAllByMerchantId ::
   Transactionable m =>

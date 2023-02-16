@@ -1,4 +1,4 @@
-module Domain.Types.FarePolicy where
+module Domain.Types.FarePolicy.FarePolicy where
 
 import Domain.Types.Common
 import qualified Domain.Types.Merchant as DM

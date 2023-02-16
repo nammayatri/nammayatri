@@ -12,7 +12,7 @@ import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.FareParameters as Fare
-import Domain.Types.FarePolicy (FarePolicy)
+import Domain.Types.FarePolicy.FarePolicy (FarePolicy)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -54,7 +54,7 @@ data ServiceHandle m = ServiceHandle
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
-    getFarePolicy :: Id DM.Merchant -> Variant -> m (Maybe FarePolicy),
+    getFarePolicy :: Id DM.Merchant -> Variant -> Maybe Meters -> m (Maybe FarePolicy),
     calculateFare ::
       Id DM.Merchant ->
       FarePolicy ->
@@ -253,7 +253,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
       -- maybe compare only distance fare?
       let estimatedFare = Fare.fareSum booking.fareParams
-      farePolicy <- getFarePolicy transporterId booking.vehicleVariant >>= fromMaybeM NoFarePolicy
+      farePolicy <- getFarePolicy transporterId booking.vehicleVariant (Just booking.estimatedDistance) >>= fromMaybeM NoFarePolicy
       fareParams <- calculateFare transporterId farePolicy recalcDistance booking.startTime booking.fareParams.driverSelectedFare
       waitingCharge <- getWaitingFare ride.tripStartTime ride.driverArrivalTime farePolicy.waitingChargePerMin
       let updatedFare = Fare.fareSum fareParams

@@ -8,7 +8,7 @@ module API.UI.FarePolicy
 where
 
 import qualified Domain.Action.UI.FarePolicy as DFarePolicy
-import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FarePolicy.FarePolicy as DFP
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude
