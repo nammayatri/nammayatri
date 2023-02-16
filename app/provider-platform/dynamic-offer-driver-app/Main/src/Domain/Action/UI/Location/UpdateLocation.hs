@@ -108,25 +108,26 @@ updateLocationHandler ::
   UpdateLocationHandle m ->
   UpdateLocationReq ->
   m APISuccess
-updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $ do
-  logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
-  checkLocationUpdatesRateLimit driver.id
-  unless (driver.role == Person.DRIVER) $ throwError AccessDenied
-  LocUpd.whenWithLocationUpdatesLock driver.id $ do
-    mbOldLoc <- findDriverLocation
-    case filterNewWaypoints mbOldLoc of
-      [] -> logWarning "Incoming points are older than current one, ignoring"
-      (a : ax) -> do
-        let newWaypoints = a :| ax
-            currPoint = NE.last newWaypoints
-        upsertDriverLocation currPoint.pt currPoint.ts
-        mbRideId <- getInProgress
-        mapM_ (\point -> streamLocationUpdates mbRideId driver.merchantId driver.id point.pt point.ts) (a : ax)
-        maybe
-          (logInfo "No ride is assigned to driver, ignoring")
-          (\rideId -> addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
-          mbRideId
-  pure Success
+updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $
+  withLogTag ("driverId-" <> driver.id.getId) $ do
+    logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
+    checkLocationUpdatesRateLimit driver.id
+    unless (driver.role == Person.DRIVER) $ throwError AccessDenied
+    LocUpd.whenWithLocationUpdatesLock driver.id $ do
+      mbOldLoc <- findDriverLocation
+      case filterNewWaypoints mbOldLoc of
+        [] -> logWarning "Incoming points are older than current one, ignoring"
+        (a : ax) -> do
+          let newWaypoints = a :| ax
+              currPoint = NE.last newWaypoints
+          upsertDriverLocation currPoint.pt currPoint.ts
+          mbRideId <- getInProgress
+          mapM_ (\point -> streamLocationUpdates mbRideId driver.merchantId driver.id point.pt point.ts) (a : ax)
+          maybe
+            (logInfo "No ride is assigned to driver, ignoring")
+            (\rideId -> addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
+            mbRideId
+    pure Success
   where
     filterNewWaypoints mbOldLoc = do
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints

@@ -75,7 +75,10 @@ driverStartRide ::
   Id DRide.Ride ->
   DriverStartRideReq ->
   m APISuccess.APISuccess
-driverStartRide handle rideId = startRide handle rideId . DriverReq
+driverStartRide handle rideId req =
+  withLogTag ("requestorId-" <> req.requestor.id.getId)
+    . startRide handle rideId
+    $ DriverReq req
 
 dashboardStartRide ::
   (MonadThrow m, Log m) =>
@@ -83,7 +86,10 @@ dashboardStartRide ::
   Id DRide.Ride ->
   DashboardStartRideReq ->
   m APISuccess.APISuccess
-dashboardStartRide handle rideId = startRide handle rideId . DashboardReq
+dashboardStartRide handle rideId req =
+  withLogTag ("merchantId-" <> req.merchantId.getId)
+    . startRide handle rideId
+    $ DashboardReq req
 
 startRide ::
   (MonadThrow m, Log m) =>
@@ -91,7 +97,7 @@ startRide ::
   Id DRide.Ride ->
   StartRideReq ->
   m APISuccess.APISuccess
-startRide ServiceHandle {..} rideId req = do
+startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) $ do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?

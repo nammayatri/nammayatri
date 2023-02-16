@@ -107,7 +107,10 @@ driverEndRide ::
   Id DRide.Ride ->
   DriverEndRideReq ->
   m APISuccess.APISuccess
-driverEndRide handle rideId = endRide handle rideId . DriverReq
+driverEndRide handle rideId req =
+  withLogTag ("requestorId-" <> req.requestor.id.getId)
+    . endRide handle rideId
+    $ DriverReq req
 
 dashboardEndRide ::
   (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
@@ -115,7 +118,10 @@ dashboardEndRide ::
   Id DRide.Ride ->
   DashboardEndRideReq ->
   m APISuccess.APISuccess
-dashboardEndRide handle rideId = endRide handle rideId . DashboardReq
+dashboardEndRide handle rideId req =
+  withLogTag ("merchantId-" <> req.merchantId.getId)
+    . endRide handle rideId
+    $ DashboardReq req
 
 endRide ::
   (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
@@ -123,7 +129,7 @@ endRide ::
   Id DRide.Ride ->
   EndRideReq ->
   m APISuccess.APISuccess
-endRide handle@ServiceHandle {..} rideId req = do
+endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) do
   rideOld <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = rideOld.driverId
   booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)

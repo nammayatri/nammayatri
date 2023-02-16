@@ -47,13 +47,17 @@ data CancelRideReq = CancelRideReq
 data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant)
 
 driverCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DP.Person -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
-driverCancelRideHandler shandle personId = cancelRideHandler shandle (PersonRequestorId personId)
+driverCancelRideHandler shandle personId rideId req =
+  withLogTag ("rideId-" <> rideId.getId) $
+    cancelRideHandler shandle (PersonRequestorId personId) rideId req
 
 dashboardCancelRideHandler :: MonadHandler m => ServiceHandle m -> Id DM.Merchant -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
-dashboardCancelRideHandler shandle merchantId = cancelRideHandler shandle (DashboardRequestorId merchantId)
+dashboardCancelRideHandler shandle merchantId rideId req =
+  withLogTag ("merchantId-" <> merchantId.getId) $
+    cancelRideHandler shandle (DashboardRequestorId merchantId) rideId req
 
 cancelRideHandler :: MonadHandler m => ServiceHandle m -> RequestorId -> Id DRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
-cancelRideHandler ServiceHandle {..} requestorId rideId req = do
+cancelRideHandler ServiceHandle {..} requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
   let driverId = ride.driverId
