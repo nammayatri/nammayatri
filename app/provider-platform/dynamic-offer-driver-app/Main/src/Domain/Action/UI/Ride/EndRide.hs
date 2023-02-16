@@ -220,9 +220,9 @@ endRide handle@ServiceHandle {..} rideId req = do
           pure timeOutsideOfThreshold
 
     (chargeableDistance, finalFare, mbUpdatedFareParams) <-
-      case (distanceCalculationFailed, distanceOutsideOfThreshold, timeOutsideOfThreshold) of
-        (False, True, _) -> recalculateFareForDistance booking ride (max (roundToIntegral ride.traveledDistance) booking.estimatedDistance)
-        (False, _, True) -> recalculateFareForDistance booking ride booking.estimatedDistance
+      case (distanceCalculationFailed, pickupDropOutsideOfThreshold, distanceOutsideOfThreshold || timeOutsideOfThreshold) of
+        (False, False, True) -> recalculateFareForDistance booking ride (max (roundToIntegral ride.traveledDistance) booking.estimatedDistance)
+        (False, True, True) -> recalculateFareForDistance booking ride (roundToIntegral ride.traveledDistance)
         _ -> do
           waitingCharge <- getWaitingFare ride.tripStartTime ride.driverArrivalTime booking.fareParams.waitingChargePerMin
           pure (booking.estimatedDistance, waitingCharge + booking.estimatedFare, Nothing)

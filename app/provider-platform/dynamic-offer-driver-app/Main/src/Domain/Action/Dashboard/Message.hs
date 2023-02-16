@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Domain.Action.Dashboard.Message where
 
 import qualified AWS.S3 as S3
