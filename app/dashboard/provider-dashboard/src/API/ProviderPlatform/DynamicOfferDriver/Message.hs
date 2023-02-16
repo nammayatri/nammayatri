@@ -21,51 +21,51 @@ import "lib-dashboard" Tools.Auth.Merchant
 type API =
   "message"
     :> ( UploadFileAPI
-            :<|> AddMessageAPI
-            :<|> SendMessageAPI
-            :<|> MessageListAPI
-            :<|> MessageInfoAPI
-            :<|> MessageDeliveryInfoAPI
-            :<|> MessageReceiverListAPI
+           :<|> AddMessageAPI
+           :<|> SendMessageAPI
+           :<|> MessageListAPI
+           :<|> MessageInfoAPI
+           :<|> MessageDeliveryInfoAPI
+           :<|> MessageReceiverListAPI
        )
 
-type UploadFileAPI = 
-    ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
-        :> Common.UploadFileAPI
+type UploadFileAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
+    :> Common.UploadFileAPI
 
-type AddMessageAPI = 
-    ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
-        :> Common.AddMessageAPI
+type AddMessageAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
+    :> Common.AddMessageAPI
 
-type SendMessageAPI = 
-    ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
-        :> Common.SendMessageAPI
+type SendMessageAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
+    :> Common.SendMessageAPI
 
-type MessageListAPI = 
-    ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
-        :> Common.MessageListAPI
+type MessageListAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
+    :> Common.MessageListAPI
 
-type MessageInfoAPI = 
-    ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
-        :> Common.MessageInfoAPI
+type MessageInfoAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
+    :> Common.MessageInfoAPI
 
-type MessageDeliveryInfoAPI = 
-    ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
-        :> Common.MessageDeliveryInfoAPI
+type MessageDeliveryInfoAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
+    :> Common.MessageDeliveryInfoAPI
 
-type MessageReceiverListAPI = 
-    ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
-        :> Common.MessageReceiverListAPI
+type MessageReceiverListAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
+    :> Common.MessageReceiverListAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
-    uploadFile merchantId
-      :<|> addMessage merchantId
-      :<|> sendMessage merchantId
-      :<|> messageList merchantId
-      :<|> messageInfo merchantId
-      :<|> messageDeliveryInfo merchantId
-      :<|> messageReceiverList merchantId
+  uploadFile merchantId
+    :<|> addMessage merchantId
+    :<|> sendMessage merchantId
+    :<|> messageList merchantId
+    :<|> messageInfo merchantId
+    :<|> messageDeliveryInfo merchantId
+    :<|> messageReceiverList merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -84,8 +84,8 @@ uploadFile merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.UploadFileEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (addMultipartBoundary . (.message.uploadFile)) req
-  where 
-    addMultipartBoundary clientFn reqBody =  clientFn ("XXX00XXX", reqBody)
+  where
+    addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
 
 addMessage :: ShortId DM.Merchant -> ApiTokenInfo -> Common.AddMessageRequest -> FlowHandler Common.AddMessageResponse
 addMessage merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
@@ -100,8 +100,8 @@ sendMessage merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.SendMessageEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (addMultipartBoundary . (.message.sendMessage)) req
-  where 
-    addMultipartBoundary clientFn reqBody =  clientFn ("XXX00XXX", reqBody)
+  where
+    addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
 
 messageList :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.MessageListResponse
 messageList merchantShortId apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do

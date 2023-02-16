@@ -8,9 +8,9 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
+import Kernel.ServantMultipart
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.ServantMultipart
 import Servant
 import Tools.Auth (AdminTokenAuth, TokenAuth)
 

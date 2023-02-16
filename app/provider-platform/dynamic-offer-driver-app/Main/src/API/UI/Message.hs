@@ -14,31 +14,31 @@ import Tools.Auth
 type API =
   "message"
     :> "list"
-        :> TokenAuth
-        :> QueryParam "limit" Int 
-        :> QueryParam "offset" Int 
-        :> Get '[JSON] [DMessage.MessageAPIEntityResponse]
+    :> TokenAuth
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> Get '[JSON] [DMessage.MessageAPIEntityResponse]
     :<|> Capture "messageId" (Id Message.Message)
-        :> "seen"
-        :> TokenAuth
-        :> Put '[JSON] APISuccess
+      :> "seen"
+      :> TokenAuth
+      :> Put '[JSON] APISuccess
     :<|> Capture "messageId" (Id Message.Message)
-        :> "response"
-        :> TokenAuth
-        :> ReqBody '[JSON] DMessage.MessageReplyReq
-        :> Put '[JSON] APISuccess
+      :> "response"
+      :> TokenAuth
+      :> ReqBody '[JSON] DMessage.MessageReplyReq
+      :> Put '[JSON] APISuccess
 
 handler :: FlowServer API
 handler =
   messageList
-    :<|> messageSeen 
-    :<|> messageResponse 
+    :<|> messageSeen
+    :<|> messageResponse
 
-messageList :: Id SP.Person -> Maybe Int -> Maybe Int -> FlowHandler [ DMessage.MessageAPIEntityResponse ]
+messageList :: Id SP.Person -> Maybe Int -> Maybe Int -> FlowHandler [DMessage.MessageAPIEntityResponse]
 messageList driverId mbLimit = withFlowHandlerAPI . DMessage.messageList driverId mbLimit
 
 messageSeen :: Id Message.Message -> Id SP.Person -> FlowHandler APISuccess
 messageSeen msgId driverId = withFlowHandlerAPI $ DMessage.messageSeen driverId msgId
 
 messageResponse :: Id Message.Message -> Id SP.Person -> DMessage.MessageReplyReq -> FlowHandler APISuccess
-messageResponse msgId driverId = withFlowHandlerAPI . DMessage.messageResponse driverId msgId 
+messageResponse msgId driverId = withFlowHandlerAPI . DMessage.messageResponse driverId msgId

@@ -1,17 +1,17 @@
-module Domain.Types.Message.Message where 
+module Domain.Types.Message.Message where
 
-import Kernel.Types.Id 
-import Data.OpenApi hiding (title, description)
-import Kernel.Prelude
+import Data.OpenApi hiding (description, title)
+import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Message.MediaFile as MF
 import Kernel.External.Types (Language)
-import Domain.Types.Merchant (Merchant)
+import Kernel.Prelude
+import Kernel.Types.Id
 
 data MessageType = Action Text | Read deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 
 data Message = Message
   { id :: Id Message,
-    _type :: MessageType, 
+    _type :: MessageType,
     title :: Text,
     description :: Text,
     mediaFiles :: [Id MF.MediaFile],
@@ -29,7 +29,7 @@ data MessageTranslation = MessageTranslation
 
 data RawMessage = RawMessage
   { id :: Id Message,
-    _type :: MessageType, 
+    _type :: MessageType,
     title :: Text,
     description :: Text,
     mediaFiles :: [Id MF.MediaFile],

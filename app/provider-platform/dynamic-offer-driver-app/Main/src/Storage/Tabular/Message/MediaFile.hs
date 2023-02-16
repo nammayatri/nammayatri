@@ -8,8 +8,8 @@
 module Storage.Tabular.Message.MediaFile where
 
 import qualified Domain.Types.Message.MediaFile as Domain
-import Kernel.Storage.Esqueleto
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 
 derivePersistField "Domain.MediaType"
@@ -18,7 +18,7 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     MediaFileT sql=media_file
-      id Text 
+      id Text
       fileType Domain.MediaType sql=type
       url Text
       createdAt UTCTime
@@ -37,7 +37,7 @@ instance TType MediaFileT Domain.MediaFile where
     return $
       Domain.MediaFile
         { id = Id id,
-          url = baseUrl, 
+          url = baseUrl,
           _type = fileType,
           ..
         }
@@ -48,5 +48,3 @@ instance TType MediaFileT Domain.MediaFile where
         fileType = _type,
         ..
       }
-
-

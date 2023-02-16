@@ -7,13 +7,13 @@
 
 module Storage.Tabular.Message.MessageTranslation where
 
+import qualified Domain.Types.Message.Message as Msg
 import qualified Domain.Types.Message.MessageTranslation as Domain
-import Kernel.Storage.Esqueleto
+import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import qualified Storage.Tabular.Message.Message as Msg
-import Kernel.External.Types (Language)
-import qualified Domain.Types.Message.Message as Msg
 import Storage.Tabular.Person ()
 
 mkPersist
@@ -21,7 +21,7 @@ mkPersist
   [defaultQQ|
     MessageTranslationT sql=message_translation
       messageId Msg.MessageTId
-      language Language 
+      language Language
       title Text
       description Text
       createdAt UTCTime
@@ -31,8 +31,8 @@ mkPersist
 
 instance TEntityKey MessageTranslationT where
   type DomainKey MessageTranslationT = (Id Msg.Message, Language)
-  fromKey (MessageTranslationTKey _messageId language) = (fromKey _messageId ,language)
-  toKey (messageId ,language) = MessageTranslationTKey (toKey messageId) language
+  fromKey (MessageTranslationTKey _messageId language) = (fromKey _messageId, language)
+  toKey (messageId, language) = MessageTranslationTKey (toKey messageId) language
 
 instance TType MessageTranslationT Domain.MessageTranslation where
   fromTType MessageTranslationT {..} = do

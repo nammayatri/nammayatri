@@ -1,11 +1,11 @@
 module Storage.Queries.Message.MediaFile where
 
+import Domain.Types.Message.MediaFile
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
-import Domain.Types.Message.MediaFile
-import Storage.Tabular.Message.MediaFile ()
 import Kernel.Types.Id
-import Kernel.Prelude
+import Storage.Tabular.Message.MediaFile ()
 
 create :: MediaFile -> SqlDB ()
 create = Esq.create

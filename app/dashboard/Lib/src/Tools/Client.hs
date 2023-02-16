@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Tools.Client (DataServer (..), CallServerAPI (..), clientWithMerchant) where
@@ -61,7 +62,7 @@ instance
 --    HasFlowEnv m k '["dataServers" ::: [DataServer]],
 --    MonadFlow m,
 --    CallServerAPI apis m k d r1,
---    FromJSON a, 
+--    FromJSON a,
 --    ToJSON a,
 --    r ~ ((LBS.ByteString, a) -> r1)
 --  ) =>
@@ -70,13 +71,13 @@ instance
 --  callServerAPI serverName mkAPIs descr f c =
 --    callServerAPI @_ @m serverName mkAPIs descr (`f` c)
 
-
 instance
   ( CoreMetrics m,
     HasFlowEnv m k '["dataServers" ::: [DataServer]],
     MonadFlow m,
     CallServerAPI apis m k d r1,
-    r ~ (c -> r1)) =>
+    r ~ (c -> r1)
+  ) =>
   CallServerAPI apis m k (c -> d) r
   where
   callServerAPI serverName mkAPIs descr f c =

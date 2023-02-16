@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeApplications #-}
 
 module ProviderPlatformClient.DynamicOfferDriver
   ( callDriverOfferBPP,
@@ -13,6 +14,7 @@ import qualified Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified Dashboard.ProviderPlatform.Merchant as Common
 import qualified Dashboard.ProviderPlatform.Message as Common
 import qualified Dashboard.ProviderPlatform.Ride as Common
+import qualified Data.ByteString.Lazy as LBS
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
@@ -21,7 +23,6 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
-import qualified Data.ByteString.Lazy as LBS
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 import "lib-dashboard" Tools.Metrics
@@ -92,7 +93,7 @@ mkDriverOfferAPIs merchantId token = do
   where
     driversClient
       :<|> ridesClient
-      :<|> merchantClient 
+      :<|> merchantClient
       :<|> messageClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     driverDocumentsInfo
@@ -131,9 +132,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> smsServiceUsageConfigUpdate = merchantClient
 
     uploadFile
-      :<|> addMessage 
-      :<|> sendMessage 
-      :<|> messageList 
+      :<|> addMessage
+      :<|> sendMessage
+      :<|> messageList
       :<|> messageInfo
       :<|> messageDeliveryInfo
       :<|> messageReceiverList = messageClient

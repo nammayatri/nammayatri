@@ -1,13 +1,14 @@
-module Domain.Types.Message.MediaFile where 
+module Domain.Types.Message.MediaFile where
 
-import Kernel.Types.Id 
 import Kernel.Prelude
+import Kernel.Types.Id
 
 data MediaType = Video | Audio | Image deriving (Read, Show)
 
 data MediaFile = MediaFile
   { id :: Id MediaFile,
-    _type :: MediaType, 
+    _type :: MediaType,
     url :: BaseUrl,
     createdAt :: UTCTime
-  } deriving (Generic)
+  }
+  deriving (Generic)

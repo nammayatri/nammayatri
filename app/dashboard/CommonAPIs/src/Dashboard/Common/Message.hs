@@ -9,31 +9,30 @@ where
 
 import Dashboard.Common as Reexport
 import Data.Aeson
-import Data.OpenApi hiding (description, name, title, password, url, summary)
-import Kernel.Prelude
-import Kernel.Storage.Esqueleto (derivePersistField)
-import Kernel.Types.APISuccess (APISuccess)
-import Kernel.External.Types (Language)
-import Servant hiding (Summary)
-import Kernel.Types.Id
+import qualified Data.Bifunctor as BF
+import Data.ByteString.Lazy as BSL
+import Data.OpenApi hiding (description, name, password, summary, title, url)
 import Data.Text as T
 import Data.Text.Encoding as DT
-import Data.ByteString.Lazy as BSL
+import Kernel.External.Types (Language)
+import Kernel.Prelude
 import Kernel.ServantMultipart
-import qualified Data.Bifunctor as BF
+import Kernel.Storage.Esqueleto (derivePersistField)
+import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Id
+import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data MessageEndpoint
-    = UploadFileEndpoint
-        | AddMessageEndpoint
-        | SendMessageEndpoint
-        | MessageListEndpoint
-        | MessageInfoEndpoint
-        | MessageDeliveryInfoEndpoint
-        | MessageReceiverListEndpoint
-
+  = UploadFileEndpoint
+  | AddMessageEndpoint
+  | SendMessageEndpoint
+  | MessageListEndpoint
+  | MessageInfoEndpoint
+  | MessageDeliveryInfoEndpoint
+  | MessageReceiverListEndpoint
   deriving (Show, Read)
-        
+
 derivePersistField "MessageEndpoint"
 
 ---
@@ -58,12 +57,12 @@ instance FromMultipart Tmp UploadFileRequest where
       <*> fmap (read . T.unpack) (lookupInput "fileType" form)
 
 instance ToMultipart Tmp UploadFileRequest where
-  toMultipart uploadFileRequest = 
-    MultipartData 
+  toMultipart uploadFileRequest =
+    MultipartData
       [Input "fileType" (show uploadFileRequest.fileType)]
       [FileData "file" (T.pack uploadFileRequest.file) "" (uploadFileRequest.file)]
 
-data FileType = Audio | Video | Image 
+data FileType = Audio | Video | Image
   deriving stock (Eq, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -85,12 +84,12 @@ type AddMessageAPI =
     :> Post '[JSON] AddMessageResponse
 
 data AddMessageRequest = AddMessageRequest
-    { _type :: MessageType -- (Action Text | Read)
-    , title :: Text -- max character 100
-    , description :: Text -- no max character limit 
-    , translations :: [MessageTranslation]
-    , mediaFiles :: [Id File]
-    }
+  { _type :: MessageType, -- (Action Text | Read)
+    title :: Text, -- max character 100
+    description :: Text, -- no max character limit
+    translations :: [MessageTranslation],
+    mediaFiles :: [Id File]
+  }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -99,16 +98,16 @@ data MessageType = Action Text | Read
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MediaFile = MediaFile
-    { _type :: FileType
-    , link :: Text
-    }
+  { _type :: FileType,
+    link :: Text
+  }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MessageTranslation = MessageTranslation
-  { language :: Language
-  , title :: Text 
-  , description :: Text
+  { language :: Language,
+    title :: Text,
+    description :: Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -131,10 +130,10 @@ type SendMessageAPI =
     :> Post '[JSON] APISuccess
 
 data SendMessageRequest = SendMessageRequest
-    { csvFile :: FilePath 
-    ,  _type :: CSVType
-    , messageId :: Text
-    }
+  { csvFile :: FilePath,
+    _type :: CSVType,
+    messageId :: Text
+  }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -146,10 +145,11 @@ instance FromMultipart Tmp SendMessageRequest where
       <*> lookupInput "messageId" form
 
 instance ToMultipart Tmp SendMessageRequest where
-  toMultipart form = 
-    MultipartData 
+  toMultipart form =
+    MultipartData
       [ Input "type" (show form._type),
-        Input "messageId" form.messageId]
+        Input "messageId" form.messageId
+      ]
       [FileData "csvFile" (T.pack form.csvFile) "text/csv" form.csvFile]
 
 data CSVType = Include | Exclude
@@ -169,17 +169,17 @@ type MessageListAPI =
     :> Get '[JSON] MessageListResponse
 
 data MessageListResponse = MessageListResponse
-    { messages :: [ MessageListItem ]
-    , summary :: Summary
-    }
+  { messages :: [MessageListItem],
+    summary :: Summary
+  }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MessageListItem = MessageListItem
-    { messageId :: Id Message
-    , title :: Text
-    , _type :: MessageType
-    }
+  { messageId :: Id Message,
+    title :: Text,
+    _type :: MessageType
+  }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -193,12 +193,12 @@ type MessageInfoAPI =
     :> Get '[JSON] MessageInfoResponse
 
 data MessageInfoResponse = MessageInfoResponse
-    { messageId :: Id Message
-    , title :: Text
-    , description :: Text
-    , _type :: MessageType
-    , mediaFiles :: [ MediaFile ]
-    }
+  { messageId :: Id Message,
+    title :: Text,
+    description :: Text,
+    _type :: MessageType,
+    mediaFiles :: [MediaFile]
+  }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -212,11 +212,11 @@ type MessageDeliveryInfoAPI =
     :> Get '[JSON] MessageDeliveryInfoResponse
 
 data MessageDeliveryInfoResponse = MessageDeliveryInfoResponse
-    { messageId :: Id Message
-    , success :: Int
-    , failed :: Int
-    , pending :: Int
-    }
+  { messageId :: Id Message,
+    success :: Int,
+    failed :: Int,
+    pending :: Int
+  }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -234,20 +234,20 @@ type MessageReceiverListAPI =
     :> Get '[JSON] MessageReceiverListResponse
 
 data MessageReceiverListResponse = MessageReceiverListResponse
-    { receivers :: [ MessageReceiverListItem ]
-    , summary :: Summary
-    }
+  { receivers :: [MessageReceiverListItem],
+    summary :: Summary
+  }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MessageReceiverListItem = MessageReceiverListItem
-    { receiverId :: Id Receiver
-    , receiverName :: Text
-    , receiverNumber :: Text
-    , reply :: Maybe Text 
-    , seen :: Maybe Bool
-    , status :: MessageDeliveryStatus
-    }
+  { receiverId :: Id Receiver,
+    receiverName :: Text,
+    receiverNumber :: Text,
+    reply :: Maybe Text,
+    seen :: Maybe Bool,
+    status :: MessageDeliveryStatus
+  }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -271,5 +271,3 @@ instance ToHttpApiData MessageDeliveryStatus where
 --     [ validateField "newPhoneNumber" newPhoneNumber P.mobileNumber,
 --       validateField "newCountryCode" newCountryCode P.mobileIndianCode
 --     ]
-
-

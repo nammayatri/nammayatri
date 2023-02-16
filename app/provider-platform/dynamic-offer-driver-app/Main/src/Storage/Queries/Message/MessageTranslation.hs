@@ -1,13 +1,15 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.Message.MessageTranslation where
 
+import qualified Domain.Types.Message.Message as Msg
+import Domain.Types.Message.MessageTranslation
+import Kernel.External.Types (Language)
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
-import Domain.Types.Message.MessageTranslation
-import qualified Domain.Types.Message.Message as Msg
-import Storage.Tabular.Message.MessageTranslation
 import Kernel.Types.Id
-import Kernel.Prelude
-import Kernel.External.Types (Language)
+import Storage.Tabular.Message.MessageTranslation
 
 create :: MessageTranslation -> SqlDB ()
 create = Esq.create

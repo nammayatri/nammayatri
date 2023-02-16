@@ -1,5 +1,5 @@
 module Dashboard.ProviderPlatform.Message
-  ( module Reexport
+  ( module Reexport,
   )
 where
 

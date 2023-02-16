@@ -1,16 +1,14 @@
-module Domain.Types.Message.MessageTranslation where 
+module Domain.Types.Message.MessageTranslation where
 
-import Kernel.External.Types (Language)
 import qualified Domain.Types.Message.Message as Msg
-import Kernel.Types.Id
+import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Kernel.Types.Id
 
-data MessageTranslation = MessageTranslation 
+data MessageTranslation = MessageTranslation
   { messageId :: Id Msg.Message,
     language :: Language,
     title :: Text,
     description :: Text,
     createdAt :: UTCTime
   }
-
-

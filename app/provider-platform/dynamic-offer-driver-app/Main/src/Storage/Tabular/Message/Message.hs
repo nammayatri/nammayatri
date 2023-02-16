@@ -8,11 +8,11 @@
 module Storage.Tabular.Message.Message where
 
 import qualified Domain.Types.Message.Message as Domain
-import Kernel.Storage.Esqueleto
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Storage.Tabular.Message.MediaFile (MediaFileTId)
 import Storage.Tabular.Merchant (MerchantTId)
+import Storage.Tabular.Message.MediaFile (MediaFileTId)
 
 derivePersistField "Domain.MessageType"
 
@@ -20,11 +20,11 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     MessageT sql=message
-      id Text 
+      id Text
       messageType Domain.MessageType sql=type
       title Text
       description Text
-      mediaFiles (PostgresList MediaFileTId) 
+      mediaFiles (PostgresList MediaFileTId)
       merchantId MerchantTId
       createdAt UTCTime
       Primary id
