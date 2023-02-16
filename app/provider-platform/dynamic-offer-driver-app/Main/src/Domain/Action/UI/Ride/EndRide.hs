@@ -220,9 +220,10 @@ endRide handle@ServiceHandle {..} rideId req = do
           pure timeOutsideOfThreshold
 
     (chargeableDistance, finalFare, mbUpdatedFareParams) <-
-      if not distanceCalculationFailed && (distanceOutsideOfThreshold || timeOutsideOfThreshold)
-        then recalculateFare booking ride
-        else do
+      case (distanceCalculationFailed, distanceOutsideOfThreshold, timeOutsideOfThreshold) of
+        (False, True, _) -> recalculateFareForDistance booking ride (max (roundToIntegral ride.traveledDistance) booking.estimatedDistance)
+        (False, _, True) -> recalculateFareForDistance booking ride booking.estimatedDistance
+        _ -> do
           waitingCharge <- getWaitingFare ride.tripStartTime ride.driverArrivalTime booking.fareParams.waitingChargePerMin
           pure (booking.estimatedDistance, waitingCharge + booking.estimatedFare, Nothing)
 
@@ -240,19 +241,18 @@ endRide handle@ServiceHandle {..} rideId req = do
     notifyCompleteToBAP booking updRide newFareParams
   return APISuccess.Success
   where
-    recalculateFare booking ride = do
+    recalculateFareForDistance booking ride recalcDistance = do
       let transporterId = booking.providerId
-          actualDistance = roundToIntegral ride.traveledDistance
           oldDistance = booking.estimatedDistance
 
       -- maybe compare only distance fare?
       let estimatedFare = Fare.fareSum booking.fareParams
       farePolicy <- getFarePolicy transporterId booking.vehicleVariant >>= fromMaybeM NoFarePolicy
-      fareParams <- calculateFare transporterId farePolicy actualDistance booking.startTime booking.fareParams.driverSelectedFare
+      fareParams <- calculateFare transporterId farePolicy recalcDistance booking.startTime booking.fareParams.driverSelectedFare
       waitingCharge <- getWaitingFare ride.tripStartTime ride.driverArrivalTime farePolicy.waitingChargePerMin
       let updatedFare = Fare.fareSum fareParams
           finalFare = updatedFare + waitingCharge
-          distanceDiff = actualDistance - oldDistance
+          distanceDiff = recalcDistance - oldDistance
           fareDiff = finalFare - estimatedFare
       logTagInfo "Fare recalculation" $
         "Fare difference: "
@@ -260,7 +260,7 @@ endRide handle@ServiceHandle {..} rideId req = do
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric transporterId fareDiff distanceDiff
-      return (actualDistance, finalFare, Just fareParams)
+      return (recalcDistance, finalFare, Just fareParams)
 
     getWaitingFare mbTripStartTime mbDriverArrivalTime waitingChargePerMin = do
       mbThresholdConfig <- findConfig
