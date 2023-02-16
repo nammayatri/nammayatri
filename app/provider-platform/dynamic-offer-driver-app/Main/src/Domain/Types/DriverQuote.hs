@@ -5,6 +5,7 @@ module Domain.Types.DriverQuote where
 import qualified Domain.Types.FareParameters as Params
 import Domain.Types.Person
 import Domain.Types.SearchRequest
+import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -19,6 +20,7 @@ data DriverQuote = DriverQuote
   { id :: Id DriverQuote,
     status :: DriverQuoteStatus,
     searchRequestId :: Id SearchRequest,
+    searchRequestForDriverId :: Maybe (Id SearchRequestForDriver),
     driverId :: Id Person,
     driverName :: Text,
     driverRating :: Maybe Centesimal,

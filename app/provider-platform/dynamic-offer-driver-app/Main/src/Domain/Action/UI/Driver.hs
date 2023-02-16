@@ -675,6 +675,7 @@ respondQuote driverId req = do
             driverName = driver.firstName,
             driverRating = driver.rating,
             vehicleVariant = sd.vehicleVariant,
+            searchRequestForDriverId = Just sd.id,
             distance = s.estimatedDistance,
             distanceToPickup = sd.actualDistanceToPickup,
             durationToPickup = sd.durationToPickup,

@@ -17,6 +17,7 @@ import Kernel.Types.Id
 import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Person (PersonTId)
 import qualified Storage.Tabular.SearchRequest as SReq
+import qualified Storage.Tabular.SearchRequestForDriver as SRFD
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.DriverQuoteStatus"
@@ -28,6 +29,7 @@ mkPersist
       id Text
       status Domain.DriverQuoteStatus
       searchRequestId SReq.SearchRequestTId
+      searchRequestForDriverId SRFD.SearchRequestForDriverTId Maybe
       driverId PersonTId
       driverName Text
       driverRating Centesimal Maybe
@@ -57,6 +59,7 @@ instance TType (DriverQuoteT, Fare.FareParametersT) Domain.DriverQuote where
       Domain.DriverQuote
         { id = Id id,
           searchRequestId = fromKey searchRequestId,
+          searchRequestForDriverId = fromKey <$> searchRequestForDriverId,
           driverId = fromKey driverId,
           durationToPickup = roundToIntegral durationToPickup,
           ..
@@ -65,6 +68,7 @@ instance TType (DriverQuoteT, Fare.FareParametersT) Domain.DriverQuote where
     ( DriverQuoteT
         { id = getId id,
           searchRequestId = toKey searchRequestId,
+          searchRequestForDriverId = toKey <$> searchRequestForDriverId,
           driverId = toKey driverId,
           durationToPickup = realToFrac durationToPickup,
           fareParametersId = toKey fareParams.id,
