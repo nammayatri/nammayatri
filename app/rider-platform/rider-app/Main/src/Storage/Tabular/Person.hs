@@ -35,6 +35,7 @@ mkPersist
       identifierType Domain.IdentifierType
       emailEncrypted Text Maybe
       emailHash DbHash Maybe
+      unencryptedMobileNumber Text Maybe
       mobileNumberEncrypted Text Maybe
       mobileNumberHash DbHash Maybe
       mobileCountryCode Text Maybe
