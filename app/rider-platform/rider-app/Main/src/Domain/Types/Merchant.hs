@@ -11,6 +11,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     shortId :: ShortId Merchant,
     name :: Text,
     exoPhone :: Maybe Text,
+    exoPhones :: [Text],
     exoPhoneCountryCode :: Maybe Text,
     fcmConfig :: FCMConfig,
     geofencingConfig :: GeofencingConfig,
@@ -19,7 +20,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 type Merchant = MerchantD 'Safe
 

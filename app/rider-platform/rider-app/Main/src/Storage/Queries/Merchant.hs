@@ -34,6 +34,10 @@ findByExoPhone countryCode exoPhone = do
         &&. merchant ^. MerchantExoPhone ==. val (Just exoPhone)
     return merchant
 
+findAll :: Transactionable m => m [Merchant]
+findAll =
+  Esq.findAll $ do from $ table @MerchantT
+
 update :: Merchant -> SqlDB ()
 update merchant = do
   now <- getCurrentTime

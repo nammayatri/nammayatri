@@ -114,7 +114,7 @@ getDriverMobileNumber callSid callFrom_ callTo_ callStatus_ = do
   let callStatus = fromText callStatus_ :: ExotelCallStatus
   let callFrom = dropFirstZero callFrom_
   let callTo = dropFirstZero callTo_
-  merchant <- Merchant.findByExoPhone "+91" callTo >>= fromMaybeM (MerchantWithExoPhoneNotFound callTo)
+  merchant <- Merchant.findAllByExoPhone "+91" callTo >>= fromMaybeM (MerchantWithExoPhoneNotFound callTo)
   mobileNumberHash <- getDbHash callFrom
   person <-
     runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchant.id)

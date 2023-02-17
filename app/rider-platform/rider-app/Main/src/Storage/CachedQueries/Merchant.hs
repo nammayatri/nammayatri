@@ -3,6 +3,8 @@
 
 module Storage.CachedQueries.Merchant
   ( findById,
+    findAll,
+    findAllByExoPhone,
     findByShortId,
     findByExoPhone,
     update,
@@ -26,6 +28,12 @@ findById id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
+
+findAll :: (CacheFlow m r, EsqDBFlow m r) => m [Merchant]
+findAll =
+  Hedis.safeGet makeAllExoPhones >>= \case
+    Just a -> return $ map (coerce @(MerchantD 'Unsafe) @Merchant) a
+    Nothing -> cacheAllMerchants /=<< Queries.findAll
 
 findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ =
@@ -66,6 +74,11 @@ cacheMerchant merchant = do
   whenJust ((,) <$> merchant.exoPhoneCountryCode <*> merchant.exoPhone) $ \(exoPhoneCountryCode, exoPhone) ->
     Hedis.setExp (makeExoPhoneKey exoPhoneCountryCode exoPhone) idKey expTime
 
+cacheAllMerchants :: (CacheFlow m r) => [Merchant] -> m ()
+cacheAllMerchants merchants = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp makeAllExoPhones (map (coerce @Merchant @(MerchantD 'Unsafe)) merchants) expTime
+
 makeIdKey :: Id Merchant -> Text
 makeIdKey id = "CachedQueries:Merchant:Id-" <> id.getId
 
@@ -75,5 +88,13 @@ makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 makeExoPhoneKey :: Text -> Text -> Text
 makeExoPhoneKey countryCode phone = "CachedQueries:Merchant:ExoPhone-" <> countryCode <> phone
 
+makeAllExoPhones :: Text
+makeAllExoPhones = "CachedQueries:Merchant:All-Merchants"
+
 update :: Merchant -> Esq.SqlDB ()
 update = Queries.update
+
+--TODO Rethink the implementation
+findAllByExoPhone ::
+  (CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Merchant)
+findAllByExoPhone countryCode exoPhone = findAll <&> find (\merchant -> (elem exoPhone merchant.exoPhones) && Just countryCode == merchant.exoPhoneCountryCode)

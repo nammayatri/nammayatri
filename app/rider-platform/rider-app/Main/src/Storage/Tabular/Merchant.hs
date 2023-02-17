@@ -23,6 +23,7 @@ mkPersist
       shortId Text
       name Text
       exoPhone Text Maybe
+      exoPhones (PostgresList Text)
       exoPhoneCountryCode Text Maybe
       fcmUrl Text
       fcmServiceAccount Text
@@ -65,6 +66,7 @@ instance TType MerchantT Domain.Merchant where
           shortId = ShortId shortId,
           registryUrl = regUrl,
           gatewayUrl = gwUrl,
+          exoPhones = unPostgresList exoPhones,
           ..
         }
   toTType Domain.Merchant {..} = do
@@ -79,5 +81,6 @@ instance TType MerchantT Domain.Merchant where
         destinationRestriction = destination,
         gatewayUrl = showBaseUrl gatewayUrl,
         registryUrl = showBaseUrl registryUrl,
+        exoPhones = PostgresList exoPhones,
         ..
       }
