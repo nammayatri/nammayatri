@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.FarePolicy
+module Storage.CachedQueries.FarePolicy.FarePolicy
   ( findById,
     findByMerchantIdAndVariant,
     findAllByMerchantId,
@@ -23,7 +23,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
-import Storage.CachedQueries.RestrictedExtraFare (findRestrictedFareListByMerchant, findRestrictedFareListByMerchantAndVehicle)
+import Storage.CachedQueries.FarePolicy.RestrictedExtraFare (findRestrictedFareListByMerchant, findRestrictedFareListByMerchantAndVehicle)
 import qualified Storage.Queries.FarePolicy.FarePolicy as Queries
 
 getUpdatedFarePolicy :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Vehicle.Variant -> Meters -> FarePolicy -> m FarePolicy

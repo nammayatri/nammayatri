@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.RestrictedExtraFare where
+module Storage.CachedQueries.FarePolicy.RestrictedExtraFare where
 
 import Domain.Types.FarePolicy.RestrictedExtraFare
 import Domain.Types.Merchant (Merchant)

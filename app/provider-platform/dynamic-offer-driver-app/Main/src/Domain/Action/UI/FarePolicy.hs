@@ -20,7 +20,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.FarePolicy as SFarePolicy
+import qualified Storage.CachedQueries.FarePolicy.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics

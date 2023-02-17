@@ -23,7 +23,7 @@ import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
 import SharedLogic.GoogleMaps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
-import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
+import qualified Storage.CachedQueries.FarePolicy.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import Storage.Queries.AllocatorJob (createAllocatorSendSearchRequestToDriverJob)
 import qualified Storage.Queries.SearchRequest as QSReq

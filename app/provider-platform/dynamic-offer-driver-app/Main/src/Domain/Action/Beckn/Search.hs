@@ -17,7 +17,7 @@ import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool hiding (lat, lon)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
+import qualified Storage.CachedQueries.FarePolicy.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Geometry as QGeometry
 import Tools.Error

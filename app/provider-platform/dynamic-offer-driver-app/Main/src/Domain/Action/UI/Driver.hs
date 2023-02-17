@@ -73,7 +73,7 @@ import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
-import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
+import Storage.CachedQueries.FarePolicy.FarePolicy (findByMerchantIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDriverLocation
