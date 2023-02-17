@@ -65,7 +65,7 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  let modifierFunc = ("static-offer-driver-app:" <>)
+  let modifierFunc = ("dynamic-offer-driver-app:" <>)
   hedisEnv <- Redis.connectHedis hedisCfg modifierFunc
   pure AppEnv {..}
 
