@@ -195,7 +195,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         if pickupDropOutsideOfThreshold
           then metersToHighPrecMeters <$> getRideDistanceThresholdWhenPickupOrDestIsDiff handle
           else metersToHighPrecMeters <$> getRideDistanceThresholdWhenPickupAndDestIsSame handle
-      let rideDistanceDifference = abs $ ride.traveledDistance - metersToHighPrecMeters booking.estimatedDistance
+      let rideDistanceDifference = ride.traveledDistance - metersToHighPrecMeters booking.estimatedDistance
       let distanceOutsideOfThreshold = rideDistanceDifference >= rideTravelledDistanceThreshold
       logTagInfo "endRide" ("distanceOutsideOfThreshold: " <> show distanceOutsideOfThreshold)
       logTagInfo "RideDistance differences" $
