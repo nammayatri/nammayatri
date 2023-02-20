@@ -55,13 +55,41 @@ mkOrder req = do
         Select.FulfillmentInfo
           { start =
               Select.StartInfo
-                { location = Select.Location Select.Gps {lat = from.lat, lon = from.lon},
+                { location =
+                    Select.Location
+                      { gps = Select.Gps {lat = from.lat, lon = from.lon},
+                        address =
+                          Just
+                            Select.Address
+                              { area = from.address.area,
+                                state = from.address.state,
+                                country = from.address.country,
+                                building = from.address.building,
+                                street = from.address.street,
+                                city = from.address.city,
+                                area_code = from.address.areaCode
+                              }
+                      },
                   time = Select.TimeTimestamp req.searchRequest.startTime
                 },
             end =
               mbTo <&> \to ->
                 Select.StopInfo
-                  { location = Select.Location Select.Gps {lat = to.lat, lon = to.lon}
+                  { location =
+                      Select.Location
+                        { gps = Select.Gps {lat = to.lat, lon = to.lon},
+                          address =
+                            Just
+                              Select.Address
+                                { area = to.address.area,
+                                  state = to.address.state,
+                                  country = to.address.country,
+                                  building = to.address.building,
+                                  street = to.address.street,
+                                  city = to.address.city,
+                                  area_code = to.address.areaCode
+                                }
+                        }
                   }
           }
     }

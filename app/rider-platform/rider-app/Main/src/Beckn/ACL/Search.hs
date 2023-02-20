@@ -72,5 +72,6 @@ mkIntent origin mbDestination startTime = do
             Search.Gps
               { lat = info.gps.lat,
                 lon = info.gps.lon
-              }
+              },
+          address = Nothing
         }

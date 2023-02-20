@@ -75,7 +75,8 @@ mkFulfillmentInfo fromLoc mbToLoc startTime =
                     Init.Gps
                       { lat = fromLoc.lat,
                         lon = fromLoc.lon
-                      }
+                      },
+                  address = Nothing
                 },
             time = Init.TimeTimestamp startTime
           },
@@ -89,7 +90,8 @@ mkFulfillmentInfo fromLoc mbToLoc startTime =
                         Init.Gps
                           { lat = toLoc.lat,
                             lon = toLoc.lon
-                          }
+                          },
+                      address = Nothing
                     }
               }
     }

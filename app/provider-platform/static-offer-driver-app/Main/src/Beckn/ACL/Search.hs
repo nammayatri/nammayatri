@@ -40,7 +40,13 @@ buildSearchReq subscriber req = do
       }
 
 mkLocation :: Search.Location -> DSearch.LocationReq
-mkLocation (Search.Location Search.Gps {..}) =
-  DSearch.LocationReq
-    { ..
-    }
+mkLocation (Search.Location Search.Gps {..} address) =
+  case address of
+    Just _ ->
+      DSearch.LocationReq
+        { ..
+        }
+    Nothing ->
+      DSearch.LocationReq
+        { ..
+        }

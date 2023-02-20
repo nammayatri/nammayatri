@@ -44,6 +44,8 @@ buildSelectReq subscriber req = do
         pickupLocation = Maps.LatLong pickup.location.gps.lat pickup.location.gps.lon,
         pickupTime = pickup.time.timestamp,
         dropLocation = Maps.LatLong dropOff.location.gps.lat dropOff.location.gps.lon,
+        pickupAddress = pickup.location.address,
+        dropAddrress = dropOff.location.address,
         variant = castVariant item.descriptor.code.vehicleVariant
       }
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeApplications #-}
 
 module PrepareDataForLoadTest
   ( prepareDataForLoadTest,
@@ -82,7 +83,8 @@ generateSearchRequest = do
                           API.StartInfo
                             { location =
                                 API.Location
-                                  { gps = API.Gps {lat = 20.5937, lon = 78.9629}
+                                  { gps = API.Gps {lat = 20.5937, lon = 78.9629},
+                                    address = Nothing
                                   },
                               time = API.TimeTimestamp example
                             },

@@ -40,7 +40,7 @@ buildSearchReq subscriber req = do
       }
 
 mkLocation :: Search.Location -> Location.SearchReqLocationAPIEntity
-mkLocation (Search.Location Search.Gps {..}) =
+mkLocation (Search.Location Search.Gps {..} _) =
   Location.SearchReqLocationAPIEntity
     { areaCode = Nothing,
       street = Nothing,

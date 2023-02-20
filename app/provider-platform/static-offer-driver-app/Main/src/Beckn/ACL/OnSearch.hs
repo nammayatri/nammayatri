@@ -93,10 +93,22 @@ mkOneWayFulfillment DOneWaySearch.QuoteInfo {..} fulfillmentId = do
       vehicle = OnSearch.FulfillmentVehicle $ castVehicleVariant vehicleVariant,
       start =
         OnSearch.StartInfo
-          { location = OnSearch.Location $ mkGps fromLocation,
+          { location =
+              OnSearch.Location
+                { gps = mkGps fromLocation,
+                  address = Nothing
+                },
             time = OnSearch.TimeTimestamp startTime
           },
-      end = Just . OnSearch.StopInfo . OnSearch.Location $ mkGps toLocation
+      end =
+        Just $
+          OnSearch.StopInfo
+            { location =
+                OnSearch.Location
+                  { gps = mkGps toLocation,
+                    address = Nothing
+                  }
+            }
     }
 
 --------------------------------------------------------------------------------------------------------
@@ -117,7 +129,11 @@ mkRentalFulfillment DRentalSearch.QuoteInfo {..} fulfillmentId = do
       vehicle = OnSearch.FulfillmentVehicle $ castVehicleVariant vehicleVariant,
       start =
         OnSearch.StartInfo
-          { location = OnSearch.Location $ mkGps fromLocation,
+          { location =
+              OnSearch.Location
+                { gps = mkGps fromLocation,
+                  address = Nothing
+                },
             time = OnSearch.TimeTimestamp startTime
           },
       end = Nothing
