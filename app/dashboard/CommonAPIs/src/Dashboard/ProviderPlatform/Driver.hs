@@ -10,13 +10,13 @@ where
 import Dashboard.Common as Reexport
 import Kernel.External.Maps.Types
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
+import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
-import Servant hiding (Summary)
+import Servant hiding (Summary, throwError)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data DriverEndpoint
@@ -40,7 +40,8 @@ newtype DriverIds = EnableDriversRequest
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
----
+---------------------------------------------------------
+-- driver list ------------------------------------------
 
 type DriverListAPI =
   "list"
@@ -261,6 +262,7 @@ type DriverInfoAPI =
     :> QueryParam "mobileCountryCode" Text
     :> QueryParam "vehicleNumber" Text
     :> QueryParam "dlNumber" Text
+    :> QueryParam "rcNumber" Text
     :> Get '[JSON] DriverInfoRes
 
 data DriverInfoRes = DriverInfoRes

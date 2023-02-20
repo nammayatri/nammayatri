@@ -160,12 +160,26 @@ driverLocation merchantShortId apiTokenInfo mbLimit mbOffset req = withFlowHandl
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   Client.callBecknTransportBPP checkedMerchantId (.drivers.driverLocation) mbLimit mbOffset req
 
-driverInfo :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverInfoRes
-driverInfo merchantShortId apiTokenInfo mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber = withFlowHandlerAPI $ do
+driverInfo ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  FlowHandler Common.DriverInfoRes
+driverInfo merchantShortId apiTokenInfo mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  when ((isJust mbMobileNumber == isJust mbVehicleNumber) || (isJust mbMobileNumber == isJust mbDlNumber) || (isJust mbDlNumber == isJust mbVehicleNumber)) $
-    throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\" is required"
-  Client.callBecknTransportBPP checkedMerchantId (.drivers.driverInfo) mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber
+  when (isJust mbDlNumber) $
+    throwError $ InvalidRequest "\"dlNumber\" is not required for static offer driver app"
+  when (isJust mbRcNumber) $
+    throwError $ InvalidRequest "\"rcNumber\" is not required for static offer driver app"
+  unless (length (catMaybes [mbMobileNumber, mbVehicleNumber]) == 1) $
+    throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
+  when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
+    throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
+  Client.callBecknTransportBPP checkedMerchantId (.drivers.driverInfo) mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber
 
 deleteDriver :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
 deleteDriver merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
