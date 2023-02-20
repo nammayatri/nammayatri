@@ -18,7 +18,7 @@ import Kernel.Utils.Error
 import qualified Storage.Tabular.Booking.BookingLocation as SLoc
 import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.Person as SPerson
-import Storage.Tabular.Quote ()
+import qualified Storage.Tabular.Quote as SQuote
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
 import qualified Storage.Tabular.TripTerms as STripTerms
 import Tools.Error
@@ -34,6 +34,7 @@ mkPersist
       bppBookingId Text Maybe sql=bpp_ride_booking_id
       status Domain.BookingStatus
       providerId Text
+      quoteId SQuote.QuoteTId Maybe
       providerUrl Text
       providerName Text
       providerMobileNumber Text
@@ -78,6 +79,7 @@ instance TType FullBookingT Domain.Booking where
         { id = Id id,
           bppBookingId = Id <$> bppBookingId,
           riderId = fromKey riderId,
+          quoteId = fromKey <$> quoteId,
           providerUrl = pUrl,
           merchantId = fromKey merchantId,
           estimatedFare = roundToIntegral estimatedFare,
@@ -111,6 +113,7 @@ instance TType FullBookingT Domain.Booking where
             { id = getId id,
               bppBookingId = getId <$> bppBookingId,
               riderId = toKey riderId,
+              quoteId = toKey <$> quoteId,
               fromLocationId = toKey fromLocation.id,
               providerUrl = showBaseUrl providerUrl,
               tripTermsId = toKey <$> (tripTerms <&> (.id)),

@@ -7,6 +7,7 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
@@ -44,6 +45,7 @@ data Booking = Booking
     bppBookingId :: Maybe (Id BPPBooking),
     status :: BookingStatus,
     providerId :: Text,
+    quoteId :: Maybe (Id DQuote.Quote),
     providerUrl :: BaseUrl,
     providerName :: Text,
     providerMobileNumber :: Text,

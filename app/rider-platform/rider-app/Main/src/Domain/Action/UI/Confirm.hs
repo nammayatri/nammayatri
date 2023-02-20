@@ -135,6 +135,7 @@ buildBooking searchRequest quote fromLoc mbToLoc now = do
         bppBookingId = Nothing,
         status = DRB.NEW,
         providerId = quote.providerId,
+        quoteId = Just $ quote.id,
         providerUrl = quote.providerUrl,
         providerName = quote.providerName,
         providerMobileNumber = quote.providerMobileNumber,
