@@ -5,6 +5,7 @@ import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
 import qualified "rider-app" API.UI.Search as AppSearch
 import Common
 import qualified "rider-app" Domain.Action.UI.Cancel as AppCancel
+import qualified "rider-app" Domain.Action.UI.Select as DSelect
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as TRB
 import qualified "rider-app" Domain.Types.Booking as AppRB
 import qualified "dynamic-offer-driver-app" Domain.Types.CancellationReason as SCR
@@ -148,8 +149,8 @@ getOnSearchTaxiEstimatesByTransporterName appToken searchId transporterName =
     $ callBAP (getQuotes searchId appToken)
       <&> (.estimates)
 
-select :: Text -> Id AppEstimate.Estimate -> ClientsM ()
-select bapToken quoteId = void $ callBAP $ selectQuote bapToken quoteId
+select :: Text -> Id AppEstimate.Estimate -> DSelect.DEstimateSelectReq -> ClientsM ()
+select bapToken quoteId _ = void $ callBAP $ selectQuote bapToken quoteId
 
 getNearbySearchRequestForDriver :: DriverTestData -> Id AppEstimate.Estimate -> ClientsM (NonEmpty SearchRequestForDriverAPIEntity)
 getNearbySearchRequestForDriver driver estimateId =
@@ -302,7 +303,7 @@ search'Select appToken searchReq' = do
   appSearchId <- search appToken searchReq'
   (bapQuoteAPIEntity :| _) <- getOnSearchTaxiEstimatesByTransporterName appToken appSearchId bapTransporterName
   let quoteId = bapQuoteAPIEntity.id
-  select appToken quoteId
+  select appToken quoteId DSelect.DEstimateSelect {autoAssignEnabled = False}
   pure quoteId
 
 data SearchConfirmResult = SearchConfirmResult

@@ -101,8 +101,8 @@ search personId req mbBundleVersion mbClientVersion = withFlowHandlerAPI . withP
   checkSearchRateLimit personId
   updateVersions personId mbBundleVersion mbClientVersion
   (searchId, searchExpiry) <- case req of
-    OneWaySearch oneWay -> oneWaySearch personId oneWay
-    RentalSearch rental -> rentalSearch personId rental
+    OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion oneWay
+    RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion rental
   return $ SearchRes searchId searchExpiry
 
 oneWaySearch ::
@@ -119,10 +119,12 @@ oneWaySearch ::
     MonadProducer PublicTransportSearch m
   ) =>
   Id Person.Person ->
+  Maybe Version ->
+  Maybe Version ->
   DOneWaySearch.OneWaySearchReq ->
   m (Id SearchRequest, UTCTime)
-oneWaySearch personId req = do
-  dSearchRes <- DOneWaySearch.oneWaySearch personId req
+oneWaySearch personId bundleVersion clientVersion req = do
+  dSearchRes <- DOneWaySearch.oneWaySearch personId req bundleVersion clientVersion
   fork "search cabs" . withShortRetry $ do
     becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
@@ -144,10 +146,12 @@ rentalSearch ::
     HasBAPMetrics m r
   ) =>
   Id Person.Person ->
+  Maybe Version ->
+  Maybe Version ->
   DRentalSearch.RentalSearchReq ->
   m (Id SearchRequest, UTCTime)
-rentalSearch personId req = do
-  dSearchRes <- DRentalSearch.rentalSearch personId req
+rentalSearch personId bundleVersion clientVersion req = do
+  dSearchRes <- DRentalSearch.rentalSearch personId bundleVersion clientVersion req
   fork "search rental" . withShortRetry $ do
     -- do we need fork here?
     becknReq <- TaxiACL.buildRentalSearchReq dSearchRes

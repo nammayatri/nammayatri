@@ -8,6 +8,7 @@ import qualified "rider-app" API.UI.Registration as Reg
 import qualified "rider-app" API.UI.Select as AppSelect
 import qualified "rider-app" API.UI.Serviceability as AppServ
 import qualified "rider-app" Domain.Action.UI.Cancel as CancelAPI
+import qualified "rider-app" Domain.Action.UI.Select as DSelect
 import qualified "rider-app" Domain.Types.Booking as AbeBooking
 import qualified "rider-app" Domain.Types.Booking as BRB
 import qualified "rider-app" Domain.Types.CancellationReason as AbeCRC
@@ -27,9 +28,10 @@ import Servant hiding (Context)
 import Servant.Client
 
 selectQuote :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess
+selectQuote2 :: RegToken -> Id AbeEstimate.Estimate -> DSelect.DEstimateSelectReq -> ClientM APISuccess
 selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectListRes
 cancelSearch :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess
-selectQuote :<|> selectList :<|> cancelSearch = client (Proxy :: Proxy AppSelect.API)
+selectQuote :<|> selectQuote2 :<|> selectList :<|> cancelSearch = client (Proxy :: Proxy AppSelect.API)
 
 cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
 cancelRide = client (Proxy :: Proxy CancelAPI.API)

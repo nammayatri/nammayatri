@@ -15,6 +15,7 @@ import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
@@ -49,9 +50,11 @@ rentalSearch ::
     HasBAPMetrics m r
   ) =>
   Id Person.Person ->
+  Maybe Version ->
+  Maybe Version ->
   RentalSearchReq ->
   m RentalSearchRes
-rentalSearch personId req = do
+rentalSearch personId bundleVersion clientVersion req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <-
     QMerchant.findById person.merchantId
@@ -59,7 +62,7 @@ rentalSearch personId req = do
   validateServiceability merchant.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing now
+  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing now bundleVersion clientVersion
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId

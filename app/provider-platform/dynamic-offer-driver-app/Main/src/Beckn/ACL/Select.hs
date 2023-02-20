@@ -46,7 +46,8 @@ buildSelectReq subscriber req = do
         dropLocation = Maps.LatLong dropOff.location.gps.lat dropOff.location.gps.lon,
         pickupAddress = pickup.location.address,
         dropAddrress = dropOff.location.address,
-        variant = castVariant item.descriptor.code.vehicleVariant
+        variant = castVariant item.descriptor.code.vehicleVariant,
+        autoAssignEnabled = order.fulfillment.tags.auto_assign_enabled
       }
 
 castVariant :: OS.VehicleVariant -> Variant

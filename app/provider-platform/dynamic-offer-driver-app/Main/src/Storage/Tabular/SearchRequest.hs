@@ -40,6 +40,7 @@ mkPersist
       updatedAt UTCTime
       vehicleVariant Variant.Variant
       Primary id
+      autoAssignEnabled Bool
       deriving Generic
     |]
 

@@ -41,7 +41,8 @@ data DSelectReq = DSelectReq
     dropLocation :: LatLong,
     pickupAddress :: Maybe BA.Address,
     dropAddrress :: Maybe BA.Address,
-    variant :: Variant
+    variant :: Variant,
+    autoAssignEnabled :: Bool
   }
 
 type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
@@ -132,7 +133,8 @@ buildSearchRequest from to merchantId sReq distance duration = do
         createdAt = now,
         vehicleVariant = sReq.variant,
         status = DSearchReq.ACTIVE,
-        updatedAt = now
+        updatedAt = now,
+        autoAssignEnabled = sReq.autoAssignEnabled
       }
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> LatLong -> m DLoc.SearchReqLocation

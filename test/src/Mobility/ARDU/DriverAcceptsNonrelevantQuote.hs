@@ -1,6 +1,7 @@
 module Mobility.ARDU.DriverAcceptsNonrelevantQuote where
 
 import Common
+import qualified "rider-app" Domain.Action.UI.Select as DSelect
 import EulerHS.Prelude
 import HSpec
 import qualified Mobility.ARDU.APICalls as API
@@ -35,7 +36,7 @@ driverOffersOnAnIrrelevantSearchRequest clients = withBecknClients clients $ do
 
   bapQuoteAPIEntity.estimatedFare `shouldSatisfy` (> 100) -- ?
   let quoteId = bapQuoteAPIEntity.id
-  Utils.select appRegistrationToken quoteId
+  Utils.select appRegistrationToken quoteId DSelect.DEstimateSelect {autoAssignEnabled = False}
 
   -- first driver gets nearby requests
   (searchReqForDriver :| _) <- Utils.getNearbySearchRequestForDriver arduDriver1 quoteId

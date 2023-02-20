@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+
 module Beckn.ACL.Select (buildSelectReq) where
 
 import qualified Beckn.Types.Core.Taxi.Common.ItemCode as Common
@@ -14,14 +16,15 @@ import Kernel.Utils.Common
 buildSelectReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DSelect.DSelectRes ->
+  Bool ->
   m (BecknReq Select.SelectMessage)
-buildSelectReq dSelectReq = do
+buildSelectReq dSelectReq autoAssignEnabled = do
   let messageId = dSelectReq.estimateId.getId
   let transactionId = dSelectReq.searchRequest.id.getId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SELECT messageId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just dSelectReq.providerId) (Just dSelectReq.providerUrl)
-  let order = mkOrder dSelectReq
+  let order = mkOrder dSelectReq autoAssignEnabled
   pure $ BecknReq context $ Select.SelectMessage order
 
 castVariant :: VehicleVariant -> Common.VehicleVariant
@@ -30,8 +33,8 @@ castVariant HATCHBACK = Common.HATCHBACK
 castVariant SEDAN = Common.SEDAN
 castVariant SUV = Common.SUV
 
-mkOrder :: DSelect.DSelectRes -> Select.Order
-mkOrder req = do
+mkOrder :: DSelect.DSelectRes -> Bool -> Select.Order
+mkOrder req autoAssignEnabled = do
   let from = req.searchRequest.fromLocation
       mbTo = req.searchRequest.toLocation
       items =
@@ -53,7 +56,11 @@ mkOrder req = do
     { items,
       fulfillment =
         Select.FulfillmentInfo
-          { start =
+          { tags =
+              Select.Tags
+                { auto_assign_enabled = autoAssignEnabled
+                },
+            start =
               Select.StartInfo
                 { location =
                     Select.Location

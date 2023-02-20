@@ -8,6 +8,7 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMeters)
 import Kernel.Types.Id
+import Kernel.Types.Version
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
@@ -21,6 +22,8 @@ data SearchRequest = SearchRequest
     toLocation :: Maybe DLoc.SearchReqLocation,
     distance :: Maybe HighPrecMeters,
     merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    bundleVersion :: Maybe Version,
+    clientVersion :: Maybe Version
   }
   deriving (Generic, Show)

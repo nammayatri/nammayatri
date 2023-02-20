@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN auto_assign_enabled Boolean not null default false;

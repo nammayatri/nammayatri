@@ -5,6 +5,7 @@ module Domain.Action.UI.Select
     SelectListRes (..),
     select,
     selectList,
+    DEstimateSelectReq (..),
   )
 where
 
@@ -37,6 +38,12 @@ data DSelectRes = DSelectRes
     providerUrl :: BaseUrl,
     variant :: VehicleVariant
   }
+
+newtype DEstimateSelectReq = DEstimateSelect
+  { autoAssignEnabled :: Bool
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype SelectListRes = SelectListRes
   { selectedQuotes :: [QuoteAPIEntity]

@@ -16,6 +16,7 @@ import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
@@ -56,8 +57,10 @@ oneWaySearch ::
   ) =>
   Id Person.Person ->
   OneWaySearchReq ->
+  Maybe Version ->
+  Maybe Version ->
   m OneWaySearchRes
-oneWaySearch personId req = do
+oneWaySearch personId req bundleVersion clientVersion = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   validateServiceability merchant.geofencingConfig
@@ -72,7 +75,7 @@ oneWaySearch personId req = do
             destination = req.destination.gps,
             travelMode = Just MapSearch.CAR
           }
-  searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (Just distance) now
+  searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (Just distance) now bundleVersion clientVersion
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId

@@ -12,6 +12,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Utils.Version
 import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.Person as SP
 import qualified Storage.Tabular.SearchRequest.SearchReqLocation as SLoc
@@ -29,6 +30,8 @@ mkPersist
       distance Centesimal Maybe
       merchantId SMerchant.MerchantTId
       createdAt UTCTime
+      bundleVersion Text Maybe
+      clientVersion Text Maybe
       Primary id
       deriving Generic
     |]
@@ -43,6 +46,9 @@ type FullSearchRequestT = (SearchRequestT, SLoc.SearchReqLocationT, Maybe SLoc.S
 instance TType FullSearchRequestT Domain.SearchRequest where
   fromTType (SearchRequestT {..}, fromLoc, mbToLoc) = do
     fromLocation <- fromTType fromLoc
+    bundleVersion' <- forM bundleVersion readVersion
+    clientVersion' <- forM clientVersion readVersion
+
     toLocation <- mapM fromTType mbToLoc
     return $
       Domain.SearchRequest
@@ -50,6 +56,8 @@ instance TType FullSearchRequestT Domain.SearchRequest where
           riderId = fromKey riderId,
           distance = HighPrecMeters <$> distance,
           merchantId = fromKey merchantId,
+          bundleVersion = bundleVersion',
+          clientVersion = clientVersion',
           ..
         }
   toTType Domain.SearchRequest {..} = do
@@ -63,6 +71,8 @@ instance TType FullSearchRequestT Domain.SearchRequest where
               toLocationId = toKey <$> (toLocation <&> (.id)),
               distance = getHighPrecMeters <$> distance,
               merchantId = toKey merchantId,
+              bundleVersion = versionToText <$> bundleVersion,
+              clientVersion = versionToText <$> clientVersion,
               ..
             }
     (searchReq, fromLoc, mbToLoc)

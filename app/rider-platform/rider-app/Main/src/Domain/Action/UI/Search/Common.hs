@@ -12,6 +12,7 @@ import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Types.Version
 import Kernel.Utils.Common
 import Tools.Metrics (CoreMetrics)
 
@@ -25,8 +26,10 @@ buildSearchRequest ::
   Maybe Location.SearchReqLocation ->
   Maybe HighPrecMeters ->
   UTCTime ->
+  Maybe Version ->
+  Maybe Version ->
   m SearchRequest.SearchRequest
-buildSearchRequest person pickup mbDrop mbDistance now = do
+buildSearchRequest person pickup mbDrop mbDistance now bundleVersion clientVersion = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -39,7 +42,9 @@ buildSearchRequest person pickup mbDrop mbDistance now = do
         toLocation = mbDrop,
         distance = mbDistance,
         merchantId = person.merchantId,
-        createdAt = now
+        createdAt = now,
+        bundleVersion = bundleVersion,
+        clientVersion = clientVersion
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime
