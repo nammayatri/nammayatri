@@ -6,5 +6,5 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 in  { googleCfg = common.mockGoogleCfg
     , encTools
-    , snapToRoadSnippetThreshold = common.snapToRoadSnippetThreshold
+    , snapToRoadSnippetThreshold = +300
     }

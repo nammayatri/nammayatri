@@ -93,7 +93,7 @@ dependencies:
   - search-result-aggregator
   - public-transport-search-consumer
   - static-offer-driver-app-allocator
-  - static-offer-driver-app-driver-tracking-health-check
+  - driver-tracking-healthcheck
   - dynamic-offer-driver-app
   - location-updates
   - driver-offer-allocator

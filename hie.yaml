@@ -67,10 +67,10 @@ cradle:
       component: "static-offer-driver-app-scheduler:exe:transporter-scheduler-exe"
 
     - path: "app/provider-platform/driver-tracking-health-check/src"
-      component: "static-offer-driver-app-driver-tracking-health-check:lib"
+      component: "driver-tracking-healthcheck:lib"
 
     - path: "app/provider-platform/driver-tracking-health-check/server/Main.hs"
-      component: "static-offer-driver-app-driver-tracking-health-check:exe:driver-tracking-healthcheck-exe"
+      component: "driver-tracking-healthcheck:exe:driver-tracking-healthcheck-exe"
 
     - path: "app/provider-platform/static-offer-driver-app/Main/src"
       component: "static-offer-driver-app:lib"

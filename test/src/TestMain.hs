@@ -5,6 +5,7 @@ module TestMain where
 
 import qualified "beckn-gateway" App as Gateway
 import qualified "driver-offer-allocator" App as ARDUAllocator
+import qualified "driver-tracking-healthcheck" App as DriverHC
 import qualified "dynamic-offer-driver-app" App as DriverOfferBpp
 import qualified "mock-fcm" App as MockFcm
 import qualified "mock-google" App as MockGoogle
@@ -17,7 +18,6 @@ import qualified "rider-app" App as AppBackend
 import qualified "search-result-aggregator" App as SearchResultAggregator
 import qualified "static-offer-driver-app" App as TransporterBackend
 import qualified "static-offer-driver-app-allocator" App as YatriAllocator
-import qualified "static-offer-driver-app-driver-tracking-health-check" App as DriverHC
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
 import qualified Kernel.External.Maps as Maps

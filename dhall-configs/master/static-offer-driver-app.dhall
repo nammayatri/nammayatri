@@ -123,5 +123,5 @@ in  { esqDBCfg
         "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , driverPoolCfg
     , driverLocationUpdateTopic = "location-updates-master"
-    , snapToRoadSnippetThreshold = common.snapToRoadSnippetThreshold
+    , snapToRoadSnippetThreshold = +300
     }

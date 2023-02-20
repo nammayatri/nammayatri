@@ -34,11 +34,12 @@ driverTrackingHealthcheckService = withLogTag "driverTrackingHealthcheckService"
 
 driverLastLocationUpdateCheckService :: Flow ()
 driverLastLocationUpdateCheckService = startService "driverLastLocationUpdateCheckService" $ withRandomId do
-  delay <- asks (.driverAllowedDelay)
+  locationDelay <- asks (.driverAllowedDelayForLocationUpdateInSec)
+  serviceInterval <- asks (.driverLocationHealthCheckIntervalInSec)
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
     HC.iAmAlive
-    drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now)
+    drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral locationDelay) `addUTCTime` now)
     let driverDetails = map fetchPersonIdAndMobileNumber drivers
     flip map driverDetails \case
       (driverId, Nothing) -> Left driverId
@@ -51,7 +52,7 @@ driverLastLocationUpdateCheckService = startService "driverLastLocationUpdateChe
             lPush redisKey driversWithToken
             logPretty INFO ("Drivers to ping: " <> show (length driversWithToken)) driversWithToken
           Nothing -> log INFO "No drivers to ping"
-  threadDelay (secondsToMcs delay).getMicroseconds
+  threadDelay (secondsToMcs serviceInterval).getMicroseconds
   where
     fetchPersonIdAndMobileNumber :: SP.Person -> (Id Driver, Maybe FCM.FCMRecipientToken)
     fetchPersonIdAndMobileNumber driver = (cast driver.id :: Id Driver, driver.deviceToken)

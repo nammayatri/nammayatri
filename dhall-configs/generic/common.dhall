@@ -56,5 +56,4 @@ in  { smsSessionConfig
     , S3Config
     , periodType = PeriodType
     , consumerType = ConsumerType
-    , snapToRoadSnippetThreshold = +300
     }

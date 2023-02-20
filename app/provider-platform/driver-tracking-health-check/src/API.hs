@@ -18,11 +18,13 @@ healthCheck ::
   ( HasField "coreMetrics" r CoreMetricsContainer,
     HasField "isShuttingDown" r Shutdown,
     HasField "loggerEnv" r LoggerEnv,
-    HasField "hedisEnv" r Redis.HedisEnv
+    HasField "hedisEnv" r Redis.HedisEnv,
+    HasField "driverAppName" r Text
   ) =>
   FlowHandlerR r Text
 healthCheck = withFlowHandlerAPI do
-  mbTime <- Redis.get key
+  redisPrefix <- asks (.driverAppName)
+  mbTime <- Redis.get $ key redisPrefix
   maybe markAsDead checkLastUpdateTime mbTime
   where
     markAsDead = throwError ServiceUnavailable
@@ -33,9 +35,11 @@ healthCheck = withFlowHandlerAPI do
         then markAsDead
         else return "Service is up!"
 
-key :: Text
-key = "beckn:driver-tracking-healthcheck:service"
+key :: Text -> Text
+key prefix = prefix <> "driver-tracking-healthcheck:service"
 
 --TODO: Make ServiceHealthChecker util in shared-kernel
-iAmAlive :: (Redis.HedisFlow m r, MonadTime m) => m ()
-iAmAlive = getCurrentTime >>= Redis.set key
+iAmAlive :: (Redis.HedisFlow m r, HasField "driverAppName" r Text, MonadTime m) => m ()
+iAmAlive = do
+  redisPrefix <- asks (.driverAppName)
+  getCurrentTime >>= Redis.set (key redisPrefix)

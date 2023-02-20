@@ -1,8 +1,10 @@
 let globalCommon = ../generic/common.dhall
 
-let appCfg = ./dynamic-offer-driver-app.dhall
+let appCfg = ./static-offer-driver-app.dhall
 
-in  { driverAllowedDelay = +300
+in  { driverAllowedDelayForLocationUpdateInSec = +60
+    , driverLocationHealthCheckIntervalInSec = +120
+    , driverAppName = "static-offer-driver-app"
     , notificationMinDelay = +50000
     , metricsPort = +9997
     , healthcheckPort = +8115

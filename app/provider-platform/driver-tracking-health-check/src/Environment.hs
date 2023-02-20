@@ -21,6 +21,7 @@ data AppCfg = AppCfg
   { loggerConfig :: LoggerConfig,
     metricsPort :: Int,
     healthcheckPort :: Int,
+    driverAppName :: Text,
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
@@ -28,9 +29,10 @@ data AppCfg = AppCfg
     hedisCfg :: Redis.HedisCfg,
     esqDBCfg :: EsqDBConfig,
     encTools :: EncTools,
-    driverAllowedDelay :: Seconds,
     notificationMinDelay :: Microseconds,
     driverInactiveDelay :: Seconds,
+    driverAllowedDelayForLocationUpdateInSec :: Seconds,
+    driverLocationHealthCheckIntervalInSec :: Seconds,
     smsCfg :: SmsConfig,
     driverInactiveSmsTemplate :: Text,
     cacheConfig :: CacheConfig
@@ -40,11 +42,13 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,
     httpClientOptions :: HttpClientOptions,
+    driverAppName :: Text,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     graceTerminationPeriod :: Seconds,
     encTools :: EncTools,
-    driverAllowedDelay :: Seconds,
+    driverAllowedDelayForLocationUpdateInSec :: Seconds,
+    driverLocationHealthCheckIntervalInSec :: Seconds,
     notificationMinDelay :: Microseconds,
     driverInactiveDelay :: Seconds,
     smsCfg :: SmsConfig,
@@ -65,7 +69,7 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  let modifierFunc = ("dynamic-offer-driver-app:" <>)
+  let modifierFunc = (driverAppName <>)
   hedisEnv <- Redis.connectHedis hedisCfg modifierFunc
   pure AppEnv {..}
 
