@@ -55,11 +55,11 @@ data UpdateLocationHandle m = UpdateLocationHandle
   }
 
 data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
-  { rId :: Maybe Text,
-    mId :: Text,
-    ts :: UTCTime,
-    pt :: LatLong,
-    da :: Bool
+  { rId :: Maybe Text, -- rideId
+    mId :: Text, -- merchantId
+    ts :: UTCTime, -- timestamp
+    pt :: LatLong, -- lat log
+    da :: Bool -- driver avaiable
   }
   deriving (Generic, FromJSON, ToJSON)
 
