@@ -112,7 +112,7 @@ getInProgressByDriverId driverId = Esq.buildDType $ do
   pure $ extractSolidType @Ride <$> mbFullRideT
 
 getInProgressOrNewRideIdAndStatusByDriverId :: Transactionable m => Id Person -> m (Maybe (Id Ride, RideStatus))
-getInProgressOrNewRideIdAndStatusByDriverId driverId = do 
+getInProgressOrNewRideIdAndStatusByDriverId driverId = do
   mbTuple :: Maybe (Text, RideStatus) <- Esq.findOne $ do
     ride <- from $ table @RideT
     where_ $

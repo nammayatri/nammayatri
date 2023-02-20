@@ -19,7 +19,7 @@ cacheAssignedRideIdAndStatus driverId rideIdAndStatus = do
   Hedis.setExp (makeAssignedRideIdAndStatusKey driverId) rideIdAndStatus expTime
 
 clearCache :: (CacheFlow m r) => Id Person -> m ()
-clearCache = Hedis.del . makeAssignedRideIdAndStatusKey 
+clearCache = Hedis.del . makeAssignedRideIdAndStatusKey
 
 getInProgressOrNewRideIdAndStatusByDriverId :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Person -> m (Maybe (Id Ride, RideStatus))
 getInProgressOrNewRideIdAndStatusByDriverId driverId =

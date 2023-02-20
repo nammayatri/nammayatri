@@ -31,10 +31,10 @@ import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import qualified Lib.LocationUpdates as LocUpd
 import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.Ride as SRide
+import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.DriverInformation as DInfo
 import qualified Storage.Queries.Person as QP
 import Tools.Metrics (CoreMetrics)
-import qualified Storage.CachedQueries.DriverInformation as DInfo
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 
 type UpdateLocationReq = NonEmpty Waypoint
 
@@ -108,7 +108,7 @@ updateLocationHandler ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text],
     MonadTime m,
-    CacheFlow m r, 
+    CacheFlow m r,
     EsqDBFlow m r
   ) =>
   UpdateLocationHandle m ->
@@ -130,7 +130,7 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
           upsertDriverLocation currPoint.pt currPoint.ts
           mbRideIdAndStatus <- getAssignedRide
           mapM_ (\point -> streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts driverInfo.active) (a : ax)
-          maybe 
+          maybe
             (logInfo "No ride is assigned to driver, ignoring")
             (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
             mbRideIdAndStatus
