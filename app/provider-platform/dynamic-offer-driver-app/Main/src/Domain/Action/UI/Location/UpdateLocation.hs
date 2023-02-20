@@ -33,6 +33,8 @@ import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.Ride as SRide
 import qualified Storage.Queries.Person as QP
 import Tools.Metrics (CoreMetrics)
+import qualified Storage.CachedQueries.DriverInformation as DInfo
+import Storage.CachedQueries.CacheConfig (CacheFlow)
 
 type UpdateLocationReq = NonEmpty Waypoint
 
@@ -48,7 +50,7 @@ data UpdateLocationHandle m = UpdateLocationHandle
   { driver :: Person.Person,
     findDriverLocation :: m (Maybe DriverLocation),
     upsertDriverLocation :: LatLong -> UTCTime -> m (),
-    getInProgress :: m (Maybe (Id DRide.Ride)),
+    getAssignedRide :: m (Maybe (Id DRide.Ride, DRide.RideStatus)),
     addIntermediateRoutePoints :: Id DRide.Ride -> NonEmpty LatLong -> m ()
   }
 
@@ -56,7 +58,8 @@ data DriverLocationUpdateStreamData = DriverLocationUpdateStreamData
   { rId :: Maybe Text,
     mId :: Text,
     ts :: UTCTime,
-    pt :: LatLong
+    pt :: LatLong,
+    da :: Bool
   }
   deriving (Generic, FromJSON, ToJSON)
 
@@ -74,7 +77,7 @@ buildUpdateLocationHandle driverId = do
       { driver,
         findDriverLocation = DrLoc.findById driverId,
         upsertDriverLocation = DrLoc.upsertGpsCoord driverId,
-        getInProgress = SRide.getInProgressRideIdByDriverId driverId,
+        getAssignedRide = SRide.getInProgressOrNewRideIdAndStatusByDriverId driverId,
         addIntermediateRoutePoints = \rideId ->
           LocUpd.addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId
       }
@@ -89,12 +92,13 @@ streamLocationUpdates ::
   Id Person.Person ->
   LatLong ->
   UTCTime ->
+  Bool ->
   m ()
-streamLocationUpdates mbRideId merchantId driverId point timestamp = do
+streamLocationUpdates mbRideId merchantId driverId point timestamp isDriverActive = do
   topicName <- asks (.driverLocationUpdateTopic)
   produceMessage
     (topicName, Just (encodeUtf8 $ getId driverId))
-    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp point)
+    (DriverLocationUpdateStreamData (getId <$> mbRideId) (getId merchantId) timestamp point isDriverActive)
 
 updateLocationHandler ::
   ( Redis.HedisFlow m r,
@@ -103,13 +107,16 @@ updateLocationHandler ::
     HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text],
-    MonadTime m
+    MonadTime m,
+    CacheFlow m r, 
+    EsqDBFlow m r
   ) =>
   UpdateLocationHandle m ->
   UpdateLocationReq ->
   m APISuccess
 updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLocationUpdate" $
   withLogTag ("driverId-" <> driver.id.getId) $ do
+    driverInfo <- DInfo.findById (cast driver.id) >>= fromMaybeM (PersonNotFound driver.id.getId)
     logInfo $ "got location updates: " <> getId driver.id <> " " <> encodeToText waypoints
     checkLocationUpdatesRateLimit driver.id
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
@@ -121,12 +128,12 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
           let newWaypoints = a :| ax
               currPoint = NE.last newWaypoints
           upsertDriverLocation currPoint.pt currPoint.ts
-          mbRideId <- getInProgress
-          mapM_ (\point -> streamLocationUpdates mbRideId driver.merchantId driver.id point.pt point.ts) (a : ax)
-          maybe
+          mbRideIdAndStatus <- getAssignedRide
+          mapM_ (\point -> streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts driverInfo.active) (a : ax)
+          maybe 
             (logInfo "No ride is assigned to driver, ignoring")
-            (\rideId -> addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
-            mbRideId
+            (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)
+            mbRideIdAndStatus
     pure Success
   where
     filterNewWaypoints mbOldLoc = do

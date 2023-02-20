@@ -10,20 +10,20 @@ import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Ride as RQueries
 
-makeAssignedRideKey :: Id Person -> Text
-makeAssignedRideKey id = "RideAssignToDriver:DriverId-" <> id.getId
+makeAssignedRideIdAndStatusKey :: Id Person -> Text
+makeAssignedRideIdAndStatusKey id = "RideAssignToDriver:IdAndStatus:DriverId-" <> id.getId
 
-cacheAssignedRide :: (CacheFlow m r) => Id Person -> Id Ride -> m ()
-cacheAssignedRide driverId rideId = do
+cacheAssignedRideIdAndStatus :: (CacheFlow m r) => Id Person -> (Id Ride, RideStatus) -> m ()
+cacheAssignedRideIdAndStatus driverId rideIdAndStatus = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp (makeAssignedRideKey driverId) rideId expTime
+  Hedis.setExp (makeAssignedRideIdAndStatusKey driverId) rideIdAndStatus expTime
 
 clearCache :: (CacheFlow m r) => Id Person -> m ()
-clearCache = Hedis.del . makeAssignedRideKey
+clearCache = Hedis.del . makeAssignedRideIdAndStatusKey 
 
-getInProgressRideIdByDriverId :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Person -> m (Maybe (Id Ride))
-getInProgressRideIdByDriverId driverId =
-  Hedis.get (makeAssignedRideKey driverId) >>= \case
+getInProgressOrNewRideIdAndStatusByDriverId :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Person -> m (Maybe (Id Ride, RideStatus))
+getInProgressOrNewRideIdAndStatusByDriverId driverId =
+  Hedis.get (makeAssignedRideIdAndStatusKey driverId) >>= \case
     Just a ->
       return $ Just a
-    Nothing -> flip whenJust (cacheAssignedRide driverId) /=<< Esq.runInReplica (RQueries.getInProgressRideIdByDriverId driverId)
+    Nothing -> flip whenJust (cacheAssignedRideIdAndStatus driverId) /=<< Esq.runInReplica (RQueries.getInProgressOrNewRideIdAndStatusByDriverId driverId)
