@@ -22,9 +22,9 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
-import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
+import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, logTagInfo, throwError)
+import Kernel.Utils.Common (fromMaybeM, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Message.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
@@ -47,30 +47,28 @@ createFilePath merchantId fileType validatedFileExtention = do
         <> show fileType
         <> "/"
         <> fileName
-        <> "."
         <> validatedFileExtention
     )
 
 uploadFile :: ShortId DM.Merchant -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
 uploadFile merchantShortId Common.UploadFileRequest {..} = do
-  logTagInfo "JENKINS_TAKE_TOO_MUCH_TIME_TO_BUILD" reqContentType
-  validatedFileExtention <- validateContentType
   merchant <- findMerchantByShortId merchantShortId
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- createFilePath merchant.id.getId fileType validatedFileExtention
+  filePath <- createFilePath merchant.id.getId fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
   mediaFileUrlPattern <- asks (.mediaFileUrlPattern)
   let fileUrl = T.replace "<FILE_PATH>" filePath mediaFileUrlPattern
   _ <- fork "S3 put file" $ S3.put (T.unpack filePath) mediaFile
   fileEntity <- mkFile fileUrl
   Esq.runTransaction $ MFQuery.create fileEntity
+  -- _ <- validateContentType
   return $ Common.UploadFileResponse {fileId = cast $ fileEntity.id}
   where
-    validateContentType = do
-      case fileType of
-        Common.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
-        Common.Image | reqContentType == "image/png" -> pure "png"
-        Common.Video | reqContentType == "video/mp4" -> pure "mp4"
-        _ -> throwError $ InternalError "UnsupportedFileFormat"
+    -- validateContentType = do
+    --   case fileType of
+    --     Common.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
+    --     Common.Image | reqContentType == "image/png" -> pure "png"
+    --     Common.Video | reqContentType == "video/mp4" -> pure "mp4"
+    --     _ -> throwError $ InternalError "UnsupportedFileFormat"
 
     mapToDomain = \case
       Common.Audio -> Domain.Audio
