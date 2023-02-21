@@ -92,7 +92,8 @@ data AppCfg = AppCfg
     kafkaProducerCfg :: KafkaProducerCfg,
     driverLocationUpdateTopic :: Text,
     maxParallelSearchRequests :: Int,
-    snapToRoadSnippetThreshold :: HighPrecMeters
+    snapToRoadSnippetThreshold :: HighPrecMeters,
+    mediaFileUrlPattern :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -158,7 +159,8 @@ data AppEnv = AppEnv
     kafkaProducerTools :: KafkaProducerTools,
     driverLocationUpdateTopic :: Text,
     maxParallelSearchRequests :: Int,
-    snapToRoadSnippetThreshold :: HighPrecMeters
+    snapToRoadSnippetThreshold :: HighPrecMeters,
+    mediaFileUrlPattern :: Text
   }
   deriving (Generic)
 

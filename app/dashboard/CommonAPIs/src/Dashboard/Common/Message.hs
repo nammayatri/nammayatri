@@ -45,6 +45,7 @@ type UploadFileAPI =
 
 data UploadFileRequest = UploadFileRequest
   { file :: FilePath,
+    reqContentType :: Text,
     fileType :: FileType
   }
   deriving stock (Eq, Show, Generic)
@@ -54,6 +55,7 @@ instance FromMultipart Tmp UploadFileRequest where
   fromMultipart form = do
     UploadFileRequest
       <$> fmap fdPayload (lookupFile "file" form)
+      <*> fmap fdFileCType (lookupFile "file" form)
       <*> fmap (read . T.unpack) (lookupInput "fileType" form)
 
 instance ToMultipart Tmp UploadFileRequest where

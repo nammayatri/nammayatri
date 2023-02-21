@@ -22,7 +22,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
-import Kernel.Types.Error (GenericError (InvalidRequest))
+import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -36,8 +36,9 @@ createFilePath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
   Text ->
   Common.FileType ->
+  Text ->
   m Text
-createFilePath merchantId fileType = do
+createFilePath merchantId fileType validatedFileExtention = do
   pathPrefix <- asks (.s3Env.pathPrefix)
   now <- getCurrentTime
   let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
@@ -46,33 +47,42 @@ createFilePath merchantId fileType = do
         <> show fileType
         <> "/"
         <> fileName
-        <> ".zip"
+        <> "."
+        <> validatedFileExtention
     )
 
 uploadFile :: ShortId DM.Merchant -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
 uploadFile merchantShortId Common.UploadFileRequest {..} = do
+  validatedFileExtention <- validateContentType
   merchant <- findMerchantByShortId merchantShortId
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- createFilePath merchant.id.getId fileType
-  let host = "https://tobedone.com" -- TODO add actual bucket url
-  baseFileUrl <- parseBaseUrl $ host <> filePath
+  filePath <- createFilePath merchant.id.getId fileType validatedFileExtention
+  mediaFileUrlPattern <- asks (.mediaFileUrlPattern)
+  let fileUrl = T.replace "<FILE_PATH>" filePath mediaFileUrlPattern
   _ <- fork "S3 put file" $ S3.put (T.unpack filePath) mediaFile
-  fileEntity <- mkFile baseFileUrl
+  fileEntity <- mkFile fileUrl
   Esq.runTransaction $ MFQuery.create fileEntity
   return $ Common.UploadFileResponse {fileId = cast $ fileEntity.id}
   where
+    validateContentType = do
+      case fileType of
+        Common.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
+        Common.Image | reqContentType == "image/png" -> pure "png"
+        Common.Video | reqContentType == "video/mp4" -> pure "mp4"
+        _ -> throwError $ InternalError "UnsupportedFileFormat"
+
     mapToDomain = \case
       Common.Audio -> Domain.Audio
       Common.Video -> Domain.Video
       Common.Image -> Domain.Image
-    mkFile filePath = do
+    mkFile fileUrl = do
       id <- generateGUID
       now <- getCurrentTime
       return $
         Domain.MediaFile
           { id,
             _type = mapToDomain fileType,
-            url = filePath,
+            url = fileUrl,
             createdAt = now
           }
 
@@ -205,7 +215,7 @@ messageInfo merchantShortId messageId = do
           _type = toCommonType _type,
           description,
           title,
-          mediaFiles = (\mediaFile -> Common.MediaFile (toCommonMediaFileType mediaFile._type) (showBaseUrl mediaFile.url)) <$> mf
+          mediaFiles = (\mediaFile -> Common.MediaFile (toCommonMediaFileType mediaFile._type) mediaFile.url) <$> mf
         }
 
 messageDeliveryInfo :: ShortId DM.Merchant -> Id Domain.Message -> Flow Common.MessageDeliveryInfoResponse

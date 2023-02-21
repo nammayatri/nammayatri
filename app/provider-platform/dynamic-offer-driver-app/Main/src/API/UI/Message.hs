@@ -13,26 +13,32 @@ import Tools.Auth
 
 type API =
   "message"
-    :> "list"
-    :> TokenAuth
-    :> QueryParam "limit" Int
-    :> QueryParam "offset" Int
-    :> Get '[JSON] [DMessage.MessageAPIEntityResponse]
-    :<|> Capture "messageId" (Id Message.Message)
-      :> "seen"
-      :> TokenAuth
-      :> Put '[JSON] APISuccess
-    :<|> Capture "messageId" (Id Message.Message)
-      :> "response"
-      :> TokenAuth
-      :> ReqBody '[JSON] DMessage.MessageReplyReq
-      :> Put '[JSON] APISuccess
+    :> ( "list"
+           :> TokenAuth
+           :> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> Get '[JSON] [DMessage.MessageAPIEntityResponse]
+           :<|> Capture "messageId" (Id Message.Message)
+             :> "seen"
+             :> TokenAuth
+             :> Put '[JSON] APISuccess
+           :<|> Capture "messageId" (Id Message.Message)
+             :> "response"
+             :> TokenAuth
+             :> ReqBody '[JSON] DMessage.MessageReplyReq
+             :> Put '[JSON] APISuccess
+           :<|> "media" -- TODO : need to remove this apis once S3 is done.
+             :> MandatoryQueryParam "filePath" Text
+             :> TokenAuth
+             :> Get '[JSON] Text
+       )
 
 handler :: FlowServer API
 handler =
   messageList
     :<|> messageSeen
     :<|> messageResponse
+    :<|> fetchMedia
 
 messageList :: Id SP.Person -> Maybe Int -> Maybe Int -> FlowHandler [DMessage.MessageAPIEntityResponse]
 messageList driverId mbLimit = withFlowHandlerAPI . DMessage.messageList driverId mbLimit
@@ -42,3 +48,6 @@ messageSeen msgId driverId = withFlowHandlerAPI $ DMessage.messageSeen driverId 
 
 messageResponse :: Id Message.Message -> Id SP.Person -> DMessage.MessageReplyReq -> FlowHandler APISuccess
 messageResponse msgId driverId = withFlowHandlerAPI . DMessage.messageResponse driverId msgId
+
+fetchMedia :: Text -> Id SP.Person -> FlowHandler Text
+fetchMedia filePath driverId = withFlowHandlerAPI $ DMessage.fetchMedia driverId filePath

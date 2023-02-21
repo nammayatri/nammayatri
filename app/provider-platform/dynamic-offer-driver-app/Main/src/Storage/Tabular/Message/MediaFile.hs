@@ -33,18 +33,15 @@ instance TEntityKey MediaFileT where
 
 instance TType MediaFileT Domain.MediaFile where
   fromTType MediaFileT {..} = do
-    baseUrl <- parseBaseUrl url
     return $
       Domain.MediaFile
         { id = Id id,
-          url = baseUrl,
           _type = fileType,
           ..
         }
   toTType Domain.MediaFile {..} =
     MediaFileT
       { id = getId id,
-        url = showBaseUrl url,
         fileType = _type,
         ..
       }
