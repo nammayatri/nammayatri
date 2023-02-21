@@ -138,35 +138,17 @@ buildSearchRequest from to merchantId sReq distance duration = do
       }
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> LatLong -> m DLoc.SearchReqLocation
-buildSearchReqLocation merchantId sessionToken address latLong@Maps.LatLong {..} = case address of
-  Just loc -> do
-    let Address {..} =
-          Address
-            { areaCode = loc.area_code,
-              street = loc.street,
-              city = loc.city,
-              state = loc.state,
-              country = loc.country,
-              building = loc.building,
-              area = loc.area,
-              full_address = Nothing
-            }
-    id <- Id <$> generateGUID
-    now <- getCurrentTime
-    let createdAt = now
-        updatedAt = now
-    pure DLoc.SearchReqLocation {..}
-  Nothing -> do
-    pickupRes <-
-      Maps.getPlaceName merchantId $
-        Maps.GetPlaceNameReq
-          { getBy = Maps.ByLatLong latLong,
-            sessionToken = Just sessionToken,
-            language = Nothing
-          }
-    Address {..} <- mkLocation pickupRes
-    id <- Id <$> generateGUID
-    now <- getCurrentTime
-    let createdAt = now
-        updatedAt = now
-    pure DLoc.SearchReqLocation {..}
+buildSearchReqLocation merchantId sessionToken _ latLong@Maps.LatLong {..} = do
+  pickupRes <-
+    Maps.getPlaceName merchantId $
+      Maps.GetPlaceNameReq
+        { getBy = Maps.ByLatLong latLong,
+          sessionToken = Just sessionToken,
+          language = Nothing
+        }
+  Address {..} <- mkLocation pickupRes
+  id <- Id <$> generateGUID
+  now <- getCurrentTime
+  let createdAt = now
+      updatedAt = now
+  pure DLoc.SearchReqLocation {..}
