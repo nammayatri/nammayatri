@@ -35,6 +35,7 @@ type API =
            :<|> DeleteDriverAPI
            :<|> UnlinkVehicleAPI
            :<|> UnlinkDLAPI
+           :<|> EndRCAssociationAPI
            :<|> UpdatePhoneNumberAPI
            :<|> AddVehicleAPI
            :<|> UpdateDriverNameAPI
@@ -85,6 +86,10 @@ type UnlinkVehicleAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
     :> Common.UnlinkVehicleAPI
 
+type EndRCAssociationAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+    :> Common.EndRCAssociationAPI
+
 type UnlinkDLAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
     :> Common.UnlinkDLAPI
@@ -115,6 +120,7 @@ handler merchantId =
     :<|> deleteDriver merchantId
     :<|> unlinkVehicle merchantId
     :<|> unlinkDL merchantId
+    :<|> endRCAssociation merchantId
     :<|> updatePhoneNumber merchantId
     :<|> addVehicle merchantId
     :<|> updateDriverName merchantId
@@ -241,3 +247,10 @@ unlinkDL merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.UnlinkDLEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.drivers.unlinkDL) driverId
+
+endRCAssociation :: ShortId DM.Merchant -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
+endRCAssociation merchantShortId apiTokenInfo driverId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.EndRCAssociationEndpoint apiTokenInfo driverId T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.drivers.endRCAssociation) driverId

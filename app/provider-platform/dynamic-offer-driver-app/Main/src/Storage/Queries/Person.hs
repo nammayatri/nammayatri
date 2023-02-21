@@ -197,7 +197,7 @@ fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleN
         &&. whenJust_ mbRcNumberHash (\rcNumberHash -> mbRegCert ?. VehicleRegistrationCertificateCertificateNumberHash ==. just (val rcNumberHash))
     pure (person, driverInfo, mbVehicle, mbRidesCount)
   where
-    -- used only for dl and rc entites, because they not required for final result, only for filters
+    -- used only for dl and rc entites, because they are not required for final result, only for filters
     joinOnlyWhenJust mbFilter cond = maybe (val False) (const cond) mbFilter
 
 findByIdAndRoleAndMerchantId ::

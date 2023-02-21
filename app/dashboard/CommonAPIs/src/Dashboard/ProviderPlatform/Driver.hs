@@ -27,6 +27,7 @@ data DriverEndpoint
   | DeleteDriverEndpoint
   | UnlinkVehicleEndpoint
   | UnlinkDLEndpoint
+  | EndRCAssociationEndpoint
   | UpdatePhoneNumberEndpoint
   | AddVehicleEndpoint
   | UpdateDriverNameEndpoint
@@ -364,6 +365,14 @@ type UnlinkVehicleAPI =
 type UnlinkDLAPI =
   Capture "driverId" (Id Driver)
     :> "unlinkDL"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- end rc association -----------------------------------
+
+type EndRCAssociationAPI =
+  Capture "driverId" (Id Driver)
+    :> "endRCAssociation"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------

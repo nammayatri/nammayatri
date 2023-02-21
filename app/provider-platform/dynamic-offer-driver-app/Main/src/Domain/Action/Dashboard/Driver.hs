@@ -11,6 +11,7 @@ module Domain.Action.Dashboard.Driver
     deleteDriver,
     unlinkVehicle,
     unlinkDL,
+    endRCAssociation,
     updatePhoneNumber,
     addVehicle,
     updateDriverName,
@@ -507,7 +508,6 @@ addVehicle merchantShortId reqDriverId req = do
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
 
--- TODO add vehicleClass
 buildVehicle :: MonadFlow m => Id DM.Merchant -> Id DP.Person -> Common.AddVehicleReq -> m DVeh.Vehicle
 buildVehicle merchantId personId req = do
   now <- getCurrentTime
@@ -578,4 +578,22 @@ unlinkDL merchantShortId driverId = do
     QDriverLicense.deleteByDriverId personId
   CQDriverInfo.updateEnabledVerifiedState driverId_ False False
   logTagInfo "dashboard -> unlinkDL : " (show personId)
+  pure Success
+
+---------------------------------------------------------------------
+endRCAssociation :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
+endRCAssociation merchantShortId reqDriverId = do
+  merchant <- findMerchantByShortId merchantShortId
+
+  let driverId = cast @Common.Driver @DP.Driver reqDriverId
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+
+  driver <- Esq.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  Esq.runTransaction $ do
+    QRCAssociation.endAssociation personId
+  CQDriverInfo.updateEnabledVerifiedState driverId False False
+  logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
