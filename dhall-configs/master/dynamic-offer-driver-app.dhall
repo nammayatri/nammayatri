@@ -218,4 +218,6 @@ in  { esqDBCfg
     , kafkaProducerCfg
     , maxParallelSearchRequests = +3
     , snapToRoadSnippetThreshold = +300
+    , mediaFileUrlPattern =
+        "http://localhost:8016/ui/message/media/?filePath=<FILE_PATH>"
     }
