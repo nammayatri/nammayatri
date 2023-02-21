@@ -53,6 +53,10 @@ updateOnRide driverId onRide = do
   clearDriverInfoCache driverId
   Esq.runTransaction $ Queries.updateOnRide driverId onRide
 
+-- this function created because all queries wishfully should be in one transaction
+updateNotOnRideMultiple :: [Id Person.Driver] -> Esq.SqlDB ()
+updateNotOnRideMultiple = Queries.updateNotOnRideMultiple
+
 deleteById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m ()
 deleteById driverId = do
   clearDriverInfoCache driverId

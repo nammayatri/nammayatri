@@ -20,7 +20,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
-import SharedLogic.Transporter (findMerchantByShortId)
+import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Queries.DriverOnboarding.Image as QImage
 
 documentsList :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DocumentsListResponse

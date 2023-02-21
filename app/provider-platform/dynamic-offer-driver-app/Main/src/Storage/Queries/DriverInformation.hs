@@ -141,6 +141,17 @@ updateOnRide driverId onRide = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+updateNotOnRideMultiple :: [Id Person.Driver] -> SqlDB ()
+updateNotOnRideMultiple driverIds = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationOnRide =. val False,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId `in_` valList (toKey . cast <$> driverIds)
+
 deleteById :: Id Person.Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverInformationT . cast
 

@@ -4,6 +4,7 @@ module API.ProviderPlatform.DynamicOfferDriver
   )
 where
 
+import qualified API.ProviderPlatform.DynamicOfferDriver.Booking as Booking
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
 import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
 import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
@@ -18,6 +19,7 @@ type API =
     :> Capture "merchantId" (ShortId DM.Merchant)
     :> ( Driver.API
            :<|> Ride.API
+           :<|> Booking.API
            :<|> Merchant.API
            :<|> Message.API
        )
@@ -26,5 +28,6 @@ handler :: FlowServer API
 handler merchantId =
   Driver.handler merchantId
     :<|> Ride.handler merchantId
+    :<|> Booking.handler merchantId
     :<|> Merchant.handler merchantId
     :<|> Message.handler merchantId

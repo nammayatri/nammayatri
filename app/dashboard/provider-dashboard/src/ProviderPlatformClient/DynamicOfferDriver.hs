@@ -9,6 +9,7 @@ module ProviderPlatformClient.DynamicOfferDriver
 where
 
 import "dynamic-offer-driver-app" API.Dashboard as BPP
+import qualified Dashboard.Common.Booking as Common
 import qualified Dashboard.ProviderPlatform.Driver as Common
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified Dashboard.ProviderPlatform.Merchant as Common
@@ -30,6 +31,7 @@ import "lib-dashboard" Tools.Metrics
 data DriverOfferAPIs = DriverOfferAPIs
   { drivers :: DriversAPIs,
     rides :: RidesAPIs,
+    bookings :: BookingsAPIs,
     merchant :: MerchantAPIs,
     message :: MessageAPIs
   }
@@ -66,6 +68,10 @@ data RidesAPIs = RidesAPIs
     rideSync :: Id Common.Ride -> Euler.EulerClient Common.RideSyncRes
   }
 
+newtype BookingsAPIs = BookingsAPIs
+  { stuckBookingsCancel :: Common.StuckBookingsCancelReq -> Euler.EulerClient Common.StuckBookingsCancelRes
+  }
+
 data MerchantAPIs = MerchantAPIs
   { merchantUpdate :: Common.MerchantUpdateReq -> Euler.EulerClient Common.MerchantUpdateRes,
     mapsServiceConfigUpdate :: Common.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
@@ -88,12 +94,14 @@ mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
 mkDriverOfferAPIs merchantId token = do
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
+  let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
   let message = MessageAPIs {..}
   DriverOfferAPIs {..}
   where
     driversClient
       :<|> ridesClient
+      :<|> bookingsClient
       :<|> merchantClient
       :<|> messageClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
@@ -126,6 +134,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> rideCancel
       :<|> rideInfo
       :<|> rideSync = ridesClient
+
+    stuckBookingsCancel = bookingsClient
 
     merchantUpdate
       :<|> mapsServiceConfigUpdate

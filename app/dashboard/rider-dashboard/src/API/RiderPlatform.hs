@@ -4,6 +4,7 @@ module API.RiderPlatform
   )
 where
 
+import qualified API.RiderPlatform.Booking as Booking
 import qualified API.RiderPlatform.Customer as Customer
 import qualified API.RiderPlatform.Merchant as Merchant
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
@@ -15,10 +16,12 @@ type API =
   "bap"
     :> Capture "merchantId" (ShortId DMerchant.Merchant)
     :> ( Customer.API
+           :<|> Booking.API
            :<|> Merchant.API
        )
 
 handler :: FlowServer API
 handler merchantId =
   Customer.handler merchantId
+    :<|> Booking.handler merchantId
     :<|> Merchant.handler merchantId

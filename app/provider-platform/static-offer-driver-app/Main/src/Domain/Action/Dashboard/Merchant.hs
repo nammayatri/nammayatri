@@ -20,6 +20,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
@@ -30,9 +31,7 @@ import Tools.Error
 merchantUpdate :: ShortId DM.Merchant -> Common.MerchantUpdateReq -> Flow Common.MerchantUpdateRes
 merchantUpdate merchantShortId req = do
   runRequestValidation Common.validateMerchantUpdateReq req
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   let updMerchant =
         merchant{DM.name = fromMaybe (merchant.name) (req.name),
                  DM.description = (req.description) <|> (merchant.description),
@@ -69,9 +68,7 @@ mapsServiceConfigUpdate ::
   Common.MapsServiceConfigUpdateReq ->
   Flow APISuccess
 mapsServiceConfigUpdate merchantShortId req = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
@@ -87,9 +84,7 @@ smsServiceConfigUpdate ::
   Common.SmsServiceConfigUpdateReq ->
   Flow APISuccess
 smsServiceConfigUpdate merchantShortId req = do
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
@@ -106,9 +101,7 @@ mapsServiceUsageConfigUpdate ::
   Flow APISuccess
 mapsServiceUsageConfigUpdate merchantShortId req = do
   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
 
   forM_ Maps.availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do
@@ -141,9 +134,7 @@ smsServiceUsageConfigUpdate ::
   Flow APISuccess
 smsServiceUsageConfigUpdate merchantShortId req = do
   runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
-  merchant <-
-    CQM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchant <- findMerchantByShortId merchantShortId
 
   forM_ SMS.availableSmsServices $ \service -> do
     when (Common.smsServiceUsedInReq req service) $ do

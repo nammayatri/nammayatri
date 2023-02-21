@@ -87,7 +87,7 @@ cancelRideTransaction bookingId ride bookingCReason = do
     updateDriverInfo personId = do
       let driverId = cast personId
       DriverInformation.updateOnRide driverId False
-      when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
+      when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId -- FIXME unreachable code
 
 reallocateRideTransaction ::
   ( EsqDBFlow m r,

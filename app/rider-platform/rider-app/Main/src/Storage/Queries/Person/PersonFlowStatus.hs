@@ -38,3 +38,13 @@ deleteByPersonId personId = do
   Esq.delete $ do
     personFlowStatus <- from $ table @PersonFlowStatusT
     where_ (personFlowStatus ^. PersonFlowStatusTId ==. val (toKey personId))
+
+updateToIdleMultiple :: [Id Person] -> UTCTime -> SqlDB ()
+updateToIdleMultiple personIds now = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonFlowStatusUpdatedAt =. val now,
+        PersonFlowStatusFlowStatus =. val DPFS.IDLE
+      ]
+    where_ $ tbl ^. PersonFlowStatusTId `in_` valList (toKey <$> personIds)

@@ -38,7 +38,7 @@ data Booking = Booking
   { id :: Id Booking,
     quoteId :: Id DriverQuote,
     status :: BookingStatus,
-    providerId :: Id DM.Merchant,
+    providerId :: Id DM.Merchant, -- FIXME merchantId
     bapId :: Text,
     bapUri :: BaseUrl,
     startTime :: UTCTime,

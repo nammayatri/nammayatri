@@ -1,5 +1,6 @@
 module Domain.Types.Transaction where
 
+import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
@@ -27,6 +28,7 @@ data Transaction = Transaction
 
 data Endpoint
   = RideAPI Common.RideEndpoint
+  | BookingAPI Common.BookingEndpoint
   | DriverAPI Common.DriverEndpoint
   | DriverRegistrationAPI Common.DriverRegistrationEndpoint
   | MerchantAPI Common.MerchantEndpoint

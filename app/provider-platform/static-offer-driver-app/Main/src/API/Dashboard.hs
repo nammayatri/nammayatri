@@ -1,5 +1,6 @@
 module API.Dashboard where
 
+import qualified API.Dashboard.Booking as Booking
 import qualified API.Dashboard.Driver as Driver
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Ride as Ride
@@ -18,6 +19,7 @@ type API' =
   DashboardTokenAuth
     :> ( Driver.API
            :<|> Ride.API
+           :<|> Booking.API
            :<|> Merchant.API
        )
 
@@ -25,4 +27,5 @@ handler :: FlowServer API
 handler merchantId _dashboard =
   Driver.handler merchantId
     :<|> Ride.handler merchantId
+    :<|> Booking.handler merchantId
     :<|> Merchant.handler merchantId

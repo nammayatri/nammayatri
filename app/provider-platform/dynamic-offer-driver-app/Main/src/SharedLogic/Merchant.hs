@@ -1,4 +1,4 @@
-module SharedLogic.Transporter where
+module SharedLogic.Merchant where
 
 import qualified Domain.Types.Merchant as DM
 import Environment

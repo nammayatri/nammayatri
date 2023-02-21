@@ -9,6 +9,7 @@ module RiderPlatformClient.RiderApp
 where
 
 import qualified "rider-app" API.Dashboard as BAP
+import qualified Dashboard.Common.Booking as Common
 import qualified Dashboard.RiderPlatform.Merchant as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as BAP
@@ -25,6 +26,7 @@ import Tools.Client
 
 data AppBackendAPIs = AppBackendAPIs
   { customers :: CustomerAPIs,
+    bookings :: BookingsAPIs,
     merchant :: MerchantAPIs
   }
 
@@ -32,6 +34,10 @@ data CustomerAPIs = CustomerAPIs
   { customerList :: Maybe Integer -> Maybe Integer -> Euler.EulerClient Text,
     customerUpdate :: Id BAP.Person -> Text -> Euler.EulerClient Text,
     customerDelete :: Id Common.Customer -> Euler.EulerClient APISuccess
+  }
+
+newtype BookingsAPIs = BookingsAPIs
+  { stuckBookingsCancel :: Common.StuckBookingsCancelReq -> Euler.EulerClient Common.StuckBookingsCancelRes
   }
 
 data MerchantAPIs = MerchantAPIs
@@ -45,15 +51,19 @@ data MerchantAPIs = MerchantAPIs
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId token = do
   let customers = CustomerAPIs {..}
+  let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
   AppBackendAPIs {..}
   where
     customersClient
+      :<|> bookingsClient
       :<|> merchantClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
 
     customerList
       :<|> customerUpdate
       :<|> customerDelete = customersClient
+
+    stuckBookingsCancel = bookingsClient
 
     merchantUpdate
       :<|> mapsServiceConfigUpdate

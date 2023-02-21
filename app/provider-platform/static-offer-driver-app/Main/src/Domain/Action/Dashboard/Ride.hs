@@ -23,7 +23,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBAP as CallBAP
-import SharedLogic.Transporter (findMerchantByShortId)
+import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.CallStatus as QCallStatus

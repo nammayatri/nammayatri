@@ -4,6 +4,7 @@ module API.ProviderPlatform.StaticOfferDriver
   )
 where
 
+import qualified API.ProviderPlatform.StaticOfferDriver.Booking as Booking
 import qualified API.ProviderPlatform.StaticOfferDriver.Driver as Driver
 import qualified API.ProviderPlatform.StaticOfferDriver.Merchant as Merchant
 import qualified API.ProviderPlatform.StaticOfferDriver.Ride as Ride
@@ -17,6 +18,7 @@ type API =
     :> Capture "merchantId" (ShortId DM.Merchant)
     :> ( Driver.API
            :<|> Ride.API
+           :<|> Booking.API
            :<|> Merchant.API
        )
 
@@ -24,4 +26,5 @@ handler :: FlowServer API
 handler merchantId =
   Driver.handler merchantId
     :<|> Ride.handler merchantId
+    :<|> Booking.handler merchantId
     :<|> Merchant.handler merchantId

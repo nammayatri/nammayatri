@@ -8,6 +8,7 @@ module Dashboard.ProviderPlatform.Ride
 where
 
 import Dashboard.Common as Reexport
+import Dashboard.Common.Booking as Reexport (CancellationReasonCode (..))
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -130,10 +131,6 @@ data CancelRideReq = CancelRideReq
   { reasonCode :: CancellationReasonCode,
     additionalInfo :: Maybe Text
   }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-newtype CancellationReasonCode = CancellationReasonCode Text
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

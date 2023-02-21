@@ -25,7 +25,7 @@ import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime 
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
-import SharedLogic.Transporter (findMerchantByShortId)
+import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Message.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery

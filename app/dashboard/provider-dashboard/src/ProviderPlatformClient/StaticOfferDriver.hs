@@ -8,6 +8,7 @@ module ProviderPlatformClient.StaticOfferDriver
 where
 
 import "static-offer-driver-app" API.Dashboard as BPP
+import qualified Dashboard.Common.Booking as Common
 import qualified Dashboard.ProviderPlatform.Driver as Common
 import qualified Dashboard.ProviderPlatform.Merchant as Common
 import qualified Dashboard.ProviderPlatform.Ride as Common
@@ -26,6 +27,7 @@ import Tools.Client
 data BecknTransportAPIs = BecknTransportAPIs
   { drivers :: DriversAPIs,
     rides :: RidesAPIs,
+    bookings :: BookingsAPIs,
     merchant :: MerchantAPIs
   }
 
@@ -54,6 +56,10 @@ data RidesAPIs = RidesAPIs
     rideSync :: Id Common.Ride -> Euler.EulerClient Common.RideSyncRes
   }
 
+newtype BookingsAPIs = BookingsAPIs
+  { stuckBookingsCancel :: Common.StuckBookingsCancelReq -> Euler.EulerClient Common.StuckBookingsCancelRes
+  }
+
 data MerchantAPIs = MerchantAPIs
   { merchantUpdate :: Common.MerchantUpdateReq -> Euler.EulerClient Common.MerchantUpdateRes,
     mapsServiceConfigUpdate :: Common.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
@@ -66,11 +72,13 @@ mkBecknTransportAPIs :: CheckedShortId DM.Merchant -> Text -> BecknTransportAPIs
 mkBecknTransportAPIs merchantId token = do
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
+  let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
   BecknTransportAPIs {..}
   where
     driversClient
       :<|> ridesClient
+      :<|> bookingsClient
       :<|> merchantClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     listDrivers
@@ -93,6 +101,8 @@ mkBecknTransportAPIs merchantId token = do
       :<|> rideCancel
       :<|> rideInfo
       :<|> rideSync = ridesClient
+
+    stuckBookingsCancel = bookingsClient
 
     merchantUpdate
       :<|> mapsServiceConfigUpdate

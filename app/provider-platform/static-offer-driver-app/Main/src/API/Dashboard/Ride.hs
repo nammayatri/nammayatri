@@ -15,7 +15,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
-import SharedLogic.Transporter (findMerchantByShortId)
+import SharedLogic.Merchant (findMerchantByShortId)
 
 type API =
   "ride"

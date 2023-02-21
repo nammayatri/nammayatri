@@ -41,7 +41,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
-import SharedLogic.Transporter (findMerchantByShortId)
+import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus
 import qualified Storage.Queries.DriverInformation as QDriverInfo

@@ -18,6 +18,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Queries.Booking (baseBookingTable)
 import Storage.Tabular.Booking as Booking
+import Storage.Tabular.DriverInformation as DriverInfo
 import Storage.Tabular.Rating as Rating
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
@@ -328,11 +329,9 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
       -- ride considered as ONGOING_6HRS if ride.status = INPROGRESS, but somehow ride.tripStartTime = Nothing
       let ongoing6HrsCond =
             ride ^. Ride.RideTripStartTime +. just (Esq.interval [Esq.HOUR 6]) <=. val (Just now)
-      let upcoming6HrsCond =
-            ride ^. Ride.RideCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
       case_
-        [ when_ (ride ^. Ride.RideStatus ==. val Ride.NEW &&. not_ upcoming6HrsCond) then_ $ val Common.UPCOMING,
-          when_ (ride ^. Ride.RideStatus ==. val Ride.NEW &&. upcoming6HrsCond) then_ $ val Common.UPCOMING_6HRS,
+        [ when_ (ride ^. Ride.RideStatus ==. val Ride.NEW &&. not_ (upcoming6HrsCond ride now)) then_ $ val Common.UPCOMING,
+          when_ (ride ^. Ride.RideStatus ==. val Ride.NEW &&. upcoming6HrsCond ride now) then_ $ val Common.UPCOMING_6HRS,
           when_ (ride ^. Ride.RideStatus ==. val Ride.INPROGRESS &&. not_ ongoing6HrsCond) then_ $ val Common.ONGOING,
           when_ (ride ^. Ride.RideStatus ==. val Ride.COMPLETED) then_ $ val Common.COMPLETED,
           when_ (ride ^. Ride.RideStatus ==. val Ride.CANCELLED) then_ $ val Common.CANCELLED
@@ -341,3 +340,36 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
 
     mkRideItem (rideShortId, rideDetails, riderDetails, customerName, bookingStatus) = do
       RideItem {rideShortId = ShortId rideShortId, ..}
+
+upcoming6HrsCond :: SqlExpr (Entity RideT) -> UTCTime -> SqlExpr (Esq.Value Bool)
+upcoming6HrsCond ride now = ride ^. Ride.RideCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
+
+data StuckRideItem = StuckRideItem
+  { rideId :: Id Ride,
+    bookingId :: Id Booking,
+    driverId :: Id Person,
+    driverActive :: Bool
+  }
+
+findStuckRideItems :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
+findStuckRideItems merchantId bookingIds now = do
+  res <- Esq.findAll $ do
+    ride :& booking :& driverInfo <-
+      from $
+        table @RideT
+          `innerJoin` table @BookingT
+            `Esq.on` ( \(ride :& booking) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                     )
+          `innerJoin` table @DriverInformationT
+            `Esq.on` ( \(ride :& _ :& driverInfo) ->
+                         ride ^. Ride.RideDriverId ==. driverInfo ^. DriverInfo.DriverInformationDriverId
+                     )
+    where_ $
+      booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
+        &&. (ride ^. Ride.RideStatus ==. val Ride.NEW &&. upcoming6HrsCond ride now)
+    pure (ride ^. RideTId, booking ^. BookingTId, driverInfo ^. DriverInformationDriverId, driverInfo ^. DriverInformationActive)
+  pure $ mkStuckRideItem <$> res
+  where
+    mkStuckRideItem (rideId, bookingId, driverId, driverActive) = StuckRideItem {..}

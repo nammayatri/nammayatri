@@ -34,6 +34,8 @@ endRideTransaction driverId bookingId ride fareBreakups = do
   SRide.clearCache $ cast driverId
   SDrLoc.clearDriverInfoCache driverId
 
+-- DLoc.updateOnRide driverId False -- FIXME it should be the same as in dynamic-offer-driver-app
+
 putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Money -> Meters -> m ()
 putDiffMetric merchantId money mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)

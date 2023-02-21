@@ -124,3 +124,25 @@ increaseReallocationsCounter rbId = do
         BookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey rbId)
+
+findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
+findStuckBookings merchantId bookingIds now = do
+  Esq.findAll $ do
+    booking <- from $ table @BookingT
+    let upcoming6HrsCond =
+          booking ^. BookingCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
+    where_ $
+      booking ^. BookingProviderId ==. val (toKey merchantId)
+        &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
+        &&. (booking ^. BookingStatus ==. val NEW &&. upcoming6HrsCond)
+    pure $ booking ^. BookingTId
+
+cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
+cancelBookings bookingIds now = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ BookingStatus =. val CANCELLED,
+        BookingUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. BookingTId `in_` valList (toKey <$> bookingIds)
