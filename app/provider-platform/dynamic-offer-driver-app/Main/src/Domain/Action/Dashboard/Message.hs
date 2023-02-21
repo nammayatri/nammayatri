@@ -24,7 +24,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
 import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Common (fromMaybeM, logInfo, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Message.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
@@ -54,6 +54,7 @@ createFilePath merchantId fileType validatedFileExtention = do
 uploadFile :: ShortId DM.Merchant -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
 uploadFile merchantShortId Common.UploadFileRequest {..} = do
   validatedFileExtention <- validateContentType
+  logInfo reqContentType
   merchant <- findMerchantByShortId merchantShortId
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
   filePath <- createFilePath merchant.id.getId fileType validatedFileExtention
