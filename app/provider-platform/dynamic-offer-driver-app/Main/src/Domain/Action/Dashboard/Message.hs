@@ -24,7 +24,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
 import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, logInfo, throwError)
+import Kernel.Utils.Common (fromMaybeM, logTagInfo, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Message.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
@@ -53,8 +53,8 @@ createFilePath merchantId fileType validatedFileExtention = do
 
 uploadFile :: ShortId DM.Merchant -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
 uploadFile merchantShortId Common.UploadFileRequest {..} = do
+  logTagInfo "JENKINS_TAKE_TOO_MUCH_TIME_TO_BUILD" reqContentType
   validatedFileExtention <- validateContentType
-  logInfo reqContentType
   merchant <- findMerchantByShortId merchantShortId
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
   filePath <- createFilePath merchant.id.getId fileType validatedFileExtention
