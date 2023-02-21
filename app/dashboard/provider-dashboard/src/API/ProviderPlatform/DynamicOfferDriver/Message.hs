@@ -21,6 +21,7 @@ import "lib-dashboard" Tools.Auth.Merchant
 type API =
   "message"
     :> ( UploadFileAPI
+           :<|> AddLinkAPI
            :<|> AddMessageAPI
            :<|> SendMessageAPI
            :<|> MessageListAPI
@@ -32,6 +33,10 @@ type API =
 type UploadFileAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
     :> Common.UploadFileAPI
+
+type AddLinkAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
+    :> Common.AddLinkAPI
 
 type AddMessageAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
@@ -60,6 +65,7 @@ type MessageReceiverListAPI =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   uploadFile merchantId
+    :<|> addLinkAsMedia merchantId
     :<|> addMessage merchantId
     :<|> sendMessage merchantId
     :<|> messageList merchantId
@@ -77,6 +83,13 @@ buildTransaction ::
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.MessageAPI endpoint) apiTokenInfo Nothing Nothing
+
+addLinkAsMedia :: ShortId DM.Merchant -> ApiTokenInfo -> Common.AddLinkAsMedia -> FlowHandler Common.UploadFileResponse
+addLinkAsMedia merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.AddLinkEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.message.addLinkAsMedia) req
 
 uploadFile :: ShortId DM.Merchant -> ApiTokenInfo -> Common.UploadFileRequest -> FlowHandler Common.UploadFileResponse
 uploadFile merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do

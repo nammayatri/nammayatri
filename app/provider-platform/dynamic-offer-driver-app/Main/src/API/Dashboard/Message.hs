@@ -13,6 +13,7 @@ import Servant hiding (throwError)
 type API =
   "message"
     :> ( Common.UploadFileAPI
+           :<|> Common.AddLinkAPI
            :<|> Common.AddMessageAPI
            :<|> Common.SendMessageAPI
            :<|> Common.MessageListAPI
@@ -24,12 +25,16 @@ type API =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   uploadFile merchantId
+    :<|> addLinkAsMedia merchantId
     :<|> addMessage merchantId
     :<|> sendMessage merchantId
     :<|> messageList merchantId
     :<|> messageInfo merchantId
     :<|> messageDeliveryInfo merchantId
     :<|> messageReceiverList merchantId
+
+addLinkAsMedia :: ShortId DM.Merchant -> Common.AddLinkAsMedia -> FlowHandler Common.UploadFileResponse
+addLinkAsMedia merchantShortId = withFlowHandlerAPI . DMessage.addLinkAsMedia merchantShortId
 
 uploadFile :: ShortId DM.Merchant -> Common.UploadFileRequest -> FlowHandler Common.UploadFileResponse
 uploadFile merchantShortId = withFlowHandlerAPI . DMessage.uploadFile merchantShortId

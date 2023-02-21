@@ -50,30 +50,25 @@ createFilePath merchantId fileType validatedFileExtention = do
         <> validatedFileExtention
     )
 
-uploadFile :: ShortId DM.Merchant -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
-uploadFile merchantShortId Common.UploadFileRequest {..} = do
-  merchant <- findMerchantByShortId merchantShortId
-  mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- createFilePath merchant.id.getId fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
-  mediaFileUrlPattern <- asks (.mediaFileUrlPattern)
-  let fileUrl = T.replace "<FILE_PATH>" filePath mediaFileUrlPattern
-  _ <- fork "S3 put file" $ S3.put (T.unpack filePath) mediaFile
-  fileEntity <- mkFile fileUrl
+addLinkAsMedia :: ShortId DM.Merchant -> Common.AddLinkAsMedia -> Flow Common.UploadFileResponse
+addLinkAsMedia merchantShortId req = do
+  _ <- findMerchantByShortId merchantShortId
+  createMediaEntry req
+
+createMediaEntry :: Common.AddLinkAsMedia -> Flow Common.UploadFileResponse
+createMediaEntry Common.AddLinkAsMedia {..} = do
+  fileEntity <- mkFile url
   Esq.runTransaction $ MFQuery.create fileEntity
-  -- _ <- validateContentType
   return $ Common.UploadFileResponse {fileId = cast $ fileEntity.id}
   where
-    -- validateContentType = do
-    --   case fileType of
-    --     Common.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
-    --     Common.Image | reqContentType == "image/png" -> pure "png"
-    --     Common.Video | reqContentType == "video/mp4" -> pure "mp4"
-    --     _ -> throwError $ InternalError "UnsupportedFileFormat"
-
     mapToDomain = \case
       Common.Audio -> Domain.Audio
       Common.Video -> Domain.Video
       Common.Image -> Domain.Image
+      Common.AudioLink -> Domain.AudioLink
+      Common.VideoLink -> Domain.VideoLink
+      Common.ImageLink -> Domain.ImageLink
+
     mkFile fileUrl = do
       id <- generateGUID
       now <- getCurrentTime
@@ -84,6 +79,25 @@ uploadFile merchantShortId Common.UploadFileRequest {..} = do
             url = fileUrl,
             createdAt = now
           }
+
+uploadFile :: ShortId DM.Merchant -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
+uploadFile merchantShortId Common.UploadFileRequest {..} = do
+  -- _ <- validateContentType
+  merchant <- findMerchantByShortId merchantShortId
+  mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
+  filePath <- createFilePath merchant.id.getId fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
+  mediaFileUrlPattern <- asks (.mediaFileUrlPattern)
+  let fileUrl = T.replace "<FILE_PATH>" filePath mediaFileUrlPattern
+  _ <- fork "S3 put file" $ S3.put (T.unpack filePath) mediaFile
+  createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
+
+-- where
+-- validateContentType = do
+--   case fileType of
+--     Common.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
+--     Common.Image | reqContentType == "image/png" -> pure "png"
+--     Common.Video | reqContentType == "video/mp4" -> pure "mp4"
+--     _ -> throwError $ InternalError "UnsupportedFileFormat"
 
 toDomainType :: Common.MessageType -> Domain.MessageType
 toDomainType = \case
@@ -112,6 +126,9 @@ toCommonMediaFileType = \case
   Domain.Audio -> Common.Audio
   Domain.Video -> Common.Video
   Domain.Image -> Common.Image
+  Domain.ImageLink -> Common.ImageLink
+  Domain.VideoLink -> Common.VideoLink
+  Domain.AudioLink -> Common.AudioLink
 
 translationToDomainType :: UTCTime -> Common.MessageTranslation -> Domain.MessageTranslation
 translationToDomainType createdAt Common.MessageTranslation {..} = Domain.MessageTranslation {..}

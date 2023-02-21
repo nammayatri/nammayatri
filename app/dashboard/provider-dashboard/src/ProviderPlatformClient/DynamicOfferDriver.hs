@@ -83,6 +83,7 @@ data MerchantAPIs = MerchantAPIs
 
 data MessageAPIs = MessageAPIs
   { uploadFile :: (LBS.ByteString, Common.UploadFileRequest) -> Euler.EulerClient Common.UploadFileResponse,
+    addLinkAsMedia :: Common.AddLinkAsMedia -> Euler.EulerClient Common.UploadFileResponse,
     addMessage :: Common.AddMessageRequest -> Euler.EulerClient Common.AddMessageResponse,
     sendMessage :: (LBS.ByteString, Common.SendMessageRequest) -> Euler.EulerClient APISuccess,
     messageList :: Maybe Int -> Maybe Int -> Euler.EulerClient Common.MessageListResponse,
@@ -146,6 +147,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> smsServiceUsageConfigUpdate = merchantClient
 
     uploadFile
+      :<|> addLinkAsMedia
       :<|> addMessage
       :<|> sendMessage
       :<|> messageList

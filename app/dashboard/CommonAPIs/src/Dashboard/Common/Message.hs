@@ -25,6 +25,7 @@ import Servant hiding (Summary)
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data MessageEndpoint
   = UploadFileEndpoint
+  | AddLinkEndpoint
   | AddMessageEndpoint
   | SendMessageEndpoint
   | MessageListEndpoint
@@ -42,6 +43,18 @@ type UploadFileAPI =
   "uploadFile"
     :> MultipartForm Tmp UploadFileRequest
     :> Post '[JSON] UploadFileResponse
+
+type AddLinkAPI =
+  "addLink"
+    :> ReqBody '[JSON] AddLinkAsMedia
+    :> Post '[JSON] UploadFileResponse
+
+data AddLinkAsMedia = AddLinkAsMedia
+  { url :: Text,
+    fileType :: FileType
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UploadFileRequest = UploadFileRequest
   { file :: FilePath,
@@ -64,7 +77,7 @@ instance ToMultipart Tmp UploadFileRequest where
       [Input "fileType" (show uploadFileRequest.fileType)]
       [FileData "file" (T.pack uploadFileRequest.file) "" (uploadFileRequest.file)]
 
-data FileType = Audio | Video | Image
+data FileType = Audio | Video | Image | AudioLink | VideoLink | ImageLink
   deriving stock (Eq, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
