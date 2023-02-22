@@ -275,6 +275,7 @@ data RideItem = RideItem
     rideDetails :: RideDetails,
     riderDetails :: RiderDetails,
     customerName :: Maybe Text,
+    fareDiff :: Maybe Money,
     bookingStatus :: Common.BookingStatus
   }
 
@@ -287,9 +288,10 @@ findAllRideItems ::
   Maybe (ShortId Ride) ->
   Maybe DbHash ->
   Maybe DbHash ->
+  Maybe Money ->
   UTCTime ->
   m [RideItem]
-findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now = do
+findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
   res <- Esq.findAll $ do
     booking :& ride :& rideDetails :& riderDetails <-
       from $
@@ -313,6 +315,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
         &&. whenJust_ mbRideShortId (\rideShortId -> ride ^. Ride.RideShortId ==. val rideShortId.getShortId)
         &&. whenJust_ mbDriverPhoneDBHash (\hash -> rideDetails ^. RideDetailsDriverNumberHash ==. val (Just hash))
         &&. whenJust_ mbCustomerPhoneDBHash (\hash -> riderDetails ^. RiderDetailsMobileNumberHash ==. val hash)
+        &&. whenJust_ mbFareDiff (\fareDiff_ -> (ride ^. Ride.RideFare -. just (booking ^. Booking.BookingEstimatedFare) >. val (Just fareDiff_)) ||. (just (booking ^. Booking.BookingEstimatedFare) -. ride ^. Ride.RideFare) >. val (Just fareDiff_))
     orderBy [desc $ ride ^. RideCreatedAt]
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
@@ -321,6 +324,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
         rideDetails,
         riderDetails,
         booking ^. BookingRiderName,
+        ride ^. Ride.RideFare -. just (booking ^. Booking.BookingEstimatedFare),
         bookingStatusVal
       )
   pure $ mkRideItem <$> res
@@ -338,7 +342,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
         ]
         (else_ $ val Common.ONGOING_6HRS)
 
-    mkRideItem (rideShortId, rideDetails, riderDetails, customerName, bookingStatus) = do
+    mkRideItem (rideShortId, rideDetails, riderDetails, customerName, fareDiff, bookingStatus) = do
       RideItem {rideShortId = ShortId rideShortId, ..}
 
 upcoming6HrsCond :: SqlExpr (Entity RideT) -> UTCTime -> SqlExpr (Esq.Value Bool)

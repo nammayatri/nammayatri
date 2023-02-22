@@ -42,6 +42,7 @@ type RideListAPI =
     :> QueryParam "rideShortId" (ShortId Ride)
     :> QueryParam "customerPhoneNo" Text
     :> QueryParam "driverPhoneNo" Text
+    :> QueryParam "fareDiff" Money
     :> Get '[JSON] RideListRes
 
 data RideListRes = RideListRes
@@ -60,6 +61,7 @@ data RideListItem = RideListItem
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
     vehicleNo :: Text,
+    fareDiff :: Maybe Money,
     bookingStatus :: BookingStatus
   }
   deriving stock (Show, Generic)
