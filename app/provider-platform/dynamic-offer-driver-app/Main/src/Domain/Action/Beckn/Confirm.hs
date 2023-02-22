@@ -28,6 +28,7 @@ import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
@@ -266,6 +267,7 @@ cancelBooking booking driver transporter = do
         then QDFS.updateStatus ride.driverId DDFS.ACTIVE
         else QDFS.updateStatus ride.driverId DDFS.IDLE
   whenJust mbRide $ \ride -> do
+    SRide.clearCache ride.driverId
     DLoc.updateOnRide (cast ride.driverId) False
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
