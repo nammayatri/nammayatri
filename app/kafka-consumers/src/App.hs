@@ -7,6 +7,7 @@ import Control.Exception (ErrorCall (ErrorCall))
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Function
+import qualified Data.Map.Strict as Map
 import qualified DynamicOfferDriverApp.Processor as DO
 import Environment
 import qualified EulerHS.Runtime as L
@@ -60,10 +61,10 @@ startConsumerWithEnv flowRt appEnv@AppEnv {..} = do
         & S.mapMaybe ((\(mbMessage, (mbMessageKey, cr)) -> (\message messageKey -> (message, messageKey, cr)) <$> mbMessage <*> mbMessageKey) . ((A.decode . LBS.fromStrict <=< crValue) &&& (pure . decodeUtf8 <=< crKey) &&& id))
         & S.mapM (\(message, messageKey, cr) -> processRealtimeLocationUpdates message messageKey $> (message, messageKey, cr))
         & S.intervalsOf (fromIntegral dumpEvery) (SF.lmap (\(message, messageKey, cr) -> ((messageKey, message.mId), (message, cr))) (SF.classify buildTimeSeries))
-        & S.mapM (calculateAvailableTime kafkaConsumer)
+        & S.mapM (Map.traverseWithKey (calculateAvailableTime kafkaConsumer))
         & S.drain
 
-    calculateAvailableTime kafkaConsumer driverLocationUpdatesMap = withFlow $ generateGUID >>= flip withLogTag (DO.calculateAvailableTime kafkaConsumer driverLocationUpdatesMap)
+    calculateAvailableTime kafkaConsumer (driverId, merchantId) (timeSeries, mbCR) = withFlow . withLogTag driverId $ generateGUID >>= flip withLogTag (DO.calculateAvailableTime merchantId driverId kafkaConsumer (reverse timeSeries, mbCR))
 
     processRealtimeLocationUpdates locationUpdate driverId = withFlow . withLogTag driverId $ generateGUID >>= flip withLogTag (DO.processData locationUpdate driverId)
 

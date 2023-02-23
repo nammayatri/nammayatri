@@ -8,8 +8,8 @@ import Kernel.Types.Id (Id)
 
 data DriverAvailability = DriverAvailability
   { id :: Id DriverAvailability,
-    driverId :: Text,
-    merchantId :: Text,
+    driverId :: DriverId,
+    merchantId :: MerchantId,
     totalAvailableTime :: Int,
     lastAvailableTime :: UTCTime,
     bucketStartTime :: UTCTime,
