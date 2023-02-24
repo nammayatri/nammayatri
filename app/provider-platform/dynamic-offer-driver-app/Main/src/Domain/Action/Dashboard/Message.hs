@@ -149,6 +149,7 @@ addMessage merchantShortId Common.AddMessageRequest {..} = do
             merchantId = merchant.id,
             _type = toDomainType _type,
             title,
+            label,
             description,
             mediaFiles = cast <$> mediaFiles,
             messageTranslations = translationToDomainType now <$> translations,

@@ -14,6 +14,7 @@ data Message = Message
     _type :: MessageType,
     title :: Text,
     description :: Text,
+    label :: Maybe Text,
     mediaFiles :: [Id MF.MediaFile],
     messageTranslations :: [MessageTranslation],
     merchantId :: Id Merchant,
@@ -24,6 +25,7 @@ data MessageTranslation = MessageTranslation
   { language :: Language,
     title :: Text,
     description :: Text,
+    label :: Maybe Text,
     createdAt :: UTCTime
   }
 
@@ -32,6 +34,7 @@ data RawMessage = RawMessage
     _type :: MessageType,
     title :: Text,
     description :: Text,
+    label :: Maybe Text,
     mediaFiles :: [Id MF.MediaFile],
     merchantId :: Id Merchant,
     createdAt :: UTCTime

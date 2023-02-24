@@ -102,6 +102,7 @@ data AddMessageRequest = AddMessageRequest
   { _type :: MessageType, -- (Action Text | Read)
     title :: Text, -- max character 100
     description :: Text, -- no max character limit
+    label :: Maybe Text,
     translations :: [MessageTranslation],
     mediaFiles :: [Id File]
   }
@@ -122,7 +123,8 @@ data MediaFile = MediaFile
 data MessageTranslation = MessageTranslation
   { language :: Language,
     title :: Text,
-    description :: Text
+    description :: Text,
+    label :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

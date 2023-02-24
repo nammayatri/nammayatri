@@ -24,6 +24,7 @@ mkPersist
       messageType Domain.MessageType sql=type
       title Text
       description Text
+      label Text Maybe
       mediaFiles (PostgresList MediaFileTId)
       merchantId MerchantTId
       createdAt UTCTime
