@@ -1,5 +1,6 @@
 module Storage.Queries.RiderDetails where
 
+import Domain.Types.Person
 import Domain.Types.RiderDetails
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -38,3 +39,10 @@ updateHasTakenRide riderId = do
         RiderDetailsUpdatedAt =. val now
       ]
     where_ $ tbl ^. RiderDetailsTId ==. val (toKey riderId)
+
+findAllReferredByDriverId :: Transactionable m => Id Person -> m [RiderDetails]
+findAllReferredByDriverId driverId = do
+  Esq.findAll $ do
+    riderDetails <- from $ table @RiderDetailsT
+    where_ $ riderDetails ^. RiderDetailsReferredByDriver ==. val (Just $ toKey driverId)
+    return riderDetails

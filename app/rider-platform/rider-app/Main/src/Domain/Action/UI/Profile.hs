@@ -6,6 +6,7 @@ module Domain.Action.UI.Profile
   )
 where
 
+import qualified Data.Text as DT
 import qualified Domain.Types.Person as Person
 import Kernel.External.Encryption
 import qualified Kernel.External.FCM.Types as FCM
@@ -17,7 +18,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
-import qualified Data.Text as DT
+
 type ProfileRes = Person.PersonAPIEntity
 
 data UpdateProfileReq = UpdateProfileReq
