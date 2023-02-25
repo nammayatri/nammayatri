@@ -196,7 +196,7 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
           fork
             "Sending message to driver"
             ( do
-                exep <- try @_ @SomeException (sendNotificationToDriver merchant.id FCM.SHOW Nothing FCM.TRIGGER_SERVICE message.title message.description driver.id driver.deviceToken)
+                exep <- try @_ @SomeException (sendNotificationToDriver merchant.id FCM.SHOW Nothing FCM.NEW_MESSAGE message.title message.description driver.id driver.deviceToken)
                 case exep of
                   Left _ -> Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (cast driverId) Domain.Failed
                   Right _ -> Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (cast driverId) Domain.Success
