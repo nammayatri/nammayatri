@@ -35,7 +35,7 @@ mkPersist
       cancellationRatioWeightage Int
       cancellationRatioWindowOption SWC.SlidingWindowOptions
       waitingTimeEstimatedThreshold Seconds Maybe
-      referralLinkPassword Text Maybe
+      referralLinkPassword Text
       createdAt UTCTime
       updatedAt UTCTime
       fcmUrl Text

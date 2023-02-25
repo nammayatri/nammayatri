@@ -186,6 +186,7 @@ updateReferralCodeAndReferredAt personId referralCode = do
     set
       tbl
       [ PersonReferredAt =. val (Just now),
-        PersonReferralCode =. val referralCode
+        PersonReferralCode =. val referralCode,
+        PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)

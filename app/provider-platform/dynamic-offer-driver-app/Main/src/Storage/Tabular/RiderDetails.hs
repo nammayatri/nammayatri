@@ -25,7 +25,7 @@ mkPersist
       createdAt UTCTime
       updatedAt UTCTime
       referralCode Text Maybe
-      referredByDriver PersonTId
+      referredByDriver PersonTId Maybe
       referredAt UTCTime Maybe
       hasTakenRide Bool
       Primary id
@@ -43,7 +43,7 @@ instance TType RiderDetailsT Domain.RiderDetails where
       Domain.RiderDetails
         { id = Id id,
           mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
-          referredByDriver = fromKey referredByDriver,
+          referredByDriver = fmap fromKey referredByDriver,
           ..
         }
   toTType Domain.RiderDetails {..} =
@@ -51,6 +51,6 @@ instance TType RiderDetailsT Domain.RiderDetails where
       { id = getId id,
         mobileNumberEncrypted = unEncrypted mobileNumber.encrypted,
         mobileNumberHash = mobileNumber.hash,
-        referredByDriver = toKey referredByDriver,
+        referredByDriver = fmap toKey referredByDriver,
         ..
       }

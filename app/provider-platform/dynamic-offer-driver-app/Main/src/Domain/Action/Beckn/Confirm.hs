@@ -204,7 +204,7 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now driverId =
             createdAt = now,
             updatedAt = now,
             referralCode = Nothing,
-            referredByDriver = driverId,
+            referredByDriver = Just driverId,
             referredAt = Nothing,
             hasTakenRide = False
           }

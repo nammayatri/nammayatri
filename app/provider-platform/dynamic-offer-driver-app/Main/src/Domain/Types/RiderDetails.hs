@@ -16,7 +16,7 @@ data RiderDetailsE e = RiderDetails
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     referralCode :: Maybe Text,
-    referredByDriver :: Id Person,
+    referredByDriver :: Maybe (Id Person),
     referredAt :: Maybe UTCTime,
     hasTakenRide :: Bool
   }
