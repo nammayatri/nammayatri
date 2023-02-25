@@ -65,6 +65,30 @@ messageList driverId mbLimit mbOffset = do
             mediaFiles = mediaFilesApiType
           }
 
+getMessage :: Id SP.Person -> Id Domain.Message -> Flow MessageAPIEntityResponse
+getMessage driverId messageId = do
+  person <- Esq.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
+  messageDetails <-
+    Esq.runInReplica $
+      MRQ.findByDriverIdMessageIdAndLanguage (cast driverId) messageId (fromMaybe ENGLISH person.language)
+        >>= fromMaybeM (InvalidRequest "Message not found")
+  makeMessageAPIEntity messageDetails
+  where
+    makeMessageAPIEntity (messageReport, rawMessage, messageTranslation) = do
+      mediaFilesApiType <- map (\mediaFile -> MediaFileApiResponse mediaFile.url mediaFile._type) <$> MFQ.findAllIn rawMessage.mediaFiles
+      pure $
+        MessageAPIEntityResponse
+          { title = maybe rawMessage.title (.title) messageTranslation,
+            description = maybe rawMessage.description (.description) messageTranslation,
+            _type = rawMessage._type,
+            label = messageTranslation >>= (.label),
+            reply = messageReport.reply,
+            created_at = rawMessage.createdAt,
+            readStatus = messageReport.readStatus,
+            messageId = rawMessage.id,
+            mediaFiles = mediaFilesApiType
+          }
+
 fetchMedia :: Id SP.Person -> Text -> Flow Text
 fetchMedia driverId filePath = do
   _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)

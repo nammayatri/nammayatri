@@ -13,7 +13,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Storage.Queries.Message.MessageReport as MRQuery
 import qualified Storage.Queries.Person as Person
-import Tools.Notifications (sendNotificationToDriver)
+import Tools.Notifications (sendMessageToDriver)
 
 broadcastMessage :: Types.MessageDict -> Text -> Flow ()
 broadcastMessage messageDict driverId = do
@@ -23,7 +23,7 @@ broadcastMessage messageDict driverId = do
       Just driver -> do
         let message = maybe messageDict.defaultMessage (flip (HM.findWithDefault messageDict.defaultMessage) messageDict.translations . show) driver.language
         Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (Id driverId) Types.Sending
-        exep <- try @_ @SomeException (sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.NEW_MESSAGE message.title message.description driver.id driver.deviceToken)
+        exep <- try @_ @SomeException (sendMessageToDriver driver.merchantId FCM.SHOW Nothing FCM.NEW_MESSAGE message.title message.description driver.id message.id driver.deviceToken)
         return $
           case exep of
             Left _ -> Types.Failed

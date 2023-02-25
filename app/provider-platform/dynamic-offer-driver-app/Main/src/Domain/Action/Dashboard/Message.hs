@@ -9,6 +9,7 @@ import Data.Csv
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601Show)
+import Data.Tuple.Extra (secondM)
 import qualified Data.Vector as V
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Message.MediaFile as Domain
@@ -17,6 +18,7 @@ import qualified Domain.Types.Message.MessageReport as Domain
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Streaming.Kafka.Producer (produceMessage)
@@ -251,17 +253,18 @@ messageDeliveryInfo merchantShortId messageId = do
 messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
 messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do
   _ <- findMerchantByShortId merchantShortId
-  messageReports <- Esq.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
+  encMesageReports <- Esq.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
+  messageReports <- mapM (secondM decrypt) encMesageReports
   let count = length messageReports
   let summary = Common.Summary {totalCount = count, count}
 
   return $ Common.MessageReceiverListResponse {receivers = buildReceiverListItem <$> messageReports, summary}
   where
-    buildReceiverListItem Domain.MessageReport {..} = do
+    buildReceiverListItem (Domain.MessageReport {..}, person) = do
       Common.MessageReceiverListItem
         { receiverId = cast driverId,
-          receiverName = "",
-          receiverNumber = "",
+          receiverName = person.firstName,
+          receiverNumber = fromMaybe "" person.mobileNumber,
           reply,
           seen = Just readStatus,
           status = toCommonDeliveryStatusType deliveryStatus

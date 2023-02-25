@@ -16,6 +16,7 @@ import Storage.Tabular.Message.Instances ()
 import qualified Storage.Tabular.Message.Message as M
 import Storage.Tabular.Message.MessageReport
 import qualified Storage.Tabular.Message.MessageTranslation as MT
+import qualified Storage.Tabular.Person as PT
 
 createMany :: [MessageReport] -> SqlDB ()
 createMany = Esq.createMany
@@ -23,30 +24,45 @@ createMany = Esq.createMany
 create :: MessageReport -> SqlDB ()
 create = Esq.create
 
+fullMessage ::
+  From
+    ( Table MessageReportT
+        :& Table M.MessageT
+        :& MbTable MT.MessageTranslationT
+    )
+fullMessage =
+  table
+    @MessageReportT
+    `innerJoin` table @M.MessageT
+      `Esq.on` ( \(messageReport :& message) ->
+                   messageReport ^. MessageReportMessageId ==. message ^. M.MessageTId
+               )
+    `leftJoin` table @MT.MessageTranslationT
+      `Esq.on` ( \(_ :& message :& messageTranslation) ->
+                   just (message ^. M.MessageTId) ==. messageTranslation ?. MT.MessageTranslationMessageId
+               )
+
 findByDriverIdAndLanguage :: Transactionable m => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation)]
 findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
   let limitVal = min (fromMaybe 10 mbLimit) 10
       offsetVal = fromMaybe 0 mbOffset
   Esq.findAll $ do
-    (messageReport :& message :& mbMessageTranslation) <-
-      from $
-        table
-          @MessageReportT
-          `innerJoin` table @M.MessageT
-            `Esq.on` ( \(messageReport :& message) ->
-                         messageReport ^. MessageReportMessageId ==. message ^. M.MessageTId
-                     )
-          `leftJoin` table @MT.MessageTranslationT
-            `Esq.on` ( \(_ :& message :& messageTranslation) ->
-                         just (message ^. M.MessageTId) ==. messageTranslation ?. MT.MessageTranslationMessageId
-                     )
-
+    (messageReport :& message :& mbMessageTranslation) <- from fullMessage
     where_ $
       messageReport ^. MessageReportDriverId ==. val (toKey $ cast driverId)
         &&. mbMessageTranslation ?. MT.MessageTranslationLanguage ==. val (Just language)
     orderBy [desc $ messageReport ^. MessageReportCreatedAt]
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
+    return (messageReport, message, mbMessageTranslation)
+
+findByDriverIdMessageIdAndLanguage :: Transactionable m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
+findByDriverIdMessageIdAndLanguage driverId messageId language = do
+  Esq.findOne $ do
+    (messageReport :& message :& mbMessageTranslation) <- from fullMessage
+    where_ $
+      messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
+        &&. mbMessageTranslation ?. MT.MessageTranslationLanguage ==. val (Just language)
     return (messageReport, message, mbMessageTranslation)
 
 findByMessageIdAndDriverId :: Transactionable m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
@@ -63,19 +79,23 @@ findByMessageIdAndStatusWithLimitAndOffset ::
   Maybe Int ->
   Id Msg.Message ->
   Maybe DeliveryStatus ->
-  m [MessageReport]
+  m [(MessageReport, P.Person)]
 findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset messageId mbDeliveryStatus = do
   findAll $ do
-    messageReport <-
+    (messageReport :& person) <-
       from $
         table @MessageReportT
+          `innerJoin` table @PT.PersonT
+            `Esq.on` ( \(messageReport :& person) ->
+                         messageReport ^. MessageReportDriverId ==. person ^. PT.PersonTId
+                     )
     where_ $
       messageReport ^. MessageReportMessageId ==. val (toKey messageId)
         &&. if isJust mbDeliveryStatus then messageReport ^. MessageReportDeliveryStatus ==. val (fromMaybe Success mbDeliveryStatus) else val True
     orderBy [desc $ messageReport ^. MessageReportCreatedAt]
     limit limitVal
     offset offsetVal
-    return messageReport
+    return (messageReport, person)
   where
     limitVal = min (maybe 10 fromIntegral mbLimit) 20
     offsetVal = maybe 0 fromIntegral mbOffset
