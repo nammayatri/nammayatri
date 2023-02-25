@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.TransporterConfig
   {-# WARNING
     "This module contains direct calls to the table. \
@@ -33,9 +35,8 @@ updateFCMConfig merchantId fcmUrl fcmServiceAccount = do
       ]
     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
 
-
 updateReferralLinkPassword :: Id Merchant -> Text -> SqlDB ()
-updateReferralLinkPassword merchantId newPassword =  do
+updateReferralLinkPassword merchantId newPassword = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
