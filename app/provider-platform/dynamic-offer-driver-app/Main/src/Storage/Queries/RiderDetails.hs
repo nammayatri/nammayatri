@@ -27,3 +27,12 @@ findByMobileNumber mobileNumber_ = do
     riderDetails <- from $ table @RiderDetailsT
     where_ $ riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
     return riderDetails
+
+updateHasTakenRide :: Id RiderDetails -> SqlDB ()
+updateHasTakenRide riderId = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RiderDetailsHasTakenRide =. val True
+      ]
+    where_ $ tbl ^. RiderDetailsTId ==. val (toKey riderId)
