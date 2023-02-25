@@ -6,7 +6,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Co
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
-import Data.Map as M
+import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Data.Vector as V
@@ -17,9 +17,9 @@ import qualified Domain.Types.Message.MessageReport as Domain
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
-import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
 import Kernel.Types.Error (GenericError (InvalidRequest))
@@ -29,8 +29,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Message.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery
-import qualified Storage.Queries.Person as Person
-import Tools.Notifications (sendNotificationToDriver)
+import qualified Storage.Queries.Message.MessageTranslation as MTQuery
 
 createFilePath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
@@ -107,13 +106,15 @@ toDomainType = \case
 toDomainDeliveryStatusType :: Common.MessageDeliveryStatus -> Domain.DeliveryStatus
 toDomainDeliveryStatusType = \case
   Common.Success -> Domain.Success
-  Common.Pending -> Domain.Pending
+  Common.Queued -> Domain.Queued
+  Common.Sending -> Domain.Sending
   Common.Failed -> Domain.Failed
 
 toCommonDeliveryStatusType :: Domain.DeliveryStatus -> Common.MessageDeliveryStatus
 toCommonDeliveryStatusType = \case
   Domain.Success -> Common.Success
-  Domain.Pending -> Common.Pending
+  Domain.Queued -> Common.Queued
+  Domain.Sending -> Common.Sending
   Domain.Failed -> Common.Failed
 
 toCommonType :: Domain.MessageType -> Common.MessageType
@@ -163,9 +164,8 @@ instance FromNamedRecord CSVRow where
 
 sendMessage :: ShortId DM.Merchant -> Common.SendMessageRequest -> Flow APISuccess
 sendMessage merchantShortId Common.SendMessageRequest {..} = do
-  merchant <- findMerchantByShortId merchantShortId
+  _ <- findMerchantByShortId merchantShortId
   message <- Esq.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
-  now <- getCurrentTime
   -- reading of csv file
   csvData <- L.runIO $ BS.readFile csvFile
   driverIds <-
@@ -173,35 +173,38 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
       Left err -> throwError . InvalidRequest $ show err
       Right (_, v) -> pure $ V.toList $ V.map (Id . T.pack . (.driverId)) v
 
-  Esq.runTransaction $ MRQuery.createMany (mkMessageReport now <$> driverIds)
+  fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) driverIds
 
-  mapM_ (sendMessage' message merchant . cast) driverIds
   return Success
   where
+    addToKafka message driverId = do
+      topicName <- asks (.broadcastMessageTopic)
+      now <- getCurrentTime
+      Esq.runTransaction $ MRQuery.create (mkMessageReport now driverId)
+      msg <- createMessageLanguageDict message
+      produceMessage
+        (topicName, Just (encodeUtf8 $ getId driverId))
+        msg
+
+    createMessageLanguageDict :: Domain.RawMessage -> Flow Domain.MessageDict
+    createMessageLanguageDict message = do
+      translations <- Esq.runInReplica $ MTQuery.findByMessageId message.id
+      pure $ Domain.MessageDict message (M.fromList $ map (addTranslation message) translations)
+
+    addTranslation Domain.RawMessage {..} trans =
+      (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, label = trans.label, ..})
+
     mkMessageReport now driverId =
       Domain.MessageReport
         { driverId,
           messageId = Id messageId,
-          deliveryStatus = Domain.Pending,
+          deliveryStatus = Domain.Queued,
           readStatus = False,
           messageDynamicFields = M.empty,
           reply = Nothing,
           createdAt = now,
           updatedAt = now
         }
-    sendMessage' message merchant driverId = do
-      mDriver <- Person.findById driverId
-      case mDriver of
-        Just driver -> do
-          fork
-            "Sending message to driver"
-            ( do
-                exep <- try @_ @SomeException (sendNotificationToDriver merchant.id FCM.SHOW Nothing FCM.NEW_MESSAGE message.title message.description driver.id driver.deviceToken)
-                case exep of
-                  Left _ -> Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (cast driverId) Domain.Failed
-                  Right _ -> Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (cast driverId) Domain.Success
-            )
-        Nothing -> Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (cast driverId) Domain.Failed
 
 messageList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
 messageList merchantShortId mbLimit mbOffset = do
@@ -240,9 +243,10 @@ messageDeliveryInfo merchantShortId messageId = do
   _ <- findMerchantByShortId merchantShortId
   success <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Success
   failed <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Failed
-  pending <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Pending
+  queued <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Queued
+  sending <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Sending
 
-  return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, pending}
+  return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending}
 
 messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
 messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do

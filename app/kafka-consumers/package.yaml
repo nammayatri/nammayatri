@@ -88,6 +88,8 @@ library:
   source-dirs: src
   ghc-options:
     - -Wincomplete-uni-patterns
+  dependencies:
+    - dynamic-offer-driver-app
 
 executables:
   kafka-consumers-exe:

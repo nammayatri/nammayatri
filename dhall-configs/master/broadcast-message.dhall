@@ -7,7 +7,7 @@ let esqDBCfg =
       , connectPort = 5432
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
-      , connectDatabase = "atlas_driver_offer_bpp"
+      , connectDatabase = "atlas_driver_offer_bpp_v2"
       , connectSchemaName = "atlas_driver_offer_bpp"
       }
 
@@ -24,20 +24,20 @@ let hedisCfg =
       { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
       , connectPort = 6379
       , connectAuth = None Text
-      , connectDatabase = +2
+      , connectDatabase = +0
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
       }
 
 let consumerProperties =
-      { groupId = "driver-availability-compute"
+      { groupId = "broadcast-messages-compute"
       , brockers = [ "kafka.kafka.svc.cluster.local:9092" ]
       , autoCommit = None Integer
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "location-updates-sandbox" ], consumerProperties }
+      { topicNames = [ "broadcast-messages-master" ], consumerProperties }
 
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }
@@ -50,10 +50,12 @@ in  { hedisCfg
     , cacheConfig
     , dumpEvery = +30
     , kafkaConsumerCfg
-    , timeBetweenUpdates = +60
     , availabilityTimeWindowOption
+    , timeBetweenUpdates = +60
     , granualityPeriodType = common.periodType.Hours
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = False }
+        //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"
+            , logRawSql = False
+            }
     }

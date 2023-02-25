@@ -11,6 +11,15 @@ let esqDBCfg =
       , connectSchemaName = "atlas_driver_offer_bpp"
       }
 
+let esqDBReplicaCfg =
+      { connectHost = esqDBCfg.connectHost
+      , connectPort = esqDBCfg.connectPort
+      , connectUser = esqDBCfg.connectUser
+      , connectPassword = esqDBCfg.connectPassword
+      , connectDatabase = esqDBCfg.connectDatabase
+      , connectSchemaName = esqDBCfg.connectSchemaName
+      }
+
 let hedisCfg =
       { connectHost = "localhost"
       , connectPort = 6379
@@ -22,7 +31,10 @@ let hedisCfg =
       }
 
 let consumerProperties =
-      { groupId = "groupId", brockers = [ "localhost:29092" ] }
+      { groupId = "groupId"
+      , brockers = [ "localhost:29092" ]
+      , autoCommit = None Integer
+      }
 
 let kafkaConsumerCfg =
       { topicNames = [ "location-updates" ], consumerProperties }
@@ -30,8 +42,12 @@ let kafkaConsumerCfg =
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }
 
+let cacheConfig = { configsExpTime = +86400 }
+
 in  { hedisCfg
     , esqDBCfg
+    , esqDBReplicaCfg
+    , cacheConfig
     , dumpEvery = +10
     , kafkaConsumerCfg
     , timeBetweenUpdates = +10

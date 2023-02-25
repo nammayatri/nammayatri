@@ -31,13 +31,13 @@ let hedisCfg =
       }
 
 let consumerProperties =
-      { groupId = "driver-availability-compute"
+      { groupId = "broadcast-messages-compute"
       , brockers = [ "kafka.kafka.svc.cluster.local:9092" ]
       , autoCommit = None Integer
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "location-updates-sandbox" ], consumerProperties }
+      { topicNames = [ "broadcast-messages-sandbox" ], consumerProperties }
 
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }
@@ -55,5 +55,7 @@ in  { hedisCfg
     , granualityPeriodType = common.periodType.Hours
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = False }
+        //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"
+            , logRawSql = False
+            }
     }

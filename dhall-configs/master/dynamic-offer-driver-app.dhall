@@ -215,6 +215,7 @@ in  { esqDBCfg
     , overrideDriverPoolCfg = Some overrideDriverPoolCfg
     , sendSearchRequestJobCfg
     , driverLocationUpdateTopic = "location-updates-master"
+    , broadcastMessageTopic = "broadcast-messages-master"
     , kafkaProducerCfg
     , maxParallelSearchRequests = +3
     , snapToRoadSnippetThreshold = +300

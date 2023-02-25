@@ -11,6 +11,15 @@ let esqDBCfg =
       , connectSchemaName = "atlas_driver_offer_bpp"
       }
 
+let esqDBReplicaCfg =
+      { connectHost = "adb.driver.reporting.beckn.juspay.net"
+      , connectPort = esqDBCfg.connectPort
+      , connectUser = esqDBCfg.connectUser
+      , connectPassword = esqDBCfg.connectPassword
+      , connectDatabase = esqDBCfg.connectDatabase
+      , connectSchemaName = esqDBCfg.connectSchemaName
+      }
+
 let hedisCfg =
       { connectHost = "cache.primary.beckn.juspay.net"
       , connectPort = 6379
@@ -24,6 +33,7 @@ let hedisCfg =
 let consumerProperties =
       { groupId = "driver-availability-compute"
       , brockers = [ "atlas-c2-kafka-brokers.kafka-cluster:9092" ]
+      , autoCommit = None Integer
       }
 
 let kafkaConsumerCfg =
@@ -32,8 +42,12 @@ let kafkaConsumerCfg =
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }
 
+let cacheConfig = { configsExpTime = +86400 }
+
 in  { hedisCfg
     , esqDBCfg
+    , esqDBReplicaCfg
+    , cacheConfig
     , dumpEvery = +120
     , kafkaConsumerCfg
     , timeBetweenUpdates = +60

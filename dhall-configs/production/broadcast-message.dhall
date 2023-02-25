@@ -3,7 +3,7 @@ let common = ./common.dhall
 let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let esqDBCfg =
-      { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+      { connectHost = "adb.driver.primary.beckn.juspay.net"
       , connectPort = 5432
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
@@ -12,7 +12,7 @@ let esqDBCfg =
       }
 
 let esqDBReplicaCfg =
-      { connectHost = esqDBCfg.connectHost
+      { connectHost = "adb.driver.reporting.beckn.juspay.net"
       , connectPort = esqDBCfg.connectPort
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
@@ -21,23 +21,23 @@ let esqDBReplicaCfg =
       }
 
 let hedisCfg =
-      { connectHost = "beckn-redis-001.zkt6uh.ng.0001.aps1.cache.amazonaws.com"
+      { connectHost = "cache.primary.beckn.juspay.net"
       , connectPort = 6379
       , connectAuth = None Text
-      , connectDatabase = +2
+      , connectDatabase = +0
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
       }
 
 let consumerProperties =
-      { groupId = "driver-availability-compute"
-      , brockers = [ "kafka.kafka.svc.cluster.local:9092" ]
+      { groupId = "broadcast-messages-compute"
+      , brockers = [ "atlas-c2-kafka-brokers.kafka-cluster:9092" ]
       , autoCommit = None Integer
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "location-updates-sandbox" ], consumerProperties }
+      { topicNames = [ "broadcast-messages-production" ], consumerProperties }
 
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }
@@ -48,12 +48,12 @@ in  { hedisCfg
     , esqDBCfg
     , esqDBReplicaCfg
     , cacheConfig
-    , dumpEvery = +30
+    , dumpEvery = +120
     , kafkaConsumerCfg
     , timeBetweenUpdates = +60
     , availabilityTimeWindowOption
     , granualityPeriodType = common.periodType.Hours
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = False }
+        //  { logFilePath = "/tmp/broadcast-messages.log", logRawSql = False }
     }

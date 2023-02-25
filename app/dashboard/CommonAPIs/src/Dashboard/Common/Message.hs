@@ -232,7 +232,8 @@ data MessageDeliveryInfoResponse = MessageDeliveryInfoResponse
   { messageId :: Id Message,
     success :: Int,
     failed :: Int,
-    pending :: Int
+    queued :: Int,
+    sending :: Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -268,7 +269,7 @@ data MessageReceiverListItem = MessageReceiverListItem
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MessageDeliveryStatus = Failed | Success | Pending
+data MessageDeliveryStatus = Failed | Success | Queued | Sending
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 

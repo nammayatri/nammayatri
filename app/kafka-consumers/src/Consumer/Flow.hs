@@ -3,6 +3,7 @@
 module Consumer.Flow where
 
 import qualified Consumer.AvailabilityTime.Processor as ATProcessor
+import qualified Consumer.BroadcastMessage.Processor as BMProcessor
 import Control.Error.Util
 import qualified Data.Aeson as A
 import Data.ByteString (ByteString)
@@ -13,9 +14,8 @@ import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
 import Kernel.Prelude
-import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Flow
-import Kernel.Utils.Common (generateGUID, throwError, withLogTag)
+import Kernel.Utils.Common (generateGUID, withLogTag)
 import qualified Streamly.Internal.Data.Fold as SF
 import Streamly.Internal.Data.Stream.Serial (SerialT)
 import qualified Streamly.Internal.Prelude as S
@@ -23,11 +23,22 @@ import qualified Streamly.Internal.Prelude as S
 runConsumer :: L.FlowRuntime -> AppEnv -> ConsumerType -> Consumer.KafkaConsumer -> IO ()
 runConsumer flowRt appEnv consumerType kafkaConsumer = do
   case consumerType of
-    AVAILABILITY_TIME -> processStreamforAvailability flowRt appEnv kafkaConsumer
-    BROADCAST_MESSAGE -> runFlowR flowRt appEnv . throwError $ InternalError "Implementation Missing"
+    AVAILABILITY_TIME -> availabilityConsumer flowRt appEnv kafkaConsumer
+    BROADCAST_MESSAGE -> broadcastMessageConsumer flowRt appEnv kafkaConsumer
 
-processStreamforAvailability :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
-processStreamforAvailability flowRt appEnv kafkaConsumer =
+broadcastMessageConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
+broadcastMessageConsumer flowRt appEnv kafkaConsumer =
+  readMessages kafkaConsumer
+    & S.mapM broadcastMessageWithFlow
+    & S.drain
+  where
+    broadcastMessageWithFlow (messagePayload, driverId, _) =
+      runFlowR flowRt appEnv . withLogTag driverId $
+        generateGUID
+          >>= flip withLogTag (BMProcessor.broadcastMessage messagePayload driverId)
+
+availabilityConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
+availabilityConsumer flowRt appEnv kafkaConsumer =
   readMessages kafkaConsumer
     & S.mapM (\(message, messageKey, cr) -> processRealtimeLocationUpdates message messageKey $> (message, messageKey, cr))
     & S.intervalsOf (fromIntegral appEnv.dumpEvery) (SF.lmap (\(message, messageKey, cr) -> ((messageKey, message.mId), (message, cr))) (SF.classify buildTimeSeries))
@@ -53,7 +64,7 @@ processStreamforAvailability flowRt appEnv kafkaConsumer =
 readMessages ::
   (FromJSON a, ConvertUtf8 aKey ByteString) =>
   Consumer.KafkaConsumer ->
-  SerialT IO (a, aKey, Consumer.ConsumerRecord (Maybe ByteString) (Maybe ByteString))
+  SerialT IO (a, aKey, ConsumerRecordD)
 readMessages kafkaConsumer = do
   let eitherRecords = S.bracket (pure kafkaConsumer) Consumer.closeConsumer pollMessageR
   let records = S.mapMaybe hush eitherRecords

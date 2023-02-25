@@ -2,7 +2,6 @@ module Consumer.AvailabilityTime.Types where
 
 import Data.Time
 import EulerHS.Prelude hiding (id)
-import qualified Kafka.Consumer as C
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Types.Id (Id)
 
@@ -38,5 +37,3 @@ type LastAvailableTime = UTCTime
 type SecondsActiveInBucket = Integer
 
 type AvailabilityBucket = Map BucketTimePair (SecondsActiveInBucket, LastAvailableTime)
-
-type ConsumerRecordD = C.ConsumerRecord (Maybe ByteString) (Maybe ByteString)

@@ -35,7 +35,7 @@ createOrUpdateDriverAvailability merchantId driverId (bucketStartTime, bucketEnd
           }
   DB.runTransaction $ Q.createOrUpdateDriverAvailability newAvailabilityEntry
 
-calculateAvailableTime :: T.MerchantId -> T.DriverId -> C.KafkaConsumer -> ([UTCTime], Maybe (C.ConsumerRecord (Maybe ByteString) (Maybe ByteString))) -> Flow ()
+calculateAvailableTime :: T.MerchantId -> T.DriverId -> C.KafkaConsumer -> ([UTCTime], Maybe ConsumerRecordD) -> Flow ()
 calculateAvailableTime _ _ _ ([], Nothing) = pure ()
 calculateAvailableTime _ _ _ ([], Just lastCR) = logInfo $ "Should never reach here, no locationupdates but kafka consumer records , last consumer record: " <> show lastCR
 calculateAvailableTime _ _ _ (locationUpdatesTimeSeries, Nothing) = logInfo $ "Should never reach here, locationupdates but no kafka consumer record, time series: " <> show locationUpdatesTimeSeries

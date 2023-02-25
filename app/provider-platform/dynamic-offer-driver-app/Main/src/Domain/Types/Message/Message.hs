@@ -1,5 +1,6 @@
 module Domain.Types.Message.Message where
 
+import Data.Map as HM
 import Data.OpenApi hiding (description, title)
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Message.MediaFile as MF
@@ -39,3 +40,10 @@ data RawMessage = RawMessage
     merchantId :: Id Merchant,
     createdAt :: UTCTime
   }
+  deriving (Generic, ToJSON, FromJSON)
+
+data MessageDict = MessageDict
+  { defaultMessage :: RawMessage,
+    translations :: HM.Map Text RawMessage
+  }
+  deriving (Generic, ToJSON, FromJSON)
