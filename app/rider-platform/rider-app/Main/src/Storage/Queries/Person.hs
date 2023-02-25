@@ -153,10 +153,11 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe (EncryptedHashed Text) ->
   Maybe FCMRecipientToken ->
   SqlDB ()
-updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken = do
+updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -170,6 +171,8 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbEncEmail mbDev
           <> updateWhenJust_ (\x -> PersonEmailEncrypted =. val (Just x)) mbEmailEncrypted
           <> updateWhenJust_ (\x -> PersonEmailHash =. val (Just x)) mbEmailHash
           <> updateWhenJust_ (\x -> PersonDeviceToken =. val (Just x)) mbDeviceToken
+          <> updateWhenJust_ (\x -> PersonReferralCode =. val (Just x)) mbReferralCode
+          <> updateWhenJust_ (\_ -> PersonReferredAt =. val (Just now)) mbReferralCode
       )
     where_ $ tbl ^. PersonId ==. val (getId personId)
 

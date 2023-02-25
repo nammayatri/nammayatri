@@ -17,7 +17,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
-
+import qualified Data.Text as DT
 type ProfileRes = Person.PersonAPIEntity
 
 data UpdateProfileReq = UpdateProfileReq
@@ -25,7 +25,8 @@ data UpdateProfileReq = UpdateProfileReq
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     email :: Maybe Text,
-    deviceToken :: Maybe FCM.FCMRecipientToken
+    deviceToken :: Maybe FCM.FCMRecipientToken,
+    referralCode :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -40,12 +41,15 @@ updatePerson personId req = do
   mPerson <- join <$> QPerson.findByEmail `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
+  unless ((DT.length <$> req.referralCode) == Just 6) $
+    throwError $ InvalidRequest "referralCode must be of 6 digits"
   runTransaction $
     QPerson.updatePersonalInfo
       personId
       (req.firstName)
       (req.middleName)
       (req.lastName)
+      (req.referralCode)
       mbEncEmail
       (req.deviceToken)
   pure APISuccess.Success
