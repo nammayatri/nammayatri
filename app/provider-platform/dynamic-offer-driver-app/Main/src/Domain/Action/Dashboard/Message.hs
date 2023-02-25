@@ -182,7 +182,7 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
     addToKafka message driverId = do
       topicName <- asks (.broadcastMessageTopic)
       now <- getCurrentTime
-      Esq.runTransaction $ MRQuery.create (mkMessageReport now driverId)
+      void $ try @_ @SomeException (Esq.runTransaction $ MRQuery.create (mkMessageReport now driverId)) -- avoid extra DB call to check if driverId exists
       msg <- createMessageLanguageDict message
       produceMessage
         (topicName, Just (encodeUtf8 $ getId driverId))

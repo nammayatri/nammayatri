@@ -204,8 +204,7 @@ data MessageListItem = MessageListItem
 -- Message Info
 --
 type MessageInfoAPI =
-  "message"
-    :> Capture "messageId" (Id Message)
+  Capture "messageId" (Id Message)
     :> "info"
     :> Get '[JSON] MessageInfoResponse
 
@@ -223,8 +222,7 @@ data MessageInfoResponse = MessageInfoResponse
 -- Message Delivery Info
 --
 type MessageDeliveryInfoAPI =
-  "message"
-    :> Capture "messageId" (Id Message)
+  Capture "messageId" (Id Message)
     :> "deliveryInfo"
     :> Get '[JSON] MessageDeliveryInfoResponse
 
@@ -242,8 +240,7 @@ data MessageDeliveryInfoResponse = MessageDeliveryInfoResponse
 -- MessageReceiverList
 --
 type MessageReceiverListAPI =
-  "message"
-    :> Capture "messageId" (Id Message)
+  Capture "messageId" (Id Message)
     :> "receiverList"
     :> QueryParam "number" Text
     :> QueryParam "status" MessageDeliveryStatus
