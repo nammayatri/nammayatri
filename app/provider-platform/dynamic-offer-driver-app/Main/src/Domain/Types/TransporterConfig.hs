@@ -24,6 +24,7 @@ data TransporterConfigD u = TransporterConfig
     cancellationRatioWeightage :: Int,
     cancellationRatioWindowOption :: SWC.SlidingWindowOptions,
     waitingTimeEstimatedThreshold :: Maybe Seconds,
+    referralLinkPassword :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     fcmConfig :: FCMConfig

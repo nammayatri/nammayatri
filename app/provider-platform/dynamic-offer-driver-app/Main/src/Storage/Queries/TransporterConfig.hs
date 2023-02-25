@@ -32,3 +32,16 @@ updateFCMConfig merchantId fcmUrl fcmServiceAccount = do
         TransporterConfigUpdatedAt =. val now
       ]
     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
+
+
+updateReferralLinkPassword :: Id Merchant -> Maybe Text -> SqlDB ()
+updateReferralLinkPassword merchantId newPassword =  do
+    Esq.update $ \tbl -> do
+      set
+        tbl
+        [
+          TransporterConfigReferralLinkPassword =. val newPassword
+        ]
+      where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
+
+
