@@ -178,3 +178,14 @@ deleteById personId = do
   Esq.delete $ do
     person <- from $ table @PersonT
     where_ (person ^. PersonId ==. val (getId personId))
+
+updateReferralCodeAndReferredAt :: Id Person -> Maybe Text -> SqlDB ()
+updateReferralCodeAndReferredAt personId referralCode = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonReferredAt =. val (Just now),
+        PersonReferralCode =. val referralCode
+      ]
+    where_ $ tbl ^. PersonId ==. val (getId personId)
