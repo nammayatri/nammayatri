@@ -6,6 +6,7 @@ import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
 import Kernel.Prelude
+import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
 import System.Environment (lookupEnv)
@@ -16,7 +17,9 @@ startKafkaConsumer = do
   configFile <- CF.getConfigNameFromConsumertype consumerType
   appCfg :: AppCfg <- readDhallConfigDefault configFile
   appEnv <- buildAppEnv appCfg consumerType
-  flowRt <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)
+  flowRt' <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)
+  managers <- managersFromManagersSettings appCfg.httpClientOptions.timeoutMs mempty -- default manager is created
+  let flowRt = flowRt' {L._httpClientManagers = managers}
   startConsumerWithEnv flowRt appEnv
 
 startConsumerWithEnv :: L.FlowRuntime -> AppEnv -> IO ()

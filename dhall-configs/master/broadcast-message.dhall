@@ -53,6 +53,7 @@ in  { hedisCfg
     , availabilityTimeWindowOption
     , timeBetweenUpdates = +60
     , granualityPeriodType = common.periodType.Hours
+    , httpClientOptions = common.httpClientOptions
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"

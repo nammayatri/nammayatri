@@ -11,6 +11,7 @@ import Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
+import Kernel.Utils.Servant.Client
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
 import Prelude (show)
@@ -65,7 +66,8 @@ data AppCfg = AppCfg
     availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
     granualityPeriodType :: PeriodType,
     loggerConfig :: LoggerConfig,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    httpClientOptions :: HttpClientOptions
   }
   deriving (Generic, FromDhall)
 
