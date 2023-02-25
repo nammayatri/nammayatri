@@ -1,25 +1,22 @@
-module DynamicOfferDriverApp.Processor
+module Consumer.AvailabilityTime.Processor
   ( processData,
     calculateAvailableTime,
   )
 where
 
+import qualified Consumer.AvailabilityTime.Storage.Queries as Q
+import qualified Consumer.AvailabilityTime.Types as T
 import qualified Data.Map as M
 import Data.Time (UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
-import qualified DynamicOfferDriverApp.Storage.Queries as Q
-import qualified DynamicOfferDriverApp.Types as T
-import Environment (AppEnv)
+import Environment
 import EulerHS.Prelude
 import qualified Kafka.Consumer as C
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Common as C hiding (Offset)
-import Kernel.Types.Flow (FlowR)
 import qualified Kernel.Types.SlidingWindowCounters as SWT
 import Kernel.Utils.Logging (logInfo)
 import qualified Kernel.Utils.SlidingWindowCounters as SW
-
-type Flow = FlowR AppEnv
 
 getTimeDiffInteger :: SWT.TimePair -> Integer
 getTimeDiffInteger (startTime, endTime) = floor $ diffUTCTime endTime startTime

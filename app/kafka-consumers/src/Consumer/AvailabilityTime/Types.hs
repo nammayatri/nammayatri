@@ -1,4 +1,4 @@
-module DynamicOfferDriverApp.Types where
+module Consumer.AvailabilityTime.Types where
 
 import Data.Time
 import EulerHS.Prelude hiding (id)

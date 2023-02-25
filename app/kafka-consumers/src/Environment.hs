@@ -5,6 +5,7 @@ import EulerHS.Prelude hiding (show)
 import Kafka.Consumer
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
+import Kernel.Types.Flow (FlowR)
 import Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Dhall
@@ -34,13 +35,15 @@ instance FromDhall ConsumerConfig where
                 <$> cgId
                 <*> ((<>) noAutoCommit . brokersList <$> bs)
 
-data ConsumerType = AVAILABILITY_TIME | FEED_TO_CLICKHOUSE deriving (Generic, FromDhall, Read)
+data ConsumerType = AVAILABILITY_TIME | BROADCAST_MESSAGE deriving (Generic, FromDhall, Read)
 
 instance Show ConsumerType where
   show AVAILABILITY_TIME = "availability-time"
-  show FEED_TO_CLICKHOUSE = "feed-to-clickhouse"
+  show BROADCAST_MESSAGE = "broadcast-message"
 
 type Seconds = Integer
+
+type Flow = FlowR AppEnv
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,

@@ -1,7 +1,7 @@
-module DynamicOfferDriverApp.Storage.Queries where
+module Consumer.AvailabilityTime.Storage.Queries where
 
-import DynamicOfferDriverApp.Storage.Tables
-import qualified DynamicOfferDriverApp.Types as Domain
+import Consumer.AvailabilityTime.Storage.Tables
+import qualified Consumer.AvailabilityTime.Types as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (putMany)
 
@@ -40,7 +40,7 @@ createOrUpdateDriverAvailability :: Domain.DriverAvailability -> SqlDB ()
 createOrUpdateDriverAvailability d@Domain.DriverAvailability {..} = do
   mbOldBucketAvailableTime <- findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStartTime bucketEndTime
   case mbOldBucketAvailableTime of
-    Nothing -> DynamicOfferDriverApp.Storage.Queries.create d
+    Nothing -> Consumer.AvailabilityTime.Storage.Queries.create d
     Just lastVal ->
       Esq.update $ \tbl -> do
         set

@@ -32,7 +32,7 @@ let loggerConfig =
       , prettyPrinting = False
       }
 
-let ConsumerType = < AVAILABILITY_TIME | FEED_TO_CLICKHOUSE >
+let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE >
 
 let httpClientOptions = { timeoutMs = +2000 }
 
