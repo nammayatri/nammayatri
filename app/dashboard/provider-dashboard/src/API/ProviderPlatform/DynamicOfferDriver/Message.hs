@@ -5,13 +5,15 @@ module API.ProviderPlatform.DynamicOfferDriver.Message
 where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
+import qualified Data.Text as DT
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
@@ -87,13 +89,20 @@ buildTransaction endpoint apiTokenInfo =
 addLinkAsMedia :: ShortId DM.Merchant -> ApiTokenInfo -> Common.AddLinkAsMedia -> FlowHandler Common.UploadFileResponse
 addLinkAsMedia merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  unless (req.fileType == Common.VideoLink && checkIfYoutubeLink req.url) $
+    throwError $ InvalidRequest "Only support youtube video links. For Audio/Image use uploadFile API."
   transaction <- buildTransaction Common.AddLinkEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.message.addLinkAsMedia) req
+  where
+    -- youtube link can be https://youtu.be/shorts/nWbI-DfwRpw or https://www.youtube.com/shorts/nWbI-DfwRpw
+    checkIfYoutubeLink link = DT.isPrefixOf "https://" link && DT.isInfixOf "youtu" link
 
 uploadFile :: ShortId DM.Merchant -> ApiTokenInfo -> Common.UploadFileRequest -> FlowHandler Common.UploadFileResponse
 uploadFile merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  unless (req.fileType `elem` [Common.Audio, Common.Image]) $
+    throwError $ InvalidRequest "Only support Audio/Image media type. For Video/MediaLinks use AddLink API."
   transaction <- buildTransaction Common.UploadFileEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (addMultipartBoundary . (.message.uploadFile)) req
@@ -103,6 +112,8 @@ uploadFile merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
 addMessage :: ShortId DM.Merchant -> ApiTokenInfo -> Common.AddMessageRequest -> FlowHandler Common.AddMessageResponse
 addMessage merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  unless (length req.mediaFiles <= 1) $
+    throwError $ InvalidRequest "Only support one media file per message. More than one media support will be added soon."
   transaction <- buildTransaction Common.AddMessageEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.message.addMessage) req
