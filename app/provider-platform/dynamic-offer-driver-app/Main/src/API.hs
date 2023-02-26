@@ -2,6 +2,7 @@ module API where
 
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
+import qualified API.Internal as Internal
 import qualified API.UI as UI
 -- import Domain.Action.UI.DriverOnboarding.DriverLicense as DriverOnboarding
 -- import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
@@ -28,6 +29,7 @@ type MainAPI =
     :<|> Beckn.API
     :<|> Idfy.IdfyWebhookAPI
     :<|> Dashboard.API
+    :<|> Internal.API
 
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
@@ -38,6 +40,7 @@ mainServer =
     :<|> Beckn.handler
     :<|> Idfy.idfyWebhookHandler DriverOnboarding.onVerify
     :<|> Dashboard.handler
+    :<|> Internal.handler
 
 driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =

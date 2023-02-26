@@ -19,8 +19,10 @@ mkPersist
     DriverReferralT sql=driver_referral
       referralCode Text
       driverId PersonTId
-      linkedAt UTCTime Maybe
+      linkedAt UTCTime
       Primary referralCode
+
+      Unique DriverReferralDriverId
       deriving Generic
     |]
 

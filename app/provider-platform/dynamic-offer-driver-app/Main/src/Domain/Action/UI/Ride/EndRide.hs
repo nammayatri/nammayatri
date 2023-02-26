@@ -16,6 +16,7 @@ import Domain.Types.FarePolicy.FarePolicy (FarePolicy)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Vehicle.Variant (Variant)
 import Environment (Flow)
@@ -52,7 +53,7 @@ data DashboardEndRideReq = DashboardEndRideReq
 data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
-    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> m (),
+    endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
     getFarePolicy :: Id DM.Merchant -> Variant -> Maybe Meters -> m (Maybe FarePolicy),
     calculateFare ::
@@ -133,7 +134,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   rideOld <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = rideOld.driverId
   booking <- findBookingById rideOld.bookingId >>= fromMaybeM (BookingNotFound rideOld.bookingId.getId)
-
+  -- riderId :: TODO
   case req of
     DriverReq driverReq -> do
       let requestor = driverReq.requestor
@@ -242,7 +243,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                fareParametersId = Just newFareParams.id
               }
     -- we need to store fareParams only when they changed
-    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams
+    endRideTransaction (cast @DP.Person @DP.Driver driverId) booking.id updRide mbUpdatedFareParams booking.riderId
 
     notifyCompleteToBAP booking updRide newFareParams
   return APISuccess.Success

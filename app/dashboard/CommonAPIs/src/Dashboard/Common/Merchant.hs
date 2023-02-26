@@ -418,3 +418,6 @@ validateSmsServiceUsageConfigUpdateReq :: Validate SmsServiceUsageConfigUpdateRe
 validateSmsServiceUsageConfigUpdateReq SmsServiceUsageConfigUpdateReq {..} = do
   let mkMessage field = "All values in list " <> field <> " should be unique"
   validateField "smsProvidersPriorityList" smsProvidersPriorityList $ PredicateFunc mkMessage (not . anySame @SMS.SmsService)
+
+---------------------------------------------------------
+-- merchant sms service config usage update -------------

@@ -1,13 +1,13 @@
 module Domain.Types.DriverReferral where
 
-import Domain.Types.Person (Person)
-import Kernel.Types.Id
-import EulerHS.Prelude hiding (id)
 import Data.Time
+import Domain.Types.Person (Person)
+import EulerHS.Prelude hiding (id)
+import Kernel.Types.Id
+
 data DriverReferral = DriverReferral
-  { 
-    referralCode :: Id Text,
+  { referralCode :: Id Text,
     driverId :: Id Person,
-    linkedAt :: Maybe UTCTime
+    linkedAt :: UTCTime
   }
   deriving (Generic, Show, Eq)
