@@ -4,6 +4,7 @@ module Domain.Action.Dashboard.Merchant
     merchantUpdate,
     smsServiceConfigUpdate,
     smsServiceUsageConfigUpdate,
+    transporterConfigUpdate,
   )
 where
 
@@ -14,6 +15,7 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
+import qualified Data.Text as DT
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (..))
@@ -152,4 +154,19 @@ smsServiceUsageConfigUpdate merchantShortId req = do
     CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
+  pure Success
+
+---------------------------------------------------------------------
+transporterConfigUpdate ::
+  ShortId DM.Merchant ->
+  Common.TransporterConfigUpdateAPIReq ->
+  Flow APISuccess
+transporterConfigUpdate merchantShortId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  unless (DT.length req.referralLinkPassword >= 5) $
+    throwError (InvalidRequest $ "Password should be minimum 5 digits in length")
+  Esq.runTransaction $ do 
+    CQTC.updateReferralLinkPassword merchant.id req.referralLinkPassword
+  CQTC.clearCache merchant.id
+  logTagInfo "dashboard -> transporterConfigUpdate : " (show merchant.id)
   pure Success

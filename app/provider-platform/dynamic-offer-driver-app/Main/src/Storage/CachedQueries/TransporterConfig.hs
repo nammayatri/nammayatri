@@ -5,6 +5,7 @@ module Storage.CachedQueries.TransporterConfig
   ( findByMerchantId,
     clearCache,
     updateFCMConfig,
+    updateReferralLinkPassword,
   )
 where
 
@@ -41,3 +42,6 @@ clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
 
 updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> Esq.SqlDB ()
 updateFCMConfig = Queries.updateFCMConfig
+
+updateReferralLinkPassword :: Id Merchant -> Text -> Esq.SqlDB () 
+updateReferralLinkPassword = Queries.updateReferralLinkPassword
