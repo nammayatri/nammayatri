@@ -54,7 +54,7 @@ updatePerson personId req = do
       merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       unless (DT.length refCode == 6) (throwError $ InvalidRequest "referralCode must be of 6 digits")
       case person.mobileNumber of
-        Just encMobileNumber -> void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.id.getId refCode (encMobileNumber.hash)
+        Just encMobileNumber -> fork "CALLING_BECKN_LINK_REFEREE_INTERNAL_API" . void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode (encMobileNumber.hash)
         Nothing -> throwError (InvalidRequest "Mobile number is null")
     _ -> pure ()
   runTransaction $

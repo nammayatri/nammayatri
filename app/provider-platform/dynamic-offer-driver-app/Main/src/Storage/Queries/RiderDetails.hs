@@ -49,6 +49,13 @@ findAllReferredByDriverId driverId = do
     where_ $ riderDetails ^. RiderDetailsReferredByDriver ==. val (Just $ toKey driverId)
     return riderDetails
 
+findByMobileNumberHash :: Transactionable m => DbHash -> m (Maybe RiderDetails)
+findByMobileNumberHash mobileNumberDbHash = do
+  Esq.findOne $ do
+    riderDetails <- from $ table @RiderDetailsT
+    where_ $ riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
+    return riderDetails
+
 updateReferralInfo ::
   DbHash ->
   Id DriverReferral ->

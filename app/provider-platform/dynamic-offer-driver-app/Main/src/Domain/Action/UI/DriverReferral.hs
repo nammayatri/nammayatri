@@ -1,5 +1,5 @@
 module Domain.Action.UI.DriverReferral
-  ( updateDriverReferral,
+  ( createDriverReferral,
     ReferralLinkReq (..),
   )
 where
@@ -24,9 +24,9 @@ data ReferralLinkReq = ReferralLinkReq
   { referralCode :: Text,
     referralLinkPassword :: Text
   }
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-updateDriverReferral ::
+createDriverReferral ::
   ( HasCacheConfig r,
     Redis.HedisFlow m r,
     MonadFlow m,
@@ -36,16 +36,23 @@ updateDriverReferral ::
   Id SP.Person ->
   ReferralLinkReq ->
   m APISuccess
-updateDriverReferral driverId referralLinkReq = do
+createDriverReferral driverId ReferralLinkReq {..} = do
   person <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound person.merchantId.getId)
-  unless (transporterConfig.referralLinkPassword == referralLinkReq.referralLinkPassword) $
-    throwError $ InvalidRequest "Invalid Password."
-  unless (DT.length referralLinkReq.referralCode == 6) $
-    throwError $ InvalidRequest "Referral Code must be of length 6."
-  driverRefferalRecord <- mkDriverRefferalType referralLinkReq.referralCode
-  Esq.runTransaction $ QRD.create driverRefferalRecord
-  pure Success
+  mbRefCodeLinkage <- QRD.findByRefferalCode $ Id referralCode
+  case mbRefCodeLinkage of
+    Just refCodeLinkage ->
+      if refCodeLinkage.driverId == driverId
+        then pure Success -- idempotent behaviour
+        else throwError (InvalidRequest $ "RefferalCode: " <> referralCode <> " already linked with some other account.")
+    Nothing -> do
+      transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound person.merchantId.getId)
+      unless (transporterConfig.referralLinkPassword == referralLinkPassword) $
+        throwError $ InvalidRequest "Invalid Password."
+      unless (DT.length referralCode == 6) $
+        throwError $ InvalidRequest "Referral Code must be of length 6."
+      driverRefferalRecord <- mkDriverRefferalType referralCode
+      Esq.runTransaction $ QRD.create driverRefferalRecord
+      pure Success
   where
     mkDriverRefferalType rc = do
       now <- getCurrentTime

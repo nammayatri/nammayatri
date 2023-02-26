@@ -42,6 +42,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     status :: Status,
     verified :: Bool,
     enabled :: Bool,
+    internalApiKey :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     geofencingConfig :: GeofencingConfig,

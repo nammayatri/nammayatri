@@ -19,6 +19,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     registryUrl :: BaseUrl,
     driverOfferBaseUrl :: BaseUrl,
     driverOfferApiKey :: Text,
+    driverOfferMerchantId :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

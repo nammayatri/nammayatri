@@ -34,6 +34,7 @@ mkPersist
       registryUrl Text
       driverOfferBaseUrl Text
       driverOfferApiKey Text
+      driverOfferMerchantId Text
       updatedAt UTCTime
       createdAt UTCTime
       Primary id

@@ -13,7 +13,7 @@ import Tools.Metrics (CoreMetrics)
 
 data RefereeLinkInfoReq = RefereeLinkInfoReq
   { referralCode :: Text,
-    customerNumberHash :: Text
+    customerNumberHash :: Value
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -43,4 +43,4 @@ linkReferee ::
   DbHash ->
   m APISuccess
 linkReferee apiKey internalUrl merchantId referralCode customerPhNumHash = do
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode (decodeUtf8 customerPhNumHash.unDbHash))) "LinkReferee"
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode (toJSON customerPhNumHash))) "LinkReferee"

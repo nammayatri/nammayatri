@@ -20,7 +20,7 @@ type API =
 
 handler :: FlowServer API
 handler =
-  updateDriverReferral
+  createDriverReferral
 
-updateDriverReferral :: Id SP.Person -> Domain.ReferralLinkReq -> FlowHandler APISuccess
-updateDriverReferral driverId = withFlowHandlerAPI . Domain.updateDriverReferral driverId
+createDriverReferral :: Id SP.Person -> Domain.ReferralLinkReq -> FlowHandler APISuccess
+createDriverReferral driverId = withFlowHandlerAPI . Domain.createDriverReferral driverId

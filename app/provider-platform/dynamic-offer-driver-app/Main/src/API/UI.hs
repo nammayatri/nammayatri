@@ -8,6 +8,7 @@ import qualified API.UI.Call as Call
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Driver as Driver
 import qualified API.UI.DriverOnboarding as DriverOnboarding
+import qualified API.UI.DriverReferral as DriverReferral
 import qualified API.UI.FarePolicy as FarePolicy
 import qualified API.UI.Frontend as Frontend
 import qualified API.UI.Location as Location
@@ -45,6 +46,7 @@ type API =
            :<|> Whatsapp.API
            :<|> Message.API
            :<|> Performance.API
+           :<|> DriverReferral.API
        )
 
 handler :: FlowServer API
@@ -66,3 +68,4 @@ handler =
     :<|> Whatsapp.handler
     :<|> Message.handler
     :<|> Performance.handler
+    :<|> DriverReferral.handler
