@@ -1,11 +1,13 @@
 module SharedLogic.CallBPPInternal where
 
 import Environment
+import EulerHS.Types (EulerClient, client)
 import Kernel.External.Encryption (DbHash)
+import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
-import Kernel.Utils.Common
-import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
+import Kernel.Utils.Common hiding (Error)
+import qualified Kernel.Utils.Servant.Client as EC
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Tools.Metrics (CoreMetrics)
@@ -17,13 +19,18 @@ data RefereeLinkInfoReq = RefereeLinkInfoReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 type LinkRefereeAPI =
-  "referee"
+  "internal"
+    :> Capture "merchantId" Text
+    :> "referee"
     :> SignatureAuth "Authorization"
     :> ReqBody '[JSON] RefereeLinkInfoReq
     :> Post '[JSON] APISuccess
 
-linkRefereeAPI :: Proxy LinkRefereeAPI
-linkRefereeAPI = Proxy
+linkRefereeClient :: Text -> RefereeLinkInfoReq -> EulerClient APISuccess
+linkRefereeClient = client likeRefereeApi
+  where
+    likeRefereeApi :: Proxy LinkRefereeAPI
+    likeRefereeApi = Proxy
 
 linkReferee ::
   ( MonadFlow m,
@@ -32,26 +39,8 @@ linkReferee ::
   ) =>
   BaseUrl ->
   Text ->
+  Text ->
   DbHash ->
   m APISuccess
-linkReferee internalUrl referralCode customerPhNumHash = do
-  callBecknAPIWithSignature "linkReferee" linkRefereeAPI internalUrl (RefereeLinkInfoReq referralCode (decodeUtf8 customerPhNumHash.unDbHash))
-
-callBecknAPIWithSignature,
-  callBecknAPIWithSignatureMetro ::
-    ( MonadFlow m,
-      CoreMetrics m,
-      IsBecknAPI api req res,
-      HasBapInfo r m
-    ) =>
-    Text ->
-    Proxy api ->
-    BaseUrl ->
-    req ->
-    m res
-callBecknAPIWithSignature a b c d = do
-  bapId <- asks (.bapSelfIds.cabs)
-  callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
-callBecknAPIWithSignatureMetro a b c d = do
-  bapId <- asks (.bapSelfIds.metro)
-  callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
+linkReferee internalUrl merchantId referralCode customerPhNumHash = do
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (linkRefereeClient merchantId (RefereeLinkInfoReq referralCode (decodeUtf8 customerPhNumHash.unDbHash))) "LinkReferee"

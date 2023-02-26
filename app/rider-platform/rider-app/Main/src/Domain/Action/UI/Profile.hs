@@ -48,11 +48,14 @@ updatePerson personId req = do
   mPerson <- join <$> QPerson.findByEmail `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
-  case (mPerson >>= (.mobileNumber), req.referralCode, mPerson <&> (.merchantId)) of
-    (Just encMobileNumber, Just refCode, Just merchantId) -> do
-      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  case req.referralCode of
+    Just refCode -> do
+      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       unless (DT.length refCode == 6) (throwError $ InvalidRequest "referralCode must be of 6 digits")
-      void $ CallBPPInternal.linkReferee merchant.gatewayUrl refCode (encMobileNumber.hash)
+      case person.mobileNumber of
+        Just encMobileNumber -> void $ CallBPPInternal.linkReferee merchant.gatewayUrl merchant.id.getId refCode (encMobileNumber.hash)
+        Nothing -> throwError (InvalidRequest "Mobile number is null")
     _ -> pure ()
   runTransaction $
     QPerson.updatePersonalInfo
