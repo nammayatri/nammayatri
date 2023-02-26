@@ -8,7 +8,6 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common hiding (Error)
 import qualified Kernel.Utils.Servant.Client as EC
-import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Tools.Metrics (CoreMetrics)
 
@@ -22,11 +21,11 @@ type LinkRefereeAPI =
   "internal"
     :> Capture "merchantId" Text
     :> "referee"
-    :> SignatureAuth "Authorization"
+    :> Header "token" Text
     :> ReqBody '[JSON] RefereeLinkInfoReq
     :> Post '[JSON] APISuccess
 
-linkRefereeClient :: Text -> RefereeLinkInfoReq -> EulerClient APISuccess
+linkRefereeClient :: Text -> Maybe Text -> RefereeLinkInfoReq -> EulerClient APISuccess
 linkRefereeClient = client likeRefereeApi
   where
     likeRefereeApi :: Proxy LinkRefereeAPI
@@ -37,10 +36,11 @@ linkReferee ::
     CoreMetrics m,
     HasBapInfo r m
   ) =>
+  Text ->
   BaseUrl ->
   Text ->
   Text ->
   DbHash ->
   m APISuccess
-linkReferee internalUrl merchantId referralCode customerPhNumHash = do
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (linkRefereeClient merchantId (RefereeLinkInfoReq referralCode (decodeUtf8 customerPhNumHash.unDbHash))) "LinkReferee"
+linkReferee apiKey internalUrl merchantId referralCode customerPhNumHash = do
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode (decodeUtf8 customerPhNumHash.unDbHash))) "LinkReferee"

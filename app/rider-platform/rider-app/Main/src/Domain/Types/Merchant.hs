@@ -17,6 +17,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,
     registryUrl :: BaseUrl,
+    driverOfferBaseUrl :: BaseUrl,
+    driverOfferApiKey :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

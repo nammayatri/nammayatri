@@ -32,6 +32,8 @@ mkPersist
       destinationRestriction GeoRestriction
       gatewayUrl Text
       registryUrl Text
+      driverOfferBaseUrl Text
+      driverOfferApiKey Text
       updatedAt UTCTime
       createdAt UTCTime
       Primary id
@@ -60,6 +62,7 @@ instance TType MerchantT Domain.Merchant where
             }
     gwUrl <- parseBaseUrl gatewayUrl
     regUrl <- parseBaseUrl registryUrl
+    doBaseUrl <- parseBaseUrl driverOfferBaseUrl
     return $
       Domain.Merchant
         { id = Id id,
@@ -67,6 +70,7 @@ instance TType MerchantT Domain.Merchant where
           registryUrl = regUrl,
           gatewayUrl = gwUrl,
           exoPhones = unPostgresList exoPhones,
+          driverOfferBaseUrl = doBaseUrl,
           ..
         }
   toTType Domain.Merchant {..} = do
@@ -81,6 +85,7 @@ instance TType MerchantT Domain.Merchant where
         destinationRestriction = destination,
         gatewayUrl = showBaseUrl gatewayUrl,
         registryUrl = showBaseUrl registryUrl,
+        driverOfferBaseUrl = showBaseUrl driverOfferBaseUrl,
         exoPhones = PostgresList exoPhones,
         ..
       }
