@@ -4,7 +4,6 @@ module Domain.Action.UI.DriverReferral
   )
 where
 
-import qualified Data.Text as DT
 import qualified Domain.Types.DriverReferral as D
 import qualified Domain.Types.Person as SP
 import Kernel.Prelude
@@ -14,6 +13,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Text as TU
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.TransporterConfig as QTC
 import qualified Storage.Queries.DriverReferral as QRD
@@ -39,17 +39,17 @@ createDriverReferral ::
 createDriverReferral driverId ReferralLinkReq {..} = do
   person <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbRefCodeLinkage <- QRD.findByRefferalCode $ Id referralCode
+  transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound person.merchantId.getId)
+  unless (transporterConfig.referralLinkPassword == referralLinkPassword) $
+    throwError $ InvalidRequest "Invalid Password."
   case mbRefCodeLinkage of
     Just refCodeLinkage ->
       if refCodeLinkage.driverId == driverId
         then pure Success -- idempotent behaviour
         else throwError (InvalidRequest $ "RefferalCode: " <> referralCode <> " already linked with some other account.")
     Nothing -> do
-      transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound person.merchantId.getId)
-      unless (transporterConfig.referralLinkPassword == referralLinkPassword) $
-        throwError $ InvalidRequest "Invalid Password."
-      unless (DT.length referralCode == 6) $
-        throwError $ InvalidRequest "Referral Code must be of length 6."
+      unless (TU.validateAllDigitWithMinLength 6 referralCode) $
+        throwError $ InvalidRequest "Referral Code must have 6 digits."
       driverRefferalRecord <- mkDriverRefferalType referralCode
       Esq.runTransaction $ QRD.create driverRefferalRecord
       pure Success

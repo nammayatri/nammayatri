@@ -2,7 +2,6 @@ module SharedLogic.CallBPPInternal where
 
 import Environment
 import EulerHS.Types (EulerClient, client)
-import Kernel.External.Encryption (DbHash)
 import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -13,7 +12,8 @@ import Tools.Metrics (CoreMetrics)
 
 data RefereeLinkInfoReq = RefereeLinkInfoReq
   { referralCode :: Text,
-    customerNumberHash :: Value
+    customerMobileNumber :: Text,
+    customerMobileCountryCode :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -40,7 +40,8 @@ linkReferee ::
   BaseUrl ->
   Text ->
   Text ->
-  DbHash ->
+  Text ->
+  Text ->
   m APISuccess
-linkReferee apiKey internalUrl merchantId referralCode customerPhNumHash = do
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode (toJSON customerPhNumHash))) "LinkReferee"
+linkReferee apiKey internalUrl merchantId referralCode phoneNumber countryCode = do
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode)) "LinkReferee"

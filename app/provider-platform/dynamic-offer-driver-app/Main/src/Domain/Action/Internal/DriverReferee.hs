@@ -1,17 +1,18 @@
 module Domain.Action.Internal.DriverReferee where
 
-import qualified Data.Aeson as A
 import Data.OpenApi (ToSchema)
-import qualified Data.Text as DT
 import qualified Domain.Types.DriverReferral as Domain
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.RiderDetails as DRD
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (encrypt, getDbHash)
 import qualified Kernel.Storage.Esqueleto as ESQ
 import Kernel.Types.APISuccess
 import Kernel.Types.App
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Text as TU
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.DriverReferral as QDR
@@ -19,14 +20,17 @@ import qualified Storage.Queries.RiderDetails as QRD
 
 data RefereeLinkInfoReq = RefereeLinkInfoReq
   { referralCode :: Id Domain.DriverReferral,
-    customerNumberHash :: A.Value
+    customerMobileNumber :: Text,
+    customerMobileCountryCode :: Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 linkReferee ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    EncFlow m r,
+    MonadReader r m
   ) =>
   Id Merchant ->
   Maybe Text ->
@@ -34,16 +38,33 @@ linkReferee ::
   m APISuccess
 linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  mobileHash <-
-    case A.fromJSON customerNumberHash of
-      A.Success hash -> pure hash
-      A.Error err -> logTagInfo "DECODING_CUSTOMER_NUMBER_HASH_FAILED" (show err) *> throwError (InternalError "Failed to read the hashed mobile number")
-  _ <- QRD.findByMobileNumberHash mobileHash >>= fromMaybeM (InvalidRequest $ "PersonNotFound with mobilehash: " <> show mobileHash)
+  numberHash <- getDbHash customerMobileNumber
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
-  unless (DT.length referralCode.getId == 6) $
-    throwError $ InvalidRequest "Referral code length should be 6"
+  unless (TU.validateAllDigitWithMinLength 6 referralCode.getId) $
+    throwError $ InvalidRequest "Referral Code must have 6 digits"
   driverReferralLinkage <- QDR.findByRefferalCode referralCode >>= fromMaybeM (InvalidRequest "Invalid referral code.")
-  ESQ.runTransaction $
-    QRD.updateReferralInfo mobileHash referralCode driverReferralLinkage.driverId
+  mbRiderDetails <- QRD.findByMobileNumberHash numberHash
+  case mbRiderDetails of
+    Just _ -> ESQ.runTransaction $ QRD.updateReferralInfo numberHash referralCode driverReferralLinkage.driverId
+    Nothing -> do
+      riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId
+      ESQ.runTransaction $ QRD.create riderDetails
   pure Success
+  where
+    mkRiderDetailsObj driverId = do
+      id <- generateGUID
+      now <- getCurrentTime
+      encPhoneNumber <- encrypt customerMobileNumber
+      pure $
+        DRD.RiderDetails
+          { id = Id id,
+            mobileCountryCode = customerMobileCountryCode,
+            mobileNumber = encPhoneNumber,
+            createdAt = now,
+            updatedAt = now,
+            referralCode = Just referralCode,
+            referredByDriver = Just driverId,
+            referredAt = Just now,
+            hasTakenRide = False
+          }

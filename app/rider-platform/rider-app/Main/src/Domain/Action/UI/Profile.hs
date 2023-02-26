@@ -6,7 +6,6 @@ module Domain.Action.UI.Profile
   )
 where
 
-import qualified Data.Text as DT
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.External.Encryption
@@ -18,6 +17,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Text as TU
 import SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as QMerchant
@@ -50,12 +50,15 @@ updatePerson personId req = do
   mbEncEmail <- encrypt `mapM` req.email
   case req.referralCode of
     Just refCode -> do
-      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
       merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-      unless (DT.length refCode == 6) (throwError $ InvalidRequest "referralCode must be of 6 digits")
-      case person.mobileNumber of
-        Just encMobileNumber -> fork "CALLING_BECKN_LINK_REFEREE_INTERNAL_API" . void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode (encMobileNumber.hash)
-        Nothing -> throwError (InvalidRequest "Mobile number is null")
+      unless (TU.validateAllDigitWithMinLength 6 refCode) (throwError $ InvalidRequest "Referral Code must have 6 digits")
+      case (person.mobileNumber, person.mobileCountryCode) of
+        (Just mobileNumber, Just countryCode) ->
+          fork "CALLING_BECKN_LINK_REFEREE_INTERNAL_API"
+            . void
+            $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
+        _ -> throwError (InvalidRequest "Mobile number is null")
     _ -> pure ()
   runTransaction $
     QPerson.updatePersonalInfo

@@ -98,7 +98,7 @@ handler subscriber transporterId req = do
     throwError $ QuoteExpired driverQuote.id.getId
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
-  (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now driver.id
+  (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
   ride <- buildRide driver.id booking
   rideDetails <- buildRideDetails ride driver
   driverSearchReqs <- QSRD.findAllActiveByRequestId driverQuote.searchRequestId
@@ -188,8 +188,8 @@ handler subscriber transporterId req = do
             baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
           }
 
-getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> Id DPerson.Person -> m (DRD.RiderDetails, Bool)
-getRiderDetails customerMobileCountryCode customerPhoneNumber now driverId =
+getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
+getRiderDetails customerMobileCountryCode customerPhoneNumber now =
   QRD.findByMobileNumber customerPhoneNumber >>= \case
     Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
     Just a -> return (a, False)
@@ -204,7 +204,7 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now driverId =
             createdAt = now,
             updatedAt = now,
             referralCode = Nothing,
-            referredByDriver = Just driverId,
+            referredByDriver = Nothing,
             referredAt = Nothing,
             hasTakenRide = False
           }
