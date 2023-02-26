@@ -37,19 +37,19 @@ createDriverReferral ::
   ReferralLinkReq ->
   m APISuccess
 createDriverReferral driverId ReferralLinkReq {..} = do
+  unless (TU.validateAllDigitWithMinLength 6 referralCode) $
+    throwError $ InvalidRequest "Referral Code must have 6 digits."
   person <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  mbRefCodeLinkage <- QRD.findByRefferalCode $ Id referralCode
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound person.merchantId.getId)
   unless (transporterConfig.referralLinkPassword == referralLinkPassword) $
     throwError $ InvalidRequest "Invalid Password."
+  mbRefCodeLinkage <- QRD.findByRefferalCode $ Id referralCode
   case mbRefCodeLinkage of
     Just refCodeLinkage ->
       if refCodeLinkage.driverId == driverId
         then pure Success -- idempotent behaviour
         else throwError (InvalidRequest $ "RefferalCode: " <> referralCode <> " already linked with some other account.")
     Nothing -> do
-      unless (TU.validateAllDigitWithMinLength 6 referralCode) $
-        throwError $ InvalidRequest "Referral Code must have 6 digits."
       driverRefferalRecord <- mkDriverRefferalType referralCode
       Esq.runTransaction $ QRD.create driverRefferalRecord
       pure Success

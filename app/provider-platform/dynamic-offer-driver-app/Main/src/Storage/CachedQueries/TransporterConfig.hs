@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.TransporterConfig
@@ -43,5 +44,5 @@ clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
 updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> Esq.SqlDB ()
 updateFCMConfig = Queries.updateFCMConfig
 
-updateReferralLinkPassword :: Id Merchant -> Text -> Esq.SqlDB () 
+updateReferralLinkPassword :: Id Merchant -> Text -> Esq.SqlDB ()
 updateReferralLinkPassword = Queries.updateReferralLinkPassword

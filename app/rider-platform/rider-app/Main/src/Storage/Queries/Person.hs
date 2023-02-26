@@ -193,3 +193,14 @@ updateReferralCodeAndReferredAt personId referralCode = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)
+
+findByReferralCode ::
+  (Transactionable m, EncFlow m r) =>
+  Text ->
+  m (Maybe Person)
+findByReferralCode referralCode = do
+  findOne $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonReferralCode ==. val (Just referralCode)
+    return person

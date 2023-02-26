@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Dashboard.Common.Merchant
   ( module Dashboard.Common.Merchant,
@@ -424,12 +425,12 @@ validateSmsServiceUsageConfigUpdateReq SmsServiceUsageConfigUpdateReq {..} = do
 -- merchant transport config update -------------
 
 type TransporterConfigUpdateAPI =
-  "referralProgram" 
+  "referralProgram"
     :> "referralOpsPassword"
     :> ReqBody '[JSON] TransporterConfigUpdateAPIReq
     :> Post '[JSON] APISuccess
 
-newtype TransporterConfigUpdateAPIReq = TransporterConfigUpdateAPIReq 
+newtype TransporterConfigUpdateAPIReq = TransporterConfigUpdateAPIReq
   { referralLinkPassword :: Text
   }
   deriving stock (Show, Generic)

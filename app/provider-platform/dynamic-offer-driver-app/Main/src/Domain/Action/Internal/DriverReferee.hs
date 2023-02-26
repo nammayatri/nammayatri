@@ -38,11 +38,11 @@ linkReferee ::
   m APISuccess
 linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  numberHash <- getDbHash customerMobileNumber
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   unless (TU.validateAllDigitWithMinLength 6 referralCode.getId) $
     throwError $ InvalidRequest "Referral Code must have 6 digits"
+  numberHash <- getDbHash customerMobileNumber
   driverReferralLinkage <- QDR.findByRefferalCode referralCode >>= fromMaybeM (InvalidRequest "Invalid referral code.")
   mbRiderDetails <- QRD.findByMobileNumberHash numberHash
   case mbRiderDetails of

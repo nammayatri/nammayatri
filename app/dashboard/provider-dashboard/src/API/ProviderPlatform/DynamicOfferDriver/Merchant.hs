@@ -49,10 +49,9 @@ type SmsServiceUsageConfigUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
     :> Common.SmsServiceUsageConfigUpdateAPI
 
-type TransporterConfigUpdateAPI = 
+type TransporterConfigUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
     :> Common.TransporterConfigUpdateAPI
-
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
@@ -137,11 +136,8 @@ transporterConfigUpdate ::
   ApiTokenInfo ->
   Common.TransporterConfigUpdateAPIReq ->
   FlowHandler APISuccess
-transporterConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do 
+transporterConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.TransporterConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.merchant.transporterConfigUpdate) req
-
-
-

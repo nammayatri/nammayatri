@@ -15,12 +15,12 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
-import qualified Data.Text as DT
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Text as TU
 import Kernel.Utils.Validation
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -162,10 +162,10 @@ transporterConfigUpdate ::
   Common.TransporterConfigUpdateAPIReq ->
   Flow APISuccess
 transporterConfigUpdate merchantShortId req = do
+  unless (TU.validateAllDigitWithMinLength 5 req.referralLinkPassword) $
+    throwError (InvalidRequest "Password should be minimum 5 digits in length")
   merchant <- findMerchantByShortId merchantShortId
-  unless (DT.length req.referralLinkPassword >= 5) $
-    throwError (InvalidRequest $ "Password should be minimum 5 digits in length")
-  Esq.runTransaction $ do 
+  Esq.runTransaction $ do
     CQTC.updateReferralLinkPassword merchant.id req.referralLinkPassword
   CQTC.clearCache merchant.id
   logTagInfo "dashboard -> transporterConfigUpdate : " (show merchant.id)
