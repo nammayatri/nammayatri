@@ -50,7 +50,9 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
     (messageReport :& message :& mbMessageTranslation) <- from fullMessage
     where_ $
       messageReport ^. MessageReportDriverId ==. val (toKey $ cast driverId)
-        &&. mbMessageTranslation ?. MT.MessageTranslationLanguage ==. val (Just language)
+        &&. ( Esq.isNothing (mbMessageTranslation ?. MT.MessageTranslationLanguage)
+                ||. mbMessageTranslation ?. MT.MessageTranslationLanguage ==. val (Just language)
+            )
     orderBy [desc $ messageReport ^. MessageReportCreatedAt]
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
@@ -62,7 +64,9 @@ findByDriverIdMessageIdAndLanguage driverId messageId language = do
     (messageReport :& message :& mbMessageTranslation) <- from fullMessage
     where_ $
       messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
-        &&. mbMessageTranslation ?. MT.MessageTranslationLanguage ==. val (Just language)
+        &&. ( Esq.isNothing (mbMessageTranslation ?. MT.MessageTranslationLanguage)
+                ||. mbMessageTranslation ?. MT.MessageTranslationLanguage ==. val (Just language)
+            )
     return (messageReport, message, mbMessageTranslation)
 
 findByMessageIdAndDriverId :: Transactionable m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
