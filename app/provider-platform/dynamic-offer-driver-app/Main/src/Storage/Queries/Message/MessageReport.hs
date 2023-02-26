@@ -25,12 +25,13 @@ create :: MessageReport -> SqlDB ()
 create = Esq.create
 
 fullMessage ::
+  Language ->
   From
     ( Table MessageReportT
         :& Table M.MessageT
         :& MbTable MT.MessageTranslationT
     )
-fullMessage =
+fullMessage lang =
   table
     @MessageReportT
     `innerJoin` table @M.MessageT
@@ -40,6 +41,7 @@ fullMessage =
     `leftJoin` table @MT.MessageTranslationT
       `Esq.on` ( \(_ :& message :& messageTranslation) ->
                    just (message ^. M.MessageTId) ==. messageTranslation ?. MT.MessageTranslationMessageId
+                     &&. messageTranslation ?. MT.MessageTranslationLanguage ==. val (Just lang)
                )
 
 findByDriverIdAndLanguage :: Transactionable m => Id P.Driver -> Language -> Maybe Int -> Maybe Int -> m [(MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation)]
@@ -47,12 +49,9 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
   let limitVal = min (fromMaybe 10 mbLimit) 10
       offsetVal = fromMaybe 0 mbOffset
   Esq.findAll $ do
-    (messageReport :& message :& mbMessageTranslation) <- from fullMessage
+    (messageReport :& message :& mbMessageTranslation) <- from (fullMessage language)
     where_ $
       messageReport ^. MessageReportDriverId ==. val (toKey $ cast driverId)
-        &&. ( Esq.isNothing (mbMessageTranslation ?. MT.MessageTranslationLanguage)
-                ||. mbMessageTranslation ?. MT.MessageTranslationLanguage ==. val (Just language)
-            )
     orderBy [desc $ messageReport ^. MessageReportCreatedAt]
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
@@ -61,12 +60,9 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
 findByDriverIdMessageIdAndLanguage :: Transactionable m => Id P.Driver -> Id Msg.Message -> Language -> m (Maybe (MessageReport, Msg.RawMessage, Maybe MTD.MessageTranslation))
 findByDriverIdMessageIdAndLanguage driverId messageId language = do
   Esq.findOne $ do
-    (messageReport :& message :& mbMessageTranslation) <- from fullMessage
+    (messageReport :& message :& mbMessageTranslation) <- from (fullMessage language)
     where_ $
       messageReport ^. MessageReportTId ==. val (toKey (messageId, driverId))
-        &&. ( Esq.isNothing (mbMessageTranslation ?. MT.MessageTranslationLanguage)
-                ||. mbMessageTranslation ?. MT.MessageTranslationLanguage ==. val (Just language)
-            )
     return (messageReport, message, mbMessageTranslation)
 
 findByMessageIdAndDriverId :: Transactionable m => Id Msg.Message -> Id P.Driver -> m (Maybe MessageReport)
