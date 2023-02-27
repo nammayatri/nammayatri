@@ -1,0 +1,41 @@
+name: "CI"
+on:
+  push:
+  pull_request:
+jobs:
+  Nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - uses: cachix/cachix-action@v12
+        with:
+          # TODO: configure official cache once provisioned.
+          # Using personal cache for now, and pushing manually.
+          name: srid-nammayatri
+      - name: Download from Nix cache (cachix)
+        run: |
+          nix develop -j 4 -c echo
+      - name: Build all packages 🔨
+        id: build-nix
+        run: |
+          nix build -L .#all
+      - name: Build Docker image 🔨
+        id: build-docker
+        run: |
+          nix build -L --no-allow-dirty .#dockerImage
+      - name: Flake checks 🧪
+        run: |
+          # Because 'nix flake check' is not system-aware
+          # See https://srid.ca/haskell-template/checks
+          nix run nixpkgs#sd \
+            'systems = nixpkgs.lib.systems.flakeExposed' \
+            'systems = [ "x86_64-linux" ]' \
+            flake.nix
+
+          # Sandbox must be disabed for:
+          # https://github.com/srid/haskell-flake/issues/21
+          nix \
+            --option sandbox false \
+            flake check -L
