@@ -77,3 +77,14 @@ getStatus searchRequestId = do
     where_ $
       searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
     return $ searchT ^. SearchRequestStatus
+
+getValidTill ::
+  (Transactionable m) =>
+  Id SearchRequest ->
+  m (Maybe UTCTime)
+getValidTill searchRequestId = do
+  findOne $ do
+    searchT <- from $ table @SearchRequestT
+    where_ $
+      searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
+    return $ searchT ^. SearchRequestValidTill
