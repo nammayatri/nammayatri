@@ -170,7 +170,7 @@ addRequest requestData Repository {..} bookingId = do
   modifyIORef rideRequestsVar $ Map.insert requestId request
 
 addResponse :: Repository -> Id SRB.Booking -> Id Driver -> Alloc.Response -> IO ()
-addResponse repository@Repository {..} bookingId driverId status = do
+addResponse repository bookingId driverId status = do
   let driverResponse = DriverResponseType driverId status
   addRequest (DriverResponse driverResponse) repository bookingId
 

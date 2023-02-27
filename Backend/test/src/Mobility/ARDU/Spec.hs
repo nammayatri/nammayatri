@@ -24,7 +24,7 @@ import qualified Mobility.ARDU.NearestDrivers as ND
 import qualified Mobility.ARDU.SuccessFlow as SF
 import qualified Mobility.ARDU.SyncRide as SR
 import Test.Tasty
-import Test.Tasty.Hspec hiding (after)
+import Test.Tasty.Hspec (testSpec)
 
 mkTestTree :: IO TestTree
 mkTestTree = do

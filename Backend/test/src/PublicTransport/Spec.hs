@@ -18,7 +18,7 @@ import Kernel.Prelude
 import qualified PublicTransport.HealthCheck as HC
 import qualified PublicTransport.Search as Search
 import Test.Tasty
-import Test.Tasty.Hspec hiding (after)
+import Test.Tasty.Hspec (testSpec)
 
 mkTestTree :: IO TestTree
 mkTestTree = do

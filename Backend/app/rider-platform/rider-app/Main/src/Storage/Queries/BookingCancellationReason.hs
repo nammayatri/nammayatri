@@ -35,7 +35,7 @@ findByRideBookingId rideBookingId =
     return rideBookingCancellationReason
 
 upsert :: BookingCancellationReason -> SqlDB ()
-upsert cancellationReason@BookingCancellationReason {..} =
+upsert cancellationReason =
   Esq.upsert
     cancellationReason
     [ BookingCancellationReasonBookingId =. val (toKey cancellationReason.bookingId),

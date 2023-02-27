@@ -36,7 +36,7 @@ driverPoolPerRide = Map.fromList [((booking01Id, 0), driverPool1)]
 
 allocationTimeFinished :: TestTree
 allocationTimeFinished = testCase "AllocationTimeFinished" $ do
-  r@Repository {..} <- initRepository
+  r <- initRepository
   addBooking r booking01Id 0
   addDriverPool r driverPoolPerRide
   addRequest Allocation r booking01Id

@@ -64,7 +64,7 @@ validateSendIssueReq SendIssueReq {..} =
 type SendIssueRes = APISuccess
 
 sendIssue :: EsqDBFlow m r => Id Person.Person -> SendIssueReq -> m SendIssueRes
-sendIssue personId request@SendIssueReq {..} = do
+sendIssue personId request = do
   runRequestValidation validateSendIssueReq request
   newIssue <- buildDBIssue personId request
   runTransaction $
