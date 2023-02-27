@@ -45,11 +45,17 @@
           config.allowUnfree = true;
         };
 
+        packages.default = self'.packages.rider-app;
+
         # The default package is a dummy one, that builds all (other) packages.
         # Useful for CI run.
-        packages.default = pkgs.runCommand "packages-combined"
+        packages.all = pkgs.runCommand "packages-combined"
           {
-            packagesss = builtins.attrValues (lib.filterAttrs (k: _: k != "default") self'.packages);
+            packagesss =
+              builtins.attrValues
+                (lib.filterAttrs (k: _: k != "all" && k != "dockerImage")
+                  # TODO: Use 'outputs' from https://github.com/srid/haskell-flake/issues/74#issuecomment-1424309168
+                  self'.packages);
           } ''
           echo $packagesss > $out
         '';

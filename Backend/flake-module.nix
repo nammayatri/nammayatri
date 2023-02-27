@@ -3,6 +3,7 @@
   imports = [
     inputs.haskell-flake.flakeModule
     inputs.flake-root.flakeModule
+    ./nix/docker.nix
   ];
   perSystem = { config, self', system, pkgs, lib, ... }: {
     haskellProjects.default = {
