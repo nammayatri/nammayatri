@@ -19,10 +19,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module DynamicOfferDriverApp.Storage.Tables where
+module Consumer.AvailabilityTime.Storage.Tables where
 
+import qualified Consumer.AvailabilityTime.Types as Domain
 import Data.Time
-import qualified DynamicOfferDriverApp.Types as Domain
 import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id

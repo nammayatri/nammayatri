@@ -23,7 +23,7 @@ import Kernel.Types.Id
 
 type MessageDynamicFieldsType = M.Map Text Text
 
-data DeliveryStatus = Success | Failed | Pending deriving (Generic, ToSchema, Show, Read, ToJSON, FromJSON)
+data DeliveryStatus = Success | Failed | Queued | Sending deriving (Generic, ToSchema, Show, Read, ToJSON, FromJSON)
 
 data MessageReport = MessageReport
   { messageId :: Id Msg.Message,

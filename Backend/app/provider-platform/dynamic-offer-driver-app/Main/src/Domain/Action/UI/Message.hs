@@ -19,7 +19,6 @@ import Data.OpenApi hiding (description, info, title, url)
 import qualified Data.Text as T
 import qualified Domain.Types.Message.MediaFile as MF
 import qualified Domain.Types.Message.Message as Domain
-import qualified Domain.Types.Message.MessageReport as Domain
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -28,6 +27,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import qualified Storage.Queries.Message.MediaFile as MFQ
 import qualified Storage.Queries.Message.MessageReport as MRQ
 import qualified Storage.Queries.Person as QP
@@ -43,12 +43,17 @@ data MessageAPIEntityResponse = MessageAPIEntityResponse
   { title :: Text,
     description :: Text,
     _type :: Domain.MessageType,
-    status :: Domain.DeliveryStatus,
+    created_at :: UTCTime,
+    label :: Maybe Text,
+    reply :: Maybe Text,
     readStatus :: Bool,
     messageId :: Id Domain.Message,
     mediaFiles :: [MediaFileApiResponse]
   }
-  deriving (Generic, ToSchema, ToJSON, FromJSON)
+  deriving (Generic, ToSchema, FromJSON)
+
+instance ToJSON MessageAPIEntityResponse where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 newtype MessageReplyReq = MessageReplyReq {reply :: Text}
   deriving (Generic, ToSchema, ToJSON, FromJSON)
@@ -66,7 +71,33 @@ messageList driverId mbLimit mbOffset = do
           { title = maybe rawMessage.title (.title) messageTranslation,
             description = maybe rawMessage.description (.description) messageTranslation,
             _type = rawMessage._type,
-            status = messageReport.deliveryStatus,
+            label = messageTranslation >>= (.label),
+            reply = messageReport.reply,
+            created_at = rawMessage.createdAt,
+            readStatus = messageReport.readStatus,
+            messageId = rawMessage.id,
+            mediaFiles = mediaFilesApiType
+          }
+
+getMessage :: Id SP.Person -> Id Domain.Message -> Flow MessageAPIEntityResponse
+getMessage driverId messageId = do
+  person <- Esq.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
+  messageDetails <-
+    Esq.runInReplica $
+      MRQ.findByDriverIdMessageIdAndLanguage (cast driverId) messageId (fromMaybe ENGLISH person.language)
+        >>= fromMaybeM (InvalidRequest "Message not found")
+  makeMessageAPIEntity messageDetails
+  where
+    makeMessageAPIEntity (messageReport, rawMessage, messageTranslation) = do
+      mediaFilesApiType <- map (\mediaFile -> MediaFileApiResponse mediaFile.url mediaFile._type) <$> MFQ.findAllIn rawMessage.mediaFiles
+      pure $
+        MessageAPIEntityResponse
+          { title = maybe rawMessage.title (.title) messageTranslation,
+            description = maybe rawMessage.description (.description) messageTranslation,
+            _type = rawMessage._type,
+            label = messageTranslation >>= (.label),
+            reply = messageReport.reply,
+            created_at = rawMessage.createdAt,
             readStatus = messageReport.readStatus,
             messageId = rawMessage.id,
             mediaFiles = mediaFilesApiType

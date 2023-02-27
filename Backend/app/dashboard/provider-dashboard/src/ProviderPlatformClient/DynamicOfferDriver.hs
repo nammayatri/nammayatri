@@ -75,7 +75,7 @@ data DriversAPIs = DriversAPIs
   }
 
 data RidesAPIs = RidesAPIs
-  { rideList :: Maybe Int -> Maybe Int -> Maybe Common.BookingStatus -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Euler.EulerClient Common.RideListRes,
+  { rideList :: Maybe Int -> Maybe Int -> Maybe Common.BookingStatus -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Money -> Euler.EulerClient Common.RideListRes,
     rideStart :: Id Common.Ride -> Common.StartRideReq -> Euler.EulerClient APISuccess,
     rideEnd :: Id Common.Ride -> Common.EndRideReq -> Euler.EulerClient APISuccess,
     rideCancel :: Id Common.Ride -> Common.CancelRideReq -> Euler.EulerClient APISuccess,
@@ -97,6 +97,7 @@ data MerchantAPIs = MerchantAPIs
 
 data MessageAPIs = MessageAPIs
   { uploadFile :: (LBS.ByteString, Common.UploadFileRequest) -> Euler.EulerClient Common.UploadFileResponse,
+    addLinkAsMedia :: Common.AddLinkAsMedia -> Euler.EulerClient Common.UploadFileResponse,
     addMessage :: Common.AddMessageRequest -> Euler.EulerClient Common.AddMessageResponse,
     sendMessage :: (LBS.ByteString, Common.SendMessageRequest) -> Euler.EulerClient APISuccess,
     messageList :: Maybe Int -> Maybe Int -> Euler.EulerClient Common.MessageListResponse,
@@ -160,6 +161,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> smsServiceUsageConfigUpdate = merchantClient
 
     uploadFile
+      :<|> addLinkAsMedia
       :<|> addMessage
       :<|> sendMessage
       :<|> messageList

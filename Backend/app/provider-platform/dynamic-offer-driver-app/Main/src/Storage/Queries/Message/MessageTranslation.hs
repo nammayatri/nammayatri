@@ -31,7 +31,15 @@ create = Esq.create
 findByMessageIdAndLanguage :: Transactionable m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
 findByMessageIdAndLanguage messageId language =
   Esq.findOne $ do
-    merchantServiceConfig <- from $ table @MessageTranslationT
+    messageTranslation <- from $ table @MessageTranslationT
     where_ $
-      merchantServiceConfig ^. MessageTranslationTId ==. val (toKey (messageId, language))
-    return merchantServiceConfig
+      messageTranslation ^. MessageTranslationTId ==. val (toKey (messageId, language))
+    return messageTranslation
+
+findByMessageId :: Transactionable m => Id Msg.Message -> m [MessageTranslation]
+findByMessageId messageId =
+  Esq.findAll $ do
+    messageTranslations <- from $ table @MessageTranslationT
+    where_ $
+      messageTranslations ^. MessageTranslationMessageId ==. val (toKey messageId)
+    return messageTranslations

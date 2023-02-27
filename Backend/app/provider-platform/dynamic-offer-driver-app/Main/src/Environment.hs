@@ -105,6 +105,7 @@ data AppCfg = AppCfg
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
     driverLocationUpdateTopic :: Text,
+    broadcastMessageTopic :: Text,
     maxParallelSearchRequests :: Int,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     mediaFileUrlPattern :: Text
@@ -172,6 +173,7 @@ data AppEnv = AppEnv
     kafkaProducerCfg :: KafkaProducerCfg,
     kafkaProducerTools :: KafkaProducerTools,
     driverLocationUpdateTopic :: Text,
+    broadcastMessageTopic :: Text,
     maxParallelSearchRequests :: Int,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     mediaFileUrlPattern :: Text

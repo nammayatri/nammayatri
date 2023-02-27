@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
@@ -298,6 +300,7 @@ data RideItem = RideItem
     rideDetails :: RideDetails,
     riderDetails :: RiderDetails,
     customerName :: Maybe Text,
+    fareDiff :: Maybe Money,
     bookingStatus :: Common.BookingStatus
   }
 
@@ -310,9 +313,10 @@ findAllRideItems ::
   Maybe (ShortId Ride) ->
   Maybe DbHash ->
   Maybe DbHash ->
+  Maybe Money ->
   UTCTime ->
   m [RideItem]
-findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now = do
+findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
   res <- Esq.findAll $ do
     booking :& ride :& rideDetails :& riderDetails <-
       from $
@@ -336,6 +340,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
         &&. whenJust_ mbRideShortId (\rideShortId -> ride ^. Ride.RideShortId ==. val rideShortId.getShortId)
         &&. whenJust_ mbDriverPhoneDBHash (\hash -> rideDetails ^. RideDetailsDriverNumberHash ==. val (Just hash))
         &&. whenJust_ mbCustomerPhoneDBHash (\hash -> riderDetails ^. RiderDetailsMobileNumberHash ==. val hash)
+        &&. whenJust_ mbFareDiff (\fareDiff_ -> (castNumM (ride ^. RideTotalFare) -. castNumM (just (booking ^. BookingEstimatedTotalFare)) >. val (Just fareDiff_)) ||. (castNumM (just (booking ^. BookingEstimatedTotalFare)) -. castNumM (ride ^. RideTotalFare) >. val (Just fareDiff_)))
     orderBy [desc $ ride ^. RideCreatedAt]
     limit $ fromIntegral limitVal
     offset $ fromIntegral offsetVal
@@ -344,6 +349,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
         rideDetails,
         riderDetails,
         booking ^. BookingRiderName,
+        ride ^. RideTotalFare -. just (booking ^. BookingEstimatedTotalFare),
         bookingStatusVal
       )
   pure $ mkRideItem <$> res
@@ -361,8 +367,9 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
         ]
         (else_ $ val Common.ONGOING_6HRS)
 
-    mkRideItem (rideShortId, rideDetails, riderDetails, customerName, bookingStatus) = do
-      RideItem {rideShortId = ShortId rideShortId, ..}
+mkRideItem :: (Text, RideDetails, RiderDetails, Maybe Text, Maybe HighPrecMoney, Common.BookingStatus) -> RideItem
+mkRideItem (rideShortId, rideDetails, riderDetails, customerName, mbFareDiff_, bookingStatus) = do
+  RideItem {rideShortId = ShortId rideShortId, fareDiff = roundToIntegral <$> mbFareDiff_, ..}
 
 upcoming6HrsCond :: SqlExpr (Entity RideT) -> UTCTime -> SqlExpr (Esq.Value Bool)
 upcoming6HrsCond ride now = ride ^. Ride.RideCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now

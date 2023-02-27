@@ -31,13 +31,13 @@ let hedisCfg =
       }
 
 let consumerProperties =
-      { groupId = "groupId"
+      { groupId = "broadcast-messages-compute"
       , brockers = [ "localhost:29092" ]
       , autoCommit = None Integer
       }
 
 let kafkaConsumerCfg =
-      { topicNames = [ "location-updates" ], consumerProperties }
+      { topicNames = [ "broadcast-messages" ], consumerProperties }
 
 let availabilityTimeWindowOption =
       { period = +7, periodType = common.periodType.Days }
@@ -56,5 +56,7 @@ in  { hedisCfg
     , httpClientOptions = common.httpClientOptions
     , loggerConfig =
             common.loggerConfig
-        //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = False }
+        //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"
+            , logRawSql = False
+            }
     }
