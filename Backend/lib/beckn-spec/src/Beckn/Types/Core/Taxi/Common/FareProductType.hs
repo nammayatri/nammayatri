@@ -27,6 +27,7 @@ data FareProductType
   | DRIVER_OFFER_ESTIMATE
   | DRIVER_OFFER
   | ONE_WAY_SPECIAL_ZONE
+  | RECURRING_TRIP
   deriving
     ( Eq,
       Ord,

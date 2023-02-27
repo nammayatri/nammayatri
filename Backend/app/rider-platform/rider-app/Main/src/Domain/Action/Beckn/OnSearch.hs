@@ -20,6 +20,7 @@ module Domain.Action.Beckn.OnSearch
     QuoteDetails (..),
     OneWayQuoteDetails (..),
     OneWaySpecialZoneQuoteDetails (..),
+    RecurringQuoteDetails (..),
     RentalQuoteDetails (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
@@ -29,10 +30,12 @@ module Domain.Action.Beckn.OnSearch
   )
 where
 
+import qualified Data.Either as E
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.RecurringQuote as DRecurringQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
@@ -115,6 +118,7 @@ data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
   | RentalDetails RentalQuoteDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
+  | RecurringDetails RecurringQuoteDetails
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: HighPrecMeters
@@ -129,6 +133,10 @@ data RentalQuoteDetails = RentalQuoteDetails
     baseDuration :: Hours
   }
 
+newtype RecurringQuoteDetails = RecurringQuoteDetails
+  { distanceToNearestDriver :: HighPrecMeters
+  }
+
 onSearch ::
   Text ->
   Maybe DOnSearchReq ->
@@ -141,16 +149,17 @@ onSearchService ::
   DOnSearchReq ->
   Flow ()
 onSearchService transactionId DOnSearchReq {..} = do
-  _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
-  merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
+  searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+  merchant <- QMerch.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
   estimates <- traverse (buildEstimate requestId providerInfo now) estimatesInfo
-  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
+  (quotes, recurringQuotes {- TODO save recurring quotes in DB -}) <-
+      E.partitionEithers <$> traverse (buildQuote requestId providerInfo now searchRequest.merchantId) quotesInfo
   DB.runTransaction do
     QEstimate.createMany estimates
     QQuote.createMany quotes
-    QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
+    QPFS.updateStatus searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = searchRequest.id, validTill = searchRequest.validTill}
 
 buildEstimate ::
   MonadFlow m =>
@@ -201,30 +210,45 @@ buildQuote ::
   UTCTime ->
   Id DMerchant.Merchant ->
   QuoteInfo ->
-  m DQuote.Quote
+  m (Either DQuote.Quote DRecurringQuote.RecurringQuote)
 buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
   uid <- generateGUID
+  uid' <- generateGUID
   tripTerms <- buildTripTerms descriptions
-  quoteDetails' <- case quoteDetails of
+  eQuoteDetails <- case quoteDetails of
     OneWayDetails oneWayDetails ->
-      pure . DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
+      pure . Left $ DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
     RentalDetails rentalSlab -> do
-      DQuote.RentalDetails <$> buildRentalSlab rentalSlab
+      Left . DQuote.RentalDetails <$> buildRentalSlab rentalSlab
     OneWaySpecialZoneDetails details -> do
-      DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
-  pure
-    DQuote.Quote
-      { id = uid,
-        providerMobileNumber = providerInfo.mobileNumber,
-        providerName = providerInfo.name,
-        providerCompletedRidesCount = providerInfo.ridesCompleted,
-        providerId = providerInfo.providerId,
-        providerUrl = providerInfo.url,
-        createdAt = now,
-        quoteDetails = quoteDetails',
-        merchantId,
-        ..
-      }
+      Left . DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
+    RecurringDetails recurringDetails ->
+      pure . Right $ mkRecurringQuoteDetails recurringDetails
+  pure $
+    case eQuoteDetails of
+      Left nonRecurringQuoteDetails ->
+        Left $
+          DQuote.Quote
+            { id = uid,
+              providerMobileNumber = providerInfo.mobileNumber,
+              providerName = providerInfo.name,
+              providerCompletedRidesCount = providerInfo.ridesCompleted,
+              providerId = providerInfo.providerId,
+              providerUrl = providerInfo.url,
+              createdAt = now,
+              quoteDetails = nonRecurringQuoteDetails,
+              ..
+            }
+      Right recurringQuoteDetails ->
+        Right $
+          DRecurringQuote.RecurringQuote
+            { id = uid',
+              providerId = providerInfo.providerId,
+              providerUrl = providerInfo.url,
+              quoteDetails = recurringQuoteDetails,
+              createdAt = now,
+              ..
+            }
 
 mkOneWayQuoteDetails :: OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
 mkOneWayQuoteDetails OneWayQuoteDetails {..} = DQuote.OneWayQuoteDetails {..}
@@ -233,6 +257,9 @@ buildOneWaySpecialZoneQuoteDetails :: MonadFlow m => OneWaySpecialZoneQuoteDetai
 buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
   id <- generateGUID
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
+
+mkRecurringQuoteDetails :: RecurringQuoteDetails -> DRecurringQuote.RecurringQuoteDetails
+mkRecurringQuoteDetails RecurringQuoteDetails {..} = DRecurringQuote.RecurringQuoteDetails {..}
 
 buildRentalSlab :: MonadFlow m => RentalQuoteDetails -> m DRentalSlab.RentalSlab
 buildRentalSlab RentalQuoteDetails {..} = do

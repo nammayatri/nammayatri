@@ -50,6 +50,22 @@ instance TEntityKey BookingLocationT where
   fromKey (BookingLocationTKey _id) = Id _id
   toKey (Id id) = BookingLocationTKey id
 
+instance FromTType BookingLocationT Domain.BookingLocation where
+  fromTType BookingLocationT {..} = do
+    let address = Domain.LocationAddress {..}
+    return $
+      Domain.BookingLocation
+        { id = Id id,
+          ..
+        }
+instance ToTType BookingLocationT Domain.BookingLocation where
+  toTType Domain.BookingLocation {..} = do
+    let Domain.LocationAddress {..} = address
+    BookingLocationT
+      { id = getId id,
+        ..
+      }
+
 mkDomainBookingLocation :: BookingLocationT -> Domain.BookingLocation
 mkDomainBookingLocation BookingLocationT {..} = do
   let address = Domain.LocationAddress {..}

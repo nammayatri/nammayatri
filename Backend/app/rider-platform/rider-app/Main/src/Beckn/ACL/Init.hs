@@ -93,7 +93,7 @@ mkFulfillmentInfo fromLoc mbToLoc startTime =
                       },
                   address = Nothing
                 },
-            time = Init.TimeTimestamp startTime
+            time = Init.Time startTime Nothing
           },
       end =
         mbToLoc >>= \toLoc ->

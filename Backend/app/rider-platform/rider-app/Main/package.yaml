@@ -57,7 +57,9 @@ dependencies:
   - base >= 4.7 && < 5
   - base64-bytestring
   - bytestring
+  - containers
   - cryptonite
+  - esqueleto
   - euler-hs
   - lens
   - prometheus-client

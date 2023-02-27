@@ -151,7 +151,7 @@ repeatSearch ::
   m ()
 repeatSearch merchant farePolicy searchReq booking ride cancellationSource now driverPoolConfig driverPool = do
   newSearchReq <- buildSearchRequest searchReq
-  estimateItem <- buildEstimate merchant newSearchReq.startTime newSearchReq.estimatedDistance (farePolicy, driverPool)
+  estimateItem <- buildEstimate merchant (OneTime newSearchReq.startTime) newSearchReq.estimatedDistance (farePolicy, driverPool)
 
   fareParams <- calculateFare searchReq.providerId farePolicy searchReq.estimatedDistance now Nothing
   let driverExtraFare = farePolicy.driverExtraFee

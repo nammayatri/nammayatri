@@ -16,7 +16,10 @@
 
 module Domain.Types.Quote where
 
-import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import Data.OpenApi
+  ( ToSchema (..),
+    genericDeclareNamedSchema,
+  )
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.RentalSlab as DRentalSlab
@@ -81,6 +84,7 @@ data QuoteAPIEntity = QuoteAPIEntity
 -- do not change constructor names without changing fareProductConstructorModifier
 data QuoteAPIDetails
   = OneWayAPIDetails OneWayQuoteAPIDetails
+  | RecurringAPIDetails RecurringQuoteAPIDetails
   | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
   | DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity
   | OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity
@@ -102,6 +106,11 @@ newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
 
 newtype OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails
   { quoteId :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+newtype RecurringQuoteAPIDetails = RecurringQuoteAPIDetails
+  { distanceToNearestDriver :: HighPrecMeters
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

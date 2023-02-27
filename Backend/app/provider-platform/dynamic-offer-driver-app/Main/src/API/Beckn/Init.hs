@@ -22,7 +22,9 @@ import Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant as DM
 import Environment
-import Kernel.Prelude hiding (init)
+import Kernel.Prelude hiding
+  ( init,
+  )
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import qualified Kernel.Types.Beckn.Context as Context
@@ -31,7 +33,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
-import Servant hiding (throwError)
+import Servant hiding
+  ( throwError,
+  )
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -50,15 +54,30 @@ init transporterId (SignatureAuthResult _ subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Init API Flow" "Reached"
     dInitReq <- ACL.buildInitReq subscriber req
-    Redis.whenWithLockRedis (initLockKey dInitReq.driverQuoteId) 60 $ do
-      let context = req.context
-      dInitRes <- DInit.handler transporterId dInitReq
-      void . handle (errHandler dInitRes.booking) $
-        CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
-          pure $ ACL.mkOnInitMessage dInitRes
-      return ()
+    case dInitReq of
+      DInit.InitOneWayTripReq dReq ->
+        Redis.whenWithLockRedis (initLockKey dReq.driverQuoteId) 60 $ do
+          let context = req.context
+          dInitRes <- DInit.initOneWayTrip transporterId dReq
+          void . handle (errHandler dInitRes.booking) $
+            CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
+              pure $ ACL.mkOnInitMessage dInitRes
+      DInit.InitRecurringBookingReq dReq -> do
+        dRes <- DInit.initRecurringBooking transporterId dReq
+        void . handle (recurringBookingErrHandler dRes.booking) $
+          CallBAP.withCallback dRes.transporter Context.INIT OnInit.onInitAPI req.context req.context.bap_uri $
+            pure $ ACL.mkOnInitRecurringBookingMessage dRes
     pure Ack
   where
+    recurringBookingErrHandler booking exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc =
+        --TODO: Handle this error by deleting the recurring booking
+        pure Ack
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc =
+        --TODO: Handle this error by deleting the recurring booking
+        pure Ack
+      | otherwise = throwM exc
+
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DInit.cancelBooking booking transporterId
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DInit.cancelBooking booking transporterId

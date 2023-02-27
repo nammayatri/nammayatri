@@ -32,20 +32,40 @@ buildOnInitReq ::
 buildOnInitReq req = do
   validateContext Context.ON_INIT $ req.context
   handleError req.contents $ \message -> do
-    let bookingId = Id req.context.message_id
-        bppBookingId = Id message.order.id
-        estimatedFare = message.order.quote.price.value
+    let estimatedFare = message.order.quote.price.value
         estimatedTotalFare = message.order.quote.price.offered_value
     validatePrices estimatedFare estimatedTotalFare
     -- if we get here, the discount >= 0
-    let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
-    return $
-      DOnInit.OnInitReq
-        { estimatedFare = roundToIntegral estimatedFare,
-          estimatedTotalFare = roundToIntegral estimatedTotalFare,
-          discount = roundToIntegral <$> discount,
-          ..
-        }
+    let discount =
+          if estimatedTotalFare == estimatedFare
+            then Nothing
+            else Just $ estimatedFare - estimatedTotalFare
+    case message.order.fulfillment of
+      Just fulfillment
+        | Just "SCHEDULED_RIDE" == fulfillment._type,
+          Just start <- fulfillment.start -> do
+          let recurringBookingId = Id fulfillment.id
+              bppBookingId = Id message.order.id
+          return $
+            DOnInit.OnInitReqRecurringBooking $
+              DOnInit.OnInitRecurringBooking
+                { estimatedFare = roundToIntegral estimatedFare,
+                  estimatedTotalFare = roundToIntegral estimatedTotalFare,
+                  discount = roundToIntegral <$> discount,
+                  startTime = start.time.timestamp,
+                  ..
+                }
+      _ -> do
+        let bookingId = Id req.context.message_id
+            bppBookingId = Id message.order.id
+        return $
+          DOnInit.OnInitReqBooking $
+            DOnInit.OnInitBooking
+              { estimatedFare = roundToIntegral estimatedFare,
+                estimatedTotalFare = roundToIntegral estimatedTotalFare,
+                discount = roundToIntegral <$> discount,
+                ..
+              }
 
 handleError ::
   (MonadFlow m) =>

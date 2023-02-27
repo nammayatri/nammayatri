@@ -17,6 +17,7 @@ module API.UI.Search
   ( SearchReq (..),
     SearchRes (..),
     DOneWaySearch.OneWaySearchReq (..),
+    DRecurringSearch.RecurringSearchReq (..),
     DRentalSearch.RentalSearchReq (..),
     DSearchCommon.SearchReqLocation (..),
     API,
@@ -32,6 +33,7 @@ import qualified Data.OpenApi as OpenApi
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
+import qualified Domain.Action.UI.Search.Recurring as DRecurringSearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
@@ -51,7 +53,9 @@ import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
-import Servant hiding (throwError)
+import Servant hiding
+  ( throwError,
+  )
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.CachedQueries.CacheConfig
@@ -75,7 +79,10 @@ type API =
 handler :: FlowServer API
 handler = search
 
-data SearchReq = OneWaySearch DOneWaySearch.OneWaySearchReq | RentalSearch DRentalSearch.RentalSearchReq
+data SearchReq
+  = OneWaySearch DOneWaySearch.OneWaySearchReq
+  | RentalSearch DRentalSearch.RentalSearchReq
+  | RecurringSearch DRecurringSearch.RecurringSearchReq
   deriving (Generic, Show)
 
 instance ToJSON SearchReq where
@@ -121,6 +128,7 @@ search personId req mbBundleVersion mbClientVersion = withFlowHandlerAPI . withP
   (searchId, searchExpiry, routeInfo) <- case req of
     OneWaySearch oneWay -> oneWaySearch personId mbBundleVersion mbClientVersion oneWay
     RentalSearch rental -> rentalSearch personId mbBundleVersion mbClientVersion rental
+    RecurringSearch recurring -> recurringSearch personId mbBundleVersion mbClientVersion recurring
   return $ SearchRes searchId searchExpiry routeInfo
 
 oneWaySearch ::
@@ -202,6 +210,31 @@ rentalSearch personId bundleVersion clientVersion req = do
     becknReq <- TaxiACL.buildRentalSearchReq dSearchRes
     void $ CallBPP.search dSearchRes.gatewayUrl becknReq
   pure (dSearchRes.searchId, dSearchRes.searchRequestExpiry, Nothing)
+
+recurringSearch ::
+  ( HasCacheConfig r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    HedisFlow m r,
+    HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
+    HasHttpClientOptions r c,
+    CoreMetrics m,
+    HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
+    HasBAPMetrics m r,
+    MonadProducer PublicTransportSearch m,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Id Person.Person ->
+  Maybe Version ->
+  Maybe Version ->
+  DRecurringSearch.RecurringSearchReq ->
+  m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
+recurringSearch personId bundleVersion clientVersion req = do
+  dSearchRes <- DRecurringSearch.recurringSearch personId req bundleVersion clientVersion
+  fork "search cabs" . withShortRetry $ do
+    becknTaxiReq <- TaxiACL.buildRecurringSearchReq dSearchRes
+    void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
+  return (dSearchRes.searchId, dSearchRes.searchRequestExpiry, Nothing)
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,

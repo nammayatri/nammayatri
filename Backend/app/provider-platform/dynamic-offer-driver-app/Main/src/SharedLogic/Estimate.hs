@@ -17,6 +17,8 @@ module SharedLogic.Estimate
     WaitingCharges (..),
     NightShiftRate (..),
     BreakupItem (..),
+    Pickup(..),
+    pickupTime,
     buildEstimate,
   )
 where
@@ -33,6 +35,8 @@ import SharedLogic.DriverPool.Types (DriverPoolResult)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import Tools.Maps (LatLong (..))
+import Data.Time.Calendar (DayOfWeek)
+import Data.Set (Set)
 
 data EstimateItem = EstimateItem
   { vehicleVariant :: Variant.Variant,
@@ -42,7 +46,8 @@ data EstimateItem = EstimateItem
     estimateBreakupList :: [BreakupItem],
     nightShiftRate :: Maybe NightShiftRate,
     waitingCharges :: WaitingCharges,
-    driversLatLong :: [LatLong]
+    driversLatLong :: [LatLong],
+    recurring :: Bool
   }
 
 data WaitingCharges = WaitingCharges
@@ -66,15 +71,27 @@ data BreakupPrice = BreakupPrice
     value :: Money
   }
 
+data Pickup
+  = OneTime UTCTime
+  | Recurring UTCTime (Set DayOfWeek)
+
+pickupTime :: Pickup -> UTCTime
+pickupTime (Recurring time _) = time
+pickupTime (OneTime time) = time
+
+isRecurringPickup :: Pickup -> Bool
+isRecurringPickup (Recurring _ _) = True
+isRecurringPickup _ = False
+
 buildEstimate ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   DM.Merchant ->
-  UTCTime ->
+  Pickup ->
   Meters ->
   (FarePolicy, NonEmpty DriverPoolResult) ->
   m EstimateItem
-buildEstimate org startTime dist (farePolicy, filteredPoolByVehVariant) = do
-  fareParams <- calculateFare org.id farePolicy dist startTime Nothing
+buildEstimate org pickup dist (farePolicy, filteredPoolByVehVariant) = do
+  fareParams <- calculateFare org.id farePolicy dist (pickupTime pickup) Nothing
   let baseFare = fareSum fareParams
       currency = "INR"
       estimateBreakups = mkBreakupListItems (BreakupPrice currency) BreakupItem farePolicy
@@ -101,7 +118,8 @@ buildEstimate org startTime dist (farePolicy, filteredPoolByVehVariant) = do
           WaitingCharges
             { waitingTimeEstimatedThreshold = farePolicy.waitingTimeEstimatedThreshold,
               waitingChargePerMin = farePolicy.waitingChargePerMin
-            }
+            },
+        recurring = isRecurringPickup pickup
       }
 
 mkBreakupListItems ::

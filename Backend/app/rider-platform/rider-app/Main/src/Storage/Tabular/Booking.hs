@@ -77,7 +77,12 @@ instance TEntityKey BookingT where
   fromKey (BookingTKey _id) = Id _id
   toKey (Id id) = BookingTKey id
 
-data BookingDetailsT = OneWayDetailsT SLoc.BookingLocationT | RentalDetailsT SRentalSlab.RentalSlabT | DriverOfferDetailsT SLoc.BookingLocationT | OneWaySpecialZoneDetailsT SLoc.BookingLocationT
+data BookingDetailsT
+    = OneWayDetailsT SLoc.BookingLocationT
+    | RecurringDetailsT SLoc.BookingLocationT
+    | RentalDetailsT SRentalSlab.RentalSlabT
+    | DriverOfferDetailsT SLoc.BookingLocationT
+    | OneWaySpecialZoneDetailsT SLoc.BookingLocationT
 
 type FullBookingT = (BookingT, SLoc.BookingLocationT, Maybe STripTerms.TripTermsT, BookingDetailsT)
 
@@ -88,6 +93,7 @@ instance FromTType FullBookingT Domain.Booking where
     tripTerms <- forM mbTripTermsT fromTType
     bookingDetails <- case bookingDetailsT of
       OneWayDetailsT toLocT -> Domain.OneWayDetails <$> buildOneWayDetails toLocT
+      RecurringDetailsT toLocT -> Domain.RecurringDetails <$> buildRecurringDetails toLocT
       RentalDetailsT rentalSlabT -> Domain.RentalDetails <$> fromTType rentalSlabT
       DriverOfferDetailsT toLocT -> Domain.DriverOfferDetails <$> buildOneWayDetails toLocT
       OneWaySpecialZoneDetailsT toLocT -> Domain.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocT
@@ -122,12 +128,24 @@ instance FromTType FullBookingT Domain.Booking where
               ..
             }
 
+      buildRecurringDetails toLocT = do
+        toLocation <- fromTType toLocT
+        distance' <- distance & fromMaybeM (InternalError "distance is null for recurring booking")
+        pure
+          Domain.RecurringBookingDetails
+            { toLocation,
+              distance = distance'
+            }
+
 instance ToTType FullBookingT Domain.Booking where
   toTType Domain.Booking {..} = do
     let (fareProductType, bookingDetailsT, toLocationId, distance, rentalSlabId, otpCode) = case bookingDetails of
           Domain.OneWayDetails details -> do
             let toLocT = toTType details.toLocation
             (DQuote.ONE_WAY, OneWayDetailsT toLocT, Just . toKey $ details.toLocation.id, Just details.distance, Nothing, Nothing)
+          Domain.RecurringDetails details -> do
+            let toLocT = toTType details.toLocation
+            (DQuote.ONE_WAY, RecurringDetailsT toLocT, Just . toKey $ details.toLocation.id, Just details.distance, Nothing, Nothing)
           Domain.RentalDetails rentalSlab -> do
             let rentalSlabT = toTType rentalSlab
             (DQuote.RENTAL, RentalDetailsT rentalSlabT, Nothing, Nothing, Just . toKey $ rentalSlab.id, Nothing)

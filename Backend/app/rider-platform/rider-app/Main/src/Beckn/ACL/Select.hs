@@ -94,7 +94,7 @@ mkOrder req autoAssignEnabled customerLanguage = do
                                 ward = from.address.ward
                               }
                       },
-                  time = Select.TimeTimestamp req.searchRequest.startTime
+                  time = Select.Time req.searchRequest.startTime Nothing
                 },
             end =
               mbTo <&> \to ->

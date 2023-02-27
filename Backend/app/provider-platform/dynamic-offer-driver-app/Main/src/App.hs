@@ -39,6 +39,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import qualified Storage.CachedQueries.Merchant as Storage
+import Storage.Queries.Timetable
 import System.Environment (lookupEnv)
 
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()

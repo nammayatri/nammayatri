@@ -38,6 +38,7 @@ create booking =
     Esq.create' fromLocT
     case bookingDetailsT of
       OneWayDetailsT toLocT -> Esq.create' toLocT
+      RecurringDetailsT toLocT -> Esq.create' toLocT
       RentalDetailsT _rentalSlabT -> pure ()
       DriverOfferDetailsT toLocT -> Esq.create' toLocT
       OneWaySpecialZoneDetailsT toLocT -> Esq.create' toLocT

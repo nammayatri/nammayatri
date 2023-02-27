@@ -20,7 +20,10 @@ module Domain.Action.UI.Quote
 where
 
 import Data.Char (toLower)
-import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import Data.OpenApi
+  ( ToSchema (..),
+    genericDeclareNamedSchema,
+  )
 import Domain.Types.Estimate (EstimateAPIEntity)
 import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.Quote (QuoteAPIEntity)
@@ -28,7 +31,9 @@ import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.SearchRequest.SearchReqLocation (SearchReqLocationAPIEntity)
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding
+  ( id,
+  )
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Storage.Hedis as Hedis

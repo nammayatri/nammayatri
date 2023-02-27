@@ -22,6 +22,7 @@ where
 
 import qualified Data.Map as M
 import Domain.Types.FareParameters
+import Data.List
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -39,7 +40,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool hiding (lat, lon)
-import SharedLogic.Estimate (EstimateItem, buildEstimate)
+import SharedLogic.Estimate (EstimateItem, Pickup, pickupTime, buildEstimate)
 import SharedLogic.FareCalculator
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -50,13 +51,14 @@ import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
+
 data DSearchReq = DSearchReq
   { messageId :: Text,
     transactionId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
     pickupLocation :: LatLong,
-    pickupTime :: UTCTime,
+    pickup :: Pickup,
     dropLocation :: LatLong,
     routeInfo :: Maybe Maps.RouteInfo
   }
@@ -134,7 +136,7 @@ handler merchantId sReq = do
                   find ((== var) . (.vehicleVariant)) farePolicies
         listOfSpecialZoneQuotes <-
           for listOfVehicleVariants $ \farePolicy -> do
-            fareParams <- calculateFare org.id farePolicy result.distance sReq.pickupTime Nothing
+            fareParams <- calculateFare org.id farePolicy result.distance (pickupTime sReq.pickup) Nothing
             buildSpecialZoneQuote
               searchRequestSpecialZone
               fareParams
@@ -159,7 +161,7 @@ handler merchantId sReq = do
 
               let listOfProtoQuotes = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
                   filteredProtoQuotes = zipMatched farePolicies listOfProtoQuotes
-              estimates <- mapM (buildEstimate org sReq.pickupTime result.distance) filteredProtoQuotes
+              estimates <- mapM (buildEstimate org sReq.pickup result.distance) filteredProtoQuotes
               logDebug $ "bap uri: " <> show sReq.bapUri
               return estimates
         return (Nothing, Just estimates)
@@ -239,7 +241,7 @@ buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation
   pure
     DSRSZ.SearchRequestSpecialZone
       { id = Id uuid,
-        startTime = pickupTime,
+        startTime = pickupTime pickup,
         createdAt = now,
         updatedAt = now,
         ..

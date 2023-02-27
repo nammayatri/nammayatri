@@ -32,6 +32,7 @@ import Beckn.Types.Core.Taxi.OnSearch.Provider as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.ProviderLocation as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.StopInfo as Reexport
+import Beckn.Types.Core.Taxi.Search.Time as Reexport
 import Kernel.Prelude
 
 newtype OnSearchMessage = OnSearchMessage

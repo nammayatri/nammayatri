@@ -22,6 +22,7 @@ import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import SharedLogic.Estimate (Pickup (..))
 import Tools.Error
 
 buildSearchReq ::
@@ -33,8 +34,14 @@ buildSearchReq subscriber req = do
   let context = req.context
   validateContext Context.SEARCH context
   let intent = req.message.intent
-  let pickup = intent.fulfillment.start
-  let dropOff = fromJust intent.fulfillment.end
+      pickup = intent.fulfillment.start
+      pickupTime =
+        case pickup.time.days of
+          Just days ->
+            Recurring pickup.time.timestamp days
+          Nothing ->
+            OneTime pickup.time.timestamp
+      dropOff = fromJust intent.fulfillment.end
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $
@@ -48,7 +55,7 @@ buildSearchReq subscriber req = do
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
-        pickupTime = pickup.time.timestamp,
+        pickup = pickupTime,
         dropLocation = LatLong {lat = dropOff.location.gps.lat, lon = dropOff.location.gps.lon},
         routeInfo = req.message.routeInfo
       }

@@ -14,14 +14,21 @@
 
 module Domain.Types.Booking.API where
 
-import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import Data.OpenApi
+  ( ToSchema (..),
+    genericDeclareNamedSchema,
+  )
 import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
 import qualified Domain.Types.Booking.BookingLocation as SLoc
 import Domain.Types.Booking.Type
 import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.RentalSlab as DRentalSlab
-import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
+import Domain.Types.Ride
+  ( Ride,
+    RideAPIEntity,
+    makeRideAPIEntity,
+  )
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Esqueleto (runInReplica)
@@ -57,6 +64,7 @@ data BookingAPIEntity = BookingAPIEntity
 -- do not change constructor names without changing fareProductConstructorModifier
 data BookingAPIDetails
   = OneWayAPIDetails OneWayBookingAPIDetails
+  | RecurringAPIDetails RecurringBookingAPIDetails
   | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
   | DriverOfferAPIDetails OneWayBookingAPIDetails
   | OneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingAPIDetails
@@ -81,6 +89,12 @@ data OneWaySpecialZoneBookingAPIDetails = OneWaySpecialZoneBookingAPIDetails
   { toLocation :: BookingLocationAPIEntity,
     estimatedDistance :: HighPrecMeters,
     otpCode :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data RecurringBookingAPIDetails = RecurringBookingAPIDetails
+  { toLocation :: BookingLocationAPIEntity,
+    estimatedDistance :: HighPrecMeters
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -117,6 +131,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups = do
     mkBookingAPIDetails :: BookingDetails -> BookingAPIDetails
     mkBookingAPIDetails = \case
       OneWayDetails details -> OneWayAPIDetails . mkOneWayAPIDetails $ details
+      RecurringDetails details -> RecurringAPIDetails . mkRecurringAPIDetails $ details
       RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
       DriverOfferDetails details -> DriverOfferAPIDetails . mkOneWayAPIDetails $ details
       OneWaySpecialZoneDetails details -> OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
@@ -131,6 +146,12 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups = do
             { toLocation = SLoc.makeBookingLocationAPIEntity toLocation,
               estimatedDistance = distance,
               ..
+            }
+
+        mkRecurringAPIDetails RecurringBookingDetails {..} =
+          RecurringBookingAPIDetails
+            { toLocation = SLoc.makeBookingLocationAPIEntity toLocation,
+              estimatedDistance = distance
             }
 
 buildBookingAPIEntity :: EsqDBReplicaFlow m r => Booking -> m BookingAPIEntity

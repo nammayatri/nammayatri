@@ -25,6 +25,7 @@ import Beckn.Types.Core.Taxi.Init.Order as Reexport
 import Beckn.Types.Core.Taxi.Init.Payment as Reexport
 import Beckn.Types.Core.Taxi.Init.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.Init.StopInfo as Reexport
+import Beckn.Types.Core.Taxi.Search.Time as Reexport
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
