@@ -23,6 +23,7 @@ data MessageTranslation = MessageTranslation
   { messageId :: Id Msg.Message,
     language :: Language,
     title :: Text,
+    label :: Maybe Text,
     description :: Text,
     createdAt :: UTCTime
   }

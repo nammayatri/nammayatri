@@ -12,18 +12,17 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module DynamicOfferDriverApp.Types where
+module Consumer.AvailabilityTime.Types where
 
 import Data.Time
 import EulerHS.Prelude hiding (id)
-import qualified Kafka.Consumer as C
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Types.Id (Id)
 
 data DriverAvailability = DriverAvailability
   { id :: Id DriverAvailability,
-    driverId :: Text,
-    merchantId :: Text,
+    driverId :: DriverId,
+    merchantId :: MerchantId,
     totalAvailableTime :: Int,
     lastAvailableTime :: UTCTime,
     bucketStartTime :: UTCTime,
@@ -52,5 +51,3 @@ type LastAvailableTime = UTCTime
 type SecondsActiveInBucket = Integer
 
 type AvailabilityBucket = Map BucketTimePair (SecondsActiveInBucket, LastAvailableTime)
-
-type ConsumerRecordD = C.ConsumerRecord (Maybe ByteString) (Maybe ByteString)

@@ -45,6 +45,9 @@ type API =
              :> MandatoryQueryParam "filePath" Text
              :> TokenAuth
              :> Get '[JSON] Text
+           :<|> Capture "messageId" (Id Message.Message)
+             :> TokenAuth
+             :> Get '[JSON] DMessage.MessageAPIEntityResponse
        )
 
 handler :: FlowServer API
@@ -53,9 +56,13 @@ handler =
     :<|> messageSeen
     :<|> messageResponse
     :<|> fetchMedia
+    :<|> getMessage
 
 messageList :: Id SP.Person -> Maybe Int -> Maybe Int -> FlowHandler [DMessage.MessageAPIEntityResponse]
 messageList driverId mbLimit = withFlowHandlerAPI . DMessage.messageList driverId mbLimit
+
+getMessage :: Id Message.Message -> Id SP.Person -> FlowHandler DMessage.MessageAPIEntityResponse
+getMessage msgId driverId = withFlowHandlerAPI $ DMessage.getMessage driverId msgId
 
 messageSeen :: Id Message.Message -> Id SP.Person -> FlowHandler APISuccess
 messageSeen msgId driverId = withFlowHandlerAPI $ DMessage.messageSeen driverId msgId

@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# LANGUAGE TypeApplications #-}
+
 module API.Dashboard.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
@@ -27,7 +29,7 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Utils.Common (Money, withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 
@@ -58,9 +60,10 @@ rideList ::
   Maybe (ShortId Common.Ride) ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Money ->
   FlowHandler Common.RideListRes
-rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone =
-  withFlowHandlerAPI . DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone
+rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff =
+  withFlowHandlerAPI . DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbFareDiff
 
 rideStart :: ShortId DM.Merchant -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
 rideStart merchantShortId reqRideId Common.StartRideReq {point} = withFlowHandlerAPI $ do

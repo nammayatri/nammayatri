@@ -18,6 +18,7 @@ import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Merchant
+import Domain.Types.Message.Message as Message
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import Domain.Types.SearchRequest
@@ -230,6 +231,40 @@ sendNotificationToDriver merchantId displayOption priority notificationType noti
           fcmShowNotification = displayOption,
           fcmEntityType = FCM.Person,
           fcmEntityIds = getId driverId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body notificationType
+        }
+    title = FCM.FCMNotificationTitle notificationTitle
+    body =
+      FCMNotificationBody message
+
+sendMessageToDriver ::
+  ( MonadFlow m,
+    HedisFlow m r,
+    CoreMetrics m,
+    HasCacheConfig r,
+    EsqDBFlow m r
+  ) =>
+  Id Merchant ->
+  FCM.FCMShowNotification ->
+  Maybe FCM.FCMAndroidMessagePriority ->
+  FCM.FCMNotificationType ->
+  Text ->
+  Text ->
+  Id Person ->
+  Id Message.Message ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+sendMessageToDriver merchantId displayOption priority notificationType notificationTitle message driverId messageId mbToken = do
+  transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig priority notificationData $ FCMNotificationRecipient driverId.getId mbToken
+  where
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notificationType,
+          fcmShowNotification = displayOption,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = getId messageId,
           fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body notificationType
         }

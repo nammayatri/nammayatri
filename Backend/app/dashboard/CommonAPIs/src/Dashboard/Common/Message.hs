@@ -39,6 +39,7 @@ import Servant hiding (Summary)
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data MessageEndpoint
   = UploadFileEndpoint
+  | AddLinkEndpoint
   | AddMessageEndpoint
   | SendMessageEndpoint
   | MessageListEndpoint
@@ -56,6 +57,18 @@ type UploadFileAPI =
   "uploadFile"
     :> MultipartForm Tmp UploadFileRequest
     :> Post '[JSON] UploadFileResponse
+
+type AddLinkAPI =
+  "addLink"
+    :> ReqBody '[JSON] AddLinkAsMedia
+    :> Post '[JSON] UploadFileResponse
+
+data AddLinkAsMedia = AddLinkAsMedia
+  { url :: Text,
+    fileType :: FileType
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UploadFileRequest = UploadFileRequest
   { file :: FilePath,
@@ -78,7 +91,7 @@ instance ToMultipart Tmp UploadFileRequest where
       [Input "fileType" (show uploadFileRequest.fileType)]
       [FileData "file" (T.pack uploadFileRequest.file) "" (uploadFileRequest.file)]
 
-data FileType = Audio | Video | Image
+data FileType = Audio | Video | Image | AudioLink | VideoLink | ImageLink
   deriving stock (Eq, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -103,6 +116,7 @@ data AddMessageRequest = AddMessageRequest
   { _type :: MessageType, -- (Action Text | Read)
     title :: Text, -- max character 100
     description :: Text, -- no max character limit
+    label :: Maybe Text,
     translations :: [MessageTranslation],
     mediaFiles :: [Id File]
   }
@@ -123,7 +137,8 @@ data MediaFile = MediaFile
 data MessageTranslation = MessageTranslation
   { language :: Language,
     title :: Text,
-    description :: Text
+    description :: Text,
+    label :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -203,8 +218,7 @@ data MessageListItem = MessageListItem
 -- Message Info
 --
 type MessageInfoAPI =
-  "message"
-    :> Capture "messageId" (Id Message)
+  Capture "messageId" (Id Message)
     :> "info"
     :> Get '[JSON] MessageInfoResponse
 
@@ -222,8 +236,7 @@ data MessageInfoResponse = MessageInfoResponse
 -- Message Delivery Info
 --
 type MessageDeliveryInfoAPI =
-  "message"
-    :> Capture "messageId" (Id Message)
+  Capture "messageId" (Id Message)
     :> "deliveryInfo"
     :> Get '[JSON] MessageDeliveryInfoResponse
 
@@ -231,7 +244,8 @@ data MessageDeliveryInfoResponse = MessageDeliveryInfoResponse
   { messageId :: Id Message,
     success :: Int,
     failed :: Int,
-    pending :: Int
+    queued :: Int,
+    sending :: Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -240,8 +254,7 @@ data MessageDeliveryInfoResponse = MessageDeliveryInfoResponse
 -- MessageReceiverList
 --
 type MessageReceiverListAPI =
-  "message"
-    :> Capture "messageId" (Id Message)
+  Capture "messageId" (Id Message)
     :> "receiverList"
     :> QueryParam "number" Text
     :> QueryParam "status" MessageDeliveryStatus
@@ -267,7 +280,7 @@ data MessageReceiverListItem = MessageReceiverListItem
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MessageDeliveryStatus = Failed | Success | Pending
+data MessageDeliveryStatus = Failed | Success | Queued | Sending
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
