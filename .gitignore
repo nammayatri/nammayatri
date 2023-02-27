@@ -1,0 +1,4 @@
+
+# Nix files
+.direnv
+/result
