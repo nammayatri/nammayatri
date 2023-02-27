@@ -64,19 +64,14 @@ updatePerson personId req = do
 validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasBapInfo r m, CoreMetrics m) => Id Person.Person -> Text -> m (Maybe Text)
 validateRefferalCode personId refCode = do
   unless (TU.validateAllDigitWithMinLength 6 refCode) (throwError $ InvalidRequest "Referral Code must have 6 digits")
-  mPerson <- QPerson.findByReferralCode refCode
-
-  case mPerson of
-    Just person_ -> do
-      if person_.id /= personId
-        then throwError (InvalidRequest "Referral Code already linked")
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
+  case person.referralCode of
+    Just code ->
+      if code /= refCode
+        then throwError (InvalidRequest "Referral Code is not same")
         else return Nothing -- idempotent behaviour
     Nothing -> do
-      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
-      when (isJust person.referralCode) $ throwError (InvalidRequest "Referral Code already linked")
-
       merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-
       case (person.mobileNumber, person.mobileCountryCode) of
         (Just mobileNumber, Just countryCode) -> do
           fork "CALLING_BECKN_LINK_REFEREE_INTERNAL_API"
