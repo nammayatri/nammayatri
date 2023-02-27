@@ -37,6 +37,7 @@
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [
         ./Backend/flake-module.nix
+        ./nix/cachix.nix
       ];
       perSystem = { config, self', system, pkgs, lib, ... }: {
         # Remove this after fixing
