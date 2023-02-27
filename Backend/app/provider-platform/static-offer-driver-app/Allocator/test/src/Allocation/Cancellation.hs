@@ -89,7 +89,7 @@ cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
 
 cancellationOnReallocationsCountExceedLimit :: TestTree
 cancellationOnReallocationsCountExceedLimit = testCase "Cancellation on reallocations count exceed limit" $ do
-  r@Repository {..} <- initRepository
+  r <- initRepository
   addBooking r booking01Id 0
   addBooking r booking02Id 3
   addBooking r booking03Id 22

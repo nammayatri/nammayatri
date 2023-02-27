@@ -25,7 +25,7 @@ import Data.ByteString as DB
 import Data.ByteString.Char8 as DBC
 import Data.ByteString.Lazy as BSL
 import qualified Data.CaseInsensitive as CI (foldedCase)
-import Data.List as DL
+import qualified Data.List as DL
 import Data.Map
 import qualified Data.Map.Strict as Map
 import Data.Text.Encoding as DTE

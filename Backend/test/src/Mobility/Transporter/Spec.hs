@@ -24,7 +24,7 @@ import qualified Mobility.Transporter.MapsConfig as MapsConfig
 import qualified Mobility.Transporter.NearestDrivers as ND
 import qualified Mobility.Transporter.Serviceability as SRV
 import Test.Tasty
-import Test.Tasty.Hspec hiding (after)
+import Test.Tasty.Hspec (testSpec)
 
 mkTestTree :: IO TestTree
 mkTestTree = do
