@@ -6,7 +6,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 
 data DriverReferral = DriverReferral
-  { referralCode :: Id Text,
+  { referralCode :: Id DriverReferral,
     driverId :: Id Person,
     linkedAt :: UTCTime
   }

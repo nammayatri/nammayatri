@@ -74,8 +74,6 @@ validateRefferalCode personId refCode = do
       merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       case (person.mobileNumber, person.mobileCountryCode) of
         (Just mobileNumber, Just countryCode) -> do
-          fork "CALLING_BECKN_LINK_REFEREE_INTERNAL_API"
-            . void
-            $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
+          void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
           return $ Just refCode
         _ -> throwError (InvalidRequest "Mobile number is null")

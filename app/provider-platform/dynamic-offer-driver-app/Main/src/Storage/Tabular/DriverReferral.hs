@@ -21,7 +21,6 @@ mkPersist
       driverId PersonTId
       linkedAt UTCTime
       Primary referralCode
-
       Unique DriverReferralDriverId
       deriving Generic
     |]
