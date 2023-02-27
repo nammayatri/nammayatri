@@ -14,23 +14,18 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Ride.Instances (FullRideT) where
+module Storage.Tabular.Ride.Instances where
 
-import qualified Domain.Types.Person as Domain
 import qualified Domain.Types.Ride as Domain
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Storage.Tabular.Rating
 import Storage.Tabular.Ride.Table
 
-type FullRideT = (RideT, Maybe RatingT)
-
-instance TType FullRideT Domain.Ride where
-  fromTType (RideT {..}, mbRatingT) = do
+instance TType RideT Domain.Ride where
+  fromTType RideT {..} = do
     tUrl <- parseBaseUrl trackingUrl
-    let rideRating = mkRideRating <$> mbRatingT
     let mbTripStartLoc = LatLong <$> tripStartLat <*> tripStartLon
     let mbTripEndLoc = LatLong <$> tripEndLat <*> tripEndLon
     return $
@@ -46,35 +41,16 @@ instance TType FullRideT Domain.Ride where
           ..
         }
   toTType Domain.Ride {..} = do
-    let rideT =
-          RideT
-            { id = getId id,
-              bookingId = toKey bookingId,
-              shortId = getShortId shortId,
-              driverId = toKey driverId,
-              trackingUrl = showBaseUrl trackingUrl,
-              tripStartLat = tripStartPos <&> (.lat),
-              tripStartLon = tripStartPos <&> (.lon),
-              tripEndLat = tripEndPos <&> (.lat),
-              tripEndLon = tripEndPos <&> (.lon),
-              fareParametersId = toKey <$> fareParametersId,
-              ..
-            }
-    let mbRatingT = mkRatingT driverId id <$> rideRating
-    (rideT, mbRatingT)
-
-mkRideRating :: RatingT -> Domain.RideRating
-mkRideRating RatingT {..} =
-  Domain.RideRating
-    { id = Id id,
-      ..
-    }
-
-mkRatingT :: Id Domain.Person -> Id Domain.Ride -> Domain.RideRating -> RatingT
-mkRatingT driverId rideId Domain.RideRating {..} =
-  RatingT
-    { id = getId id,
-      driverId = toKey driverId,
-      rideId = toKey rideId,
-      ..
-    }
+    RideT
+      { id = getId id,
+        bookingId = toKey bookingId,
+        shortId = getShortId shortId,
+        driverId = toKey driverId,
+        trackingUrl = showBaseUrl trackingUrl,
+        tripStartLat = tripStartPos <&> (.lat),
+        tripStartLon = tripStartPos <&> (.lon),
+        tripEndLat = tripEndPos <&> (.lat),
+        tripEndLon = tripEndPos <&> (.lon),
+        fareParametersId = toKey <$> fareParametersId,
+        ..
+      }
