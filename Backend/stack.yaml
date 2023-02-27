@@ -79,7 +79,7 @@ extra-deps:
     subdirs:
       - app/gateway
       - app/mock-registry
-  -  ../../shared-kernel/lib/mobility-core
+  # -  ../../shared-kernel/lib/mobility-core
   - git: git@github.com:Namma-Company/atlas-shared-kernel.git
     commit: 0121f1e547ff3d5b2469d744c3cd5e54ba526a2c
     subdirs:
