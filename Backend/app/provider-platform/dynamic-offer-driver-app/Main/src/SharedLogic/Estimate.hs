@@ -17,6 +17,8 @@ module SharedLogic.Estimate
     WaitingCharges (..),
     NightShiftRate (..),
     BreakupItem (..),
+    Pickup(..),
+    pickupTime,
     buildEstimate,
     buildEstimateFromSlabFarePolicy,
   )
@@ -35,6 +37,8 @@ import SharedLogic.DriverPool.Types (DriverPoolResult)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import Tools.Maps (LatLong (..))
+import Data.Time.Calendar (DayOfWeek)
+import Data.Set (Set)
 
 data EstimateItem = EstimateItem
   { vehicleVariant :: Variant.Variant,
@@ -44,7 +48,8 @@ data EstimateItem = EstimateItem
     estimateBreakupList :: [BreakupItem],
     nightShiftRate :: Maybe NightShiftRate,
     waitingCharges :: WaitingCharges,
-    driversLatLong :: [LatLong]
+    driversLatLong :: [LatLong],
+    recurring :: Bool
   }
 
 data WaitingCharges = WaitingCharges
@@ -69,15 +74,27 @@ data BreakupPrice = BreakupPrice
     value :: Money
   }
 
+data Pickup
+  = OneTime UTCTime
+  | Recurring UTCTime (Set DayOfWeek)
+
+pickupTime :: Pickup -> UTCTime
+pickupTime (Recurring time _) = time
+pickupTime (OneTime time) = time
+
+isRecurringPickup :: Pickup -> Bool
+isRecurringPickup (Recurring _ _) = True
+isRecurringPickup _ = False
+
 buildEstimate ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   DM.Merchant ->
-  UTCTime ->
+  Pickup ->
   Meters ->
   (FarePolicy, NonEmpty DriverPoolResult) ->
   m EstimateItem
-buildEstimate org startTime dist (farePolicy, filteredPoolByVehVariant) = do
-  fareParams <- calculateFare org.id (Left farePolicy) dist startTime Nothing Nothing
+buildEstimate org pickup dist (farePolicy, filteredPoolByVehVariant) = do
+  fareParams <- calculateFare org.id (Left farePolicy) dist (pickupTime pickup) Nothing Nothing
   let baseFare = fareSum fareParams
       currency = "INR"
       estimateBreakups = mkBreakupListItems (BreakupPrice currency) BreakupItem farePolicy
@@ -105,7 +122,8 @@ buildEstimate org startTime dist (farePolicy, filteredPoolByVehVariant) = do
             { waitingTimeEstimatedThreshold = farePolicy.waitingTimeEstimatedThreshold,
               waitingChargePerMin = farePolicy.waitingChargePerMin,
               waitingOrPickupCharges = Nothing
-            }
+            },
+        recurring = isRecurringPickup pickup
       }
 
 mkBreakupListItems ::
@@ -139,12 +157,12 @@ mkBreakupListItems mkPrice mkBreakupItem farePolicy = do
 buildEstimateFromSlabFarePolicy ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   DM.Merchant ->
-  UTCTime ->
+  Pickup ->
   Meters ->
   (SlabFarePolicy, NonEmpty DriverPoolResult) ->
   m EstimateItem
-buildEstimateFromSlabFarePolicy org startTime dist (slabFarePolicy, filteredPoolByVehVariant) = do
-  fareParams <- calculateFare org.id (Right slabFarePolicy) dist startTime Nothing Nothing
+buildEstimateFromSlabFarePolicy org pickup dist (slabFarePolicy, filteredPoolByVehVariant) = do
+  fareParams <- calculateFare org.id (Right slabFarePolicy) dist (pickupTime pickup) Nothing Nothing
   let baseFare = fareSum fareParams
       currency = "INR"
       estimateBreakups = mkBreakupSlabListItems (BreakupPrice currency) BreakupItem slabFarePolicy fareParams.baseFare fareParams.waitingOrPickupCharges
@@ -172,7 +190,8 @@ buildEstimateFromSlabFarePolicy org startTime dist (slabFarePolicy, filteredPool
             { waitingTimeEstimatedThreshold = Nothing,
               waitingChargePerMin = Nothing,
               waitingOrPickupCharges = fareParams.waitingOrPickupCharges
-            }
+            },
+        recurring = False
       }
 
 mkBreakupSlabListItems ::

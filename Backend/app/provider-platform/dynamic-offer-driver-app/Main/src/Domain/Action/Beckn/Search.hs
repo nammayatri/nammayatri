@@ -44,7 +44,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool hiding (lat, lon)
-import SharedLogic.Estimate (EstimateItem, buildEstimate, buildEstimateFromSlabFarePolicy)
+import SharedLogic.Estimate (EstimateItem, Pickup, pickupTime, buildEstimate, buildEstimateFromSlabFarePolicy)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
@@ -58,13 +58,14 @@ import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
 
+
 data DSearchReq = DSearchReq
   { messageId :: Text,
     transactionId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
     pickupLocation :: LatLong,
-    pickupTime :: UTCTime,
+    pickup :: Pickup,
     dropLocation :: LatLong,
     routeInfo :: Maybe Maps.RouteInfo,
     device :: Maybe Text
@@ -142,7 +143,7 @@ handler merchantId sReq = do
             let slabFarePolicies = selectFarePolicy result.distance allFarePolicies
             let listOfVehicleVariants = listVehicleVariantHelper slabFarePolicies
             for listOfVehicleVariants $ \slabFarePolicy -> do
-              fareParams <- calculateFare org.id (Right slabFarePolicy) result.distance sReq.pickupTime Nothing Nothing
+              fareParams <- calculateFare org.id (Right slabFarePolicy) result.distance (pickupTime sReq.pickup) Nothing Nothing
               buildSpecialZoneQuote
                 searchRequestSpecialZone
                 fareParams
@@ -156,7 +157,7 @@ handler merchantId sReq = do
             let farePolicies = selectFarePolicy result.distance allFarePolicies
             let listOfVehicleVariants = listVehicleVariantHelper farePolicies
             for listOfVehicleVariants $ \farePolicy -> do
-              fareParams <- calculateFare org.id (Left farePolicy) result.distance sReq.pickupTime Nothing Nothing
+              fareParams <- calculateFare org.id (Left farePolicy) result.distance (pickupTime sReq.pickup) Nothing Nothing
               buildSpecialZoneQuote
                 searchRequestSpecialZone
                 fareParams
@@ -230,7 +231,7 @@ handler merchantId sReq = do
       DPC.DriverPoolConfig ->
       Merchant ->
       DistanceAndDuration ->
-      (Merchant -> UTCTime -> Meters -> (a, NonEmpty DriverPoolResult) -> m EstimateItem) ->
+      (Merchant -> Pickup -> Meters -> (a, NonEmpty DriverPoolResult) -> m EstimateItem) ->
       [a] ->
       m [EstimateItem]
     buildEstimates sReqest fromLocation driverPoolCfg org result buildEstimateFn farePolicies =
@@ -253,7 +254,7 @@ handler merchantId sReq = do
           logDebug $ "Search handler: driver pool " <> show driverPool
 
           let filteredProtoQuotes = getfilteredProtoQuotes driverPool farePolicies
-          estimates <- mapM (buildEstimateFn org sReqest.pickupTime result.distance) filteredProtoQuotes
+          estimates <- mapM (buildEstimateFn org sReqest.pickup result.distance) filteredProtoQuotes
           logDebug $ "bap uri: " <> show sReqest.bapUri
           return estimates
 
@@ -300,7 +301,7 @@ buildSearchRequestSpecialZone DSearchReq {..} providerId fromLocation toLocation
   pure
     DSRSZ.SearchRequestSpecialZone
       { id = Id uuid,
-        startTime = pickupTime,
+        startTime = pickupTime pickup,
         createdAt = now,
         updatedAt = now,
         ..

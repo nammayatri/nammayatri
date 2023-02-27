@@ -12,16 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Domain.Action.Beckn.Init where
 
+import Data.Set (Set)
+import Data.Time.Calendar (DayOfWeek)
+import Data.Time.Clock (UTCTime (..))
+import Data.Time.LocalTime (timeToTimeOfDay)
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
+import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.RecurringBooking as DRecurringBooking
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Veh
+import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
@@ -32,6 +41,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.GoogleMaps as Maps
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
@@ -41,8 +51,16 @@ import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.QuoteSpecialZone as QSZoneQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
+import qualified Storage.Queries.FarePolicy as QFarePolicy
+import qualified Storage.Queries.RecurringBooking as QRecurringBooking
+import Tools.Error ( FarePolicyError (NoFarePolicy) )
+import qualified Tools.Maps as Maps
 
-data InitReq = InitReq
+data InitReq
+  = InitOneWayTripReq InitOneWayTrip
+  | InitRecurringBookingReq InitRecurringBooking
+
+data InitOneWayTrip = InitOneWayTrip
   { driverQuoteId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
@@ -52,9 +70,25 @@ data InitReq = InitReq
 
 data InitTypeReq = InitSpecialZoneReq | InitNormalReq
 
+data InitRecurringBooking = InitRecurringBooking
+  { bapId :: Text,
+    bapUri :: BaseUrl,
+    variant :: Variant,
+    pickupLocation :: DLoc.SearchReqLocationAPIEntity,
+    pickupTime :: UTCTime,
+    pickupSchedule :: Set DayOfWeek,
+    dropLocation :: DLoc.SearchReqLocationAPIEntity
+  }
+
 data InitRes = InitRes
   { booking :: DRB.Booking,
     transporter :: DM.Merchant
+  }
+
+data InitRecurringBookingRes = InitRecurringBookingRes
+  { booking :: DRecurringBooking.RecurringBooking,
+    transporter :: DM.Merchant,
+    farePolicy :: DFarePolicy.FarePolicy
   }
 
 buildBookingLocation :: (MonadGuid m) => DLoc.SearchReqLocation -> m DLoc.BookingLocation
@@ -104,8 +138,8 @@ cancelBooking booking transporterId = do
             additionalInfo = Nothing
           }
 
-handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
-handler merchantId req = do
+initOneWayTrip :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitOneWayTrip -> m InitRes
+initOneWayTrip merchantId req = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
   case req.initTypeReq of
@@ -162,7 +196,6 @@ handler merchantId req = do
             bapId = req.bapId,
             bapUri = req.bapUri,
             startTime = searchRequest.startTime,
-            riderId = Nothing,
             vehicleVariant = driverQuote.vehicleVariant,
             estimatedDistance = driverQuote.distance,
             maxEstimatedDistance = req.maxEstimatedDistance,
@@ -172,6 +205,7 @@ handler merchantId req = do
             toLocation,
             estimatedFare = driverQuote.estimatedFare,
             riderName = Nothing,
+            riderId = Nothing,
             estimatedDuration = searchRequest.estimatedDuration,
             fareParams = driverQuote.fareParams,
             specialZoneOtpCode = Nothing,
@@ -185,3 +219,74 @@ findRandomExophone merchantId = do
     [] -> throwError $ ExophoneNotFound merchantId.getId
     e : es -> pure $ e :| es
   getRandomElement nonEmptyExophones
+
+initRecurringBooking ::
+  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>
+  Id DM.Merchant ->
+  InitRecurringBooking ->
+  m InitRecurringBookingRes
+initRecurringBooking merchantId req = do
+  transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  farePolicy <- QFarePolicy.findByMerchantIdAndVariant merchantId req.variant >>= fromMaybeM NoFarePolicy
+  recurringBooking <- buildRecurringBooking farePolicy
+  runTransaction $ QRecurringBooking.create recurringBooking
+  pure $
+    InitRecurringBookingRes
+      { booking = recurringBooking,
+        transporter = transporter,
+        farePolicy = farePolicy
+      }
+  where
+    buildRecurringBooking farePolicy = do
+      id <- Id <$> generateGUID
+      sessiontoken <- generateGUIDText
+      fromLocation <- buildRecurringBookingLocation merchantId sessiontoken req.pickupLocation
+      toLocation <- buildRecurringBookingLocation merchantId sessiontoken req.dropLocation
+
+      let startDate = utctDay req.pickupTime
+          pickupTime = timeToTimeOfDay $ utctDayTime req.pickupTime
+      pure $
+        DRecurringBooking.RecurringBooking
+          { scheduledDays = req.pickupSchedule,
+            endDate = Nothing,
+            status = DRecurringBooking.Active,
+            providerId = merchantId.getId,
+            bapId = req.bapId,
+            bapUri = req.bapUri,
+            farePolicyId = farePolicy.id,
+            ..
+          }
+
+buildRecurringBookingLocation ::
+  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>
+  Id DM.Merchant ->
+  Text ->
+  DLoc.SearchReqLocationAPIEntity ->
+  m DLoc.BookingLocation
+buildRecurringBookingLocation merchantId sessionToken DLoc.SearchReqLocationAPIEntity {..} = do
+  pickupRes <-
+    Maps.getPlaceName merchantId $
+      Maps.GetPlaceNameReq
+        { getBy = Maps.ByLatLong Maps.LatLong {..},
+          sessionToken = Just sessionToken,
+          language = Nothing
+        }
+  googleMapsLocation <- Maps.mkLocation pickupRes
+  id <- Id <$> generateGUID
+  now <- getCurrentTime
+  let createdAt = now
+      updatedAt = now
+
+  let address = DLoc.LocationAddress
+          { door = googleMapsLocation.door,
+            ..
+          }
+  pure $
+    DLoc.BookingLocation
+      { id = id,
+        lat = lat,
+        lon = lon,
+        address = address,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+      }

@@ -111,6 +111,7 @@ library
       Domain.Action.UI.SavedReqLocation
       Domain.Action.UI.Search.Common
       Domain.Action.UI.Search.OneWay
+      Domain.Action.UI.Search.Recurring
       Domain.Action.UI.Search.Rental
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
@@ -146,6 +147,8 @@ library
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonFlowStatus
       Domain.Types.Quote
+      Domain.Types.RecurringBooking
+      Domain.Types.RecurringQuote
       Domain.Types.RegistrationToken
       Domain.Types.RentalSlab
       Domain.Types.Ride
@@ -154,6 +157,7 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
+      Domain.Types.Timetable
       Domain.Types.TripTerms
       Domain.Types.VehicleVariant
       Domain.Types.Webengage
@@ -198,6 +202,7 @@ library
       Storage.Queries.Person.PersonDefaultEmergencyNumber
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.Quote
+      Storage.Queries.RecurringBooking
       Storage.Queries.RegistrationToken
       Storage.Queries.RentalSlab
       Storage.Queries.Ride
@@ -205,6 +210,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.Sos
       Storage.Queries.SpecialZoneQuote
+      Storage.Queries.Timetable
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
       Storage.Tabular.BlackListOrg
@@ -232,6 +238,8 @@ library
       Storage.Tabular.Person.PersonFlowStatus
       Storage.Tabular.Quote
       Storage.Tabular.Quote.Instances
+      Storage.Tabular.RecurringBooking
+      Storage.Tabular.RecurringQuote
       Storage.Tabular.RegistrationToken
       Storage.Tabular.RentalSlab
       Storage.Tabular.Ride
@@ -240,6 +248,7 @@ library
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.Sos
       Storage.Tabular.SpecialZoneQuote
+      Storage.Tabular.Timetable
       Storage.Tabular.TripTerms
       Storage.Tabular.Webengage
       Tools.Auth
@@ -305,6 +314,7 @@ library
     , containers
     , cryptonite
     , dashboard-helper-api
+    , esqueleto
     , euler-hs
     , extra
     , geohash ==1.0.1
@@ -385,6 +395,7 @@ executable rider-app-exe
     , containers
     , cryptonite
     , dashboard-helper-api
+    , esqueleto
     , euler-hs
     , extra
     , geohash ==1.0.1

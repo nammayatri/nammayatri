@@ -168,10 +168,10 @@ repeatSearch merchant eitherFarePolicy searchReq booking ride cancellationSource
   (estimateItem, driverExtraFare) <- case eitherFarePolicy of
     Left normalFarePolicy ->
       (,normalFarePolicy.driverExtraFee)
-        <$> buildEstimate merchant newSearchReq.startTime newSearchReq.estimatedDistance (normalFarePolicy, driverPool)
+        <$> buildEstimate merchant (OneTime newSearchReq.startTime) newSearchReq.estimatedDistance (normalFarePolicy, driverPool)
     Right slabFarePolicy -> do
       (,DFP.ExtraFee {minFee = 0, maxFee = 0})
-        <$> buildEstimateFromSlabFarePolicy merchant newSearchReq.startTime newSearchReq.estimatedDistance (slabFarePolicy, driverPool)
+        <$> buildEstimateFromSlabFarePolicy merchant (OneTime newSearchReq.startTime) newSearchReq.estimatedDistance (slabFarePolicy, driverPool)
 
   fareParams <- calculateFare searchReq.providerId eitherFarePolicy searchReq.estimatedDistance now Nothing newSearchReq.customerExtraFee
 

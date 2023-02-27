@@ -16,8 +16,51 @@ module Beckn.ACL.OnInit where
 
 import Beckn.Types.Core.Taxi.OnInit as OnInit
 import Domain.Action.Beckn.Init as DInit
+import qualified Domain.Types.ItemId as ItemId
 import Kernel.Prelude
 import SharedLogic.FareCalculator
+
+mkOnInitRecurringBookingMessage :: DInit.InitRecurringBookingRes -> OnInit.OnInitMessage
+mkOnInitRecurringBookingMessage res = do
+  let rb = res.booking
+      currency = "INR"
+
+  OnInit.OnInitMessage
+    { order =
+        OnInit.Order
+          { id = rb.id.getId,
+            state = OnInit.NEW,
+            items =
+              Just
+                [ OnInit.OrderItem
+                    { quantity = OnInit.Quantity {count = 1},
+                      id = ItemId.toText $ ItemId.RecurringTrip res.farePolicy.vehicleVariant
+                    }
+                ],
+            quote =
+              OnInit.Quote
+                { price =
+                    OnInit.QuotePrice
+                      { currency,
+                        value = 0,
+                        offered_value = 0
+                      },
+                  breakup = []
+                },
+            payment =
+              OnInit.Payment
+                { collected_by = "N/A",
+                  params =
+                    OnInit.PaymentParams
+                      { currency = currency,
+                        amount = 0
+                      },
+                  _type = OnInit.ON_FULFILLMENT,
+                  time = OnInit.TimeDuration "FIXME"
+                },
+            fulfillment = Nothing
+          }
+    }
 
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
 mkOnInitMessage res = do
@@ -31,6 +74,7 @@ mkOnInitMessage res = do
         OnInit.Order
           { id = res.booking.id.getId,
             state = OnInit.NEW,
+            items = Nothing,
             quote =
               OnInit.Quote
                 { price =
@@ -51,6 +95,7 @@ mkOnInitMessage res = do
                       },
                   _type = OnInit.ON_FULFILLMENT,
                   time = OnInit.TimeDuration "FIXME"
-                }
+                },
+            fulfillment = Nothing
           }
     }
