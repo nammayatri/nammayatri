@@ -118,6 +118,9 @@ buildEstimateOrQuoteInfo item = do
     OnSearch.RENTAL_TRIP -> do
       quoteDetails <- DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
       pure $ Right DOnSearch.QuoteInfo {..}
+    OnSearch.RECURRING_TRIP -> do
+      quoteDetails <- DOnSearch.RecurringDetails <$> buildRecurringQuoteDetails item
+      pure $ Right DOnSearch.QuoteInfo {..}
     OnSearch.DRIVER_OFFER_ESTIMATE -> pure $ Left DOnSearch.EstimateInfo {bppEstimateId = Id item.id, ..}
     OnSearch.DRIVER_OFFER -> throwError $ InvalidRequest "DRIVER_OFFER supported in on_select, use DRIVER_OFFER_ESTIMATE"
     OnSearch.ONE_WAY_SPECIAL_ZONE -> do
@@ -153,6 +156,19 @@ buildOneWaySpecialZoneQuoteDetails item = do
   pure
     DOnSearch.OneWaySpecialZoneQuoteDetails
       { quoteId = item.id
+      }
+
+buildRecurringQuoteDetails ::
+  (MonadThrow m, Log m) =>
+  OnSearch.Item ->
+  m DOnSearch.RecurringQuoteDetails
+buildRecurringQuoteDetails item = do
+  distanceToNearestDriver <-
+    (item.tags >>= (.distance_to_nearest_driver))
+      & fromMaybeM (InvalidRequest "Trip type is RECURRING, but distanceToNearestDriver is Nothing")
+  pure
+    DOnSearch.RecurringQuoteDetails
+      { distanceToNearestDriver = realToFrac distanceToNearestDriver
       }
 
 --FIXME remove round by using Kilometers and Hours in spec

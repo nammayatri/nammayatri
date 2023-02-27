@@ -26,6 +26,7 @@ mkOnInitMessage res =
         OnInit.Order
           { id = booking.id.getId,
             state = OnInit.NEW,
+            items = Nothing,
             quote =
               OnInit.Quote
                 { price = mkPrice booking.estimatedFare booking.estimatedTotalFare,

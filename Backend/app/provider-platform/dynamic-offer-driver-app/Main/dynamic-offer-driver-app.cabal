@@ -160,6 +160,7 @@ library
       Domain.Types.Issue.IssueOption
       Domain.Types.Issue.IssueReport
       Domain.Types.Issue.IssueTranslation
+      Domain.Types.ItemId
       Domain.Types.MediaFile
       Domain.Types.Merchant
       Domain.Types.Merchant.DriverIntelligentPoolConfig
@@ -175,6 +176,7 @@ library
       Domain.Types.Person
       Domain.Types.QuoteSpecialZone
       Domain.Types.Rating
+      Domain.Types.RecurringBooking
       Domain.Types.RegistrationToken
       Domain.Types.Ride
       Domain.Types.RideDetails
@@ -184,6 +186,7 @@ library
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchRequestSpecialZone
       Domain.Types.SlabFarePolicy
+      Domain.Types.Timetable
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Environment
@@ -197,6 +200,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
+      SharedLogic.Allocator.Jobs.UpdateRecurringBookingTimetable
       SharedLogic.CacheDistance
       SharedLogic.CallBAP
       SharedLogic.CancelSearch
@@ -279,6 +283,7 @@ library
       Storage.Queries.Person
       Storage.Queries.QuoteSpecialZone
       Storage.Queries.Rating
+      Storage.Queries.RecurringBooking
       Storage.Queries.RegistrationToken
       Storage.Queries.Ride
       Storage.Queries.RideDetails
@@ -287,6 +292,7 @@ library
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SlabFarePolicy
+      Storage.Queries.Timetable
       Storage.Queries.Vehicle
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
@@ -333,6 +339,7 @@ library
       Storage.Tabular.Person
       Storage.Tabular.QuoteSpecialZone
       Storage.Tabular.Rating
+      Storage.Tabular.RecurringBooking
       Storage.Tabular.RegistrationToken
       Storage.Tabular.Ride
       Storage.Tabular.Ride.Instances
@@ -344,6 +351,7 @@ library
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone
       Storage.Tabular.SlabFarePolicy
+      Storage.Tabular.Timetable
       Storage.Tabular.Vehicle
       Tools.Auth
       Tools.Call

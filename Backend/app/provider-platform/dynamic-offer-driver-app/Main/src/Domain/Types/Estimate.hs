@@ -24,7 +24,8 @@ data Estimate = Estimate
     estimateBreakupList :: [EstimateBreakup],
     nightShiftRate :: NightShiftRate,
     waitingCharges :: WaitingCharges,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    recurring :: Bool
   }
   deriving (Generic)
 

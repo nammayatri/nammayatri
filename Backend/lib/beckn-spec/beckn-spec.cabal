@@ -109,6 +109,7 @@ library
       Beckn.Types.Core.Taxi.OnConfirm.StopInfo
       Beckn.Types.Core.Taxi.OnInit
       Beckn.Types.Core.Taxi.OnInit.BreakupItem
+      Beckn.Types.Core.Taxi.OnInit.Fulfillment
       Beckn.Types.Core.Taxi.OnInit.Order
       Beckn.Types.Core.Taxi.OnInit.OrderState
       Beckn.Types.Core.Taxi.OnInit.Payment

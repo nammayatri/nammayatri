@@ -16,7 +16,10 @@ module Beckn.ACL.OnSearch where
 
 import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
-import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
+import Beckn.Types.Core.Taxi.OnSearch.Item
+  ( BreakupItem (..),
+    BreakupPrice (..),
+  )
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -36,6 +39,16 @@ oneWaySpecialZoneCategory :: OS.Category
 oneWaySpecialZoneCategory =
   OS.Category
     { id = OS.ONE_WAY_SPECIAL_ZONE,
+      descriptor =
+        OS.Descriptor
+          { name = ""
+          }
+    }
+
+scheduledRideCategory :: OS.Category
+scheduledRideCategory =
+  OS.Category
+    { id = OS.RECURRING_TRIP,
       descriptor =
         OS.Descriptor
           { name = ""
@@ -72,7 +85,7 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
           { id = provider.subscriberId.getShortId,
             descriptor = OS.Descriptor {name = provider.name},
             locations = [],
-            categories = [autoOneWayCategory, oneWaySpecialZoneCategory],
+            categories = [autoOneWayCategory, oneWaySpecialZoneCategory, scheduledRideCategory],
             items,
             offers = [],
             add_ons = [],
@@ -95,7 +108,7 @@ mkStartInfo dReq =
           { gps = OS.Gps {lat = dReq.fromLocation.lat, lon = dReq.fromLocation.lon},
             address = Nothing
           },
-      time = OS.TimeTimestamp dReq.now
+      time = OS.Time dReq.now Nothing
     }
 
 mkStopInfo :: DSearch.DSearchRes -> OS.StopInfo
@@ -133,7 +146,10 @@ mkQuoteEntities start end estInfo = do
       item =
         OS.Item
           { id = estInfo.estimate.id.getId,
-            category_id = autoOneWayCategory.id,
+            category_id =
+              if estInfo.estimate.recurring
+                then scheduledRideCategory.id
+                else autoOneWayCategory.id,
             fulfillment_id = fulfillment.id,
             offer_id = Nothing,
             price =

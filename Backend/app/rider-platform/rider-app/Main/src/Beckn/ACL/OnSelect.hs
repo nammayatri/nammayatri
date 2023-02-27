@@ -75,6 +75,7 @@ buildQuoteInfo ::
 buildQuoteInfo item = do
   quoteDetails <- case item.category_id of
     OnSelect.ONE_WAY_TRIP -> throwError $ InvalidRequest "select not supported for one way trip"
+    OnSelect.RECURRING_TRIP -> throwError $ InvalidRequest "select not supported for recurring trip"
     OnSelect.RENTAL_TRIP -> throwError $ InvalidRequest "select not supported for rental trip"
     OnSelect.DRIVER_OFFER -> buildDriverOfferQuoteDetails item
     OnSelect.DRIVER_OFFER_ESTIMATE -> throwError $ InvalidRequest "Estimates are only supported in on_search"

@@ -57,9 +57,14 @@ dependencies:
   - base >= 4.7 && < 5
   - base64-bytestring
   - bytestring
+  - containers
   - cryptonite
+<<<<<<< HEAD
   - cryptostore >= 0.3.0.0
   - x509
+=======
+  - esqueleto
+>>>>>>> b4aeb32cb (backend/feat: #11 Add Recurring scheduled rides)
   - euler-hs
   - lens
   - prometheus-client

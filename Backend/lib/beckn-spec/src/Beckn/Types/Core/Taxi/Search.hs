@@ -23,6 +23,7 @@ import Beckn.Types.Core.Taxi.Search.Intent as Reexport
 import Beckn.Types.Core.Taxi.Search.Location as Reexport
 import Beckn.Types.Core.Taxi.Search.StartInfo as Reexport
 import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
+import Beckn.Types.Core.Taxi.Search.Time as Reexport
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude

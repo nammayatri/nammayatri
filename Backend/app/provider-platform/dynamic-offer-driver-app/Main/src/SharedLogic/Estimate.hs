@@ -14,33 +14,49 @@
 
 module SharedLogic.Estimate
   ( module DEst,
+    Pickup(..),
+    pickupTime,
     buildEstimate,
     buildEstimateFromSlabFarePolicy,
   )
 where
 
-import Domain.Types.Estimate as DEst
-import Domain.Types.FarePolicy
-import qualified Domain.Types.Merchant as DM
-import Domain.Types.SlabFarePolicy
-import Kernel.Prelude
-import Kernel.Storage.Hedis (HedisFlow)
-import Kernel.Types.Common
-import Kernel.Types.Id
-import Kernel.Utils.Common
-import SharedLogic.FareCalculator
-import Storage.CachedQueries.CacheConfig
+import           Data.Set                          ( Set )
+import           Data.Time.Calendar                ( DayOfWeek )
+import           Domain.Types.Estimate             as DEst
+import           Domain.Types.FarePolicy
+import qualified Domain.Types.Merchant             as DM
+import           Domain.Types.SlabFarePolicy
+import           Kernel.Prelude
+import           Kernel.Storage.Hedis              ( HedisFlow )
+import           Kernel.Types.Common
+import           Kernel.Types.Id
+import           Kernel.Utils.Common
+import           SharedLogic.FareCalculator
+import           Storage.CachedQueries.CacheConfig
+
+data Pickup
+  = OneTime UTCTime
+  | Recurring UTCTime (Set DayOfWeek)
+
+pickupTime :: Pickup -> UTCTime
+pickupTime (Recurring time _) = time
+pickupTime (OneTime time)     = time
+
+isRecurringPickup :: Pickup -> Bool
+isRecurringPickup (Recurring _ _) = True
+isRecurringPickup _               = False
 
 buildEstimate ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   DM.Merchant ->
   Text ->
-  UTCTime ->
+  Pickup ->
   Meters ->
   FarePolicy ->
   m DEst.Estimate
-buildEstimate merchant transactionId startTime dist farePolicy = do
-  fareParams <- calculateFare merchant.id (Left farePolicy) dist startTime Nothing Nothing
+buildEstimate merchant transactionId pickup dist farePolicy = do
+  fareParams <- calculateFare merchant.id (Left farePolicy) dist (pickupTime pickup) Nothing Nothing
   let baseFare = fareSum fareParams
       estimateBreakups = mkBreakupListItems farePolicy
   logDebug $ "baseFare: " <> show baseFare
@@ -66,7 +82,8 @@ buildEstimate merchant transactionId startTime dist farePolicy = do
               waitingChargePerMin = farePolicy.waitingChargePerMin,
               waitingOrPickupCharges = Nothing
             },
-        createdAt = now
+        createdAt = now,
+        recurring = isRecurringPickup pickup
       }
 
 mkBreakupListItems ::
@@ -103,12 +120,12 @@ buildEstimateFromSlabFarePolicy ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   DM.Merchant ->
   Text ->
-  UTCTime ->
+  Pickup ->
   Meters ->
   SlabFarePolicy ->
   m DEst.Estimate
-buildEstimateFromSlabFarePolicy merchant transactionId startTime dist slabFarePolicy = do
-  fareParams <- calculateFare merchant.id (Right slabFarePolicy) dist startTime Nothing Nothing
+buildEstimateFromSlabFarePolicy merchant transactionId pickup dist slabFarePolicy = do
+  fareParams <- calculateFare merchant.id (Right slabFarePolicy) dist (pickupTime pickup) Nothing Nothing
   let baseFare = fareSum fareParams
       estimateBreakups = mkBreakupSlabListItems slabFarePolicy fareParams.baseFare fareParams.waitingOrPickupCharges
   logDebug $ "baseFare: " <> show baseFare
@@ -134,7 +151,8 @@ buildEstimateFromSlabFarePolicy merchant transactionId startTime dist slabFarePo
               waitingChargePerMin = Nothing,
               waitingOrPickupCharges = fareParams.waitingOrPickupCharges
             },
-        createdAt = now
+        createdAt = now,
+        recurring = False
       }
 
 mkBreakupSlabListItems ::

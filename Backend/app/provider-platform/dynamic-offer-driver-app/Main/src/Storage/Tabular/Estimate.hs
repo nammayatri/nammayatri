@@ -62,6 +62,7 @@ instance FromTType EstimateT Domain.Estimate where
       Domain.Estimate
         { id = Id id,
           estimateBreakupList = coerce @[Domain.EstimateBreakupD 'Unsafe] @[Domain.EstimateBreakup] $ estimateBreakupListDec,
+          recurring = False,
           ..
         }
 

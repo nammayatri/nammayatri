@@ -89,7 +89,7 @@ mkOrder dSelectRes = do
                                 ward = from.address.ward
                               }
                       },
-                  time = Select.TimeTimestamp dSelectRes.searchRequest.startTime
+                  time = Select.Time dSelectRes.searchRequest.startTime Nothing
                 },
             end =
               mbTo <&> \to ->
