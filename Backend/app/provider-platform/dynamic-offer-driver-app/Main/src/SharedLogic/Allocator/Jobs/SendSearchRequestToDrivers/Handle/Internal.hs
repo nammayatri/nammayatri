@@ -19,6 +19,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
     setBatchDurationLock,
     createRescheduleTime,
     ifSearchRequestIsCancelled,
+    ifSearchRequestIsExpired,
     module Reexport,
   )
 where
@@ -50,6 +51,19 @@ ifSearchRequestIsCancelled ::
 ifSearchRequestIsCancelled searchReqId = do
   searchReqStatus <- SR.getStatus searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
   pure $ searchReqStatus == SR.CANCELLED
+
+ifSearchRequestIsExpired ::
+  ( HasCacheConfig r,
+    HedisFlow m r,
+    EsqDBFlow m r,
+    Log m
+  ) =>
+  Id SearchRequest ->
+  m Bool
+ifSearchRequestIsExpired searchReqId = do
+  searchReqValidTill <- SR.getValidTill searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
+  now <- getCurrentTime
+  pure $ searchReqValidTill <= now
 
 isRideAlreadyAssigned ::
   ( HasCacheConfig r,

@@ -96,5 +96,5 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverM
                 incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter merchant.name,
                 putTaskDuration = Metrics.putTaskDuration merchant.name
               },
-          ifSearchRequestIsCancelled = I.ifSearchRequestIsCancelled searchReq.id
+                    ifSearchRequestIsValid = IfSearchRequestIsValid {cancelled = I.ifSearchRequestIsCancelled searchReq.id, expired = I.ifSearchRequestIsExpired searchReq.id}
         }
