@@ -16,7 +16,9 @@ jobs:
           name: srid-nammayatri
       - name: Download from Nix cache (cachix)
         run: |
-          nix develop -j 4 -c echo
+          # TODO: Use regular shell here, eventually, once CI starts pushing to
+          # cachix.
+          nix develop -j 4 .#all -c echo
       - name: Build all packages 🔨
         id: build-nix
         run: |
