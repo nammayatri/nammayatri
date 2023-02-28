@@ -14,7 +14,7 @@
 
 module Domain.Action.Beckn.Search where
 
-import Data.List (nubBy, elemIndex)
+import Data.List (elemIndex, nubBy)
 import Domain.Types.FarePolicy.FarePolicy (FarePolicy)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
