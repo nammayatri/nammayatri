@@ -53,31 +53,34 @@ in
       doCheck = false;
     };
 
-    # TODO: port more over
+    # Packages from nixpkgs 
+    aeson.input = { super, ... }: { drv = super.aeson_1_5_6_0; };
+    aeson-casing.overrides.doCheck = false;
+    prometheus-proc.overrides.broken = false;
+    tinylog.overrides.broken = false;
+
+    # Trying to match Stack LTS 16.31 (of stack.yaml)
+    # These should be removed once we upgrade to GHC 9.2
+    openapi3.input.hackageVersion = "3.1.0";
+    openapi3.overrides = { jailbreak = true; doCheck = false; };
+
   };
   overrides = self: super: with pkgs.haskell.lib; {
-    # NOTE: A lot of these overrides try to match
-    # https://www.stackage.org/lts-16.31 because that's what the project is
-    # mostly using.
-    prometheus-proc = unmarkBroken super.prometheus-proc; # self.callHackage "prometheus-proc" "0.1.4.0" { };
-    openapi3 = doJailbreak (dontCheck (self.callHackage "openapi3" "3.1.0" { }));
+    # TODO: port these to packageSettings
     servant-openapi3 = doJailbreak (dontCheck (self.callHackage "servant-openapi3" "2.0.1.2" { }));
     servant-multipart = doJailbreak (dontCheck (self.callHackage "servant-multipart" "0.12" { }));
     lens = doJailbreak (dontCheck (self.callHackage "lens" "4.19.2" { }));
-    tinylog = unmarkBroken super.tinylog;
     universum = doJailbreak (dontCheck (self.callHackage "universum" "1.6.1" { }));
     jwt = doJailbreak (dontCheck (self.callHackage "jwt" "0.10.0" { }));
     dhall = doJailbreak (dontCheck (self.callHackage "dhall" "1.35.0" { }));
     optparse-applicative = doJailbreak super.optparse-applicative_0_15_1_0;
     megaparsec = doJailbreak (dontCheck (self.callHackage "megaparsec" "9.0.0" { }));
-    aeson-casing = dontCheck super.aeson-casing;
     amazonka-core = doJailbreak (dontCheck (unmarkBroken super.amazonka-core));
     singletons = doJailbreak (dontCheck (self.callHackage "singletons" "2.6" { }));
     th-desugar = doJailbreak (dontCheck (self.callHackage "th-desugar" "1.10" { }));
     streamly = doJailbreak (dontCheck (self.callHackage "streamly" "0.7.3.1" { }));
 
     # These may not be necessary once we upgrade to GHC 9.2
-    aeson = super.aeson_1_5_6_0;
     geojson = dontCheck (self.callHackage "geojson" "4.0.4" { });
     http2 = dontCheck (self.callHackage "http2" "3.0.2" { });
     binary-parsers = unmarkBroken super.binary-parsers;
