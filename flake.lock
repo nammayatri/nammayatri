@@ -186,11 +186,11 @@
     },
     "nixpkgs-140774-workaround": {
       "locked": {
-        "lastModified": 1677011310,
-        "narHash": "sha256-gYaAIxErObUdPIeEuvYr9PDLnjMqWBnURLD+lDOcAyY=",
+        "lastModified": 1677547627,
+        "narHash": "sha256-lX39CwdHQk53Kx/axTFKQ3SO6pOsiWR8AfGAhXtD2oo=",
         "owner": "srid",
         "repo": "nixpkgs-140774-workaround",
-        "rev": "f08fe5886a16d48495b736926b030f515e3f4018",
+        "rev": "0470b3cee6647b57337451e4b1221ef5dd9803ab",
         "type": "github"
       },
       "original": {
@@ -231,7 +231,8 @@
         "nixpkgs": "nixpkgs",
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround",
         "passetto-hs": "passetto-hs",
-        "sequelize": "sequelize"
+        "sequelize": "sequelize",
+        "treefmt-nix": "treefmt-nix"
       }
     },
     "sequelize": {
@@ -248,6 +249,26 @@
         "owner": "juspay",
         "repo": "haskell-sequelize",
         "rev": "3abc8fe10edde3fd1c9a776ede81d057dc590341",
+        "type": "github"
+      }
+    },
+    "treefmt-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1677433127,
+        "narHash": "sha256-vafj2WbhrlnwkU20yRDqtHFTUJIEygPfxJVswB3dJ9U=",
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "rev": "f7fcf3770c6cec6fd5f995ba94e6e6376019b9ff",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "treefmt-nix",
         "type": "github"
       }
     }

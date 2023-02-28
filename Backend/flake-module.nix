@@ -3,14 +3,15 @@
   imports = [
     inputs.haskell-flake.flakeModule
     inputs.flake-root.flakeModule
+    inputs.treefmt-nix.flakeModule
     ./nix/docker.nix
+    ./nix/treefmt.nix
   ];
   perSystem = { config, self', system, pkgs, lib, ... }: {
     haskellProjects.default = {
       imports = [
         ./nix/haskell-overrides.nix
         inputs.nixpkgs-140774-workaround.haskellFlakeProjectModules.default
-        inputs.nixpkgs-140774-workaround.haskellFlakeProjectModules.latestOrmoluAndGhcid
       ];
       # beckn is not upgraded to 9.2 yet (could take weeks per Hemant)
       # we can't use 884, because that's broken in nixpkgs. So 8.10.
@@ -23,7 +24,11 @@
           inherit (pkgs.haskellPackages)
             hpack
             ;
-        };
+          inherit (hp)
+            ghcid
+            ;
+          treefmt = config.treefmt.build.wrapper;
+        } // config.treefmt.build.programs;
         mkShellArgs.shellHook = ''
           ${lib.getExe config.flake-root.package}
           # Re-generate .cabal files so HLS will work (per hie.yaml)
