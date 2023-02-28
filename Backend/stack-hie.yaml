@@ -85,7 +85,7 @@ extra-deps:
       - app/mock-registry
   # -  ../beckn-shared-kernel/lib/mobility-core
   - git: https://github.com/nammayatri/shared-kernel.git
-    commit: 28bae0f39eb3d2158c74dd3aac7ed685805c5cee
+    commit: eb9ea61fdd6f4b08f7d1e3c47a102204a06a7e6e
     subdirs:
       - lib/mobility-core
   - git: https://github.com/juspay/passetto
