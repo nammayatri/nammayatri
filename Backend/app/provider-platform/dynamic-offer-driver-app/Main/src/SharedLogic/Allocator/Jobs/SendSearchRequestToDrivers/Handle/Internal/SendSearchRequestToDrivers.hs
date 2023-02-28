@@ -58,7 +58,7 @@ sendSearchRequestToDrivers ::
   DriverPoolConfig ->
   [DriverPoolWithActualDistResult] ->
   m ()
-sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFee driverPoolConfig driverPool = do
+sendSearchRequestToDrivers searchReq baseFare  driverMinExtraFee driverMaxExtraFee driverPoolConfig driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchReq.id

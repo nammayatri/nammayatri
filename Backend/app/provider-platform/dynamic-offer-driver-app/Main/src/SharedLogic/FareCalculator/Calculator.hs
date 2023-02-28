@@ -87,10 +87,15 @@ mkNormalBreakupList mkPrice mkBreakupItem fareParams = do
         fareParams.driverSelectedFare <&> \selFare ->
           mkBreakupItem mkSelectedFareCaption (mkPrice selFare)
 
+      mkCustomerExtraFareItem =
+        fareParams.customerExtraFee <&> \ceFare -> do
+          let customerExtraFareCaption = mconcat ["Extra fare selected by customer: ", show ceFare, " INR"]
+          mkBreakupItem customerExtraFareCaption (mkPrice ceFare)
+
       totalFareFinalRounded = fareSum fareParams
       totalFareCaption = "TOTAL_FARE"
       totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
-  catMaybes [Just totalFareItem, Just baseFareItem, deadKmFareItem, extraDistanceFareItem, mbSelectedFareItem]
+  catMaybes [Just totalFareItem, Just baseFareItem, deadKmFareItem, extraDistanceFareItem, mbSelectedFareItem, mkCustomerExtraFareItem]
 
 -- TODO: make some tests for it
 
@@ -101,7 +106,7 @@ fareSum fareParams = case fareParams.farePolicyType of
 
 normalFareSum :: FareParameters -> Money
 normalFareSum fareParams = do
-  baseFareSum fareParams + (fromMaybe 0 fareParams.deadKmFare) + fromMaybe 0 fareParams.driverSelectedFare
+  baseFareSum fareParams + (fromMaybe 0 fareParams.deadKmFare) + fromMaybe 0 fareParams.driverSelectedFare + fromMaybe 0 fareParams.customerExtraFee
 
 slabFareSum :: FareParameters -> Money
 slabFareSum = baseFareSum
@@ -146,8 +151,9 @@ calculateFareParameters ::
   Meters ->
   UTCTime ->
   Maybe Money ->
+  Maybe Money ->
   m FareParameters
-calculateFareParameters fp distance time mbExtraFare = do
+calculateFareParameters fp distance time mbExtraFare mbCustomerExtraFee = do
   let baseDistanceFare = roundToIntegral $ fp.baseDistanceFare
       mbExtraDistance =
         distance - fp.baseDistanceMeters
@@ -163,6 +169,7 @@ calculateFareParameters fp distance time mbExtraFare = do
         deadKmFare = Just fp.deadKmFare,
         extraKmFare = mbExtraKmFare,
         driverSelectedFare = mbExtraFare,
+        customerExtraFee = mbCustomerExtraFee,
         nightShiftRate = fp.nightShiftRate,
         nightCoefIncluded,
         waitingChargePerMin = fp.waitingChargePerMin,
@@ -178,8 +185,9 @@ calculateSlabFareParameters ::
   Meters ->
   UTCTime ->
   Maybe Money ->
+  Maybe Money ->
   m FareParameters
-calculateSlabFareParameters fp distance time mbExtraFare = do
+calculateSlabFareParameters fp distance time mbExtraFare customerExtraFee = do
   let mbSlab = find (selectSlab distance) fp.fareSlabs
   when (isNothing mbSlab) $ throwError (InvalidRequest "Fare slab not found")
   let slab = fromJust mbSlab
@@ -193,6 +201,7 @@ calculateSlabFareParameters fp distance time mbExtraFare = do
     FareParameters
       { id,
         baseFare = baseDistanceFare,
+        customerExtraFee = customerExtraFee,
         deadKmFare = Nothing,
         extraKmFare = Nothing,
         serviceCharge = Just fp.serviceCharge,

@@ -71,7 +71,7 @@ sendSearchRequestToDrivers' ::
   Money ->
   Money ->
   m ExecutionResult
-sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverMinExtraCharge driverMaxExtraCharge = do
+sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare  driverMinExtraCharge driverMaxExtraCharge = do
   handler handle
   where
     handle =
@@ -81,7 +81,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverM
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchReq.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq,
           cleanupDriverPoolBatches = I.cleanupDriverPoolBatches searchReq.id,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare driverMinExtraCharge driverMaxExtraCharge driverPoolConfig,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare  driverMinExtraCharge driverMaxExtraCharge driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           setBatchDurationLock = I.setBatchDurationLock searchReq.id driverPoolConfig.singleBatchProcessTime,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,

@@ -48,13 +48,14 @@ mkPersist
       bapUri Text
       estimatedDistance Meters
       estimatedDuration Seconds
+      customerExtraFee Money Maybe
       status Domain.SearchRequestStatus
-      searchRepeatCounter Int
       vehicleVariant Variant.Variant
+      searchRepeatCounter Int
+      autoAssignEnabled Bool
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
-      autoAssignEnabled Bool
       deriving Generic
     |]
 

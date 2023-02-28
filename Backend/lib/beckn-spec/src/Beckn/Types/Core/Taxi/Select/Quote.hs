@@ -12,30 +12,17 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Select.Order where
+module Beckn.Types.Core.Taxi.Select.Quote where
 
-import Beckn.Types.Core.Taxi.Select.Descriptor
-import Beckn.Types.Core.Taxi.Select.Fulfillment
-import Beckn.Types.Core.Taxi.Select.Quote
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (State, id, state)
-import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+import Beckn.Types.Core.Taxi.Select.BreakupItem
+import Data.OpenApi
+import Kernel.Prelude
+import Kernel.Utils.Schema
 
-data Order = Order
-  { items :: [OrderItem],
-    fulfillment :: FulfillmentInfo,
-    quote :: Quote
+newtype Quote = Quote
+  { breakup :: [BreakupItem]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
-instance ToSchema Order where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data OrderItem = OrderItem
-  { id :: Maybe Text, -- for those cases where SELECT API can't be stateless
-    descriptor :: Descriptor
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema OrderItem where
+instance ToSchema Quote where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

@@ -87,6 +87,7 @@ data ServiceHandle m = ServiceHandle
       Meters ->
       UTCTime ->
       Maybe Money ->
+      Maybe Money ->
       m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     findDriverLoc :: Id DP.Person -> m (Maybe DrLoc.DriverLocation),
@@ -236,7 +237,7 @@ recalculateFareForDistance handle@ServiceHandle {..} booking ride recalcDistance
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
   farePolicy <- getFarePolicy transporterId booking.vehicleVariant (Just booking.estimatedDistance)
-  fareParams <- calculateFare transporterId farePolicy recalcDistance booking.startTime booking.fareParams.driverSelectedFare
+  fareParams <- calculateFare transporterId farePolicy recalcDistance booking.startTime booking.fareParams.driverSelectedFare booking.fareParams.customerExtraFee
   waitingCharge <- case farePolicy of
     Left normalFarePolicy -> getWaitingFare handle ride.tripStartTime ride.driverArrivalTime normalFarePolicy.waitingChargePerMin
     Right _ -> pure 0

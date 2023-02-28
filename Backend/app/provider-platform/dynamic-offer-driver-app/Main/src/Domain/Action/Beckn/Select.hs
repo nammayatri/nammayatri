@@ -61,7 +61,8 @@ data DSelectReq = DSelectReq
     dropAddrress :: Maybe BA.Address,
     variant :: Variant,
     autoAssignEnabled :: Bool,
-    customerLanguage :: Maybe Maps.Language
+    customerLanguage :: Maybe Maps.Language,
+    customerExtraFee :: Maybe Money
   }
 
 type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
@@ -90,13 +91,13 @@ handler merchantId sReq = do
     DFareParams.SLAB -> do
       slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant org.id sReq.variant >>= fromMaybeM (InternalError "Slab fare policy not found")
       let driverExtraFare = DFarePolicy.ExtraFee {minFee = 0, maxFee = 0}
-      fareParams <- calculateFare merchantId (Right slabFarePolicy) distance sReq.pickupTime Nothing
+      fareParams <- calculateFare merchantId (Right slabFarePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee
       pure (fareParams, driverExtraFare)
     DFareParams.NORMAL -> do
       farePolicy <- FarePolicyS.findByMerchantIdAndVariant org.id sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
-      fareParams <- calculateFare merchantId (Left farePolicy) distance sReq.pickupTime Nothing
+      fareParams <- calculateFare merchantId (Left farePolicy) distance sReq.pickupTime Nothing sReq.customerExtraFee
       pure (fareParams, farePolicy.driverExtraFee)
-  searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration
+  searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration sReq.customerExtraFee
   let estimateFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
@@ -120,6 +121,7 @@ handler merchantId sReq = do
             { requestId = searchReq.id,
               baseFare = estimateFare,
               estimatedRideDistance = distance,
+              customerExtraFee = sReq.customerExtraFee,
               driverMinExtraFee = driverExtraFare.minFee,
               driverMaxExtraFee = driverExtraFare.maxFee
             }
@@ -137,8 +139,9 @@ buildSearchRequest ::
   DSelectReq ->
   Meters ->
   Seconds ->
+  Maybe Money ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to merchantId sReq distance duration = do
+buildSearchRequest from to merchantId sReq distance duration customerExtraFee = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -157,6 +160,7 @@ buildSearchRequest from to merchantId sReq distance duration = do
         bapUri = sReq.bapUri,
         estimatedDistance = distance,
         estimatedDuration = duration,
+        customerExtraFee,
         createdAt = now,
         vehicleVariant = sReq.variant,
         status = DSearchReq.ACTIVE,

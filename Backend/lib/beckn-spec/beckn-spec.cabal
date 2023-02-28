@@ -167,11 +167,13 @@ library
       Beckn.Types.Core.Taxi.Search.StopInfo
       Beckn.Types.Core.Taxi.Search.Time
       Beckn.Types.Core.Taxi.Select
+      Beckn.Types.Core.Taxi.Select.BreakupItem
       Beckn.Types.Core.Taxi.Select.Descriptor
       Beckn.Types.Core.Taxi.Select.Fulfillment
       Beckn.Types.Core.Taxi.Select.Location
       Beckn.Types.Core.Taxi.Select.Order
       Beckn.Types.Core.Taxi.Select.Payment
+      Beckn.Types.Core.Taxi.Select.Quote
       Beckn.Types.Core.Taxi.Select.StartInfo
       Beckn.Types.Core.Taxi.Select.StopInfo
       Beckn.Types.Core.Taxi.Track

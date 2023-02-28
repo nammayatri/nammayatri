@@ -755,11 +755,11 @@ respondQuote driverId req = do
             Fare.SLAB -> do
               slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM (InternalError "Slab fare policy not found")
               let driverExtraFee = ExtraFee {minFee = 0, maxFee = 0}
-              fareParams <- calculateFare organization.id (Right slabFarePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare
+              fareParams <- calculateFare organization.id (Right slabFarePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare sReq.customerExtraFee
               pure (fareParams, driverExtraFee)
             Fare.NORMAL -> do
               farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
-              fareParams <- calculateFare organization.id (Left farePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare
+              fareParams <- calculateFare organization.id (Left farePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare sReq.customerExtraFee
               pure (fareParams, farePolicy.driverExtraFee)
           whenJust mbOfferedFare $ \off ->
             unless (isAllowedExtraFee driverExtraFee off) $

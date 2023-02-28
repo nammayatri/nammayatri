@@ -13,7 +13,9 @@
 -}
 
 module API.UI.Select
-  ( DSelect.DSelectRes (..),
+  ( DSelect.DSelectReq (..),
+    DSelect.DEstimateSelectReq (..),
+    DSelect.DSelectRes (..),
     DSelect.SelectListRes (..),
     DSelect.QuotesResultResponse (..),
     API,
@@ -76,17 +78,16 @@ handler =
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let autoAssignFlag = False
-  let req = DSelect.DEstimateSelectReq {autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
-  dSelectReq <- DSelect.select personId estimateId autoAssignFlag autoAssignFlag
-  becknReq <- ACL.buildSelectReq dSelectReq req.autoAssignEnabled
+  let req = DSelect.DEstimateSelectReq {customerExtraFee = Nothing, autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
+  dSelectReq <- DSelect.select personId estimateId req
+  becknReq <- ACL.buildSelectReq dSelectReq
   void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
 select2 :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelect.DEstimateSelectReq -> FlowHandler APISuccess
 select2 personId estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  let autoAssignV2Flag = fromMaybe False req.autoAssignEnabledV2
-  dSelectReq <- DSelect.select personId estimateId req.autoAssignEnabled autoAssignV2Flag
-  becknReq <- ACL.buildSelectReq dSelectReq req.autoAssignEnabled
+  dSelectReq <- DSelect.select personId estimateId req
+  becknReq <- ACL.buildSelectReq dSelectReq 
   void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 

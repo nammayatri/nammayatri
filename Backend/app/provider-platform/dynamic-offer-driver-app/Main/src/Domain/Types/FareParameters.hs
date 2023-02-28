@@ -26,6 +26,7 @@ data FareParameters = FareParameters
     deadKmFare :: Maybe Money,
     extraKmFare :: Maybe Money,
     driverSelectedFare :: Maybe Money,
+    customerExtraFee :: Maybe Money,
     nightShiftRate :: Maybe Centesimal,
     nightCoefIncluded :: Bool,
     waitingChargePerMin :: Maybe Money,
