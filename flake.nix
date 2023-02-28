@@ -9,6 +9,7 @@
 
     flake-root.url = "github:srid/flake-root";
     nixpkgs-140774-workaround.url = "github:srid/nixpkgs-140774-workaround";
+    nixpkgs-21_11.url = "github:nixos/nixpkgs/nixos-21.11";
 
     # Dependencies
     euler-hs.url = "github:juspay/euler-hs";

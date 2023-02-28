@@ -186,16 +186,32 @@
     },
     "nixpkgs-140774-workaround": {
       "locked": {
-        "lastModified": 1677547627,
-        "narHash": "sha256-lX39CwdHQk53Kx/axTFKQ3SO6pOsiWR8AfGAhXtD2oo=",
+        "lastModified": 1677550654,
+        "narHash": "sha256-Z8cxaevYGwVyzhuCKvwtKhcAIOHNuDuypA1cUbKWUsw=",
         "owner": "srid",
         "repo": "nixpkgs-140774-workaround",
-        "rev": "0470b3cee6647b57337451e4b1221ef5dd9803ab",
+        "rev": "0150105dc68e598ee6e675e4ca3355b77a310a58",
         "type": "github"
       },
       "original": {
         "owner": "srid",
         "repo": "nixpkgs-140774-workaround",
+        "type": "github"
+      }
+    },
+    "nixpkgs-21_11": {
+      "locked": {
+        "lastModified": 1659446231,
+        "narHash": "sha256-hekabNdTdgR/iLsgce5TGWmfIDZ86qjPhxDg/8TlzhE=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "eabc38219184cc3e04a974fe31857d8e0eac098d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-21.11",
+        "repo": "nixpkgs",
         "type": "github"
       }
     },
@@ -230,6 +246,7 @@
         "mysql-haskell": "mysql-haskell",
         "nixpkgs": "nixpkgs",
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround",
+        "nixpkgs-21_11": "nixpkgs-21_11",
         "passetto-hs": "passetto-hs",
         "sequelize": "sequelize",
         "treefmt-nix": "treefmt-nix"
