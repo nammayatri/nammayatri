@@ -94,7 +94,8 @@ data AppCfg = AppCfg
     broadcastMessageTopic :: Text,
     maxParallelSearchRequests :: Int,
     snapToRoadSnippetThreshold :: HighPrecMeters,
-    mediaFileUrlPattern :: Text
+    mediaFileUrlPattern :: Text,
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
   }
   deriving (Generic, FromDhall)
 
@@ -162,7 +163,8 @@ data AppEnv = AppEnv
     broadcastMessageTopic :: Text,
     maxParallelSearchRequests :: Int,
     snapToRoadSnippetThreshold :: HighPrecMeters,
-    mediaFileUrlPattern :: Text
+    mediaFileUrlPattern :: Text,
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
   }
   deriving (Generic)
 

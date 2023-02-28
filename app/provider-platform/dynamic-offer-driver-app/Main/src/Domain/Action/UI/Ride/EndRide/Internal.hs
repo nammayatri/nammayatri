@@ -31,7 +31,7 @@ import Tools.Error
 import qualified Tools.Metrics as Metrics
 
 endRideTransaction ::
-  (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) =>
   Id DP.Driver ->
   Id SRB.Booking ->
   Ride.Ride ->
@@ -41,9 +41,14 @@ endRideTransaction ::
 endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
+  minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
+  let shouldUpdateRideComplete =
+        case minTripDistanceForReferralCfg of
+          Just distance -> ride.traveledDistance >= distance
+          Nothing -> True
   Esq.runTransaction $ do
     whenJust mbRiderDetails $ \riderDetails ->
-      unless (riderDetails.hasTakenRide) $
+      when (not riderDetails.hasTakenRide && shouldUpdateRideComplete) do
         QRD.updateHasTakenRide riderDetails.id
     whenJust mbFareParams QFare.create
     QRide.updateAll ride.id ride
