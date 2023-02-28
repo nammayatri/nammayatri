@@ -1,15 +1,16 @@
-ARG DEP_IMAGE_PATH=atlas
+ARG DEP_IMAGE_PATH=nammayatri-dep
 ARG DEP_LABEL=latest
 
 FROM ${DEP_IMAGE_PATH}:${DEP_LABEL} as build
 COPY . /opt/build/
 
-WORKDIR /opt/build
+WORKDIR /opt/build/Backend
 
 # Make sure we haven't added any hlint warnings
 RUN hlint_count=$(hlint -g -j --json | jq '.|length') && \
   echo "Found ${hlint_count} warnings" && \
   test ${hlint_count} -le 0
+
 # And that we're ormolu-clean
 RUN ormolu_files=`for i in $(git ls-files | grep '\.hs$'); do ormolu -m check -o '-XTypeApplications' -o '-fplugin=RecordDotPreprocessor' $i || echo $i; done` && \
   echo "Unformatted files: ${ormolu_files}" && \
@@ -17,11 +18,11 @@ RUN ormolu_files=`for i in $(git ls-files | grep '\.hs$'); do ormolu -m check -o
 
 ARG BUILD_ARGS
 
-RUN stack build --system-ghc ${BUILD_ARGS}
+RUN stack build --system-ghc
 
-RUN stack test ${BUILD_ARGS} mobility-core
+RUN stack test mobility-core
 
-RUN mv "$(stack path --local-install-root --system-ghc)/bin" /opt/build/bin
+RUN mv "$(stack path --local-install-root --system-ghc)/bin" /opt/build/Backend/bin
 
 # Base image for stack build so compiled artifact from previous
 # stage should run
@@ -42,12 +43,10 @@ RUN apt-get update && apt-get install -y \
   libmysqlclient-dev \
   librdkafka-dev
 
-COPY ./log-processor /usr/sbin/log-processor
-RUN chmod +x /usr/sbin/log-processor
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y awscli
 
-COPY --from=build /opt/build/swagger .
-COPY --from=build /opt/build/bin .
-COPY --from=build /opt/build/swagger ./swagger
+COPY --from=build /opt/build/Backend/swagger .
+COPY --from=build /opt/build/Backend/bin .
+COPY --from=build /opt/build/Backend/swagger ./swagger
 CMD ["/opt/app/rider-platform/rider-app-exe"]
