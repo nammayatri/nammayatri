@@ -12,16 +12,16 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Fixtures (module Fixtures) where
+module Domain.Action.UI.Ride.EndRide.DefaultConfig where
 
-import Fixtures.BaseUrl as Fixtures
-import Fixtures.Booking as Fixtures
-import Fixtures.DriverLocation as Fixtures
-import Fixtures.EndRideDefaultConfig as Fixtures
-import Fixtures.Person as Fixtures
-import Fixtures.Quote as Fixtures
-import Fixtures.RentalFarePolicy as Fixtures
-import Fixtures.Ride as Fixtures
-import Fixtures.SearchRequest as Fixtures
-import Fixtures.Time as Fixtures
-import Fixtures.TransporterConfig as Fixtures
+import Kernel.Prelude
+import Kernel.Types.Common
+import Kernel.Utils.Dhall (FromDhall)
+
+data EndRideDefaultConfig = EndRideDefaultConfig
+  { pickupLocThreshold :: Meters,
+    dropLocThreshold :: Meters,
+    rideTimeEstimatedThreshold :: Seconds,
+    waitingTimeEstimatedThreshold :: Seconds
+  }
+  deriving (Generic, FromDhall)

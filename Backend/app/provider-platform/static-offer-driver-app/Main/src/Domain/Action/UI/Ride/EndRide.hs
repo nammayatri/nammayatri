@@ -22,6 +22,7 @@ module Domain.Action.UI.Ride.EndRide
   )
 where
 
+import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDefCfg
 import qualified Domain.Action.UI.Ride.EndRide.Internal as EInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
@@ -78,12 +79,7 @@ data ServiceHandle m = ServiceHandle
     findDriverLoc :: Id DP.Person -> m (Maybe DrLoc.DriverLocation),
     finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
-    getDefaultPickupLocThreshold :: m Meters,
-    getDefaultDropLocThreshold :: m Meters,
-    getDefaultrideTravelledDistThresholdWhenPickupOrDestIsDiff :: m Meters,
-    getDefaultrideTravelledDistThresholdWhenPickupAndDestIsSame :: m Meters,
-    getDefaultRideTimeEstimatedThreshold :: m Seconds,
-    getDefaultWaitingTimeEstimatedThreshold :: m Seconds,
+    getDefaultConfig :: m EndRideDefCfg.EndRideDefaultConfig,
     getConfig :: m DTConf.TransporterConfig,
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
@@ -119,12 +115,7 @@ buildEndRideHandle merchantId rideId = do
         findDriverLoc = DrLoc.findById,
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
         isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
-        getDefaultPickupLocThreshold = asks (.defaultPickupLocThreshold),
-        getDefaultDropLocThreshold = asks (.defaultDropLocThreshold),
-        getDefaultrideTravelledDistThresholdWhenPickupOrDestIsDiff = asks (.defaultrideTravelledDistThresholdWhenPickupOrDestIsDiff),
-        getDefaultrideTravelledDistThresholdWhenPickupAndDestIsSame = asks (.defaultrideTravelledDistThresholdWhenPickupAndDestIsSame),
-        getDefaultRideTimeEstimatedThreshold = asks (.defaultRideTimeEstimatedThreshold),
-        getDefaultWaitingTimeEstimatedThreshold = asks (.defaultWaitingTimeEstimatedThreshold),
+        getDefaultConfig = asks (.defaultEndRideCfg),
         getConfig = QTConf.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId),
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
@@ -338,8 +329,8 @@ getLocThreshold ::
 getLocThreshold ServiceHandle {..} stop = do
   transporterConfig <- getConfig
   (mbThresholdConfig, defaultThreshold) <- case stop of
-    PICKUP -> (transporterConfig.pickupLocThreshold,) <$> getDefaultPickupLocThreshold
-    DROP -> (transporterConfig.dropLocThreshold,) <$> getDefaultDropLocThreshold
+    PICKUP -> (transporterConfig.pickupLocThreshold,) <$> (getDefaultConfig <&> (.pickupLocThreshold))
+    DROP -> (transporterConfig.dropLocThreshold,) <$> (getDefaultConfig <&> (.dropLocThreshold))
   pure $ fromMaybe defaultThreshold mbThresholdConfig
 
 getRideDistanceThresholdWhenPickupOrDestIsDiff ::
@@ -348,7 +339,9 @@ getRideDistanceThresholdWhenPickupOrDestIsDiff ::
   m Meters
 getRideDistanceThresholdWhenPickupOrDestIsDiff ServiceHandle {..} = do
   transporterConfig <- getConfig
-  (mbThresholdConfig, defaultThreshold) <- (transporterConfig.rideTravelledDistThresholdWhenPickupOrDestIsDiff,) <$> getDefaultrideTravelledDistThresholdWhenPickupOrDestIsDiff
+  (mbThresholdConfig, defaultThreshold) <-
+    (transporterConfig.rideTravelledDistThresholdWhenPickupOrDestIsDiff,)
+      <$> (getDefaultConfig <&> (.rideTravelledDistThresholdWhenPickupOrDestIsDiff))
   pure $ fromMaybe defaultThreshold mbThresholdConfig
 
 getRideDistanceThresholdWhenPickupAndDestIsSame ::
@@ -357,7 +350,9 @@ getRideDistanceThresholdWhenPickupAndDestIsSame ::
   m Meters
 getRideDistanceThresholdWhenPickupAndDestIsSame ServiceHandle {..} = do
   transporterConfig <- getConfig
-  (mbThresholdConfig, defaultThreshold) <- (transporterConfig.rideTravelledDistThresholdWhenPickupAndDestIsSame,) <$> getDefaultrideTravelledDistThresholdWhenPickupAndDestIsSame
+  (mbThresholdConfig, defaultThreshold) <-
+    (transporterConfig.rideTravelledDistThresholdWhenPickupAndDestIsSame,)
+      <$> (getDefaultConfig <&> (.rideTravelledDistThresholdWhenPickupAndDestIsSame))
   pure $ fromMaybe defaultThreshold mbThresholdConfig
 
 getRideTimeThreshold ::
@@ -366,7 +361,9 @@ getRideTimeThreshold ::
   m Seconds
 getRideTimeThreshold ServiceHandle {..} = do
   transporterConfig <- getConfig
-  (mbThresholdConfig, defaultThreshold) <- (transporterConfig.rideTimeEstimatedThreshold,) <$> getDefaultRideTimeEstimatedThreshold
+  (mbThresholdConfig, defaultThreshold) <-
+    (transporterConfig.rideTimeEstimatedThreshold,)
+      <$> (getDefaultConfig <&> (.rideTimeEstimatedThreshold))
   pure $ fromMaybe defaultThreshold mbThresholdConfig
 
 getWaitingTimeThreshold ::
@@ -375,5 +372,7 @@ getWaitingTimeThreshold ::
   m Seconds
 getWaitingTimeThreshold ServiceHandle {..} = do
   transporterConfig <- getConfig
-  (mbThresholdConfig, defaultThreshold) <- (transporterConfig.waitingTimeEstimatedThreshold,) <$> getDefaultRideTimeEstimatedThreshold
+  (mbThresholdConfig, defaultThreshold) <-
+    (transporterConfig.waitingTimeEstimatedThreshold,)
+      <$> (getDefaultConfig <&> (.rideTimeEstimatedThreshold))
   pure $ fromMaybe defaultThreshold mbThresholdConfig
