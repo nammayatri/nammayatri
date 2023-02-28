@@ -25,7 +25,7 @@ in
               cachix push ${cachixName}
           '' + (if pkgs.stdenv.hostPlatform.isLinux && lib.hasAttr "rev" self then ''
             # Push docker image
-            if [[ "git branch --show-current" == "main" ]]; then
+            if [[ "$(git branch --show-current)" == "main" ]]; then
               echo '## Pushing docker image drv ...'
               nix build --no-allow-dirty .#dockerImage --json | \
                 jq -r '.[].outputs | to_entries[].value' | \
