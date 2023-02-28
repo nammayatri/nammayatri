@@ -41,6 +41,7 @@ data SearchRequest = SearchRequest
     bapUri :: BaseUrl,
     estimatedDistance :: Meters,
     estimatedDuration :: Seconds,
+    customerExtraFee :: Maybe Money,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     vehicleVariant :: Variant.Variant,

@@ -49,6 +49,7 @@ buildSelectReq subscriber req = do
   item <- case order.items of
     [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
+  let customerExtraFee = listToMaybe order.quote.breakup <&> roundToIntegral . (.price.value)
   pure
     DSelect.DSelectReq
       { messageId = messageId,
@@ -62,7 +63,8 @@ buildSelectReq subscriber req = do
         dropAddrress = dropOff.location.address,
         variant = castVariant item.descriptor.code.vehicleVariant,
         autoAssignEnabled = order.fulfillment.tags.auto_assign_enabled,
-        customerLanguage = order.fulfillment.tags.customer_language
+        customerLanguage = order.fulfillment.tags.customer_language,
+        customerExtraFee = customerExtraFee
       }
 
 castVariant :: OS.VehicleVariant -> Variant

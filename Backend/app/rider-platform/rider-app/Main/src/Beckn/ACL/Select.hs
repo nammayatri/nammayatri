@@ -20,7 +20,6 @@ import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types.VehicleVariant
 import Environment
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -30,15 +29,14 @@ import Kernel.Utils.Common
 buildSelectReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DSelect.DSelectRes ->
-  Bool ->
   m (BecknReq Select.SelectMessage)
-buildSelectReq dSelectReq autoAssignEnabled = do
+buildSelectReq dSelectReq = do
   let messageId = dSelectReq.estimateId.getId
   let transactionId = dSelectReq.searchRequest.id.getId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SELECT messageId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just dSelectReq.providerId) (Just dSelectReq.providerUrl) dSelectReq.city
-  let order = mkOrder dSelectReq autoAssignEnabled dSelectReq.customerLanguage
+  let order = mkOrder dSelectReq
   pure $ BecknReq context $ Select.SelectMessage order
 
 castVariant :: VehicleVariant -> Common.VehicleVariant
@@ -49,10 +47,11 @@ castVariant SUV = Common.SUV
 castVariant TAXI = Common.TAXI
 castVariant TAXI_PLUS = Common.TAXI_PLUS
 
-mkOrder :: DSelect.DSelectRes -> Bool -> Maybe Maps.Language -> Select.Order
-mkOrder req autoAssignEnabled customerLanguage = do
+mkOrder :: DSelect.DSelectRes -> Select.Order
+mkOrder req = do
   let from = req.searchRequest.fromLocation
       mbTo = req.searchRequest.toLocation
+      autoAssignEnabled = req.autoAssignEnabled
       items =
         (: []) $
           Select.OrderItem
@@ -68,6 +67,20 @@ mkOrder req autoAssignEnabled customerLanguage = do
                         }
                   }
             }
+      breakups =
+        catMaybes
+          [ ( \customerExtraFee ->
+                Select.BreakupItem
+                  { title = "Extra fee",
+                    price =
+                      Select.BreakupItemPrice
+                        { currency = "INR",
+                          value = realToFrac customerExtraFee
+                        }
+                  }
+            )
+              <$> req.customerExtraFee
+          ]
   Select.Order
     { items,
       fulfillment =
@@ -75,7 +88,7 @@ mkOrder req autoAssignEnabled customerLanguage = do
           { tags =
               Select.Tags
                 { auto_assign_enabled = autoAssignEnabled,
-                  customer_language = customerLanguage
+                  customer_language = req.customerLanguage
                 },
             start =
               Select.StartInfo
@@ -119,5 +132,9 @@ mkOrder req autoAssignEnabled customerLanguage = do
                                 }
                         }
                   }
+          },
+      quote =
+        Select.Quote
+          { breakup = breakups
           }
     }

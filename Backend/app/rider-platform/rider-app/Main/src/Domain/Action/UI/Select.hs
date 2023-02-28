@@ -14,14 +14,15 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.UI.Select
-  ( DSelectRes (..),
+  ( DSelectReq (..),
+    DEstimateSelectReq (..),
+    DSelectRes (..),
     SelectListRes (..),
+    QuotesResultResponse (..),
+    CancelAPIResponse (..),
     select,
     selectList,
     selectResult,
-    QuotesResultResponse (..),
-    DEstimateSelectReq (..),
-    CancelAPIResponse (..),
   )
 where
 
@@ -44,7 +45,9 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Types.Predicate
 import Kernel.Utils.Common
+import Kernel.Utils.Validation
 import SharedLogic.Estimate (checkIfEstimateCancelled)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QBooking
@@ -54,22 +57,36 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
+newtype DSelectReq = DSelectReq
+  { customerExtraFee :: Maybe Money
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+data DEstimateSelectReq = DEstimateSelectReq
+  { customerExtraFee :: Maybe Money,
+    autoAssignEnabled :: Bool,
+    autoAssignEnabledV2 :: Maybe Bool
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+validateDSelectReq :: Validate DEstimateSelectReq
+validateDSelectReq DEstimateSelectReq {..} =
+  sequenceA_
+    [ validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @Money 1 100
+    ]
+
 data DSelectRes = DSelectRes
   { searchRequest :: DSearchReq.SearchRequest,
     estimateId :: Id DEstimate.Estimate,
     providerId :: Text,
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,
+    city :: Text,
     customerLanguage :: Maybe Maps.Language,
-    city :: Text
+    customerExtraFee :: Maybe Money,
+    autoAssignEnabled :: Bool
   }
-
-data DEstimateSelectReq = DEstimateSelectReq
-  { autoAssignEnabled :: Bool,
-    autoAssignEnabledV2 :: Maybe Bool
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data QuotesResultResponse = QuotesResultResponse
   { selectedQuotes :: Maybe SelectListRes,
@@ -103,8 +120,9 @@ instance FromJSON CancelAPIResponse where
       _ -> parseFail "Expected \"Success\" in \"result\" field."
   parseJSON err = typeMismatch "Object APISuccess" err
 
-select :: Id DPerson.Person -> Id DEstimate.Estimate -> Bool -> Bool -> Flow DSelectRes
-select personId estimateId autoAssignEnabled autoAssignEnabledV2 = do
+select :: Id DPerson.Person -> Id DEstimate.Estimate -> DEstimateSelectReq -> Flow DSelectRes
+select personId estimateId req@DEstimateSelectReq {..} = do
+  runRequestValidation validateDSelectReq req
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   checkIfEstimateCancelled estimate.id estimate.status
@@ -116,7 +134,7 @@ select personId estimateId autoAssignEnabled autoAssignEnabledV2 = do
   Esq.runTransaction $ do
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId $ Just DEstimate.DRIVER_QUOTE_REQUESTED
-    QEstimate.updateAutoAssign estimateId autoAssignEnabled autoAssignEnabledV2
+    QEstimate.updateAutoAssign estimateId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
   pure
     DSelectRes
       { providerId = estimate.providerId,
