@@ -79,24 +79,24 @@ data Booking = Booking
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 data BookingDetails
   = OneWayDetails OneWayBookingDetails
   | RentalDetails DRentalSlab.RentalSlab
   | DriverOfferDetails OneWayBookingDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails
-  deriving (Show)
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 data OneWayBookingDetails = OneWayBookingDetails
   { toLocation :: DLoc.BookingLocation,
     distance :: HighPrecMeters
   }
-  deriving (Show)
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
   { toLocation :: DLoc.BookingLocation,
     distance :: HighPrecMeters,
     otpCode :: Maybe Text
   }
-  deriving (Show)
+  deriving (Generic, Show, ToJSON, FromJSON)

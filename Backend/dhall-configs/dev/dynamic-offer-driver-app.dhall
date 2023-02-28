@@ -123,4 +123,5 @@ in  { esqDBCfg
     , snapToRoadSnippetThreshold = +300
     , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
+    , appPrefix = "dynamic-offer-driver-app"
     }

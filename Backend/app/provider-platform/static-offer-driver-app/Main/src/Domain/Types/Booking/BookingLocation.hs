@@ -29,7 +29,7 @@ data BookingLocation = BookingLocation
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq, HasCoordinates)
+  deriving (Generic, Show, Eq, HasCoordinates, ToJSON)
 
 data LocationAddress = LocationAddress
   { street :: Maybe Text,
@@ -40,7 +40,7 @@ data LocationAddress = LocationAddress
     areaCode :: Maybe Text,
     area :: Maybe Text
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToJSON)
 
 data BookingLocationAPIEntity = BookingLocationAPIEntity
   { lat :: Double,

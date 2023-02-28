@@ -29,6 +29,7 @@ import qualified Domain.Types.RiderDetails as RD
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -100,7 +101,11 @@ getDistanceBetweenPoints ::
     EsqDBFlow m r,
     Metrics.CoreMetrics m,
     Maps.HasCoordinates a,
-    Maps.HasCoordinates b
+    Maps.HasCoordinates b,
+    ToJSON a,
+    ToJSON b,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id Merchant ->
   a ->

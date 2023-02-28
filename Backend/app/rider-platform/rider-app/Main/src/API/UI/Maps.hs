@@ -48,6 +48,18 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] DMaps.GetPlaceNameReq
              :> Post '[JSON] DMaps.GetPlaceNameResp
+           :<|> "getDistance"
+             :> TokenAuth
+             :> ReqBody '[JSON] DMaps.GetDistanceReq
+             :> Post '[JSON] DMaps.GetDistanceResp
+           :<|> "getRoutes"
+             :> TokenAuth
+             :> ReqBody '[JSON] DMaps.GetRoutesReq
+             :> Post '[JSON] DMaps.GetRoutesResp
+           :<|> "snapToRoad"
+             :> TokenAuth
+             :> ReqBody '[JSON] DMaps.SnapToRoadReq
+             :> Post '[JSON] DMaps.SnapToRoadResp
        )
 
 handler :: FlowServer API
@@ -55,6 +67,9 @@ handler =
   autoComplete
     :<|> getPlaceDetails
     :<|> getPlaceName
+    :<|> getDistance
+    :<|> getRoutes
+    :<|> snapToRoad
 
 autoComplete :: Id Person.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
 autoComplete personId = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.autoComplete personId
@@ -64,3 +79,12 @@ getPlaceDetails personId = withFlowHandlerAPI . withPersonIdLogTag personId . DM
 
 getPlaceName :: Id Person.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
 getPlaceName personId = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceName personId
+
+getDistance :: Id Person.Person -> DMaps.GetDistanceReq -> FlowHandler DMaps.GetDistanceResp
+getDistance personId = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getDistance personId
+
+getRoutes :: Id Person.Person -> DMaps.GetRoutesReq -> FlowHandler DMaps.GetRoutesResp
+getRoutes personId = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getRoutes personId
+
+snapToRoad :: Id Person.Person -> DMaps.SnapToRoadReq -> FlowHandler DMaps.SnapToRoadResp
+snapToRoad personId = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.snapToRoad personId

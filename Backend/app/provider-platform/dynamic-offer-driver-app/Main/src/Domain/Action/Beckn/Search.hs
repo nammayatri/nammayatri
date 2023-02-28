@@ -37,6 +37,7 @@ import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -223,7 +224,16 @@ handler merchantId sReq = do
           }
 
     buildEstimates ::
-      (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, Esq.EsqDBReplicaFlow m r, CoreMetrics m, EncFlow m r, HasField "vehicleVariant" a DVeh.Variant) =>
+      ( HasCacheConfig r,
+        EsqDBFlow m r,
+        HedisFlow m r,
+        Esq.EsqDBReplicaFlow m r,
+        CoreMetrics m,
+        EncFlow m r,
+        HasField "vehicleVariant" a DVeh.Variant,
+        HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+        HasFlowEnv m r '["appPrefix" ::: Text]
+      ) =>
       DSearchReq ->
       DLoc.SearchReqLocation ->
       DPC.DriverPoolConfig ->

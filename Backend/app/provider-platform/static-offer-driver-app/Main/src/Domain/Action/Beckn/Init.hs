@@ -24,6 +24,7 @@ import Kernel.Randomizer (getRandomElement)
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -70,6 +71,8 @@ init ::
     EsqDBFlow m r,
     HedisFlow m r,
     HasField "driverEstimatedPickupDuration" r Seconds,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text],
     CoreMetrics m
   ) =>
   Id DM.Merchant ->
@@ -96,6 +99,8 @@ initOneWayTrip ::
     EsqDBFlow m r,
     HedisFlow m r,
     HasField "driverEstimatedPickupDuration" r Seconds,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text],
     CoreMetrics m
   ) =>
   InitReq ->

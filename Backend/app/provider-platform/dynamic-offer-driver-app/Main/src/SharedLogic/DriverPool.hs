@@ -57,6 +57,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
@@ -426,7 +427,10 @@ calculateDriverPool ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
-    HasCoordinates a
+    HasCoordinates a,
+    ToJSON a,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->
@@ -478,7 +482,10 @@ calculateDriverPoolWithActualDist ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
-    HasCoordinates a
+    HasCoordinates a,
+    ToJSON a,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->
@@ -559,7 +566,10 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
-    HasCoordinates a
+    HasCoordinates a,
+    ToJSON a,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->
@@ -625,7 +635,10 @@ computeActualDistanceOneToOne ::
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasCoordinates a
+    HasCoordinates a,
+    ToJSON a,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id DM.Merchant ->
   a ->
@@ -640,7 +653,10 @@ computeActualDistance ::
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasCoordinates a
+    HasCoordinates a,
+    ToJSON a,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id DM.Merchant ->
   a ->

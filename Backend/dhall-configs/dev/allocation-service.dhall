@@ -35,4 +35,5 @@ in  { appCfg
     , selfUIUrl = appCfg.selfUIUrl
     , cacheConfig = appCfg.cacheConfig
     , driverPoolBatchesCfg
+    , appPrefix = appCfg.appPrefix
     }

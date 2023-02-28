@@ -19,9 +19,18 @@ module Domain.Action.UI.Maps
     Maps.GetPlaceDetailsResp,
     Maps.GetPlaceNameReq,
     Maps.GetPlaceNameResp,
+    GetDistanceReq,
+    GetDistanceResp,
+    Maps.GetRoutesReq,
+    Maps.GetRoutesResp,
+    Maps.SnapToRoadReq,
+    Maps.SnapToRoadResp,
     autoComplete,
     getPlaceDetails,
     getPlaceName,
+    getDistance,
+    getRoutes,
+    snapToRoad,
   )
 where
 
@@ -34,6 +43,7 @@ import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -44,18 +54,48 @@ import qualified Storage.Queries.Person as QP
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 
-autoComplete :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.AutoCompleteReq -> m Maps.AutoCompleteResp
+autoComplete ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    SCC.CacheFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id DP.Person ->
+  Maps.AutoCompleteReq ->
+  m Maps.AutoCompleteResp
 autoComplete personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   Maps.autoComplete person.merchantId req
 
-getPlaceDetails :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
+getPlaceDetails ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    SCC.CacheFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id DP.Person ->
+  Maps.GetPlaceDetailsReq ->
+  m Maps.GetPlaceDetailsResp
 getPlaceDetails personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
   Maps.getPlaceDetails person.merchantId req
 
-getPlaceName :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DP.Person -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
+getPlaceName ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    SCC.CacheFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id DP.Person ->
+  Maps.GetPlaceNameReq ->
+  m Maps.GetPlaceNameResp
 getPlaceName personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
@@ -75,7 +115,18 @@ getPlaceName personId req = do
         then callMapsApi person.merchantId req merchant.geoHashPrecisionValue
         else mapM convertToGetPlaceNameResp placeNameCache
 
-callMapsApi :: (EncFlow m r, EsqDBFlow m r, SCC.CacheFlow m r, CoreMetrics m) => Id DMerchant.Merchant -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
+callMapsApi ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    SCC.CacheFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id DMerchant.Merchant ->
+  Maps.GetPlaceNameReq ->
+  Int ->
+  m Maps.GetPlaceNameResp
 callMapsApi merchantId req geoHashPrecisionValue = do
   res <- Maps.getPlaceName merchantId req
   let firstElement = listToMaybe res
@@ -124,3 +175,53 @@ convertResultsRespToPlaceNameCache resultsResp latitude longitude geoHashPrecisi
             geoHash = pack <$> DG.encode geoHashPrecisionValue (latitude, longitude)
           }
   return res
+
+getDistance ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    SCC.CacheFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id DP.Person ->
+  GetDistanceReq ->
+  m GetDistanceResp
+getDistance personId req = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  Maps.getDistance person.merchantId req
+
+type GetDistanceReq = Maps.GetDistanceReq Maps.LatLong Maps.LatLong
+
+type GetDistanceResp = Maps.GetDistanceResp Maps.LatLong Maps.LatLong
+
+getRoutes ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    SCC.CacheFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id DP.Person ->
+  Maps.GetRoutesReq ->
+  m Maps.GetRoutesResp
+getRoutes personId req = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  Maps.getRoutes person.merchantId req
+
+snapToRoad ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    SCC.CacheFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text],
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
+  ) =>
+  Id DP.Person ->
+  Maps.SnapToRoadReq ->
+  m Maps.SnapToRoadResp
+snapToRoad personId req = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  Maps.snapToRoad person.merchantId req

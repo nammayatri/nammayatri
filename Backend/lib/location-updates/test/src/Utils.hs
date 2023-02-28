@@ -21,9 +21,12 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Hedis.Config
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import Kernel.Streaming.Kafka.Producer (buildKafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Metrics
 import Kernel.Types.Flow
 import Kernel.Types.Id
+import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
@@ -41,7 +44,10 @@ data AppEnv = AppEnv
     encTools :: EncTools,
     coreMetrics :: Metrics.CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
-    snapToRoadSnippetThreshold :: HighPrecMeters
+    snapToRoadSnippetThreshold :: HighPrecMeters,
+    appPrefix :: Text,
+    kafkaProducerTools :: KafkaProducerTools,
+    version :: Metrics.DeploymentVersion
   }
   deriving (Generic)
 
@@ -71,11 +77,14 @@ wrapTests func = do
       coreMetrics <- Metrics.registerCoreMetricsContainer
       -- fetch google configs for using mock-google or real google
       appCfg <- Environment.readConfig "../"
+      kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
+      version <- lookupDeploymentVersion
       let appEnv =
             AppEnv
               { httpClientOptions = defaultHttpClientOptions,
                 encTools = appCfg.encTools,
                 snapToRoadSnippetThreshold = appCfg.snapToRoadSnippetThreshold,
+                appPrefix = appCfg.appPrefix,
                 ..
               }
       func appCfg appEnv

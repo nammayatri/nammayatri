@@ -36,6 +36,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Randomizer (randomizeList)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -72,7 +73,9 @@ prepareDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     EsqDBFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
@@ -373,7 +376,9 @@ getNextDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     CoreMetrics m,
     EsqDBFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->

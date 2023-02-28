@@ -393,7 +393,7 @@ data NearestDriversResult = NearestDriversResult
     lat :: Double,
     lon :: Double
   }
-  deriving (Generic, GoogleMaps.HasCoordinates)
+  deriving (Generic, GoogleMaps.HasCoordinates, ToJSON, FromJSON)
 
 getNearestDrivers ::
   (Transactionable m, MonadTime m) =>

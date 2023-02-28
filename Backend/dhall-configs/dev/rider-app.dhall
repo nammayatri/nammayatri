@@ -142,4 +142,6 @@ in  { esqDBCfg
     , maxEmergencyNumberCount = +3
     , minTripDistanceForReferralCfg = Some +1000
     , registryMap
+    , appPrefix = "rider-app"
+    , snapToRoadSnippetThreshold = +300
     }
