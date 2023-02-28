@@ -102,7 +102,7 @@ The `dev/` folder at the project top-level contains all the relevant files and c
 To set up your development environment, from project root run
 
 ```
-$ ./dev/setup.sh
+$ ./Backend/dev/setup.sh
 ```
 
 
@@ -167,7 +167,7 @@ The top level of the project has a very descriptive folder structure with helpfu
 
 The entire project is structured as a collection of smaller focused packages, which can be found listed in the top level `stack.yaml` file, under the _packages_ section.
 
-Each package has clear separation of focuses w.r.t the functionality it provides, which helps with maintenance and development and provides clear designated areas to look at for a specific desired behavior and functionality. A good overview of the app structure be found in the table below:- 
+Each package has clear separation of focuses w.r.t the functionality it provides, which helps with maintenance and development and provides clear designated areas to look at for a specific desired behavior and functionality. A good overview of the app structure be found in the table below:-
 
 ```text
 ├── rider-platform                                  : encapsulates all the rider side microservices
@@ -176,7 +176,7 @@ Each package has clear separation of focuses w.r.t the functionality it provides
 |       ├── Main (public-transport-rider-platform-exe)
 |       └── search-consumer	(public-transport-search-consumer-exe)
 ├── provider-platform                               : encapsulates all the provider side microservices
-|   ├── static-offer-driver-app                     : Microservices that power fixed price ride 
+|   ├── static-offer-driver-app                     : Microservices that power fixed price ride
 |   |   |                                             hailing service
 |   |   ├── Allocator (allocation-service-exe)      : Allocation service that matches a driver
 |   |   |                                             to a ride
@@ -191,7 +191,7 @@ Each package has clear separation of focuses w.r.t the functionality it provides
 ├── dashboard
 |   ├── rider-dashboard (rider-dashboard-exe)       : Rider specific ops dashboard APIs
 |   └── provider-dashboard (provider-dashboard-exe) : Provider specific ops dashboard APIs
-├── kafka-consumers                                 : Microservices that consume messages from kafka 
+├── kafka-consumers                                 : Microservices that consume messages from kafka
 |                                                     to perform various tasks
 ├── mocks                                           : Mock servers that mock various
 |                                                     third party APIs, used for local testing
