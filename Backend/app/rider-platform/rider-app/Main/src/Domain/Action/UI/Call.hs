@@ -125,7 +125,6 @@ directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
 
 getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ callStatus_ = do
-  let callStatus = fromText callStatus_ :: ExotelCallStatus
   let callFrom = dropFirstZero callFrom_
   let callTo = dropFirstZero callTo_
   merchant <- Merchant.findAllByExoPhone "+91" callTo >>= fromMaybeM (MerchantWithExoPhoneNotFound callTo)
@@ -136,9 +135,12 @@ getDriverMobileNumber callSid callFrom_ callTo_ callStatus_ = do
   bookings <- runInReplica $ QRB.findByRiderIdAndStatus person.id [DRB.TRIP_ASSIGNED]
   booking <- fromMaybeM (BookingForRiderNotFound $ getId person.id) (listToMaybe bookings)
   ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
-  callId <- generateGUID
-  callStatusObj <- buildCallStatus ride.id callId callSid callStatus
-  runTransaction $ QCallStatus.create callStatusObj
+  callStatus' <- QCallStatus.findByCallSid callSid
+  when (isNothing callStatus') do
+    let callStatus = fromText callStatus_ :: ExotelCallStatus
+    callId <- generateGUID
+    callStatusObj <- buildCallStatus ride.id callId callSid callStatus
+    runTransaction $ QCallStatus.create callStatusObj
   return ride.driverMobileNumber
   where
     dropFirstZero = T.dropWhile (== '0')

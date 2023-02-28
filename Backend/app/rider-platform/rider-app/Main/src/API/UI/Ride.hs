@@ -36,10 +36,10 @@ type API =
     :> "driver"
     :> "location"
     :> TokenAuth
-    :> Post '[JSON] DRide.GetDriverLocRes
+    :> Post '[JSON] (Maybe DRide.GetDriverLocRes)
 
 handler :: FlowServer API
 handler = getDriverLoc
 
-getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler DRide.GetDriverLocRes
+getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler (Maybe DRide.GetDriverLocRes)
 getDriverLoc rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId personId

@@ -55,7 +55,6 @@ directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
 
 getCustomerMobileNumber :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> m MobileNumberResp
 getCustomerMobileNumber callSid callFrom_ callStatus_ = do
-  let callStatus = fromText callStatus_ :: ExotelCallStatus
   let callFrom = dropFirstZero callFrom_
   mobileNumberHash <- getDbHash callFrom
   driver <- runInReplica $ QPerson.findByMobileNumber "+91" mobileNumberHash >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
@@ -69,9 +68,12 @@ getCustomerMobileNumber callSid callFrom_ callStatus_ = do
       QRD.findById riderId
         >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   requestorPhone <- decrypt riderDetails.mobileNumber
-  callId <- generateGUID
-  callStatusObj <- buildCallStatus activeRide.id callId callSid callStatus
-  runTransaction $ QCallStatus.create callStatusObj
+  callStatus' <- QCallStatus.findByCallSid callSid
+  when (isNothing callStatus') do
+    let callStatus = fromText callStatus_ :: ExotelCallStatus
+    callId <- generateGUID
+    callStatusObj <- buildCallStatus activeRide.id callId callSid callStatus
+    runTransaction $ QCallStatus.create callStatusObj
   return requestorPhone
   where
     dropFirstZero = T.dropWhile (== '0')

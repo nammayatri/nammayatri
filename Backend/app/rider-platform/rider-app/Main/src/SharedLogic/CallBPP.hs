@@ -137,12 +137,16 @@ callGetDriverLocation ::
     CoreMetrics m
   ) =>
   DRide.Ride ->
-  m GetLocationRes
+  m (Maybe GetLocationRes)
 callGetDriverLocation ride = do
   trackingUrl <- ride.trackingUrl & fromMaybeM (RideFieldNotPresent "trackingUrl")
   let eulerClient = Euler.client (Proxy @(Get '[JSON] GetLocationRes))
-  callAPI trackingUrl eulerClient "BPP.driverTrackUrl"
-    >>= fromEitherM (\err -> InternalError $ "Failed to call driverTrackUrl: " <> show err)
+  res <- callAPI trackingUrl eulerClient "BPP.driverTrackUrl"
+  case res of
+    Left _ -> do
+      pure Nothing
+    Right res' -> do
+      pure (Just res')
 
 feedback ::
   ( MonadFlow m,
