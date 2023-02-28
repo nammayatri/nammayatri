@@ -4,57 +4,57 @@ let
   inputs = self.inputs;
 in
 {
-  packageSettings =
-    let
-      defaults = {
-        jailbreak = true;
-        doHaddock = false;
-        doCheck = false;
-      };
-    in
-    # NOTE: Some of the 'input' boilerplace could be automated with
-      # https://github.com/srid/haskell-flake/issues/84 
-    {
-      # Nammayatri umbrella dependencies
-      mobility-core.input.path = inputs.beckn-shared-kernel + /lib/mobility-core;
-      beckn-gateway.input.path = inputs.beckn-gateway + /app/gateway;
-      mock-registry.input.path = inputs.beckn-gateway + /app/mock-registry;
+  # NOTE: Some of the 'input' boilerplace could be automated with
+  # https://github.com/srid/haskell-flake/issues/84 
+  packageSettings = {
+    # Nammayatri umbrella dependencies
+    mobility-core.input.path = inputs.beckn-shared-kernel + /lib/mobility-core;
+    beckn-gateway.input.path = inputs.beckn-gateway + /app/gateway;
+    mock-registry.input.path = inputs.beckn-gateway + /app/mock-registry;
 
-      # Packages coming from flake inputs
-      euler-hs = {
-        input.path = inputs.euler-hs;
-        overrides = { old, ... }: {
-          inherit (defaults) jailbreak doHaddock doCheck;
-          patches = (old.patches or [ ]) ++ [ ./euler-hs.patch ];
-        };
-      };
-      passetto-client.input.path = inputs.passetto-hs + /client;
-      passetto-core.input.path = inputs.passetto-hs + /core;
-      hedis.input.path = inputs.hedis;
-      hedis.overrides.doCheck = false;
-      sequelize.input.path = inputs.sequelize;
-      sequelize.overrides.doCheck = false;
-      beam-core.input.path = inputs.beam + /beam-core;
-      beam-core.overrides.jailbreak = true;
-      beam-migrate.input.path = inputs.beam + /beam-migrate;
-      beam-migrate.overrides.jailbreak = true;
-      beam-sqlite.input.path = inputs.beam + /beam-sqlite;
-      beam-sqlite.overrides = {
-        inherit (defaults) jailbreak doCheck;
-      };
-      beam-postgres.input.path = inputs.beam + /beam-postgres;
-      beam-postgres.overrides = {
-        inherit (defaults) jailbreak doCheck;
-      };
-      beam-mysql.input.path = inputs.beam-mysql;
-      beam-mysql.overrides = {
-        inherit (defaults) jailbreak doCheck;
-      };
-      mysql-haskell.input.path = inputs.mysql-haskell;
-      mysql-haskell.overrides = {
-        inherit (defaults) jailbreak doCheck;
+    # Packages coming from flake inputs
+    euler-hs = {
+      input.path = inputs.euler-hs;
+      overrides = { old, ... }: {
+        jailbreak = true;
+        doCheck = false;
+        doHaddock = false;
+        patches = (old.patches or [ ]) ++ [ ./euler-hs.patch ];
       };
     };
+    passetto-client.input.path = inputs.passetto-hs + /client;
+    passetto-core.input.path = inputs.passetto-hs + /core;
+    hedis.input.path = inputs.hedis;
+    hedis.overrides.doCheck = false;
+    sequelize.input.path = inputs.sequelize;
+    sequelize.overrides.doCheck = false;
+    beam-core.input.path = inputs.beam + /beam-core;
+    beam-core.overrides.jailbreak = true;
+    beam-migrate.input.path = inputs.beam + /beam-migrate;
+    beam-migrate.overrides.jailbreak = true;
+    beam-sqlite.input.path = inputs.beam + /beam-sqlite;
+    beam-sqlite.overrides = {
+      jailbreak = true;
+      doCheck = false;
+    };
+    beam-postgres.input.path = inputs.beam + /beam-postgres;
+    beam-postgres.overrides = {
+      jailbreak = true;
+      doCheck = false;
+    };
+    beam-mysql.input.path = inputs.beam-mysql;
+    beam-mysql.overrides = {
+      jailbreak = true;
+      doCheck = false;
+    };
+    mysql-haskell.input.path = inputs.mysql-haskell;
+    mysql-haskell.overrides = {
+      jailbreak = true;
+      doCheck = false;
+    };
+
+    # TODO: port more over
+  };
   overrides = self: super: with pkgs.haskell.lib; {
     # NOTE: A lot of these overrides try to match
     # https://www.stackage.org/lts-16.31 because that's what the project is
