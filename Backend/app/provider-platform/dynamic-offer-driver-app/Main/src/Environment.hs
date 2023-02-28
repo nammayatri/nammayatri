@@ -17,6 +17,7 @@ module Environment where
 
 import AWS.S3
 import qualified Data.Text as T
+import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDefCfg
 import EulerHS.Prelude
 import qualified Idfy.Types.IdfyConfig as Idfy
 import Kernel.External.Encryption (EncTools)
@@ -84,12 +85,7 @@ data AppCfg = AppCfg
     driverUnlockDelay :: Seconds,
     idfyCfg :: Idfy.IdfyConfig,
     dashboardToken :: Text,
-    defaultPickupLocThreshold :: Meters,
-    defaultDropLocThreshold :: Meters,
-    defaultrideTravelledDistThresholdWhenPickupOrDestIsDiff :: Meters,
-    defaultrideTravelledDistThresholdWhenPickupAndDestIsSame :: Meters,
-    defaultRideTimeEstimatedThreshold :: Seconds,
-    defaultWaitingTimeEstimatedThreshold :: Seconds,
+    defaultEndRideCfg :: EndRideDefCfg.EndRideDefaultConfig,
     cacheConfig :: CacheConfig,
     metricsSearchDurationTimeout :: Seconds,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
@@ -152,12 +148,7 @@ data AppEnv = AppEnv
     driverUnlockDelay :: Seconds,
     idfyCfg :: Idfy.IdfyConfig,
     dashboardToken :: Text,
-    defaultPickupLocThreshold :: Meters,
-    defaultDropLocThreshold :: Meters,
-    defaultrideTravelledDistThresholdWhenPickupOrDestIsDiff :: Meters,
-    defaultrideTravelledDistThresholdWhenPickupAndDestIsSame :: Meters,
-    defaultRideTimeEstimatedThreshold :: Seconds,
-    defaultWaitingTimeEstimatedThreshold :: Seconds,
+    defaultEndRideCfg :: EndRideDefCfg.EndRideDefaultConfig,
     cacheConfig :: CacheConfig,
     s3Env :: S3Env Flow,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,

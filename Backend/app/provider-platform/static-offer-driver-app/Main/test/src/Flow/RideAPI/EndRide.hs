@@ -91,12 +91,7 @@ handle =
       finalDistanceCalculation = \_ _ _ -> pure (),
       getRentalFarePolicy = undefined, -- not required for current test cases
       isDistanceCalculationFailed = \_ -> pure False,
-      getDefaultPickupLocThreshold = pure 500,
-      getDefaultDropLocThreshold = pure 500,
-      getDefaultrideTravelledDistThresholdWhenPickupOrDestIsDiff = pure 700,
-      getDefaultrideTravelledDistThresholdWhenPickupAndDestIsSame = pure 1200,
-      getDefaultRideTimeEstimatedThreshold = pure 900,
-      getDefaultWaitingTimeEstimatedThreshold = pure 3,
+      getDefaultConfig = pure Fixtures.defaultEndRideConfig,
       getConfig = pure Fixtures.defaultTransporterConfig,
       whenWithLocationUpdatesLock = \_driverId action -> action
     }

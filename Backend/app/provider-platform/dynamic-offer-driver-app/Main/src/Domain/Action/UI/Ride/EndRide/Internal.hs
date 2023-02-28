@@ -15,6 +15,7 @@
 module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
     putDiffMetric,
+    getDistanceBetweenPoints,
   )
 where
 
@@ -44,6 +45,7 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
+import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Notifications (sendNotificationToDriver)
 
@@ -87,3 +89,25 @@ putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id
 putDiffMetric merchantId money mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   Metrics.putFareAndDistanceDeviations org.name money mtrs
+
+getDistanceBetweenPoints ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Metrics.CoreMetrics m,
+    Maps.HasCoordinates a,
+    Maps.HasCoordinates b
+  ) =>
+  Id Merchant ->
+  a ->
+  b ->
+  m Meters
+getDistanceBetweenPoints merchantId a b = do
+  distRes <-
+    Maps.getDistance merchantId $
+      Maps.GetDistanceReq
+        { origin = a,
+          destination = b,
+          travelMode = Just Maps.CAR
+        }
+  return $ distRes.distance
