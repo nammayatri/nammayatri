@@ -56,8 +56,8 @@ if [ -n "$FILES_WITH_TRAILING_WS" ]; then
   FAIL="true"
 fi
 
-for MODULE in $(ls dev/migrations); do
-  MIGRATION_DIR="dev/migrations/${MODULE}"
+for MODULE in $(ls Backend/dev/migrations); do
+  MIGRATION_DIR="Backend/dev/migrations/${MODULE}"
   if [ $(ls ${MIGRATION_DIR} | cut -c-4 | uniq | wc -l) != $(ls ${MIGRATION_DIR} | wc -l) ]; then
     echo "There are overlapping migration indices in ${MODULE}"
     FAIL="true"
