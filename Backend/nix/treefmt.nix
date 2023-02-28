@@ -8,7 +8,7 @@
         package = pkgs.treefmt;
 
         programs.nixpkgs-fmt.enable = true;
-        # FIXME: hlint doesn't work well with record-dot-preprocessor code
+        # FIXME: Disabled until https://github.com/nammayatri/nammayatri/issues/31
         # programs.hlint.enable = true;
         programs.ormolu.enable = true;
 
