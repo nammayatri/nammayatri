@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Domain.Action.Beckn.Rating where
 
 import qualified Domain.Types.Booking as DBooking
