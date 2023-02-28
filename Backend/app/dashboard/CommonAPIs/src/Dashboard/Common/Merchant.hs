@@ -248,11 +248,13 @@ type SmsServiceConfigUpdateAPI =
 data SmsServiceConfigUpdateReq
   = MyValueFirstConfigUpdateReq MyValueFirstCfgUpdateReq
   | ExotelSmsConfigUpdateReq ExotelSmsCfgUpdateReq
+  | GupShupConfigUpdateReq GupShupCfgUpdateReq
   deriving stock (Show, Generic)
 
 data SmsServiceConfigUpdateTReq
   = MyValueFirstConfigUpdateTReq MyValueFirstCfgUpdateTReq
   | ExotelSmsConfigUpdateTReq ExotelSmsCfgUpdateTReq
+  | GupShupConfigUpdateTReq GupShupCfgUpdateTReq
   deriving stock (Generic)
 
 instance HideSecrets SmsServiceConfigUpdateReq where
@@ -260,11 +262,13 @@ instance HideSecrets SmsServiceConfigUpdateReq where
   hideSecrets = \case
     MyValueFirstConfigUpdateReq req -> MyValueFirstConfigUpdateTReq $ hideSecrets req
     ExotelSmsConfigUpdateReq req -> ExotelSmsConfigUpdateTReq $ hideSecrets req
+    GupShupConfigUpdateReq req -> GupShupConfigUpdateTReq $ hideSecrets req
 
 getSmsServiceFromReq :: SmsServiceConfigUpdateReq -> SMS.SmsService
 getSmsServiceFromReq = \case
   MyValueFirstConfigUpdateReq _ -> SMS.MyValueFirst
   ExotelSmsConfigUpdateReq _ -> SMS.ExotelSms
+  GupShupConfigUpdateReq _ -> SMS.GupShup
 
 buildSmsServiceConfig ::
   EncFlow m r =>
@@ -279,6 +283,10 @@ buildSmsServiceConfig = \case
     apiKey' <- encrypt apiKey
     apiToken' <- encrypt apiToken
     pure . SMS.ExotelSmsConfig $ SMS.ExotelSmsCfg {apiKey = apiKey', apiToken = apiToken', ..}
+  GupShupConfigUpdateReq GupShupCfgUpdateReq {..} -> do
+    username' <- encrypt username
+    password' <- encrypt password
+    pure . SMS.MyValueFirstConfig $ SMS.MyValueFirstCfg {username = username', password = password', ..}
 
 instance ToJSON SmsServiceConfigUpdateReq where
   toJSON = genericToJSON (updateSmsReqOptions updateSmsReqConstructorModifier)
@@ -313,16 +321,36 @@ updateSmsReqConstructorModifier :: String -> String
 updateSmsReqConstructorModifier = \case
   "MyValueFirstConfigUpdateReq" -> show SMS.MyValueFirst
   "ExotelSmsConfigUpdateReq" -> show SMS.ExotelSms
+  "GupShupConfigUpdateReq" -> show SMS.GupShup
   x -> x
 
 updateSmsTReqConstructorModifier :: String -> String
 updateSmsTReqConstructorModifier = \case
   "MyValueFirstConfigUpdateTReq" -> show SMS.MyValueFirst
   "ExotelSmsConfigUpdateTReq" -> show SMS.ExotelSms
+  "GupShupConfigUpdateTReq" -> show SMS.GupShup
   x -> x
 
 -- SMS services
 -- MyValueFirst
+
+data GupShupCfgUpdateReq = GupShupCfgUpdateReq
+  { username :: Text,
+    password :: Text,
+    url :: BaseUrl
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype GupShupCfgUpdateTReq = GupShupCfgUpdateTReq
+  { url :: BaseUrl
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance HideSecrets GupShupCfgUpdateReq where
+  type ReqWithoutSecrets GupShupCfgUpdateReq = GupShupCfgUpdateTReq
+  hideSecrets GupShupCfgUpdateReq {..} = GupShupCfgUpdateTReq {..}
 
 data MyValueFirstCfgUpdateReq = MyValueFirstCfgUpdateReq
   { username :: Text,
