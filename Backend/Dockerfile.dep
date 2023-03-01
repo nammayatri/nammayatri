@@ -24,6 +24,8 @@ RUN stack install --resolver lts-17.6 hlint ormolu
 # Docker build should not use cached layer if any of these is modified
 COPY . /opt/build/
 
+WORKDIR /opt/build/Backend
+
 RUN stack build --system-ghc --dependencies-only
 
 # Remove src code to avoid caching it

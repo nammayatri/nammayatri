@@ -16,6 +16,7 @@ module Storage.Queries.Rating where
 
 import Domain.Types.Person
 import Domain.Types.Rating
+import Domain.Types.Ride
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -45,3 +46,9 @@ findAllRatingsForPerson driverId =
     rating <- from $ table @RatingT
     where_ $ rating ^. RatingDriverId ==. val (toKey driverId)
     return rating
+
+findRatingForRide :: Transactionable m => Id Ride -> m (Maybe Rating)
+findRatingForRide rideId = findOne $ do
+  rating <- from $ table @RatingT
+  where_ $ rating ^. RatingRideId ==. val (toKey rideId)
+  pure rating
