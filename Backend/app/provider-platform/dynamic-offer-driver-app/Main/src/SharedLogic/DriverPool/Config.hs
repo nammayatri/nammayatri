@@ -40,7 +40,8 @@ data DriverPoolConfig = DriverPoolConfig
     actualDistanceThreshold :: Maybe Meters,
     maxDriverQuotesRequired :: Int,
     driverQuoteLimit :: Int,
-    intelligentPoolPercentage :: Maybe Int
+    intelligentPoolPercentage :: Maybe Int,
+    driverRequestCountLimit :: Int
   }
   deriving (Generic, FromDhall)
 
