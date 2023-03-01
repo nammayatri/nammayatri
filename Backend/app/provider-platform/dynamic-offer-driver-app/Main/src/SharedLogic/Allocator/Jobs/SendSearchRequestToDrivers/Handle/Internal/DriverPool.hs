@@ -11,6 +11,9 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Redundant id" #-}
+{-# HLINT ignore "parser" #-}
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool
   ( isBatchNumExceedLimit,
@@ -40,6 +43,8 @@ import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.TransporterConfig as TC
 import Tools.Maps as Maps
 import Tools.Metrics
+import Domain.Types.Person (Driver)
+import qualified Control.Monad as CM
 
 isBatchNumExceedLimit ::
   ( Redis.HedisFlow m r,
@@ -105,6 +110,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
                 pure filledBatch
               else do
                 pure driverPoolBatch
+          incrementDriverRequestCount finalPoolBatch searchReq.id
           cacheBatch finalPoolBatch
           pure finalPoolBatch
 
@@ -148,6 +154,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       transporterConfig <- TC.findByMerchantId merchantId
       let batchDriverIds = batch <&> (.driverPoolResult.driverId)
       let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
+      driversWithValidReqAmount <- filterM (\dpr -> checkRequestCount searchReq.id dpr.driverPoolResult.driverId driverPoolCfg) driversNotInBatch
       minQuotesToQualifyForIntelligentPool <- asks (.intelligentPoolConfig.minQuotesToQualifyForIntelligentPool)
       let fillSize = batchSize - length batch
       (batch <>)
@@ -155,9 +162,9 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
           Intelligent -> do
             (sortedDriverPool, randomizedDriverPool) <-
               bimapM (sortWithDriverScore merchantId transporterConfig) randomizeAndLimitSelection
-                =<< splitDriverPoolForSorting minQuotesToQualifyForIntelligentPool driversNotInBatch -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
+                =<< splitDriverPoolForSorting minQuotesToQualifyForIntelligentPool driversWithValidReqAmount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
             takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) fillSize
-          Random -> pure $ take fillSize driversNotInBatch
+          Random -> pure $ take fillSize driversWithValidReqAmount
     cacheBatch batch = do
       logDebug $ "Caching batch-" <> show batch
       Redis.withCrossAppRedis $ Redis.setExp (driverPoolBatchKey searchReq.id batchNum) batch (60 * 10)
@@ -370,3 +377,20 @@ incrementPoolRadiusStep searchReqId = do
   res <- Redis.withCrossAppRedis $ Redis.incr (poolRadiusStepKey searchReqId)
   logInfo $ "Increment radius step to " <> show res <> "."
   return ()
+
+driverRequestCountKey :: Id DSR.SearchRequest -> Id Driver -> Text
+driverRequestCountKey searchReqId driverId = "Driver-Request-Count-Key:SearchReqId-DriverId" <> searchReqId.getId <> driverId.getId
+
+checkRequestCount :: (Redis.HedisFlow m r, HasDriverPoolConfig  r) => Id DSR.SearchRequest -> Id Driver -> DriverPoolConfig -> m Bool
+checkRequestCount searchReqId driverId driverPoolConfig = do
+  let configValue = driverPoolConfig.driverRequestCountLimit
+  maybe True (\count -> (count :: Int) < configValue) <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchReqId driverId))
+
+incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DSR.SearchRequest -> m ()
+incrementDriverRequestCount finalPoolBatch searchReqId = do
+  CM.mapM_ 
+    (\dpr -> 
+        Redis.withCrossAppRedis do
+          void $ Redis.incr (driverRequestCountKey searchReqId dpr.driverPoolResult.driverId)
+          Redis.expire (driverRequestCountKey searchReqId dpr.driverPoolResult.driverId) 7200
+    ) finalPoolBatch
