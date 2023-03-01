@@ -1,76 +1,108 @@
-{ self, pkgs, ... }:
+{ self, pkgs, lib, ... }:
 
 let
   inputs = self.inputs;
+  # A function that enables us to write `foo = [ dontCheck ]` instead of `foo =
+  # lib.pipe super.foo [ dontCheck ]` in haskell-flake's `overrides`.
+  compilePipe = f: self: super:
+    lib.mapAttrs
+      (name: value:
+        if lib.isList value then
+          lib.pipe super.${name} value
+        else
+          value
+      )
+      (f self super);
 in
 {
   source-overrides = {
+    # Dependencies from flake inputs.
     # NOTE: The below boilerplate can be automated once
     # https://github.com/srid/haskell-flake/issues/84 is done.
     inherit (inputs)
-      euler-hs
-      sequelize
       beam-mysql
-      mysql-haskell
+      euler-hs
       hedis
+      mysql-haskell
+      sequelize
       ;
     beam-core = inputs.beam + /beam-core;
     beam-migrate = inputs.beam + /beam-migrate;
-    beam-sqlite = inputs.beam + /beam-sqlite;
     beam-postgres = inputs.beam + /beam-postgres;
-    mobility-core = inputs.beckn-shared-kernel + /lib/mobility-core;
+    beam-sqlite = inputs.beam + /beam-sqlite;
     beckn-gateway = inputs.beckn-gateway + /app/gateway;
+    mobility-core = inputs.beckn-shared-kernel + /lib/mobility-core;
     mock-registry = inputs.beckn-gateway + /app/mock-registry;
     passetto-client = inputs.passetto-hs + /client;
     passetto-core = inputs.passetto-hs + /core;
+
+    # Dependencies from Hackage
+    aeson = "1.5.6.0";
+    dhall = "1.35.0";
+    geojson = "4.0.4";
+    http2 = "3.0.2";
+    jwt = "0.10.0";
+    lens = "4.19.2";
+    megaparsec = "9.0.0";
+    mmorph = "1.1.3";
+    openapi3 = "3.1.0";
+    optparse-applicative = "0.15.1.0";
+    servant = "0.18.3";
+    servant-client = "0.18.1";
+    servant-client-core = "0.18.1";
+    servant-docs = "0.11.7";
+    servant-foreign = "0.15.2";
+    servant-mock = "0.8.7";
+    servant-multipart = "0.12";
+    servant-openapi3 = "2.0.1.2";
+    servant-server = "0.18.1";
+    singletons = "2.6";
+    streamly = "0.7.3.1";
+    th-desugar = "1.10";
+    universum = "1.6.1";
   };
-  overrides = self: super: with pkgs.haskell.lib; {
+  overrides = compilePipe (self: super: with pkgs.haskell.lib.compose; {
     # NOTE: A lot of these overrides try to match
     # https://www.stackage.org/lts-16.31 because that's what the project is
-    # mostly using.
-    prometheus-proc = unmarkBroken super.prometheus-proc; # self.callHackage "prometheus-proc" "0.1.4.0" { };
-    openapi3 = doJailbreak (dontCheck (self.callHackage "openapi3" "3.1.0" { }));
-    servant-openapi3 = doJailbreak (dontCheck (self.callHackage "servant-openapi3" "2.0.1.2" { }));
-    servant-multipart = doJailbreak (dontCheck (self.callHackage "servant-multipart" "0.12" { }));
-    lens = doJailbreak (dontCheck (self.callHackage "lens" "4.19.2" { }));
-    tinylog = unmarkBroken super.tinylog;
-    universum = doJailbreak (dontCheck (self.callHackage "universum" "1.6.1" { }));
-    jwt = doJailbreak (dontCheck (self.callHackage "jwt" "0.10.0" { }));
-    dhall = doJailbreak (dontCheck (self.callHackage "dhall" "1.35.0" { }));
-    optparse-applicative = doJailbreak super.optparse-applicative_0_15_1_0;
-    megaparsec = doJailbreak (dontCheck (self.callHackage "megaparsec" "9.0.0" { }));
-    aeson-casing = dontCheck super.aeson-casing;
-    amazonka-core = doJailbreak (dontCheck (unmarkBroken super.amazonka-core));
-    singletons = doJailbreak (dontCheck (self.callHackage "singletons" "2.6" { }));
-    th-desugar = doJailbreak (dontCheck (self.callHackage "th-desugar" "1.10" { }));
-    streamly = doJailbreak (dontCheck (self.callHackage "streamly" "0.7.3.1" { }));
-
-    # These may not be necessary once we upgrade to GHC 9.2
-    aeson = super.aeson_1_5_6_0;
-    geojson = dontCheck (self.callHackage "geojson" "4.0.4" { });
-    http2 = dontCheck (self.callHackage "http2" "3.0.2" { });
-    binary-parsers = unmarkBroken super.binary-parsers;
-    word24 = unmarkBroken super.word24;
-    mmorph = doJailbreak super.mmorph_1_1_3;
-    servant = doJailbreak (self.callHackage "servant" "0.18.3" { });
-    servant-mock = doJailbreak (dontCheck (self.callHackage "servant-mock" "0.8.7" { }));
-    servant-server = doJailbreak (dontCheck (self.callHackage "servant-server" "0.18.1" { }));
-    servant-client = doJailbreak (dontCheck (self.callHackage "servant-client" "0.18.1" { }));
-    servant-client-core = doJailbreak (dontCheck (self.callHackage "servant-client-core" "0.18.1" { }));
-    servant-docs = doJailbreak (dontCheck (self.callHackage "servant-docs" "0.11.7" { }));
-    servant-foreign = doJailbreak (dontCheck (self.callHackage "servant-foreign" "0.15.2" { }));
-    lrucaching = unmarkBroken super.lrucaching;
-    mysql-haskell = doJailbreak (dontCheck super.mysql-haskell); # memory constraint too narrow
-    beam-core = doJailbreak super.beam-core;
-    beam-migrate = doJailbreak super.beam-migrate;
-    beam-mysql = doJailbreak (dontCheck super.beam-mysql);
-    beam-sqlite = doJailbreak (dontCheck super.beam-sqlite);
-    beam-postgres = doJailbreak (dontCheck super.beam-postgres);
-
-    sequelize = dontCheck super.sequelize;
-    euler-hs = appendPatch
-      (doJailbreak (dontHaddock (dontCheck super.euler-hs)))
-      ./euler-hs.patch;
-    hedis = dontCheck super.hedis;
-  };
+    # mostly using. As we migrate to GHC 9.2, we can remove most of these.
+    aeson = [ doJailbreak ];
+    aeson-casing = [ dontCheck ];
+    amazonka-core = [ unmarkBroken dontCheck doJailbreak ];
+    beam-core = [ doJailbreak ];
+    beam-migrate = [ doJailbreak ];
+    beam-mysql = [ dontCheck doJailbreak ];
+    beam-postgres = [ dontCheck doJailbreak ];
+    beam-sqlite = [ dontCheck doJailbreak ];
+    binary-parsers = [ unmarkBroken ];
+    dhall = [ dontCheck doJailbreak ];
+    euler-hs = [ dontCheck dontHaddock doJailbreak (appendPatch ./euler-hs.patch) ];
+    geojson = [ dontCheck ];
+    hedis = [ dontCheck ];
+    http2 = [ dontCheck ];
+    jwt = [ dontCheck doJailbreak ];
+    lens = [ dontCheck doJailbreak ];
+    lrucaching = [ unmarkBroken ];
+    megaparsec = [ dontCheck doJailbreak ];
+    mmorph = [ doJailbreak ];
+    mysql-haskell = [ dontCheck doJailbreak ];
+    openapi3 = [ dontCheck doJailbreak ];
+    optparse-applicative = [ doJailbreak ];
+    prometheus-proc = [ unmarkBroken ];
+    sequelize = [ dontCheck ];
+    servant = [ doJailbreak ];
+    servant-client = [ dontCheck doJailbreak ];
+    servant-client-core = [ dontCheck doJailbreak ];
+    servant-docs = [ dontCheck doJailbreak ];
+    servant-foreign = [ dontCheck doJailbreak ];
+    servant-mock = [ dontCheck doJailbreak ];
+    servant-multipart = [ dontCheck doJailbreak ];
+    servant-openapi3 = [ dontCheck doJailbreak ];
+    servant-server = [ dontCheck doJailbreak ];
+    singletons = [ dontCheck doJailbreak ];
+    streamly = [ dontCheck doJailbreak ];
+    th-desugar = [ dontCheck doJailbreak ];
+    tinylog = [ unmarkBroken ];
+    universum = [ dontCheck doJailbreak ];
+    word24 = [ unmarkBroken ];
+  });
 }
