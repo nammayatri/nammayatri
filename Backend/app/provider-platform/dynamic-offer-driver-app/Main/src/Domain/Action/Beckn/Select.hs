@@ -55,7 +55,8 @@ data DSelectReq = DSelectReq
     pickupAddress :: Maybe BA.Address,
     dropAddrress :: Maybe BA.Address,
     variant :: Variant,
-    autoAssignEnabled :: Bool
+    autoAssignEnabled :: Bool,
+    customerExtraFee :: Maybe Money
   }
 
 type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
@@ -80,7 +81,7 @@ handler merchantId sReq = do
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
   farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
-  fareParams <- calculateFare merchantId farePolicy distance sReq.pickupTime Nothing
+  fareParams <- calculateFare merchantId farePolicy distance sReq.pickupTime Nothing sReq.customerExtraFee
   searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration
   let driverExtraFare = farePolicy.driverExtraFee
   let baseFare = fareSum fareParams
@@ -97,7 +98,7 @@ handler merchantId sReq = do
     QSReq.create searchReq
 
   driverPoolConfig <- getDriverPoolConfig distance
-  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverExtraFare.minFee driverExtraFare.maxFee
+  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare sReq.customerExtraFee driverExtraFare.minFee driverExtraFare.maxFee
   case res of
     ReSchedule ut ->
       Esq.runTransaction $ do
@@ -106,6 +107,7 @@ handler merchantId sReq = do
             { requestId = searchReq.id,
               baseFare = baseFare,
               estimatedRideDistance = distance,
+              customerExtraFee = sReq.customerExtraFee,
               driverMinExtraFee = driverExtraFare.minFee,
               driverMaxExtraFee = driverExtraFare.maxFee
             }

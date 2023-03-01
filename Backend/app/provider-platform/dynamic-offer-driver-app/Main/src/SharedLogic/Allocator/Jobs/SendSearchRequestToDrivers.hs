@@ -54,7 +54,8 @@ sendSearchRequestToDrivers Job {id, jobData} = withLogTag ("JobId-" <> id.getId)
   searchReq <- QSR.findById searchReqId >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig jobData.estimatedRideDistance
-  sendSearchRequestToDrivers' driverPoolConfig searchReq merchant jobData.baseFare jobData.driverMinExtraFee jobData.driverMaxExtraFee
+  sendSearchRequestToDrivers' driverPoolConfig searchReq merchant jobData.baseFare jobData.customerExtraFee
+    jobData.driverMinExtraFee jobData.driverMaxExtraFee
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
@@ -73,10 +74,11 @@ sendSearchRequestToDrivers' ::
   SearchRequest ->
   Merchant ->
   Money ->
+  Maybe Money ->
   Money ->
   Money ->
   m ExecutionResult
-sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverMinExtraCharge driverMaxExtraCharge = do
+sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare customerExtraFee driverMinExtraCharge driverMaxExtraCharge = do
   handler handle
   where
     handle =
@@ -86,7 +88,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverM
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchReq.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq,
           cleanupDriverPoolBatches = I.cleanupDriverPoolBatches searchReq.id,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare driverMinExtraCharge driverMaxExtraCharge,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare customerExtraFee driverMinExtraCharge driverMaxExtraCharge,
           getRescheduleTime = I.getRescheduleTime,
           setBatchDurationLock = I.setBatchDurationLock searchReq.id,
           createRescheduleTime = I.createRescheduleTime,

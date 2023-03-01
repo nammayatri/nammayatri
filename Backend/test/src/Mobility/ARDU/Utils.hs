@@ -17,6 +17,7 @@ module Mobility.ARDU.Utils (module Mobility.ARDU.Utils) where
 import qualified "dynamic-offer-driver-app" API.UI.Driver as TDriver
 import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
 import qualified "rider-app" API.UI.Search as AppSearch
+import qualified API.UI.Select as AppSelect
 import Common
 import qualified "rider-app" Domain.Action.UI.Cancel as AppCancel
 import qualified "rider-app" Domain.Action.UI.Select as DSelect
@@ -164,7 +165,7 @@ getOnSearchTaxiEstimatesByTransporterName appToken searchId transporterName =
       <&> (.estimates)
 
 select :: Text -> Id AppEstimate.Estimate -> DSelect.DEstimateSelectReq -> ClientsM ()
-select bapToken quoteId _ = void $ callBAP $ selectQuote bapToken quoteId
+select bapToken quoteId req = void $ callBAP $ selectQuote2 bapToken quoteId req
 
 getNearbySearchRequestForDriver :: DriverTestData -> Id AppEstimate.Estimate -> ClientsM (NonEmpty SearchRequestForDriverAPIEntity)
 getNearbySearchRequestForDriver driver estimateId =
@@ -317,7 +318,7 @@ search'Select appToken searchReq' = do
   appSearchId <- search appToken searchReq'
   (bapQuoteAPIEntity :| _) <- getOnSearchTaxiEstimatesByTransporterName appToken appSearchId bapTransporterName
   let quoteId = bapQuoteAPIEntity.id
-  select appToken quoteId DSelect.DEstimateSelect {autoAssignEnabled = False}
+  select appToken quoteId DSelect.DEstimateSelectReq {customerExtraFee = Just 15, autoAssignEnabled = False}
   pure quoteId
 
 data SearchConfirmResult = SearchConfirmResult

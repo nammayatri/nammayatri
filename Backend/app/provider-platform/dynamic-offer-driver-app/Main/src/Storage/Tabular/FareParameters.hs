@@ -36,6 +36,7 @@ mkPersist
       baseFare Money
       extraKmFare Money Maybe
       driverSelectedFare Money Maybe
+      customerExtraFee Money Maybe
       nightShiftRate Centesimal Maybe
       nightCoefIncluded Bool
       waitingChargePerMin Money Maybe

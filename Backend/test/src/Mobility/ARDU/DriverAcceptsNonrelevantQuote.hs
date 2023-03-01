@@ -50,7 +50,7 @@ driverOffersOnAnIrrelevantSearchRequest clients = withBecknClients clients $ do
 
   bapQuoteAPIEntity.estimatedFare `shouldSatisfy` (> 100) -- ?
   let quoteId = bapQuoteAPIEntity.id
-  Utils.select appRegistrationToken quoteId DSelect.DEstimateSelect {autoAssignEnabled = False}
+  Utils.select appRegistrationToken quoteId DSelect.DEstimateSelectReq {customerExtraFee = Just 15, autoAssignEnabled = False}
 
   -- first driver gets nearby requests
   (searchReqForDriver :| _) <- Utils.getNearbySearchRequestForDriver arduDriver1 quoteId

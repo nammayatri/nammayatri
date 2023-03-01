@@ -652,7 +652,7 @@ respondQuote driverId req = do
         whenJust mbOfferedFare $ \off ->
           unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
             throwError $ NotAllowedExtraFee $ show off
-        fareParams <- calculateFare organization.id farePolicy sReq.estimatedDistance sReqFD.startTime mbOfferedFare
+        fareParams <- calculateFare organization.id farePolicy sReq.estimatedDistance sReqFD.startTime mbOfferedFare sReqFD.customerExtraFee
         driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
         Esq.runTransaction $ do
           QDrQt.create driverQuote

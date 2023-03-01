@@ -54,6 +54,7 @@ mkPersist
       status Domain.DriverSearchRequestStatus
       createdAt UTCTime
       response Domain.SearchRequestForDriverResponse Maybe
+      customerExtraFee Money Maybe
       driverMinExtraFee Money
       driverMaxExtraFee Money
       rideRequestPopupDelayDuration Seconds

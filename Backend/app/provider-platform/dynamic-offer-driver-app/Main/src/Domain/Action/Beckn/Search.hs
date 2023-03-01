@@ -189,7 +189,7 @@ mkEstimate ::
   (FarePolicy, DriverPoolResult) ->
   m EstimateItem
 mkEstimate org startTime dist driverpool (farePolicy, driverMetadata) = do
-  fareParams <- calculateFare org.id farePolicy dist startTime Nothing
+  fareParams <- calculateFare org.id farePolicy dist startTime Nothing Nothing
   let baseFare = fareSum fareParams
       currency = "INR"
       estimateBreakups = mkBreakupListItems (BreakupPrice currency) BreakupItem farePolicy

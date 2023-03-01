@@ -12,21 +12,17 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.FareParameters where
+module Beckn.Types.Core.Taxi.Select.Quote where
 
+import Beckn.Types.Core.Taxi.Select.BreakupItem
+import Data.OpenApi
 import Kernel.Prelude
-import Kernel.Types.Id
-import Kernel.Utils.Common
-import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.Schema
 
-data FareParameters = FareParameters
-  { id :: Id FareParameters,
-    baseFare :: Money,
-    extraKmFare :: Maybe Money,
-    driverSelectedFare :: Maybe Money,
-    customerExtraFee :: Maybe Money,
-    nightShiftRate :: Maybe Centesimal,
-    nightCoefIncluded :: Bool,
-    waitingChargePerMin :: Maybe Money
+newtype Quote = Quote
+  { breakup :: [BreakupItem]
   }
-  deriving (Generic, Show, Eq, PrettyShow)
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Quote where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

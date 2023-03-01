@@ -37,6 +37,7 @@ data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { requestId :: Id DSR.SearchRequest,
     baseFare :: Money,
     estimatedRideDistance :: Meters,
+    customerExtraFee :: Maybe Money,
     driverMinExtraFee :: Money,
     driverMaxExtraFee :: Money
   }

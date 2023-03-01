@@ -41,10 +41,11 @@ calculateFare ::
   Meters ->
   UTCTime ->
   Maybe Money ->
+  Maybe Money ->
   m FareParameters
-calculateFare merchantId farePolicy distance time driverSelectedFare = do
+calculateFare merchantId farePolicy distance time driverSelectedFare customerExtraFee = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| merchantId ||+ " and vehicle variant " +|| farePolicy.vehicleVariant ||+ ""
-  fareParams <- calculateFareParameters farePolicy distance time driverSelectedFare
+  fareParams <- calculateFareParameters farePolicy distance time driverSelectedFare customerExtraFee
   logTagInfo
     "FareCalculator"
     $ "Fare parameters calculated: " +|| fareParams ||+ ""

@@ -41,7 +41,7 @@ import Mobility.AppBackend.Fixtures
 import Servant hiding (Context)
 import Servant.Client
 
-selectQuote :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess
+selectQuote :: RegToken -> Id AbeEstimate.Estimate -> AppSelect.DSelectReq -> ClientM APISuccess
 selectQuote2 :: RegToken -> Id AbeEstimate.Estimate -> DSelect.DEstimateSelectReq -> ClientM APISuccess
 selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectListRes
 cancelSearch :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess

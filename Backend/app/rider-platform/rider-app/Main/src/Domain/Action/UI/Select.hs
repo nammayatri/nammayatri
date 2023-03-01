@@ -14,11 +14,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.UI.Select
-  ( DSelectRes (..),
+  ( DSelectReq (..),
+    DEstimateSelectReq (..),
+    DSelectRes (..),
     SelectListRes (..),
     select,
     selectList,
-    DEstimateSelectReq (..),
   )
 where
 
@@ -36,7 +37,9 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
+import Kernel.Types.Predicate
 import Kernel.Utils.Common
+import Kernel.Utils.Validation
 import SharedLogic.Estimate (checkIfEstimateCancelled)
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
@@ -44,19 +47,33 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 
+newtype DSelectReq = DSelectReq
+  { customerExtraFee :: Maybe Money
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+data DEstimateSelectReq = DEstimateSelectReq
+  { customerExtraFee :: Maybe Money,
+    autoAssignEnabled :: Bool
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+validateDSelectReq :: Validate DEstimateSelectReq
+validateDSelectReq DEstimateSelectReq {..} =
+  sequenceA_
+    [ validateField "customerExtraFee" customerExtraFee $ InMaybe $ InRange @Money 1 100
+    ]
+
 data DSelectRes = DSelectRes
   { searchRequest :: DSearchReq.SearchRequest,
     estimateId :: Id DEstimate.Estimate,
     providerId :: Text,
     providerUrl :: BaseUrl,
-    variant :: VehicleVariant
+    variant :: VehicleVariant,
+    customerExtraFee :: Maybe Money,
+    autoAssignEnabled :: Bool
   }
-
-newtype DEstimateSelectReq = DEstimateSelect
-  { autoAssignEnabled :: Bool
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype SelectListRes = SelectListRes
   { selectedQuotes :: [QuoteAPIEntity]
@@ -64,8 +81,9 @@ newtype SelectListRes = SelectListRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-select :: Id DPerson.Person -> Id DEstimate.Estimate -> Flow DSelectRes
-select personId estimateId = do
+select :: Id DPerson.Person -> Id DEstimate.Estimate -> DEstimateSelectReq -> Flow DSelectRes
+select personId estimateId req@DEstimateSelectReq {..} = do
+  runRequestValidation validateDSelectReq req
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   checkIfEstimateCancelled estimate.id estimate.status

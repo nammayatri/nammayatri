@@ -29,15 +29,14 @@ import Kernel.Utils.Common
 buildSelectReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DSelect.DSelectRes ->
-  Bool ->
   m (BecknReq Select.SelectMessage)
-buildSelectReq dSelectReq autoAssignEnabled = do
+buildSelectReq dSelectReq = do
   let messageId = dSelectReq.estimateId.getId
   let transactionId = dSelectReq.searchRequest.id.getId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SELECT messageId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just dSelectReq.providerId) (Just dSelectReq.providerUrl)
-  let order = mkOrder dSelectReq autoAssignEnabled
+  let order = mkOrder dSelectReq
   pure $ BecknReq context $ Select.SelectMessage order
 
 castVariant :: VehicleVariant -> Common.VehicleVariant
@@ -46,10 +45,11 @@ castVariant HATCHBACK = Common.HATCHBACK
 castVariant SEDAN = Common.SEDAN
 castVariant SUV = Common.SUV
 
-mkOrder :: DSelect.DSelectRes -> Bool -> Select.Order
-mkOrder req autoAssignEnabled = do
+mkOrder :: DSelect.DSelectRes -> Select.Order
+mkOrder req = do
   let from = req.searchRequest.fromLocation
       mbTo = req.searchRequest.toLocation
+      autoAssignEnabled = req.autoAssignEnabled
       items =
         (: []) $
           Select.OrderItem
@@ -65,6 +65,20 @@ mkOrder req autoAssignEnabled = do
                         }
                   }
             }
+      breakups =
+        catMaybes
+          [ ( \customerExtraFee ->
+                Select.BreakupItem
+                  { title = "Extra fee",
+                    price =
+                      Select.BreakupItemPrice
+                        { currency = "INR",
+                          value = realToFrac customerExtraFee
+                        }
+                  }
+            )
+              <$> req.customerExtraFee
+          ]
   Select.Order
     { items,
       fulfillment =
@@ -111,5 +125,9 @@ mkOrder req autoAssignEnabled = do
                                 }
                         }
                   }
+          },
+      quote =
+        Select.Quote
+          { breakup = breakups
           }
     }

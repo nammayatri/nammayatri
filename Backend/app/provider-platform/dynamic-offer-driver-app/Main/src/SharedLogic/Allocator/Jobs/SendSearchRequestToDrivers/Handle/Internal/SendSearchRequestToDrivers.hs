@@ -54,11 +54,12 @@ sendSearchRequestToDrivers ::
   ) =>
   DSR.SearchRequest ->
   Money ->
+  Maybe Money ->
   Money ->
   Money ->
   [DriverPoolWithActualDistResult] ->
   m ()
-sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFee driverPool = do
+sendSearchRequestToDrivers searchReq baseFare customerExtraFee driverMinExtraFee driverMaxExtraFee driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchReq.id
