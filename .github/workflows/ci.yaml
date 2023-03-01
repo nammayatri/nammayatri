@@ -14,6 +14,7 @@ jobs:
       - uses: cachix/cachix-action@v12
         with:
           name: nammayatri
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: Download from Nix cache + build external deps
         run: |
           # TODO: Replace .#all with .#default
