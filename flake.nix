@@ -15,9 +15,9 @@
     euler-hs.url = "github:juspay/euler-hs";
     euler-hs.flake = false;
 
-    beckn-shared-kernel.url = "github:nammayatri/shared-kernel/ghc810";
+    beckn-shared-kernel.url = "github:nammayatri/shared-kernel/ghc810"; # https://github.com/nammayatri/shared-kernel/pull/12
     beckn-shared-kernel.flake = false;
-    beckn-gateway.url = "github:nammayatri/beckn-gateway/c36a89f364dce8da6b9adbe97a1b711b0e7ee080";
+    beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.flake = false;
 
     passetto-hs.url = "github:juspay/passetto/bb92cf1dd9699662d2a7bb96cd6a6aed6f20e8ff";

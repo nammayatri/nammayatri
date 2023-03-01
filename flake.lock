@@ -37,17 +37,16 @@
     "beckn-gateway": {
       "flake": false,
       "locked": {
-        "lastModified": 1677328105,
-        "narHash": "sha256-ltPiEZ1hkqT5k5fb7DSiZZ0rsB4IEw304eiLshwAtAY=",
+        "lastModified": 1677585949,
+        "narHash": "sha256-M/JkHCTXTBsno1dSW+qVRVurSK+A5ldRXdJ62a3bFXo=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "c36a89f364dce8da6b9adbe97a1b711b0e7ee080",
+        "rev": "90891b73e2c007953e463921744a87bdbd026c58",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "c36a89f364dce8da6b9adbe97a1b711b0e7ee080",
         "type": "github"
       }
     },
