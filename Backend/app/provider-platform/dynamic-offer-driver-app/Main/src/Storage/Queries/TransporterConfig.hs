@@ -27,15 +27,15 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.TransporterConfig
 
-findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe TransporterConfig)
-findByMerchantId merchantId =
-  Esq.findOne $ do
+findByMerchantId :: forall m ma. Transactionable ma m => Id Merchant -> Proxy ma -> m (Maybe TransporterConfig)
+findByMerchantId merchantId _ =
+  Esq.findOne @m @ma $ do
     config <- from $ table @TransporterConfigT
     where_ $
       config ^. TransporterConfigMerchantId ==. val (toKey merchantId)
     return config
 
-updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> SqlDB ()
+updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> SqlDB m ()
 updateFCMConfig merchantId fcmUrl fcmServiceAccount = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do

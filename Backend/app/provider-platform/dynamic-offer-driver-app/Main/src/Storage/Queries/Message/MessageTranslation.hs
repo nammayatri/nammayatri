@@ -24,20 +24,20 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.Message.MessageTranslation
 
-create :: MessageTranslation -> SqlDB ()
+create :: MessageTranslation -> SqlDB m ()
 create = Esq.create
 
-findByMessageIdAndLanguage :: Transactionable m => Id Msg.Message -> Language -> m (Maybe MessageTranslation)
-findByMessageIdAndLanguage messageId language =
-  Esq.findOne $ do
+findByMessageIdAndLanguage :: forall m ma. Transactionable ma m => Id Msg.Message -> Language -> Proxy ma -> m (Maybe MessageTranslation)
+findByMessageIdAndLanguage messageId language _ =
+  Esq.findOne @m @ma $ do
     messageTranslation <- from $ table @MessageTranslationT
     where_ $
       messageTranslation ^. MessageTranslationTId ==. val (toKey (messageId, language))
     return messageTranslation
 
-findByMessageId :: Transactionable m => Id Msg.Message -> m [MessageTranslation]
-findByMessageId messageId =
-  Esq.findAll $ do
+findByMessageId :: forall m ma. Transactionable ma m => Id Msg.Message -> Proxy ma -> m [MessageTranslation]
+findByMessageId messageId _ =
+  Esq.findAll @m @ma $ do
     messageTranslations <- from $ table @MessageTranslationT
     where_ $
       messageTranslations ^. MessageTranslationMessageId ==. val (toKey messageId)

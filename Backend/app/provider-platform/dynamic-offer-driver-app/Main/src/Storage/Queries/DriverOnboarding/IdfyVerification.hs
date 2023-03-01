@@ -24,32 +24,38 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.DriverOnboarding.IdfyVerification
 
-create :: IdfyVerification -> SqlDB ()
+create :: IdfyVerification -> SqlDB m ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
+  Proxy ma ->
   Id IdfyVerification ->
   m (Maybe IdfyVerification)
-findById = Esq.findById
+findById _ = Esq.findById @m @ma
 
 findAllByDriverId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Person ->
+  Proxy ma ->
   m [IdfyVerification]
-findAllByDriverId driverId = do
-  findAll $ do
+findAllByDriverId driverId _ = do
+  findAll @m @ma $ do
     verifications <- from $ table @IdfyVerificationT
     where_ $ verifications ^. IdfyVerificationDriverId ==. val (toKey driverId)
     return verifications
 
 findLatestByDriverIdAndDocType ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Person ->
   ImageType ->
+  Proxy ma ->
   m (Maybe IdfyVerification)
-findLatestByDriverIdAndDocType driverId imgType = do
-  verifications_ <- findAll $ do
+findLatestByDriverIdAndDocType driverId imgType _ = do
+  verifications_ <- findAll @m @ma $ do
     verifications <- from $ table @IdfyVerificationT
     where_ $
       verifications ^. IdfyVerificationDriverId ==. val (toKey driverId)
@@ -62,11 +68,13 @@ findLatestByDriverIdAndDocType driverId imgType = do
     headMaybe (x : _) = Just x
 
 findByRequestId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Text ->
+  Proxy ma ->
   m (Maybe IdfyVerification)
-findByRequestId requestId = do
-  findOne $ do
+findByRequestId requestId _ = do
+  findOne @m @ma $ do
     verification <- from $ table @IdfyVerificationT
     where_ $ verification ^. IdfyVerificationRequestId ==. val requestId
     return verification
@@ -75,7 +83,7 @@ updateResponse ::
   Text ->
   Text ->
   Text ->
-  SqlDB ()
+  SqlDB m ()
 updateResponse requestId status resp = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -87,7 +95,7 @@ updateResponse requestId status resp = do
       ]
     where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId
 
-updateExtractValidationStatus :: Text -> ImageExtractionValidation -> SqlDB ()
+updateExtractValidationStatus :: Text -> ImageExtractionValidation -> SqlDB m ()
 updateExtractValidationStatus requestId status = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -98,7 +106,7 @@ updateExtractValidationStatus requestId status = do
       ]
     where_ $ tbl ^. IdfyVerificationRequestId ==. val requestId
 
-deleteByPersonId :: Id Person -> SqlDB ()
+deleteByPersonId :: Id Person -> SqlDB m ()
 deleteByPersonId personId =
   Esq.delete $ do
     verifications <- from $ table @IdfyVerificationT

@@ -40,8 +40,8 @@ import Storage.Queries.DriverOnboarding.Image as QImage
 documentsList :: ShortId DM.Merchant -> Id Common.Driver -> Flow Common.DocumentsListResponse
 documentsList merchantShortId driverId = do
   merchant <- findMerchantByShortId merchantShortId
-  licImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) DriverLicense)
-  vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate)
+  licImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) DriverLicense (Proxy @Flow))
+  vehRegImgs <- map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) VehicleRegistrationCertificate (Proxy @Flow))
   pure
     Common.DocumentsListResponse
       { driverLicense = licImgs,

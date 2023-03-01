@@ -44,5 +44,5 @@ notifyErrorToSupport driverPhone orgName errs = do
 
 throwImageError :: Id Domain.Image -> DriverOnboardingError -> Flow b
 throwImageError id_ err = do
-  runTransaction $ Query.addFailureReason id_ err
+  runTransaction $ Query.addFailureReason @Flow id_ err
   throwError err

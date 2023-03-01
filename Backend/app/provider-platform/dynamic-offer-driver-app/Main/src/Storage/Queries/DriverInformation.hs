@@ -28,14 +28,14 @@ import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person
 
-create :: DriverInformation -> SqlDB ()
+create :: DriverInformation -> SqlDB m ()
 create = Esq.create
 
-findById :: Transactionable m => Id Person.Driver -> m (Maybe DriverInformation)
-findById = Esq.findById . cast
+findById :: forall m ma. Transactionable ma m => Proxy ma -> Id Person.Driver -> m (Maybe DriverInformation)
+findById _ = Esq.findById @m @ma . cast
 
-fetchAllByIds :: Transactionable m => Id Merchant -> [Id Driver] -> m [DriverInformation]
-fetchAllByIds merchantId driversIds = Esq.findAll $ do
+fetchAllByIds :: forall m ma. Transactionable ma m => Id Merchant -> [Id Driver] -> Proxy ma -> m [DriverInformation]
+fetchAllByIds merchantId driversIds _ = Esq.findAll @m @ma $ do
   (driverInformation :& person) <-
     from $
       table @DriverInformationT
@@ -50,8 +50,8 @@ fetchAllByIds merchantId driversIds = Esq.findAll $ do
   where
     personsKeys = toKey . cast <$> driversIds
 
-fetchAllAvailableByIds :: Transactionable m => [Id Person.Driver] -> m [DriverInformation]
-fetchAllAvailableByIds driversIds = Esq.findAll $ do
+fetchAllAvailableByIds :: forall m ma. Transactionable ma m => [Id Person.Driver] -> Proxy ma -> m [DriverInformation]
+fetchAllAvailableByIds driversIds _ = Esq.findAll @m @ma $ do
   driverInformation <- from $ table @DriverInformationT
   where_ $
     driverInformation ^. DriverInformationDriverId `in_` valList personsKeys
@@ -61,7 +61,7 @@ fetchAllAvailableByIds driversIds = Esq.findAll $ do
   where
     personsKeys = toKey . cast <$> driversIds
 
-updateActivity :: Id Person.Driver -> Bool -> SqlDB ()
+updateActivity :: Id Person.Driver -> Bool -> SqlDB m ()
 updateActivity driverId isActive = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -72,7 +72,7 @@ updateActivity driverId isActive = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-updateEnabledState :: Id Driver -> Bool -> SqlDB ()
+updateEnabledState :: Id Driver -> Bool -> SqlDB m ()
 updateEnabledState driverId isEnabled = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -84,7 +84,7 @@ updateEnabledState driverId isEnabled = do
         <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-updateEnabledVerifiedState :: Id Person.Driver -> Bool -> Bool -> SqlDB ()
+updateEnabledVerifiedState :: Id Person.Driver -> Bool -> Bool -> SqlDB m ()
 updateEnabledVerifiedState driverId isEnabled isVerified = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -97,7 +97,7 @@ updateEnabledVerifiedState driverId isEnabled isVerified = do
         <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-updateBlockedState :: Id Person.Driver -> Bool -> SqlDB ()
+updateBlockedState :: Id Person.Driver -> Bool -> SqlDB m ()
 updateBlockedState driverId isBlocked = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -108,7 +108,7 @@ updateBlockedState driverId isBlocked = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-verifyAndEnableDriver :: Id Person -> SqlDB ()
+verifyAndEnableDriver :: Id Person -> SqlDB m ()
 verifyAndEnableDriver driverId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -121,14 +121,14 @@ verifyAndEnableDriver driverId = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey driverId)
 
-updateEnabledStateReturningIds :: EsqDBFlow m r => Id Merchant -> [Id Driver] -> Bool -> m [Id Driver]
+updateEnabledStateReturningIds :: forall m r. EsqDBFlow m r => Id Merchant -> [Id Driver] -> Bool -> m [Id Driver]
 updateEnabledStateReturningIds merchantId driverIds isEnabled =
   Esq.runTransaction $ do
-    present <- fmap (cast . (.driverId)) <$> fetchAllByIds merchantId driverIds
+    present <- fmap (cast . (.driverId)) <$> fetchAllByIds merchantId driverIds (Proxy @m)
     updateEnabledStateForIds present
     pure present
   where
-    updateEnabledStateForIds :: [Id Driver] -> SqlDB ()
+    updateEnabledStateForIds :: [Id Driver] -> SqlDB m ()
     updateEnabledStateForIds present = do
       now <- getCurrentTime
       Esq.update $ \tbl -> do
@@ -143,7 +143,7 @@ updateEnabledStateReturningIds merchantId driverIds isEnabled =
 updateOnRide ::
   Id Person.Driver ->
   Bool ->
-  SqlDB ()
+  SqlDB m ()
 updateOnRide driverId onRide = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -154,7 +154,7 @@ updateOnRide driverId onRide = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-updateNotOnRideMultiple :: [Id Person.Driver] -> SqlDB ()
+updateNotOnRideMultiple :: [Id Person.Driver] -> SqlDB m ()
 updateNotOnRideMultiple driverIds = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -165,19 +165,21 @@ updateNotOnRideMultiple driverIds = do
       ]
     where_ $ tbl ^. DriverInformationDriverId `in_` valList (toKey . cast <$> driverIds)
 
-deleteById :: Id Person.Driver -> SqlDB ()
+deleteById :: Id Person.Driver -> SqlDB m ()
 deleteById = Esq.deleteByKey @DriverInformationT . cast
 
 findAllWithLimitOffsetByMerchantId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->
   Maybe Integer ->
   Id Merchant ->
+  Proxy ma ->
   m [(Person, DriverInformation)]
-findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId = do
-  findAll $ do
+findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId _ = do
+  findAll @m @ma $ do
     (person :& driverInformation) <-
       from $
         table @PersonT
@@ -205,9 +207,9 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
         ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)
     unMaybe = maybe_ (val "") identity
 
-getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m => UTCTime -> m [Person]
-getDriversWithOutdatedLocationsToMakeInactive before = do
-  findAll $ do
+getDriversWithOutdatedLocationsToMakeInactive :: forall m ma. Transactionable ma m => UTCTime -> Proxy ma -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive before _ = do
+  findAll @m @ma $ do
     (driverInformation :& _ :& person) <-
       from $
         table @DriverInformationT
@@ -224,7 +226,7 @@ getDriversWithOutdatedLocationsToMakeInactive before = do
     orderBy [asc $ driverInformation ^. DriverInformationUpdatedAt]
     pure person
 
-addReferralCode :: Id Person -> EncryptedHashedField 'AsEncrypted Text -> SqlDB ()
+addReferralCode :: Id Person -> EncryptedHashedField 'AsEncrypted Text -> SqlDB m ()
 addReferralCode personId code = do
   Esq.update $ \tbl -> do
     set
@@ -233,10 +235,10 @@ addReferralCode personId code = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey personId)
 
-countDrivers :: Transactionable m => Id Merchant -> m (Int, Int)
-countDrivers merchantId =
+countDrivers :: forall m ma. Transactionable ma m => Id Merchant -> Proxy ma -> m (Int, Int)
+countDrivers merchantId _ =
   getResults <$> do
-    findAll $ do
+    findAll @m @ma $ do
       (driverInformation :& person) <-
         from $
           table @DriverInformationT

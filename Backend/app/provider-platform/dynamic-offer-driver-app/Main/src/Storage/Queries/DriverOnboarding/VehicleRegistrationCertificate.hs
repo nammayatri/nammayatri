@@ -23,10 +23,10 @@ import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Tabular.Person ()
 
-create :: VehicleRegistrationCertificate -> SqlDB ()
+create :: VehicleRegistrationCertificate -> SqlDB m ()
 create = Esq.create
 
-upsert :: VehicleRegistrationCertificate -> SqlDB ()
+upsert :: VehicleRegistrationCertificate -> SqlDB m ()
 upsert a@VehicleRegistrationCertificate {..} =
   Esq.upsert
     a
@@ -45,18 +45,22 @@ upsert a@VehicleRegistrationCertificate {..} =
     ]
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
+  Proxy ma ->
   Id VehicleRegistrationCertificate ->
   m (Maybe VehicleRegistrationCertificate)
-findById = Esq.findById
+findById _ = Esq.findById @m @ma
 
 findLastVehicleRC ::
-  (Transactionable m, EncFlow m r) =>
+  forall m ma r.
+  (Transactionable ma m, EncFlow m r) =>
   Text ->
+  Proxy ma ->
   m (Maybe VehicleRegistrationCertificate)
-findLastVehicleRC certNumber = do
+findLastVehicleRC certNumber _ = do
   certNumberHash <- getDbHash certNumber
-  rcs <- findAll $ do
+  rcs <- findAll @m @ma $ do
     rc <- from $ table @VehicleRegistrationCertificateT
     where_ $ rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash
     orderBy [desc $ rc ^. VehicleRegistrationCertificateFitnessExpiry]
@@ -67,13 +71,15 @@ findLastVehicleRC certNumber = do
     headMaybe (x : _) = Just x
 
 findByRCAndExpiry ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
+  Proxy ma ->
   m (Maybe VehicleRegistrationCertificate)
-findByRCAndExpiry certNumber expiry = do
+findByRCAndExpiry certNumber expiry _ = do
   let certNumberHash = certNumber & (.hash)
-  findOne $ do
+  findOne @m @ma $ do
     rc <- from $ table @VehicleRegistrationCertificateT
     where_ $
       rc ^. VehicleRegistrationCertificateCertificateNumberHash ==. val certNumberHash

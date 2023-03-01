@@ -108,6 +108,7 @@ authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BPP:Registration:auth:" <> getId person.id <> ":hitsCount"
 
 auth ::
+  forall m r.
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     HasCacheConfig r,
@@ -131,7 +132,7 @@ auth req mbBundleVersion mbClientVersion = do
     QMerchant.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   person <-
-    QP.findByMobileNumber countryCode mobileNumberHash
+    QP.findByMobileNumber countryCode mobileNumberHash (Proxy @m)
       >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
@@ -139,7 +140,7 @@ auth req mbBundleVersion mbClientVersion = do
       scfg = sessionConfig smsCfg
   token <- makeSession scfg entityId SR.USER (show <$> useFakeOtpM)
   Esq.runTransaction do
-    QR.create token
+    QR.create @m token
     QP.updatePersonVersions person mbBundleVersion mbClientVersion
   whenNothing_ useFakeOtpM $ do
     otpSmsTemplate <- asks (.otpSmsTemplate)
@@ -154,7 +155,7 @@ auth req mbBundleVersion mbClientVersion = do
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-createDriverDetails :: Id SP.Person -> Esq.SqlDB ()
+createDriverDetails :: Id SP.Person -> Esq.SqlDB m ()
 createDriverDetails personId = do
   now <- getCurrentTime
   let driverInfo =
@@ -242,11 +243,11 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
+createDriverWithDetails :: forall m r. (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DO.Merchant -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion mercahntId = do
   person <- makePerson req mbBundleVersion mbClientVersion mercahntId
   DB.runTransaction $ do
-    QP.create person
+    QP.create @m person
     QDFS.create $ makeIdleDriverFlowStatus person
     createDriverDetails (person.id)
   pure person
@@ -259,6 +260,7 @@ createDriverWithDetails req mbBundleVersion mbClientVersion mercahntId = do
         }
 
 verify ::
+  forall m r.
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
     Redis.HedisFlow m r,
@@ -271,22 +273,22 @@ verify ::
   m AuthVerifyRes
 verify tokenId req = do
   runRequestValidation validateAuthVerifyReq req
-  SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
+  SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId (Proxy @m)
   checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
   when verified $ throwError $ AuthBlocked "Already verified."
   checkForExpiry authExpiry updatedAt
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
-  person <- checkPersonExists entityId
+  person <- checkPersonExists entityId (Proxy @m)
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
   Esq.runTransaction $ do
-    QR.deleteByPersonIdExceptNew person.id tokenId
+    QR.deleteByPersonIdExceptNew @m person.id tokenId
     QR.setVerified tokenId
     QP.updateDeviceToken person.id deviceToken
     when isNewPerson $
       QP.setIsNewFalse person.id
-  updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
+  updPers <- QP.findById (Proxy @m) (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
   unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
     fork "whatsapp_opt_api_call" $ do
@@ -301,6 +303,7 @@ verify tokenId req = do
         throwError TokenExpired
 
 callWhatsappOptApi ::
+  forall m r.
   ( EsqDBFlow m r,
     CoreMetrics m,
     EncFlow m r,
@@ -315,17 +318,18 @@ callWhatsappOptApi mobileNo merchantId personId hasOptedIn = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
   void $ Whatsapp.whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
   DB.runTransaction $
-    QP.updateWhatsappNotificationEnrollStatus personId $ Just status
+    QP.updateWhatsappNotificationEnrollStatus @m personId $ Just status
 
-checkRegistrationTokenExists :: (Esq.Transactionable m, MonadThrow m, Log m) => Id SR.RegistrationToken -> m SR.RegistrationToken
-checkRegistrationTokenExists tokenId =
-  QR.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
+checkRegistrationTokenExists :: forall m ma. (Esq.Transactionable ma m, MonadThrow m, Log m) => Id SR.RegistrationToken -> Proxy ma -> m SR.RegistrationToken
+checkRegistrationTokenExists tokenId proxy =
+  QR.findById proxy tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-checkPersonExists :: (Esq.Transactionable m, MonadThrow m, Log m) => Text -> m SP.Person
-checkPersonExists entityId =
-  QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
+checkPersonExists :: forall m ma. (Esq.Transactionable ma m, MonadThrow m, Log m) => Text -> Proxy ma -> m SP.Person
+checkPersonExists entityId proxy =
+  QP.findById proxy (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
 
 resend ::
+  forall m r.
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
@@ -336,8 +340,8 @@ resend ::
   Id SR.RegistrationToken ->
   m ResendAuthRes
 resend tokenId = do
-  SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
-  person <- checkPersonExists entityId
+  SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId (Proxy @m)
+  person <- checkPersonExists entityId (Proxy @m)
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
   smsCfg <- asks (.smsCfg)
   otpSmsTemplate <- asks (.otpSmsTemplate)
@@ -350,17 +354,18 @@ resend tokenId = do
   withLogTag ("personId_" <> entityId) $
     Sms.sendSMS person.merchantId (Sms.constructSendSMSReq otpCode otpHash otpSmsTemplate phoneNumber sender)
       >>= Sms.checkSmsResult
-  Esq.runTransaction $ QR.updateAttempts (attempts - 1) id
+  Esq.runTransaction $ QR.updateAttempts @m (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
+cleanCachedTokens :: forall m r. (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
-  regTokens <- QR.findAllByPersonId personId
+  regTokens <- QR.findAllByPersonId personId (Proxy @m)
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
 
 logout ::
+  forall m r.
   ( EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r
@@ -370,10 +375,10 @@ logout ::
 logout personId = do
   cleanCachedTokens personId
   uperson <-
-    QP.findById personId
+    QP.findById (Proxy @m) personId
       >>= fromMaybeM (PersonNotFound personId.getId)
   Esq.runTransaction $ do
-    QP.updateDeviceToken uperson.id Nothing
+    QP.updateDeviceToken @m uperson.id Nothing
     QR.deleteByPersonId personId
   when (uperson.role == SP.DRIVER) $ QD.updateActivity (cast uperson.id) False
   pure Success

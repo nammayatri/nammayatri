@@ -36,17 +36,17 @@ import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
 import Storage.Tabular.RiderDetails as RiderDetails
 
-create :: Ride -> SqlDB ()
+create :: Ride -> SqlDB m ()
 create = Esq.create
 
-findById :: Transactionable m => Id Ride -> m (Maybe Ride)
-findById rideId = Esq.findOne $ do
+findById :: forall m ma. Transactionable ma m => Id Ride -> Proxy ma -> m (Maybe Ride)
+findById rideId _ = Esq.findOne @m @ma $ do
   ride <- from $ table @RideT
   where_ $ ride ^. RideTId ==. val (toKey rideId)
   pure ride
 
-findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
-findActiveByRBId rbId = Esq.findOne $ do
+findActiveByRBId :: forall m ma. Transactionable ma m => Id Booking -> Proxy ma -> m (Maybe Ride)
+findActiveByRBId rbId _ = Esq.findOne @m @ma $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. Ride.RideBookingId ==. val (toKey rbId)
@@ -54,18 +54,20 @@ findActiveByRBId rbId = Esq.findOne $ do
   pure ride
 
 findAllByDriverId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Person ->
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
   Maybe Ride.RideStatus ->
+  Proxy ma ->
   m [(Ride, Booking)]
-findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buildDType $ do
+findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus _ = Esq.buildDType $ do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
-  res <- Esq.findAll' $ do
+  res <- Esq.findAll' @m @ma $ do
     ((booking :& fromLocation :& toLocation :& fareParams) :& ride) <-
       from $
         baseBookingTable
@@ -86,25 +88,25 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
     res <&> \(fullBookingT, ride) -> do
       (extractSolidType @Ride ride, extractSolidType @Booking fullBookingT)
 
-findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-findOneByDriverId driverId = Esq.findOne $ do
+findOneByDriverId :: forall m ma. Transactionable ma m => Id Person -> Proxy ma -> m (Maybe Ride)
+findOneByDriverId driverId _ = Esq.findOne @m @ma $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. RideDriverId ==. val (toKey driverId)
   limit 1
   pure ride
 
-getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-getInProgressByDriverId driverId = Esq.findOne $ do
+getInProgressByDriverId :: forall m ma. Transactionable ma m => Id Person -> Proxy ma -> m (Maybe Ride)
+getInProgressByDriverId driverId _ = Esq.findOne @m @ma $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. RideDriverId ==. val (toKey driverId)
       &&. ride ^. RideStatus ==. val Ride.INPROGRESS
   pure ride
 
-getInProgressOrNewRideIdAndStatusByDriverId :: Transactionable m => Id Person -> m (Maybe (Id Ride, RideStatus))
-getInProgressOrNewRideIdAndStatusByDriverId driverId = do
-  mbTuple :: Maybe (Text, RideStatus) <- Esq.findOne $ do
+getInProgressOrNewRideIdAndStatusByDriverId :: forall m ma. Transactionable ma m => Id Person -> Proxy ma -> m (Maybe (Id Ride, RideStatus))
+getInProgressOrNewRideIdAndStatusByDriverId driverId _ = do
+  mbTuple :: Maybe (Text, RideStatus) <- Esq.findOne @m @ma $ do
     ride <- from $ table @RideT
     where_ $
       ride ^. RideDriverId ==. val (toKey driverId)
@@ -112,8 +114,8 @@ getInProgressOrNewRideIdAndStatusByDriverId driverId = do
     pure (ride ^. RideId, ride ^. RideStatus)
   pure $ first Id <$> mbTuple
 
-getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-getActiveByDriverId driverId = Esq.findOne $ do
+getActiveByDriverId :: forall m ma. Transactionable ma m => Id Person -> Proxy ma -> m (Maybe Ride)
+getActiveByDriverId driverId _ = Esq.findOne @m @ma $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. RideDriverId ==. val (toKey driverId)
@@ -125,7 +127,7 @@ getActiveByDriverId driverId = Esq.findOne $ do
 updateStatus ::
   Id Ride ->
   RideStatus ->
-  SqlDB ()
+  SqlDB m ()
 updateStatus rideId status = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -139,7 +141,7 @@ updateStatus rideId status = do
 updateStartTimeAndLoc ::
   Id Ride ->
   LatLong ->
-  SqlDB ()
+  SqlDB m ()
 updateStartTimeAndLoc rideId point = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -155,7 +157,7 @@ updateStartTimeAndLoc rideId point = do
 updateStatusByIds ::
   [Id Ride] ->
   RideStatus ->
-  SqlDB ()
+  SqlDB m ()
 updateStatusByIds ids status = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -169,7 +171,7 @@ updateStatusByIds ids status = do
 updateDistance ::
   Id Person ->
   HighPrecMeters ->
-  SqlDB ()
+  SqlDB m ()
 updateDistance driverId distance = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -185,7 +187,7 @@ updateDistance driverId distance = do
 updateAll ::
   Id Ride ->
   Ride ->
-  SqlDB ()
+  SqlDB m ()
 updateAll rideId ride = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -201,9 +203,9 @@ updateAll rideId ride = do
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 
-getCountByStatus :: Transactionable m => Id Merchant -> m [(RideStatus, Int)]
-getCountByStatus merchantId = do
-  Esq.findAll $ do
+getCountByStatus :: forall m ma. Transactionable ma m => Id Merchant -> Proxy ma -> m [(RideStatus, Int)]
+getCountByStatus merchantId _ = do
+  Esq.findAll @m @ma $ do
     (ride :& booking) <-
       from $
         table @RideT
@@ -215,10 +217,10 @@ getCountByStatus merchantId = do
     groupBy $ ride ^. RideStatus
     return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))
 
-countRides :: Transactionable m => Id Merchant -> m Int
-countRides merchantId =
+countRides :: forall m ma. Transactionable ma m => Id Merchant -> Proxy ma -> m Int
+countRides merchantId _ =
   mkCount <$> do
-    Esq.findAll $ do
+    Esq.findAll @m @ma $ do
       (_ride :& booking) <-
         from $
           table @RideT
@@ -232,8 +234,8 @@ countRides merchantId =
     mkCount [counter] = counter
     mkCount _ = 0
 
-getRidesForDate :: Transactionable m => Id Person -> Day -> m [Ride]
-getRidesForDate driverId date = Esq.findAll $ do
+getRidesForDate :: forall m ma. Transactionable ma m => Id Person -> Day -> Proxy ma -> m [Ride]
+getRidesForDate driverId date _ = Esq.findAll @m @ma $ do
   ride <- from $ table @RideT
   where_ $
     ride ^. RideDriverId ==. val (toKey driverId)
@@ -245,7 +247,7 @@ getRidesForDate driverId date = Esq.findAll $ do
     minDayTime = UTCTime (addDays (-1) date) 66600
     maxDayTime = UTCTime date 66600
 
-updateArrival :: Id Ride -> SqlDB ()
+updateArrival :: Id Ride -> SqlDB m ()
 updateArrival rideId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -266,7 +268,8 @@ data RideItem = RideItem
   }
 
 findAllRideItems ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
   Int ->
   Int ->
@@ -276,9 +279,10 @@ findAllRideItems ::
   Maybe DbHash ->
   Maybe Money ->
   UTCTime ->
+  Proxy ma ->
   m [RideItem]
-findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now = do
-  res <- Esq.findAll $ do
+findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now _ = do
+  res <- Esq.findAll @m @ma $ do
     booking :& ride :& rideDetails :& riderDetails <-
       from $
         table @BookingT
@@ -341,9 +345,9 @@ data StuckRideItem = StuckRideItem
     driverActive :: Bool
   }
 
-findStuckRideItems :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
-findStuckRideItems merchantId bookingIds now = do
-  res <- Esq.findAll $ do
+findStuckRideItems :: forall m ma. Transactionable ma m => Id Merchant -> [Id Booking] -> UTCTime -> Proxy ma -> m [StuckRideItem]
+findStuckRideItems merchantId bookingIds now _ = do
+  res <- Esq.findAll @m @ma $ do
     ride :& booking :& driverInfo <-
       from $
         table @RideT

@@ -29,10 +29,10 @@ import Storage.Tabular.DriverQuote as DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 
 -- fareParams already created with driverQuote
-create :: Booking -> SqlDB ()
+create :: forall m. Monad m => Booking -> SqlDB m ()
 create dBooking = Esq.runTransaction $
   withFullEntity dBooking $ \(booking, fromLoc, toLoc, _fareParams) -> do
-    Esq.create' fromLoc
+    Esq.create' @BookingLocationT @m fromLoc
     Esq.create' toLoc
     Esq.create' booking
 
@@ -52,19 +52,19 @@ baseBookingTable =
                    rb ^. BookingFareParametersId ==. farePars ^. Fare.FareParametersTId
                )
 
-findById :: Transactionable m => Id Booking -> m (Maybe Booking)
-findById bookingId = buildDType $
+findById :: forall m ma. Transactionable ma m => Id Booking -> Proxy ma -> m (Maybe Booking)
+findById bookingId _ = buildDType $
   fmap (fmap $ extractSolidType @Booking) $
-    Esq.findOne' $ do
+    Esq.findOne' @m @ma $ do
       (rb :& bFromLoc :& bToLoc :& farePars) <-
         from baseBookingTable
       where_ $ rb ^. BookingTId ==. val (toKey bookingId)
       pure (rb, bFromLoc, bToLoc, farePars)
 
-findBySearchReq :: Transactionable m => Id DSR.SearchRequest -> m (Maybe Booking)
-findBySearchReq searchReqId = buildDType $
+findBySearchReq :: forall m ma. Transactionable ma m => Id DSR.SearchRequest -> Proxy ma -> m (Maybe Booking)
+findBySearchReq searchReqId _ = buildDType $
   fmap (fmap $ extractSolidType @Booking) $
-    Esq.findOne' $ do
+    Esq.findOne' @m @ma $ do
       (rb :& bFromLoc :& bToLoc :& farePars :& dq) <-
         from
           ( baseBookingTable
@@ -76,7 +76,7 @@ findBySearchReq searchReqId = buildDType $
       where_ $ dq ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
       pure (rb, bFromLoc, bToLoc, farePars)
 
-updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
+updateStatus :: Id Booking -> BookingStatus -> SqlDB m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -87,7 +87,7 @@ updateStatus rbId rbStatus = do
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey rbId)
 
-updateRiderId :: Id Booking -> Id RiderDetails -> SqlDB ()
+updateRiderId :: Id Booking -> Id RiderDetails -> SqlDB m ()
 updateRiderId rbId riderId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -98,7 +98,7 @@ updateRiderId rbId riderId = do
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey rbId)
 
-updateRiderName :: Id Booking -> Text -> SqlDB ()
+updateRiderName :: Id Booking -> Text -> SqlDB m ()
 updateRiderName bookingId riderName = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -109,9 +109,9 @@ updateRiderName bookingId riderName = do
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
 
-findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
-findStuckBookings merchantId bookingIds now = do
-  Esq.findAll $ do
+findStuckBookings :: forall m ma. Transactionable ma m => Id Merchant -> [Id Booking] -> UTCTime -> Proxy ma -> m [Id Booking]
+findStuckBookings merchantId bookingIds now _ = do
+  Esq.findAll @m @ma $ do
     booking <- from $ table @BookingT
     let upcoming6HrsCond =
           booking ^. BookingCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
@@ -121,7 +121,7 @@ findStuckBookings merchantId bookingIds now = do
         &&. (booking ^. BookingStatus ==. val NEW &&. upcoming6HrsCond)
     pure $ booking ^. BookingTId
 
-cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
+cancelBookings :: [Id Booking] -> UTCTime -> SqlDB m ()
 cancelBookings bookingIds now = do
   Esq.update $ \tbl -> do
     set

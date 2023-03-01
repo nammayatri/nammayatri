@@ -41,6 +41,7 @@ data DTrackRes = TrackRes
   }
 
 track ::
+  forall m r.
   (CacheFlow m r, EsqDBFlow m r) =>
   Id DM.Merchant ->
   DTrackReq ->
@@ -49,8 +50,8 @@ track transporterId req = do
   transporter <-
     QM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  ride <- QRide.findById req.rideId (Proxy @m) >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
+  booking <- QRB.findById ride.bookingId (Proxy @m) >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
   return $

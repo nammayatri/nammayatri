@@ -24,23 +24,25 @@ import Kernel.Types.Id
 import Storage.Tabular.Message.Instances ()
 import Storage.Tabular.Message.Message
 
-create :: Message -> SqlDB ()
+create :: forall m. Monad m => Message -> SqlDB m ()
 create msg = Esq.runTransaction $
   withFullEntity msg $ \(message, messageTranslations) -> do
-    Esq.create' message
+    Esq.create' @MessageT @m message
     traverse_ Esq.create' messageTranslations
 
-findById :: Transactionable m => Id Message -> m (Maybe RawMessage)
-findById = Esq.findById
+findById :: forall m ma. Transactionable ma m => Proxy ma -> Id Message -> m (Maybe RawMessage)
+findById _ = Esq.findById @m @ma
 
 findAllWithLimitOffset ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Maybe Int ->
   Maybe Int ->
   Id Merchant ->
+  Proxy ma ->
   m [RawMessage]
-findAllWithLimitOffset mbLimit mbOffset merchantId = do
-  findAll $ do
+findAllWithLimitOffset mbLimit mbOffset merchantId _ = do
+  findAll @m @ma $ do
     message <-
       from $
         table @MessageT

@@ -35,10 +35,10 @@ data GetDriverFlowStatusRes = GetDriverFlowStatusRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getDriverFlowStatus :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m GetDriverFlowStatusRes
+getDriverFlowStatus :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> m GetDriverFlowStatusRes
 getDriverFlowStatus personId = do
   -- should not be run in replica
-  driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
+  driverStatus <- QDFS.getStatus personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   case driverStatus of
     DDFS.GOT_SEARCH_REQUEST _ _ -> expireDriverStatusIfNeeded driverStatus
     DDFS.OFFERED_QUOTE _ _ -> expireDriverStatusIfNeeded driverStatus
@@ -52,8 +52,8 @@ getDriverFlowStatus personId = do
           driverInfo <- CDI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
           if driverInfo.active
             then do
-              Esq.runTransaction $ QDFS.updateStatus personId DDFS.ACTIVE
+              Esq.runTransaction $ QDFS.updateStatus @m personId DDFS.ACTIVE
               return $ GetDriverFlowStatusRes (Just driverStatus) DDFS.ACTIVE
             else do
-              Esq.runTransaction $ QDFS.updateStatus personId DDFS.IDLE
+              Esq.runTransaction $ QDFS.updateStatus @m personId DDFS.IDLE
               return $ GetDriverFlowStatusRes (Just driverStatus) DDFS.IDLE

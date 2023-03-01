@@ -29,33 +29,37 @@ import Kernel.Utils.Common
 import Storage.Tabular.FarePolicy.FarePolicy
 
 findAllByMerchantId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
+  Proxy ma ->
   m [FarePolicy]
-findAllByMerchantId merchantId = do
-  Esq.findAll $ do
+findAllByMerchantId merchantId _ = do
+  Esq.findAll @m @ma $ do
     farePolicy <- from $ table @FarePolicyT
     where_ $
       farePolicy ^. FarePolicyMerchantId ==. val (toKey merchantId)
     return farePolicy
 
 findByMerchantIdAndVariant ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
   Variant ->
+  Proxy ma ->
   m (Maybe FarePolicy)
-findByMerchantIdAndVariant merchantId variant = do
-  Esq.findOne $ do
+findByMerchantIdAndVariant merchantId variant _ = do
+  Esq.findOne @m @ma $ do
     farePolicy <- from $ table @FarePolicyT
     where_ $
       farePolicy ^. FarePolicyMerchantId ==. val (toKey merchantId)
         &&. farePolicy ^. FarePolicyVehicleVariant ==. val variant
     return farePolicy
 
-findById :: Transactionable m => Id FarePolicy -> m (Maybe FarePolicy)
-findById = Esq.findById
+findById :: forall m ma. Transactionable ma m => Proxy ma -> Id FarePolicy -> m (Maybe FarePolicy)
+findById _ = Esq.findById @m @ma
 
-update :: FarePolicy -> SqlDB ()
+update :: FarePolicy -> SqlDB m ()
 update farePolicy = do
   now <- getCurrentTime
   void $

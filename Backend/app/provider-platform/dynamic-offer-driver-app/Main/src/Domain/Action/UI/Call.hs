@@ -45,33 +45,33 @@ type GetCallStatusRes = SCS.CallStatusAPIEntity
 
 type MobileNumberResp = Text
 
-directCallStatusCallback :: EsqDBFlow m r => Text -> Text -> Text -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback :: forall m r. EsqDBFlow m r => Text -> Text -> Text -> Maybe Int -> m CallCallbackRes
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
   let dialCallStatus = fromText dialCallStatus_ :: ExotelCallStatus
-  callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
+  callStatus <- QCallStatus.findByCallSid callSid (Proxy @m) >>= fromMaybeM CallStatusDoesNotExist
   recordingUrl <- parseBaseUrl recordingUrl_
-  runTransaction $ QCallStatus.updateCallStatus callStatus.id dialCallStatus (fromMaybe 0 callDuration) recordingUrl
+  runTransaction $ QCallStatus.updateCallStatus @m callStatus.id dialCallStatus (fromMaybe 0 callDuration) recordingUrl
   return Ack
 
-getCustomerMobileNumber :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> m MobileNumberResp
+getCustomerMobileNumber :: forall m r. (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> m MobileNumberResp
 getCustomerMobileNumber callSid callFrom_ callStatus_ = do
   let callStatus = fromText callStatus_ :: ExotelCallStatus
   let callFrom = dropFirstZero callFrom_
   mobileNumberHash <- getDbHash callFrom
-  driver <- runInReplica $ QPerson.findByMobileNumber "+91" mobileNumberHash >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
-  activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
-  activeBooking <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
+  driver <- runInReplica $ QPerson.findByMobileNumber "+91" mobileNumberHash (Proxy @m) >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
+  activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id (Proxy @m) >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
+  activeBooking <- runInReplica $ QRB.findById activeRide.bookingId (Proxy @m) >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   riderId <-
     activeBooking.riderId
       & fromMaybeM (BookingFieldNotPresent "riderId")
   riderDetails <-
     runInReplica $
-      QRD.findById riderId
+      QRD.findById (Proxy @m) riderId
         >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   requestorPhone <- decrypt riderDetails.mobileNumber
   callId <- generateGUID
   callStatusObj <- buildCallStatus activeRide.id callId callSid callStatus
-  runTransaction $ QCallStatus.create callStatusObj
+  runTransaction $ QCallStatus.create @m callStatusObj
   return requestorPhone
   where
     dropFirstZero = T.dropWhile (== '0')
@@ -88,6 +88,6 @@ getCustomerMobileNumber callSid callFrom_ callStatus_ = do
             createdAt = now
           }
 
-getCallStatus :: (EsqDBFlow m r) => Id SCS.CallStatus -> m GetCallStatusRes
+getCallStatus :: forall m r. (EsqDBFlow m r) => Id SCS.CallStatus -> m GetCallStatusRes
 getCallStatus callStatusId = do
-  QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity
+  QCallStatus.findById (Proxy @m) callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity

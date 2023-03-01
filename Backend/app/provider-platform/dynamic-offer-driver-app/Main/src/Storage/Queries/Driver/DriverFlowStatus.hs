@@ -22,24 +22,26 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.Driver.DriverFlowStatus
 
-create :: DDFS.DriverFlowStatus -> SqlDB ()
+create :: DDFS.DriverFlowStatus -> SqlDB m ()
 create = Esq.create
 
-deleteById :: Id Person -> SqlDB ()
+deleteById :: Id Person -> SqlDB m ()
 deleteById = Esq.deleteByKey @DriverFlowStatusT
 
 getStatus ::
-  (Transactionable m) =>
+  forall ma m.
+  (Transactionable ma m) =>
   Id Person ->
+  Proxy ma ->
   m (Maybe DDFS.FlowStatus)
-getStatus personId = do
-  findOne $ do
+getStatus personId _ = do
+  findOne @m @ma $ do
     driverFlowStatus <- from $ table @DriverFlowStatusT
     where_ $
       driverFlowStatus ^. DriverFlowStatusTId ==. val (toKey personId)
     return $ driverFlowStatus ^. DriverFlowStatusFlowStatus
 
-updateStatus :: Id Person -> DDFS.FlowStatus -> SqlDB ()
+updateStatus :: Id Person -> DDFS.FlowStatus -> SqlDB m ()
 updateStatus personId flowStatus = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do

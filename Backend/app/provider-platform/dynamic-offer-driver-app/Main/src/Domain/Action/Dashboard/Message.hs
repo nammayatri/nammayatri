@@ -73,7 +73,7 @@ addLinkAsMedia merchantShortId req = do
 createMediaEntry :: Common.AddLinkAsMedia -> Flow Common.UploadFileResponse
 createMediaEntry Common.AddLinkAsMedia {..} = do
   fileEntity <- mkFile url
-  Esq.runTransaction $ MFQuery.create fileEntity
+  Esq.runTransaction $ MFQuery.create @Flow fileEntity
   return $ Common.UploadFileResponse {fileId = cast $ fileEntity.id}
   where
     mapToDomain = \case
@@ -154,7 +154,7 @@ addMessage :: ShortId DM.Merchant -> Common.AddMessageRequest -> Flow Common.Add
 addMessage merchantShortId Common.AddMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
   message <- mkMessage merchant
-  Esq.runTransaction $ MQuery.create message
+  Esq.runTransaction $ MQuery.create @Flow message
   return $ Common.AddMessageResponse {messageId = cast $ message.id}
   where
     mkMessage merchant = do
@@ -181,7 +181,7 @@ instance FromNamedRecord CSVRow where
 sendMessage :: ShortId DM.Merchant -> Common.SendMessageRequest -> Flow APISuccess
 sendMessage merchantShortId Common.SendMessageRequest {..} = do
   _ <- findMerchantByShortId merchantShortId
-  message <- Esq.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
+  message <- Esq.runInReplica $ MQuery.findById (Proxy @Flow) (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
   -- reading of csv file
   csvData <- L.runIO $ BS.readFile csvFile
   driverIds <-
@@ -196,7 +196,7 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
     addToKafka message driverId = do
       topicName <- asks (.broadcastMessageTopic)
       now <- getCurrentTime
-      void $ try @_ @SomeException (Esq.runTransaction $ MRQuery.create (mkMessageReport now driverId)) -- avoid extra DB call to check if driverId exists
+      void $ try @_ @SomeException (Esq.runTransaction $ MRQuery.create @Flow (mkMessageReport now driverId)) -- avoid extra DB call to check if driverId exists
       msg <- createMessageLanguageDict message
       produceMessage
         (topicName, Just (encodeUtf8 $ getId driverId))
@@ -204,7 +204,7 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
 
     createMessageLanguageDict :: Domain.RawMessage -> Flow Domain.MessageDict
     createMessageLanguageDict message = do
-      translations <- Esq.runInReplica $ MTQuery.findByMessageId message.id
+      translations <- Esq.runInReplica $ MTQuery.findByMessageId message.id (Proxy @Flow)
       pure $ Domain.MessageDict message (M.fromList $ map (addTranslation message) translations)
 
     addTranslation Domain.RawMessage {..} trans =
@@ -225,7 +225,7 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
 messageList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
 messageList merchantShortId mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
-  messages <- MQuery.findAllWithLimitOffset mbLimit mbOffset merchant.id
+  messages <- MQuery.findAllWithLimitOffset mbLimit mbOffset merchant.id (Proxy @Flow)
   let count = length messages
   let summary = Common.Summary {totalCount = count, count}
   return $ Common.MessageListResponse {messages = buildMessage <$> messages, summary}
@@ -241,8 +241,8 @@ messageList merchantShortId mbLimit mbOffset = do
 messageInfo :: ShortId DM.Merchant -> Id Domain.Message -> Flow Common.MessageInfoResponse
 messageInfo merchantShortId messageId = do
   _ <- findMerchantByShortId merchantShortId
-  message <- MQuery.findById messageId >>= fromMaybeM (InvalidRequest "Message Not Found")
-  mediaFiles <- mapMaybeM MFQuery.findById message.mediaFiles
+  message <- MQuery.findById (Proxy @Flow) messageId >>= fromMaybeM (InvalidRequest "Message Not Found")
+  mediaFiles <- mapMaybeM (MFQuery.findById (Proxy @Flow)) message.mediaFiles
   return $ buildMessageInfoResponse mediaFiles message
   where
     buildMessageInfoResponse mf Domain.RawMessage {..} =
@@ -257,17 +257,17 @@ messageInfo merchantShortId messageId = do
 messageDeliveryInfo :: ShortId DM.Merchant -> Id Domain.Message -> Flow Common.MessageDeliveryInfoResponse
 messageDeliveryInfo merchantShortId messageId = do
   _ <- findMerchantByShortId merchantShortId
-  success <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Success
-  failed <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Failed
-  queued <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Queued
-  sending <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Sending
+  success <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Success (Proxy @Flow)
+  failed <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Failed (Proxy @Flow)
+  queued <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Queued (Proxy @Flow)
+  sending <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Sending (Proxy @Flow)
 
   return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending}
 
 messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
 messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do
   _ <- findMerchantByShortId merchantShortId
-  encMesageReports <- Esq.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
+  encMesageReports <- Esq.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId (toDomainDeliveryStatusType <$> mbStatus) (Proxy @Flow)
   messageReports <- mapM (secondM decrypt) encMesageReports
   let count = length messageReports
   let summary = Common.Summary {totalCount = count, count}

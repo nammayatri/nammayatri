@@ -35,6 +35,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.Metrics as Metrics
 
 sendSearchRequestToDrivers ::
+  forall m r.
   ( EncFlow m r,
     TranslateFlow m r,
     EsqDBReplicaFlow m r,
@@ -51,7 +52,7 @@ sendSearchRequestToDrivers ::
   m ExecutionResult
 sendSearchRequestToDrivers Job {id, jobData} = withLogTag ("JobId-" <> id.getId) do
   let searchReqId = jobData.requestId
-  searchReq <- QSR.findById searchReqId >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
+  searchReq <- QSR.findById searchReqId (Proxy @m) >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig jobData.estimatedRideDistance
   sendSearchRequestToDrivers' driverPoolConfig searchReq merchant jobData.baseFare jobData.driverMinExtraFee jobData.driverMaxExtraFee

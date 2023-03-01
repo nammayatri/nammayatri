@@ -33,8 +33,8 @@ import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 
 onVerify :: VerificationResponse -> Text -> Flow AckResponse
 onVerify resp respDump = do
-  verificationReq <- IVQuery.findByRequestId resp.request_id >>= fromMaybeM (InternalError "Verification request not found")
-  runTransaction $ IVQuery.updateResponse resp.request_id resp.status respDump
+  verificationReq <- IVQuery.findByRequestId resp.request_id (Proxy @Flow) >>= fromMaybeM (InternalError "Verification request not found")
+  runTransaction $ IVQuery.updateResponse @Flow resp.request_id resp.status respDump
 
   ack_ <- maybe (pure Ack) (verifyDocument verificationReq) resp.result
   -- running statusHandler to enable Driver

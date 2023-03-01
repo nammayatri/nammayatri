@@ -61,6 +61,7 @@ newtype CancelSearchReq = CancelSearchReq
   }
 
 cancel ::
+  forall m r c.
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -81,17 +82,17 @@ cancel transporterId _ req = do
   transporter <-
     QM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  booking <- QRB.findById req.bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
-  mbRide <- QRide.findActiveByRBId req.bookingId
+  mbRide <- QRide.findActiveByRBId req.bookingId (Proxy @m)
   bookingCR <- buildBookingCancellationReason
   Esq.runTransaction $ do
-    QBCR.upsert bookingCR
+    QBCR.upsert @m bookingCR
     QRB.updateStatus booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED
-      driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      driverInfo <- QDI.findById (Proxy @m) (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       if driverInfo.active
         then QDFS.updateStatus ride.driverId DDFS.ACTIVE
         else QDFS.updateStatus ride.driverId DDFS.IDLE
@@ -104,7 +105,7 @@ cancel transporterId _ req = do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCR.source
   whenJust mbRide $ \ride ->
     fork "cancelRide - Notify driver" $ do
-      driver <- QPers.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      driver <- QPers.findById (Proxy @m) ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       Notify.notifyOnCancel transporter.id booking driver.id driver.deviceToken bookingCR.source
   where
     buildBookingCancellationReason = do
@@ -120,6 +121,7 @@ cancel transporterId _ req = do
           }
 
 cancelSearch ::
+  forall m r.
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -132,12 +134,12 @@ cancelSearch ::
   m ()
 cancelSearch transporterId _ req = do
   let transactionId = req.searchId
-  searchID <- Esq.runInReplica $ SR.getRequestIdfromTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound transactionId.getId)
-  driverSearchReqs <- Esq.runInReplica $ QSRD.findAllActiveByRequestId searchID
+  searchID <- Esq.runInReplica $ SR.getRequestIdfromTransactionId transactionId (Proxy @m) >>= fromMaybeM (SearchRequestNotFound transactionId.getId)
+  driverSearchReqs <- Esq.runInReplica $ QSRD.findAllActiveByRequestId searchID (Proxy @m)
   for_ driverSearchReqs $ \driverReq -> do
     logTagInfo ("searchId-" <> getId req.searchId) "Search Request Cancellation"
     DB.runTransaction $ do
-      SR.updateStatus searchID SR.CANCELLED
+      SR.updateStatus @m searchID SR.CANCELLED
       QSRD.setInactiveByRequestId driverReq.searchRequestId
-    driver_ <- Esq.runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
+    driver_ <- Esq.runInReplica $ QPerson.findById (Proxy @m) driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
     Notify.notifyOnCancelSearchRequest transporterId driverReq.driverId driver_.deviceToken driverReq.searchRequestId

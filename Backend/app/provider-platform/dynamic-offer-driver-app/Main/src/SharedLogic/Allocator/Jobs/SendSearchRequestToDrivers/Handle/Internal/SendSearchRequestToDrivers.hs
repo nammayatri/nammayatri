@@ -43,6 +43,7 @@ import qualified Tools.Notifications as Notify
 type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 
 sendSearchRequestToDrivers ::
+  forall m r.
   ( Log m,
     EsqDBFlow m r,
     TranslateFlow m r,
@@ -68,7 +69,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   Esq.runTransaction $ do
-    QSRD.setInactiveByRequestId searchReq.id -- inactive previous request by drivers so that they can make new offers.
+    QSRD.setInactiveByRequestId @m searchReq.id -- inactive previous request by drivers so that they can make new offers.
     QSRD.createMany searchRequestsForDrivers
     forM_ driverPoolZipSearchRequests $ \(_, sReqFD) -> do
       QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = sReqFD.searchRequestId, validTill = sReqFD.searchRequestValidTill}

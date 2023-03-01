@@ -94,14 +94,14 @@ handler merchantId sReq = do
 
   inTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
   Esq.runTransaction $ do
-    QSReq.create searchReq
+    QSReq.create @Flow searchReq
 
   driverPoolConfig <- getDriverPoolConfig distance
   res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverExtraFare.minFee driverExtraFare.maxFee
   case res of
     ReSchedule ut ->
       Esq.runTransaction $ do
-        createAllocatorSendSearchRequestToDriverJob inTime $
+        createAllocatorSendSearchRequestToDriverJob @Flow inTime $
           SendSearchRequestToDriverJobData
             { requestId = searchReq.id,
               baseFare = baseFare,

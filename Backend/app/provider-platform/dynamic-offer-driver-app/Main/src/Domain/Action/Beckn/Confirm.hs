@@ -79,6 +79,7 @@ data DConfirmRes = DConfirmRes
   }
 
 handler ::
+  forall m r c.
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -86,6 +87,8 @@ handler ::
     HedisFlow m r,
     DP.HasDriverPoolConfig r,
     HasPrettyLogger m r,
+    --HasField "httpClientOptions" r HttpClientOptions,
+    --HasField "longDurationRetryCfg" r RetryCfg,
     HasHttpClientOptions r c,
     EncFlow m r,
     CoreMetrics m,
@@ -98,9 +101,9 @@ handler ::
   DConfirmReq ->
   m DConfirmRes
 handler subscriber transporterId req = do
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
-  driverQuote <- QDQ.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
-  driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
+  booking <- QRB.findById req.bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  driverQuote <- QDQ.findById booking.quoteId (Proxy @m) >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+  driver <- QPerson.findById (Proxy @m) driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
   let transporterId' = booking.providerId
   transporter <-
     QM.findById transporterId'
@@ -115,9 +118,9 @@ handler subscriber transporterId req = do
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
   ride <- buildRide driver.id booking
   rideDetails <- buildRideDetails ride driver
-  driverSearchReqs <- QSRD.findAllActiveByRequestId driverQuote.searchRequestId
+  driverSearchReqs <- QSRD.findAllActiveByRequestId driverQuote.searchRequestId (Proxy @m)
   Esq.runTransaction $ do
-    when isNewRider $ QRD.create riderDetails
+    when isNewRider $ QRD.create @m riderDetails
     QRB.updateRiderId booking.id riderDetails.id
     QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
     QBL.updateAddress booking.fromLocation.id req.fromAddress
@@ -138,11 +141,11 @@ handler subscriber transporterId req = do
       DP.decrementTotalQuotesCount transporter.id (cast driverReq.driverId) driverReq.searchRequestId
       DP.removeSearchReqIdFromMap transporter.id driverId driverReq.searchRequestId
       Esq.runTransaction $ do
-        QSRD.updateDriverResponse driverReq.id SReqD.Pulled
-      driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        QSRD.updateDriverResponse @m driverReq.id SReqD.Pulled
+      driver_ <- QPerson.findById (Proxy @m) driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare transporter.id driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
 
-  uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+  uBooking <- QRB.findById booking.id (Proxy @m) >>= fromMaybeM (BookingNotFound booking.id.getId)
   Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
 
   pure
@@ -201,9 +204,9 @@ handler subscriber transporterId req = do
             baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
           }
 
-getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
+getRiderDetails :: forall m r. (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
 getRiderDetails customerMobileCountryCode customerPhoneNumber now =
-  QRD.findByMobileNumber customerPhoneNumber >>= \case
+  QRD.findByMobileNumber customerPhoneNumber (Proxy @m) >>= \case
     Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
     Just a -> return (a, False)
   where
@@ -219,6 +222,7 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
           }
 
 buildRideDetails ::
+  forall m r.
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -234,7 +238,7 @@ buildRideDetails ::
   m SRD.RideDetails
 buildRideDetails ride driver = do
   vehicle <-
-    QVeh.findById ride.driverId
+    QVeh.findById (Proxy @m) ride.driverId
       >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   return
     SRD.RideDetails
@@ -250,6 +254,7 @@ buildRideDetails ride driver = do
       }
 
 cancelBooking ::
+  forall m r c.
   ( EsqDBFlow m r,
     HedisFlow m r,
     Esq.EsqDBReplicaFlow m r,
@@ -268,14 +273,14 @@ cancelBooking booking driver transporter = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   let transporterId' = booking.providerId
   unless (transporterId' == transporter.id) $ throwError AccessDenied
-  mbRide <- QRide.findActiveByRBId booking.id
+  mbRide <- QRide.findActiveByRBId booking.id (Proxy @m)
   bookingCancellationReason <- buildBookingCancellationReason booking.id driver.id mbRide
   Esq.runTransaction $ do
-    QRB.updateStatus booking.id DRB.CANCELLED
+    QRB.updateStatus @m booking.id DRB.CANCELLED
     QBCR.upsert bookingCancellationReason
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id DRide.CANCELLED
-      driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      driverInfo <- QDI.findById (Proxy @m) (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       if driverInfo.active
         then QDFS.updateStatus ride.driverId DDFS.ACTIVE
         else QDFS.updateStatus ride.driverId DDFS.IDLE

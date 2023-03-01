@@ -23,12 +23,12 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.FarePolicy.RestrictedExtraFare
 
-create :: Domain.RestrictedExtraFare -> SqlDB ()
+create :: Domain.RestrictedExtraFare -> SqlDB m ()
 create = Esq.create
 
-findMaxExtraFareByMerchantAndVehicle :: (Transactionable m) => Id Merchant -> Vehicle.Variant -> m [Domain.RestrictedExtraFare]
-findMaxExtraFareByMerchantAndVehicle merchantId vehicleVariant = do
-  findAll $ do
+findMaxExtraFareByMerchantAndVehicle :: forall m ma. (Transactionable ma m) => Id Merchant -> Vehicle.Variant -> Proxy ma -> m [Domain.RestrictedExtraFare]
+findMaxExtraFareByMerchantAndVehicle merchantId vehicleVariant _ = do
+  findAll @m @ma $ do
     restrictedExtraFare <- Esq.from $ table @RestrictedExtraFareT
     where_ $
       restrictedExtraFare ^. RestrictedExtraFareMerchantId ==. val (toKey merchantId)
@@ -36,9 +36,9 @@ findMaxExtraFareByMerchantAndVehicle merchantId vehicleVariant = do
     orderBy [desc (restrictedExtraFare ^. RestrictedExtraFareMinTripDistance)]
     return restrictedExtraFare
 
-findMaxExtraFareByMerchant :: (Transactionable m) => Id Merchant -> m [Domain.RestrictedExtraFare]
-findMaxExtraFareByMerchant merchantId = do
-  findAll $ do
+findMaxExtraFareByMerchant :: forall m ma. (Transactionable ma m) => Id Merchant -> Proxy ma -> m [Domain.RestrictedExtraFare]
+findMaxExtraFareByMerchant merchantId _ = do
+  findAll @m @ma $ do
     restrictedExtraFare <- Esq.from $ table @RestrictedExtraFareT
     where_ $
       restrictedExtraFare ^. RestrictedExtraFareMerchantId ==. val (toKey merchantId)

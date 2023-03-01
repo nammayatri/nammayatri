@@ -53,13 +53,14 @@ getUpdatedFarePolicy mId varId distance farePolicy = do
         Just fare -> Just (fare.driverMaxExtraFare)
         Nothing -> Nothing
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
+findById :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
 findById id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
-    Nothing -> flip whenJust cacheFarePolicy /=<< Queries.findById id
+    Nothing -> flip whenJust cacheFarePolicy /=<< Queries.findById (Proxy @m) id
 
 findByMerchantIdAndVariant ::
+  forall m r.
   (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   Vehicle.Variant ->
@@ -77,9 +78,9 @@ findByMerchantIdAndVariant merchantId vehVar mRideDistance =
           Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
             Just a -> return . Just $ coerce @(FarePolicyD 'Unsafe) @FarePolicy a
             Nothing -> findAndCache
-    findAndCache = flip whenJust cacheFarePolicy /=<< Queries.findByMerchantIdAndVariant merchantId vehVar
+    findAndCache = flip whenJust cacheFarePolicy /=<< Queries.findByMerchantIdAndVariant merchantId vehVar (Proxy @m)
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Meters -> m [FarePolicy]
+findAllByMerchantId :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Meters -> m [FarePolicy]
 findAllByMerchantId merchantId mRideDistance =
   case mRideDistance of
     Just distance -> traverse (getUpdatedFarePolicy merchantId Nothing distance) =<< getFarePolicy
@@ -88,7 +89,7 @@ findAllByMerchantId merchantId mRideDistance =
     getFarePolicy = do
       Hedis.withCrossAppRedis (Hedis.safeGet $ makeAllMerchantIdKey merchantId) >>= \case
         Just a -> return $ fmap (coerce @(FarePolicyD 'Unsafe) @FarePolicy) a
-        Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
+        Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId (Proxy @m)
     cacheRes fps = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.withCrossAppRedis $ Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[FarePolicy] @[FarePolicyD 'Unsafe] fps) expTime
@@ -117,5 +118,7 @@ clearCache fp = Hedis.withCrossAppRedis $ do
   Hedis.del (makeMerchantIdVehVarKey fp.merchantId fp.vehicleVariant)
   Hedis.del (makeAllMerchantIdKey fp.merchantId)
 
-update :: FarePolicy -> Esq.SqlDB ()
-update = Queries.update
+update :: HedisFlow m r => FarePolicy -> Esq.SqlDB m ()
+update fp = do
+  Queries.update fp
+  Esq.finalize $ clearCache fp

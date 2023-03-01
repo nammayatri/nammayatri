@@ -137,7 +137,7 @@ handler merchantId sReq = do
   toLocation <- buildSearchReqLocation sReq.dropLocation
   let pickupLatLong = Maps.getCoordinates fromLocation
   let mbDropoffLatLong = Just $ Maps.getCoordinates toLocation
-  unlessM (rideServiceable org.geofencingConfig QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
+  unlessM (rideServiceable org.geofencingConfig (\a b -> QGeometry.someGeometriesContain a b (Proxy @Flow)) pickupLatLong mbDropoffLatLong) $
     throwError RideNotServiceable
   result <- getDistanceAndDuration merchantId fromLocation toLocation sReq.routeInfo
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)

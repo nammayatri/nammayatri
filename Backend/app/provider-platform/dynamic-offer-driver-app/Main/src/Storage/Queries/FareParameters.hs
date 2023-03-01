@@ -20,8 +20,8 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.FareParameters ()
 
-create :: FareParameters -> SqlDB ()
+create :: FareParameters -> SqlDB m ()
 create = Esq.create
 
-findById :: Transactionable m => Id FareParameters -> m (Maybe FareParameters)
-findById = Esq.findById
+findById :: forall m ma. Transactionable ma m => Proxy ma -> Id FareParameters -> m (Maybe FareParameters)
+findById _ = Esq.findById @m @ma

@@ -28,23 +28,27 @@ import Kernel.Types.Field
 import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.Image
 
-create :: Image -> SqlDB ()
+create :: Image -> SqlDB m ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
+  Proxy ma ->
   Id Image ->
   m (Maybe Image)
-findById = Esq.findById
+findById _ = Esq.findById @m @ma
 
 findImagesByPersonAndType ::
-  (Transactionable m) =>
+  forall m ma.
+  (Transactionable ma m) =>
   Id Merchant ->
   Id Person ->
   ImageType ->
+  Proxy ma ->
   m [Image]
-findImagesByPersonAndType merchantId personId imgType = do
-  findAll $ do
+findImagesByPersonAndType merchantId personId imgType _ = do
+  findAll @m @ma $ do
     images <- from $ table @ImageT
     where_ $
       images ^. ImagePersonId ==. val (toKey personId)
@@ -53,18 +57,20 @@ findImagesByPersonAndType merchantId personId imgType = do
     return images
 
 findRecentByPersonIdAndImageType ::
-  ( Transactionable m,
+  forall m ma r.
+  ( Transactionable ma m,
     MonadFlow m,
     HasFlowEnv m r '["driverOnboardingConfigs" ::: DriverOnboardingConfigs]
   ) =>
   Id Person ->
   ImageType ->
+  Proxy ma ->
   m [Image]
-findRecentByPersonIdAndImageType personId imgtype = do
+findRecentByPersonIdAndImageType personId imgtype _ = do
   DriverOnboardingConfigs {..} <- asks (.driverOnboardingConfigs)
   let onBoardingRetryTimeinHours = intToNominalDiffTime onboardingRetryTimeinHours
   now <- getCurrentTime
-  findAll $ do
+  findAll @m @ma $ do
     images <- from $ table @ImageT
     where_ $
       images ^. ImagePersonId ==. val (toKey personId)
@@ -74,7 +80,7 @@ findRecentByPersonIdAndImageType personId imgtype = do
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 
-updateToValid :: Id Image -> SqlDB ()
+updateToValid :: Id Image -> SqlDB m ()
 updateToValid id = do
   Esq.update $ \tbl -> do
     set
@@ -83,16 +89,18 @@ updateToValid id = do
     where_ $ tbl ^. ImageTId ==. val (toKey id)
 
 findByMerchantId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
+  Proxy ma ->
   m [Image]
-findByMerchantId merchantId = do
-  findAll $ do
+findByMerchantId merchantId _ = do
+  findAll @m @ma $ do
     images <- from $ table @ImageT
     where_ $ images ^. ImageMerchantId ==. val (toKey merchantId)
     return images
 
-addFailureReason :: Id Image -> DriverOnboardingError -> SqlDB ()
+addFailureReason :: Id Image -> DriverOnboardingError -> SqlDB m ()
 addFailureReason id reason = do
   Esq.update $ \tbl -> do
     set
@@ -100,7 +108,7 @@ addFailureReason id reason = do
       [ImageFailureReason =. val (Just reason)]
     where_ $ tbl ^. ImageTId ==. val (toKey id)
 
-deleteByPersonId :: Id Person -> SqlDB ()
+deleteByPersonId :: Id Person -> SqlDB m ()
 deleteByPersonId personId =
   Esq.delete $ do
     images <- from $ table @ImageT

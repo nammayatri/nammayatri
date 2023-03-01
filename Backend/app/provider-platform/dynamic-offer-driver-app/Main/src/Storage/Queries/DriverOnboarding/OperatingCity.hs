@@ -22,31 +22,37 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.OperatingCity
 
-create :: OperatingCity -> SqlDB ()
+create :: OperatingCity -> SqlDB m ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
+  Proxy ma ->
   Id OperatingCity ->
   m (Maybe OperatingCity)
-findById = Esq.findById
+findById _ = Esq.findById @m @ma
 
 findByMerchantId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
+  Proxy ma ->
   m (Maybe OperatingCity)
-findByMerchantId personid = do
-  findOne $ do
+findByMerchantId personid _ = do
+  findOne @m @ma $ do
     vechileRegCert <- from $ table @OperatingCityT
     where_ $ vechileRegCert ^. OperatingCityMerchantId ==. val (toKey personid)
     return vechileRegCert
 
 findEnabledCityByName ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Text ->
+  Proxy ma ->
   m [OperatingCity]
-findEnabledCityByName city =
-  Esq.findAll $ do
+findEnabledCityByName city _ =
+  Esq.findAll @m @ma $ do
     operatingCity <- from $ table @OperatingCityT
     where_ $
       lower_ (operatingCity ^. OperatingCityCityName) ==. val city
@@ -54,12 +60,14 @@ findEnabledCityByName city =
     return operatingCity
 
 findEnabledCityByMerchantIdAndName ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
   Text ->
+  Proxy ma ->
   m [OperatingCity]
-findEnabledCityByMerchantIdAndName merchantId city =
-  Esq.findAll $ do
+findEnabledCityByMerchantIdAndName merchantId city _ =
+  Esq.findAll @m @ma $ do
     operatingCity <- from $ table @OperatingCityT
     where_ $
       lower_ (operatingCity ^. OperatingCityCityName) ==. val city

@@ -82,7 +82,13 @@ listFarePolicies person = do
       { oneWayFarePolicies = map makeFarePolicyAPIEntity oneWayFarePolicies
       }
 
-updateFarePolicy :: (HasCacheConfig r, EsqDBFlow m r, CoreMetrics m, HedisFlow m r) => SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyReq -> m UpdateFarePolicyRes
+updateFarePolicy ::
+  forall m r.
+  (HasCacheConfig r, EsqDBFlow m r, CoreMetrics m, HedisFlow m r) =>
+  SP.Person ->
+  Id DFarePolicy.FarePolicy ->
+  UpdateFarePolicyReq ->
+  m UpdateFarePolicyRes
 updateFarePolicy admin fpId req = do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy
@@ -103,10 +109,9 @@ updateFarePolicy admin fpId req = do
             nightShiftRate = req.nightShiftRate
           } ::
           DFarePolicy.FarePolicy
-  coordinators <- QP.findAdminsByMerchantId admin.merchantId
+  coordinators <- QP.findAdminsByMerchantId admin.merchantId (Proxy @m)
   Esq.runTransaction $
-    SFarePolicy.update updatedFarePolicy
-  SFarePolicy.clearCache updatedFarePolicy
+    SFarePolicy.update @m updatedFarePolicy
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
   for_ otherCoordinators $ \cooridinator -> do
     Notify.notifyFarePolicyChange admin.merchantId cooridinator.id cooridinator.deviceToken

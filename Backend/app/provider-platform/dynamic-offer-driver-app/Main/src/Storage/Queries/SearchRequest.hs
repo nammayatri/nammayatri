@@ -22,17 +22,17 @@ import Kernel.Utils.Common
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
 
-create :: SearchRequest -> SqlDB ()
+create :: forall m. Monad m => SearchRequest -> SqlDB m ()
 create dsReq = Esq.runTransaction $
   withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
-    Esq.create' fromLoc
+    Esq.create' @SearchReqLocationT @m fromLoc
     Esq.create' toLoc
     Esq.create' sReq
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
-findById searchRequestId = buildDType $
+findById :: forall m ma. Transactionable ma m => Id SearchRequest -> Proxy ma -> m (Maybe SearchRequest)
+findById searchRequestId _ = buildDType $
   fmap (fmap $ extractSolidType @Domain.SearchRequest) $
-    Esq.findOne' $ do
+    Esq.findOne' @m @ma $ do
       (sReq :& sFromLoc :& sToLoc) <-
         from
           ( table @SearchRequestT
@@ -45,7 +45,7 @@ findById searchRequestId = buildDType $
 updateStatus ::
   Id SearchRequest ->
   SearchRequestStatus ->
-  SqlDB ()
+  SqlDB m ()
 updateStatus searchId status_ = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -57,33 +57,39 @@ updateStatus searchId status_ = do
     where_ $ tbl ^. SearchRequestTId ==. val (toKey searchId)
 
 getRequestIdfromTransactionId ::
-  (Transactionable m) =>
+  forall m ma.
+  Transactionable ma m =>
   Id SearchRequest ->
+  Proxy ma ->
   m (Maybe (Id SearchRequest))
-getRequestIdfromTransactionId tId = do
-  findOne $ do
+getRequestIdfromTransactionId tId _ = do
+  findOne @m @ma $ do
     searchT <- from $ table @SearchRequestT
     where_ $
       searchT ^. SearchRequestTransactionId ==. val (getId tId)
     return $ searchT ^. SearchRequestTId
 
 getStatus ::
-  (Transactionable m) =>
+  forall m ma.
+  Transactionable ma m =>
   Id SearchRequest ->
+  Proxy ma ->
   m (Maybe SearchRequestStatus)
-getStatus searchRequestId = do
-  findOne $ do
+getStatus searchRequestId _ = do
+  findOne @m @ma $ do
     searchT <- from $ table @SearchRequestT
     where_ $
       searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
     return $ searchT ^. SearchRequestStatus
 
 getValidTill ::
-  (Transactionable m) =>
+  forall m ma.
+  (Transactionable ma m) =>
   Id SearchRequest ->
+  Proxy ma ->
   m (Maybe UTCTime)
-getValidTill searchRequestId = do
-  findOne $ do
+getValidTill searchRequestId _ = do
+  findOne @m @ma $ do
     searchT <- from $ table @SearchRequestT
     where_ $
       searchT ^. SearchRequestTId ==. val (toKey searchRequestId)

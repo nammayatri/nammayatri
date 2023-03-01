@@ -90,15 +90,15 @@ verifyDL ::
 verifyDL isDashboard mbMerchant personId req@DriverDLReq {..} = do
   now <- getCurrentTime
   runRequestValidation (validateDriverDLReq now) req
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById (Proxy @Flow) personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   operatingCity' <- case mbMerchant of
-    Just merchant -> QCity.findEnabledCityByMerchantIdAndName merchant.id $ T.toLower req.operatingCity
-    Nothing -> QCity.findEnabledCityByName $ T.toLower req.operatingCity
+    Just merchant -> QCity.findEnabledCityByMerchantIdAndName merchant.id (T.toLower req.operatingCity) (Proxy @Flow)
+    Nothing -> QCity.findEnabledCityByName (T.toLower req.operatingCity) (Proxy @Flow)
   when (null operatingCity') $
     throwError $ InvalidOperatingCity req.operatingCity
   configs <- asks (.driverOnboardingConfigs)
@@ -119,7 +119,7 @@ verifyDL isDashboard mbMerchant personId req@DriverDLReq {..} = do
           unless (extractDLNumber == dlNumber) $
             throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
         Nothing -> throwImageError imageId1 ImageExtractionFailed
-  mdriverLicense <- Query.findByDLNumber driverLicenseNumber
+  mdriverLicense <- Query.findByDLNumber driverLicenseNumber (Proxy @Flow)
 
   case mdriverLicense of
     Just driverLicense -> do
@@ -127,14 +127,14 @@ verifyDL isDashboard mbMerchant personId req@DriverDLReq {..} = do
       unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
       verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
     Nothing -> do
-      mDriverDL <- Query.findByDriverId personId
+      mDriverDL <- Query.findByDriverId personId (Proxy @Flow)
       when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
       verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
     getImage imageId = do
-      imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
+      imageMetadata <- ImageQuery.findById (Proxy @Flow) imageId >>= fromMaybeM (ImageNotFound imageId.getId)
       unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
       unless (imageMetadata.imageType == Image.DriverLicense) $
@@ -152,7 +152,7 @@ verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue =
   idfyRes <- Idfy.verifyDL dlNumber driverDateOfBirth
   encryptedDL <- encrypt dlNumber
   idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now imageExtractionValidation encryptedDL
-  runTransaction $ IVQuery.create idfyVerificationEntity
+  runTransaction $ IVQuery.create @Flow idfyVerificationEntity
   where
     mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedDL = do
       id <- generateGUID
@@ -175,14 +175,14 @@ verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue =
 
 onVerifyDL :: Domain.IdfyVerification -> Idfy.DLVerificationOutput -> Flow AckResponse
 onVerifyDL verificationReq output = do
-  person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
+  person <- Person.findById (Proxy @Flow) verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
 
   if verificationReq.imageExtractionValidation == Domain.Skipped
     && isJust verificationReq.issueDateOnDoc
     && ( (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc)
            /= (convertUTCTimetoDate <$> (convertTextToUTC output.date_of_issue))
        )
-    then runTransaction $ IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> pure Ack
+    then runTransaction $ IVQuery.updateExtractValidationStatus @Flow verificationReq.requestId Domain.Failed >> pure Ack
     else do
       now <- getCurrentTime
       id <- generateGUID
@@ -194,9 +194,9 @@ onVerifyDL verificationReq output = do
 
       case mDriverLicense of
         Just driverLicense -> do
-          runTransaction $ Query.upsert driverLicense
+          runTransaction $ Query.upsert @Flow driverLicense
           case driverLicense.driverName of
-            Just name_ -> runTransaction $ Person.updateName person.id name_
+            Just name_ -> runTransaction $ Person.updateName @Flow person.id name_
             Nothing -> return ()
           return Ack
         Nothing -> return Ack

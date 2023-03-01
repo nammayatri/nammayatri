@@ -60,12 +60,12 @@ newtype MessageReplyReq = MessageReplyReq {reply :: Text}
 
 messageList :: Id SP.Person -> Maybe Int -> Maybe Int -> Flow [MessageAPIEntityResponse]
 messageList driverId mbLimit mbOffset = do
-  person <- Esq.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
-  messageDetails <- Esq.runInReplica $ MRQ.findByDriverIdAndLanguage (cast driverId) (fromMaybe ENGLISH person.language) mbLimit mbOffset
+  person <- Esq.runInReplica (QP.findById (Proxy @Flow) driverId >>= fromMaybeM (PersonNotFound driverId.getId))
+  messageDetails <- Esq.runInReplica $ MRQ.findByDriverIdAndLanguage (cast driverId) (fromMaybe ENGLISH person.language) mbLimit mbOffset (Proxy @Flow)
   mapM makeMessageAPIEntity messageDetails
   where
     makeMessageAPIEntity (messageReport, rawMessage, messageTranslation) = do
-      mediaFilesApiType <- map (\mediaFile -> MediaFileApiResponse mediaFile.url mediaFile._type) <$> MFQ.findAllIn rawMessage.mediaFiles
+      mediaFilesApiType <- map (\mediaFile -> MediaFileApiResponse mediaFile.url mediaFile._type) <$> MFQ.findAllIn rawMessage.mediaFiles (Proxy @Flow)
       pure $
         MessageAPIEntityResponse
           { title = maybe rawMessage.title (.title) messageTranslation,
@@ -81,15 +81,15 @@ messageList driverId mbLimit mbOffset = do
 
 getMessage :: Id SP.Person -> Id Domain.Message -> Flow MessageAPIEntityResponse
 getMessage driverId messageId = do
-  person <- Esq.runInReplica (QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId))
+  person <- Esq.runInReplica (QP.findById (Proxy @Flow) driverId >>= fromMaybeM (PersonNotFound driverId.getId))
   messageDetails <-
     Esq.runInReplica $
-      MRQ.findByDriverIdMessageIdAndLanguage (cast driverId) messageId (fromMaybe ENGLISH person.language)
+      MRQ.findByDriverIdMessageIdAndLanguage (cast driverId) messageId (fromMaybe ENGLISH person.language) (Proxy @Flow)
         >>= fromMaybeM (InvalidRequest "Message not found")
   makeMessageAPIEntity messageDetails
   where
     makeMessageAPIEntity (messageReport, rawMessage, messageTranslation) = do
-      mediaFilesApiType <- map (\mediaFile -> MediaFileApiResponse mediaFile.url mediaFile._type) <$> MFQ.findAllIn rawMessage.mediaFiles
+      mediaFilesApiType <- map (\mediaFile -> MediaFileApiResponse mediaFile.url mediaFile._type) <$> MFQ.findAllIn rawMessage.mediaFiles (Proxy @Flow)
       pure $
         MessageAPIEntityResponse
           { title = maybe rawMessage.title (.title) messageTranslation,
@@ -105,17 +105,17 @@ getMessage driverId messageId = do
 
 fetchMedia :: Id SP.Person -> Text -> Flow Text
 fetchMedia driverId filePath = do
-  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  _ <- Esq.runInReplica $ QP.findById (Proxy @Flow) driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   S3.get $ T.unpack filePath
 
 messageSeen :: Id SP.Person -> Id Domain.Message -> Flow APISuccess
 messageSeen driverId messageId = do
-  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  Esq.runTransaction $ MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
+  _ <- Esq.runInReplica $ QP.findById (Proxy @Flow) driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  Esq.runTransaction $ MRQ.updateSeenAndReplyByMessageIdAndDriverId @Flow messageId (cast driverId) True Nothing
   return Success
 
 messageResponse :: Id SP.Person -> Id Domain.Message -> MessageReplyReq -> Flow APISuccess
 messageResponse driverId messageId MessageReplyReq {..} = do
-  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  Esq.runTransaction $ MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True (Just reply)
+  _ <- Esq.runInReplica $ QP.findById (Proxy @Flow) driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  Esq.runTransaction $ MRQ.updateSeenAndReplyByMessageIdAndDriverId @Flow messageId (cast driverId) True (Just reply)
   return Success

@@ -69,11 +69,11 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   mbDriverPhoneDBHash <- getDbHash `traverse` mbDriverPhone
   now <- getCurrentTime
-  rideItems <- runInReplica $ QRide.findAllRideItems merchant.id limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now
+  rideItems <- runInReplica $ QRide.findAllRideItems merchant.id limit offset mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbFareDiff now (Proxy @Flow)
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
   -- should we consider filters in totalCount, e.g. count all canceled rides?
-  totalCount <- runInReplica $ QRide.countRides merchant.id
+  totalCount <- runInReplica $ QRide.countRides merchant.id (Proxy @Flow)
   let summary = Common.Summary {totalCount, count}
   pure Common.RideListRes {totalItems = count, summary, rides = rideListItems}
   where
@@ -102,24 +102,24 @@ rideInfo :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideInfoRes
 rideInfo merchantShortId reqRideId = do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  rideDetails <- runInReplica $ QRideDetails.findById rideId >>= fromMaybeM (RideNotFound rideId.getId) -- FIXME RideDetailsNotFound
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
-  quote <- runInReplica $ DQ.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+  ride <- runInReplica $ QRide.findById rideId (Proxy @Flow) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  rideDetails <- runInReplica $ QRideDetails.findById (Proxy @Flow) rideId >>= fromMaybeM (RideNotFound rideId.getId) -- FIXME RideDetailsNotFound
+  booking <- runInReplica $ QBooking.findById ride.bookingId (Proxy @Flow) >>= fromMaybeM (BookingNotFound rideId.getId)
+  quote <- runInReplica $ DQ.findById booking.quoteId (Proxy @Flow) >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
   let driverId = ride.driverId
 
   -- merchant access checking
   unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
 
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
-  riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
-  driverLocation <- runInReplica $ QDrLoc.findById driverId >>= fromMaybeM LocationNotFound
+  riderDetails <- runInReplica $ QRiderDetails.findById (Proxy @Flow) riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
+  driverLocation <- runInReplica $ QDrLoc.findById (Proxy @Flow) driverId >>= fromMaybeM LocationNotFound
 
   mbBCReason <-
     if ride.status == DRide.CANCELLED
-      then runInReplica $ QBCReason.findByRideId rideId -- it can be Nothing if cancelled by user
+      then runInReplica $ QBCReason.findByRideId rideId (Proxy @Flow) -- it can be Nothing if cancelled by user
       else pure Nothing
-  driverInitiatedCallCount <- runInReplica $ QCallStatus.countCallsByRideId rideId
+  driverInitiatedCallCount <- runInReplica $ QCallStatus.countCallsByRideId rideId (Proxy @Flow)
   let cancellationReason =
         (coerce @DCReason.CancellationReasonCode @Common.CancellationReasonCode <$>) . join $ mbBCReason <&> (.reasonCode)
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
@@ -199,8 +199,8 @@ rideSync :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideSyncRes
 rideSync merchantShortId reqRideId = do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
+  ride <- runInReplica $ QRide.findById rideId (Proxy @Flow) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId (Proxy @Flow) >>= fromMaybeM (BookingNotFound rideId.getId)
 
   -- merchant access checking
   unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
@@ -227,7 +227,7 @@ syncInProgressRide ride booking = do
 
 syncCancelledRide :: DRide.Ride -> DBooking.Booking -> DM.Merchant -> Flow Common.RideSyncRes
 syncCancelledRide ride booking merchant = do
-  mbBookingCReason <- runInReplica $ QBCReason.findByRideId ride.id
+  mbBookingCReason <- runInReplica $ QBCReason.findByRideId ride.id (Proxy @Flow)
   -- rides cancelled by bap no need to sync, and have mbBookingCReason = Nothing
   case mbBookingCReason of
     Nothing -> pure $ Common.RideSyncRes Common.RIDE_CANCELLED "No cancellation reason found for ride. Nothing to sync, ignoring"
@@ -245,7 +245,7 @@ syncCompletedRide ride booking = do
     -- only for old rides
     logWarning "No fare params linked to ride. Using fare params linked to booking, they may be not actual"
   let fareParametersId = fromMaybe booking.fareParams.id ride.fareParametersId
-  fareParameters <- runInReplica $ QFareParams.findById fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
+  fareParameters <- runInReplica $ QFareParams.findById (Proxy @Flow) fareParametersId >>= fromMaybeM (FareParametersNotFound fareParametersId.getId)
   handle (errHandler ride.status booking.status "ride completed") $
     CallBAP.sendRideCompletedUpdateToBAP booking ride fareParameters
   pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"

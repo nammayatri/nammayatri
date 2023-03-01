@@ -14,7 +14,7 @@
 
 module App where
 
-import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
+import Environment (Flow, HandlerCfg, HandlerEnv, buildHandlerEnv)
 import qualified EulerHS.Runtime as R
 import Kernel.Exit
 import Kernel.Prelude
@@ -64,7 +64,7 @@ runDriverOfferAllocator configModifier = do
 
         logInfo "Setting up for signature auth..."
         allProviders <-
-          try Storage.loadAllProviders
+          try (Storage.loadAllProviders (Proxy @Flow))
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
         flowRt' <- modFlowRtWithAuthManagers flowRt handlerEnv allSubscriberIds

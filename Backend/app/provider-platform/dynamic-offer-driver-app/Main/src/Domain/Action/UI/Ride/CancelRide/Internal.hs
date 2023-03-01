@@ -41,6 +41,7 @@ import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
 cancelRideImpl ::
+  forall m r c.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
@@ -55,8 +56,8 @@ cancelRideImpl ::
   SBCR.BookingCancellationReason ->
   m ()
 cancelRideImpl rideId bookingCReason = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  ride <- QRide.findById rideId (Proxy @m) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- QRB.findById ride.bookingId (Proxy @m) >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let transporterId = booking.providerId
   transporter <-
     CQM.findById transporterId
@@ -66,12 +67,13 @@ cancelRideImpl rideId bookingCReason = do
   fork "cancelRide - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCReason.source
   fork "cancelRide - Notify driver" $ do
-    driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    driver <- QPerson.findById (Proxy @m) ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     when (bookingCReason.source == SBCR.ByDriver) $
       DP.incrementCancellationCount transporterId driver.id
     Notify.notifyOnCancel transporterId booking driver.id driver.deviceToken bookingCReason.source
 
 cancelRideTransaction ::
+  forall m r.
   ( EsqDBFlow m r,
     CacheFlow m r,
     Esq.EsqDBReplicaFlow m r
@@ -85,7 +87,7 @@ cancelRideTransaction bookingId ride bookingCReason = do
   DLoc.updateOnRide driverId False
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   Esq.runTransaction $ do
-    when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
+    when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime @m driverId
     QRide.updateStatus ride.id SRide.CANCELLED
     QRB.updateStatus bookingId SRB.CANCELLED
     QBCR.upsert bookingCReason

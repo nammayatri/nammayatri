@@ -24,10 +24,10 @@ import Kernel.Types.Id
 import Storage.Tabular.DriverOnboarding.DriverLicense
 import Storage.Tabular.Person ()
 
-create :: DriverLicense -> SqlDB ()
+create :: DriverLicense -> SqlDB m ()
 create = Esq.create
 
-upsert :: DriverLicense -> SqlDB ()
+upsert :: DriverLicense -> SqlDB m ()
 upsert a@DriverLicense {..} =
   Esq.upsert
     a
@@ -41,33 +41,39 @@ upsert a@DriverLicense {..} =
     ]
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
+  Proxy ma ->
   Id DriverLicense ->
   m (Maybe DriverLicense)
-findById = Esq.findById
+findById _ = Esq.findById @m @ma
 
 findByDriverId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Person ->
+  Proxy ma ->
   m (Maybe DriverLicense)
-findByDriverId driverId = do
-  findOne $ do
+findByDriverId driverId _ = do
+  findOne @m @ma $ do
     dl <- from $ table @DriverLicenseT
     where_ $ dl ^. DriverLicenseDriverId ==. val (toKey driverId)
     return dl
 
 findByDLNumber ::
-  (Transactionable m, EncFlow m r) =>
+  forall m ma r.
+  (Transactionable ma m, EncFlow m r) =>
   Text ->
+  Proxy ma ->
   m (Maybe DriverLicense)
-findByDLNumber dlNumber = do
+findByDLNumber dlNumber _ = do
   dlNumberHash <- getDbHash dlNumber
-  findOne $ do
+  findOne @m @ma $ do
     dl <- from $ table @DriverLicenseT
     where_ $ dl ^. DriverLicenseLicenseNumberHash ==. val dlNumberHash
     return dl
 
-deleteByDriverId :: Id Person -> SqlDB ()
+deleteByDriverId :: Id Person -> SqlDB m ()
 deleteByDriverId driverId =
   Esq.delete $ do
     dl <- from $ table @DriverLicenseT

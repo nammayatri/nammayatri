@@ -108,7 +108,7 @@ validateImage ::
   ImageValidateRequest ->
   Flow ImageValidateResponse
 validateImage isDashboard mbMerchant personId ImageValidateRequest {..} = do
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById (Proxy @Flow) personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
 
   org <- case mbMerchant of
@@ -119,7 +119,7 @@ validateImage isDashboard mbMerchant personId ImageValidateRequest {..} = do
       unless (merchant.id == merchantId) $ throwError (PersonNotFound personId.getId)
       pure merchant
 
-  images <- Query.findRecentByPersonIdAndImageType personId imageType
+  images <- Query.findRecentByPersonIdAndImageType personId imageType (Proxy @Flow)
   unless isDashboard $ do
     onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
     when (length images > onboardingTryLimit) $ do
@@ -130,13 +130,13 @@ validateImage isDashboard mbMerchant personId ImageValidateRequest {..} = do
   imagePath <- createPath personId.getId merchantId.getId imageType
   _ <- fork "S3 Put Image" $ S3.put (T.unpack imagePath) image
   imageEntity <- mkImage personId merchantId imagePath imageType False
-  runTransaction $ Query.create imageEntity
+  runTransaction $ Query.create @Flow imageEntity
 
   -- skipping validation for rc as validation not available in idfy
   unless (imageType == Domain.VehicleRegistrationCertificate) $ do
     validationOutput <- Idfy.validateImage image (getDocType imageType)
     checkErrors imageEntity.id imageType validationOutput.result
-  runTransaction $ Query.updateToValid imageEntity.id
+  runTransaction $ Query.updateToValid @Flow imageEntity.id
 
   return $ ImageValidateResponse {imageId = imageEntity.id}
   where
@@ -186,16 +186,16 @@ mkImage personId_ merchantId s3Path imageType_ isValid = do
 getDocs :: Person.Person -> Text -> Flow GetDocsResponse
 getDocs _admin mobileNumber = do
   mobileNumberHash <- getDbHash mobileNumber
-  driver <- runInReplica $ Person.findByMobileNumber "+91" mobileNumberHash >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+  driver <- runInReplica $ Person.findByMobileNumber "+91" mobileNumberHash (Proxy @Flow) >>= fromMaybeM (PersonDoesNotExist mobileNumber)
   let merchantId = driver.merchantId
-  dl <- runInReplica $ DLQuery.findByDriverId driver.id
+  dl <- runInReplica $ DLQuery.findByDriverId driver.id (Proxy @Flow)
   let dlImageId = (.documentImageId1) <$> dl
 
-  association <- DRAQuery.getActiveAssociationByDriver driver.id
+  association <- DRAQuery.getActiveAssociationByDriver driver.id (Proxy @Flow)
   rc <-
     maybe
       (pure Nothing)
-      (\assoc_ -> runInReplica $ RCQuery.findById assoc_.rcId)
+      (\assoc_ -> runInReplica $ RCQuery.findById (Proxy @Flow) assoc_.rcId)
       association
   let rcImageId = (.documentImageId) <$> rc
 
@@ -206,7 +206,7 @@ getDocs _admin mobileNumber = do
 
 getImage :: Id Merchant -> Id Domain.Image -> Flow Text
 getImage merchantId imageId = do
-  imageMetadata <- Query.findById imageId
+  imageMetadata <- Query.findById (Proxy @Flow) imageId
   case imageMetadata of
     Just img | img.merchantId == merchantId -> S3.get $ T.unpack img.s3Path
     _ -> pure T.empty

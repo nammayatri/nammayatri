@@ -341,6 +341,7 @@ getPopupDelay merchantId driverId cancellationRatio cancellationScoreRelatedConf
       else pure $ Seconds 0
 
 calculateDriverPool ::
+  forall m r a.
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -371,6 +372,7 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
           merchantId
           onlyNotOnRide
           driverPoolCfg.driverPositionInfoExpiry
+          (Proxy @m)
   maxParallelSearchRequests <- asks (.maxParallelSearchRequests)
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool

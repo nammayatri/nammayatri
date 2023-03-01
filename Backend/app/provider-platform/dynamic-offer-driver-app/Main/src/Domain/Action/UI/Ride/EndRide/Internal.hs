@@ -43,6 +43,7 @@ import Tools.Error
 import qualified Tools.Metrics as Metrics
 
 endRideTransaction ::
+  forall m r.
   (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) =>
   Id DP.Driver ->
   Id SRB.Booking ->
@@ -53,7 +54,7 @@ endRideTransaction driverId bookingId ride mbFareParams = do
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   Esq.runTransaction $ do
     whenJust mbFareParams QFare.create
-    QRide.updateAll ride.id ride
+    QRide.updateAll @m ride.id ride
     QRide.updateStatus ride.id Ride.COMPLETED
     QRB.updateStatus bookingId SRB.COMPLETED
     DriverStats.updateIdleTime driverId

@@ -35,9 +35,9 @@ cacheAssignedRideIdAndStatus driverId rideIdAndStatus = do
 clearCache :: (CacheFlow m r) => Id Person -> m ()
 clearCache = Hedis.del . makeAssignedRideIdAndStatusKey
 
-getInProgressOrNewRideIdAndStatusByDriverId :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Person -> m (Maybe (Id Ride, RideStatus))
+getInProgressOrNewRideIdAndStatusByDriverId :: forall m r. (CacheFlow m r, EsqDBReplicaFlow m r) => Id Person -> m (Maybe (Id Ride, RideStatus))
 getInProgressOrNewRideIdAndStatusByDriverId driverId =
   Hedis.get (makeAssignedRideIdAndStatusKey driverId) >>= \case
     Just a ->
       return $ Just a
-    Nothing -> flip whenJust (cacheAssignedRideIdAndStatus driverId) /=<< Esq.runInReplica (RQueries.getInProgressOrNewRideIdAndStatusByDriverId driverId)
+    Nothing -> flip whenJust (cacheAssignedRideIdAndStatus driverId) /=<< Esq.runInReplica (RQueries.getInProgressOrNewRideIdAndStatusByDriverId driverId (Proxy @m))

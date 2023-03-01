@@ -22,20 +22,20 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.CallStatus
 
-create :: CallStatus -> SqlDB ()
+create :: CallStatus -> SqlDB m ()
 create = Esq.create
 
-findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
-findById = Esq.findById
+findById :: forall m ma. Transactionable ma m => Proxy ma -> Id CallStatus -> m (Maybe CallStatus)
+findById _ = Esq.findById @m @ma
 
-findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
-findByCallSid callSid =
-  Esq.findOne $ do
+findByCallSid :: forall m ma. Transactionable ma m => Text -> Proxy ma -> m (Maybe CallStatus)
+findByCallSid callSid _ =
+  Esq.findOne @m @ma $ do
     callStatus <- from $ table @CallStatusT
     where_ $ callStatus ^. CallStatusExotelCallSid ==. val callSid
     return callStatus
 
-updateCallStatus :: Id CallStatus -> ExotelCallStatus -> Int -> BaseUrl -> SqlDB ()
+updateCallStatus :: Id CallStatus -> ExotelCallStatus -> Int -> BaseUrl -> SqlDB m ()
 updateCallStatus callId status conversationDuration recordingUrl = do
   Esq.update $ \tbl -> do
     set
@@ -46,9 +46,9 @@ updateCallStatus callId status conversationDuration recordingUrl = do
       ]
     where_ $ tbl ^. CallStatusId ==. val (getId callId)
 
-countCallsByRideId :: Transactionable m => Id Ride -> m Int
-countCallsByRideId rideId = (fromMaybe 0 <$>) $
-  Esq.findOne $ do
+countCallsByRideId :: forall m ma. Transactionable ma m => Id Ride -> Proxy ma -> m Int
+countCallsByRideId rideId _ = (fromMaybe 0 <$>) $
+  Esq.findOne @m @ma $ do
     callStatus <- from $ table @CallStatusT
     where_ $ callStatus ^. CallStatusRideId ==. val (toKey rideId)
     groupBy $ callStatus ^. CallStatusRideId

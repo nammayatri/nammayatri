@@ -23,10 +23,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.Rating
 
-create :: Rating -> SqlDB ()
+create :: Rating -> SqlDB m ()
 create = Esq.create
 
-updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> SqlDB ()
+updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> SqlDB m ()
 updateRating ratingId driverId newRatingValue newFeedbackDetails = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -40,15 +40,15 @@ updateRating ratingId driverId newRatingValue newFeedbackDetails = do
       tbl ^. RatingTId ==. val (toKey ratingId)
         &&. tbl ^. RatingDriverId ==. val (toKey driverId)
 
-findAllRatingsForPerson :: Transactionable m => Id Person -> m [Rating]
-findAllRatingsForPerson driverId =
-  findAll $ do
+findAllRatingsForPerson :: forall m ma. Transactionable ma m => Id Person -> Proxy ma -> m [Rating]
+findAllRatingsForPerson driverId _ =
+  findAll @m @ma $ do
     rating <- from $ table @RatingT
     where_ $ rating ^. RatingDriverId ==. val (toKey driverId)
     return rating
 
-findRatingForRide :: Transactionable m => Id Ride -> m (Maybe Rating)
-findRatingForRide rideId = findOne $ do
+findRatingForRide :: forall m ma. Transactionable ma m => Id Ride -> Proxy ma -> m (Maybe Rating)
+findRatingForRide rideId _ = findOne @m @ma $ do
   rating <- from $ table @RatingT
   where_ $ rating ^. RatingRideId ==. val (toKey rideId)
   pure rating

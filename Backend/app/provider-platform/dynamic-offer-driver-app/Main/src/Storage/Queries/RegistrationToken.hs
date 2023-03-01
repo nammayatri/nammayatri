@@ -22,13 +22,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.RegistrationToken
 
-create :: RegistrationToken -> SqlDB ()
+create :: RegistrationToken -> SqlDB m ()
 create = Esq.create
 
-findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
-findById = Esq.findById
+findById :: forall m ma. Transactionable ma m => Proxy ma -> Id RegistrationToken -> m (Maybe RegistrationToken)
+findById _ = Esq.findById @m @ma
 
-setVerified :: Id RegistrationToken -> SqlDB ()
+setVerified :: Id RegistrationToken -> SqlDB m ()
 setVerified rtId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -39,14 +39,14 @@ setVerified rtId = do
       ]
     where_ $ tbl ^. RegistrationTokenTId ==. val (toKey rtId)
 
-findByToken :: Transactionable m => RegToken -> m (Maybe RegistrationToken)
-findByToken token =
-  findOne $ do
+findByToken :: forall m ma. Transactionable ma m => RegToken -> Proxy ma -> m (Maybe RegistrationToken)
+findByToken token _ =
+  findOne @m @ma $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenToken ==. val token
     return regToken
 
-updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
+updateAttempts :: Int -> Id RegistrationToken -> SqlDB m ()
 updateAttempts attemps rtId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -57,13 +57,13 @@ updateAttempts attemps rtId = do
       ]
     where_ $ tbl ^. RegistrationTokenTId ==. val (toKey rtId)
 
-deleteByPersonId :: Id Person -> SqlDB ()
+deleteByPersonId :: Id Person -> SqlDB m ()
 deleteByPersonId personId =
   Esq.delete $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
 
-deleteByPersonIdExceptNew :: Id Person -> Id RegistrationToken -> SqlDB ()
+deleteByPersonIdExceptNew :: Id Person -> Id RegistrationToken -> SqlDB m ()
 deleteByPersonIdExceptNew personId newRT =
   Esq.delete $ do
     regToken <- from $ table @RegistrationTokenT
@@ -71,9 +71,9 @@ deleteByPersonIdExceptNew personId newRT =
       regToken ^. RegistrationTokenEntityId ==. val (getId personId)
         &&. not_ (regToken ^. RegistrationTokenTId ==. val (toKey newRT))
 
-findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
-findAllByPersonId personId =
-  findAll $ do
+findAllByPersonId :: forall m ma. Transactionable ma m => Id Person -> Proxy ma -> m [RegistrationToken]
+findAllByPersonId personId _ =
+  findAll @m @ma $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
     return regToken

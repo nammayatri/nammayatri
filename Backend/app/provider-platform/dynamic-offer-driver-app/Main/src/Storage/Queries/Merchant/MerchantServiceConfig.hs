@@ -28,15 +28,15 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.Merchant.MerchantServiceConfig
 
-findByMerchantIdAndService :: Transactionable m => Id Merchant -> ServiceName -> m (Maybe MerchantServiceConfig)
-findByMerchantIdAndService merchantId serviceName =
-  Esq.findOne $ do
+findByMerchantIdAndService :: forall m ma. Transactionable ma m => Id Merchant -> ServiceName -> Proxy ma -> m (Maybe MerchantServiceConfig)
+findByMerchantIdAndService merchantId serviceName _ =
+  Esq.findOne @m @ma $ do
     merchantServiceConfig <- from $ table @MerchantServiceConfigT
     where_ $
       merchantServiceConfig ^. MerchantServiceConfigTId ==. val (toKey (merchantId, serviceName))
     return merchantServiceConfig
 
-upsertMerchantServiceConfig :: MerchantServiceConfig -> SqlDB ()
+upsertMerchantServiceConfig :: MerchantServiceConfig -> SqlDB m ()
 upsertMerchantServiceConfig merchantServiceConfig = do
   now <- getCurrentTime
   let (_serviceName, configJSON) = getServiceNameConfigJSON merchantServiceConfig.serviceConfig

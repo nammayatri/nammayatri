@@ -28,6 +28,7 @@ import Storage.CachedQueries.CacheConfig
 import Storage.Queries.FarePolicy.RestrictedExtraFare as Queries
 
 findRestrictedFareListByMerchantAndVehicle ::
+  forall m r.
   (CacheFlow m r, Esq.EsqDBFlow m r) =>
   Id Merchant ->
   Vehicle.Variant ->
@@ -36,11 +37,12 @@ findRestrictedFareListByMerchantAndVehicle merchantId vehVar =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdVehVarKey merchantId vehVar) >>= \case
     Just a -> pure a
     Nothing -> do
-      val <- Queries.findMaxExtraFareByMerchantAndVehicle merchantId vehVar
+      val <- Queries.findMaxExtraFareByMerchantAndVehicle merchantId vehVar (Proxy @m)
       _ <- cacheRestrictedFareListByMerchantAndVehicle merchantId vehVar val
       pure val
 
 findRestrictedFareListByMerchant ::
+  forall m r.
   (CacheFlow m r, Esq.EsqDBFlow m r) =>
   Id Merchant ->
   m [RestrictedExtraFare]
@@ -48,7 +50,7 @@ findRestrictedFareListByMerchant merchantId =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey merchantId) >>= \case
     Just a -> pure a
     Nothing -> do
-      val <- Queries.findMaxExtraFareByMerchant merchantId
+      val <- Queries.findMaxExtraFareByMerchant merchantId (Proxy @m)
       _ <- cacheRestrictedFareListByMerchant merchantId val
       pure val
 

@@ -90,9 +90,9 @@ baseDriverDocumentsInfoQuery licenseImagesAggTable vehicleRegistrationImagesAggT
     `Esq.leftJoin` vehicleRegistrationImagesAggTable
       `Esq.on` (\(p :& _ :& _ :& _ :& _ :& _ :& _ :& _ :& (vehRegImgPersonId, _)) -> just (p ^. PersonTId) ==. vehRegImgPersonId)
 
-fetchDriverDocsInfo :: (Transactionable m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> m [DriverDocsInfo]
-fetchDriverDocsInfo merchantId mbDriverIds = fmap (map mkDriverDocsInfo) $
-  Esq.findAll $ do
+fetchDriverDocsInfo :: forall m ma. (Transactionable ma m) => Id Merchant -> Maybe (NonEmpty (Id Driver)) -> Proxy ma -> m [DriverDocsInfo]
+fetchDriverDocsInfo merchantId mbDriverIds _ = fmap (map mkDriverDocsInfo) $
+  Esq.findAll @m @ma $ do
     imagesCountLic <- imagesAggTableCTEbyDoctype Image.DriverLicense
     imagesCountVehReg <- imagesAggTableCTEbyDoctype Image.VehicleRegistrationCertificate
     person :& license :& licReq :& assoc :& registration :& regReq :& driverInfo :& licImages :& vehRegImages <-

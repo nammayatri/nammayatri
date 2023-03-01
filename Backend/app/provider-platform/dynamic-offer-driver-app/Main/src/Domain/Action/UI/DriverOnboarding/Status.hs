@@ -63,7 +63,7 @@ data StatusRes = StatusRes
 
 statusHandler :: Id SP.Person -> Flow StatusRes
 statusHandler personId = do
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  person <- runInReplica $ QPerson.findById (Proxy @Flow) personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   (dlStatus, mDL) <- getDLAndStatus personId
   (rcStatus, mRC) <- getRCAndStatus personId
@@ -74,7 +74,7 @@ statusHandler personId = do
 
 getDLAndStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe DL.DriverLicense)
 getDLAndStatus driverId = do
-  mDriverLicense <- DLQuery.findByDriverId driverId
+  mDriverLicense <- DLQuery.findByDriverId driverId (Proxy @Flow)
   status <-
     case mDriverLicense of
       Just driverLicense -> return $ mapStatus driverLicense.verificationStatus
@@ -84,10 +84,10 @@ getDLAndStatus driverId = do
 
 getRCAndStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate)
 getRCAndStatus driverId = do
-  mDriverAssociation <- DRAQuery.getActiveAssociationByDriver driverId
+  mDriverAssociation <- DRAQuery.getActiveAssociationByDriver driverId (Proxy @Flow)
   case mDriverAssociation of
     Just driverAssociation -> do
-      vehicleRC <- RCQuery.findById driverAssociation.rcId >>= fromMaybeM (InternalError "Associated rc not found")
+      vehicleRC <- RCQuery.findById (Proxy @Flow) driverAssociation.rcId >>= fromMaybeM (InternalError "Associated rc not found")
       return (mapStatus vehicleRC.verificationStatus, Just vehicleRC)
     Nothing -> do
       status <- checkIfInVerification driverId Image.VehicleRegistrationCertificate
@@ -101,8 +101,8 @@ mapStatus = \case
 
 checkIfInVerification :: Id SP.Person -> Image.ImageType -> Flow ResponseStatus
 checkIfInVerification driverId docType = do
-  verificationReq <- IVQuery.findLatestByDriverIdAndDocType driverId docType
-  images <- IQuery.findRecentByPersonIdAndImageType driverId docType
+  verificationReq <- IVQuery.findLatestByDriverIdAndDocType driverId docType (Proxy @Flow)
+  images <- IQuery.findRecentByPersonIdAndImageType driverId docType (Proxy @Flow)
   onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
   pure $ verificationStatus onboardingTryLimit (length images) verificationReq
 
@@ -125,9 +125,9 @@ enableDriver personId merchantId (Just rc) (Just dl) = do
   rcNumber <- decrypt rc.certificateNumber
   now <- getCurrentTime
   let vehicle = buildVehicle now personId merchantId rcNumber
-  DB.runTransaction $ VQuery.upsert vehicle
+  DB.runTransaction $ VQuery.upsert @Flow vehicle
   case dl.driverName of
-    Just name -> DB.runTransaction $ Person.updateName personId name
+    Just name -> DB.runTransaction $ Person.updateName @Flow personId name
     Nothing -> return ()
   where
     buildVehicle now personId_ merchantId_ certificateNumber =

@@ -25,7 +25,7 @@ import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Storage.Tabular.DriverLocation
 
-create :: Id Person -> LatLong -> UTCTime -> SqlDB ()
+create :: Id Person -> LatLong -> UTCTime -> SqlDB m ()
 create drLocationId latLong updateTime = do
   -- Tricky query to be able to insert meaningful Point
   now <- getCurrentTime
@@ -41,14 +41,16 @@ create drLocationId latLong updateTime = do
         <#> val now
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
+  Proxy ma ->
   Id Person ->
   m (Maybe DriverLocation)
-findById = Esq.findById
+findById _ = Esq.findById @m @ma
 
-upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB DriverLocation
+upsertGpsCoord :: forall m. Monad m => Id Person -> LatLong -> UTCTime -> SqlDB m DriverLocation
 upsertGpsCoord drLocationId latLong calculationTime = do
-  mbDrLoc <- Esq.findById @DriverLocation @DriverLocationT drLocationId
+  mbDrLoc <- Esq.findById @(SqlDB m) @m @DriverLocation @DriverLocationT drLocationId
   now <- getCurrentTime
   case mbDrLoc of
     Nothing -> do
@@ -67,5 +69,5 @@ upsertGpsCoord drLocationId latLong calculationTime = do
         where_ $ tbl ^. DriverLocationTId ==. val (toKey $ cast drLocationId)
       return $ oldLocation{lat = latLong.lat, lon = latLong.lon, coordinatesCalculatedAt = calculationTime, updatedAt = now}
 
-deleteById :: Id Person -> SqlDB ()
+deleteById :: Id Person -> SqlDB m ()
 deleteById = deleteByKey @DriverLocationT

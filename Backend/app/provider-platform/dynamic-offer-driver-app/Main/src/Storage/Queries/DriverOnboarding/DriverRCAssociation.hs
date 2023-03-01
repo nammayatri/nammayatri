@@ -25,22 +25,26 @@ import Kernel.Utils.Common
 import Storage.Tabular.DriverOnboarding.DriverRCAssociation
 import Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
 
-create :: DriverRCAssociation -> SqlDB ()
+create :: DriverRCAssociation -> SqlDB m ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
+  Proxy ma ->
   Id DriverRCAssociation ->
   m (Maybe DriverRCAssociation)
-findById = Esq.findById
+findById _ = Esq.findById @m @ma
 
 getActiveAssociationByDriver ::
-  (Transactionable m, MonadFlow m) =>
+  forall m ma.
+  (Transactionable ma m, MonadFlow m) =>
   Id Person ->
+  Proxy ma ->
   m (Maybe DriverRCAssociation)
-getActiveAssociationByDriver driverId = do
+getActiveAssociationByDriver driverId _ = do
   now <- getCurrentTime
-  findOne $ do
+  findOne @m @ma $ do
     association <- from $ table @DriverRCAssociationT
     where_ $
       association ^. DriverRCAssociationDriverId ==. val (toKey driverId)
@@ -48,11 +52,13 @@ getActiveAssociationByDriver driverId = do
     return association
 
 findAllByDriverId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Person ->
+  Proxy ma ->
   m [(DriverRCAssociation, VehicleRegistrationCertificate)]
-findAllByDriverId driverId = do
-  findAll $ do
+findAllByDriverId driverId _ = do
+  findAll @m @ma $ do
     rcAssoc :& regCert <-
       from $
         table @DriverRCAssociationT
@@ -66,12 +72,14 @@ findAllByDriverId driverId = do
     return (rcAssoc, regCert)
 
 getActiveAssociationByRC ::
-  (Transactionable m, MonadFlow m) =>
+  forall m ma.
+  (Transactionable ma m, MonadFlow m) =>
   Id VehicleRegistrationCertificate ->
+  Proxy ma ->
   m (Maybe DriverRCAssociation)
-getActiveAssociationByRC rcId = do
+getActiveAssociationByRC rcId _ = do
   now <- getCurrentTime
-  findOne $ do
+  findOne @m @ma $ do
     association <- from $ table @DriverRCAssociationT
     where_ $
       association ^. DriverRCAssociationRcId ==. val (toKey rcId)
@@ -80,7 +88,7 @@ getActiveAssociationByRC rcId = do
 
 endAssociation ::
   Id Person ->
-  SqlDB ()
+  SqlDB m ()
 endAssociation driverId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -92,7 +100,7 @@ endAssociation driverId = do
       tbl ^. DriverRCAssociationDriverId ==. val (toKey driverId)
         &&. tbl ^. DriverRCAssociationAssociatedTill >. val (Just now)
 
-deleteByDriverId :: Id Person -> SqlDB ()
+deleteByDriverId :: Id Person -> SqlDB m ()
 deleteByDriverId driverId =
   Esq.delete $ do
     associations <- from $ table @DriverRCAssociationT

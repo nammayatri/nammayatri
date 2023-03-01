@@ -22,22 +22,26 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.RiderDetails
 
-create :: RiderDetails -> SqlDB ()
+create :: RiderDetails -> SqlDB m ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
+  Proxy ma ->
   Id RiderDetails ->
   m (Maybe RiderDetails)
-findById = Esq.findById
+findById _ = Esq.findById @m @ma
 
 findByMobileNumber ::
-  (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
+  forall m ma r.
+  (MonadThrow m, Log m, Transactionable ma m, EncFlow m r) =>
   Text ->
+  Proxy ma ->
   m (Maybe RiderDetails)
-findByMobileNumber mobileNumber_ = do
+findByMobileNumber mobileNumber_ _ = do
   mobileNumberDbHash <- getDbHash mobileNumber_
-  Esq.findOne $ do
+  Esq.findOne @m @ma $ do
     riderDetails <- from $ table @RiderDetailsT
     where_ $ riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
     return riderDetails

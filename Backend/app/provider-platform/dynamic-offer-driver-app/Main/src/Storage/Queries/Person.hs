@@ -64,14 +64,16 @@ baseFullPersonQuery =
                  person ^. PersonTId ==. vehicle ^. VehicleDriverId
              )
 
-create :: Person -> SqlDB ()
+create :: Person -> SqlDB m ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
+  Proxy ma ->
   Id Person ->
   m (Maybe Person)
-findById = Esq.findById
+findById _ = Esq.findById @m @ma
 
 data FullDriver = FullDriver
   { person :: Person,
@@ -84,7 +86,8 @@ mkFullDriver :: (Person, DriverLocation, DriverInformation, Vehicle) -> FullDriv
 mkFullDriver (p, l, i, v) = FullDriver p l i v
 
 findAllDriversWithInfoAndVehicle ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
   Int ->
   Int ->
@@ -92,9 +95,10 @@ findAllDriversWithInfoAndVehicle ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe DbHash ->
+  Proxy ma ->
   m [(Person, DriverInformation, Maybe Vehicle)]
-findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSearchPhoneDBHash = do
-  Esq.findAll $ do
+findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnabled mbBlocked mbSearchPhoneDBHash _ = do
+  Esq.findAll @m @ma $ do
     person :& info :& mbVeh <-
       from $
         table @PersonT
@@ -118,10 +122,10 @@ findAllDriversWithInfoAndVehicle merchantId limitVal offsetVal mbVerified mbEnab
     offset $ fromIntegral offsetVal
     pure (person, info, mbVeh)
 
-countDrivers :: Transactionable m => Id Merchant -> m Int
-countDrivers merchantId =
+countDrivers :: forall m ma. Transactionable ma m => Id Merchant -> Proxy ma -> m Int
+countDrivers merchantId _ =
   mkCount <$> do
-    Esq.findAll $ do
+    Esq.findAll @m @ma $ do
       person <- from $ table @PersonT
       where_ $
         person ^. PersonMerchantId ==. val (toKey merchantId)
@@ -132,12 +136,14 @@ countDrivers merchantId =
     mkCount _ = 0
 
 findAllDriversByIdsFirstNameAsc ::
-  (Transactionable m, Functor m) =>
+  forall m ma.
+  (Transactionable ma m, Functor m) =>
   Id Merchant ->
   [Id Person] ->
+  Proxy ma ->
   m [FullDriver]
-findAllDriversByIdsFirstNameAsc merchantId driverIds = fmap (map mkFullDriver) $
-  Esq.findAll $ do
+findAllDriversByIdsFirstNameAsc merchantId driverIds _ = fmap (map mkFullDriver) $
+  Esq.findAll @m @ma $ do
     (person :& driverLocation :& driverInfo :& vehicle) <-
       from baseFullPersonQuery
     where_ $
@@ -164,9 +170,18 @@ ridesCountAggTable = with $ do
   groupBy $ ride ^. RideDriverId
   pure (ride ^. RideDriverId, count @Int $ ride ^. RideId)
 
-fetchDriverInfoWithRidesCount :: Transactionable m => Id Merchant -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> m (Maybe DriverWithRidesCount)
-fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash = fmap (fmap mkDriverWithRidesCount) $ do
-  Esq.findOne $ do
+fetchDriverInfoWithRidesCount ::
+  forall m ma.
+  Transactionable ma m =>
+  Id Merchant ->
+  Maybe (DbHash, Text) ->
+  Maybe Text ->
+  Maybe DbHash ->
+  Maybe DbHash ->
+  Proxy ma ->
+  m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash _ = fmap (fmap mkDriverWithRidesCount) $ do
+  Esq.findOne @m @ma $ do
     ridesCountAggQuery <- ridesCountAggTable
     person :& driverInfo :& mbVehicle :& mbDriverLicense :& _mbRcAssoc :& mbRegCert :& (_, mbRidesCount) <-
       from $
@@ -215,13 +230,15 @@ fetchDriverInfoWithRidesCount merchantId mbMobileNumberDbHashWithCode mbVehicleN
     joinOnlyWhenJust mbFilter cond = maybe (val False) (const cond) mbFilter
 
 findByIdAndRoleAndMerchantId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Person ->
   Person.Role ->
   Id Merchant ->
+  Proxy ma ->
   m (Maybe Person)
-findByIdAndRoleAndMerchantId pid role_ merchantId =
-  Esq.findOne $ do
+findByIdAndRoleAndMerchantId pid role_ merchantId _ =
+  Esq.findOne @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonTId ==. val (toKey pid)
@@ -230,21 +247,23 @@ findByIdAndRoleAndMerchantId pid role_ merchantId =
     return person
 
 findAllByMerchantId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   [Person.Role] ->
   Id Merchant ->
+  Proxy ma ->
   m [Person]
-findAllByMerchantId roles merchantId =
-  Esq.findAll $ do
+findAllByMerchantId roles merchantId _ =
+  Esq.findAll @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       (person ^. PersonRole `in_` valList roles ||. val (null roles))
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
-findAdminsByMerchantId :: Transactionable m => Id Merchant -> m [Person]
-findAdminsByMerchantId merchantId =
-  Esq.findAll $ do
+findAdminsByMerchantId :: forall m ma. Transactionable ma m => Id Merchant -> Proxy ma -> m [Person]
+findAdminsByMerchantId merchantId _ =
+  Esq.findAll @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonMerchantId ==. val (toKey merchantId)
@@ -252,12 +271,14 @@ findAdminsByMerchantId merchantId =
     return person
 
 findByMobileNumber ::
-  (Transactionable m) =>
+  forall m ma.
+  Transactionable ma m =>
   Text ->
   DbHash ->
+  Proxy ma ->
   m (Maybe Person)
-findByMobileNumber countryCode mobileNumberHash = do
-  findOne $ do
+findByMobileNumber countryCode mobileNumberHash _ = do
+  findOne @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonMobileCountryCode ==. val (Just countryCode)
@@ -265,28 +286,32 @@ findByMobileNumber countryCode mobileNumberHash = do
     return person
 
 findByIdentifier ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Text ->
+  Proxy ma ->
   m (Maybe Person)
-findByIdentifier identifier_ =
-  findOne $ do
+findByIdentifier identifier_ _ =
+  findOne @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonIdentifier ==. val (Just identifier_)
     return person
 
 findByEmail ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Text ->
+  Proxy ma ->
   m (Maybe Person)
-findByEmail email_ =
-  findOne $ do
+findByEmail email_ _ =
+  findOne @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonEmail ==. val (Just email_)
     return person
 
-updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB ()
+updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB m ()
 updateMerchantIdAndMakeAdmin personId merchantId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -298,7 +323,7 @@ updateMerchantIdAndMakeAdmin personId merchantId = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updateName :: Id Person -> Text -> SqlDB ()
+updateName :: Id Person -> Text -> SqlDB m ()
 updateName personId name = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -309,7 +334,7 @@ updateName personId name = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updatePersonRec :: Id Person -> Person -> SqlDB ()
+updatePersonRec :: Id Person -> Person -> SqlDB m ()
 updatePersonRec personId person = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -333,7 +358,7 @@ updatePersonRec personId person = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
+updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB m ()
 updatePersonVersions person mbBundleVersion mbClientVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
@@ -351,7 +376,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
         where_ $
           tbl ^. PersonTId ==. val (toKey person.id)
 
-updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
+updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB m ()
 updateDeviceToken personId mbDeviceToken = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -362,7 +387,7 @@ updateDeviceToken personId mbDeviceToken = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
+updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB m ()
 updateWhatsappNotificationEnrollStatus personId enrollStatus = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -373,7 +398,7 @@ updateWhatsappNotificationEnrollStatus personId enrollStatus = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updateMobileNumberAndCode :: Person -> SqlDB ()
+updateMobileNumberAndCode :: Person -> SqlDB m ()
 updateMobileNumberAndCode person = do
   let personT = toTType person
   now <- getCurrentTime
@@ -388,7 +413,7 @@ updateMobileNumberAndCode person = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
 
-setIsNewFalse :: Id Person -> SqlDB ()
+setIsNewFalse :: Id Person -> SqlDB m ()
 setIsNewFalse personId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -399,10 +424,10 @@ setIsNewFalse personId = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-deleteById :: Id Person -> SqlDB ()
+deleteById :: Id Person -> SqlDB m ()
 deleteById = Esq.deleteByKey @PersonT
 
-updateAverageRating :: Id Person -> Centesimal -> SqlDB ()
+updateAverageRating :: Id Person -> Centesimal -> SqlDB m ()
 updateAverageRating personId newAverageRating = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -426,17 +451,19 @@ data NearestDriversResult = NearestDriversResult
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestDrivers ::
-  (Transactionable m, MonadTime m) =>
+  forall m ma.
+  (Transactionable ma m, MonadTime m) =>
   Maybe Variant ->
   LatLong ->
   Int ->
   Id Merchant ->
   Bool ->
   Maybe Seconds ->
+  Proxy ma ->
   m [NearestDriversResult]
-getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
+getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry _ = do
   now <- getCurrentTime
-  res <- Esq.findAll $ do
+  res <- Esq.findAll @m @ma $ do
     withTable <- with $ do
       (person :& location :& driverInfo :& vehicle) <-
         from baseFullPersonQuery

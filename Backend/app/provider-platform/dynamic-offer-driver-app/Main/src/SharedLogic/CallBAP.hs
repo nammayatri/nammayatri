@@ -128,6 +128,7 @@ buildBppUrl (Id transporterId) =
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
 sendRideAssignedUpdateToBAP ::
+  forall m r c.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -142,10 +143,10 @@ sendRideAssignedUpdateToBAP ::
   m ()
 sendRideAssignedUpdateToBAP booking ride = do
   transporter <-
-    CQM.findById booking.providerId
+    CQM.findById @m @r booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  driver <- QPerson.findById (Proxy @m) ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- QVeh.findById (Proxy @m) ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
 
@@ -223,6 +224,7 @@ sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
   void $ callOnUpdate transporter booking bookingCancelledMsg retryConfig
 
 sendDriverOffer ::
+  forall m r c.
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,

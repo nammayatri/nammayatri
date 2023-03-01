@@ -25,7 +25,7 @@ import Lib.Scheduler.Types
 import SharedLogic.Allocator
 import Storage.Tabular.AllocatorJob
 
-createAllocatorSendSearchRequestToDriverJob :: NominalDiffTime -> SendSearchRequestToDriverJobData -> Esq.SqlDB ()
+createAllocatorSendSearchRequestToDriverJob :: NominalDiffTime -> SendSearchRequestToDriverJobData -> Esq.SqlDB m ()
 createAllocatorSendSearchRequestToDriverJob inTime jobData = do
   void $
     createJobIn @_ @'SendSearchRequestToDriver Storage.Queries.AllocatorJob.create inTime $
@@ -34,17 +34,17 @@ createAllocatorSendSearchRequestToDriverJob inTime jobData = do
           maxErrors = 5
         }
 
-create :: AnyJob AllocatorJobType -> SqlDB ()
+create :: AnyJob AllocatorJobType -> SqlDB m ()
 create = Esq.create
 
 findAll :: SchedulerM [AnyJob AllocatorJobType]
-findAll = Esq.findAll $ from $ table @AllocatorJobT
+findAll = Esq.findAll @SchedulerM @SchedulerM $ from $ table @AllocatorJobT
 
 findById :: Id (AnyJob AllocatorJobType) -> SchedulerM (Maybe (AnyJob AllocatorJobType))
-findById = Esq.findById
+findById = Esq.findById @SchedulerM @SchedulerM
 
 getTasksById :: [Id (AnyJob AllocatorJobType)] -> SchedulerM [AnyJob AllocatorJobType]
-getTasksById ids = Esq.findAll $ do
+getTasksById ids = Esq.findAll @SchedulerM @SchedulerM $ do
   job <- from $ table @AllocatorJobT
   where_ $ job ^. AllocatorJobId `in_` valList (map (.getId) ids)
   pure job
@@ -52,7 +52,7 @@ getTasksById ids = Esq.findAll $ do
 getReadyTasks :: SchedulerM [AnyJob AllocatorJobType]
 getReadyTasks = do
   now <- getCurrentTime
-  Esq.findAll $ do
+  Esq.findAll @SchedulerM @SchedulerM $ do
     job <- from $ table @AllocatorJobT
     where_ $
       job ^. AllocatorJobStatus ==. val Pending
@@ -63,7 +63,7 @@ getReadyTasks = do
 updateStatus :: JobStatus -> Id (AnyJob AllocatorJobType) -> SchedulerM ()
 updateStatus newStatus jobId = do
   now <- getCurrentTime
-  Esq.runTransaction . Esq.update $ \job -> do
+  Esq.runTransaction . Esq.update @AllocatorJobT @SchedulerM $ \job -> do
     set job [AllocatorJobStatus =. val newStatus, AllocatorJobUpdatedAt =. val now]
     where_ $ job ^. AllocatorJobId ==. val jobId.getId
 
@@ -76,28 +76,28 @@ markAsFailed = updateStatus Failed
 updateErrorCountAndFail :: Id (AnyJob AllocatorJobType) -> Int -> SchedulerM ()
 updateErrorCountAndFail jobId fCount = do
   now <- getCurrentTime
-  Esq.runTransaction . Esq.update $ \job -> do
+  Esq.runTransaction . Esq.update @AllocatorJobT @SchedulerM $ \job -> do
     set job [AllocatorJobStatus =. val Failed, AllocatorJobCurrErrors =. val fCount, AllocatorJobUpdatedAt =. val now]
     where_ $ job ^. AllocatorJobId ==. val jobId.getId
 
 reSchedule :: Id (AnyJob AllocatorJobType) -> UTCTime -> SchedulerM ()
 reSchedule jobId newScheduleTime = do
   now <- getCurrentTime
-  Esq.runTransaction . Esq.update $ \job -> do
+  Esq.runTransaction . Esq.update @AllocatorJobT @SchedulerM $ \job -> do
     set job [AllocatorJobScheduledAt =. val newScheduleTime, AllocatorJobUpdatedAt =. val now]
     where_ $ job ^. AllocatorJobId ==. val jobId.getId
 
 updateFailureCount :: Id (AnyJob AllocatorJobType) -> Int -> SchedulerM ()
 updateFailureCount jobId newCountValue = do
   now <- getCurrentTime
-  Esq.runTransaction . Esq.update $ \job -> do
+  Esq.runTransaction . Esq.update @AllocatorJobT @SchedulerM $ \job -> do
     set job [AllocatorJobCurrErrors =. val newCountValue, AllocatorJobUpdatedAt =. val now]
     where_ $ job ^. AllocatorJobId ==. val jobId.getId
 
 reScheduleOnError :: Id (AnyJob AllocatorJobType) -> Int -> UTCTime -> SchedulerM ()
 reScheduleOnError jobId newCountValue newScheduleTime = do
   now <- getCurrentTime
-  Esq.runTransaction . Esq.update $ \job -> do
+  Esq.runTransaction . Esq.update @AllocatorJobT @SchedulerM $ \job -> do
     set
       job
       [ AllocatorJobScheduledAt =. val newScheduleTime,

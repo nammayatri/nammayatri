@@ -41,6 +41,7 @@ import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.SearchRequest as SR
 
 ifSearchRequestIsCancelled ::
+  forall m r.
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -49,10 +50,11 @@ ifSearchRequestIsCancelled ::
   Id SearchRequest ->
   m Bool
 ifSearchRequestIsCancelled searchReqId = do
-  searchReqStatus <- SR.getStatus searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
+  searchReqStatus <- SR.getStatus searchReqId (Proxy @m) >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
   pure $ searchReqStatus == SR.CANCELLED
 
 ifSearchRequestIsExpired ::
+  forall m r.
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -61,11 +63,12 @@ ifSearchRequestIsExpired ::
   Id SearchRequest ->
   m Bool
 ifSearchRequestIsExpired searchReqId = do
-  searchReqValidTill <- SR.getValidTill searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
+  searchReqValidTill <- SR.getValidTill searchReqId (Proxy @m) >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
   now <- getCurrentTime
   pure $ searchReqValidTill <= now
 
 isRideAlreadyAssigned ::
+  forall m r.
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -73,9 +76,10 @@ isRideAlreadyAssigned ::
   ) =>
   Id SearchRequest ->
   m Bool
-isRideAlreadyAssigned searchReqId = isJust <$> QB.findBySearchReq searchReqId
+isRideAlreadyAssigned searchReqId = isJust <$> QB.findBySearchReq searchReqId (Proxy @m)
 
 isReceivedMaxDriverQuotes ::
+  forall m r.
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -85,7 +89,7 @@ isReceivedMaxDriverQuotes ::
   Id SearchRequest ->
   m Bool
 isReceivedMaxDriverQuotes driverPoolCfg searchReqId = do
-  totalQuotesRecieved <- length <$> QDQ.findAllByRequestId searchReqId
+  totalQuotesRecieved <- length <$> QDQ.findAllByRequestId searchReqId (Proxy @m)
   pure (totalQuotesRecieved >= driverPoolCfg.maxDriverQuotesRequired)
 
 getRescheduleTime ::

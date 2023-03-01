@@ -22,26 +22,28 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.BookingCancellationReason
 
-create :: BookingCancellationReason -> SqlDB ()
+create :: BookingCancellationReason -> SqlDB m ()
 create = Esq.create
 
 findByRideBookingId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Booking ->
+  Proxy ma ->
   m (Maybe BookingCancellationReason)
-findByRideBookingId rideBookingId =
-  Esq.findOne $ do
+findByRideBookingId rideBookingId _ =
+  Esq.findOne @m @ma $ do
     rideBookingCancellationReason <- from $ table @BookingCancellationReasonT
     where_ $ rideBookingCancellationReason ^. BookingCancellationReasonBookingId ==. val (toKey rideBookingId)
     return rideBookingCancellationReason
 
-findByRideId :: Transactionable m => Id Ride -> m (Maybe BookingCancellationReason)
-findByRideId rideId = Esq.findOne $ do
+findByRideId :: forall m ma. Transactionable ma m => Id Ride -> Proxy ma -> m (Maybe BookingCancellationReason)
+findByRideId rideId _ = Esq.findOne @m @ma $ do
   bookingCancellationReason <- from $ table @BookingCancellationReasonT
   where_ $ bookingCancellationReason ^. BookingCancellationReasonRideId ==. (just . val . toKey $ rideId)
   return bookingCancellationReason
 
-upsert :: BookingCancellationReason -> SqlDB ()
+upsert :: BookingCancellationReason -> SqlDB m ()
 upsert cancellationReason@BookingCancellationReason {..} =
   Esq.upsert
     cancellationReason

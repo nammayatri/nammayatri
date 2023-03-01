@@ -33,11 +33,11 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.TransporterConfig as Queries
 
-findByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe TransporterConfig)
+findByMerchantId :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe TransporterConfig)
 findByMerchantId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
-    Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantId id
+    Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantId id (Proxy @m)
 
 cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
 cacheTransporterConfig cfg = do
@@ -52,5 +52,5 @@ makeMerchantIdKey id = "driver-offer:CachedQueries:TransporterConfig:MerchantId-
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
 
-updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> Esq.SqlDB ()
+updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> Esq.SqlDB m ()
 updateFCMConfig = Queries.updateFCMConfig

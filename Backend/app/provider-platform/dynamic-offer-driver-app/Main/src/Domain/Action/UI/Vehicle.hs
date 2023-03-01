@@ -92,26 +92,26 @@ data Driver = Driver
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-listVehicles :: EsqDBReplicaFlow m r => SP.Person -> Maybe Variant.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
+listVehicles :: forall m r. EsqDBReplicaFlow m r => SP.Person -> Maybe Variant.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
 listVehicles admin variantM mbRegNum limitM offsetM = do
   let merchantId = admin.merchantId
-  personList <- Esq.runInReplica $ QP.findAllByMerchantId [SP.DRIVER] merchantId
-  vehicleList <- Esq.runInReplica $ QV.findAllByVariantRegNumMerchantId variantM mbRegNum limit offset merchantId
+  personList <- Esq.runInReplica $ QP.findAllByMerchantId [SP.DRIVER] merchantId (Proxy @m)
+  vehicleList <- Esq.runInReplica $ QV.findAllByVariantRegNumMerchantId variantM mbRegNum limit offset merchantId (Proxy @m)
   respList <- buildVehicleRes personList `traverse` vehicleList
   return $ ListVehicleRes respList
   where
     limit = toInteger $ fromMaybe 50 limitM
     offset = toInteger $ fromMaybe 0 offsetM
 
-updateVehicle :: EsqDBFlow m r => SP.Person -> Id SP.Person -> UpdateVehicleReq -> m UpdateVehicleRes
+updateVehicle :: forall m r. EsqDBFlow m r => SP.Person -> Id SP.Person -> UpdateVehicleReq -> m UpdateVehicleRes
 updateVehicle admin driverId req = do
   let merchantId = admin.merchantId
   runRequestValidation validateUpdateVehicleReq req
-  driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  driver <- QP.findById (Proxy @m) driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   unless (driver.merchantId == merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
-  vehicle <- QV.findById driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
+  vehicle <- QV.findById (Proxy @m) driverId >>= fromMaybeM (VehicleNotFound driverId.getId)
   whenJust req.registrationNo $ \regNum -> do
-    vehicleWithRegistrationNoM <- QV.findByRegistrationNo regNum
+    vehicleWithRegistrationNoM <- QV.findByRegistrationNo regNum (Proxy @m)
     when (isJust vehicleWithRegistrationNoM) $
       throwError $ InvalidRequest "Registration number already exists."
   let updatedVehicle =
@@ -127,21 +127,21 @@ updateVehicle admin driverId req = do
                 registrationCategory = req.registrationCategory <|> vehicle.registrationCategory
                }
 
-  Esq.runTransaction $ QV.updateVehicleRec updatedVehicle
+  Esq.runTransaction $ QV.updateVehicleRec @m updatedVehicle
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateVehicle : ") (show updatedVehicle)
   return $ SV.makeVehicleAPIEntity updatedVehicle
 
-getVehicle :: EsqDBReplicaFlow m r => Id SP.Person -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
+getVehicle :: forall m r. EsqDBReplicaFlow m r => Id SP.Person -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
 getVehicle personId registrationNoM vehicleIdM = do
   user <-
     Esq.runInReplica $
-      QP.findById personId
+      QP.findById (Proxy @m) personId
         >>= fromMaybeM (PersonNotFound personId.getId)
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError $ InvalidRequest "You should pass registration number and vehicle id."
     _ ->
       Esq.runInReplica $
-        QV.findByAnyOf registrationNoM vehicleIdM
+        QV.findByAnyOf registrationNoM vehicleIdM (Proxy @m)
           >>= fromMaybeM (VehicleDoesNotExist personId.getId)
   hasAccess user vehicle
   return . GetVehicleRes $ SV.makeVehicleAPIEntity vehicle

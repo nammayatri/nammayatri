@@ -26,10 +26,10 @@ import Kernel.Utils.Common (addUTCTime, secondsToNominalDiffTime)
 import Storage.Tabular.DriverQuote
 import qualified Storage.Tabular.FareParameters as Fare
 
-create :: Domain.DriverQuote -> SqlDB ()
+create :: forall m. Monad m => Domain.DriverQuote -> SqlDB m ()
 create dQuote = Esq.runTransaction $
   withFullEntity dQuote $ \(dQuoteT, fareParamsT) -> do
-    Esq.create' fareParamsT
+    Esq.create' @Fare.FareParametersT @m fareParamsT
     Esq.create' dQuoteT
 
 baseDriverQuoteQuery ::
@@ -44,27 +44,27 @@ baseDriverQuoteQuery =
                    rb ^. DriverQuoteFareParametersId ==. farePars ^. Fare.FareParametersTId
                )
 
-findById :: (Transactionable m) => Id Domain.DriverQuote -> m (Maybe Domain.DriverQuote)
-findById dQuoteId = buildDType $
+findById :: forall m ma. (Transactionable ma m) => Id Domain.DriverQuote -> Proxy ma -> m (Maybe Domain.DriverQuote)
+findById dQuoteId _ = buildDType $
   fmap (fmap $ extractSolidType @Domain.DriverQuote) $
-    Esq.findOne' $ do
+    Esq.findOne' @m @ma $ do
       (dQuote :& farePars) <-
         from baseDriverQuoteQuery
       where_ $ dQuote ^. DriverQuoteTId ==. val (toKey dQuoteId)
       pure (dQuote, farePars)
 
-setInactiveByRequestId :: Id DSReq.SearchRequest -> SqlDB ()
+setInactiveByRequestId :: Id DSReq.SearchRequest -> SqlDB m ()
 setInactiveByRequestId searchReqId = Esq.update $ \p -> do
   set p [DriverQuoteStatus =. val Domain.Inactive]
   where_ $ p ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
 
-findActiveQuotesByDriverId :: (Transactionable m, MonadTime m) => Id Person -> Seconds -> m [Domain.DriverQuote]
-findActiveQuotesByDriverId driverId driverUnlockDelay = do
+findActiveQuotesByDriverId :: forall m ma. (Transactionable ma m, MonadTime m) => Id Person -> Seconds -> Proxy ma -> m [Domain.DriverQuote]
+findActiveQuotesByDriverId driverId driverUnlockDelay _ = do
   now <- getCurrentTime
   buildDType $ do
     let delayToAvoidRaces = secondsToNominalDiffTime . negate $ driverUnlockDelay
     fmap (fmap $ extractSolidType @Domain.DriverQuote) $
-      Esq.findAll' $ do
+      Esq.findAll' @m @ma $ do
         (dQuote :& farePars) <-
           from baseDriverQuoteQuery
         where_ $
@@ -73,11 +73,11 @@ findActiveQuotesByDriverId driverId driverUnlockDelay = do
             &&. dQuote ^. DriverQuoteValidTill >. val (addUTCTime delayToAvoidRaces now)
         pure (dQuote, farePars)
 
-findAllByRequestId :: Transactionable m => Id DSReq.SearchRequest -> m [Domain.DriverQuote]
-findAllByRequestId searchReqId = do
+findAllByRequestId :: forall m ma. Transactionable ma m => Id DSReq.SearchRequest -> Proxy ma -> m [Domain.DriverQuote]
+findAllByRequestId searchReqId _ = do
   buildDType $ do
     fmap (fmap $ extractSolidType @Domain.DriverQuote) $
-      Esq.findAll' $ do
+      Esq.findAll' @m @ma $ do
         (dQuote :& farePars) <-
           from baseDriverQuoteQuery
         where_ $
@@ -85,17 +85,17 @@ findAllByRequestId searchReqId = do
             &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
         pure (dQuote, farePars)
 
-countAllByRequestId :: Transactionable m => Id DSReq.SearchRequest -> m Int32
-countAllByRequestId searchReqId = do
+countAllByRequestId :: forall m ma. Transactionable ma m => Id DSReq.SearchRequest -> Proxy ma -> m Int32
+countAllByRequestId searchReqId _ = do
   fmap (fromMaybe 0) $
-    Esq.findOne $ do
+    Esq.findOne @m @ma $ do
       dQuote <- from $ table @DriverQuoteT
       where_ $
         dQuote ^. DriverQuoteStatus ==. val Domain.Active
           &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
       pure (countRows @Int32)
 
-deleteByDriverId :: Id Person -> SqlDB ()
+deleteByDriverId :: Id Person -> SqlDB m ()
 deleteByDriverId personId =
   Esq.delete $ do
     driverQuotes <- from $ table @DriverQuoteT

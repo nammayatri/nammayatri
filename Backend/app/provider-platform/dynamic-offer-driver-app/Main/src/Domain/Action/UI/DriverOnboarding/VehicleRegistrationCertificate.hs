@@ -82,15 +82,15 @@ verifyRC ::
   Flow DriverRCRes
 verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
   runRequestValidation validateDriverRCReq req
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById (Proxy @Flow) personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   when driverInfo.blocked $ throwError DriverAccountBlocked
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   operatingCity' <- case mbMerchant of
-    Just merchant -> QCity.findEnabledCityByMerchantIdAndName merchant.id $ T.toLower req.operatingCity
-    Nothing -> QCity.findEnabledCityByName $ T.toLower req.operatingCity
+    Just merchant -> QCity.findEnabledCityByMerchantIdAndName merchant.id (T.toLower req.operatingCity) (Proxy @Flow)
+    Nothing -> QCity.findEnabledCityByName (T.toLower req.operatingCity) (Proxy @Flow)
   when (null operatingCity') $
     throwError $ InvalidOperatingCity req.operatingCity
   configs <- asks (.driverOnboardingConfigs)
@@ -111,20 +111,20 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
         Nothing -> throwImageError imageId ImageExtractionFailed
 
   now <- getCurrentTime
-  mDriverAssociation <- DAQuery.getActiveAssociationByDriver personId
+  mDriverAssociation <- DAQuery.getActiveAssociationByDriver personId (Proxy @Flow)
 
   case mDriverAssociation of
     Just driverAssociaion -> do
-      driverRC <- RCQuery.findById driverAssociaion.rcId >>= fromMaybeM (InvalidRequest "Missing RC entry")
+      driverRC <- RCQuery.findById (Proxy @Flow) driverAssociaion.rcId >>= fromMaybeM (InvalidRequest "Missing RC entry")
       rcNumber <- decrypt driverRC.certificateNumber
       unless (rcNumber == vehicleRegistrationCertNumber) $ throwImageError imageId DriverAlreadyLinked
       unless (driverRC.fitnessExpiry < now) $ throwImageError imageId RCAlreadyUpdated -- RC not expired
       verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration
     Nothing -> do
-      mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber
+      mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber (Proxy @Flow)
       case mVehicleRC of
         Just vehicleRC -> do
-          mRCAssociation <- DAQuery.getActiveAssociationByRC vehicleRC.id
+          mRCAssociation <- DAQuery.getActiveAssociationByRC vehicleRC.id (Proxy @Flow)
           when (isJust mRCAssociation) $ throwImageError imageId RCAlreadyLinked
           verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration
         Nothing -> do
@@ -134,7 +134,7 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
   where
     getImage :: Id Image.Image -> Flow Text
     getImage imageId_ = do
-      imageMetadata <- ImageQuery.findById imageId_ >>= fromMaybeM (ImageNotFound imageId_.getId)
+      imageMetadata <- ImageQuery.findById (Proxy @Flow) imageId_ >>= fromMaybeM (ImageNotFound imageId_.getId)
       unless (imageMetadata.isValid) $ throwError (ImageNotValid imageId_.getId)
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_.getId)
       unless (imageMetadata.imageType == Image.VehicleRegistrationCertificate) $
@@ -152,7 +152,7 @@ verifyRCFlow personId rcNumber imageId dateOfRegistration = do
           else Domain.Skipped
   idfyRes <- Idfy.verifyRC rcNumber
   idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now imageExtractionValidation encryptedRC
-  runTransaction $ IVQuery.create idfyVerificationEntity
+  runTransaction $ IVQuery.create @Flow idfyVerificationEntity
   where
     mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedRC = do
       id <- generateGUID
@@ -175,14 +175,14 @@ verifyRCFlow personId rcNumber imageId dateOfRegistration = do
 
 onVerifyRC :: Domain.IdfyVerification -> Idfy.RCVerificationOutput -> Flow AckResponse
 onVerifyRC verificationReq output = do
-  person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
+  person <- Person.findById (Proxy @Flow) verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
 
   if verificationReq.imageExtractionValidation == Domain.Skipped
     && isJust verificationReq.issueDateOnDoc
     && ( (convertUTCTimetoDate <$> verificationReq.issueDateOnDoc)
            /= (convertUTCTimetoDate <$> (convertTextToUTC output.registration_date))
        )
-    then runTransaction $ IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> return Ack
+    then runTransaction $ IVQuery.updateExtractValidationStatus @Flow verificationReq.requestId Domain.Failed >> return Ack
     else do
       now <- getCurrentTime
       id <- generateGUID
@@ -194,16 +194,16 @@ onVerifyRC verificationReq output = do
 
       case mVehicleRC of
         Just vehicleRC -> do
-          runTransaction $ RCQuery.upsert vehicleRC
+          runTransaction $ RCQuery.upsert @Flow vehicleRC
 
           -- linking to driver
-          rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (InternalError "RC not found")
-          mRCAssociation <- DAQuery.getActiveAssociationByRC rc.id
+          rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry (Proxy @Flow) >>= fromMaybeM (InternalError "RC not found")
+          mRCAssociation <- DAQuery.getActiveAssociationByRC rc.id (Proxy @Flow)
           when (isNothing mRCAssociation) $ do
-            currAssoc <- DAQuery.getActiveAssociationByDriver person.id
-            when (isJust currAssoc) $ do runTransaction $ DAQuery.endAssociation person.id
+            currAssoc <- DAQuery.getActiveAssociationByDriver person.id (Proxy @Flow)
+            when (isJust currAssoc) $ do runTransaction $ DAQuery.endAssociation @Flow person.id
             driverRCAssoc <- mkAssociation person.id rc.id
-            runTransaction $ DAQuery.create driverRCAssoc
+            runTransaction $ DAQuery.create @Flow driverRCAssoc
           return Ack
         _ -> return Ack
   where

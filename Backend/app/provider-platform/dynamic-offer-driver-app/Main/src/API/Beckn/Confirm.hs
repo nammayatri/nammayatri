@@ -58,8 +58,8 @@ confirm transporterId (SignatureAuthResult _ subscriber _) req =
       dConfirmRes <- DConfirm.handler subscriber transporterId dConfirmReq
       now <- getCurrentTime
       transporter <- QM.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
-      driverQuote <- runInReplica $ QDQ.findById dConfirmRes.booking.quoteId >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId.getId)
-      driver <- runInReplica $ QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
+      driverQuote <- runInReplica $ QDQ.findById dConfirmRes.booking.quoteId (Proxy @Flow) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId.getId)
+      driver <- runInReplica $ QPerson.findById (Proxy @Flow) driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
       fork "on_confirm/on_update" $ do
         handle (errHandler dConfirmRes transporter driver) $ do
           void $

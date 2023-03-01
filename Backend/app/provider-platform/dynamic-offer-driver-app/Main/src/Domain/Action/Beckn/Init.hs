@@ -58,6 +58,7 @@ buildBookingLocation DLoc.SearchReqLocation {..} = do
       }
 
 cancelBooking ::
+  forall m r c.
   ( EsqDBFlow m r,
     HedisFlow m r,
     EncFlow m r,
@@ -77,7 +78,7 @@ cancelBooking booking transporterId = do
   bookingCancellationReason <- buildBookingCancellationReason
   transporter <- QM.findById transporterId >>= fromMaybeM (MerchantNotFound transporterId.getId)
   Esq.runTransaction $ do
-    QBCR.upsert bookingCancellationReason
+    QBCR.upsert @m bookingCancellationReason
     QRB.updateStatus booking.id DRB.CANCELLED
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
@@ -94,18 +95,18 @@ cancelBooking booking transporterId = do
             additionalInfo = Nothing
           }
 
-handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
+handler :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
 handler merchantId req = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
-  driverQuote <- QDQuote.findById req.driverQuoteId >>= fromMaybeM (QuoteNotFound req.driverQuoteId.getId)
+  driverQuote <- QDQuote.findById req.driverQuoteId (Proxy @m) >>= fromMaybeM (QuoteNotFound req.driverQuoteId.getId)
   when (driverQuote.validTill < now) $
     throwError $ QuoteExpired driverQuote.id.getId
-  searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
+  searchRequest <- QSR.findById driverQuote.searchRequestId (Proxy @m) >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
   -- do we need to check searchRequest.validTill?
   booking <- buildBooking searchRequest driverQuote now
   Esq.runTransaction $
-    QRB.create booking
+    QRB.create @m booking
   pure InitRes {..}
   where
     buildBooking searchRequest driverQuote now = do

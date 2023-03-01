@@ -39,11 +39,11 @@ data DRatingReq = DRatingReq
 
 handler :: DRatingReq -> Flow ()
 handler req = do
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  booking <- QRB.findById req.bookingId (Proxy @Flow) >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   ride <-
-    QRide.findActiveByRBId booking.id
+    QRide.findActiveByRBId booking.id (Proxy @Flow)
       >>= fromMaybeM (RideNotFound booking.id.getId)
-  rating <- QRating.findRatingForRide ride.id
+  rating <- QRating.findRatingForRide ride.id (Proxy @Flow)
   let driverId = ride.driverId
   unless (ride.status == DRide.COMPLETED) $
     throwError $ RideInvalidStatus "Ride is not ready for rating."
@@ -54,21 +54,22 @@ handler req = do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
       newRating <- buildRating ride.id driverId ratingValue feedbackDetails
-      Esq.runTransaction $ QRating.create newRating
+      Esq.runTransaction $ QRating.create @Flow newRating
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       Esq.runTransaction $ do
-        QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
+        QRating.updateRating @Flow rideRating.id driverId ratingValue feedbackDetails
   calculateAverageRating driverId
 
 calculateAverageRating ::
+  forall m r.
   (EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["minimumDriverRatesCount" ::: Int]) =>
   Id DP.Person ->
   m ()
 calculateAverageRating personId = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
-  allRatings <- QRating.findAllRatingsForPerson personId
+  allRatings <- QRating.findAllRatingsForPerson personId (Proxy @m)
   let ratingsSum = fromIntegral $ sum (allRatings <&> (.ratingValue))
   let ratingCount = length allRatings
   when (ratingCount == 0) $
@@ -77,7 +78,7 @@ calculateAverageRating personId = do
   when (ratingCount >= minimumDriverRatesCount) $ do
     let newAverage = ratingsSum / fromIntegral ratingCount
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
-    Esq.runTransaction $ QP.updateAverageRating personId newAverage
+    Esq.runTransaction $ QP.updateAverageRating @m personId newAverage
 
 buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> m DRating.Rating
 buildRating rideId driverId ratingValue feedbackDetails = do

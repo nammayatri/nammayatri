@@ -57,8 +57,8 @@ stuckBookingsCancel merchantShortId req = do
   let reqBookingIds = cast @Common.Booking @DBooking.Booking <$> req.bookingIds
 
   now <- getCurrentTime
-  stuckBookingIds <- Esq.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now
-  stuckRideItems <- Esq.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now
+  stuckBookingIds <- Esq.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now (Proxy @Flow)
+  stuckRideItems <- Esq.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now (Proxy @Flow)
   let bcReasons = mkBookingCancellationReason Common.bookingStuckCode Nothing <$> stuckBookingIds
   let bcReasonsWithRides = (\item -> mkBookingCancellationReason Common.rideStuckCode (Just item.rideId) item.bookingId) <$> stuckRideItems
   let allStuckBookingIds = stuckBookingIds <> (stuckRideItems <&> (.bookingId))
@@ -67,7 +67,7 @@ stuckBookingsCancel merchantShortId req = do
   -- drivers going out of ride, update location from redis to db
   driverLocations <- catMaybes <$> traverse SDrLoc.findById stuckPersonIds
   Esq.runTransaction $ do
-    QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
+    QRide.updateStatusByIds @Flow (stuckRideItems <&> (.rideId)) DRide.CANCELLED
     QBooking.cancelBookings allStuckBookingIds now
     for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
     for_ driverLocations $ \location -> do

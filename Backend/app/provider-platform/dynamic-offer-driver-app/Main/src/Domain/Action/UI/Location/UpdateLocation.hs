@@ -83,7 +83,7 @@ buildUpdateLocationHandle ::
 buildUpdateLocationHandle driverId = do
   driver <-
     runInReplica $
-      QP.findById driverId
+      QP.findById (Proxy @Flow) driverId
         >>= fromMaybeM (PersonNotFound driverId.getId)
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
   pure $
