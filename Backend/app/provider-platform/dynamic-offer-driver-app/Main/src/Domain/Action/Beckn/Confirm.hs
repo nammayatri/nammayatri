@@ -185,7 +185,6 @@ handler subscriber transporterId req = do
             driverArrivalTime = Nothing,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
-            rideRating = Nothing,
             tripStartPos = Nothing,
             tripEndPos = Nothing,
             fareParametersId = Nothing,

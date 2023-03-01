@@ -32,45 +32,26 @@ import Kernel.Utils.Common
 import Storage.Queries.Booking (baseBookingTable)
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.DriverInformation as DriverInfo
-import Storage.Tabular.Rating as Rating
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideDetails as RideDetails
 import Storage.Tabular.RiderDetails as RiderDetails
 
 create :: Ride -> SqlDB ()
-create dRide = Esq.runTransaction $
-  withFullEntity dRide $ \(sRide, _mbSRating) -> do
-    Esq.create' @RideT sRide
-
-fullRideTable ::
-  From
-    ( Table RideT
-        :& MbTable RatingT
-    )
-fullRideTable =
-  table @RideT
-    `leftJoin` table @RatingT
-      `Esq.on` ( \(ride :& mbRating) ->
-                   just (ride ^. Ride.RideTId) ==. mbRating ?. Rating.RatingRideId
-               )
+create = Esq.create
 
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
-findById rideId = Esq.buildDType $ do
-  mbFullRideT <- Esq.findOne' $ do
-    (ride :& mbRating) <- from fullRideTable
-    where_ $ ride ^. RideTId ==. val (toKey rideId)
-    pure (ride, mbRating)
-  pure $ extractSolidType @Ride <$> mbFullRideT
+findById rideId = Esq.findOne $ do
+  ride <- from $ table @RideT
+  where_ $ ride ^. RideTId ==. val (toKey rideId)
+  pure ride
 
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
-findActiveByRBId rbId = Esq.buildDType $ do
-  mbFullRideT <- Esq.findOne' $ do
-    (ride :& mbRating) <- from fullRideTable
-    where_ $
-      ride ^. Ride.RideBookingId ==. val (toKey rbId)
-        &&. ride ^. RideStatus !=. val Ride.CANCELLED
-    pure (ride, mbRating)
-  pure $ extractSolidType @Ride <$> mbFullRideT
+findActiveByRBId rbId = Esq.findOne $ do
+  ride <- from $ table @RideT
+  where_ $
+    ride ^. Ride.RideBookingId ==. val (toKey rbId)
+      &&. ride ^. RideStatus !=. val Ride.CANCELLED
+  pure ride
 
 findAllByDriverId ::
   Transactionable m =>
@@ -85,11 +66,11 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
   res <- Esq.findAll' $ do
-    ((booking :& fromLocation :& toLocation :& fareParams) :& (ride :& mbRating)) <-
+    ((booking :& fromLocation :& toLocation :& fareParams) :& ride) <-
       from $
         baseBookingTable
-          `innerJoin` fullRideTable
-            `Esq.on` ( \((booking :& _ :& _ :& _) :& (ride :& _)) ->
+          `innerJoin` table @RideT
+            `Esq.on` ( \((booking :& _ :& _ :& _) :& ride) ->
                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
                      )
     where_ $
@@ -99,31 +80,27 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus = Esq.buil
     orderBy [desc $ ride ^. RideCreatedAt]
     limit limitVal
     offset offsetVal
-    return ((booking, fromLocation, toLocation, fareParams), (ride, mbRating))
+    return ((booking, fromLocation, toLocation, fareParams), ride)
 
   pure $
-    res <&> \(fullBookingT, fullRideT) -> do
-      (extractSolidType @Ride fullRideT, extractSolidType @Booking fullBookingT)
+    res <&> \(fullBookingT, ride) -> do
+      (extractSolidType @Ride ride, extractSolidType @Booking fullBookingT)
 
 findOneByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-findOneByDriverId driverId = Esq.buildDType $ do
-  mbFullRideT <- Esq.findOne' $ do
-    (ride :& mbRating) <- from fullRideTable
-    where_ $
-      ride ^. RideDriverId ==. val (toKey driverId)
-    limit 1
-    pure (ride, mbRating)
-  pure $ extractSolidType @Ride <$> mbFullRideT
+findOneByDriverId driverId = Esq.findOne $ do
+  ride <- from $ table @RideT
+  where_ $
+    ride ^. RideDriverId ==. val (toKey driverId)
+  limit 1
+  pure ride
 
 getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-getInProgressByDriverId driverId = Esq.buildDType $ do
-  mbFullRideT <- Esq.findOne' $ do
-    (ride :& mbRating) <- from fullRideTable
-    where_ $
-      ride ^. RideDriverId ==. val (toKey driverId)
-        &&. ride ^. RideStatus ==. val Ride.INPROGRESS
-    pure (ride, mbRating)
-  pure $ extractSolidType @Ride <$> mbFullRideT
+getInProgressByDriverId driverId = Esq.findOne $ do
+  ride <- from $ table @RideT
+  where_ $
+    ride ^. RideDriverId ==. val (toKey driverId)
+      &&. ride ^. RideStatus ==. val Ride.INPROGRESS
+  pure ride
 
 getInProgressOrNewRideIdAndStatusByDriverId :: Transactionable m => Id Person -> m (Maybe (Id Ride, RideStatus))
 getInProgressOrNewRideIdAndStatusByDriverId driverId = do
@@ -136,16 +113,14 @@ getInProgressOrNewRideIdAndStatusByDriverId driverId = do
   pure $ first Id <$> mbTuple
 
 getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
-getActiveByDriverId driverId = Esq.buildDType $ do
-  mbFullRideT <- Esq.findOne' $ do
-    (ride :& mbRating) <- from fullRideTable
-    where_ $
-      ride ^. RideDriverId ==. val (toKey driverId)
-        &&. ( ride ^. RideStatus ==. val Ride.INPROGRESS
-                ||. ride ^. RideStatus ==. val Ride.NEW
-            )
-    pure (ride, mbRating)
-  pure $ extractSolidType @Ride <$> mbFullRideT
+getActiveByDriverId driverId = Esq.findOne $ do
+  ride <- from $ table @RideT
+  where_ $
+    ride ^. RideDriverId ==. val (toKey driverId)
+      &&. ( ride ^. RideStatus ==. val Ride.INPROGRESS
+              ||. ride ^. RideStatus ==. val Ride.NEW
+          )
+  pure ride
 
 updateStatus ::
   Id Ride ->
@@ -258,16 +233,14 @@ countRides merchantId =
     mkCount _ = 0
 
 getRidesForDate :: Transactionable m => Id Person -> Day -> m [Ride]
-getRidesForDate driverId date = Esq.buildDType $ do
-  fullRideType <- Esq.findAll' $ do
-    (ride :& rating) <- from fullRideTable
-    where_ $
-      ride ^. RideDriverId ==. val (toKey driverId)
-        &&. ride ^. RideTripEndTime >=. val (Just minDayTime)
-        &&. ride ^. RideTripEndTime <. val (Just maxDayTime)
-        &&. ride ^. RideStatus ==. val Ride.COMPLETED
-    return (ride, rating)
-  return $ extractSolidType @Ride <$> fullRideType
+getRidesForDate driverId date = Esq.findAll $ do
+  ride <- from $ table @RideT
+  where_ $
+    ride ^. RideDriverId ==. val (toKey driverId)
+      &&. ride ^. RideTripEndTime >=. val (Just minDayTime)
+      &&. ride ^. RideTripEndTime <. val (Just maxDayTime)
+      &&. ride ^. RideStatus ==. val Ride.COMPLETED
+  return ride
   where
     minDayTime = UTCTime (addDays (-1) date) 66600
     maxDayTime = UTCTime date 66600

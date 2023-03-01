@@ -24,6 +24,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
@@ -44,6 +45,7 @@ import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
 import Tools.Error
@@ -92,16 +94,18 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus = do
   rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus
   driverRideLis <- forM rides $ \(ride, booking) -> do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
+    rideRating <- runInReplica $ QR.findRatingForRide ride.id
     driverNumber <- RD.getDriverNumber rideDetail
-    pure $ mkDriverRideRes rideDetail driverNumber (ride, booking)
+    pure $ mkDriverRideRes rideDetail driverNumber rideRating (ride, booking)
   pure . DriverRideListRes $ driverRideLis
 
 mkDriverRideRes ::
   RD.RideDetails ->
   Maybe Text ->
+  Maybe DRating.Rating ->
   (DRide.Ride, DRB.Booking) ->
   DriverRideRes
-mkDriverRideRes rideDetails driverNumber (ride, booking) = do
+mkDriverRideRes rideDetails driverNumber rideRating (ride, booking) = do
   let fareParams = booking.fareParams
   let initial = "" :: Text
   DriverRideRes
@@ -126,7 +130,7 @@ mkDriverRideRes rideDetails driverNumber (ride, booking) = do
       riderName = booking.riderName,
       tripStartTime = ride.tripStartTime,
       tripEndTime = ride.tripEndTime,
-      rideRating = ride.rideRating <&> (.ratingValue),
+      rideRating = rideRating <&> (.ratingValue),
       chargeableDistance = ride.chargeableDistance
     }
 

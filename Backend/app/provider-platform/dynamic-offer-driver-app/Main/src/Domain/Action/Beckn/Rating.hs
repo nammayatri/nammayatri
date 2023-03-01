@@ -11,7 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.Beckn.Rating where
 
@@ -44,12 +43,13 @@ handler req = do
   ride <-
     QRide.findActiveByRBId booking.id
       >>= fromMaybeM (RideNotFound booking.id.getId)
+  rating <- QRating.findRatingForRide ride.id
   let driverId = ride.driverId
   unless (ride.status == DRide.COMPLETED) $
     throwError $ RideInvalidStatus "Ride is not ready for rating."
   let ratingValue = req.ratingValue
       feedbackDetails = req.feedbackDetails
-  case ride.rideRating of
+  case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
@@ -58,9 +58,8 @@ handler req = do
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      let ratingId = cast @DRide.RideRating @DRating.Rating rideRating.id
       Esq.runTransaction $ do
-        QRating.updateRating ratingId driverId ratingValue feedbackDetails
+        QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
   calculateAverageRating driverId
 
 calculateAverageRating ::

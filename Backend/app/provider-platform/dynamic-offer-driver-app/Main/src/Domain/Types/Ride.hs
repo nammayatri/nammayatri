@@ -63,17 +63,7 @@ data Ride = Ride
     tripEndTime :: Maybe UTCTime,
     tripStartPos :: Maybe LatLong,
     tripEndPos :: Maybe LatLong,
-    rideRating :: Maybe RideRating,
     fareParametersId :: Maybe (Id DFare.FareParameters),
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
-  }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
-
-data RideRating = RideRating
-  { id :: Id RideRating,
-    ratingValue :: Int,
-    feedbackDetails :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

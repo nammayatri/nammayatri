@@ -17,6 +17,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
     Handle (..),
     MetricsHandle (..),
     handler,
+    IfSearchRequestIsValid (..),
   )
 where
 
@@ -33,6 +34,11 @@ data MetricsHandle m = MetricsHandle
     putTaskDuration :: Milliseconds -> m ()
   }
 
+data IfSearchRequestIsValid m = IfSearchRequestIsValid
+  { expired :: m Bool,
+    cancelled :: m Bool
+  }
+
 data Handle m = Handle
   { isBatchNumExceedLimit :: m Bool,
     isRideAlreadyAssigned :: m Bool,
@@ -44,7 +50,7 @@ data Handle m = Handle
     metrics :: MetricsHandle m,
     setBatchDurationLock :: m (Maybe UTCTime),
     createRescheduleTime :: UTCTime -> m UTCTime,
-    ifSearchRequestIsCancelled :: m Bool
+    ifSearchRequestIsValid :: IfSearchRequestIsValid m
   }
 
 handler :: HandleMonad m => Handle m -> m ExecutionResult
@@ -52,25 +58,31 @@ handler h@Handle {..} = do
   logInfo "Starting job execution"
   metrics.incrementTaskCounter
   measuringDuration (\ms _ -> metrics.putTaskDuration ms) $ do
-    isSearchRequestCancelled <- ifSearchRequestIsCancelled
+    isSearchRequestCancelled <- ifSearchRequestIsValid.cancelled
     res <-
       if isSearchRequestCancelled
         then do
           logInfo "Search request is cancelled."
           return Complete
         else do
-          isRideAssigned <- isRideAlreadyAssigned
-          if isRideAssigned
+          isSearchRequestExpired <- ifSearchRequestIsValid.expired
+          if isSearchRequestExpired
             then do
-              logInfo "Ride already assigned."
+              logInfo "Search request is expired."
               return Complete
             else do
-              isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
-              if isReceivedMaxDriverQuotes'
+              isRideAssigned <- isRideAlreadyAssigned
+              if isRideAssigned
                 then do
-                  logInfo "Received enough quotes from drivers."
+                  logInfo "Ride already assigned."
                   return Complete
-                else processRequestSending h
+                else do
+                  isReceivedMaxDriverQuotes' <- isReceivedMaxDriverQuotes
+                  if isReceivedMaxDriverQuotes'
+                    then do
+                      logInfo "Received enough quotes from drivers."
+                      return Complete
+                    else processRequestSending h
     case res of
       Complete -> cleanupDriverPoolBatches
       _ -> return ()

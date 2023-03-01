@@ -660,7 +660,7 @@ respondQuote driverId req = do
           QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
         DP.incrementQuoteAcceptedCount sReq.providerId driverId
         -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
-        when ((quoteCount + 1) >= quoteLimit) $ sendRemoveRideRequestNotification organization.id driverQuote
+        when ((quoteCount + 1) >= quoteLimit || sReq.autoAssignEnabled) $ sendRemoveRideRequestNotification organization.id driverQuote
         sendDriverOffer organization sReq driverQuote
       Reject -> do
         Esq.runTransaction $ do
