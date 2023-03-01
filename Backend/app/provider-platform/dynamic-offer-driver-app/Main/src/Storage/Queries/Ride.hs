@@ -41,9 +41,9 @@ create = Esq.create
 
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 findById rideId = Esq.findOne $ do
-    ride <- from $ table @RideT
-    where_ $ ride ^. RideTId ==. val (toKey rideId)
-    pure ride
+  ride <- from $ table @RideT
+  where_ $ ride ^. RideTId ==. val (toKey rideId)
+  pure ride
 
 findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 findActiveByRBId rbId = Esq.findOne $ do
