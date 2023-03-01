@@ -4,7 +4,7 @@ The Nammayatri project is in the process of using Nix instead of Stack. At the m
 
 ## Installing Nix
 
-https://haskell.flake.page/start/nix
+https://haskell.flake.page/nix
 
 ## Keeping stack.yaml and flake.lock in sync
 
