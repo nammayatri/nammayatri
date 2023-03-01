@@ -1,2 +1,253 @@
 cradle:
-  cabal:
+  stack:
+    stackYaml: "./stack-hie.yaml"
+
+    components:
+      - path: "app/rider-platform/rider-app/Main/src"
+        component: "rider-app:lib"
+
+      - path: "app/rider-platform/rider-app/Main/server/Main.hs"
+        component: "rider-app:exe:rider-app-exe"
+
+      - path: "app/rider-platform/rider-app/Main/server/Paths_app_backend.hs"
+        component: "rider-app:exe:rider-app-exe"
+
+      - path: "app/rider-platform/rider-app/search-result-aggregator/src"
+        component: "search-result-aggregator:lib"
+
+      - path: "app/rider-platform/rider-app/search-result-aggregator/server/Main.hs"
+        component: "search-result-aggregator:exe:search-result-aggregator-exe"
+
+      - path: "app/rider-platform/rider-app/search-result-aggregator/server/Paths_search_result_aggregator.hs"
+        component: "search-result-aggregator:exe:search-result-aggregator-exe"
+
+      - path: "app/rider-platform/public-transport-rider-platform/search-consumer/src"
+        component: "public-transport-search-consumer:lib"
+
+      - path: "app/rider-platform/public-transport-rider-platform/search-consumer/server/Main.hs"
+        component: "public-transport-search-consumer:exe:public-transport-search-consumer-exe"
+
+      - path: "app/rider-platform/public-transport-rider-platform/search-consumer/server/Paths_public_transport_search_consumer.hs"
+        component: "public-transport-search-consumer:exe:public-transport-search-consumer-exe"
+
+      - path: "app/beckn-cli/src"
+        component: "beckn-cli:lib"
+
+      - path: "app/beckn-cli/app/Main.hs"
+        component: "beckn-cli:exe:beckn-cli-exe"
+
+      - path: "app/beckn-cli/app/Paths_beckn_cli.hs"
+        component: "beckn-cli:exe:beckn-cli-exe"
+
+      - path: "app/provider-platform/dynamic-offer-driver-app/Main/src"
+        component: "dynamic-offer-driver-app:lib"
+
+      - path: "app/provider-platform/dynamic-offer-driver-app/Main/server/Main.hs"
+        component: "dynamic-offer-driver-app:exe:dynamic-offer-driver-app-exe"
+
+      - path: "app/provider-platform/dynamic-offer-driver-app/Allocator/src"
+        component: "driver-offer-allocator:lib"
+
+      - path: "app/provider-platform/dynamic-offer-driver-app/Allocator/server/Main.hs"
+        component: "driver-offer-allocator:exe:driver-offer-allocator-exe"
+
+      - path: "app/provider-platform/static-offer-driver-app/Allocator/src"
+        component: "static-offer-driver-app-allocator:lib"
+
+      - path: "app/provider-platform/static-offer-driver-app/Allocator/server/Main.hs"
+        component: "static-offer-driver-app-allocator:exe:static-offer-driver-app-btm-exe"
+
+      - path: "app/provider-platform/static-offer-driver-app/Allocator/test/src"
+        component: "static-offer-driver-app-allocator:test:static-offer-driver-app-allocator-tests"
+
+      - path: "app/provider-platform/static-offer-driver-app/Scheduler/src"
+        component: "static-offer-driver-app-scheduler:lib"
+
+      - path: "app/provider-platform/static-offer-driver-app/Scheduler/server/Main.hs"
+        component: "static-offer-driver-app-scheduler:exe:transporter-scheduler-exe"
+
+      - path: "app/provider-platform/driver-tracking-health-check/src"
+        component: "driver-tracking-healthcheck:lib"
+
+      - path: "app/provider-platform/driver-tracking-health-check/server/Main.hs"
+        component: "driver-tracking-healthcheck:exe:driver-tracking-healthcheck-exe"
+
+      - path: "app/provider-platform/static-offer-driver-app/Main/src"
+        component: "static-offer-driver-app:lib"
+
+      - path: "app/provider-platform/static-offer-driver-app/Main/server/Main.hs"
+        component: "static-offer-driver-app:exe:static-offer-driver-app-exe"
+
+      - path: "app/provider-platform/static-offer-driver-app/server/Main.hs"
+        component: "static-offer-driver-app:exe:transporter-scheduler-exe"
+
+      - path: "app/provider-platform/static-offer-driver-app/Main/test/app"
+        component: "static-offer-driver-app:test:static-offer-driver-app-tests"
+
+      - path: "app/provider-platform/static-offer-driver-app/Main/test/src"
+        component: "static-offer-driver-app:test:static-offer-driver-app-tests"
+
+      - path: "app/gateway/src"
+        component: "beckn-gateway:lib"
+
+      - path: "app/gateway/server/Main.hs"
+        component: "beckn-gateway:exe:beckn-gateway-exe"
+
+      - path: "app/gateway/server/Paths_beckn_gateway.hs"
+        component: "beckn-gateway:exe:beckn-gateway-exe"
+
+      - path: "app/dashboard/rider-dashboard/src"
+        component: "rider-dashboard:lib"
+
+      - path: "app/dashboard/rider-dashboard/server/Main.hs"
+        component: "rider-dashboard:exe:rider-dashboard-exe"
+
+      - path: "app/dashboard/provider-dashboard/src"
+        component: "provider-dashboard:lib"
+
+      - path: "app/dashboard/provider-dashboard/server/Main.hs"
+        component: "provider-dashboard:exe:provider-dashboard-exe"
+
+      - path: "app/dashboard/Lib/src"
+        component: "lib-dashboard:lib"
+
+      - path: "app/dashboard/CommonAPIs/src"
+        component: "dashboard-helper-api:lib"
+
+      - path: "app/mocks/google/src"
+        component: "mock-google:lib"
+
+      - path: "app/mocks/google/server/Main.hs"
+        component: "mock-google:exe:mock-google-exe"
+
+      - path: "app/example-service/src"
+        component: "example-service:lib"
+
+      - path: "app/example-service/server/Main.hs"
+        component: "example-service:exe:example-service-exe"
+
+      - path: "app/example-service/server/Paths_example_service.hs"
+        component: "example-service:exe:example-service-exe"
+
+      - path: "app/mocks/rider-platform/src"
+        component: "mock-rider-platform:lib"
+
+      - path: "app/mocks/rider-platform/server/Main.hs"
+        component: "mock-rider-platform:exe:mock-rider-platform-exe"
+
+      - path: "app/mocks/rider-platform/server/Paths_mock_rider_platform.hs"
+        component: "mock-rider-platform:exe:mock-rider-platform-exe"
+
+      - path: "app/kafka-consumers/src"
+        component: "kafka-consumers:lib"
+
+      - path: "app/kafka-consumers/app/Main.hs"
+        component: "kafka-consumers:exe:kafka-consumers-exe"
+
+      - path: "app/kafka-consumers/app/Paths_kafka_consumers.hs"
+        component: "kafka-consumers:exe:kafka-consumers-exe"
+
+      - path: "app/rider-platform/public-transport-rider-platform/Main/src"
+        component: "public-transport-rider-platform:lib"
+
+      - path: "app/rider-platform/public-transport-rider-platform/Main/server/Main.hs"
+        component: "public-transport-rider-platform:exe:public-transport-rider-platform-exe"
+
+      - path: "app/rider-platform/public-transport-rider-platform/Main/server/Paths_public_transport_rider_platform.hs"
+        component: "public-transport-rider-platform:exe:public-transport-rider-platform-exe"
+
+      - path: "app/mocks/sms/src"
+        component: "mock-sms:lib"
+
+      - path: "app/mocks/sms/server/Main.hs"
+        component: "mock-sms:exe:mock-fcm-exe"
+
+      - path: "app/mocks/sms/server/Paths_mock_sms.hs"
+        component: "mock-sms:exe:mock-fcm-exe"
+
+      - path: "app/mocks/idfy/src"
+        component: "mock-idfy:lib"
+
+      - path: "app/mocks/idfy/server/Main.hs"
+        component: "mock-idfy:exe:mock-fcm-exe"
+
+      - path: "app/mocks/idfy/server/Paths_mock_idfy.hs"
+        component: "mock-idfy:exe:mock-fcm-exe"
+
+      - path: "app/mocks/fcm/src"
+        component: "mock-fcm:lib"
+
+      - path: "app/mocks/fcm/server/Main.hs"
+        component: "mock-fcm:exe:mock-fcm-exe"
+
+      - path: "app/mocks/fcm/server/Paths_mock_fcm.hs"
+        component: "mock-fcm:exe:mock-fcm-exe"
+
+      - path: "app/mock-registry/src"
+        component: "mock-registry:lib"
+
+      - path: "app/mock-registry/server/Main.hs"
+        component: "mock-registry:exe:mock-registry-exe"
+
+      - path: "app/mock-registry/server/Paths_mock_registry.hs"
+        component: "mock-registry:exe:mock-registry-exe"
+
+      - path: "app/mocks/public-transport-provider-platform/src"
+        component: "mock-public-transport-provider-platform:lib"
+
+      - path: "app/mocks/public-transport-provider-platform/server/Main.hs"
+        component: "mock-public-transport-provider-platform:exe:mock-public-transport-provider-platform-exe"
+
+      - path: "app/mocks/public-transport-provider-platform/server/Paths_mock_public_transport_provider_platform.hs"
+        component: "mock-public-transport-provider-platform:exe:mock-public-transport-provider-platform-exe"
+
+      - path: "test/src"
+        component: "beckn-test:lib"
+
+      - path: "test/app"
+        component: "beckn-test:test:beckn-integ-test"
+
+      - path: "app/scheduler-example/src"
+        component: "scheduler-example:lib"
+
+      - path: "app/scheduler-example/server/Main.hs"
+        component: "scheduler-example:exe:scheduler-example-exe"
+
+      - path: "app/scheduler-example/server/Paths_scheduler_example.hs"
+        component: "scheduler-example:exe:scheduler-example-exe"
+
+      - path: "lib/beckn-spec/src"
+        component: "beckn-spec:lib"
+
+      - path: "lib/beckn-services/src"
+        component: "beckn-services:lib"
+
+      - path: "lib/location-updates/src"
+        component: "location-updates:lib"
+
+      - path: "lib/location-updates/test/src"
+        component: "location-updates:test:location-updates-tests"
+
+      - path: "lib/scheduler/src"
+        component: "scheduler:lib"
+
+      - path: "lib/scheduler/test/src"
+        component: "scheduler:test:scheduler-tests"
+
+      - path: "app/utils/route-extractor/src"
+        component: "route-extractor:lib"
+
+      - path: "app/utils/route-extractor/app/Main.hs"
+        component: "route-extractor:exe:route-extractor-exe"
+
+      - path: "app/utils/route-extractor/app/Paths_route_extractor.hs"
+        component: "route-extractor:exe:route-extractor-exe"
+
+      - path: "app/utils/image-api-helper/src"
+        component: "image-api-helper:lib"
+
+      - path: "app/utils/image-api-helper/app/Main.hs"
+        component: "image-api-helper:exe:image-api-helper-exe"
+
+      - path: "app/utils/image-api-helper/app/Paths_image_api_helper.hs"
+        component: "image-api-helper:exe:image-api-helper-exe"
