@@ -7,8 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+      - uses: nixbuild/nix-quick-install-action@v21
+        with:
+          nix_conf: |
+            experimental-features = nix-command flakes
       - uses: cachix/cachix-action@v12
         with:
           name: nammayatri
