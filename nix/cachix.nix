@@ -1,7 +1,7 @@
 { self, ... }:
 
 let
-  cachixName = "srid-nammayatri";
+  cachixName = "nammayatri";
 in
 {
   perSystem = { pkgs, lib, ... }: {

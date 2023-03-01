@@ -11,9 +11,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@main
       - uses: cachix/cachix-action@v12
         with:
-          # TODO: configure official cache once provisioned.
-          # Using personal cache for now, and pushing manually.
-          name: srid-nammayatri
+          name: nammayatri
       - name: Download from Nix cache + build external deps
         run: |
           # TODO: Replace .#all with .#default
