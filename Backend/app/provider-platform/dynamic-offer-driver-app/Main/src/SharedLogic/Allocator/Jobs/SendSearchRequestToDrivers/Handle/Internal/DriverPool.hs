@@ -378,14 +378,15 @@ incrementPoolRadiusStep searchReqId = do
 driverRequestCountKey :: Id DSR.SearchRequest -> Id Driver -> Text
 driverRequestCountKey searchReqId driverId = "Driver-Request-Count-Key:SearchReqId-DriverId" <> searchReqId.getId <> driverId.getId
 
-checkRequestCount :: (Redis.HedisFlow m r, HasDriverPoolConfig  r) => Id DSR.SearchRequest -> Id Driver -> DriverPoolConfig -> m Bool
+checkRequestCount :: (Redis.HedisFlow m r, HasDriverPoolConfig r) => Id DSR.SearchRequest -> Id Driver -> DriverPoolConfig -> m Bool
 checkRequestCount searchReqId driverId driverPoolConfig = maybe True (\count -> (count :: Int) < driverPoolConfig.driverRequestCountLimit) <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchReqId driverId))
 
 incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DSR.SearchRequest -> m ()
 incrementDriverRequestCount finalPoolBatch searchReqId = do
-  CM.mapM_ 
-    (\dpr -> 
+  CM.mapM_
+    ( \dpr ->
         Redis.withCrossAppRedis do
           void $ Redis.incr (driverRequestCountKey searchReqId dpr.driverPoolResult.driverId)
           Redis.expire (driverRequestCountKey searchReqId dpr.driverPoolResult.driverId) 7200
-    ) finalPoolBatch
+    )
+    finalPoolBatch
