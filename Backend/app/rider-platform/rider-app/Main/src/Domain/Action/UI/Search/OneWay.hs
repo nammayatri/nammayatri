@@ -21,6 +21,7 @@ module Domain.Action.UI.Search.OneWay
 where
 
 import qualified Domain.Action.UI.Search.Common as DSearch
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -33,13 +34,10 @@ import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry
-import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
-import qualified Tools.Maps as MapSearch
 import Tools.Metrics
 import qualified Tools.Metrics as Metrics
 
@@ -69,33 +67,25 @@ oneWaySearch ::
     CoreMetrics m,
     HasBAPMetrics m r
   ) =>
-  Id Person.Person ->
+  Person.Person ->
+  Merchant.Merchant ->
   OneWaySearchReq ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Meters ->
   m OneWaySearchRes
-oneWaySearch personId req bundleVersion clientVersion = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+oneWaySearch person merchant req bundleVersion clientVersion distance = do
   validateServiceability merchant.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   toLocation <- DSearch.buildSearchReqLoc req.destination
   now <- getCurrentTime
-  distance <-
-    (\res -> metersToHighPrecMeters res.distance)
-      <$> MapSearch.getDistance merchant.id
-        MapSearch.GetDistanceReq
-          { origin = req.origin.gps,
-            destination = req.destination.gps,
-            travelMode = Just MapSearch.CAR
-          }
-  searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (Just distance) now bundleVersion clientVersion
+  searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (metersToHighPrecMeters <$> distance) now bundleVersion clientVersion
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
   DB.runTransaction $ do
     QSearchRequest.create searchRequest
-    QPFS.updateStatus personId DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
+    QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   let dSearchRes =
         OneWaySearchRes
           { origin = req.origin,

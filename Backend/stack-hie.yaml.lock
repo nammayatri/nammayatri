@@ -5,68 +5,55 @@
 
 packages:
 - completed:
-    subdir: app/gateway
-    name: beckn-gateway
+    subdir: lib/mobility-core
+    name: mobility-core
     version: 0.1.0.0
-    git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-gateway.git
+    git: https://github.com/nammayatri/shared-kernel.git
     pantry-tree:
-      size: 1105
-      sha256: a5f8c0fd5f73a399b718988f3374ca93d7664be177c60bcf5308e455d1072fb4
-    commit: 580217a5701209ff0a20c5ba2295584b38e46bdc
+      size: 16450
+      sha256: 970f19ca0e208b006c54b39545e894759973818da7921d4484ce64bf09a72321
+    commit: 28bae0f39eb3d2158c74dd3aac7ed685805c5cee
   original:
-    subdir: app/gateway
-    git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-gateway.git
-    commit: 580217a5701209ff0a20c5ba2295584b38e46bdc
-- completed:
-    subdir: app/mock-registry
-    name: mock-registry
-    version: 0.1.0.0
-    git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-gateway.git
-    pantry-tree:
-      size: 662
-      sha256: 96f34faad6ad4eca6c3b9c4163de013749976f1a8b4163e04eeb36725c34ec7f
-    commit: 580217a5701209ff0a20c5ba2295584b38e46bdc
-  original:
-    subdir: app/mock-registry
-    git: ssh://git@ssh.bitbucket.juspay.net/bec/beckn-gateway.git
-    commit: 580217a5701209ff0a20c5ba2295584b38e46bdc
+    subdir: lib/mobility-core
+    git: https://github.com/nammayatri/shared-kernel.git
+    commit: 28bae0f39eb3d2158c74dd3aac7ed685805c5cee
 - completed:
     subdir: core
     name: passetto-core
     version: 0.1.0
-    git: ssh://git@bitbucket.org/juspay/passetto-hs
+    git: https://github.com/juspay/passetto
     pantry-tree:
       size: 406
       sha256: d5a3a1e7110099da7f7b9109578d27dc423a00973ccb47b69c6eeb09212742dd
-    commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
+    commit: bb92cf1dd9699662d2a7bb96cd6a6aed6f20e8ff
   original:
     subdir: core
-    git: ssh://git@bitbucket.org/juspay/passetto-hs
-    commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
+    git: https://github.com/juspay/passetto
+    commit: bb92cf1dd9699662d2a7bb96cd6a6aed6f20e8ff
 - completed:
     subdir: client
     name: passetto-client
     version: 0.1.0
-    git: ssh://git@bitbucket.org/juspay/passetto-hs
+    git: https://github.com/juspay/passetto
     pantry-tree:
       size: 770
       sha256: 2d0789a50636d2bb58ed655ffbc83f66f8af89ef3bc098ff2a8fbc69f3964e8d
-    commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
+    commit: bb92cf1dd9699662d2a7bb96cd6a6aed6f20e8ff
   original:
     subdir: client
-    git: ssh://git@bitbucket.org/juspay/passetto-hs
-    commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
+    git: https://github.com/juspay/passetto
+    commit: bb92cf1dd9699662d2a7bb96cd6a6aed6f20e8ff
 - completed:
     name: euler-hs
-    version: 2.0.4.4
-    git: git@bitbucket.org:juspay/euler-hs.git
+    version: 2.6.0.1
+    git: https://github.com/juspay/euler-hs
     pantry-tree:
-      size: 7785
-      sha256: b7913783c3e9c5db4e27d5323f33489821e34b2ebbaafcf394de5ecad2190d4a
-    commit: b9bf8f6b32f593f49aff782690e8029f74a9947e
+      size: 7074
+      sha256: d6a415449098fb477b794e8355285dca5f69e61d77de62cb12599dbb9b0bf6b5
+    commit: 0fdda6ef43c1a6c9c7221d7c194c278e375b9936
   original:
-    git: git@bitbucket.org:juspay/euler-hs.git
-    commit: b9bf8f6b32f593f49aff782690e8029f74a9947e
+    git: https://github.com/juspay/euler-hs
+    commit: 0fdda6ef43c1a6c9c7221d7c194c278e375b9936
 - completed:
     name: hedis
     version: 0.12.8.1
@@ -166,14 +153,14 @@ packages:
 - completed:
     name: sequelize
     version: 1.1.0.0
-    git: git@bitbucket.org:juspay/haskell-sequelize.git
+    git: https://github.com/juspay/haskell-sequelize.git
     pantry-tree:
-      size: 719
-      sha256: d3f8956a4c8e471a14912a5b62c542ae42bdf34305ab518b3f72a0ef42c41c1f
-    commit: bcbf4481372d77491896a5d2051ddb2eb90640ca
+      size: 543
+      sha256: cc5224453360f8399ab3c71b03c646d8b515d52f29b727e1e929e9ef441068f3
+    commit: 3abc8fe10edde3fd1c9a776ede81d057dc590341
   original:
-    git: git@bitbucket.org:juspay/haskell-sequelize.git
-    commit: bcbf4481372d77491896a5d2051ddb2eb90640ca
+    git: https://github.com/juspay/haskell-sequelize.git
+    commit: 3abc8fe10edde3fd1c9a776ede81d057dc590341
 - completed:
     hackage: generic-lens-1.1.0.0@sha256:caaab13ae4f2a68e43671d25fb56746ba14bc9d5d787d594a66c7f56eba3fa66,6412
     pantry-tree:
