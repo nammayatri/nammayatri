@@ -10,7 +10,6 @@
     haskellProjects.default = {
       imports = [
         ./nix/haskell-overrides.nix
-        inputs.nixpkgs-140774-workaround.haskellFlakeProjectModules.default
       ];
       # beckn is not upgraded to 9.2 yet (could take weeks per Hemant)
       # we can't use 884, because that's broken in nixpkgs. So 8.10.
@@ -20,19 +19,7 @@
           inherit (pkgs)
             dhall
             ;
-          inherit (pkgs.haskellPackages)
-            hpack
-            ;
-          inherit (hp)
-            ghcid
-            ;
-          treefmt = config.treefmt.build.wrapper;
-        } // config.treefmt.build.programs;
-        mkShellArgs.shellHook = ''
-          ${lib.getExe config.flake-root.package}
-          # Re-generate .cabal files so HLS will work (per hie.yaml)
-          time ${pkgs.findutils}/bin/find -name package.yaml -exec hpack {} \;
-        '';
+        };
       };
       overrides = self: super: with pkgs.haskell.lib; {
         # FIXME: location-updates-tests: Network.Socket.connect: <socket: 6>: does not exist (Connection refused)

@@ -9,7 +9,6 @@
     cachix-push.url = "github:juspay/cachix-push";
 
     flake-root.url = "github:srid/flake-root";
-    nixpkgs-140774-workaround.url = "github:srid/nixpkgs-140774-workaround";
     # Dependencies
     euler-hs.url = "github:juspay/euler-hs";
     euler-hs.flake = false;
@@ -40,7 +39,7 @@
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [
         inputs.cachix-push.flakeModule
-        inputs.common.flakeModules.default
+        inputs.common.flakeModule
         ./Backend/flake-module.nix
       ];
       perSystem = { config, self', system, pkgs, lib, ... }: {
