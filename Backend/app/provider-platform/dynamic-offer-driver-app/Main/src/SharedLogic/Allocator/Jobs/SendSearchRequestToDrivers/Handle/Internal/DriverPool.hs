@@ -24,9 +24,11 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
   )
 where
 
+import qualified Control.Monad as CM
 import Control.Monad.Extra (maybeM)
 import qualified Data.HashMap as HM
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.TransporterConfig (TransporterConfig)
 import EulerHS.Prelude hiding (id)
@@ -43,8 +45,6 @@ import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.TransporterConfig as TC
 import Tools.Maps as Maps
 import Tools.Metrics
-import Domain.Types.Person (Driver)
-import qualified Control.Monad as CM
 
 isBatchNumExceedLimit ::
   ( Redis.HedisFlow m r,
