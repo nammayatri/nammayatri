@@ -55,6 +55,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J
@@ -141,7 +142,8 @@ oneWaySearch ::
   DOneWaySearch.OneWaySearchReq ->
   m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
 oneWaySearch personId bundleVersion clientVersion req = do
-  dSearchRes <- DOneWaySearch.oneWaySearch personId req bundleVersion clientVersion
+  person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   let sourceLatlong = req.origin.gps
   let destinationLatLong = req.destination.gps
   let request =
@@ -150,9 +152,9 @@ oneWaySearch personId bundleVersion clientVersion req = do
             calcPoints = True,
             mode = Just Maps.CAR
           }
-  person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist $ show personId)
   routeResponse <- Maps.getRoutes person.merchantId request
   let shortestRouteInfo = getRouteInfoWithShortestDuration routeResponse
+  dSearchRes <- DOneWaySearch.oneWaySearch person merchant req bundleVersion clientVersion ((.distance) =<< shortestRouteInfo)
   fork "search cabs" . withShortRetry $ do
     becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes shortestRouteInfo
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
