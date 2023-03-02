@@ -11,9 +11,7 @@
       imports = [
         ./nix/haskell-overrides.nix
       ];
-      # beckn is not upgraded to 9.2 yet (could take weeks per Hemant)
-      # we can't use 884, because that's broken in nixpkgs. So 8.10.
-      basePackages = pkgs.haskell.packages.ghc8107;
+      basePackages = config.haskellProjects.ghc810.outputs.finalPackages;
       devShell = {
         tools = hp: {
           dhall = pkgs.dhall;
