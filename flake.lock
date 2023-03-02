@@ -67,6 +67,24 @@
         "type": "github"
       }
     },
+    "common": {
+      "inputs": {
+        "nixpkgs-21_11": "nixpkgs-21_11"
+      },
+      "locked": {
+        "lastModified": 1677768601,
+        "narHash": "sha256-fw2YNvbXs1WfYLl1MvwANS5S8t1PW8HpsnjMmme5ybA=",
+        "owner": "nammayatri",
+        "repo": "common",
+        "rev": "56d771bdc8404a078f4106755634989c8d9c3761",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nammayatri",
+        "repo": "common",
+        "type": "github"
+      }
+    },
     "euler-hs": {
       "flake": false,
       "locked": {
@@ -237,6 +255,7 @@
         "beam-mysql": "beam-mysql",
         "beckn-gateway": "beckn-gateway",
         "beckn-shared-kernel": "beckn-shared-kernel",
+        "common": "common",
         "euler-hs": "euler-hs",
         "flake-parts": "flake-parts",
         "flake-root": "flake-root",
@@ -245,7 +264,6 @@
         "mysql-haskell": "mysql-haskell",
         "nixpkgs": "nixpkgs",
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround",
-        "nixpkgs-21_11": "nixpkgs-21_11",
         "passetto-hs": "passetto-hs",
         "sequelize": "sequelize",
         "treefmt-nix": "treefmt-nix"

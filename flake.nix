@@ -9,12 +9,11 @@
 
     flake-root.url = "github:srid/flake-root";
     nixpkgs-140774-workaround.url = "github:srid/nixpkgs-140774-workaround";
-    nixpkgs-21_11.url = "github:nixos/nixpkgs/nixos-21.11";
-
     # Dependencies
     euler-hs.url = "github:juspay/euler-hs";
     euler-hs.flake = false;
 
+    common.url = "github:nammayatri/common";
     beckn-shared-kernel.url = "github:nammayatri/shared-kernel/ghc810"; # https://github.com/nammayatri/shared-kernel/pull/12
     beckn-shared-kernel.flake = false;
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
@@ -39,6 +38,7 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [
+        inputs.common.flakeModules.default
         ./Backend/flake-module.nix
         ./nix/cachix.nix
       ];

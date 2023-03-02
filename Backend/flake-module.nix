@@ -5,7 +5,6 @@
     inputs.flake-root.flakeModule
     inputs.treefmt-nix.flakeModule
     ./nix/docker.nix
-    ./nix/treefmt.nix
   ];
   perSystem = { config, self', system, pkgs, lib, ... }: {
     haskellProjects.default = {
