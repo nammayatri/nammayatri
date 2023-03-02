@@ -75,7 +75,8 @@ data RideListItem = RideListItem
     driverPhoneNo :: Maybe Text,
     vehicleNo :: Text,
     fareDiff :: Maybe Money,
-    bookingStatus :: BookingStatus
+    bookingStatus :: BookingStatus,
+    rideCreatedAt :: UTCTime
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

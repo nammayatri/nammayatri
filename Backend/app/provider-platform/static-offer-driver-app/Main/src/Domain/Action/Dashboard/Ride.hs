@@ -92,7 +92,8 @@ buildRideListItem QRide.RideItem {..} = do
         driverPhoneNo,
         vehicleNo = rideDetails.vehicleNumber,
         fareDiff,
-        bookingStatus
+        bookingStatus,
+        rideCreatedAt = rideCreatedAt
       }
 
 ---------------------------------------------------------------------

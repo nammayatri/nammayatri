@@ -258,6 +258,7 @@ updateArrival rideId = do
 
 data RideItem = RideItem
   { rideShortId :: ShortId Ride,
+    rideCreatedAt :: UTCTime,
     rideDetails :: RideDetails,
     riderDetails :: RiderDetails,
     customerName :: Maybe Text,
@@ -307,6 +308,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     offset $ fromIntegral offsetVal
     return
       ( ride ^. RideShortId,
+        ride ^. RideCreatedAt,
         rideDetails,
         riderDetails,
         booking ^. BookingRiderName,
@@ -328,7 +330,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
         ]
         (else_ $ val Common.ONGOING_6HRS)
 
-    mkRideItem (rideShortId, rideDetails, riderDetails, customerName, fareDiff, bookingStatus) = do
+    mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, customerName, fareDiff, bookingStatus) = do
       RideItem {rideShortId = ShortId rideShortId, ..}
 
 upcoming6HrsCond :: SqlExpr (Entity RideT) -> UTCTime -> SqlExpr (Esq.Value Bool)
