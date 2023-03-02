@@ -40,7 +40,7 @@
       imports = [
         inputs.cachix-push.flakeModule
         inputs.common.flakeModule
-        ./Backend/flake-module.nix
+        ./Backend
       ];
       perSystem = { config, self', system, pkgs, lib, ... }: {
         # Remove this after fixing
