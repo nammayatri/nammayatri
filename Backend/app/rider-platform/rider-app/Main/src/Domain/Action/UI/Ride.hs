@@ -23,8 +23,10 @@ import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig
@@ -55,24 +57,17 @@ getDriverLoc rideId personId = do
     $ throwError $ RideInvalidStatus "Cannot track this ride"
   res <- CallBPP.callGetDriverLocation ride
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  let fromLocation = booking.fromLocation
+  let fromLocation = Maps.getCoordinates booking.fromLocation
   driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
   driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
   mbIsOnTheWayNotified <- Redis.get @() (driverOnTheWay rideId)
   mbHasReachedNotified <- Redis.get @() (driverHasReached rideId)
   when (ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)) $ do
-    distance <-
-      (.distance)
-        <$> MapSearch.getDistance booking.merchantId
-          MapSearch.GetDistanceReq
-            { origin = fromLocation,
-              destination = res.currPoint,
-              travelMode = Just MapSearch.CAR
-            }
+    let distance = highPrecMetersToMeters $ distanceBetweenInMeters fromLocation res.currPoint
     mbStartDistance <- Redis.get @Meters (distanceUpdates rideId)
     case mbStartDistance of
       Nothing -> Redis.setExp (distanceUpdates rideId) distance 3600
-      Just startDistance -> when (startDistance - 100 > distance) $ do
+      Just startDistance -> when (startDistance - 50 > distance) $ do
         unless (isJust mbIsOnTheWayNotified) $ do
           Notify.notifyDriverOnTheWay personId
           Redis.setExp (driverOnTheWay rideId) () driverOnTheWayNotifyExpiry

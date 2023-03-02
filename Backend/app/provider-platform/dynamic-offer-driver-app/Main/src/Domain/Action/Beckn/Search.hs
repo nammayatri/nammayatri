@@ -106,27 +106,18 @@ data DistanceAndDuration = DistanceAndDuration
 
 getDistanceAndDuration :: Id DM.Merchant -> DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> Maybe Maps.RouteInfo -> Flow DistanceAndDuration
 getDistanceAndDuration merchantId fromLocation toLocation routeInfo = case routeInfo of
-  (Just infoElement) ->
-    if isJust infoElement.distance && isJust infoElement.duration
-      then return DistanceAndDuration {distance = fromMaybe 0 infoElement.distance, duration = fromMaybe 0 infoElement.duration}
-      else do
-        response <-
-          Maps.getDistance merchantId $
-            Maps.GetDistanceReq
-              { origin = fromLocation,
-                destination = toLocation,
-                travelMode = Just Maps.CAR
-              }
-        return DistanceAndDuration {distance = response.distance, duration = response.duration}
-  Nothing -> do
-    response <-
-      Maps.getDistance merchantId $
-        Maps.GetDistanceReq
-          { origin = fromLocation,
-            destination = toLocation,
-            travelMode = Just Maps.CAR
-          }
-    return DistanceAndDuration {distance = response.distance, duration = response.duration}
+  Just (Maps.RouteInfo (Just duration) (Just distance) _ _ _) -> return $ DistanceAndDuration {distance, duration}
+  _ -> getMapsDistance
+  where
+    getMapsDistance = do
+      response <-
+        Maps.getDistance merchantId $
+          Maps.GetDistanceReq
+            { origin = fromLocation,
+              destination = toLocation,
+              travelMode = Just Maps.CAR
+            }
+      return DistanceAndDuration {distance = response.distance, duration = response.duration}
 
 handler :: Id DM.Merchant -> DSearchReq -> Flow DSearchRes
 handler merchantId sReq = do
