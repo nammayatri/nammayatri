@@ -382,9 +382,7 @@ driverRequestCountKey :: Id DSR.SearchRequest -> Id Driver -> Text
 driverRequestCountKey searchReqId driverId = "Driver-Request-Count-Key:SearchReqId-DriverId" <> searchReqId.getId <> driverId.getId
 
 checkRequestCount :: (Redis.HedisFlow m r, HasDriverPoolConfig  r) => Id DSR.SearchRequest -> Id Driver -> DriverPoolConfig -> m Bool
-checkRequestCount searchReqId driverId driverPoolConfig = do
-  let configValue = driverPoolConfig.driverRequestCountLimit
-  maybe True (\count -> (count :: Int) < configValue) <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchReqId driverId))
+checkRequestCount searchReqId driverId driverPoolConfig = maybe True (\count -> (count :: Int) < driverPoolConfig.driverRequestCountLimit) <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchReqId driverId))
 
 incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DSR.SearchRequest -> m ()
 incrementDriverRequestCount finalPoolBatch searchReqId = do
