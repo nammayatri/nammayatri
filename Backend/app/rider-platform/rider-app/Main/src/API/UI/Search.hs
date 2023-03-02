@@ -143,7 +143,7 @@ oneWaySearch ::
   DOneWaySearch.OneWaySearchReq ->
   m (Id SearchRequest, UTCTime, Maybe Maps.RouteInfo)
 oneWaySearch personId bundleVersion clientVersion req = do
-  person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  person <- Person.findById personId (Proxy @m) >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   let sourceLatlong = req.origin.gps
   let destinationLatLong = req.destination.gps

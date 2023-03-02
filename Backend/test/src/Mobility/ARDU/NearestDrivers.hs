@@ -48,21 +48,21 @@ testOrder :: IO ()
 testOrder = do
   res <-
     runARDUFlow "Test ordering" $
-      Q.getNearestDrivers Nothing pickupPoint 5000 org1 False (Just hour) <&> getIds
+      Q.getNearestDrivers Nothing pickupPoint 5000 org1 False (Just hour) (Proxy @DynamicDriverAppFlow) <&> getIds
   res `shouldSatisfy` equals [closestDriver, furthestDriver]
 
 testInRadius :: IO ()
 testInRadius = do
   res <-
     runARDUFlow "Test radius filtration" $
-      Q.getNearestDrivers Nothing pickupPoint 800 org1 False (Just hour) <&> getIds
+      Q.getNearestDrivers Nothing pickupPoint 800 org1 False (Just hour) (Proxy @DynamicDriverAppFlow) <&> getIds
   res `shouldSatisfy` equals [closestDriver]
 
 testNotInRadius :: IO ()
 testNotInRadius = do
   res <-
     runARDUFlow "Test outside radius filtration" $
-      Q.getNearestDrivers Nothing pickupPoint 10 org1 False (Just hour) <&> getIds
+      Q.getNearestDrivers Nothing pickupPoint 10 org1 False (Just hour) (Proxy @DynamicDriverAppFlow) <&> getIds
   res `shouldSatisfy` equals []
 
 getIds :: [Q.NearestDriversResult] -> [Text]
@@ -100,11 +100,11 @@ hatchbackDriver = "ND-hatchback-driver-0000000000000000"
 setDriversActive :: Bool -> FlowR ARDUEnv.AppEnv ()
 setDriversActive isActive = Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
-  forM_ drivers (\driver -> Q.updateActivity (Id driver) isActive)
+  forM_ drivers (\driver -> Q.updateActivity @DynamicDriverAppFlow (Id driver) isActive)
 
 -- we can remove this when we flatten migrations
 setDriverWithOldLocation :: FlowR ARDUEnv.AppEnv ()
 setDriverWithOldLocation = do
   now <- getCurrentTime
   Esq.runTransaction $
-    void $ QL.upsertGpsCoord (Id driverWithOldLocation) (LatLong 13.005432 77.59336) ((-86400) `addUTCTime` now) -- one day ago
+    void $ QL.upsertGpsCoord @DynamicDriverAppFlow (Id driverWithOldLocation) (LatLong 13.005432 77.59336) ((-86400) `addUTCTime` now) -- one day ago

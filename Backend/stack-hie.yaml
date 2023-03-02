@@ -76,10 +76,10 @@ packages:
 # extra-deps: []
 
 extra-deps:
-  # - ../beckn-gateway/app/gateway
-  # - ../beckn-gateway/app/mock-registry
+  # - ../../beckn-gateway/app/gateway
+  # - ../../beckn-gateway/app/mock-registry
   - git: https://github.com/nammayatri/beckn-gateway.git
-    commit: 7094d2af08055f37ca01f2891d19f3153e619be1
+    commit: 879884854bf6b50bcd6b7d81563cd0e9051270af
     subdirs:
       - app/gateway
       - app/mock-registry

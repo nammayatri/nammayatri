@@ -85,23 +85,25 @@ newtype CreatePersonRes = CreatePersonRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createPerson ::
+  forall m r.
   (EsqDBFlow m r, EncFlow m r) =>
   TokenInfo ->
   CreatePersonReq ->
   m CreatePersonRes
 createPerson _ personEntity = do
   runRequestValidation validateCreatePerson personEntity
-  unlessM (isNothing <$> QP.findByEmail personEntity.email) $ throwError (InvalidRequest "Email already registered")
-  unlessM (isNothing <$> QP.findByMobileNumber personEntity.mobileNumber personEntity.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
+  unlessM (isNothing <$> QP.findByEmail personEntity.email (Proxy @m)) $ throwError (InvalidRequest "Email already registered")
+  unlessM (isNothing <$> QP.findByMobileNumber personEntity.mobileNumber personEntity.mobileCountryCode (Proxy @m)) $ throwError (InvalidRequest "Phone already registered")
   person <- buildPerson personEntity
   decPerson <- decrypt person
   let roleId = personEntity.roleId
-  role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  role <- QRole.findById roleId (Proxy @m) >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   let personAPIEntity = AP.makePersonAPIEntity decPerson role []
-  Esq.runTransaction $ QP.create person
+  Esq.runTransaction $ QP.create @m person
   return $ CreatePersonRes personAPIEntity
 
 listPerson ::
+  forall m r.
   (EsqDBReplicaFlow m r, EncFlow m r) =>
   TokenInfo ->
   Maybe Text ->
@@ -110,26 +112,28 @@ listPerson ::
   m ListPersonRes
 listPerson _ mbSearchString mbLimit mbOffset = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  personAndRoleList <- runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset
+  personAndRoleList <- runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset (Proxy @m)
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList) -> do
     decPerson <- decrypt encPerson
     pure $ DP.makePersonAPIEntity decPerson role merchantAccessList
   pure $ ListPersonRes res
 
 assignRole ::
+  forall m r.
   EsqDBFlow m r =>
   TokenInfo ->
   Id DP.Person ->
   Id DRole.Role ->
   m APISuccess
 assignRole _ personId roleId = do
-  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  _person <- QP.findById personId (Proxy @m) >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  _role <- QRole.findById roleId (Proxy @m) >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   Esq.runTransaction $
-    QP.updatePersonRole personId roleId
+    QP.updatePersonRole @m personId roleId
   pure Success
 
 assignMerchantAccess ::
+  forall m r.
   ( EsqDBFlow m r,
     HasFlowEnv m r '["dataServers" ::: [Client.DataServer]]
   ) =>
@@ -139,21 +143,22 @@ assignMerchantAccess ::
   m APISuccess
 assignMerchantAccess _ personId req = do
   merchant <-
-    QMerchant.findByShortId req.merchantId
+    QMerchant.findByShortId req.merchantId (Proxy @m)
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   availableServers <- asks (.dataServers)
   unless (merchant.serverName `elem` (availableServers <&> (.name))) $
     throwError $ InvalidRequest "Server for this merchant is not available"
-  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId personId merchant.id
+  _person <- QP.findById personId (Proxy @m) >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId personId merchant.id (Proxy @m)
   whenJust mbMerchantAccess $ \_ -> do
     throwError $ InvalidRequest "Merchant access already assigned."
   merchantAccess <- buildMerchantAccess personId merchant.id
   Esq.runTransaction $
-    QAccess.create merchantAccess
+    QAccess.create @m merchantAccess
   pure Success
 
 resetMerchantAccess ::
+  forall m r.
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
@@ -165,36 +170,37 @@ resetMerchantAccess ::
   m APISuccess
 resetMerchantAccess _ personId req = do
   merchant <-
-    QMerchant.findByShortId req.merchantId
+    QMerchant.findByShortId req.merchantId (Proxy @m)
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   availableServers <- asks (.dataServers)
   unless (merchant.serverName `elem` (availableServers <&> (.name))) $
     throwError $ InvalidRequest "Server for this merchant is not available"
-  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId personId merchant.id
+  _person <- QP.findById personId (Proxy @m) >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId personId merchant.id (Proxy @m)
   case mbMerchantAccess of
     Nothing -> throwError $ InvalidRequest "Server access already denied."
     Just merchantAccess -> do
       -- this function uses tokens from db, so should be called before transaction
       Auth.cleanCachedTokensByMerchantId personId merchant.id
       Esq.runTransaction $ do
-        QAccess.deleteById merchantAccess.id
+        QAccess.deleteById @m merchantAccess.id
         QReg.deleteAllByPersonIdAndMerchantId personId merchant.id
       pure Success
 
 changePassword ::
+  forall m r.
   (EsqDBFlow m r, EncFlow m r) =>
   TokenInfo ->
   ChangePasswordReq ->
   m APISuccess
 changePassword tokenInfo req = do
-  encPerson <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  encPerson <- QP.findById tokenInfo.personId (Proxy @m) >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
   newHash <- getDbHash req.newPassword
   let oldActual = encPerson.passwordHash
   oldProvided <- getDbHash req.oldPassword
   unless (oldActual == oldProvided) . throwError $ InvalidRequest "Old password is incorrect."
   Esq.runTransaction $
-    QP.updatePersonPassword tokenInfo.personId newHash
+    QP.updatePersonPassword @m tokenInfo.personId newHash
   pure Success
 
 buildMerchantAccess :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> m DAccess.MerchantAccess
@@ -210,24 +216,26 @@ buildMerchantAccess personId merchantId = do
       }
 
 profile ::
+  forall m r.
   (EsqDBReplicaFlow m r, EncFlow m r) =>
   TokenInfo ->
   m DP.PersonAPIEntity
 profile tokenInfo = do
-  encPerson <- runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  role <- runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
-  merchantAccessList <- runInReplica $ QAccess.findAllByPersonId tokenInfo.personId
+  encPerson <- runInReplica $ QP.findById tokenInfo.personId (Proxy @m) >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  role <- runInReplica $ QRole.findById encPerson.roleId (Proxy @m) >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  merchantAccessList <- runInReplica $ QAccess.findAllByPersonId tokenInfo.personId (Proxy @m)
   decPerson <- decrypt encPerson
   pure $ DP.makePersonAPIEntity decPerson role (merchantAccessList <&> (.shortId))
 
 getCurrentMerchant ::
+  forall m r.
   EsqDBReplicaFlow m r =>
   TokenInfo ->
   m MerchantAccessRes
 getCurrentMerchant tokenInfo = do
   merchant <-
     runInReplica $
-      QMerchant.findById tokenInfo.merchantId
+      QMerchant.findById tokenInfo.merchantId (Proxy @m)
         >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
   pure $ MerchantAccessReq merchant.shortId
 

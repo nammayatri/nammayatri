@@ -83,12 +83,12 @@ instance
   where
   toPayloadType _ = fromSing (sing @at)
 
-verifyDashboardAccess :: EsqDBFlow m r => DRole.DashboardAccessType -> Id DP.Person -> m (Id DP.Person)
+verifyDashboardAccess :: forall m r. EsqDBFlow m r => DRole.DashboardAccessType -> Id DP.Person -> m (Id DP.Person)
 verifyDashboardAccess requiredAccessType personId = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QPerson.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   case requiredAccessType of
     DRole.DASHBOARD_ADMIN -> do
-      role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+      role <- QRole.findById person.roleId (Proxy @m) >>= fromMaybeM (RoleNotFound person.roleId.getId)
       if role.dashboardAccessType == DRole.DASHBOARD_ADMIN
         then pure person.id
         else throwError AccessDenied

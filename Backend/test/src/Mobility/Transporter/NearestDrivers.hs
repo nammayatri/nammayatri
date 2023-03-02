@@ -55,42 +55,42 @@ testOrder :: IO ()
 testOrder = do
   res <-
     runTransporterFlow "Test ordering" $
-      Q.getNearestDrivers pickupPoint 5000 org1 (Just SUV) SFP.ONE_WAY (Just hour) <&> getIds
+      Q.getNearestDrivers pickupPoint 5000 org1 (Just SUV) SFP.ONE_WAY (Just hour) (Proxy @StaticDriverAppFlow) <&> getIds
   res `shouldSatisfy` equals [closestDriver, furthestDriver]
 
 testInRadius :: IO ()
 testInRadius = do
   res <-
     runTransporterFlow "Test radius filtration" $
-      Q.getNearestDrivers pickupPoint 800 org1 (Just SUV) SFP.ONE_WAY (Just hour) <&> getIds
+      Q.getNearestDrivers pickupPoint 800 org1 (Just SUV) SFP.ONE_WAY (Just hour) (Proxy @StaticDriverAppFlow) <&> getIds
   res `shouldSatisfy` equals [closestDriver]
 
 testNotInRadius :: IO ()
 testNotInRadius = do
   res <-
     runTransporterFlow "Test outside radius filtration" $
-      Q.getNearestDrivers pickupPoint 0 org1 (Just SUV) SFP.ONE_WAY (Just hour) <&> getIds
+      Q.getNearestDrivers pickupPoint 0 org1 (Just SUV) SFP.ONE_WAY (Just hour) (Proxy @StaticDriverAppFlow) <&> getIds
   res `shouldSatisfy` equals []
 
 testDowngradingDriverWithSUV :: IO ()
 testDowngradingDriverWithSUV = do
   res <-
     runTransporterFlow "Test downgrading driver with SUV ride request" $
-      Q.getNearestDrivers pickupPoint 10000 org1 (Just SUV) SFP.ONE_WAY (Just hour) <&> getIds
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just SUV) SFP.ONE_WAY (Just hour) (Proxy @StaticDriverAppFlow) <&> getIds
   res `shouldSatisfy` equals [closestDriver, furthestDriver, suvDriver]
 
 testDowngradingDriverWithSedan :: IO ()
 testDowngradingDriverWithSedan = do
   res <-
     runTransporterFlow "Test downgrading driver with sedan ride request" $
-      Q.getNearestDrivers pickupPoint 10000 org1 (Just SEDAN) SFP.ONE_WAY (Just hour) <&> getIds
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just SEDAN) SFP.ONE_WAY (Just hour) (Proxy @StaticDriverAppFlow) <&> getIds
   res `shouldSatisfy` equals [suvDriver, sedanDriver]
 
 testDowngradingDriverWithHatchback :: IO ()
 testDowngradingDriverWithHatchback = do
   res <-
     runTransporterFlow "Test downgrading driver with hatchback ride request" $
-      Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.ONE_WAY (Just hour) <&> getIds
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.ONE_WAY (Just hour) (Proxy @StaticDriverAppFlow) <&> getIds
   res `shouldSatisfy` equals [suvDriver, sedanDriver, hatchbackDriver]
 
 testIsRental :: IO ()
@@ -98,7 +98,7 @@ testIsRental = do
   res <-
     runTransporterFlow "Test isRental" $ do
       setSuvDriverRental True
-      Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL (Just hour) <&> getIds
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL (Just hour) (Proxy @StaticDriverAppFlow) <&> getIds
   res `shouldSatisfy` equals [suvDriver]
 
 testNotRental :: IO ()
@@ -106,7 +106,7 @@ testNotRental = do
   res <-
     runTransporterFlow "Test notRental" $ do
       setSuvDriverRental False
-      Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL (Just hour) <&> getIds
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL (Just hour) (Proxy @StaticDriverAppFlow) <&> getIds
   res `shouldSatisfy` equals []
 
 getIds :: [Q.NearestDriversResult] -> [Text]
@@ -143,15 +143,15 @@ hatchbackDriver = "003093df-4f7c-440f--hatchback_driver"
 setDriversActive :: Bool -> FlowR BecknTransport.AppEnv ()
 setDriversActive isActive = Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, otherDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
-  forM_ drivers (\driver -> Q.updateActivity (Id driver) isActive)
+  forM_ drivers (\driver -> Q.updateActivity @StaticDriverAppFlow (Id driver) isActive)
 
 setSuvDriverRental :: Bool -> FlowR BecknTransport.AppEnv ()
 setSuvDriverRental isRental = Esq.runTransaction $ do
-  Q.updateRental (Id suvDriver) isRental
+  Q.updateRental @StaticDriverAppFlow (Id suvDriver) isRental
 
 -- we can remove this when we flatten migrations
 setDriverWithOldLocation :: FlowR BecknTransport.AppEnv ()
 setDriverWithOldLocation = do
   now <- getCurrentTime
   Esq.runTransaction . void $
-    QL.upsertGpsCoord (Id driverWithOldLocation) (LatLong 13.005432 77.59336) ((-86400) `addUTCTime` now) -- one day ago
+    QL.upsertGpsCoord @StaticDriverAppFlow (Id driverWithOldLocation) (LatLong 13.005432 77.59336) ((-86400) `addUTCTime` now) -- one day ago

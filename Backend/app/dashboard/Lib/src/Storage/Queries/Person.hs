@@ -30,36 +30,42 @@ import Storage.Tabular.MerchantAccess as Access
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Role as Role
 
-create :: Person -> SqlDB ()
+create :: Person -> SqlDB m ()
 create = Esq.create
 
 findById ::
+  forall m ma.
   Transactionable ma m =>
   Id Person ->
+  Proxy ma ->
   m (Maybe Person)
-findById = Esq.findById
+findById personId _ = Esq.findById @m @ma personId
 
 findByEmail ::
-  (Transactionable m, EncFlow m r) =>
+  forall m ma r.
+  (Transactionable ma m, EncFlow m r) =>
   Text ->
+  Proxy ma ->
   m (Maybe Person)
-findByEmail email = do
+findByEmail email _ = do
   emailDbHash <- getDbHash email
-  findOne $ do
+  findOne @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonEmailHash ==. val emailDbHash
     return person
 
 findByEmailAndPassword ::
-  (Transactionable m, EncFlow m r) =>
+  forall m ma r.
+  (Transactionable ma m, EncFlow m r) =>
   Text ->
   Text ->
+  Proxy ma ->
   m (Maybe Person)
-findByEmailAndPassword email password = do
+findByEmailAndPassword email password _ = do
   emailDbHash <- getDbHash email
   passwordDbHash <- getDbHash password
-  findOne $ do
+  findOne @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonEmailHash ==. val emailDbHash
@@ -67,13 +73,15 @@ findByEmailAndPassword email password = do
     return person
 
 findByMobileNumber ::
-  (Transactionable m, EncFlow m r) =>
+  forall m ma r.
+  (Transactionable ma m, EncFlow m r) =>
   Text ->
   Text ->
+  Proxy ma ->
   m (Maybe Person)
-findByMobileNumber mobileNumber mobileCountryCode = do
+findByMobileNumber mobileNumber mobileCountryCode _ = do
   mobileDbHash <- getDbHash mobileNumber
-  findOne $ do
+  findOne @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonMobileNumberHash ==. val mobileDbHash
@@ -82,15 +90,17 @@ findByMobileNumber mobileNumber mobileCountryCode = do
 
 -- TODO add filtering by role
 findAllWithLimitOffset ::
+  forall m ma.
   Transactionable ma m =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->
   Maybe Integer ->
+  Proxy ma ->
   m [(Person, Role, [ShortId Merchant.Merchant])]
-findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset =
+findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset _ =
   fromMaybeList <$> do
-    findAll $ do
+    findAll @m @ma $ do
       merchantAccessAggTable <- with $ do
         (merchantAccess :& merchant) <-
           from $
@@ -132,7 +142,7 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset =
     fromMaybeList :: [(Person, Role, Maybe [Text])] -> [(Person, Role, [ShortId Merchant.Merchant])]
     fromMaybeList = map (\(person, role, mbMerchantShortIds) -> (person, role, ShortId <$> fromMaybe [] mbMerchantShortIds))
 
-updatePersonRole :: Id Person -> Id Role -> SqlDB ()
+updatePersonRole :: Id Person -> Id Role -> SqlDB m ()
 updatePersonRole personId roleId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -143,7 +153,7 @@ updatePersonRole personId roleId = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-updatePersonPassword :: Id Person -> DbHash -> SqlDB ()
+updatePersonPassword :: Id Person -> DbHash -> SqlDB m ()
 updatePersonPassword personId newPasswordHash = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do

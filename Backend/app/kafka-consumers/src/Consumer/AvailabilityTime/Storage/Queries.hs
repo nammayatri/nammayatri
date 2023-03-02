@@ -16,16 +16,17 @@ module Consumer.AvailabilityTime.Storage.Queries where
 
 import Consumer.AvailabilityTime.Storage.Tables
 import qualified Consumer.AvailabilityTime.Types as Domain
+import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (putMany)
 
-create :: Domain.DriverAvailability -> Esq.SqlDB ()
+create :: Domain.DriverAvailability -> Esq.SqlDB Flow ()
 create = Esq.create
 
-findLatestByDriverIdAndMerchantId :: (Esq.Transactionable m) => Domain.DriverId -> Domain.MerchantId -> m (Maybe Domain.DriverAvailability)
+findLatestByDriverIdAndMerchantId :: forall m. (Esq.Transactionable Flow m) => Domain.DriverId -> Domain.MerchantId -> m (Maybe Domain.DriverAvailability)
 findLatestByDriverIdAndMerchantId driverId merchantId = buildDType $
   fmap (fmap $ extractSolidType @Domain.DriverAvailability) $
-    Esq.findOne' $ do
+    Esq.findOne' @m @Flow $ do
       dDriverAvailability <-
         from $ table @DriverAvailabilityT
       where_ $
@@ -35,10 +36,10 @@ findLatestByDriverIdAndMerchantId driverId merchantId = buildDType $
       limit 1
       pure dDriverAvailability
 
-findAvailableTimeInBucketByDriverIdAndMerchantId :: (Esq.Transactionable m) => Domain.DriverId -> Domain.MerchantId -> UTCTime -> UTCTime -> m (Maybe Domain.DriverAvailability)
+findAvailableTimeInBucketByDriverIdAndMerchantId :: forall m. (Esq.Transactionable Flow m) => Domain.DriverId -> Domain.MerchantId -> UTCTime -> UTCTime -> m (Maybe Domain.DriverAvailability)
 findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStartTime bucketEndTime = buildDType $
   fmap (fmap $ extractSolidType @Domain.DriverAvailability) $
-    Esq.findOne' $ do
+    Esq.findOne' @m @Flow $ do
       dDriverAvailability <-
         from $ table @DriverAvailabilityT
       where_ $
@@ -50,7 +51,7 @@ findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStart
       limit 1
       pure dDriverAvailability
 
-createOrUpdateDriverAvailability :: Domain.DriverAvailability -> SqlDB ()
+createOrUpdateDriverAvailability :: Domain.DriverAvailability -> SqlDB Flow ()
 createOrUpdateDriverAvailability d@Domain.DriverAvailability {..} = do
   mbOldBucketAvailableTime <- findAvailableTimeInBucketByDriverIdAndMerchantId driverId merchantId bucketStartTime bucketEndTime
   case mbOldBucketAvailableTime of

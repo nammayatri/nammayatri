@@ -24,39 +24,39 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.RegistrationToken
 
-create :: RegistrationToken -> SqlDB ()
+create :: RegistrationToken -> SqlDB m ()
 create = Esq.create
 
-findByToken :: Transactionable ma m => RegToken -> m (Maybe RegistrationToken)
-findByToken token =
-  findOne $ do
+findByToken :: forall m ma. Transactionable ma m => RegToken -> Proxy ma -> m (Maybe RegistrationToken)
+findByToken token _ =
+  findOne @m @ma $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenToken ==. val token
     return regToken
 
-findAllByPersonId :: Transactionable ma m => Id Person -> m [RegistrationToken]
-findAllByPersonId personId =
-  findAll $ do
+findAllByPersonId :: forall m ma. Transactionable ma m => Id Person -> Proxy ma -> m [RegistrationToken]
+findAllByPersonId personId _ =
+  findAll @m @ma $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
     return regToken
 
-findAllByPersonIdAndMerchantId :: Transactionable ma m => Id Person -> Id Merchant -> m [RegistrationToken]
-findAllByPersonIdAndMerchantId personId merchantId =
-  findAll $ do
+findAllByPersonIdAndMerchantId :: forall m ma. Transactionable ma m => Id Person -> Id Merchant -> Proxy ma -> m [RegistrationToken]
+findAllByPersonIdAndMerchantId personId merchantId _ =
+  findAll @m @ma $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $
       regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
         &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
     return regToken
 
-deleteAllByPersonId :: Id Person -> SqlDB ()
+deleteAllByPersonId :: Id Person -> SqlDB m ()
 deleteAllByPersonId personId =
   Esq.delete $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
 
-deleteAllByPersonIdAndMerchantId :: Id Person -> Id Merchant -> SqlDB ()
+deleteAllByPersonIdAndMerchantId :: Id Person -> Id Merchant -> SqlDB m ()
 deleteAllByPersonIdAndMerchantId personId merchantId =
   Esq.delete $ do
     regToken <- from $ table @RegistrationTokenT
@@ -64,5 +64,5 @@ deleteAllByPersonIdAndMerchantId personId merchantId =
       regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
         &&. regToken ^. RegistrationTokenMerchantId ==. val (toKey merchantId)
 
-deleteById :: Id RegistrationToken -> SqlDB ()
+deleteById :: Id RegistrationToken -> SqlDB m ()
 deleteById = Esq.deleteByKey @RegistrationTokenT

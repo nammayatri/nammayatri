@@ -22,7 +22,7 @@ import Kernel.Types.Geofencing (GeoRestriction (Regions))
 import Kernel.Types.Id
 import "rider-app" Storage.Tabular.Merchant
 
-updateOrigAndDestRestriction :: Id DM.Merchant -> [Text] -> [Text] -> SqlDB ()
+updateOrigAndDestRestriction :: Id DM.Merchant -> [Text] -> [Text] -> SqlDB m ()
 updateOrigAndDestRestriction merchantId originList destinationList =
   Esq.update $ \tbl -> do
     set

@@ -23,15 +23,17 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.AccessMatrix
 
-create :: DMatrix.AccessMatrixItem -> SqlDB ()
+create :: DMatrix.AccessMatrixItem -> SqlDB m ()
 create = Esq.create
 
 findByRoleIdAndEntity ::
-  (Transactionable m) =>
+  forall m ma.
+  Transactionable ma m =>
   Id DRole.Role ->
   DMatrix.ApiEntity ->
+  Proxy ma ->
   m (Maybe DMatrix.AccessMatrixItem)
-findByRoleIdAndEntity roleId apiEntity = findOne $ do
+findByRoleIdAndEntity roleId apiEntity _ = findOne @m @ma $ do
   accessMatrix <- from $ table @AccessMatrixT
   where_ $
     accessMatrix ^. AccessMatrixRoleId ==. val (toKey roleId)
@@ -39,29 +41,33 @@ findByRoleIdAndEntity roleId apiEntity = findOne $ do
   return accessMatrix
 
 findAllByRoles ::
+  forall m ma.
   Transactionable ma m =>
   [DRole.Role] ->
+  Proxy ma ->
   m [DMatrix.AccessMatrixItem]
-findAllByRoles roles = do
+findAllByRoles roles _ = do
   let roleKeys = map (toKey . (.id)) roles
-  Esq.findAll $ do
+  Esq.findAll @m @ma $ do
     accessMatrix <- from $ table @AccessMatrixT
     where_ $
       accessMatrix ^. AccessMatrixRoleId `in_` valList roleKeys
     return accessMatrix
 
 findAllByRoleId ::
+  forall m ma.
   Transactionable ma m =>
   Id DRole.Role ->
+  Proxy ma ->
   m [DMatrix.AccessMatrixItem]
-findAllByRoleId roleId = do
-  Esq.findAll $ do
+findAllByRoleId roleId _ = do
+  Esq.findAll @m @ma $ do
     accessMatrix <- from $ table @AccessMatrixT
     where_ $
       accessMatrix ^. AccessMatrixRoleId ==. val (toKey roleId)
     return accessMatrix
 
-updateUserAccessType :: Id DMatrix.AccessMatrixItem -> DMatrix.UserAccessType -> SqlDB ()
+updateUserAccessType :: Id DMatrix.AccessMatrixItem -> DMatrix.UserAccessType -> SqlDB m ()
 updateUserAccessType accessMatrixItemId userAccessType = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do

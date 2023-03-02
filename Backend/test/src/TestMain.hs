@@ -51,7 +51,7 @@ import System.Environment as Env (setEnv)
 import System.Posix
 import Test.Tasty
 import TestSilentIOLogger ()
-import Utils (runAppFlow)
+import Utils (RiderPlatformFlow, runAppFlow)
 
 main :: IO ()
 main = do
@@ -130,7 +130,7 @@ specs' googleCfg trees = do
     onServersStarted = do
       runAppFlow "" $ do
         Esq.runTransaction $
-          updateOrigAndDestRestriction Fixtures.yatriMerchantId ["Ernakulam", "Kochi", "Karnataka"] ["Kerala", "Kochi", "Karnataka"]
+          updateOrigAndDestRestriction @RiderPlatformFlow Fixtures.yatriMerchantId ["Ernakulam", "Kochi", "Karnataka"] ["Kerala", "Kochi", "Karnataka"]
 
     cleanupServers _ = do
       AppBackendUtils.clearCachedMapsConfig

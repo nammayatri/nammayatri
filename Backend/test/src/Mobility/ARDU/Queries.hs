@@ -21,7 +21,7 @@ import Kernel.Types.Id
 import qualified Servant.Client as Servant
 import "dynamic-offer-driver-app" Storage.Tabular.Booking
 
-updateBapUrl :: BaseUrl -> Id DBooking.Booking -> Esq.SqlDB ()
+updateBapUrl :: BaseUrl -> Id DBooking.Booking -> Esq.SqlDB m ()
 updateBapUrl bapUrl bookingId = do
   Esq.update $ \tbl -> do
     set
@@ -30,7 +30,7 @@ updateBapUrl bapUrl bookingId = do
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
 
-updateBapUrlWithFake :: Id DBooking.Booking -> Esq.SqlDB ()
+updateBapUrlWithFake :: Id DBooking.Booking -> Esq.SqlDB m ()
 updateBapUrlWithFake = updateBapUrl fakeUrl
 
 fakeUrl :: BaseUrl

@@ -65,7 +65,7 @@ getBAPBooking ::
   Id AppRB.Booking ->
   ClientsM AppRB.Booking
 getBAPBooking bapRBId = do
-  mbBRB <- liftIO $ runAppFlow "" $ BQRB.findById bapRBId
+  mbBRB <- liftIO $ runAppFlow "" $ BQRB.findById bapRBId (Proxy @RiderPlatformFlow)
   mbBRB `shouldSatisfy` isJust
   let Just bRB = mbBRB
   return bRB
@@ -77,7 +77,7 @@ getBPPBooking bapRBId = do
   bRB <- getBAPBooking bapRBId
   bRB.bppBookingId `shouldSatisfy` isJust
   let Just bppBookingId = bRB.bppBookingId
-  mbTRB <- liftIO $ runARDUFlow "" $ TQRB.findById $ cast bppBookingId
+  mbTRB <- liftIO $ runARDUFlow "" $ TQRB.findById (cast bppBookingId) (Proxy @DynamicDriverAppFlow)
   mbTRB $> () `shouldSatisfy` isJust
   let Just tRB = mbTRB
   return tRB
@@ -86,7 +86,7 @@ getBPPRide ::
   Id TRB.Booking ->
   ClientsM TRide.Ride
 getBPPRide rideBookingId = do
-  mbRide <- liftIO $ runARDUFlow "" $ TQRide.findActiveByRBId rideBookingId
+  mbRide <- liftIO $ runARDUFlow "" $ TQRide.findActiveByRBId rideBookingId (Proxy @DynamicDriverAppFlow)
   mbRide `shouldSatisfy` isJust
   return $ fromJust mbRide
 
@@ -94,7 +94,7 @@ getBAPRide ::
   Id TRide.Ride ->
   ClientsM BRide.Ride
 getBAPRide bppRideId = do
-  mbRide <- liftIO $ runAppFlow "" $ BQRide.findByBPPRideId (cast bppRideId)
+  mbRide <- liftIO $ runAppFlow "" $ BQRide.findByBPPRideId (cast bppRideId) (Proxy @RiderPlatformFlow)
   mbRide `shouldSatisfy` isJust
   return $ fromJust mbRide
 
@@ -102,7 +102,7 @@ getBPPRideById ::
   Id TRide.Ride ->
   ClientsM TRide.Ride
 getBPPRideById rideId = do
-  mbRide <- liftIO $ runARDUFlow "" $ TQRide.findById rideId
+  mbRide <- liftIO $ runARDUFlow "" $ TQRide.findById rideId (Proxy @DynamicDriverAppFlow)
   mbRide `shouldSatisfy` isJust
   return $ fromJust mbRide
 
@@ -110,7 +110,7 @@ getBPPDriverLocation ::
   Id TPerson.Person ->
   ClientsM LatLong
 getBPPDriverLocation driverId = do
-  mbRes <- liftIO $ runARDUFlow "" $ findById driverId
+  mbRes <- liftIO $ runARDUFlow "" $ findById (Proxy @DynamicDriverAppFlow) driverId
   mbRes `shouldSatisfy` isJust
   let res = fromJust mbRes
   pure $
@@ -123,7 +123,7 @@ getBPPDriverInformation ::
   Id TPerson.Person ->
   ClientsM TDrInfo.DriverInformation
 getBPPDriverInformation driverId =
-  liftIO $ poll $ runARDUFlow "" $ QTDrInfo.findById $ cast driverId
+  liftIO $ poll $ runARDUFlow "" $ QTDrInfo.findById (Proxy @DynamicDriverAppFlow) (cast driverId)
 
 -- driver setup/reset
 setupDriver :: DriverTestData -> LatLong -> ClientsM ()
@@ -136,11 +136,11 @@ setupDriver driver initialPoint = do
 
 resetDriver :: DriverTestData -> IO ()
 resetDriver driver = runARDUFlow "" $ do
-  rides <- TQRide.findAllByDriverId (cast driver.driverId) Nothing Nothing (Just True) Nothing
-  activeQuotes <- TDQ.findActiveQuotesByDriverId (cast driver.driverId) 99999
+  rides <- TQRide.findAllByDriverId (cast driver.driverId) Nothing Nothing (Just True) Nothing (Proxy @DynamicDriverAppFlow)
+  activeQuotes <- TDQ.findActiveQuotesByDriverId (cast driver.driverId) 99999 (Proxy @DynamicDriverAppFlow)
   Esq.runTransaction $ do
     void . forM rides $ \(ride, booking) -> do
-      TQRide.updateStatus ride.id TRide.CANCELLED
+      TQRide.updateStatus @DynamicDriverAppFlow ride.id TRide.CANCELLED
       TQRB.updateStatus booking.id TRB.CANCELLED
     void . forM activeQuotes $ \activeQuote ->
       TDQ.setInactiveByRequestId activeQuote.searchRequestId
@@ -171,7 +171,7 @@ getNearbySearchRequestForDriver driver estimateId =
   pollFilteredMList
     "get at least one nearby search request for driver"
     ( \p -> do
-        mbSReq <- liftIO $ runARDUFlow "" $ QSReq.findById p.searchRequestId
+        mbSReq <- liftIO $ runARDUFlow "" $ QSReq.findById p.searchRequestId (Proxy @DynamicDriverAppFlow)
         pure $ fmap (.messageId) mbSReq == Just estimateId.getId
     )
     ((.searchRequestsForDriver) <$> callBPP (API.ui.driver.getNearbySearchRequests driver.token))
@@ -368,9 +368,9 @@ withFakeBapUrl booking action = do
   liftIO $
     runARDUFlow "fake bap url" $ do
       Esq.runTransaction $
-        Queries.updateBapUrlWithFake booking.id
+        Queries.updateBapUrlWithFake @DynamicDriverAppFlow booking.id
   action
   liftIO $
     runARDUFlow "update bap url" $ do
       Esq.runTransaction $
-        Queries.updateBapUrl booking.bapUri booking.id
+        Queries.updateBapUrl @DynamicDriverAppFlow booking.bapUri booking.id

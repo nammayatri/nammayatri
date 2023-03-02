@@ -41,7 +41,7 @@ fetchConfig :: forall b. (Show b, Eq b) => Id Merchant -> Maps.MapsService -> (S
 fetchConfig merchantId serviceProvider getterFunc resultExpected = do
   Just cfg <-
     runTransporterFlow "" $
-      QMSC.findByMerchantIdAndService merchantId (MapsService serviceProvider)
+      QMSC.findByMerchantIdAndService merchantId (MapsService serviceProvider) (Proxy @StaticDriverAppFlow)
   getterFunc cfg.serviceConfig `shouldBe` resultExpected
 
 fetchGoogleConfig :: IO ()

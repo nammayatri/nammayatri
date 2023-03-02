@@ -27,22 +27,24 @@ import Tools.Auth
 import Tools.Error
 
 getAccessMatrix ::
+  forall m r.
   EsqDBReplicaFlow m r =>
   TokenInfo ->
   Maybe Integer ->
   Maybe Integer ->
   m DMatrix.AccessMatrixAPIEntity
 getAccessMatrix _ mbLimit mbOffset = do
-  roles <- runInReplica $ QRole.findAllByLimitOffset mbLimit mbOffset
-  accessMatrixItems <- runInReplica $ QMatrix.findAllByRoles roles
+  roles <- runInReplica $ QRole.findAllByLimitOffset mbLimit mbOffset (Proxy @m)
+  accessMatrixItems <- runInReplica $ QMatrix.findAllByRoles roles (Proxy @m)
   pure $ DMatrix.mkAccessMatrixAPIEntity roles accessMatrixItems
 
 getAccessMatrixByRole ::
+  forall m r.
   EsqDBReplicaFlow m r =>
   TokenInfo ->
   Id DRole.Role ->
   m DMatrix.AccessMatrixRowAPIEntity
 getAccessMatrixByRole _ roleId = do
-  role <- runInReplica $ QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  accessMatrixItems <- runInReplica $ QMatrix.findAllByRoleId roleId
+  role <- runInReplica $ QRole.findById roleId (Proxy @m) >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  accessMatrixItems <- runInReplica $ QMatrix.findAllByRoleId roleId (Proxy @m)
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role

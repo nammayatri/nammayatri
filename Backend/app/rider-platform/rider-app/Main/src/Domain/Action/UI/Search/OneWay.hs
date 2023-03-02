@@ -75,7 +75,7 @@ oneWaySearch ::
   Maybe Version ->
   Maybe Meters ->
   m OneWaySearchRes
-oneWaySearch personId req bundleVersion clientVersion = do
+oneWaySearch person merchant req bundleVersion clientVersion distance = do
   validateServiceability merchant.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   toLocation <- DSearch.buildSearchReqLoc req.destination
@@ -86,7 +86,7 @@ oneWaySearch personId req bundleVersion clientVersion = do
   Metrics.startSearchMetrics merchant.name txnId
   DB.runTransaction $ do
     QSearchRequest.create @m searchRequest
-    QPFS.updateStatus personId DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
+    QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   let dSearchRes =
         OneWaySearchRes
           { origin = req.origin,

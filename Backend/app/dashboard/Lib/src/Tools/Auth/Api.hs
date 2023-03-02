@@ -91,10 +91,10 @@ instance
         apiEntity = fromSing (sing @ae)
       }
 
-verifyAccessLevel :: EsqDBFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
+verifyAccessLevel :: forall m r. EsqDBFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
 verifyAccessLevel requiredApiAccessLevel personId = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntity person.roleId requiredApiAccessLevel.apiEntity
+  person <- QPerson.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
+  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntity person.roleId requiredApiAccessLevel.apiEntity (Proxy @m)
   let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
   unless (checkUserAccess userAccessType requiredApiAccessLevel.apiAccessType) $
     throwError AccessDenied
@@ -107,11 +107,12 @@ checkUserAccess DMatrix.USER_WRITE_ACCESS WRITE_ACCESS = True
 checkUserAccess _ _ = False
 
 verifyServer ::
+  forall m r.
   EsqDBFlow m r =>
   DSN.ServerName ->
   Id DM.Merchant ->
   m DM.Merchant
 verifyServer requiredServerAccess merchantId = do
-  merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  merchant <- QM.findById merchantId (Proxy @m) >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (requiredServerAccess == merchant.serverName) $ throwError AccessDenied
   return merchant

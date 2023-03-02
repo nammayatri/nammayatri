@@ -24,15 +24,17 @@ import Kernel.Types.Id
 import Storage.Tabular.Merchant
 import Storage.Tabular.MerchantAccess
 
-create :: DAccess.MerchantAccess -> SqlDB ()
+create :: DAccess.MerchantAccess -> SqlDB m ()
 create = Esq.create
 
 findByPersonIdAndMerchantId ::
-  (Transactionable m) =>
+  forall m ma.
+  Transactionable ma m =>
   Id DP.Person ->
   Id DMerchant.Merchant ->
+  Proxy ma ->
   m (Maybe DAccess.MerchantAccess)
-findByPersonIdAndMerchantId personId merchantId = findOne $ do
+findByPersonIdAndMerchantId personId merchantId _ = findOne @m @ma $ do
   merchantAccess <- from $ table @MerchantAccessT
   where_ $
     merchantAccess ^. MerchantAccessPersonId ==. val (toKey personId)
@@ -40,10 +42,12 @@ findByPersonIdAndMerchantId personId merchantId = findOne $ do
   return merchantAccess
 
 findAllByPersonId ::
-  (Transactionable m) =>
+  forall m ma.
+  Transactionable ma m =>
   Id DP.Person ->
+  Proxy ma ->
   m [DMerchant.Merchant]
-findAllByPersonId personId = findAll $ do
+findAllByPersonId personId _ = findAll @m @ma $ do
   (merchantAccess :& merchant) <-
     from $
       table @MerchantAccessT
@@ -55,5 +59,5 @@ findAllByPersonId personId = findAll $ do
     merchantAccess ^. MerchantAccessPersonId ==. val (toKey personId)
   return merchant
 
-deleteById :: Id DAccess.MerchantAccess -> SqlDB ()
+deleteById :: Id DAccess.MerchantAccess -> SqlDB m ()
 deleteById = Esq.deleteByKey @MerchantAccessT

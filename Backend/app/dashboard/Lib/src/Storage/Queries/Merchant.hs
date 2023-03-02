@@ -21,14 +21,16 @@ import Kernel.Types.Id
 import Storage.Tabular.Merchant
 
 findById ::
+  forall m ma.
   Transactionable ma m =>
   Id Merchant ->
+  Proxy ma ->
   m (Maybe Merchant)
-findById = Esq.findById
+findById merchantId _ = Esq.findById @m @ma merchantId
 
-findByShortId :: Transactionable ma m => ShortId Merchant -> m (Maybe Merchant)
-findByShortId shortId = do
-  findOne $ do
+findByShortId :: forall m ma. Transactionable ma m => ShortId Merchant -> Proxy ma -> m (Maybe Merchant)
+findByShortId shortId _ = do
+  findOne @m @ma $ do
     merchant <- from $ table @MerchantT
     where_ $ merchant ^. MerchantShortId ==. val (getShortId shortId)
     return merchant

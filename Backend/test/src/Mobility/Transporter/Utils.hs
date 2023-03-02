@@ -64,7 +64,7 @@ getBAPBooking ::
   Id BRB.Booking ->
   ClientsM BRB.Booking
 getBAPBooking bapRBId = do
-  mbBRB <- liftIO $ runAppFlow "" $ BQRB.findById bapRBId
+  mbBRB <- liftIO $ runAppFlow "" $ BQRB.findById bapRBId (Proxy @RiderPlatformFlow)
   mbBRB `shouldSatisfy` isJust
   let Just bRB = mbBRB
   return bRB
@@ -76,7 +76,7 @@ getBPPBooking bapRBId = do
   bRB <- getBAPBooking bapRBId
   bRB.bppBookingId `shouldSatisfy` isJust
   let Just bppBookingId = bRB.bppBookingId
-  mbTRB <- liftIO $ runTransporterFlow "" $ TQRB.findById $ cast bppBookingId
+  mbTRB <- liftIO $ runTransporterFlow "" $ TQRB.findById (cast bppBookingId) (Proxy @StaticDriverAppFlow)
   mbTRB $> () `shouldSatisfy` isJust
   let Just tRB = mbTRB
   return tRB
@@ -85,7 +85,7 @@ getBPPRide ::
   Id TRB.Booking ->
   ClientsM TRide.Ride
 getBPPRide rideBookingId = do
-  mbRide <- liftIO $ runTransporterFlow "" $ TQRide.findActiveByRBId rideBookingId
+  mbRide <- liftIO $ runTransporterFlow "" $ TQRide.findActiveByRBId rideBookingId (Proxy @StaticDriverAppFlow)
   mbRide `shouldSatisfy` isJust
   return $ fromJust mbRide
 
@@ -93,7 +93,7 @@ getBPPRideById ::
   Id TRide.Ride ->
   ClientsM TRide.Ride
 getBPPRideById rideId = do
-  mbRide <- liftIO $ runTransporterFlow "" $ TQRide.findById rideId
+  mbRide <- liftIO $ runTransporterFlow "" $ TQRide.findById rideId (Proxy @StaticDriverAppFlow)
   mbRide `shouldSatisfy` isJust
   return $ fromJust mbRide
 
@@ -101,7 +101,7 @@ getBPPDriverLocation ::
   Id TPerson.Person ->
   ClientsM LatLong
 getBPPDriverLocation driverId = do
-  mbRes <- liftIO $ runTransporterFlow "" $ findById driverId
+  mbRes <- liftIO $ runTransporterFlow "" $ findById driverId (Proxy @StaticDriverAppFlow)
   mbRes `shouldSatisfy` isJust
   let res = fromJust mbRes
   pure $
@@ -121,9 +121,9 @@ setupDriver driver initialPoint = do
 
 resetDriver :: DriverTestData -> IO ()
 resetDriver driver = runTransporterFlow "" $ do
-  mbActiveRide <- TQRide.getActiveByDriverId $ cast driver.driverId
+  mbActiveRide <- TQRide.getActiveByDriverId (cast driver.driverId) (Proxy @StaticDriverAppFlow)
   Esq.runTransaction $ do
-    QNS.deleteByPersonId $ cast driver.driverId
+    QNS.deleteByPersonId @StaticDriverAppFlow $ cast driver.driverId
     whenJust mbActiveRide $ \activeRide -> do
       TQRide.updateStatus activeRide.id TRide.CANCELLED
       TQBooking.updateStatus activeRide.bookingId TBooking.CANCELLED

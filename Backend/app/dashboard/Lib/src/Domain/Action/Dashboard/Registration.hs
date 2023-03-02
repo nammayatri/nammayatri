@@ -49,6 +49,7 @@ newtype LogoutRes = LogoutRes {message :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 login ::
+  forall m r.
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
@@ -59,15 +60,16 @@ login ::
   m LoginRes
 login LoginReq {..} = do
   availableServers <- asks (.dataServers)
-  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
+  merchant <- QMerchant.findByShortId merchantId (Proxy @m) >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
   unless (merchant.serverName `elem` (availableServers <&> (.name))) $
     throwError $ InvalidRequest "Server for this merchant is not available"
-  person <- QP.findByEmailAndPassword email password >>= fromMaybeM (PersonDoesNotExist email)
-  _merchantAccess <- QAccess.findByPersonIdAndMerchantId person.id merchant.id >>= fromMaybeM AccessDenied --FIXME cleanup tokens for this merchantId
+  person <- QP.findByEmailAndPassword email password (Proxy @m) >>= fromMaybeM (PersonDoesNotExist email)
+  _merchantAccess <- QAccess.findByPersonIdAndMerchantId person.id merchant.id (Proxy @m) >>= fromMaybeM AccessDenied --FIXME cleanup tokens for this merchantId
   token <- generateToken person.id merchant.id
   pure $ LoginRes token "Logged in successfully"
 
 generateToken ::
+  forall m r.
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
@@ -80,11 +82,12 @@ generateToken personId merchantId = do
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokensByMerchantId personId merchantId
   DB.runTransaction $ do
-    QR.deleteAllByPersonIdAndMerchantId personId merchantId
+    QR.deleteAllByPersonIdAndMerchantId @m personId merchantId
     QR.create regToken
   pure $ regToken.token
 
 logout ::
+  forall m r.
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
@@ -93,13 +96,14 @@ logout ::
   m LogoutRes
 logout tokenInfo = do
   let personId = tokenInfo.personId
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QP.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokensByMerchantId personId tokenInfo.merchantId
-  DB.runTransaction (QR.deleteAllByPersonIdAndMerchantId person.id tokenInfo.merchantId)
+  DB.runTransaction (QR.deleteAllByPersonIdAndMerchantId @m person.id tokenInfo.merchantId)
   pure $ LogoutRes "Logged out successfully"
 
 logoutAllMerchants ::
+  forall m r.
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
@@ -108,10 +112,10 @@ logoutAllMerchants ::
   m LogoutRes
 logoutAllMerchants tokenInfo = do
   let personId = tokenInfo.personId
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QP.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokens personId
-  DB.runTransaction (QR.deleteAllByPersonId person.id)
+  DB.runTransaction (QR.deleteAllByPersonId @m person.id)
   pure $ LogoutRes "Logged out successfully from all servers"
 
 buildRegistrationToken :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> m DR.RegistrationToken

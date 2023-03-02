@@ -47,16 +47,17 @@ newtype ListRoleRes = ListRoleRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createRole ::
+  forall m r.
   EsqDBFlow m r =>
   TokenInfo ->
   CreateRoleReq ->
   m DRole.RoleAPIEntity
 createRole _ req = do
-  mbExistingRole <- QRole.findByName req.name
+  mbExistingRole <- QRole.findByName req.name (Proxy @m)
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
   role <- buildRole req
   Esq.runTransaction $
-    QRole.create role
+    QRole.create @m role
   pure $ DRole.mkRoleAPIEntity role
 
 buildRole ::
@@ -77,22 +78,23 @@ buildRole req = do
       }
 
 assignAccessLevel ::
+  forall m r.
   EsqDBFlow m r =>
   TokenInfo ->
   Id DRole.Role ->
   AssignAccessLevelReq ->
   m APISuccess
 assignAccessLevel _ roleId req = do
-  _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  mbAccessMatrixItem <- QMatrix.findByRoleIdAndEntity roleId req.apiEntity
+  _role <- QRole.findById roleId (Proxy @m) >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  mbAccessMatrixItem <- QMatrix.findByRoleIdAndEntity roleId req.apiEntity (Proxy @m)
   case mbAccessMatrixItem of
     Just accessMatrixItem -> do
       Esq.runTransaction $ do
-        QMatrix.updateUserAccessType accessMatrixItem.id req.userAccessType
+        QMatrix.updateUserAccessType @m accessMatrixItem.id req.userAccessType
     Nothing -> do
       accessMatrixItem <- buildAccessMatrixItem roleId req
       Esq.runTransaction $ do
-        QMatrix.create accessMatrixItem
+        QMatrix.create @m accessMatrixItem
   pure Success
 
 buildAccessMatrixItem ::
@@ -114,6 +116,7 @@ buildAccessMatrixItem roleId req = do
       }
 
 listRoles ::
+  forall m r.
   ( EsqDBReplicaFlow m r,
     EncFlow m r
   ) =>
@@ -123,7 +126,7 @@ listRoles ::
   Maybe Integer ->
   m ListRoleRes
 listRoles _ mbSearchString mbLimit mbOffset = do
-  personAndRoleList <- Esq.runInReplica $ QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
+  personAndRoleList <- Esq.runInReplica $ QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString (Proxy @m)
   res <- forM personAndRoleList $ \role -> do
     pure $ mkRoleAPIEntity role
   pure $ ListRoleRes res

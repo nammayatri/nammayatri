@@ -31,16 +31,16 @@ import Tools.Notifications (sendMessageToDriver)
 
 broadcastMessage :: Types.MessageDict -> Text -> Flow ()
 broadcastMessage messageDict driverId = do
-  mDriver <- Esq.runInReplica $ Person.findById (Id driverId)
+  mDriver <- Esq.runInReplica $ Person.findById (Proxy @Flow) (Id driverId)
   status <-
     case mDriver of
       Just driver -> do
         let message = maybe messageDict.defaultMessage (flip (HM.findWithDefault messageDict.defaultMessage) messageDict.translations . show) driver.language
-        Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (Id driverId) Types.Sending
+        Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId @Flow message.id (Id driverId) Types.Sending
         exep <- try @_ @SomeException (sendMessageToDriver driver.merchantId FCM.SHOW Nothing FCM.NEW_MESSAGE message.title message.description driver.id message.id driver.deviceToken)
         return $
           case exep of
             Left _ -> Types.Failed
             Right _ -> Types.Success
       Nothing -> return Types.Failed
-  void $ Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId messageDict.defaultMessage.id (Id driverId) status
+  void $ Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId @Flow messageDict.defaultMessage.id (Id driverId) status

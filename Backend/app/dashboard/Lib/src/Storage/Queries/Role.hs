@@ -21,34 +21,40 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.Role
 
-create :: Role -> SqlDB ()
+create :: Role -> SqlDB m ()
 create = Esq.create
 
 findById ::
+  forall m ma.
   Transactionable ma m =>
   Id Role ->
+  Proxy ma ->
   m (Maybe Role)
-findById = Esq.findById
+findById roleId _ = Esq.findById @m @ma roleId
 
 findByName ::
+  forall m ma.
   Transactionable ma m =>
   Text ->
+  Proxy ma ->
   m (Maybe Role)
-findByName name = findOne $ do
+findByName name _ = findOne @m @ma $ do
   role <- from $ table @RoleT
   where_ $
     role ^. RoleName ==. val name
   return role
 
 findAllByLimitOffset ::
+  forall m ma.
   Transactionable ma m =>
   Maybe Integer ->
   Maybe Integer ->
+  Proxy ma ->
   m [Role]
-findAllByLimitOffset mbLimit mbOffset = do
+findAllByLimitOffset mbLimit mbOffset _ = do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
-  Esq.findAll $ do
+  Esq.findAll @m @ma $ do
     role <- from $ table @RoleT
     orderBy [asc $ role ^. RoleName]
     limit limitVal
@@ -56,15 +62,17 @@ findAllByLimitOffset mbLimit mbOffset = do
     pure role
 
 findAllWithLimitOffset ::
+  forall m ma.
   Transactionable ma m =>
   Maybe Integer ->
   Maybe Integer ->
   Maybe Text ->
+  Proxy ma ->
   m [Role]
-findAllWithLimitOffset mbLimit mbOffset mbSearchString = do
+findAllWithLimitOffset mbLimit mbOffset mbSearchString _ = do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
-  Esq.findAll $ do
+  Esq.findAll @m @ma $ do
     role <- from $ table @RoleT
     where_ $
       Esq.whenJust_ mbSearchString (filterBySearchString role)

@@ -158,6 +158,12 @@ runTransporterFlow tag = runFlow tag transporterAppEnv
 runARDUFlow :: Text -> FlowR ARDU.AppEnv a -> IO a
 runARDUFlow tag = runFlow tag driverOfferBppEnv
 
+type DynamicDriverAppFlow = FlowR ARDU.AppEnv
+
+type StaticDriverAppFlow = FlowR BecknTransport.AppEnv
+
+type RiderPlatformFlow = FlowR BecknApp.AppEnv
+
 data Person
 
 data DriverTestData = DriverTestData
@@ -183,12 +189,12 @@ equals list1 list2 = all (`elem` list1) list2 && all (`elem` list2) list1
 
 resetCustomer :: Text -> IO ()
 resetCustomer token = runAppFlow "" $ do
-  regToken <- BQRegToken.findByToken token >>= fromMaybeM (InvalidToken token)
-  activeBookings <- BQB.findByRiderIdAndStatus (Id regToken.entityId) BDB.activeBookingStatus
+  regToken <- BQRegToken.findByToken token (Proxy @RiderPlatformFlow) >>= fromMaybeM (InvalidToken token)
+  activeBookings <- BQB.findByRiderIdAndStatus (Id regToken.entityId) BDB.activeBookingStatus (Proxy @RiderPlatformFlow)
   forM_ activeBookings $ \activeBooking -> do
-    rides <- BQRide.findActiveByRBId activeBooking.id
+    rides <- BQRide.findActiveByRBId activeBooking.id (Proxy @RiderPlatformFlow)
     Esq.runTransaction $ do
-      BQB.updateStatus activeBooking.id BDB.CANCELLED
+      BQB.updateStatus @RiderPlatformFlow activeBooking.id BDB.CANCELLED
       void . forM rides $ \ride ->
         BQRide.updateStatus ride.id BDRide.CANCELLED
 

@@ -68,17 +68,19 @@ authTokenCacheKey regToken = do
   pure $ authTokenCacheKeyPrefix <> regToken
 
 verifyToken ::
+  forall m r.
   ( EsqDBFlow m r,
     HasFlowEnv m r '["registrationTokenExpiry" ::: Days]
   ) =>
   RegToken ->
   m DR.RegistrationToken
 verifyToken regToken = do
-  QR.findByToken regToken
+  QR.findByToken regToken (Proxy @m)
     >>= Utils.fromMaybeM (InvalidToken regToken)
     >>= validateToken
 
 validateToken ::
+  forall m r.
   ( EsqDBFlow m r,
     HasFlowEnv m r '["registrationTokenExpiry" ::: Days]
   ) =>
@@ -90,16 +92,17 @@ validateToken sr = do
   expired <- Utils.isExpired nominal sr.createdAt
   when expired $ do
     Esq.runTransaction $
-      QR.deleteById sr.id
+      QR.deleteById @m sr.id
     Utils.throwError TokenExpired
-  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId sr.personId sr.merchantId
+  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId sr.personId sr.merchantId (Proxy @m)
   when (isNothing mbMerchantAccess) $ do
     Esq.runTransaction $
-      QR.deleteById sr.id
+      QR.deleteById @m sr.id
     Utils.throwError AccessDenied
   return sr
 
 cleanCachedTokens ::
+  forall m r.
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
@@ -107,12 +110,13 @@ cleanCachedTokens ::
   Id DP.Person ->
   m ()
 cleanCachedTokens personId = do
-  regTokens <- QR.findAllByPersonId personId
+  regTokens <- QR.findAllByPersonId personId (Proxy @m)
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key
 
 cleanCachedTokensByMerchantId ::
+  forall m r.
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
@@ -121,7 +125,7 @@ cleanCachedTokensByMerchantId ::
   Id DMerchant.Merchant ->
   m ()
 cleanCachedTokensByMerchantId personId merchantId = do
-  regTokens <- QR.findAllByPersonIdAndMerchantId personId merchantId
+  regTokens <- QR.findAllByPersonIdAndMerchantId personId merchantId (Proxy @m)
   for_ regTokens $ \regToken -> do
     key <- authTokenCacheKey regToken.token
     void $ Redis.del key

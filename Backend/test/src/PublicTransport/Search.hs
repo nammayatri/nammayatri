@@ -23,7 +23,7 @@ import Domain.Types.PaymentTransaction (PaymentStatus (FAILED, PENDING, SUCCESS)
 import qualified "rider-app" Domain.Types.SearchRequest as AppBE
 import qualified "public-transport-rider-platform" Environment as Bap
 import HSpec
-import Kernel.Prelude hiding (Proxy)
+import Kernel.Prelude
 import Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
@@ -105,7 +105,7 @@ testSearch = do
     pure $ Just (ekmAbcQuote, ekmEmbQuote)
 
 findSearchBAP :: Id AppBE.SearchRequest -> IO (Maybe AppBE.SearchRequest)
-findSearchBAP searchId = runAppFlow "" $ AppBE.findById searchId
+findSearchBAP searchId = runAppFlow "" $ AppBE.findById searchId (Proxy @RiderPlatformFlow)
 
 findQuoteByStations :: Text -> Text -> [OfferRes] -> Maybe PublicTransportQuote
 findQuoteByStations dep arriv = find pred_ . mapMaybe f

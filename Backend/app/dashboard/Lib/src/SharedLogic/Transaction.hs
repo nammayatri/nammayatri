@@ -103,6 +103,7 @@ withResponseTransactionStoring =
   withResponseTransactionStoring' (Just . Common.hideSecrets)
 
 withResponseTransactionStoring' ::
+  forall m r transactionResponse response.
   ( Esq.EsqDBFlow m r,
     MonadCatch m,
     ToJSON transactionResponse
@@ -114,11 +115,11 @@ withResponseTransactionStoring' ::
 withResponseTransactionStoring' responseModifier transaction clientCall = handle errorHandler $ do
   response <- clientCall
   Esq.runTransaction $
-    QT.create $ transaction{response = encodeToText <$> responseModifier response}
+    QT.create @m $ transaction{response = encodeToText <$> responseModifier response}
   pure response
   where
     -- This code do not handle ExternalAPICallError, only E.Error
     errorHandler (err :: E.Error) = do
       Esq.runTransaction $
-        QT.create transaction{responseError = Just $ show err}
+        QT.create @m transaction{responseError = Just $ show err}
       throwError err
