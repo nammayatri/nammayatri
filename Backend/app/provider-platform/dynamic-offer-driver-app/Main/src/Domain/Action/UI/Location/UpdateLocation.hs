@@ -44,6 +44,7 @@ import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.SlidingWindowLimiter (slidingWindowLimiter)
 import qualified Lib.LocationUpdates as LocUpd
 import qualified SharedLogic.DriverLocation as DrLoc
+import SharedLogic.DriverPool (updateDriverSpeedInRedis)
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.DriverInformation as DInfo
@@ -143,7 +144,12 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
               currPoint = NE.last newWaypoints
           upsertDriverLocation currPoint.pt currPoint.ts
           mbRideIdAndStatus <- getAssignedRide
-          mapM_ (\point -> streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts driverInfo.active) (a : ax)
+          mapM_
+            ( \point -> do
+                updateDriverSpeedInRedis driver.merchantId driver.id point.pt point.ts
+                streamLocationUpdates (fst <$> mbRideIdAndStatus) driver.merchantId driver.id point.pt point.ts driverInfo.active
+            )
+            (a : ax)
           maybe
             (logInfo "No ride is assigned to driver, ignoring")
             (\(rideId, rideStatus) -> when (rideStatus == DRide.INPROGRESS) $ addIntermediateRoutePoints rideId $ NE.map (.pt) newWaypoints)

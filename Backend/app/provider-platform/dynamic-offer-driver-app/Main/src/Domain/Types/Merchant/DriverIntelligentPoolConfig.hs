@@ -18,6 +18,7 @@ import Data.Time (UTCTime)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 
@@ -32,6 +33,11 @@ data DriverIntelligentPoolConfigD u = DriverIntelligentPoolConfig
     minQuotesToQualifyForIntelligentPool :: Int,
     minQuotesToQualifyForIntelligentPoolWindowOption :: SWC.SlidingWindowOptions,
     intelligentPoolPercentage :: Maybe Int,
+    speedNormalizer :: Double, -- abnormally high speed
+    driverSpeedWeightage :: Int,
+    minLocationUpdates :: Int,
+    locationUpdateSampleTime :: Minutes,
+    defaultDriverSpeed :: Double,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
