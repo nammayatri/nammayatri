@@ -48,9 +48,6 @@ screen initialState =
   , name : "HelpAndSupportScreen"
   , eval
   , globalEvents : [( \push -> do
-      launchAff_ $ flowRunner $ runExceptT $ runBackT $ do
-        rideHistoryResponse <- Remote.getRideHistoryReqBT "1" "0" "false"
-        lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponse rideHistoryResponse
       pure $ pure unit)]
   }
 
@@ -157,10 +154,10 @@ recentRideDetails state push =
  , orientation VERTICAL
  , PP.cornerRadii $ PTD.Corners 8.0 true true true true  
  , stroke ("1," <> Color.grey900)
- , visibility if(state.props.isNoRides) then GONE else VISIBLE
+ , visibility if state.props.isNoRides then GONE else VISIBLE
  ][ linearLayout
     [ width MATCH_PARENT
-    , height WRAP_CONTENT
+    , height MATCH_PARENT
     , orientation HORIZONTAL
     ][  imageView 
         [ width $ V 150

@@ -15,11 +15,11 @@
 
 module Screens.RideHistoryScreen.View where
 
-import Prelude ( Unit, ($), (<$>), const, (==), (<<<), bind, pure, unit, discard, show, not, (&&),($), (<$>), (<>),(<<<), (==), (/), (>))
+import Prelude ( Unit, (<$>), const, bind, pure, unit, discard, show, not, (&&),($), (<>),(<<<), (==), (/), (>), (<))
 import Screens.Types as ST
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), Margin(..), Visibility(..), PrestoDOM, Padding(..), Screen, color, gravity, height, width,id, alignParentBottom, linearLayout, onScroll, margin, orientation, onScrollStateChange, padding, text, textSize, textView, background, scrollBarY, swipeRefreshLayout, onAnimationEnd, visibility, weight, onRefresh, onClick, onBackPressed, afterRender)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, gravity, height, id, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
 import Effect (Effect)
-import Screens.RideHistoryScreen.Controller (Action(..), ScreenOutput, eval, prestoListFilter)
+import Screens.RideHistoryScreen.Controller (Action(..), ScreenOutput, eval)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import PrestoDOM.List as PrestoList
@@ -34,37 +34,38 @@ import Data.Array ((..))
 import Components.ErrorModal as ErrorModal
 import Styles.Colors as Color
 import Components.BottomNavBar as BottomNavBar
-import Engineering.Helpers.Commons (safeMarginBottom, screenWidth)
+import Engineering.Helpers.Commons (safeMarginBottom, screenWidth, flowRunner)
 import Services.Backend as Remote
 import PrestoDOM.Events (globalOnScroll)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
 import Animation as Anim
-import Services.APITypes (GetRidesHistoryResp(..), Status(..))
-import Common.Types.App
+import Services.APITypes (GetRidesHistoryResp(..))
+import Common.Types.App (LazyCheck(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.RideHistoryScreen.ComponentConfig
+import Data.Maybe as Maybe
 
 
 screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> Screen Action ST.RideHistoryScreenState ScreenOutput
 screen initialState rideListItem = 
-  {
-    initialState : initialState {
-      shimmerLoader = ST.AnimatedIn
-    }
+  { initialState : initialState {shimmerLoader = ST.AnimatedIn }
   , view : view rideListItem
   , name : "RideHistoryScreen"
   , globalEvents : [
     globalOnScroll "RideHistoryScreen",
         ( \push -> do
             launchAff_ $ flowRunner $ runExceptT $ runBackT $ do
-              (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show initialState.offsetValue) "false"
-              lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list
+              let offsetValue = if initialState.currentTab == ST.Completed then initialState.completedRidesTuple.offsetValue else initialState.cancelledRidesTuple.offsetValue
+              let lengthOfArrayList = if initialState.currentTab == ST.Completed then DA.length initialState.completedRidesTuple.listArrayItems else DA.length initialState.cancelledRidesTuple.listArrayItems
+              let listFilter = if initialState.currentTab == ST.Completed then "COMPLETED" else "CANCELLED"
+              if offsetValue < lengthOfArrayList then pure unit else do
+                (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "8" (show offsetValue) "false" $ Maybe.Just listFilter
+                lift $ lift $ doAff do liftEffect $ push $ RideHistoryAPIResponseAction rideHistoryResponse.list initialState.currentTab
             pure $ pure unit
         )
   ]
@@ -90,31 +91,7 @@ view rideListItem push state =
           , separatorView 
           , ridesView rideListItem push state 
           ]
-      , linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , background Color.white900
-      , onClick push (const Loader)
-      , gravity CENTER
-      , alignParentBottom "true,-1"
-      , padding (PaddingBottom 5)
-      , visibility if (state.loaderButtonVisibility && (not state.loadMoreDisabled)) then VISIBLE else GONE--(state.data.totalItemCount == (state.data.firstVisibleItem + state.data.visibleItemCount) && state.data.totalItemCount /= 0 && state.data.totalItemCount /= state.data.visibleItemCount) then VISIBLE else GONE
-      ][ linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , orientation VERTICAL
-        , margin $ Margin 0 5 0 5
-        ]
-        [ textView
-          ([ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text (getString LOAD_MORE)
-          , padding (Padding 10 5 10 5)
-          , color Color.blueTextColor
-          ] <> FontStyle.subHeading1 TypoGraphy)
-        ]
-    ]
+        , loadMoreButton push state
     , BottomNavBar.view (push <<< BottomNavBarAction) (navData 1)
     ]
 
@@ -144,7 +121,7 @@ headerView push state =
               , width WRAP_CONTENT
               , height WRAP_CONTENT
               , weight 0.5
-              , onClick push (const $ SelectTab "COMPLETED")
+              , onClick push (const $ SelectTab ST.Completed)
               ][
                 linearLayout
                   [ width $ (V (screenWidth unit / 2) )
@@ -153,7 +130,7 @@ headerView push state =
                   ][ textView  
                       [ text (getString COMPLETED_)
                       , textSize FontSize.a_18
-                      , color if state.currentTab == "COMPLETED" then Color.black900 else Color.black500
+                      , color if state.currentTab == ST.Completed then Color.black900 else Color.black500
                       , margin (MarginVertical 15 15)
                       ]
                   ]
@@ -161,7 +138,7 @@ headerView push state =
                   [ height (V 2)
                   , width MATCH_PARENT
                   , background Color.black900
-                  , visibility if state.currentTab == "COMPLETED" then VISIBLE else GONE
+                  , visibility if state.currentTab == ST.Completed then VISIBLE else GONE
                   ][]
               ]
           , linearLayout
@@ -169,7 +146,7 @@ headerView push state =
               , width WRAP_CONTENT
               , height WRAP_CONTENT
               , weight 0.5
-              , onClick push (const $ SelectTab "CANCELLED")
+              , onClick push (const $ SelectTab ST.Cancelled)
               ][
                 linearLayout
                   [ width $ V (screenWidth unit / 2)
@@ -178,7 +155,7 @@ headerView push state =
                   ][ textView  
                       [ text (getString CANCELLED_) 
                       , textSize FontSize.a_18
-                      , color if state.currentTab == "CANCELLED" then Color.black900 else Color.black500
+                      , color if state.currentTab == ST.Cancelled then Color.black900 else Color.black500
                       , margin (MarginVertical 15 15)
                       ]
                   ]
@@ -186,7 +163,7 @@ headerView push state =
                   [ height (V 2)
                   , width MATCH_PARENT
                   , background Color.black900
-                  , visibility if state.currentTab == "CANCELLED" then VISIBLE else GONE
+                  , visibility if state.currentTab == ST.Cancelled then VISIBLE else GONE
                   ][]
               ]
          ]
@@ -201,7 +178,7 @@ ridesView rideListItem push state =
   ][ swipeRefreshLayout
       [height MATCH_PARENT
       , width MATCH_PARENT
-      , onRefresh push (const Refresh)
+      , onRefresh push $ const Refresh
       , id "2000030"
       ]
       [ Keyed.relativeLayout
@@ -220,7 +197,7 @@ ridesView rideListItem push state =
                         _ -> GONE
             , PrestoList.listItem rideListItem 
             , background Color.bg_grey
-            , PrestoList.listDataV2 (prestoListFilter state.currentTab state.prestoListArrayItems)
+            , PrestoList.listDataV2 if state.currentTab == ST.Completed then state.completedRidesTuple.prestoListArrayItems else state.cancelledRidesTuple.prestoListArrayItems
             ]
           , DT.Tuple "LOADER"
               $ PrestoAnim.animationSet
@@ -259,7 +236,7 @@ ridesView rideListItem push state =
                 , padding (PaddingBottom safeMarginBottom)
                 , background Color.white900
                 , visibility $ case state.shimmerLoader of
-                          ST.AnimatedOut ->  if DA.length (prestoListFilter state.currentTab state.prestoListArrayItems) > 0 then GONE else VISIBLE
+                          ST.AnimatedOut ->  if DA.length (if state.currentTab == ST.Completed then state.completedRidesTuple.prestoListArrayItems else state.cancelledRidesTuple.prestoListArrayItems) > 0 then GONE else VISIBLE
                           _ -> GONE
                 ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig)]
           ])
@@ -267,7 +244,35 @@ ridesView rideListItem push state =
 
   ]
 
-  
+loadMoreButton :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
+loadMoreButton push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.white900
+    , onClick push $ const Loader
+    , gravity CENTER
+    , padding $ PaddingBottom 5
+    , visibility if state.loaderButtonVisibility && (not state.loadMoreDisabled) then VISIBLE else GONE
+    ][ linearLayout
+        [ width MATCH_PARENT
+        , height $ V 1
+        , background Color.bg_grey
+        ][]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , orientation VERTICAL
+        , margin $ MarginVertical 5 5
+        ][ textView
+          ([ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getString LOAD_MORE
+          , color Color.blueTextColor
+          ] <> FontStyle.subHeading1 TypoGraphy)
+        ]
+    ]
 
 separatorView :: forall w. PrestoDOM (Effect Unit) w
 separatorView = 

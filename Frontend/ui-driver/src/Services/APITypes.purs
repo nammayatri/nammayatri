@@ -432,7 +432,7 @@ instance decodeGetDriverInfoResp :: Decode GetDriverInfoResp where decode = defa
 instance encodeGetDriverInfoResp :: Encode GetDriverInfoResp where encode = defaultEncode
 -----------------------------------------------GET RIDES HISTORY---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-data GetRidesHistoryReq = GetRidesHistoryReq String String String
+data GetRidesHistoryReq = GetRidesHistoryReq String String String (Maybe String)
 
 newtype GetRidesHistoryResp = GetRidesHistoryResp
     {
@@ -480,13 +480,13 @@ newtype LocationInfo = LocationInfo
 
 
 instance makeGetRidesHistoryReq :: RestEndpoint GetRidesHistoryReq GetRidesHistoryResp where
-    makeRequest reqBody@(GetRidesHistoryReq limit offset isActive) headers = defaultMakeRequest GET (EP.getRideHistory limit offset isActive) headers reqBody
+    makeRequest reqBody@(GetRidesHistoryReq limit offset isActive status) headers = defaultMakeRequest GET (EP.getRideHistory limit offset isActive status) headers reqBody
     decodeResponse = decodeJSON
     encodeRequest req = defaultEncode req
 
 derive instance genericGetRidesHistoryReq :: Generic GetRidesHistoryReq _
 instance showGetRidesHistoryReq :: Show GetRidesHistoryReq where show = genericShow
-instance standardEncodeGetRidesHistoryReq :: StandardEncode GetRidesHistoryReq where standardEncode (GetRidesHistoryReq req rq limit) = standardEncode req
+instance standardEncodeGetRidesHistoryReq :: StandardEncode GetRidesHistoryReq where standardEncode (GetRidesHistoryReq req rq limit status) = standardEncode req
 instance decodeGetRidesHistoryReq :: Decode GetRidesHistoryReq where decode = defaultDecode
 instance encodeGetRidesHistoryReq :: Encode GetRidesHistoryReq where encode = defaultEncode
 

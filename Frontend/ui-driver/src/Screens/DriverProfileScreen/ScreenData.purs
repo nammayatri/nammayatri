@@ -64,27 +64,3 @@ optionList dummy =
       {menuOptions: REFER , icon:"ic_add_person,https://assets.juspay.in/nammayatri/images/driver/ic_add_person.png"},
       {menuOptions: DRIVER_LOGOUT , icon:"ny_ic_logout_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_logout_grey.png"}
     ]
-
-
-navData :: BottomNavBarState
-navData = {
-   activeIndex: 3,
-   screenName: "DriverProfileScreen",
-   navButton: [
-    {
-      defaultIcon: "ny_ic_home_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_home_inactive.png",
-      activeIcon: "ny_ic_home_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_home_inactive.png",
-      text: "Home"
-    },
-    {
-      defaultIcon: "ny_ic_cab_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cab_inactive.png",
-      activeIcon: "ny_ic_cab_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cab_inactive.png",
-      text: "Rides"
-    },
-    {
-      defaultIcon: "ny_ic_account_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_account_active.png",
-      activeIcon: "ny_ic_account_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_account_active.png",
-      text: "Profile"
-    }
-  ]
-}

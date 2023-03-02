@@ -47,7 +47,6 @@ instance loggableAction :: Loggable Action where
     ReportIssue -> do
       trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "report_issue"
       trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
-    RideHistoryAPIResponse resp -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "ride_history_api_resp"
     NoRidesAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "no_action_view_rides"
     NoAction -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "no_action"
 
@@ -63,7 +62,6 @@ data Action = NoAction
              | OptionClick ListOptions 
              | ReportIssue 
              | ViewAllRides 
-             | RideHistoryAPIResponse GetRidesHistoryResp
              | AfterRender
              | NoRidesAction
 

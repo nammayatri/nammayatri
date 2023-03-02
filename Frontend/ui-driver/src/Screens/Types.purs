@@ -349,12 +349,24 @@ type RideHistoryScreenState =
     prestoListArrayItems :: Array ItemState,
     rideList :: Array IndividualRideCardState,
     selectedItem :: IndividualRideCardState,
-    currentTab :: String,
-    offsetValue :: Int,
+    currentTab :: RideTabs,
     loaderButtonVisibility :: Boolean,
     loadMoreDisabled :: Boolean,
-    recievedResponse :: Boolean
+    recievedResponse :: Boolean,
+    completedRidesTuple :: RideType,
+    cancelledRidesTuple :: RideType
   }
+
+type RideType = {
+  listArrayItems :: Array IndividualRideCardState,
+  prestoListArrayItems :: Array ItemState,
+  offsetValue :: Int
+}
+
+data RideTabs = Completed | Cancelled 
+derive instance genericRideTabs :: Generic RideTabs _
+instance eqRideTabs :: Eq RideTabs where eq = genericEq
+
 
 ------------------------------------------- ReferralScreenState -----------------------------------------
 

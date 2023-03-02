@@ -17,6 +17,8 @@ module Services.EndPoints where
 
 import Prelude ((<>))
 import Services.Config (getBaseUrl)
+import Prelude(show, (==))
+import Data.Maybe
 
 
 triggerOTP :: String -> String
@@ -46,8 +48,11 @@ logout dummyString = (getBaseUrl "") <> "/auth/logout"
 getDriverInfo :: String -> String
 getDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
 
-getRideHistory :: String -> String -> String -> String
-getRideHistory limit offset isActive = (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
+getRideHistory :: String -> String -> String -> Maybe String -> String
+getRideHistory limit offset isActive status = do
+    case status of
+        Nothing -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive
+        Just status -> (getBaseUrl "") <> "/driver/ride/list?limit="<>limit<>"&offset="<>offset<>"&onlyActive="<>isActive <> "&status="<> show status
 
 offerRide :: String -> String 
 offerRide dummyString = (getBaseUrl "") <> "/driver/searchRequest/quote/offer"

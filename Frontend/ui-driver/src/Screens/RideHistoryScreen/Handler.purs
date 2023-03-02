@@ -15,21 +15,21 @@
 
 module Screens.RideHistoryScreen.Handler where
 
-import Prelude (bind, map, pure, ($), (<$>), discard)
-import Engineering.Helpers.BackTrack (getState)
-import Screens.RideHistoryScreen.Controller (ScreenOutput(..))
+import Components.IndividualRideCard as IndividualRideCard
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
-import Engineering.Helpers.Commons (liftFlow)
-import Screens.RideHistoryScreen.View as RideHistoryScreen
-import Types.App (FlowBT, GlobalState(..), MY_RIDES_SCREEN_OUTPUT(..),ScreenType(..))
-import Screens.Types (IndividualRideCardState, AnimationState(..))
-import Components.IndividualRideCard as IndividualRideCard
-import PrestoDOM.List as PrestoList
-import PrestoDOM.Core2 (getPushFn)
-import Services.APITypes (RidesInfo(..), Status(..))
 import Data.Maybe (Maybe(..))
+import Engineering.Helpers.BackTrack (getState)
+import Engineering.Helpers.Commons (liftFlow)
+import Prelude (bind, map, pure, ($), (<$>), discard)
+import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import PrestoDOM.Core2 (getPushFn)
+import PrestoDOM.List as PrestoList
+import Screens.RideHistoryScreen.Controller (ScreenOutput(..))
+import Screens.RideHistoryScreen.View as RideHistoryScreen
+import Screens.Types (IndividualRideCardState, AnimationState(..))
+import Services.APITypes (RidesInfo(..), Status(..))
+import Types.App (FlowBT, GlobalState(..), MY_RIDES_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 
 
@@ -49,10 +49,10 @@ rideHistory = do
     GoToTripDetails updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{currentTab = updatedState.currentTab})
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRIP_DETAILS updatedState.selectedItem)
-    LoaderOutput updatedState -> App.BackT $ App.BackPoint <$> (pure $ LOADER_OUTPUT updatedState)
-    RefreshScreen updatedState -> App.BackT $ App.BackPoint <$> (pure $ REFRESH updatedState) 
-    GoToFilter currentTab -> App.BackT $ App.BackPoint <$> (pure $ FILTER currentTab)
+    LoaderOutput updatedState -> App.BackT $ App.NoBack <$> (pure $ LOADER_OUTPUT updatedState)
+    RefreshScreen updatedState -> App.BackT $ App.NoBack <$> (pure $ REFRESH updatedState) 
     GoToNotification -> App.BackT $ App.BackPoint <$> (pure $ NOTIFICATION_FLOW)
+    SelectTabOutput updatedState -> App.BackT $ App.NoBack <$> (pure $ SELECT_TAB_OUTPUT updatedState)
 rideHistoryItem :: IndividualRideCardState
 rideHistoryItem = {
     date : "31/05/2022",

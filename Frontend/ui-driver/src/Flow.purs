@@ -45,7 +45,7 @@ import Screens.Handlers as UI
 import Screens.HomeScreen.Controller (activeRideDetail)
 import Screens.HomeScreen.View (rideRequestPollingData)
 import Screens.PopUpScreen.Controller (transformAllocationData)
-import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, ReferralType(..))
+import Screens.Types (ActiveRide, AllocationData, HomeScreenStage(..), Location, ReferralType(..),  RideTabs(..))
 import Services.APITypes (DriverActiveInactiveResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GetDriverInfoReq(..), GetDriverInfoResp(..), GetRidesHistoryResp(..), GetRouteResp(..), LogOutReq(..), LogOutRes(..), OfferRideResp(..), ReferDriverResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), TriggerOTPResp(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyTokenResp(..), GetPerformanceReq(..), GetPerformanceRes(..))
 import Services.Accessor (_lat, _lon, _id)
 import Services.Backend (makeGetRouteReq, walkCoordinates, walkCoordinate)
@@ -402,7 +402,7 @@ driverProfileFlow :: FlowBT String Unit
 driverProfileFlow = do
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
-  (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false"
+  (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" $ Just "COMPLETED"
   case (head rideHistoryResponse.list) of
     Nothing -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { props {isNoRides = true}})
@@ -443,7 +443,7 @@ driverProfileFlow = do
       loginFlow
     HELP_AND_SUPPORT_SCREEN -> helpAndSupportFlow
     GO_TO_DRIVER_HISTORY_SCREEN -> do
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
+      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{completedRidesTuple {offsetValue = 0}, cancelledRidesTuple {offsetValue = 0}, currentTab = Completed})
       myRidesScreenFlow
     GO_TO_EDIT_BANK_DETAIL_SCREEN -> editBankDetailsFlow
     NOTIFICATIONS_SCREEN -> notificationFlow
@@ -494,7 +494,7 @@ helpAndSupportFlow = do
         totalAmount = (updatedState.data.fare)}})
       tripDetailsScreenFlow
     MY_RIDES_SCREEN -> do
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
+      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{completedRidesTuple {offsetValue = 0}, cancelledRidesTuple {offsetValue = 0}, currentTab = Completed})
       myRidesScreenFlow
     REPORT_ISSUE -> writeToUsFlow
 
@@ -519,17 +519,17 @@ myRidesScreenFlow = do
   flow <- UI.rideHistory
   case flow of
     REFRESH state -> do
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{offsetValue = 0})
+      if state.currentTab == Completed then
+        modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{completedRidesTuple {offsetValue = 0}})
+        else modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{cancelledRidesTuple {offsetValue = 0}})
       myRidesScreenFlow
     MY_RIDE state -> tripDetailsScreenFlow
     HOME_SCREEN -> homeScreenFlow
     PROFILE_SCREEN -> driverProfileFlow
     GO_TO_REFERRAL_SCREEN -> referralScreenFlow
     LOADER_OUTPUT state -> do
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{offsetValue = state.offsetValue + 8})
-      myRidesScreenFlow
-    FILTER currTab-> do  
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{currentTab = currTab})
+      if state.currentTab == Completed then modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{currentTab = state.currentTab, completedRidesTuple {offsetValue = state.completedRidesTuple.offsetValue + 8}}) 
+        else modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{currentTab = state.currentTab, cancelledRidesTuple {offsetValue = state.cancelledRidesTuple.offsetValue + 8}}) 
       myRidesScreenFlow
     GO_TO_TRIP_DETAILS selectedCard -> do
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
@@ -544,6 +544,9 @@ myRidesScreenFlow = do
       }})
       tripDetailsScreenFlow
     NOTIFICATION_FLOW -> notificationFlow
+    SELECT_TAB_OUTPUT state -> do
+      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> state{currentTab = state.currentTab}) 
+      myRidesScreenFlow
 
 referralScreenFlow :: FlowBT String Unit
 referralScreenFlow = do
@@ -577,7 +580,7 @@ tripDetailsScreenFlow = do
   case flow of
     ON_SUBMIT  -> pure unit
     GO_TO_HOME_SCREEN -> do
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
+      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{completedRidesTuple {offsetValue = 0}, cancelledRidesTuple {offsetValue = 0}, currentTab = Completed})
       myRidesScreenFlow
 
 currentRideFlow :: FlowBT String Unit 
@@ -588,7 +591,7 @@ currentRideFlow = do
   if isLocalStageOn RideRequested && (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "false" && isRequestExpired then 
     homeScreenFlow 
     else pure unit
-  (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true"
+  (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" Nothing
   _ <- pure $ spy "activeRideResponse" activeRideResponse
   if not (null activeRideResponse.list) then do 
     case (activeRideResponse.list !! 0 ) of 
@@ -648,7 +651,7 @@ homeScreenFlow = do
     GO_TO_PROFILE_SCREEN -> driverProfileFlow
     GO_TO_RIDES_SCREEN -> do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_RIDES_SCREEN" "."
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0 , currentTab = "COMPLETED"})
+      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{completedRidesTuple {offsetValue = 0}, cancelledRidesTuple {offsetValue = 0} , currentTab = Completed})
       myRidesScreenFlow
     GO_TO_REFERRAL_SCREEN_FROM_HOME_SCREEN -> referralScreenFlow
     DRIVER_AVAILABILITY_STATUS status -> do
@@ -692,7 +695,7 @@ homeScreenFlow = do
       void $ lift $ lift $ toggleLoader true
       endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (fromString lat)) (fromMaybe 0.0 (fromString lon)))-- driver's  lat long during ending ride
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
-      (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false"
+      (GetRidesHistoryResp rideHistoryResponse) <- Remote.getRideHistoryReqBT "1" "0" "false" Nothing
       case (head rideHistoryResponse.list) of
         Nothing -> pure unit
         Just (RidesInfo response) -> do

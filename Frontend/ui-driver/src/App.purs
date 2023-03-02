@@ -156,9 +156,9 @@ data MY_RIDES_SCREEN_OUTPUT = MY_RIDE RideHistoryScreenState
                             | GO_TO_REFERRAL_SCREEN
                             | REFRESH RideHistoryScreenState 
                             | LOADER_OUTPUT RideHistoryScreenState 
-                            | FILTER String 
                             | GO_TO_TRIP_DETAILS IndividualRideCardState
                             | NOTIFICATION_FLOW
+                            | SELECT_TAB_OUTPUT RideHistoryScreenState
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | Go_BACK

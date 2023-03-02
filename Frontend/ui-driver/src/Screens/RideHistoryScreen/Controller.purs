@@ -15,34 +15,35 @@
 
 module Screens.RideHistoryScreen.Controller where
 
-import Prelude (class Show, pure, unit, ($), map, (==), not,bind, (&&),(<>) ,(+), (*), (/=), discard, (/))
-import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..))
-import PrestoDOM.Types.Core (class Loggable)
-import PrestoDOM (Eval, continue, exit, ScrollState(..))
-import Components.BottomNavBar.Controller(Action(..)) as BottomNavBar
-import Components.IndividualRideCard.Controller as IndividualRideCardController
-import Components.ErrorModal as ErrorModalController 
-import Services.APITypes (RidesInfo(..), Status(..))
-import PrestoDOM.Types.Core (toPropValue)
-import Helpers.Utils (convertUTCtoISC)
-import Resource.Constants (decodeAddress)
-import Data.Array (union, (!!), filter, length)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Int(fromString, toNumber)
-import Data.Number(fromString) as NUM
-import Data.String (Pattern(..), split)
-import Helpers.Utils (setRefreshing, setEnabled, parseFloat)
-import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
-import Data.Int (ceil)
-import Styles.Colors as Color
 import Log
+
+import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
+import Components.ErrorModal as ErrorModalController
+import Components.IndividualRideCard.Controller as IndividualRideCardController
+import Data.Array (union, (!!), filter, length)
+import Data.Int (ceil)
+import Data.Int (fromString, toNumber)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number (fromString) as NUM
 import Data.Show (show)
-import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
-import Screens (ScreenName(..), getScreen)
+import Data.String (Pattern(..), split)
+import Engineering.Helpers.Commons (getNewIDWithTag, strToBool)
+import Helpers.Utils (convertUTCtoISC)
+import Helpers.Utils (setRefreshing, setEnabled, parseFloat)
 import Language.Strings (getString)
-import Language.Types(STR(..))
+import Language.Types (STR(..))
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
+import Prelude (class Show, pure, unit, ($), map, (==), not, bind, (&&), (<>), (+), (*), (/=), discard, (/))
+import PrestoDOM (Eval, continue, exit, ScrollState(..))
+import PrestoDOM.Types.Core (class Loggable)
+import PrestoDOM.Types.Core (toPropValue)
+import Resource.Constants (decodeAddress)
+import Screens (ScreenName(..), getScreen)
+import Screens.Types (AnimationState(..), IndividualRideCardState(..), ItemState(..), RideHistoryScreenState, RideTabs(..))
+import Services.APITypes (RidesInfo(..), Status(..))
 import Storage (setValueToLocalNativeStore, KeyStore(..))
 import JBridge (firebaseLogEvent)
+import Styles.Colors as Color
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -65,7 +66,7 @@ instance loggableAction :: Loggable Action where
     Loader -> trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "load_more"
     Scroll str -> trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "scroll_event"
     ScrollStateChanged scrollState -> trackAppActionClick appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "scroll_state_changed"
-    RideHistoryAPIResponseAction resp -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "ride_history_response_action"
+    RideHistoryAPIResponseAction resp status -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "ride_history_response_action"
     ErrorModalActionController action -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "error_modal_action"
     Dummy -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "dummy_action"
     NoAction -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "no_action"
@@ -73,22 +74,22 @@ instance loggableAction :: Loggable Action where
 data ScreenOutput = GoBack 
                     | RideHistoryScreen RideHistoryScreenState 
                     | HomeScreen 
-                    | GoToFilter String
                     | ProfileScreen 
                     | GoToTripDetails RideHistoryScreenState 
                     | RefreshScreen RideHistoryScreenState 
                     | LoaderOutput RideHistoryScreenState   
                     | GoToNotification 
                     | GoToReferralScreen
+                    | SelectTabOutput RideHistoryScreenState
 
 data Action = Dummy 
             | OnFadeComplete String 
             | Refresh 
             | BackPressed
-            | SelectTab String
+            | SelectTab RideTabs
             | BottomNavBarAction BottomNavBar.Action 
             | IndividualRideCardAction IndividualRideCardController.Action
-            | RideHistoryAPIResponseAction (Array RidesInfo)
+            | RideHistoryAPIResponseAction (Array RidesInfo) RideTabs
             | Loader
             | Scroll String
             | ErrorModalActionController ErrorModalController.Action
@@ -113,8 +114,7 @@ eval (ScrollStateChanged scrollState) state = do
           else pure unit 
   continue state
 
-eval (SelectTab tab) state = do
-    continue $ state {currentTab = tab}
+eval (SelectTab tab) state = exit $ SelectTabOutput state {currentTab = tab}
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   case screen of
@@ -129,20 +129,24 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
       exit $ GoToReferralScreen
     _ -> continue state
 
-eval (IndividualRideCardAction (IndividualRideCardController.Select index)) state = do
-  let filteredRideList = rideListFilter state.currentTab state.rideList
-  exit $ GoToTripDetails state { 
-      selectedItem = (fromMaybe dummyCard (filteredRideList !! index))
-  }
+eval (IndividualRideCardAction (IndividualRideCardController.Select index)) state = exit $ GoToTripDetails state { 
+      selectedItem = fromMaybe dummyCard ((if state.currentTab == Completed then state.completedRidesTuple.listArrayItems else state.cancelledRidesTuple.listArrayItems) !! index)}
 eval Loader state = do
   exit $ LoaderOutput state
-  
-eval (RideHistoryAPIResponseAction rideList) state = do
-  let bufferCardDataPrestoList = (rideHistoryListTransformer rideList)
-  let filteredRideList = (rideListResponseTransformer rideList)
+
+eval (RideHistoryAPIResponseAction rideList status) state = do
   _ <- pure $ setRefreshing "2000030" false
-  let loadBtnDisabled = if(length rideList == 0) then true else false
-  continue $ state {shimmerLoader = AnimatedOut, recievedResponse = true,rideList = union(state.rideList) (filteredRideList) ,prestoListArrayItems =  union (state.prestoListArrayItems) (bufferCardDataPrestoList), loadMoreDisabled = loadBtnDisabled}
+  let bufferCardDataPrestoList = rideHistoryListTransformer rideList
+  let rideListArray = rideListResponseTransformer rideList
+  let newState = state {shimmerLoader = AnimatedOut, recievedResponse = true, loaderButtonVisibility = length rideList == 0}
+  case status of
+    Completed -> continue $ newState {
+      completedRidesTuple {prestoListArrayItems = union state.completedRidesTuple.prestoListArrayItems bufferCardDataPrestoList,
+      listArrayItems = union state.completedRidesTuple.listArrayItems rideListArray}}
+    Cancelled -> continue $ newState {
+      cancelledRidesTuple {prestoListArrayItems = union state.cancelledRidesTuple.prestoListArrayItems bufferCardDataPrestoList, 
+      listArrayItems = union state.cancelledRidesTuple.listArrayItems rideListArray}}
+
 
 eval (Scroll value) state = do
   -- TODO : LOAD MORE FUNCTIONALITY
@@ -210,13 +214,6 @@ rideListResponseTransformer list = (map (\(RidesInfo ride) -> {
     destination : (decodeAddress (ride.toLocation) )
 
 }) list )
-
-
-prestoListFilter :: String -> Array ItemState -> Array ItemState
-prestoListFilter statusType list = (filter (\(ride) -> (ride.status == (toPropValue statusType)) ) list )
-
-rideListFilter :: String -> Array IndividualRideCardState -> Array IndividualRideCardState
-rideListFilter statusType list = (filter (\(ride) -> (ride.status == statusType) ) list )
 
 dummyCard :: IndividualRideCardState
 dummyCard =  {

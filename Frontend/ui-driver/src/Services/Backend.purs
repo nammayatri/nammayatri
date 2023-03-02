@@ -363,17 +363,17 @@ makeOfferRideReq requestId offeredFare = OfferRideReq
 
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
 
-getRideHistoryReq limit offset onlyActive = do
+getRideHistoryReq limit offset onlyActive status = do
         headers <- getHeaders ""
-        withAPIResult (EP.getRideHistory limit offset onlyActive) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive)
+        withAPIResult (EP.getRideHistory limit offset onlyActive status) unwrapResponse $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status)
     where
         unwrapResponse (x) = x
 
 
-getRideHistoryReqBT :: String -> String -> String -> FlowBT String GetRidesHistoryResp
-getRideHistoryReqBT limit offset onlyActive = do
+getRideHistoryReqBT :: String -> String -> String -> (Maybe String) -> FlowBT String GetRidesHistoryResp
+getRideHistoryReqBT limit offset onlyActive status = do
         headers <- lift $ lift $ getHeaders ""
-        withAPIResultBT (EP.getRideHistory limit offset onlyActive) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive))
+        withAPIResultBT (EP.getRideHistory limit offset onlyActive status) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetRidesHistoryReq limit offset onlyActive status))
     where
     errorHandler (ErrorPayload errorPayload) =  do 
         BackT $ pure GoBack
