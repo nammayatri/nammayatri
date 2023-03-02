@@ -31,8 +31,9 @@ handler ::
   [GoogleMaps.Place] ->
   Text ->
   Maybe GoogleMaps.Mode ->
+  Maybe Text ->
   FlowHandler GoogleMaps.DistanceMatrixResp
-handler origins destinations key mode = withFlowHandlerAPI $ do
+handler origins destinations key mode _ = withFlowHandlerAPI $ do
   unless (key == Data.mockKey) $ throwError AccessDenied
   unless (isNothing mode || mode == Just GoogleMaps.DRIVING) $
     throwError $ NotImplemented $ "distanceMatrix is not implemented: mode: " <> show mode
