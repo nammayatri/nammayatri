@@ -296,6 +296,7 @@ countRides merchantId =
 
 data RideItem = RideItem
   { rideShortId :: ShortId Ride,
+    rideCreatedAt :: UTCTime,
     rideDetails :: RideDetails,
     riderDetails :: RiderDetails,
     customerName :: Maybe Text,
@@ -345,6 +346,7 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
     offset $ fromIntegral offsetVal
     return
       ( ride ^. RideShortId,
+        ride ^. RideCreatedAt,
         rideDetails,
         riderDetails,
         booking ^. BookingRiderName,
@@ -366,8 +368,8 @@ findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbC
         ]
         (else_ $ val Common.ONGOING_6HRS)
 
-mkRideItem :: (Text, RideDetails, RiderDetails, Maybe Text, Maybe HighPrecMoney, Common.BookingStatus) -> RideItem
-mkRideItem (rideShortId, rideDetails, riderDetails, customerName, mbFareDiff_, bookingStatus) = do
+mkRideItem :: (Text, UTCTime, RideDetails, RiderDetails, Maybe Text, Maybe HighPrecMoney, Common.BookingStatus) -> RideItem
+mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, customerName, mbFareDiff_, bookingStatus) = do
   RideItem {rideShortId = ShortId rideShortId, fareDiff = roundToIntegral <$> mbFareDiff_, ..}
 
 upcoming6HrsCond :: SqlExpr (Entity RideT) -> UTCTime -> SqlExpr (Esq.Value Bool)
