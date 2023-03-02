@@ -5,6 +5,19 @@
 
 packages:
 - completed:
+    subdir: lib/mobility-core
+    name: mobility-core
+    version: 0.1.0.0
+    git: https://github.com/nammayatri/shared-kernel.git
+    pantry-tree:
+      size: 16775
+      sha256: 4cff070b2984912dcbc7b19ce678a25706f1cba7250a89b8060f538733078ecf
+    commit: 0655c0de03b86fa11d30e4212af4f11d248928c1
+  original:
+    subdir: lib/mobility-core
+    git: https://github.com/nammayatri/shared-kernel.git
+    commit: 0655c0de03b86fa11d30e4212af4f11d248928c1
+- completed:
     name: clickhouse-haskell
     version: 0.1.2.4
     git: https://github.com/piyushKumar-1/clickhouse-haskell.git
@@ -15,19 +28,6 @@ packages:
   original:
     git: https://github.com/piyushKumar-1/clickhouse-haskell.git
     commit: 5eafcf35b7f2f5619f21dbafb55d98b1e57b1d39
-- completed:
-    subdir: lib/mobility-core
-    name: mobility-core
-    version: 0.1.0.0
-    git: https://github.com/nammayatri/shared-kernel.git
-    pantry-tree:
-      size: 16775
-      sha256: 1b7ed2f0e7e0cac9fc6f38cc32dab380e7aa4ab1dd2c92587a00ee0733a1d13e
-    commit: 3f6b93f067085848461c88065a0f8069eb697859
-  original:
-    subdir: lib/mobility-core
-    git: https://github.com/nammayatri/shared-kernel.git
-    commit: 3f6b93f067085848461c88065a0f8069eb697859
 - completed:
     subdir: core
     name: passetto-core

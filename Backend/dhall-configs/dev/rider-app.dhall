@@ -91,7 +91,6 @@ in  { esqDBCfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
     , webengageCfg = WebengageConfig
-    , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
     , port = +8013
     , metricsPort = +9999
     , hostName = "localhost"
@@ -140,5 +139,5 @@ in  { esqDBCfg
     , dashboardToken = sec.dashboardToken
     , cacheConfig
     , cacheTranslationConfig
-    , maxEmergencyNumberCount = 3
+    , maxEmergencyNumberCount = +3
     }

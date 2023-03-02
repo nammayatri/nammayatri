@@ -47,6 +47,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.Queries.Person as QP
@@ -102,7 +103,6 @@ authHitsCountKey person = "BPP:Registration:auth" <> getId person.id <> ":hitsCo
 auth ::
   ( HasCacheConfig r,
     HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
-    HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
@@ -128,14 +128,19 @@ auth req mbBundleVersion mbClientVersion = do
   Esq.runTransaction $ do
     QR.create token
     QP.updatePersonVersions person mbBundleVersion mbClientVersion
-  otpSmsTemplate <- asks (.otpSmsTemplate)
   let otpHash = smsCfg.credConfig.otpHash
   let otpCode = SR.authValueHash token
       phoneNumber = countryCode <> mobileNumber
       sender = smsCfg.sender
   whenNothing_ useFakeOtpM $ do
-    withLogTag ("personId_" <> getId person.id) $
-      Sms.sendSMS person.merchantId (Sms.constructSendSMSReq otpCode otpHash otpSmsTemplate phoneNumber sender)
+    withLogTag ("personId_" <> getId person.id) $ do
+      message <-
+        MessageBuilder.buildSendOTPMessage person.merchantId $
+          MessageBuilder.BuildSendOTPMessageReq
+            { otp = otpCode,
+              hash = otpHash
+            }
+      Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
         >>= Sms.checkSmsResult
   let attempts = SR.attempts token
       authId = SR.id token
@@ -225,7 +230,6 @@ checkPersonExists entityId =
 
 resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
-    HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
@@ -237,7 +241,6 @@ resend tokenId = do
   SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
-  otpSmsTemplate <- asks (.otpSmsTemplate)
   smsCfg <- asks (.smsCfg)
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
@@ -245,8 +248,14 @@ resend tokenId = do
   let otpHash = smsCfg.credConfig.otpHash
       phoneNumber = countryCode <> mobileNumber
       sender = smsCfg.sender
-  withLogTag ("personId_" <> entityId) $
-    Sms.sendSMS person.merchantId (Sms.constructSendSMSReq otpCode otpHash otpSmsTemplate phoneNumber sender)
+  withLogTag ("personId_" <> entityId) $ do
+    message <-
+      MessageBuilder.buildSendOTPMessage person.merchantId $
+        MessageBuilder.BuildSendOTPMessageReq
+          { otp = otpCode,
+            hash = otpHash
+          }
+    Sms.sendSMS person.merchantId (Sms.SendSMSReq message phoneNumber sender)
       >>= Sms.checkSmsResult
   Esq.runTransaction $ QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)

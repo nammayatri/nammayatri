@@ -7,7 +7,7 @@ token: {{app-token}}
 {
   "defaultEmergencyNumbers" : [{
       "name": "Bob",
-      "mobileCountryCode": "92",
+      "mobileCountryCode": "+91",
       "mobileNumber": "8005553535"
   }]
 }
@@ -20,8 +20,3 @@ content-type: application/json
 token: {{app-token}}
 
 ###
-
-# @name getEmergencyRides
-GET {{app-host}}/ride/emergency/list
-content-type: application/json
-token: {{app-token}}
