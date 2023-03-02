@@ -76,6 +76,7 @@ data ConfirmResBDetails
       }
 
 confirm ::
+  forall m r.
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
@@ -88,7 +89,7 @@ confirm ::
   DConfirmReq ->
   m DConfirmRes
 confirm transporterId subscriber req = do
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  booking <- QRB.findById req.bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   transporter <-
     CQM.findById transporterId'
@@ -118,7 +119,7 @@ confirm transporterId subscriber req = do
   res <- case booking.bookingDetails of
     SRB.OneWayDetails details -> do
       finalTransaction $ do
-        RideRequest.create rideRequest
+        RideRequest.create @m rideRequest
         whenJust req.toAddress $ \toAddr -> QBL.updateAddress details.toLocation.id toAddr
       return $
         DConfirmRes
@@ -149,7 +150,7 @@ confirm transporterId subscriber req = do
             ..
           }
 
-  Esq.runTransaction $ QBE.logRideConfirmedEvent booking.id
+  Esq.runTransaction $ QBE.logRideConfirmedEvent @m booking.id
   return res
   where
     buildRideReq bookingId subscriberId now = do
@@ -164,9 +165,9 @@ confirm transporterId subscriber req = do
             info = Nothing
           }
 
-getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
+getRiderDetails :: forall m r. (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
 getRiderDetails customerMobileCountryCode customerPhoneNumber now =
-  QRD.findByMobileNumber customerPhoneNumber >>= \case
+  QRD.findByMobileNumber customerPhoneNumber (Proxy @m) >>= \case
     Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
     Just a -> return (a, False)
   where
@@ -191,6 +192,7 @@ mkDiscountTransaction booking discount currTime =
     }
 
 cancel ::
+  forall m r.
   (CacheFlow m r, EsqDBFlow m r) =>
   Id DM.Merchant ->
   CancelReq ->
@@ -199,11 +201,11 @@ cancel transporterId req = do
   merchant <-
     CQM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  booking <- QRB.findById req.bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
   rideReq <- buildRideReq booking.id merchant.subscriberId
-  Esq.runTransaction $ RideRequest.create rideReq
+  Esq.runTransaction $ RideRequest.create @m rideReq
   pure Ack
   where
     buildRideReq bookingId subscriberId = do

@@ -85,6 +85,7 @@ validateUpdateFarePolicyDiscountReq UpdateFarePolicyDiscountReq {..} =
 type DeleteFarePolicyDiscountRes = APISuccess
 
 createFarePolicyDiscount ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -99,8 +100,8 @@ createFarePolicyDiscount admin req = do
   discounts <- QDisc.findAllByMerchantIdAndVariant merchantId req.vehicleVariant
   when (req.enabled && any (.enabled) discounts) $ throwError FPDiscountAlreadyEnabled
   disc <- buildDiscount merchantId
-  cooridinators <- QP.findAdminsByMerchantId merchantId
-  Esq.runTransaction $ QDisc.create disc
+  cooridinators <- QP.findAdminsByMerchantId merchantId (Proxy @m)
+  Esq.runTransaction $ QDisc.create @m disc
   QDisc.clearCache disc
   let otherCoordinators = filter ((/= admin.id) . (.id)) cooridinators
   fcmConfig <- findFCMConfigByMerchantId merchantId
@@ -128,6 +129,7 @@ createFarePolicyDiscount admin req = do
           }
 
 updateFarePolicyDiscount ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -150,9 +152,8 @@ updateFarePolicyDiscount admin discId req = do
                  discount = req.discount,
                  enabled = req.enabled
                 }
-  cooridinators <- QP.findAdminsByMerchantId merchantId
-  Esq.runTransaction $ QDisc.update updatedFarePolicy
-  QDisc.clearCache updatedFarePolicy
+  cooridinators <- QP.findAdminsByMerchantId merchantId (Proxy @m)
+  Esq.runTransaction $ QDisc.update @m updatedFarePolicy
   let otherCoordinators = filter ((/= admin.id) . (.id)) cooridinators
   fcmConfig <- findFCMConfigByMerchantId merchantId
   for_ otherCoordinators $ \cooridinator ->
@@ -161,6 +162,7 @@ updateFarePolicyDiscount admin discId req = do
   pure Success
 
 deleteFarePolicyDiscount ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -173,9 +175,8 @@ deleteFarePolicyDiscount admin discId = do
   let merchantId = admin.merchantId
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist
   unless (discount.merchantId == merchantId) $ throwError AccessDenied
-  cooridinators <- QP.findAdminsByMerchantId merchantId
-  Esq.runTransaction $ QDisc.deleteById discId
-  QDisc.clearCache discount
+  cooridinators <- QP.findAdminsByMerchantId merchantId (Proxy @m)
+  Esq.runTransaction $ QDisc.delete @m discount
   let otherCoordinators = filter ((/= admin.id) . (.id)) cooridinators
   fcmConfig <- findFCMConfigByMerchantId merchantId
   for_ otherCoordinators $ \cooridinator ->

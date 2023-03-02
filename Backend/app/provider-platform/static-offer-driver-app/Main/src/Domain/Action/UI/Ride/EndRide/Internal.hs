@@ -36,10 +36,10 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
-endRideTransaction :: (CacheFlow m r, EsqDBFlow m r) => Id Driver -> Id SRB.Booking -> SRide.Ride -> [DFareBreakup.FareBreakup] -> m ()
+endRideTransaction :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id Driver -> Id SRB.Booking -> SRide.Ride -> [DFareBreakup.FareBreakup] -> m ()
 endRideTransaction driverId bookingId ride fareBreakups = do
   Esq.runTransaction $ do
-    QRide.updateAll ride.id ride
+    QRide.updateAll @m ride.id ride
     QRide.updateStatus ride.id SRide.COMPLETED
     QRB.updateStatus bookingId SRB.COMPLETED
     DriverInformation.updateOnRide driverId False

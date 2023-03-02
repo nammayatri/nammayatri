@@ -67,7 +67,7 @@ getProfile admin = do
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeTranspAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
-updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateTranspAdminProfileReq -> m UpdateTranspAdminProfileRes
+updateProfile :: forall m r. (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateTranspAdminProfileReq -> m UpdateTranspAdminProfileRes
 updateProfile admin req = do
   let merchantId = admin.merchantId
       updAdmin =
@@ -77,7 +77,7 @@ updateProfile admin req = do
               deviceToken = req.deviceToken <|> admin.deviceToken
              }
   Esq.runTransaction $
-    QPerson.updatePersonRec updAdmin.id updAdmin
+    QPerson.updatePersonRec @m updAdmin.id updAdmin
   org <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   decUpdAdmin <- decrypt updAdmin
   let personAPIEntity = SP.makePersonAPIEntity decUpdAdmin

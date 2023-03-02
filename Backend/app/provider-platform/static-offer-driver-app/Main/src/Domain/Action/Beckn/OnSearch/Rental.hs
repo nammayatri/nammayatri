@@ -48,6 +48,7 @@ data QuoteInfo = QuoteInfo
   }
 
 onSearchCallback ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -71,7 +72,7 @@ onSearchCallback searchRequest transporterId fromLocation now = do
       return (quote, quoteInfo)
 
   Esq.runTransaction $
-    for_ listOfQuotes QQuote.create
+    for_ listOfQuotes (QQuote.create @m)
 
   pure quoteInfos
 

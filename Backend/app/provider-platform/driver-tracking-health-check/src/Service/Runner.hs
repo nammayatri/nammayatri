@@ -52,7 +52,7 @@ driverLastLocationUpdateCheckService = startService "driverLastLocationUpdateChe
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
     HC.iAmAlive
-    drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral locationDelay) `addUTCTime` now)
+    drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral locationDelay) `addUTCTime` now) (Proxy @Flow)
     let driverDetails = map fetchPersonIdAndMobileNumber drivers
     flip map driverDetails \case
       (driverId, Nothing) -> Left driverId
@@ -79,7 +79,7 @@ driverDevicePingService = startService "driverDevicePingService" do
   rPop redisKey >>= flip whenJust \(driverId, token) ->
     withLogTag driverId.getId do
       log INFO "Ping driver"
-      driver <- SQP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      driver <- SQP.findById driverId (Proxy @Flow) >>= fromMaybeM (PersonNotFound driverId.getId)
       fcmConfig <- findFCMConfigByMerchantId driver.merchantId
       notifyDevice fcmConfig{FCM.fcmTokenKeyPrefix = "transporter-healthcheck"} TRIGGER_SERVICE "You were inactive" "Please check the app" driverId (Just token)
   asks (.notificationMinDelay)
@@ -91,7 +91,7 @@ driverMakingInactiveService = startService "driverMakingInactiveService" $ withR
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverMakingInactiveService" do
     now <- getCurrentTime
     HC.iAmAlive
-    drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now)
+    drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now) (Proxy @Flow)
     logPretty INFO ("Drivers to make inactive: " <> show (length drivers)) ((.id) <$> drivers)
     mapM_ fetchPersonIdAndMobileNumber drivers
   threadDelay (secondsToMcs delay).getMicroseconds
@@ -102,7 +102,7 @@ driverMakingInactiveService = startService "driverMakingInactiveService" $ withR
       countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
       log INFO "Make driver inactive"
       Esq.runTransaction $
-        DrInfo.updateActivity (cast driver.id) False
+        DrInfo.updateActivity @Flow (cast driver.id) False
 
       smsCfg <- asks (.smsCfg)
       driverInactiveSmsTemplate <- asks (.driverInactiveSmsTemplate)

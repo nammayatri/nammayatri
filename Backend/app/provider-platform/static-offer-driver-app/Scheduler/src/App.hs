@@ -76,5 +76,5 @@ allocateRentalRide job = C.handleAll (const $ pure Retry) $ do
           }
   logInfo $ "allocating rental ride for rideReqestId=" <> job.jobData.bookingId.getId
   logPretty DEBUG "ride request" rideReq
-  Esq.runTransaction $ RideRequest.create rideReq
+  Esq.runTransaction $ RideRequest.create @SchedulerM rideReq
   pure Complete

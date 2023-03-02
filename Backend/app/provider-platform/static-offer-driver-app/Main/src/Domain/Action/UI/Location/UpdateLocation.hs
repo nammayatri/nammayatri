@@ -79,7 +79,7 @@ type UpdateLocationRes = APISuccess
 buildUpdateLocationHandle :: Id Person.Person -> Flow (Handler Flow)
 buildUpdateLocationHandle driverId = do
   driver <-
-    QP.findById driverId
+    QP.findById driverId (Proxy @Flow)
       >>= fromMaybeM (PersonNotFound driverId.getId)
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler driver.merchantId False
   pure $

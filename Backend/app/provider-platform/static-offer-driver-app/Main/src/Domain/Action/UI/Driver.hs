@@ -194,6 +194,7 @@ validateUpdateDriverReq UpdateDriverReq {..} =
 type UpdateDriverRes = DriverInformationRes
 
 createDriver ::
+  forall m r.
   ( HasCacheConfig r,
     HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
@@ -210,15 +211,15 @@ createDriver admin req = do
   let personEntity = req.person
   mobileNumberHash <- getDbHash personEntity.mobileNumber
   duplicateCheck
-    (QVehicle.findByRegistrationNo req.vehicle.registrationNo)
+    (QVehicle.findByRegistrationNo req.vehicle.registrationNo (Proxy @m))
     "Vehicle with this registration number already exists."
   duplicateCheck
-    (QPerson.findByMobileNumber personEntity.mobileCountryCode mobileNumberHash)
+    (QPerson.findByMobileNumber personEntity.mobileCountryCode mobileNumberHash (Proxy @m))
     "Person with this mobile number already exists"
   person <- buildDriver req.person merchantId
   vehicle <- buildVehicle req.vehicle person.id merchantId
   Esq.runTransaction $ do
-    QPerson.create person
+    QPerson.create @m person
     createDriverDetails person.id admin.id
     QVehicle.create vehicle
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
@@ -237,7 +238,7 @@ createDriver admin req = do
   where
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
 
-createDriverDetails :: Id SP.Person -> Id SP.Person -> Esq.SqlDB ()
+createDriverDetails :: Id SP.Person -> Id SP.Person -> Esq.SqlDB m ()
 createDriverDetails personId adminId = do
   now <- getCurrentTime
   let driverInfo =
@@ -260,6 +261,7 @@ createDriverDetails personId adminId = do
     driverId = cast personId
 
 getInformation ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -269,10 +271,10 @@ getInformation ::
   Id SP.Person ->
   m DriverInformationRes
 getInformation personId = do
-  _ <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  _ <- runInReplica $ QPerson.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  driverInfo <- runInReplica $ QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  person <- runInReplica $ QPerson.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
+  driverInfo <- runInReplica $ QDriverInformation.findById driverId (Proxy @m) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   let merchantId = person.merchantId
   organization <-
@@ -281,36 +283,39 @@ getInformation personId = do
   pure $ makeDriverInformationRes driverEntity organization
 
 setActivity ::
+  forall m r.
   ( EsqDBFlow m r
   ) =>
   Id SP.Person ->
   Bool ->
   m APISuccess.APISuccess
 setActivity personId isActive = do
-  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  _ <- QPerson.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   when isActive $ do
-    driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+    driverInfo <- QDriverInformation.findById driverId (Proxy @m) >>= fromMaybeM DriverInfoNotFound
     unless driverInfo.enabled $ throwError DriverAccountDisabled
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
   Esq.runTransaction $
-    QDriverInformation.updateActivity driverId isActive
+    QDriverInformation.updateActivity @m driverId isActive
   pure APISuccess.Success
 
 setRental ::
+  forall m r.
   ( EsqDBFlow m r
   ) =>
   Id SP.Person ->
   Bool ->
   m APISuccess.APISuccess
 setRental personId isRental = do
-  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  _ <- QPerson.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   Esq.runTransaction $
-    QDriverInformation.updateRental driverId isRental
+    QDriverInformation.updateRental @m driverId isRental
   pure APISuccess.Success
 
 listDriver ::
+  forall m r.
   ( EsqDBReplicaFlow m r,
     EncFlow m r
   ) =>
@@ -321,13 +326,13 @@ listDriver ::
   m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  personList <- runInReplica $ QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
+  personList <- runInReplica $ QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId (Proxy @m)
   respPersonList <- traverse buildDriverEntityRes personList
   return $ ListDriverRes respPersonList
 
-buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
+buildDriverEntityRes :: forall m r. (EsqDBReplicaFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
-  vehicle <- runInReplica $ QVehicle.findById person.id >>= fromMaybeM (VehicleNotFound person.id.getId)
+  vehicle <- runInReplica $ QVehicle.findById person.id (Proxy @m) >>= fromMaybeM (VehicleNotFound person.id.getId)
   decMobNum <- mapM decrypt person.mobileNumber
   return $
     DriverEntityRes
@@ -350,6 +355,7 @@ buildDriverEntityRes (person, driverInfo) = do
       }
 
 changeDriverEnableState ::
+  forall m r.
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m,
@@ -361,11 +367,11 @@ changeDriverEnableState ::
   m APISuccess
 changeDriverEnableState admin personId isEnabled = do
   person <-
-    QPerson.findById personId
+    QPerson.findById personId (Proxy @m)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (person.merchantId == admin.merchantId) $ throwError Unauthorized
   Esq.runTransaction $ do
-    QDriverInformation.updateEnabledState driverId isEnabled
+    QDriverInformation.updateEnabledState @m driverId isEnabled
     unless isEnabled $ QDriverInformation.updateActivity driverId False
   unless isEnabled $ do
     fcmConfig <- findFCMConfigByMerchantId person.merchantId
@@ -378,6 +384,7 @@ changeDriverEnableState admin personId isEnabled = do
     notificationMessage = "Your account has been disabled. Contact support for more info."
 
 deleteDriver ::
+  forall m r.
   ( EsqDBFlow m r,
     Redis.HedisFlow m r
   ) =>
@@ -386,13 +393,13 @@ deleteDriver ::
   m APISuccess
 deleteDriver admin driverId = do
   driver <-
-    QPerson.findById driverId
+    QPerson.findById driverId (Proxy @m)
       >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   unless (driver.merchantId == admin.merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession driverId
   Esq.runTransaction $ do
-    QDriverInformation.deleteById (cast driverId)
+    QDriverInformation.deleteById @m (cast driverId)
     QDriverStats.deleteById (cast driverId)
     QR.deleteByPersonId driverId
     QVehicle.deleteById driverId
@@ -402,6 +409,7 @@ deleteDriver admin driverId = do
   return Success
 
 updateDriver ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -413,15 +421,15 @@ updateDriver ::
   m UpdateDriverRes
 updateDriver personId req = do
   runRequestValidation validateUpdateDriverReq req
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QPerson.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   let updPerson =
         person{firstName = fromMaybe person.firstName req.firstName,
                middleName = req.middleName <|> person.middleName,
                lastName = req.lastName <|> person.lastName,
                deviceToken = req.deviceToken <|> person.deviceToken
               }
-  vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
-  driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  vehicle <- QVehicle.findById personId (Proxy @m) >>= fromMaybeM (VehicleNotFound personId.getId)
+  driverInfo <- QDriverInformation.findById (cast personId) (Proxy @m) >>= fromMaybeM DriverInfoNotFound
   let wantToDowngrade = req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True
   when (vehicle.variant == SV.SEDAN && req.canDowngradeToSedan == Just True) $
     throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
@@ -432,7 +440,7 @@ updateDriver personId req = do
                    canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback
                   }
   Esq.runTransaction $ do
-    QPerson.updatePersonRec personId updPerson
+    QPerson.updatePersonRec @m personId updPerson
     QDriverInformation.updateDowngradingOptions (cast person.id) updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback
   driverEntity <- buildDriverEntityRes (updPerson, updDriverInfo)
   let merchantId = person.merchantId

@@ -19,7 +19,7 @@ module Storage.CachedQueries.FarePolicy.Discount
     findAllByMerchantIdAndVariant,
     create,
     update,
-    deleteById,
+    delete,
     clearCache,
   )
 where
@@ -38,17 +38,17 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.OneWayFarePolicy as OWFP
 import qualified Storage.Queries.FarePolicy.Discount as Queries
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id Discount -> m (Maybe Discount)
+findById :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id Discount -> m (Maybe Discount)
 findById id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(DiscountD 'Unsafe) @Discount a
-    Nothing -> flip whenJust cacheDiscount /=<< Queries.findById id
+    Nothing -> flip whenJust cacheDiscount /=<< Queries.findById id (Proxy @m)
 
-findAllByMerchantIdAndVariant :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Vehicle.Variant -> m [Discount]
+findAllByMerchantIdAndVariant :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Vehicle.Variant -> m [Discount]
 findAllByMerchantIdAndVariant merchantId vehVar =
   Hedis.safeGet (makeAllMerchantIdVehVarKey merchantId vehVar) >>= \case
     Just a -> return $ fmap (coerce @(DiscountD 'Unsafe) @Discount) a
-    Nothing -> cacheRes /=<< Queries.findAllByMerchantIdAndVariant merchantId vehVar
+    Nothing -> cacheRes /=<< Queries.findAllByMerchantIdAndVariant merchantId vehVar (Proxy @m)
   where
     cacheRes discounts = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -79,13 +79,18 @@ clearCache discount = do
 
 create ::
   Discount ->
-  Esq.SqlDB ()
+  Esq.SqlDB m ()
 create = Queries.create
 
 update ::
+  (CacheFlow m r, EsqDBFlow m r) =>
   Discount ->
-  Esq.SqlDB ()
-update = Queries.update
+  Esq.SqlDB m ()
+update discount = do
+  Queries.update discount
+  Esq.finalize $ clearCache discount
 
-deleteById :: Id Discount -> Esq.SqlDB ()
-deleteById = Queries.deleteById
+delete :: (CacheFlow m r, EsqDBFlow m r) => Discount -> Esq.SqlDB m ()
+delete discount = do
+  Queries.deleteById discount.id
+  Esq.finalize $ clearCache discount

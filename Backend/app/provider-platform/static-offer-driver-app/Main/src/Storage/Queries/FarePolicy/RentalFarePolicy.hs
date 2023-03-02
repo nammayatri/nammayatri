@@ -32,22 +32,24 @@ import Storage.Tabular.FarePolicy.RentalFarePolicy
 
 create ::
   Domain.RentalFarePolicy ->
-  SqlDB ()
+  SqlDB m ()
 create = Esq.create
 
 -- it's possible to find deleted fare policies only by their id.
 -- other function return only not deleted fare policies
 -- (RentalFarePolicyDeleted ==. val False)
 
-findById :: Transactionable m => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
-findById = Esq.findById
+findById :: forall m ma. Transactionable ma m => Id RentalFarePolicy -> Proxy ma -> m (Maybe RentalFarePolicy)
+findById rentalPolicyId _ = Esq.findById @m @ma rentalPolicyId
 
 findAllByMerchantId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
+  Proxy ma ->
   m [RentalFarePolicy]
-findAllByMerchantId merchantId = do
-  Esq.findAll $ do
+findAllByMerchantId merchantId _ = do
+  Esq.findAll @m @ma $ do
     rentalFarePolicy <- from $ table @RentalFarePolicyT
     where_ $
       rentalFarePolicy ^. RentalFarePolicyMerchantId ==. val (toKey merchantId)
@@ -56,7 +58,7 @@ findAllByMerchantId merchantId = do
 
 markAllAsDeleted ::
   Id Merchant ->
-  SqlDB ()
+  SqlDB m ()
 markAllAsDeleted merchantId = Esq.update $ \rentalFp -> do
   set
     rentalFp
@@ -64,14 +66,16 @@ markAllAsDeleted merchantId = Esq.update $ \rentalFp -> do
   where_ $ rentalFp ^. RentalFarePolicyMerchantId ==. val (toKey merchantId)
 
 findByOffer ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
   Vehicle.Variant ->
   Kilometers ->
   Hours ->
+  Proxy ma ->
   m (Maybe RentalFarePolicy)
-findByOffer merchantId vehicleVariant_ baseDistance baseDuration = do
-  Esq.findOne $ do
+findByOffer merchantId vehicleVariant_ baseDistance baseDuration _ = do
+  Esq.findOne @m @ma $ do
     rentalFarePolicy <- from $ table @RentalFarePolicyT
     where_ $
       rentalFarePolicy ^. RentalFarePolicyMerchantId ==. val (toKey merchantId)

@@ -23,16 +23,18 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.Vehicle
 
-create :: Vehicle -> SqlDB ()
+create :: Vehicle -> SqlDB m ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Person ->
+  Proxy ma ->
   m (Maybe Vehicle)
-findById = Esq.findById
+findById personId _ = Esq.findById @m @ma personId
 
-updateVehicleRec :: Vehicle -> SqlDB ()
+updateVehicleRec :: Vehicle -> SqlDB m ()
 updateVehicleRec vehicle = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -52,12 +54,12 @@ updateVehicleRec vehicle = do
       ]
     where_ $ tbl ^. VehicleTId ==. val (toKey vehicle.driverId)
 
-deleteById :: Id Person -> SqlDB ()
+deleteById :: Id Person -> SqlDB m ()
 deleteById = Esq.deleteByKey @VehicleT
 
-findByAnyOf :: Transactionable m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
-findByAnyOf registrationNoM vehicleIdM =
-  Esq.findOne $ do
+findByAnyOf :: forall m ma. Transactionable ma m => Maybe Text -> Maybe (Id Person) -> Proxy ma -> m (Maybe Vehicle)
+findByAnyOf registrationNoM vehicleIdM _ =
+  Esq.findOne @m @ma $ do
     vehicle <- from $ table @VehicleT
     where_ $
       whenJust_ vehicleIdM (\vehicleId -> vehicle ^. VehicleTId ==. val (toKey vehicleId))
@@ -65,17 +67,19 @@ findByAnyOf registrationNoM vehicleIdM =
     return vehicle
 
 findAllByVariantRegNumMerchantId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Maybe Variant ->
   Maybe Text ->
   Integer ->
   Integer ->
   Id Merchant ->
+  Proxy ma ->
   m [Vehicle]
-findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' merchantId = do
+findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' merchantId _ = do
   let limitVal = fromIntegral limit'
       offsetVal = fromIntegral offset'
-  Esq.findAll $ do
+  Esq.findAll @m @ma $ do
     vehicle <- from $ table @VehicleT
     where_ $
       vehicle ^. VehicleMerchantId ==. val (toKey merchantId)
@@ -87,11 +91,13 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limit' offset' merchantId = d
     return vehicle
 
 findByRegistrationNo ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Text ->
+  Proxy ma ->
   m (Maybe Vehicle)
-findByRegistrationNo registrationNo =
-  Esq.findOne $ do
+findByRegistrationNo registrationNo _ =
+  Esq.findOne @m @ma $ do
     vehicle <- from $ table @VehicleT
     where_ $ vehicle ^. VehicleRegistrationNo ==. val registrationNo
     return vehicle

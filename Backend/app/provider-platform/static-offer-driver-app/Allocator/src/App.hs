@@ -47,7 +47,7 @@ runAllocator configModifier = do
     flowRt' <- runFlowR flowRt appEnv do
       logInfo "Setting up for signature auth..."
       allProviders <-
-        try Storage.loadAllProviders
+        try (Storage.loadAllProviders (Proxy @Flow))
           >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
       let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
       let shardMap = config.shards

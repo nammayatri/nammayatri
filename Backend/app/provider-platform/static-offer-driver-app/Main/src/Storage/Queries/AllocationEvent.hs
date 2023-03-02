@@ -23,7 +23,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.AllocationEvent
 
-logAllocationEvent :: AllocationEventType -> Id Booking -> Maybe (Id Driver) -> SqlDB ()
+logAllocationEvent :: AllocationEventType -> Id Booking -> Maybe (Id Driver) -> SqlDB m ()
 logAllocationEvent eventType bookingId driverId = do
   uuid <- generateGUID
   now <- getCurrentTime
@@ -36,7 +36,7 @@ logAllocationEvent eventType bookingId driverId = do
         bookingId = bookingId
       }
 
-deleteByPersonId :: Id Driver -> SqlDB ()
+deleteByPersonId :: Id Driver -> SqlDB m ()
 deleteByPersonId driverId =
   Esq.delete $ do
     allocationEvents <- from $ table @AllocationEventT

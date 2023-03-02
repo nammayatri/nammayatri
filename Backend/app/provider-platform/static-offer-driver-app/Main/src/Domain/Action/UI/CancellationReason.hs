@@ -26,6 +26,6 @@ import qualified Storage.Queries.CancellationReason as QCR
 
 type ListRes = [SCR.CancellationReasonAPIEntity]
 
-list :: (EsqDBReplicaFlow m r) => m ListRes
+list :: forall m r. (EsqDBReplicaFlow m r) => m ListRes
 list = do
-  fmap SCR.makeCancellationReasonAPIEntity <$> runInReplica QCR.findAll
+  fmap SCR.makeCancellationReasonAPIEntity <$> runInReplica (QCR.findAll (Proxy @m))

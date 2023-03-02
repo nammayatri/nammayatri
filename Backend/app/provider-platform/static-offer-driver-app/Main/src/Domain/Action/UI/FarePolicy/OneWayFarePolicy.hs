@@ -80,6 +80,7 @@ listOneWayFarePolicies person = do
       }
 
 updateOneWayFarePolicy ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -101,10 +102,9 @@ updateOneWayFarePolicy admin fpId req = do
                    nightShiftEnd = req.nightShiftEnd,
                    nightShiftRate = req.nightShiftRate
                   }
-  coordinators <- QP.findAdminsByMerchantId admin.merchantId
+  coordinators <- QP.findAdminsByMerchantId admin.merchantId (Proxy @m)
   Esq.runTransaction $
-    SFarePolicy.update updatedFarePolicy
-  SFarePolicy.clearCache updatedFarePolicy
+    SFarePolicy.update @m updatedFarePolicy
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
   fcmConfig <- findFCMConfigByMerchantId admin.merchantId
   for_ otherCoordinators $ \cooridinator -> do

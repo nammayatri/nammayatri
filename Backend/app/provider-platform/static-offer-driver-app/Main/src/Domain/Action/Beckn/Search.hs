@@ -69,10 +69,10 @@ search transporterId req@DSearchReq {..} = do
   unless transporter.enabled $ throwError AgencyDisabled
   let pickupLatLong = getCoordinates pickupLocation
   let mbDropoffLatLong = getCoordinates <$> mbDropLocation
-  unlessM (rideServiceable transporter.geofencingConfig QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
+  unlessM (rideServiceable transporter.geofencingConfig (\a b -> QGeometry.someGeometriesContain a b (Proxy @Flow)) pickupLatLong mbDropoffLatLong) $
     throwError RideNotServiceable
   whenJustM
-    (QSearchRequest.findByMsgIdAndBapIdAndBppId messageId bapId transporter.id)
+    (QSearchRequest.findByMsgIdAndBapIdAndBppId messageId bapId transporter.id (Proxy @Flow))
     (\_ -> throwError $ InvalidRequest "Duplicate Search request")
 
   searchMetricsMVar <- Metrics.startSearchMetrics transporter.name
@@ -84,7 +84,7 @@ search transporterId req@DSearchReq {..} = do
   searchRequest <- buildSearchRequest req transporter.id now validity fromLocation mbToLocation
   Esq.runTransaction $ do
     --These things are used only for analitics
-    QSearchRequest.create searchRequest
+    QSearchRequest.create @Flow searchRequest
   pure DSearchRes {..}
 
 buildSearchReqLoc ::

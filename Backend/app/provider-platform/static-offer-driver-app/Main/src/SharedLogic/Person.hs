@@ -24,5 +24,5 @@ import Tools.Error
 
 findPerson :: Id DP.Person -> Flow DP.Person
 findPerson personId = do
-  QP.findById personId
+  QP.findById personId (Proxy @Flow)
     >>= fromMaybeM (PersonNotFound personId.getId)

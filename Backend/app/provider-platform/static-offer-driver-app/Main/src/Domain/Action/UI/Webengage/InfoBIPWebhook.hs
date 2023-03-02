@@ -47,6 +47,7 @@ data SMSStatus = SMSStatus
   deriving (Generic, FromJSON, ToJSON, Show, Eq, FromDhall, ToSchema)
 
 sendStatus ::
+  forall m r.
   ( HasFlowEnv m r '["webengageCfg" ::: IT.WebengageConfig],
     EncFlow m r,
     EsqDBFlow m r,
@@ -58,7 +59,7 @@ sendStatus ::
 sendStatus req = withTransactionIdLogTag' (head req.messages).messageId $ do
   webengageCfg <- asks (.webengageCfg)
   let infoBipRes = head req.messages
-  webengageData <- QW.findByInfoMsgId infoBipRes.messageId >>= fromMaybeM (PersonDoesNotExist infoBipRes.messageId)
+  webengageData <- QW.findByInfoMsgId infoBipRes.messageId (Proxy @m) >>= fromMaybeM (PersonDoesNotExist infoBipRes.messageId)
   let version = webengageData.version
   let webMsgId = webengageData.webMessageId
   let toNumber = webengageData.toNumber

@@ -35,7 +35,7 @@ logBusinessEvent ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe (Id Ride) ->
-  SqlDB ()
+  SqlDB m ()
 logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distance duration rideId = do
   uuid <- generateGUID
   now <- getCurrentTime
@@ -53,7 +53,7 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
         rideId = rideId
       }
 
-logDriverInPoolEvent :: WhenPoolWasComputed -> Maybe (Id Booking) -> DriverPoolResult -> SqlDB ()
+logDriverInPoolEvent :: WhenPoolWasComputed -> Maybe (Id Booking) -> DriverPoolResult -> SqlDB m ()
 logDriverInPoolEvent whenPoolWasComputed bookingId driverInPool = do
   logBusinessEvent
     (Just driverInPool.driverId)
@@ -65,7 +65,7 @@ logDriverInPoolEvent whenPoolWasComputed bookingId driverInPool = do
     (Just driverInPool.durationToPickup)
     Nothing
 
-logDriverAssignetEvent :: Id Driver -> Id Booking -> Id Ride -> SqlDB ()
+logDriverAssignetEvent :: Id Driver -> Id Booking -> Id Ride -> SqlDB m ()
 logDriverAssignetEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
@@ -77,7 +77,7 @@ logDriverAssignetEvent driverId bookingId rideId = do
     Nothing
     (Just rideId)
 
-logRideConfirmedEvent :: Id Booking -> SqlDB ()
+logRideConfirmedEvent :: Id Booking -> SqlDB m ()
 logRideConfirmedEvent bookingId = do
   logBusinessEvent
     Nothing
@@ -89,7 +89,7 @@ logRideConfirmedEvent bookingId = do
     Nothing
     Nothing
 
-logRideCommencedEvent :: Id Driver -> Id Booking -> Id Ride -> SqlDB ()
+logRideCommencedEvent :: Id Driver -> Id Booking -> Id Ride -> SqlDB m ()
 logRideCommencedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
@@ -101,7 +101,7 @@ logRideCommencedEvent driverId bookingId rideId = do
     Nothing
     (Just rideId)
 
-deleteByPersonId :: Id Driver -> SqlDB ()
+deleteByPersonId :: Id Driver -> SqlDB m ()
 deleteByPersonId driverId =
   Esq.delete $ do
     businessEvents <- from $ table @BusinessEventT

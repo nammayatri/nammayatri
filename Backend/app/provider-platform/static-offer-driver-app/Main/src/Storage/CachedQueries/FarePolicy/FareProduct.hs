@@ -37,19 +37,21 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.FareProduct as Queries
 
 findEnabledByMerchantId ::
+  forall m r.
   (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   m [FareProduct]
 findEnabledByMerchantId id =
   Hedis.safeGet (makeAllMerchantIdKey id) >>= \case
     Just a -> return $ coerce @(FareProductD 'Unsafe) @FareProduct <$> a
-    Nothing -> cacheRes /=<< Queries.findEnabledByMerchantId id
+    Nothing -> cacheRes /=<< Queries.findEnabledByMerchantId id (Proxy @m)
   where
     cacheRes fareProds = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.setExp (makeAllMerchantIdKey id) (coerce @[FareProduct] @[FareProductD 'Unsafe] fareProds) expTime
 
 findEnabledByMerchantIdAndType ::
+  forall m r.
   (CacheFlow m r, EsqDBFlow m r) =>
   Maybe FareProductType ->
   Id Merchant ->
@@ -57,7 +59,7 @@ findEnabledByMerchantIdAndType ::
 findEnabledByMerchantIdAndType mbFPType merchantId =
   Hedis.safeGet (makeAllMerchantIdTypeKey merchantId mbFPType) >>= \case
     Just a -> return $ fmap (coerce @(FareProductD 'Unsafe) @FareProduct) a
-    Nothing -> cacheRes /=<< Queries.findEnabledByMerchantIdAndType mbFPType merchantId
+    Nothing -> cacheRes /=<< Queries.findEnabledByMerchantIdAndType mbFPType merchantId (Proxy @m)
   where
     cacheRes fareProds = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -82,13 +84,19 @@ clearCache merchantId fpType = do
   Hedis.del (makeAllMerchantIdTypeKey merchantId Nothing)
 
 insertIfNotExist ::
+  HedisFlow m r =>
   Id Merchant ->
   FareProductType ->
-  Esq.SqlDB ()
-insertIfNotExist = Queries.insertIfNotExist
+  Esq.SqlDB m ()
+insertIfNotExist merchantId fareProductType = do
+  Queries.insertIfNotExist merchantId fareProductType
+  Esq.finalize $ clearCache merchantId fareProductType
 
 delete ::
+  HedisFlow m r =>
   Id Merchant ->
   FareProductType ->
-  Esq.SqlDB ()
-delete = Queries.delete
+  Esq.SqlDB m ()
+delete merchantId fareProductType = do
+  Queries.delete merchantId fareProductType
+  Esq.finalize $ clearCache merchantId fareProductType

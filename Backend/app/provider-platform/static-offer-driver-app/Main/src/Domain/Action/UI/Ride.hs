@@ -76,6 +76,7 @@ newtype DriverRideListRes = DriverRideListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 listDriverRides ::
+  forall m r.
   (EsqDBReplicaFlow m r, EncFlow m r) =>
   Id DP.Person ->
   Maybe Integer ->
@@ -83,9 +84,9 @@ listDriverRides ::
   Maybe Bool ->
   m DriverRideListRes
 listDriverRides driverId mbLimit mbOffset mbOnlyActive = do
-  rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive
+  rides <- runInReplica $ QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive (Proxy @m)
   driverRideLis <- forM rides $ \(ride, booking) -> do
-    rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
+    rideDetail <- runInReplica $ QRD.findById ride.id (Proxy @m) >>= fromMaybeM (VehicleNotFound driverId.getId)
     driverNumber <- RD.getDriverNumber rideDetail
     pure $ mkDriverRideRes rideDetail driverNumber (ride, booking)
   pure . DriverRideListRes $ driverRideLis
@@ -126,18 +127,32 @@ mkDriverRideRes rideDetails driverNumber (ride, booking) = do
       chargeableDistance = ride.chargeableDistance
     }
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasShortDurationRetryCfg r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup ::
+  forall m r c.
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]
+  ) =>
+  Id DRide.Ride ->
+  LatLong ->
+  m APISuccess
 arrivedAtPickup rideId req = do
-  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- runInReplica $ QRide.findById rideId (Proxy @m) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
-  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let pickupLoc = getCoordinates booking.fromLocation
   let distance = distanceBetweenInMeters req pickupLoc
   driverReachedDistance <- asks (.driverReachedDistance)
   unless (distance < driverReachedDistance) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
     Esq.runTransaction $ do
-      QRide.updateArrival rideId
+      QRide.updateArrival @m rideId
     BP.sendDriverArrivalUpdateToBAP booking ride ride.driverArrivalTime
   pure Success
   where

@@ -35,32 +35,34 @@ import Storage.Tabular.FarePolicy.OneWayFarePolicy
 import Storage.Tabular.Quote as Quote
 import Storage.Tabular.Quote.RentalQuote (RentalQuoteT (..))
 
-buildFullOneWayFarePolicy :: Transactionable m => OneWayFarePolicyT -> DTypeBuilder m (SolidType FullOneWayFarePolicyT)
-buildFullOneWayFarePolicy farePolicy = do
+buildFullOneWayFarePolicy :: forall m ma. Transactionable ma m => OneWayFarePolicyT -> Proxy ma -> DTypeBuilder m (SolidType FullOneWayFarePolicyT)
+buildFullOneWayFarePolicy farePolicy proxy = do
   let merchantId = fromKey $ Storage.Tabular.FarePolicy.OneWayFarePolicy.merchantId farePolicy
       vehicleVariant = Storage.Tabular.FarePolicy.OneWayFarePolicy.vehicleVariant farePolicy
-  perExtraKmRate <- QExtraKmRate.findAll' merchantId vehicleVariant
-  discount <- QDisc.findAllByMerchantIdAndVariant' merchantId vehicleVariant
+  perExtraKmRate <- QExtraKmRate.findAll' merchantId vehicleVariant proxy
+  discount <- QDisc.findAllByMerchantIdAndVariant' merchantId vehicleVariant proxy
 
   return $ extractSolidType @OneWayFarePolicy (farePolicy, perExtraKmRate, discount)
 
-buildFullQuote :: Transactionable m => QuoteT -> DTypeBuilder m (Maybe (SolidType FullQuoteT))
-buildFullQuote quoteT@QuoteT {..} = runMaybeT $ do
+buildFullQuote :: forall m ma. Transactionable ma m => QuoteT -> Proxy ma -> DTypeBuilder m (Maybe (SolidType FullQuoteT))
+buildFullQuote quoteT@QuoteT {..} proxy = runMaybeT $ do
   quoteDetails <- case fareProductType of
     Domain.RENTAL -> do
-      rentalQuoteT@RentalQuoteT {..} <- MaybeT $ QRentalQuote.findByQuoteId' (Id id)
-      rentalFarePolicyT <- MaybeT . Esq.findById' $ fromKey rentalFarePolicyId
+      rentalQuoteT@RentalQuoteT {..} <- MaybeT $ QRentalQuote.findByQuoteId' (Id id) proxy
+      rentalFarePolicyT <- MaybeT . Esq.findById' @_ @m @ma $ fromKey rentalFarePolicyId
       return $ Quote.RentalDetailsT (rentalQuoteT, rentalFarePolicyT)
     Domain.ONE_WAY -> do
-      oneWayQuoteT <- MaybeT $ QOneWayQuote.findByQuoteId' (Id id)
+      oneWayQuoteT <- MaybeT $ QOneWayQuote.findByQuoteId' (Id id) proxy
       return $ Quote.OneWayDetailsT oneWayQuoteT
   return $ extractSolidType @Quote (quoteT, quoteDetails)
 
 buildFullBooking ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   (BookingT, BookingLocationT, Maybe OneWayBookingT, Maybe BookingLocationT, Maybe RentalBookingT) ->
+  Proxy ma ->
   DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking (bookingT@BookingT {..}, fromLocT, mbOneWayBookingT, mbToLocT, mbRentalBookingT) = runMaybeT $ do
+buildFullBooking (bookingT@BookingT {..}, fromLocT, mbOneWayBookingT, mbToLocT, mbRentalBookingT) _ = runMaybeT $ do
   bookingDetailsT <- case fareProductType of
     Domain.RENTAL -> MaybeT $ pure (Booking.RentalDetailsT <$> mbRentalBookingT)
     Domain.ONE_WAY -> MaybeT $ pure (Booking.OneWayDetailsT <$> ((,) <$> mbToLocT <*> mbOneWayBookingT))

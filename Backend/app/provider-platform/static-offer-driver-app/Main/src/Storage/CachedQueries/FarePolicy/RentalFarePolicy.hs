@@ -39,13 +39,14 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as Queries
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
+findById :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
 findById id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy a
-    Nothing -> flip whenJust cacheRentalFarePolicy /=<< Queries.findById id
+    Nothing -> flip whenJust cacheRentalFarePolicy /=<< Queries.findById id (Proxy @m)
 
 findByOffer ::
+  forall m r.
   (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   Vehicle.Variant ->
@@ -60,13 +61,13 @@ findByOffer merchantId vehVar kms hours =
         Just a -> return . Just $ coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy a
         Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheRentalFarePolicy /=<< Queries.findByOffer merchantId vehVar kms hours
+    findAndCache = flip whenJust cacheRentalFarePolicy /=<< Queries.findByOffer merchantId vehVar kms hours (Proxy @m)
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [RentalFarePolicy]
+findAllByMerchantId :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [RentalFarePolicy]
 findAllByMerchantId merchantId =
   Hedis.safeGet (makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(RentalFarePolicyD 'Unsafe) @RentalFarePolicy) a
-    Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
+    Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId (Proxy @m)
   where
     cacheRes rFPs = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -112,10 +113,10 @@ clearAllCacheByMerchantId merchantId =
 
 create ::
   RentalFarePolicy ->
-  Esq.SqlDB ()
+  Esq.SqlDB m ()
 create = Queries.create
 
 markAllAsDeleted ::
   Id Merchant ->
-  Esq.SqlDB ()
+  Esq.SqlDB m ()
 markAllAsDeleted = Queries.markAllAsDeleted

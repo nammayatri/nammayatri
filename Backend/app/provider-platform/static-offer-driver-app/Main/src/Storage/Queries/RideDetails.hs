@@ -21,11 +21,13 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.RideDetails ()
 
-create :: RideDetails -> SqlDB ()
+create :: RideDetails -> SqlDB m ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id SR.Ride ->
+  Proxy ma ->
   m (Maybe RideDetails)
-findById = Esq.findById
+findById rideId _ = Esq.findById @m @ma rideId

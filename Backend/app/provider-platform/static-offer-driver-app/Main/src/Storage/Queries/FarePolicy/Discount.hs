@@ -28,39 +28,45 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.FarePolicy.Discount
 
-create :: Discount -> SqlDB ()
+create :: Discount -> SqlDB m ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Discount ->
+  Proxy ma ->
   m (Maybe Discount)
-findById = Esq.findById
+findById discId _ = Esq.findById @m @ma discId
 
 findAllByMerchantIdAndVariant ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
   Vehicle.Variant ->
+  Proxy ma ->
   m [Discount]
-findAllByMerchantIdAndVariant merchantId vehicleVariant =
+findAllByMerchantIdAndVariant merchantId vehicleVariant proxy =
   Esq.buildDType $
     fmap (extractSolidType @Discount)
-      <$> Storage.Queries.FarePolicy.Discount.findAllByMerchantIdAndVariant' merchantId vehicleVariant
+      <$> Storage.Queries.FarePolicy.Discount.findAllByMerchantIdAndVariant' merchantId vehicleVariant proxy
 
 findAllByMerchantIdAndVariant' ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
   Vehicle.Variant ->
+  Proxy ma ->
   DTypeBuilder m [DiscountT]
-findAllByMerchantIdAndVariant' merchantId vehicleVariant =
-  Esq.findAll' $ do
+findAllByMerchantIdAndVariant' merchantId vehicleVariant _ =
+  Esq.findAll' @m @ma $ do
     discount <- from $ table @DiscountT
     where_ $
       discount ^. DiscountMerchantId ==. val (toKey merchantId)
         &&. discount ^. DiscountVehicleVariant ==. val vehicleVariant
     return discount
 
-update :: Discount -> SqlDB ()
+update :: Discount -> SqlDB m ()
 update disc = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -74,5 +80,5 @@ update disc = do
       ]
     where_ $ tbl ^. DiscountId ==. val (getId disc.id)
 
-deleteById :: Id Discount -> SqlDB ()
+deleteById :: Id Discount -> SqlDB m ()
 deleteById = deleteByKey @DiscountT

@@ -50,6 +50,7 @@ import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
 sendRideAssignedUpdateToBAP ::
+  forall m r c.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -66,8 +67,8 @@ sendRideAssignedUpdateToBAP booking ride = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  driver <- QPerson.findById ride.driverId (Proxy @m) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- QVeh.findById ride.driverId (Proxy @m) >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
 

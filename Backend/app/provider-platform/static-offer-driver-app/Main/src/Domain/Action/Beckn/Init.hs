@@ -88,6 +88,7 @@ init transporterId req = do
       }
 
 initOneWayTrip ::
+  forall m r.
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
@@ -101,7 +102,7 @@ initOneWayTrip ::
   UTCTime ->
   m DRB.Booking
 initOneWayTrip req oneWayReq transporter now = do
-  unlessM (rideServiceable transporter.geofencingConfig QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
+  unlessM (rideServiceable transporter.geofencingConfig (\a b -> QGeometry.someGeometriesContain a b (Proxy @m)) req.fromLocation (Just oneWayReq.toLocation)) $
     throwError RideNotServiceable
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
   mbDistRes <- CD.getCacheDistance req.transactionId
@@ -136,10 +137,11 @@ initOneWayTrip req oneWayReq transporter now = do
   fromLoc <- buildRBLoc req.fromLocation now
   booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare owDetails fromLoc now
   DB.runTransaction $ do
-    QRB.create booking
+    QRB.create @m booking
   return booking
 
 initRentalTrip ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -151,7 +153,7 @@ initRentalTrip ::
   UTCTime ->
   m DRB.Booking
 initRentalTrip req rentalReq transporter now = do
-  unlessM (rideServiceable transporter.geofencingConfig QGeometry.someGeometriesContain req.fromLocation Nothing) $
+  unlessM (rideServiceable transporter.geofencingConfig (\a b -> QGeometry.someGeometriesContain a b (Proxy @m)) req.fromLocation Nothing) $
     throwError RideNotServiceable
   let estimatedFare = 0
       discount = Nothing
@@ -161,7 +163,7 @@ initRentalTrip req rentalReq transporter now = do
   fromLoc <- buildRBLoc req.fromLocation now
   booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare rentDetails fromLoc now
   DB.runTransaction $ do
-    QRB.create booking
+    QRB.create @m booking
   return booking
 
 buildRBLoc ::

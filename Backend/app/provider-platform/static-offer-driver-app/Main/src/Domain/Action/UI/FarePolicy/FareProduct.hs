@@ -49,12 +49,11 @@ listFareProducts person = do
   fareProducts <- SFareProduct.findEnabledByMerchantId person.merchantId
   pure $ ListFareProductsRes $ makeFareProductAPIEntity <$> fareProducts
 
-updateFareProduct :: (HedisFlow m r, EsqDBFlow m r) => SP.Person -> UpdateFareProductReq -> m APISuccess
+updateFareProduct :: forall m r. (HedisFlow m r, EsqDBFlow m r) => SP.Person -> UpdateFareProductReq -> m APISuccess
 updateFareProduct person updReq = do
   let merchantId = person.merchantId
   Esq.runTransaction $
     if updReq.enabled
-      then SFareProduct.insertIfNotExist merchantId updReq.fareProductType
+      then SFareProduct.insertIfNotExist @m merchantId updReq.fareProductType
       else SFareProduct.delete merchantId updReq.fareProductType
-  SFareProduct.clearCache merchantId updReq.fareProductType
   pure Success

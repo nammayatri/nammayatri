@@ -31,37 +31,39 @@ import Storage.Queries.FullEntityBuilders (buildFullOneWayFarePolicy)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy
 
 findByMerchantIdAndVariant ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
   Vehicle.Variant ->
+  Proxy ma ->
   m (Maybe OneWayFarePolicy)
-findByMerchantIdAndVariant merchantId vehicleVariant_ =
+findByMerchantIdAndVariant merchantId vehicleVariant_ proxy =
   Esq.buildDType $ do
-    mbFarePolicy <- Esq.findOne' $ do
+    mbFarePolicy <- Esq.findOne' @m @ma $ do
       farePolicy <- from $ table @OneWayFarePolicyT
       where_ $
         farePolicy ^. OneWayFarePolicyMerchantId ==. val (toKey merchantId)
           &&. farePolicy ^. OneWayFarePolicyVehicleVariant ==. val vehicleVariant_
       return farePolicy
-    mapM buildFullOneWayFarePolicy mbFarePolicy
+    mapM (`buildFullOneWayFarePolicy` proxy) mbFarePolicy
 
-findAllByMerchantId :: Transactionable m => Id Merchant -> m [OneWayFarePolicy]
-findAllByMerchantId merchantId =
+findAllByMerchantId :: forall m ma. Transactionable ma m => Id Merchant -> Proxy ma -> m [OneWayFarePolicy]
+findAllByMerchantId merchantId proxy =
   Esq.buildDType $ do
-    farePolicy <- Esq.findAll' $ do
+    farePolicy <- Esq.findAll' @m @ma $ do
       farePolicy <- from $ table @OneWayFarePolicyT
       where_ $ farePolicy ^. OneWayFarePolicyMerchantId ==. val (toKey merchantId)
       orderBy [asc $ farePolicy ^. OneWayFarePolicyVehicleVariant]
       return farePolicy
-    mapM buildFullOneWayFarePolicy farePolicy
+    mapM (`buildFullOneWayFarePolicy` proxy) farePolicy
 
-findById :: Transactionable m => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
-findById fpId =
+findById :: forall m ma. Transactionable ma m => Id OneWayFarePolicy -> Proxy ma -> m (Maybe OneWayFarePolicy)
+findById fpId proxy =
   Esq.buildDType $ do
-    mbfarePolicy <- Esq.findById' fpId
-    mapM buildFullOneWayFarePolicy mbfarePolicy
+    mbfarePolicy <- Esq.findById' @_ @m @ma fpId
+    mapM (`buildFullOneWayFarePolicy` proxy) mbfarePolicy
 
-update :: OneWayFarePolicy -> SqlDB ()
+update :: OneWayFarePolicy -> SqlDB m ()
 update farePolicy = do
   now <- getCurrentTime
   withFullEntity farePolicy $ \(farePolicyT, perExtraKmRateList, _) -> do

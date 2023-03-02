@@ -21,18 +21,18 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.RideRequest
 
-create :: RideRequest -> SqlDB ()
+create :: RideRequest -> SqlDB m ()
 create = Esq.create
 
-fetchOldest :: Transactionable m => ShortId Subscriber -> Integer -> m [RideRequest]
-fetchOldest subscriberId limit' = do
+fetchOldest :: forall m ma. Transactionable ma m => ShortId Subscriber -> Integer -> Proxy ma -> m [RideRequest]
+fetchOldest subscriberId limit' _ = do
   let limitVal = fromIntegral limit'
-  Esq.findAll $ do
+  Esq.findAll @m @ma $ do
     rideRequest <- from $ table @RideRequestT
     where_ $ rideRequest ^. RideRequestSubscriberId ==. val (getShortId subscriberId)
     orderBy [asc $ rideRequest ^. RideRequestCreatedAt]
     limit limitVal
     return rideRequest
 
-removeRequest :: Id RideRequest -> SqlDB ()
+removeRequest :: Id RideRequest -> SqlDB m ()
 removeRequest = Esq.deleteByKey @RideRequestT

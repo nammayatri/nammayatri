@@ -100,6 +100,7 @@ authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BPP:Registration:auth" <> getId person.id <> ":hitsCount"
 
 auth ::
+  forall m r.
   ( HasCacheConfig r,
     HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
@@ -119,14 +120,14 @@ auth req mbBundleVersion mbClientVersion = do
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
   mobileNumberHash <- getDbHash mobileNumber
-  person <- QP.findByMobileNumber countryCode mobileNumberHash >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+  person <- QP.findByMobileNumber countryCode mobileNumberHash (Proxy @m) >>= fromMaybeM (PersonDoesNotExist mobileNumber)
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   token <- makeSession scfg entityId SR.USER (show <$> useFakeOtpM)
   Esq.runTransaction $ do
-    QR.create token
+    QR.create @m token
     QP.updatePersonVersions person mbBundleVersion mbClientVersion
   otpSmsTemplate <- asks (.otpSmsTemplate)
   let otpHash = smsCfg.credConfig.otpHash
@@ -175,6 +176,7 @@ verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
 verify ::
+  forall m r.
   ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
     Redis.HedisFlow m r,
@@ -197,7 +199,7 @@ verify tokenId req = do
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
   Esq.runTransaction $ do
-    QR.deleteByPersonIdExceptNew person.id tokenId
+    QR.deleteByPersonIdExceptNew @m person.id tokenId
     QR.setVerified tokenId
     QP.updateDeviceToken person.id deviceToken
     when isNewPerson $
@@ -206,7 +208,7 @@ verify tokenId req = do
     let merchantId = person.merchantId
     fcmConfig <- findFCMConfigByMerchantId merchantId
     Notify.notifyOnRegistration fcmConfig regToken person.id deviceToken
-  updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
+  updPers <- QP.findById (Id entityId) (Proxy @m) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthVerifyRes token personAPIEntity
@@ -215,15 +217,16 @@ verify tokenId req = do
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
 
-checkRegistrationTokenExists :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
+checkRegistrationTokenExists :: forall m r. EsqDBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
-  QR.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
+  QR.findById tokenId (Proxy @m) >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-checkPersonExists :: EsqDBFlow m r => Text -> m SP.Person
+checkPersonExists :: forall m r. EsqDBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
-  QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
+  QP.findById (Id entityId) (Proxy @m) >>= fromMaybeM (PersonNotFound entityId)
 
 resend ::
+  forall m r.
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
@@ -248,17 +251,18 @@ resend tokenId = do
   withLogTag ("personId_" <> entityId) $
     Sms.sendSMS person.merchantId (Sms.constructSendSMSReq otpCode otpHash otpSmsTemplate phoneNumber sender)
       >>= Sms.checkSmsResult
-  Esq.runTransaction $ QR.updateAttempts (attempts - 1) id
+  Esq.runTransaction $ QR.updateAttempts @m (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
+cleanCachedTokens :: forall m r. (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
-  regTokens <- QR.findAllByPersonId personId
+  regTokens <- QR.findAllByPersonId personId (Proxy @m)
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
 
 logout ::
+  forall m r.
   ( EsqDBFlow m r,
     Redis.HedisFlow m r
   ) =>
@@ -267,9 +271,9 @@ logout ::
 logout personId = do
   cleanCachedTokens personId
   uperson <-
-    QP.findById personId
+    QP.findById personId (Proxy @m)
       >>= fromMaybeM (PersonNotFound personId.getId)
   Esq.runTransaction $ do
-    QP.updateDeviceToken uperson.id Nothing
+    QP.updateDeviceToken @m uperson.id Nothing
     QR.deleteByPersonId personId
   pure Success

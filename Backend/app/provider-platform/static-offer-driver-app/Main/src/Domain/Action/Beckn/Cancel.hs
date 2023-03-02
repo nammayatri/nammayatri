@@ -38,6 +38,7 @@ newtype CancelReq = CancelReq
   }
 
 cancel ::
+  forall m r.
   (CacheFlow m r, EsqDBFlow m r) =>
   Id DM.Merchant ->
   SignatureAuthResult ->
@@ -47,11 +48,11 @@ cancel transporterId _ req = do
   merchant <-
     QM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  booking <- QRB.findById req.bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
   rideReq <- buildRideReq booking.id merchant.subscriberId
-  Esq.runTransaction $ RideRequest.create rideReq
+  Esq.runTransaction $ RideRequest.create @m rideReq
   where
     buildRideReq bookingId subscriberId = do
       guid <- generateGUID

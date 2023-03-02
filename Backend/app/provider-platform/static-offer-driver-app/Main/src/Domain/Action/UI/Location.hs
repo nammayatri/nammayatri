@@ -41,18 +41,18 @@ data GetLocationRes = GetLocationRes
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-getLocation :: (EsqDBReplicaFlow m r, CacheFlow m r) => Id SRide.Ride -> m GetLocationRes
+getLocation :: forall m r. (EsqDBReplicaFlow m r, CacheFlow m r) => Id SRide.Ride -> m GetLocationRes
 getLocation rideId = do
   ride <-
     runInReplica $
-      QRide.findById rideId
+      QRide.findById rideId (Proxy @m)
         >>= fromMaybeM (RideDoesNotExist rideId.getId)
   status <-
     case ride.status of
       SRide.NEW -> pure PreRide
       SRide.INPROGRESS -> pure ActualRide
       _ -> throwError $ RideInvalidStatus "Cannot track this ride"
-  driver <- runInReplica $ Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  driver <- runInReplica $ Person.findById ride.driverId (Proxy @m) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   currLocation <- DrLoc.findById driver.id >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
   let totalDistance = roundToIntegral ride.traveledDistance.getHighPrecMeters

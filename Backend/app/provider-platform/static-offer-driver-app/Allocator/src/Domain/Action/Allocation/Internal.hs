@@ -108,7 +108,7 @@ getConfiguredReallocationsLimit = asks (.reallocationsLimit)
 
 getRequests :: ShortId Subscriber -> Integer -> Flow [Alloc.RideRequest]
 getRequests subscriberId numRequests = do
-  allRequests <- QRR.fetchOldest subscriberId numRequests
+  allRequests <- QRR.fetchOldest subscriberId numRequests (Proxy @Flow)
   let (errors, requests) =
         partitionEithers $ map toRideRequest allRequests
   traverse_ logError errors
@@ -119,20 +119,20 @@ assignDriver ::
   Id Driver ->
   Flow ()
 assignDriver bookingId driverId = do
-  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- QRB.findById bookingId (Proxy @Flow) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   driver <-
-    QP.findById (cast driverId)
+    QP.findById (cast driverId) (Proxy @Flow)
       >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   ride <- buildRide booking
   rideDetails <- buildRideDetails ride driver
   Esq.runTransaction $ do
-    QDI.updateOnRide (cast driver.id) True
+    QDI.updateOnRide @Flow (cast driver.id) True
     QRB.updateStatus bookingId SRB.TRIP_ASSIGNED
     QRide.create ride
     QRD.create rideDetails
     QBE.logDriverAssignetEvent driverId bookingId ride.id
   fork "assignDriver - Notify BAP" $ do
-    uBooking <- QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+    uBooking <- QRB.findById bookingId (Proxy @Flow) >>= fromMaybeM (BookingNotFound bookingId.getId)
     BP.sendRideAssignedUpdateToBAP uBooking ride
     fcmConfig <- findAllocatorFCMConfigByMerchantId booking.providerId
     Notify.notifyDriver fcmConfig notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
@@ -176,7 +176,7 @@ assignDriver bookingId driverId = do
 
     buildRideDetails ride driver = do
       vehicle <-
-        QV.findById ride.driverId
+        QV.findById ride.driverId (Proxy @Flow)
           >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
       return
         SRD.RideDetails
@@ -229,7 +229,7 @@ getCurrentNotifications ::
   Id Booking ->
   Flow [Alloc.CurrentNotification]
 getCurrentNotifications bookingId = do
-  notificationStatuses <- QNS.findActiveNotificationByRBId bookingId
+  notificationStatuses <- QNS.findActiveNotificationByRBId bookingId (Proxy @Flow)
   pure $ map buildCurrentNotification notificationStatuses
   where
     buildCurrentNotification notificationStatus =
@@ -238,7 +238,7 @@ getCurrentNotifications bookingId = do
         (notificationStatus.expiresAt)
 
 cleanupOldNotifications :: Flow Int
-cleanupOldNotifications = Esq.runTransaction QNS.cleanupOldNotifications
+cleanupOldNotifications = Esq.runTransaction (QNS.cleanupOldNotifications @Flow)
 
 sendNewRideNotifications ::
   Id Booking ->
@@ -247,9 +247,9 @@ sendNewRideNotifications ::
 sendNewRideNotifications bookingId = traverse_ sendNewRideNotification
   where
     sendNewRideNotification driverId = do
-      booking <- QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+      booking <- QRB.findById bookingId (Proxy @Flow) >>= fromMaybeM (BookingNotFound bookingId.getId)
       person <-
-        QP.findById (cast driverId)
+        QP.findById (cast driverId) (Proxy @Flow)
           >>= fromMaybeM (PersonNotFound driverId.getId)
       fcmConfig <- findAllocatorFCMConfigByMerchantId person.merchantId
       notifyDriverNewAllocation fcmConfig booking.id person.id person.deviceToken
@@ -259,37 +259,38 @@ sendRideNotAssignedNotification ::
   Id Driver ->
   Flow ()
 sendRideNotAssignedNotification bookingId driverId = do
-  booking <- QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+  booking <- QRB.findById bookingId (Proxy @Flow) >>= fromMaybeM (BookingNotFound bookingId.getId)
   person <-
-    QP.findById (cast driverId)
+    QP.findById (cast driverId) (Proxy @Flow)
       >>= fromMaybeM (PersonNotFound driverId.getId)
   fcmConfig <- findAllocatorFCMConfigByMerchantId person.merchantId
   notifyRideNotAssigned fcmConfig booking.id person.id person.deviceToken
 
-updateNotificationStatuses :: EsqDBFlow m r => Id Booking -> Alloc.NotificationStatus -> NonEmpty (Id Driver) -> m ()
+updateNotificationStatuses :: forall m r. EsqDBFlow m r => Id Booking -> Alloc.NotificationStatus -> NonEmpty (Id Driver) -> m ()
 updateNotificationStatuses bookingId status driverIds = do
   let storageStatus = allocNotifStatusToStorageStatus status
-  Esq.runTransaction $ QNS.updateStatus bookingId storageStatus $ toList driverIds
+  Esq.runTransaction $ QNS.updateStatus @m bookingId storageStatus $ toList driverIds
 
-resetLastRejectionTimes :: EsqDBFlow m r => NonEmpty (Id Driver) -> m ()
-resetLastRejectionTimes driverIds = Esq.runTransaction . QDS.updateIdleTimes $ toList driverIds
+resetLastRejectionTimes :: forall m r. EsqDBFlow m r => NonEmpty (Id Driver) -> m ()
+resetLastRejectionTimes driverIds = Esq.runTransaction . QDS.updateIdleTimes @m $ toList driverIds
 
-getDriversWithNotification :: EsqDBFlow m r => m [Id Driver]
-getDriversWithNotification = QNS.fetchActiveNotifications <&> fmap (.driverId)
+getDriversWithNotification :: forall m r. EsqDBFlow m r => m [Id Driver]
+getDriversWithNotification = QNS.fetchActiveNotifications (Proxy @m) <&> fmap (.driverId)
 
-getTopDriversByIdleTime :: EsqDBFlow m r => Int -> [Id Driver] -> m [Id Driver]
-getTopDriversByIdleTime = QDS.getTopDriversByIdleTime
+getTopDriversByIdleTime :: forall m r. EsqDBFlow m r => Int -> [Id Driver] -> m [Id Driver]
+getTopDriversByIdleTime a b = QDS.getTopDriversByIdleTime a b (Proxy @m)
 
-checkAvailability :: EsqDBFlow m r => [DriverPoolResult] -> m [DriverPoolResult]
+checkAvailability :: forall m r. EsqDBFlow m r => [DriverPoolResult] -> m [DriverPoolResult]
 checkAvailability driverPool = do
   let driverIds = (.driverId) <$> driverPool
-  driversInfo <- QDriverInfo.fetchAllAvailableByIds driverIds
+  driversInfo <- QDriverInfo.fetchAllAvailableByIds driverIds (Proxy @m)
   let availableDriverIds = map (cast . SDriverInfo.driverId) driversInfo
   -- availableDriverIds is part of driverPool, but isn't sorted by distance
   -- So we can use order that we have in sorted pool driverPool
   pure $ filter (\dpRes -> dpRes.driverId `elem` availableDriverIds) driverPool
 
 cancelBooking ::
+  forall m r c.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -305,14 +306,14 @@ cancelBooking ::
   SBCR.BookingCancellationReason ->
   m ()
 cancelBooking bookingId reason = do
-  booking <- QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
-  mbRide <- QRide.findActiveByRBId bookingId
+  booking <- QRB.findById bookingId (Proxy @m) >>= fromMaybeM (BookingNotFound bookingId.getId)
+  mbRide <- QRide.findActiveByRBId bookingId (Proxy @m)
   let transporterId = booking.providerId
   transporter <-
     CQM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
   Esq.runTransaction $ do
-    QRB.updateStatus booking.id SRB.CANCELLED
+    QRB.updateStatus @m booking.id SRB.CANCELLED
     QBCR.upsert reason
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED
@@ -325,15 +326,15 @@ cancelBooking bookingId reason = do
     BP.sendBookingCancelledUpdateToBAP booking transporter reason.source
   whenJust mbRide $ \ride ->
     fork "cancelRide - Notify driver" $ do
-      driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      driver <- QP.findById ride.driverId (Proxy @m) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       fcmConfig <- findAllocatorFCMConfigByMerchantId driver.merchantId
       Notify.notifyOnCancel fcmConfig booking driver.id driver.deviceToken reason.source
 
-cleanupNotifications :: EsqDBFlow m r => Id Booking -> m ()
-cleanupNotifications = Esq.runTransaction . QNS.cleanupNotifications
+cleanupNotifications :: forall m r. EsqDBFlow m r => Id Booking -> m ()
+cleanupNotifications = Esq.runTransaction . QNS.cleanupNotifications @m
 
-removeRequest :: EsqDBFlow m r => Id SRR.RideRequest -> m ()
-removeRequest = Esq.runTransaction . QRR.removeRequest
+removeRequest :: forall m r. EsqDBFlow m r => Id SRR.RideRequest -> m ()
+removeRequest = Esq.runTransaction . QRR.removeRequest @m
 
 allocNotifStatusToStorageStatus ::
   Alloc.NotificationStatus ->
@@ -343,7 +344,7 @@ allocNotifStatusToStorageStatus = \case
   Alloc.Rejected -> SNS.REJECTED
   Alloc.Ignored -> SNS.IGNORED
 
-addAllocationRequest :: EsqDBFlow m r => ShortId Subscriber -> Id Booking -> m ()
+addAllocationRequest :: forall m r. EsqDBFlow m r => ShortId Subscriber -> Id Booking -> m ()
 addAllocationRequest subscriberId bookingId = do
   guid <- generateGUID
   currTime <- getCurrentTime
@@ -356,9 +357,10 @@ addAllocationRequest subscriberId bookingId = do
             _type = SRR.ALLOCATION,
             info = Nothing
           }
-  Esq.runTransaction $ QRR.create rideRequest
+  Esq.runTransaction $ QRR.create @m rideRequest
 
 addNotificationStatuses ::
+  forall m r.
   EsqDBFlow m r =>
   Id Booking ->
   NonEmpty (Id Driver) ->
@@ -366,7 +368,7 @@ addNotificationStatuses ::
   m ()
 addNotificationStatuses bookingId driverIds expiryTime = do
   notificationStatuses <- traverse createNotificationStatus driverIds
-  Esq.runTransaction $ QNS.createMany $ toList notificationStatuses
+  Esq.runTransaction $ QNS.createMany @m $ toList notificationStatuses
   where
     createNotificationStatus driverId = do
       uuid <- generateGUID
@@ -385,16 +387,16 @@ addAvailableDriver driverInfo availableDriversIds =
     then cast (driverInfo.driverId) : availableDriversIds
     else availableDriversIds
 
-logEvent :: EsqDBFlow m r => AllocationEventType -> Id Booking -> m ()
-logEvent eventType bookingId = Esq.runTransaction $ logAllocationEvent eventType bookingId Nothing
+logEvent :: forall m r. EsqDBFlow m r => AllocationEventType -> Id Booking -> m ()
+logEvent eventType bookingId = Esq.runTransaction $ logAllocationEvent @m eventType bookingId Nothing
 
-logDriverEvents :: EsqDBFlow m r => AllocationEventType -> Id Booking -> NonEmpty (Id Driver) -> m ()
+logDriverEvents :: forall m r. EsqDBFlow m r => AllocationEventType -> Id Booking -> NonEmpty (Id Driver) -> m ()
 logDriverEvents eventType bookingId driverList = Esq.runTransaction $ traverse_ logDriverEvent driverList
   where
-    logDriverEvent driver = logAllocationEvent eventType bookingId $ Just driver
+    logDriverEvent driver = logAllocationEvent @m eventType bookingId $ Just driver
 
-getBooking :: EsqDBFlow m r => Id Booking -> m Booking
-getBooking bookingId = QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+getBooking :: forall m r. EsqDBFlow m r => Id Booking -> m Booking
+getBooking bookingId = QRB.findById bookingId (Proxy @m) >>= fromMaybeM (BookingNotFound bookingId.getId)
 
 incrementTaskCounter :: (TMetrics.HasAllocatorMetrics m r, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m ()
 incrementTaskCounter subscriberId = do

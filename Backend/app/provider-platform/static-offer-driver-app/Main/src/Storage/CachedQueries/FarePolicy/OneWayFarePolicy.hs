@@ -37,13 +37,14 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy as Queries
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
+findById :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
 findById id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy a
-    Nothing -> flip whenJust cacheOneWayFarePolicy /=<< Queries.findById id
+    Nothing -> flip whenJust cacheOneWayFarePolicy /=<< Queries.findById id (Proxy @m)
 
 findByMerchantIdAndVariant ::
+  forall m r.
   (CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant ->
   Vehicle.Variant ->
@@ -56,13 +57,13 @@ findByMerchantIdAndVariant merchantId vehVar =
         Just a -> return . Just $ coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy a
         Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheOneWayFarePolicy /=<< Queries.findByMerchantIdAndVariant merchantId vehVar
+    findAndCache = flip whenJust cacheOneWayFarePolicy /=<< Queries.findByMerchantIdAndVariant merchantId vehVar (Proxy @m)
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [OneWayFarePolicy]
+findAllByMerchantId :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [OneWayFarePolicy]
 findAllByMerchantId merchantId =
   Hedis.safeGet (makeAllMerchantIdKey merchantId) >>= \case
     Just a -> return $ fmap (coerce @(OneWayFarePolicyD 'Unsafe) @OneWayFarePolicy) a
-    Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId
+    Nothing -> cacheRes /=<< Queries.findAllByMerchantId merchantId (Proxy @m)
   where
     cacheRes owFPs = do
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -91,5 +92,7 @@ clearCache owFP = do
   Hedis.del (makeMerchantIdVehVarKey owFP.merchantId owFP.vehicleVariant)
   Hedis.del (makeAllMerchantIdKey owFP.merchantId)
 
-update :: OneWayFarePolicy -> Esq.SqlDB ()
-update = Queries.update
+update :: HedisFlow m r => OneWayFarePolicy -> Esq.SqlDB m ()
+update owFP = do
+  Queries.update owFP
+  Esq.finalize $ clearCache owFP

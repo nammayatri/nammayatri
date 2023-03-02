@@ -21,15 +21,15 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.Webengage
 
-create :: Webengage -> SqlDB ()
+create :: Webengage -> SqlDB m ()
 create = Esq.create
 
-findById :: Transactionable m => Id Webengage -> m (Maybe Webengage)
-findById = Esq.findById
+findById :: forall m ma. Transactionable ma m => Id Webengage -> Proxy ma -> m (Maybe Webengage)
+findById webEngId _ = Esq.findById @m @ma webEngId
 
-findByInfoMsgId :: Transactionable m => Text -> m (Maybe Webengage)
-findByInfoMsgId infoMessageId =
-  Esq.findOne $ do
+findByInfoMsgId :: forall m ma. Transactionable ma m => Text -> Proxy ma -> m (Maybe Webengage)
+findByInfoMsgId infoMessageId _ =
+  Esq.findOne @m @ma $ do
     webengage <- from $ table @WebengageT
     where_ $ webengage ^. WebengageInfoMessageId ==. val infoMessageId
     return webengage

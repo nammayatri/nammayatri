@@ -54,6 +54,7 @@ data QuoteInfo = QuoteInfo
   }
 
 onSearchCallback ::
+  forall m r.
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
@@ -75,7 +76,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation transac
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId
       ||+ " with drivers " +| T.intercalate ", " (getId . (.driverId) <$> pool) |+ ""
-  Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_SEARCH Nothing) pool
+  Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent @m SB.ON_SEARCH Nothing) pool
   let listOfProtoQuotes =
         catMaybes $
           everyPossibleVariant <&> \var ->
@@ -108,7 +109,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation transac
         estimatedRideFinishTime
         now
   Esq.runTransaction $
-    for_ listOfQuotes QQuote.create
+    for_ listOfQuotes (QQuote.create @m)
   pure $ mkQuoteInfo fromLocation toLocation now <$> listOfQuotes
 
 buildOneWayQuote ::

@@ -45,6 +45,7 @@ import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 
 cancelRideImpl ::
+  forall m r c.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -60,8 +61,8 @@ cancelRideImpl ::
   SBCR.BookingCancellationReason ->
   m ()
 cancelRideImpl rideId bookingCReason = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  ride <- QRide.findById rideId (Proxy @m) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- QRB.findById ride.bookingId (Proxy @m) >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let transporterId = booking.providerId
   transporter <-
     CQM.findById transporterId
@@ -75,13 +76,14 @@ cancelRideImpl rideId bookingCReason = do
       then BP.sendBookingReallocationUpdateToBAP booking ride.id transporter bookingCReason.source
       else BP.sendBookingCancelledUpdateToBAP booking transporter bookingCReason.source
   fork "cancelRide - Notify driver" $ do
-    driver <- Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    driver <- Person.findById ride.driverId (Proxy @m) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     fcmConfig <- findFCMConfigByMerchantId transporterId
     Notify.notifyOnCancel fcmConfig booking driver.id driver.deviceToken bookingCReason.source
   where
     isCancelledByDriver = bookingCReason.source == SBCR.ByDriver
 
 cancelRideTransaction ::
+  forall m r.
   ( EsqDBFlow m r,
     CacheFlow m r
   ) =>
@@ -92,7 +94,7 @@ cancelRideTransaction ::
 cancelRideTransaction bookingId ride bookingCReason = do
   Esq.runTransaction $ do
     updateDriverInfo ride.driverId
-    QRide.updateStatus ride.id SRide.CANCELLED
+    QRide.updateStatus @m ride.id SRide.CANCELLED
     QRB.updateStatus bookingId SRB.CANCELLED
     QBCR.upsert bookingCReason
   SRide.clearCache $ cast ride.driverId
@@ -104,6 +106,7 @@ cancelRideTransaction bookingId ride bookingCReason = do
       when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId -- FIXME unreachable code
 
 reallocateRideTransaction ::
+  forall m r.
   ( EsqDBFlow m r,
     CacheFlow m r
   ) =>
@@ -115,7 +118,7 @@ reallocateRideTransaction ::
 reallocateRideTransaction subscriberId bookingId ride bookingCReason = do
   rideRequest <- buildRideReq
   Esq.runTransaction $ do
-    QRB.updateStatus bookingId SRB.AWAITING_REASSIGNMENT
+    QRB.updateStatus @m bookingId SRB.AWAITING_REASSIGNMENT
     QRB.increaseReallocationsCounter bookingId
     QRide.updateStatus ride.id SRide.CANCELLED
     updateDriverInfo

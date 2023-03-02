@@ -20,16 +20,16 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Storage.Tabular.Geometry
 
-findGeometriesContaining :: Transactionable m => LatLong -> [Text] -> m [Geometry]
-findGeometriesContaining gps regions =
-  Esq.findAll $ do
+findGeometriesContaining :: forall m ma. Transactionable ma m => LatLong -> [Text] -> Proxy ma -> m [Geometry]
+findGeometriesContaining gps regions _ =
+  Esq.findAll @m @ma $ do
     geometry <- from $ table @GeometryT
     where_ $
       geometry ^. GeometryRegion `in_` valList regions
         &&. containsPoint (gps.lon, gps.lat)
     return geometry
 
-someGeometriesContain :: Transactionable m => LatLong -> [Text] -> m Bool
-someGeometriesContain gps regions = do
-  geometries <- findGeometriesContaining gps regions
+someGeometriesContain :: Transactionable ma m => LatLong -> [Text] -> Proxy ma -> m Bool
+someGeometriesContain gps regions proxy = do
+  geometries <- findGeometriesContaining gps regions proxy
   pure $ not $ null geometries

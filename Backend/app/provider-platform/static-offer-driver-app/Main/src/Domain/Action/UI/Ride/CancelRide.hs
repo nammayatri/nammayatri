@@ -48,8 +48,8 @@ data ServiceHandle m = ServiceHandle
 cancelRideHandle :: ServiceHandle Flow
 cancelRideHandle =
   ServiceHandle
-    { findRideById = QRide.findById,
-      findById = QPerson.findById,
+    { findRideById = flip QRide.findById (Proxy @Flow),
+      findById = flip QPerson.findById (Proxy @Flow),
       cancelRide = CInternal.cancelRideImpl
     }
 

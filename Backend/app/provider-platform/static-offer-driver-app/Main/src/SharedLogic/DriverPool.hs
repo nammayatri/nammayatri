@@ -37,6 +37,7 @@ import qualified Tools.Maps as Maps
 import Tools.Metrics
 
 calculateDriverPool ::
+  forall m r a.
   ( EncFlow m r,
     HasCacheConfig r,
     EsqDBFlow m r,
@@ -64,6 +65,7 @@ calculateDriverPool pickup merchantId variant fareProductType mRadiusStep = do
         variant
         fareProductType
         mbDriverPositionInfoExpiry
+        (Proxy @m)
   case nearestDriversResult of
     [] -> pure []
     (a : xs) -> do

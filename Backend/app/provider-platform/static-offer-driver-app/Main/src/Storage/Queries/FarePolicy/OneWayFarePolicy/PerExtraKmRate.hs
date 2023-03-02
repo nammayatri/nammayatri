@@ -27,16 +27,18 @@ import Kernel.Utils.Common
 import Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate
 
 findAll' ::
-  ( Transactionable m,
+  forall m ma.
+  ( Transactionable ma m,
     Monad m,
     MonadThrow m,
     Log m
   ) =>
   Id Merchant ->
   Vehicle.Variant ->
+  Proxy ma ->
   DTypeBuilder m [PerExtraKmRateT]
-findAll' merchantId vehicleVariant = do
-  Esq.findAll' $ do
+findAll' merchantId vehicleVariant _ = do
+  Esq.findAll' @m @ma $ do
     perExtraKmRate <- from $ table @PerExtraKmRateT
     where_ $
       perExtraKmRate ^. PerExtraKmRateMerchantId ==. val (toKey merchantId)
@@ -44,7 +46,7 @@ findAll' merchantId vehicleVariant = do
     orderBy [asc $ perExtraKmRate ^. PerExtraKmRateDistanceRangeStart]
     return perExtraKmRate
 
-deleteAll' :: Id Merchant -> Vehicle.Variant -> FullEntitySqlDB ()
+deleteAll' :: Id Merchant -> Vehicle.Variant -> FullEntitySqlDB m ()
 deleteAll' merchantId var =
   Esq.delete' $ do
     perExtraKmRate <- from $ table @PerExtraKmRateT

@@ -72,7 +72,7 @@ validateCreateRentalsFarePolicyRequest CreateRentalFarePolicyItem {..} =
       validateField "driverAllowanceForDay" driverAllowanceForDay $ InMaybe $ Min @Money 0
     ]
 
-createRentalFarePolicy :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> CreateRentalFarePolicyReq -> m APISuccess
+createRentalFarePolicy :: forall m r. (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) => SP.Person -> CreateRentalFarePolicyReq -> m APISuccess
 createRentalFarePolicy admin req = do
   let merchantId = admin.merchantId
   mapM_ (runRequestValidation validateCreateRentalsFarePolicyRequest) req.createList
@@ -80,7 +80,7 @@ createRentalFarePolicy admin req = do
     guid <- Id <$> generateGUID
     pure $ toDomainType merchantId guid createItemReq
   Esq.runTransaction $ do
-    SRentalFarePolicy.markAllAsDeleted merchantId
+    SRentalFarePolicy.markAllAsDeleted @m merchantId
     forM_ newRentalFarePolicyItems SRentalFarePolicy.create
   SRentalFarePolicy.clearAllCacheByMerchantId merchantId
   pure Success

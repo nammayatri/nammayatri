@@ -22,7 +22,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.DriverStats
 
-createInitialDriverStats :: Id Driver -> SqlDB ()
+createInitialDriverStats :: Id Driver -> SqlDB m ()
 createInitialDriverStats driverId = do
   now <- getCurrentTime
   create $
@@ -31,19 +31,19 @@ createInitialDriverStats driverId = do
         idleSince = now
       }
 
-getTopDriversByIdleTime :: Transactionable m => Int -> [Id Driver] -> m [Id Driver]
-getTopDriversByIdleTime count_ ids =
-  Esq.findAll $ do
+getTopDriversByIdleTime :: forall m ma. Transactionable ma m => Int -> [Id Driver] -> Proxy ma -> m [Id Driver]
+getTopDriversByIdleTime count_ ids _ =
+  Esq.findAll @m @ma $ do
     driverStats <- from $ table @DriverStatsT
     where_ $ driverStats ^. DriverStatsDriverId `in_` valList (toKey . cast <$> ids)
     orderBy [asc $ driverStats ^. DriverStatsIdleSince]
     limit $ fromIntegral count_
     return $ driverStats ^. DriverStatsTId
 
-updateIdleTime :: Id Driver -> SqlDB ()
+updateIdleTime :: Id Driver -> SqlDB m ()
 updateIdleTime driverId = updateIdleTimes [driverId]
 
-updateIdleTimes :: [Id Driver] -> SqlDB ()
+updateIdleTimes :: [Id Driver] -> SqlDB m ()
 updateIdleTimes driverIds = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -53,8 +53,8 @@ updateIdleTimes driverIds = do
       ]
     where_ $ tbl ^. DriverStatsDriverId `in_` valList (toKey . cast <$> driverIds)
 
-fetchAll :: Transactionable m => m [DriverStats]
-fetchAll = Esq.findAll $ from $ table @DriverStatsT
+fetchAll :: forall m ma. Transactionable ma m => Proxy ma -> m [DriverStats]
+fetchAll _ = Esq.findAll @m @ma $ from $ table @DriverStatsT
 
-deleteById :: Id Driver -> SqlDB ()
+deleteById :: Id Driver -> SqlDB m ()
 deleteById = deleteByKey @DriverStatsT

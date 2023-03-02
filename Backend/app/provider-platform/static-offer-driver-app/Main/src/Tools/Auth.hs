@@ -79,17 +79,17 @@ verifyAdmin user = do
     throwError AccessDenied
   return user
 
-verifyToken :: EsqDBFlow m r => RegToken -> m SR.RegistrationToken
+verifyToken :: forall m r. EsqDBFlow m r => RegToken -> m SR.RegistrationToken
 verifyToken regToken = do
-  QR.findByToken regToken
+  QR.findByToken regToken (Proxy @m)
     >>= Utils.fromMaybeM (InvalidToken regToken)
     >>= validateToken
 
-validateAdmin :: (EsqDBFlow m r, EncFlow m r) => RegToken -> m Person.Person
+validateAdmin :: forall m r. (EsqDBFlow m r, EncFlow m r) => RegToken -> m Person.Person
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- verifyToken regToken
   user <-
-    QP.findById (Id entityId)
+    QP.findById (Id entityId) (Proxy @m)
       >>= fromMaybeM (PersonNotFound entityId)
   verifyAdmin user
 
@@ -158,8 +158,8 @@ verifyDashboard incomingToken = do
     then pure Dashboard
     else throwError (InvalidToken incomingToken)
 
-clearDriverSession :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id Person.Person -> m ()
+clearDriverSession :: forall m r. (EsqDBFlow m r, Redis.HedisFlow m r) => Id Person.Person -> m ()
 clearDriverSession personId = do
-  regTokens <- QR.findAllByPersonId personId
+  regTokens <- QR.findAllByPersonId personId (Proxy @m)
   for_ regTokens $ \regToken -> do
     void $ Redis.del $ authTokenCacheKey regToken.token

@@ -52,11 +52,9 @@ merchantUpdate merchantShortId req = do
                  DM.enabled = fromMaybe (merchant.enabled) (req.enabled)
                 }
   Esq.runTransaction $ do
-    CQM.update updMerchant
+    CQM.update @Flow updMerchant
     whenJust req.fcmConfig $
       \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
-  CQM.clearCache updMerchant
-  whenJust req.fcmConfig $ \_ -> CQTC.clearCache merchant.id
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
   return $ mkMerchantUpdateRes updMerchant
 
@@ -83,12 +81,10 @@ mapsServiceConfigUpdate ::
   Flow APISuccess
 mapsServiceConfigUpdate merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
-  let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
   Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+    CQMSC.upsertMerchantServiceConfig @Flow merchantServiceConfig
   logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -99,12 +95,10 @@ smsServiceConfigUpdate ::
   Flow APISuccess
 smsServiceConfigUpdate merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
-  let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
   Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+    CQMSC.upsertMerchantServiceConfig @Flow merchantServiceConfig
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -136,8 +130,7 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
                                    autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
                                   }
   Esq.runTransaction $ do
-    CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
-  CQMSUC.clearCache merchant.id
+    CQMSUC.updateMerchantServiceUsageConfig @Flow updMerchantServiceUsageConfig
   logTagInfo "dashboard -> mapsServiceUsageConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -163,7 +156,6 @@ smsServiceUsageConfigUpdate merchantShortId req = do
         merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
                                   }
   Esq.runTransaction $ do
-    CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
-  CQMSUC.clearCache merchant.id
+    CQMSUC.updateMerchantServiceUsageConfig @Flow updMerchantServiceUsageConfig
   logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
   pure Success

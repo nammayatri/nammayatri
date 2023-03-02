@@ -36,13 +36,13 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
 
-findById :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
+findById :: forall m r. (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
 findById id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ (coerce @(MerchantD 'Unsafe) @Merchant) a
-    Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
+    Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id (Proxy @m)
 
-findBySubscriberId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: forall m r. (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
   Hedis.safeGet (makeSubscriberIdKey subscriberId) >>= \case
     Nothing -> findAndCache
@@ -51,9 +51,9 @@ findBySubscriberId subscriberId =
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheMerchant /=<< Queries.findBySubscriberId subscriberId
+    findAndCache = flip whenJust cacheMerchant /=<< Queries.findBySubscriberId subscriberId (Proxy @m)
 
-findByShortId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: forall m r. (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId =
   Hedis.safeGet (makeShortIdKey shortId) >>= \case
     Nothing -> findAndCache
@@ -62,7 +62,7 @@ findByShortId shortId =
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId
+    findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId (Proxy @m)
 
 -- Call it after any update
 clearCache :: HedisFlow m r => Merchant -> m ()
@@ -88,8 +88,10 @@ makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> sub
 makeShortIdKey :: ShortId Merchant -> Text
 makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 
-update :: Merchant -> Esq.SqlDB ()
-update = Queries.update
+update :: HedisFlow m r => Merchant -> Esq.SqlDB m ()
+update merchant = do
+  Queries.update merchant
+  Esq.finalize $ clearCache merchant
 
-loadAllProviders :: Esq.Transactionable m => m [Merchant]
+loadAllProviders :: forall m ma. Esq.Transactionable ma m => Proxy ma -> m [Merchant]
 loadAllProviders = Queries.loadAllProviders

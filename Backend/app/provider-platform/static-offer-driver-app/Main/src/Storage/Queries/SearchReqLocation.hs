@@ -22,11 +22,13 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.SearchRequest.SearchReqLocation ()
 
-create :: SearchReqLocation -> SqlDB ()
+create :: SearchReqLocation -> SqlDB m ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id SearchReqLocation ->
+  Proxy ma ->
   m (Maybe SearchReqLocation)
-findById = Esq.findById
+findById reqId _ = Esq.findById @m @ma reqId

@@ -54,6 +54,7 @@ driverPoolBatchKey :: Id SRB.Booking -> PoolBatchNum -> Text
 driverPoolBatchKey bookingId batchNum = driverPoolKey bookingId <> ":BatchNum-" <> show batchNum
 
 prepareDriverPoolBatch ::
+  forall m r.
   ( EncFlow m r,
     HasCacheConfig r,
     CoreMetrics m,
@@ -66,7 +67,7 @@ prepareDriverPoolBatch ::
   PoolBatchNum ->
   m [DriverPoolResult]
 prepareDriverPoolBatch bookingId batchNum = withLogTag ("BatchNum-" <> show batchNum) $ do
-  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- QBooking.findById bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   previousBatchesDrivers <- getPreviousBatchesDrivers
   logDebug $ "PreviousBatchesDrivers-" <> show previousBatchesDrivers
   prepareDriverPoolBatch' booking previousBatchesDrivers

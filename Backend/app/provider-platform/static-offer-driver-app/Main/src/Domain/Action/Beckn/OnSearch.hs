@@ -80,13 +80,14 @@ onSearch DOnSearchReq {..} = do
   pure onSearchReq
 
 buildDOnSearchRes ::
+  forall m r.
   EsqDBFlow m r =>
   DM.Merchant ->
   QuoteInfos ->
   DFareProduct.FareProductType ->
   m DOnSearchRes
 buildDOnSearchRes org quoteInfos fareProductType = do
-  count <- QRide.getCountByStatus org.id
+  count <- QRide.getCountByStatus org.id (Proxy @m)
   let transporterInfo =
         TransporterInfo
           { subscriberId = org.subscriberId,

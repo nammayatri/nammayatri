@@ -73,9 +73,9 @@ buildStartRideHandle merchantId = do
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId False
   pure
     ServiceHandle
-      { findRideById = QRide.findById,
-        findBookingById = QRB.findById,
-        findLocationByDriverId = QDrLoc.findById,
+      { findRideById = flip QRide.findById (Proxy @Flow),
+        findBookingById = flip QRB.findById (Proxy @Flow),
+        findLocationByDriverId = flip QDrLoc.findById (Proxy @Flow),
         startRideAndUpdateLocation = SInternal.startRideTransaction,
         notifyBAPRideStarted = sendRideStartedUpdateToBAP,
         rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),

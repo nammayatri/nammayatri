@@ -105,8 +105,8 @@ buildEndRideHandle merchantId rideId = do
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId True
   return $
     ServiceHandle
-      { fetchRide = QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId),
-        findBookingById = QRB.findById,
+      { fetchRide = QRide.findById rideId (Proxy @Flow) >>= fromMaybeM (RideDoesNotExist rideId.getId),
+        findBookingById = flip QRB.findById (Proxy @Flow),
         notifyCompleteToBAP = sendRideCompletedUpdateToBAP,
         endRideTransaction = EInternal.endRideTransaction,
         calculateFare = Fare.calculateFare merchantId,

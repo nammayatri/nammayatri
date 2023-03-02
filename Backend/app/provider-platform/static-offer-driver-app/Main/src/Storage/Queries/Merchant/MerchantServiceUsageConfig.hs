@@ -28,9 +28,9 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.Merchant.MerchantServiceUsageConfig
 
-findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
-findByMerchantId orgId =
-  Esq.findOne $ do
+findByMerchantId :: forall m ma. Transactionable ma m => Id Merchant -> Proxy ma -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantId orgId _ =
+  Esq.findOne @m @ma $ do
     orgMapsCfg <- from $ table @MerchantServiceUsageConfigT
     where_ $
       orgMapsCfg ^. MerchantServiceUsageConfigTId ==. val (toKey orgId)
@@ -38,7 +38,7 @@ findByMerchantId orgId =
 
 updateMerchantServiceUsageConfig ::
   MerchantServiceUsageConfig ->
-  SqlDB ()
+  SqlDB m ()
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do

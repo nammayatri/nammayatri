@@ -86,12 +86,12 @@ listDrivers merchantShortId mbLimit mbOffset mbVerified mbEnabled mbBlocked mbSe
       then do
         let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
             offset = fromMaybe 0 mbOffset
-        Esq.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash
+        Esq.runInReplica $ QPerson.findAllDriversWithInfoAndVehicle merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash (Proxy @Flow)
       else pure []
   items <- mapM buildDriverListItem driversWithInfo
   let count = length items
   -- should we consider filters in totalCount, e.g. count all enabled drivers?
-  totalCount <- Esq.runInReplica $ QPerson.countDrivers merchant.id
+  totalCount <- Esq.runInReplica $ QPerson.countDrivers merchant.id (Proxy @Flow)
   let summary = Common.Summary {totalCount, count}
   pure Common.DriverListRes {totalItems = count, summary, drivers = items}
   where
@@ -120,7 +120,7 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
 driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
 driverActivity merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
-  Common.mkDriverActivityRes <$> Esq.runInReplica (QDriverInfo.countDrivers merchant.id)
+  Common.mkDriverActivityRes <$> Esq.runInReplica (QDriverInfo.countDrivers merchant.id (Proxy @Flow))
 
 ---------------------------------------------------------------------
 enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
@@ -130,16 +130,16 @@ enableDriver merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    QPerson.findById personId
+    QPerson.findById personId (Proxy @Flow)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  _vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+  _vehicle <- QVehicle.findById personId (Proxy @Flow) >>= fromMaybeM (VehicleDoesNotExist personId.getId)
   Esq.runTransaction $ do
-    QDriverInfo.updateEnabledState driverId True
+    QDriverInfo.updateEnabledState @Flow driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
   pure Success
 
@@ -151,7 +151,7 @@ disableDriver merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    QPerson.findById personId
+    QPerson.findById personId (Proxy @Flow)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
@@ -159,7 +159,7 @@ disableDriver merchantShortId reqDriverId = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   Esq.runTransaction $ do
-    QVehicle.deleteById personId
+    QVehicle.deleteById @Flow personId
     QDriverInfo.updateEnabledState driverId False
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
@@ -172,14 +172,14 @@ blockDriver merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    Esq.runInReplica (QPerson.findById personId)
+    Esq.runInReplica (QPerson.findById personId (Proxy @Flow))
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ QDriverInfo.updateBlockedState driverId True
+  Esq.runTransaction $ QDriverInfo.updateBlockedState @Flow driverId True
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -191,14 +191,14 @@ unblockDriver merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    Esq.runInReplica (QPerson.findById personId)
+    Esq.runInReplica (QPerson.findById personId (Proxy @Flow))
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ QDriverInfo.updateBlockedState driverId False
+  Esq.runTransaction $ QDriverInfo.updateBlockedState @Flow driverId False
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -212,7 +212,7 @@ driverLocation ::
 driverLocation merchantShortId mbLimit mbOffset req = do
   merchant <- findMerchantByShortId merchantShortId
   let driverIds = coerce req.driverIds
-  allDrivers <- Esq.runInReplica $ QPerson.findAllDriversByIdsFirstNameAsc merchant.id driverIds
+  allDrivers <- Esq.runInReplica $ QPerson.findAllDriversByIdsFirstNameAsc merchant.id driverIds (Proxy @Flow)
   let driversNotFound =
         filter (not . (`elem` map ((.id) . (.person)) allDrivers)) driverIds
       limitedDrivers = limitOffset mbLimit mbOffset allDrivers
@@ -256,11 +256,11 @@ driverInfo merchantShortId mbMobileNumber mbMobileCountryCode mbVehicleNumber mb
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
       Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing
+        QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing (Proxy @Flow)
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
     (Nothing, Just vehicleNumber) ->
       Esq.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber)
+        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) (Proxy @Flow)
           >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\" is required"
   buildDriverInfoRes driverDocsInfo
@@ -292,7 +292,7 @@ deleteDriver merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    QPerson.findById personId
+    QPerson.findById personId (Proxy @Flow)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
@@ -301,18 +301,18 @@ deleteDriver merchantShortId reqDriverId = do
 
   unless (driver.role == DP.DRIVER) $ throwError Unauthorized
 
-  rides <- QRide.findOneByDriverId personId
+  rides <- QRide.findOneByDriverId personId (Proxy @Flow)
   unless (isNothing rides) $
     throwError $ InvalidRequest "Unable to delete driver, which have at least one ride"
 
-  driverInformation <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  driverInformation <- QDriverInfo.findById driverId (Proxy @Flow) >>= fromMaybeM DriverInfoNotFound
   when driverInformation.enabled $
     throwError $ InvalidRequest "Driver should be disabled before deletion"
 
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
   Esq.runTransaction $ do
-    QNotificationStatus.deleteByPersonId driverId
+    QNotificationStatus.deleteByPersonId @Flow driverId
     QAllocationEvent.deleteByPersonId driverId
     QBusinessEvent.deleteByPersonId driverId
     QDriverInfo.deleteById driverId
@@ -332,7 +332,7 @@ unlinkVehicle merchantShortId reqDriverId = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    QPerson.findById personId
+    QPerson.findById personId (Proxy @Flow)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
@@ -340,7 +340,7 @@ unlinkVehicle merchantShortId reqDriverId = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   Esq.runTransaction $ do
-    QVehicle.deleteById personId
+    QVehicle.deleteById @Flow personId
     QDriverInfo.updateEnabledState driverId False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   return Success
@@ -353,14 +353,14 @@ updatePhoneNumber merchantShortId reqDriverId req = do
 
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    QPerson.findById personId
+    QPerson.findById personId (Proxy @Flow)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
   phoneNumberHash <- getDbHash req.newPhoneNumber
-  mbLinkedPerson <- QPerson.findByMobileNumber req.newCountryCode phoneNumberHash
+  mbLinkedPerson <- QPerson.findByMobileNumber req.newCountryCode phoneNumberHash (Proxy @Flow)
   whenJust mbLinkedPerson $ \linkedPerson -> do
     if linkedPerson.id == driver.id
       then throwError $ InvalidRequest "Person already have the same mobile number"
@@ -375,7 +375,7 @@ updatePhoneNumber merchantShortId reqDriverId req = do
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
   Esq.runTransaction $ do
-    QPerson.updateMobileNumberAndCode updDriver
+    QPerson.updateMobileNumberAndCode @Flow updDriver
     QR.deleteByPersonId personId
   logTagInfo "dashboard -> updatePhoneNumber : " (show personId)
   pure Success
@@ -388,19 +388,19 @@ addVehicle merchantShortId reqDriverId req = do
 
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    QPerson.findById personId
+    QPerson.findById personId (Proxy @Flow)
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  mbLinkedVehicle <- QVehicle.findById personId
+  mbLinkedVehicle <- QVehicle.findById personId (Proxy @Flow)
   whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
   vehicle <- buildVehicle merchantId personId req
   let updDriver = driver {DP.firstName = req.driverName} :: DP.Person
   Esq.runTransaction $ do
-    QVehicle.create vehicle
+    QVehicle.create @Flow vehicle
     QPerson.updatePersonRec personId updDriver
   logTagInfo "dashboard -> addVehicle : " (show personId)
   pure Success
@@ -447,7 +447,7 @@ updateDriverName merchantShortId reqDriverId req = do
 
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
-    Esq.runInReplica (QPerson.findById personId)
+    Esq.runInReplica (QPerson.findById personId (Proxy @Flow))
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
   -- merchant access checking
@@ -460,7 +460,7 @@ updateDriverName merchantShortId reqDriverId req = do
               }
 
   Esq.runTransaction $ do
-    QPerson.updatePersonRec personId updDriver
+    QPerson.updatePersonRec @Flow personId updDriver
 
   logTagInfo "dashboard -> updateDriverName : " (show personId)
   pure Success

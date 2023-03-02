@@ -22,9 +22,9 @@ import Kernel.Types.Id
 import Storage.Tabular.Quote ()
 import Storage.Tabular.Quote.RentalQuote
 
-findByQuoteId' :: Transactionable m => Id Quote -> DTypeBuilder m (Maybe RentalQuoteT)
-findByQuoteId' quoteId =
-  Esq.findOne' $ do
+findByQuoteId' :: forall m ma. Transactionable ma m => Id Quote -> Proxy ma -> DTypeBuilder m (Maybe RentalQuoteT)
+findByQuoteId' quoteId _ =
+  Esq.findOne' @m @ma $ do
     rentalQuote <- from $ table @RentalQuoteT
     where_ $ rentalQuote ^. RentalQuoteQuoteId ==. val (toKey quoteId)
     return rentalQuote

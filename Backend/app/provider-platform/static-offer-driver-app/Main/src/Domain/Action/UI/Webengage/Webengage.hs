@@ -68,6 +68,7 @@ newtype WebengageRes = WebengageRes
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 callInfobip ::
+  forall m r.
   ( HasFlowEnv m r '["infoBIPCfg" ::: EIF.InfoBIPConfig],
     EncFlow m r,
     EsqDBFlow m r,
@@ -85,7 +86,7 @@ callInfobip req = withTransactionIdLogTag' req.metadata.messageId $ do
   let templetId = req.metadata.indiaDLT.contentTemplateId
   let version = req.version
   let webMsgId = req.metadata.messageId
-  person <- Person.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  person <- Person.findById personId (Proxy @m) >>= fromMaybeM (PersonDoesNotExist personId.getId)
   decPerson <- decrypt person
   mobileNumber <- fromMaybeM (PersonDoesNotExist personId.getId) decPerson.mobileNumber
   countryCode <- fromMaybeM (PersonDoesNotExist personId.getId) decPerson.mobileCountryCode
@@ -93,7 +94,7 @@ callInfobip req = withTransactionIdLogTag' req.metadata.messageId $ do
   let infoMessage = head infoBipRes.messages
   let status = Just infoMessage.status.groupName
   webengage <- buildWebengage version entityId templetId infoMessage.messageId webMsgId personId.getId status
-  runTransaction $ QWeb.create webengage
+  runTransaction $ QWeb.create @m webengage
   return $
     WebengageRes
       { status = "sms_accepted"

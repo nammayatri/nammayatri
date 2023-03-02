@@ -22,7 +22,7 @@ import Kernel.Types.Id
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Quote
 
-create :: Quote -> SqlDB ()
+create :: Quote -> SqlDB m ()
 create quote =
   Esq.withFullEntity quote $ \(quoteT, quoteDetails) -> do
     create' quoteT
@@ -30,15 +30,15 @@ create quote =
       OneWayDetailsT oneWayQuoteT -> create' oneWayQuoteT
       RentalDetailsT (rentalQuoteT, _) -> create' rentalQuoteT
 
-findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Quote]
-findAllByRequestId requestId = Esq.buildDType $ do
-  quoteT <- Esq.findAll' $ do
+findAllByRequestId :: forall m ma. Transactionable ma m => Id SearchRequest -> Proxy ma -> m [Quote]
+findAllByRequestId requestId proxy = Esq.buildDType $ do
+  quoteT <- Esq.findAll' @m @ma $ do
     quote <- from $ table @QuoteT
     where_ $ quote ^. QuoteRequestId ==. val (toKey requestId)
     return quote
-  catMaybes <$> mapM buildFullQuote quoteT
+  catMaybes <$> mapM (`buildFullQuote` proxy) quoteT
 
-findById :: Transactionable m => Id Quote -> m (Maybe Quote)
-findById quoteId = Esq.buildDType $ do
-  quoteT <- Esq.findById' quoteId
-  join <$> mapM buildFullQuote quoteT
+findById :: forall m ma. Transactionable ma m => Id Quote -> Proxy ma -> m (Maybe Quote)
+findById quoteId proxy = Esq.buildDType $ do
+  quoteT <- Esq.findById' @_ @m @ma quoteId
+  join <$> mapM (`buildFullQuote` proxy) quoteT

@@ -18,5 +18,5 @@ import Domain.Types.DiscountTransaction
 import Kernel.Storage.Esqueleto as Esq
 import Storage.Tabular.DiscountTransaction ()
 
-create :: DiscountTransaction -> SqlDB ()
+create :: DiscountTransaction -> SqlDB m ()
 create = Esq.create

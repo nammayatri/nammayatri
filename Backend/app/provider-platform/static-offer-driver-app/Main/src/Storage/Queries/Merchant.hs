@@ -26,33 +26,33 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.Merchant
 
-findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
-findById = Esq.findById
+findById :: forall m ma. Transactionable ma m => Id Merchant -> Proxy ma -> m (Maybe Merchant)
+findById merchantId _ = Esq.findById @m @ma merchantId
 
-findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe Merchant)
-findBySubscriberId subscriberId = Esq.findOne $ do
+findBySubscriberId :: forall m ma. Transactionable ma m => ShortId Subscriber -> Proxy ma -> m (Maybe Merchant)
+findBySubscriberId subscriberId _ = Esq.findOne @m @ma $ do
   org <- from $ table @MerchantT
   where_ $
     org ^. MerchantSubscriberId ==. val (subscriberId.getShortId)
   return org
 
-findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
-findByShortId shortId = Esq.findOne $ do
+findByShortId :: forall m ma. Transactionable ma m => ShortId Merchant -> Proxy ma -> m (Maybe Merchant)
+findByShortId shortId _ = Esq.findOne @m @ma $ do
   org <- from $ table @MerchantT
   where_ $
     org ^. MerchantShortId ==. val (shortId.getShortId)
   return org
 
-loadAllProviders :: Transactionable m => m [Merchant]
-loadAllProviders =
-  Esq.findAll $ do
+loadAllProviders :: forall m ma. Transactionable ma m => Proxy ma -> m [Merchant]
+loadAllProviders _ =
+  Esq.findAll @m @ma $ do
     org <- from $ table @MerchantT
     where_ $
       org ^. MerchantStatus ==. val DM.APPROVED
         &&. org ^. MerchantEnabled
     return org
 
-update :: Merchant -> SqlDB ()
+update :: Merchant -> SqlDB m ()
 update org = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do

@@ -29,18 +29,22 @@ import Kernel.Types.Id
 import Storage.Tabular.FarePolicy.FareProduct
 
 findEnabledByMerchantId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Merchant ->
+  Proxy ma ->
   m [FareProduct]
-findEnabledByMerchantId = findEnabledByMerchantIdAndType Nothing
+findEnabledByMerchantId = findEnabledByMerchantIdAndType @m @ma Nothing
 
 findEnabledByMerchantIdAndType ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Maybe FareProductType ->
   Id Merchant ->
+  Proxy ma ->
   m [FareProduct]
-findEnabledByMerchantIdAndType mbType merchantId =
-  Esq.findAll $ do
+findEnabledByMerchantIdAndType mbType merchantId _ =
+  Esq.findAll @m @ma $ do
     fareProduct <- from $ table @FareProductT
     where_ $
       fareProduct ^. FareProductMerchantId ==. val (toKey merchantId)
@@ -48,16 +52,18 @@ findEnabledByMerchantIdAndType mbType merchantId =
     pure fareProduct
 
 insertIfNotExist ::
+  forall m.
+  Monad m =>
   Id Merchant ->
   FareProductType ->
-  SqlDB ()
+  SqlDB m ()
 insertIfNotExist merchantId typ = do
-  mbFp <- listToMaybe <$> findEnabledByMerchantIdAndType (Just typ) merchantId
+  mbFp <- listToMaybe <$> findEnabledByMerchantIdAndType (Just typ) merchantId (Proxy @m)
   case mbFp of
     Nothing -> insertFareProduct
     Just _ -> pure ()
   where
-    insertFareProduct :: SqlDB ()
+    insertFareProduct :: SqlDB m ()
     insertFareProduct = do
       now <- getCurrentTime
       guid <- Id <$> generateGUIDText
@@ -72,7 +78,7 @@ insertIfNotExist merchantId typ = do
 delete ::
   Id Merchant ->
   FareProductType ->
-  SqlDB ()
+  SqlDB m ()
 delete merchantId fpType = Esq.delete $ do
   fareProduct <- from $ table @FareProductT
   where_ $

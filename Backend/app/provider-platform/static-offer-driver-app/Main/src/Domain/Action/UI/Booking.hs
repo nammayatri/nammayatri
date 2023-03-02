@@ -95,12 +95,13 @@ newtype SetDriverAcceptanceReq = SetDriverAcceptanceReq
 
 type SetDriverAcceptanceRes = APISuccess
 
-bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
+bookingStatus :: forall m r. (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id SRB.Booking -> m SRB.BookingAPIEntity
 bookingStatus bookingId = do
-  booking <- Esq.runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- Esq.runInReplica (QRB.findById bookingId (Proxy @m)) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   buildBookingAPIEntity booking
 
 bookingList ::
+  forall m r.
   (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
   SP.Person ->
   Maybe Integer ->
@@ -109,10 +110,11 @@ bookingList ::
   Maybe SRB.BookingStatus ->
   m BookingListRes
 bookingList person mbLimit mbOffset mbOnlyActive mbBookingStatus = do
-  rbList <- Esq.runInReplica $ QRB.findAllByMerchant person.merchantId mbLimit mbOffset mbOnlyActive mbBookingStatus
+  rbList <- Esq.runInReplica $ QRB.findAllByMerchant person.merchantId mbLimit mbOffset mbOnlyActive mbBookingStatus (Proxy @m)
   BookingListRes <$> traverse buildBookingAPIEntity rbList
 
 bookingCancel ::
+  forall m r.
   (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
   Id SRB.Booking ->
   SP.Person ->
@@ -123,7 +125,7 @@ bookingCancel bookingId admin = do
     QM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   rideReq <- buildRideReq (org.subscriberId)
-  Esq.runTransaction $ RideRequest.create rideReq
+  Esq.runTransaction $ RideRequest.create @m rideReq
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> bookingCancel : ") (show rideReq)
   return Success
   where
@@ -141,15 +143,19 @@ bookingCancel bookingId admin = do
           }
 
 getRideInfo ::
-  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes
+  forall m r.
+  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m) =>
+  Id SRB.Booking ->
+  Id SP.Person ->
+  m GetRideInfoRes
 getRideInfo bookingId personId = do
-  mbNotification <- Esq.runInReplica $ QNotificationStatus.findActiveNotificationByDriverId driverId bookingId
+  mbNotification <- Esq.runInReplica $ QNotificationStatus.findActiveNotificationByDriverId driverId bookingId (Proxy @m)
   case mbNotification of
     Nothing -> return $ GetRideInfoRes Nothing
     Just notification -> do
       let notificationExpiryTime = notification.expiresAt
-      booking <- Esq.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
-      driver <- Esq.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      booking <- Esq.runInReplica $ QRB.findById bookingId (Proxy @m) >>= fromMaybeM (BookingNotFound bookingId.getId)
+      driver <- Esq.runInReplica $ QP.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
       driverLocation <-
         QDrLoc.findById driver.id
           >>= fromMaybeM LocationNotFound
@@ -186,12 +192,17 @@ responseToEventType ACCEPT = AllocationEvent.AcceptedByDriver
 responseToEventType REJECT = AllocationEvent.RejectedByDriver
 
 setDriverAcceptance ::
-  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> Id SP.Person -> SetDriverAcceptanceReq -> m SetDriverAcceptanceRes
+  forall m r.
+  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  Id SRB.Booking ->
+  Id SP.Person ->
+  SetDriverAcceptanceReq ->
+  m SetDriverAcceptanceRes
 setDriverAcceptance bookingId personId req = do
   currentTime <- getCurrentTime
   logTagInfo "setDriverAcceptance" logMessage
   booking <-
-    QRB.findById bookingId
+    QRB.findById bookingId (Proxy @m)
       >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   merchant <-
     QM.findById booking.providerId
@@ -209,7 +220,7 @@ setDriverAcceptance bookingId personId req = do
             info = Just driverResponse
           }
   Esq.runTransaction $ do
-    RideRequest.create rideRequest
+    RideRequest.create @m rideRequest
     AllocationEvent.logAllocationEvent
       (responseToEventType response)
       bookingId
@@ -264,10 +275,10 @@ buildBookingAPIDetails = \case
     let details = RentalDetailsAPIEntity RentalBookingDetailsAPIEntity {..}
     pure (details, descriptions)
 
-buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> m BookingAPIEntity
+buildBookingAPIEntity :: forall m r. (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> m BookingAPIEntity
 buildBookingAPIEntity booking = do
   let rbStatus = booking.status
-  rideList <- mapM buildRideAPIEntity =<< Esq.runInReplica (QRide.findAllRideAPIEntityDataByRBId booking.id)
-  fareBreakups <- Esq.runInReplica $ QFareBreakup.findAllByBookingId booking.id
+  rideList <- mapM buildRideAPIEntity =<< Esq.runInReplica (QRide.findAllRideAPIEntityDataByRBId booking.id (Proxy @m))
+  fareBreakups <- Esq.runInReplica $ QFareBreakup.findAllByBookingId booking.id (Proxy @m)
   (bookingDetails, tripTerms) <- buildBookingAPIDetails booking.bookingDetails
   return $ makeBookingAPIEntity booking rbStatus rideList fareBreakups bookingDetails tripTerms

@@ -23,10 +23,10 @@ import Kernel.Types.Id
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
 
-create :: SearchRequest -> SqlDB ()
+create :: forall m. Monad m => SearchRequest -> SqlDB m ()
 create dsReq = Esq.runTransaction $
   withFullEntity dsReq $ \(sReq, fromLoc, mbToLoc) -> do
-    Esq.create' fromLoc
+    Esq.create' @SearchReqLocationT @m fromLoc
     traverse_ Esq.create' mbToLoc
     Esq.create' sReq
 
@@ -47,17 +47,17 @@ fullSearchRequestTable =
                    s ^. SearchRequestToLocationId ==. mbLoc2 ?. SearchReqLocationTId
                )
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
-findById searchRequestId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
+findById :: forall m ma. Transactionable ma m => Id SearchRequest -> Proxy ma -> m (Maybe SearchRequest)
+findById searchRequestId _ = Esq.buildDType $ do
+  mbFullSearchReqT <- Esq.findOne' @m @ma $ do
     (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
     pure (sReq, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
 
-findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Merchant -> m (Maybe SearchRequest)
-findByMsgIdAndBapIdAndBppId txnId bapId merchantId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
+findByMsgIdAndBapIdAndBppId :: forall m ma. Transactionable ma m => Text -> Text -> Id Merchant -> Proxy ma -> m (Maybe SearchRequest)
+findByMsgIdAndBapIdAndBppId txnId bapId merchantId _ = Esq.buildDType $ do
+  mbFullSearchReqT <- Esq.findOne' @m @ma $ do
     (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $
       sReq ^. SearchRequestMessageId ==. val txnId
