@@ -91,11 +91,11 @@
         "nixpkgs-21_11": "nixpkgs-21_11"
       },
       "locked": {
-        "lastModified": 1677777817,
-        "narHash": "sha256-x4tQuNx4d4lRsi72yR9chei5J1nuLHw1J6fPmK8b1hQ=",
+        "lastModified": 1677779389,
+        "narHash": "sha256-1y6JS4iVDpeIeXr6bQ71k32JJhteSW4FfTBHSDaXgTg=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "f4eb5ab2d0623d7197a41f55411306f3bc01aa02",
+        "rev": "9d6ce9ea07a542fbfd7d8aee709aa12dee5fe4d4",
         "type": "github"
       },
       "original": {
