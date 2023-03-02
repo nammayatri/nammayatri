@@ -30,11 +30,14 @@ module SharedLogic.DriverPool
     getPopupDelay,
     getValidSearchRequestCount,
     removeSearchReqIdFromMap,
+    updateDriverSpeedInRedis,
+    getDriverAverageSpeed,
     PoolCalculationStage (..),
     module Reexport,
   )
 where
 
+import Data.Fixed
 import Data.List (partition)
 import Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
@@ -49,11 +52,13 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
+import SharedLogic.DriverSpeedCalculation (HasSpeedCalculationConfig)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.TransporterConfig as TC
 import qualified Storage.Queries.Person as QP
@@ -339,6 +344,62 @@ getPopupDelay merchantId driverId cancellationRatio cancellationScoreRelatedConf
             then fromMaybe (Seconds 0) cancellationScoreRelatedConfig.popupDelayToAddAsPenalty
             else Seconds 0
       else pure $ Seconds 0
+
+mkDriverLocationUpdatesKey :: Id DM.Merchant -> Id DP.Person -> Text
+mkDriverLocationUpdatesKey mId dId = "driver-offer:DriverPool:mId-" <> mId.getId <> ":dId:" <> dId.getId
+
+updateDriverSpeedInRedis ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    HasSpeedCalculationConfig r
+  ) =>
+  Id DM.Merchant ->
+  Id DP.Person ->
+  LatLong ->
+  UTCTime ->
+  m ()
+updateDriverSpeedInRedis merchantId driverId points timeStamp = Redis.withCrossAppRedis $ do
+  speedCalculationConfig <- asks (.speedCalculationConfig)
+  now <- getCurrentTime
+  let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantId driverId
+  locationUpdatesList :: [(LatLong, UTCTime)] <-
+    sortOn (Down . snd)
+      . ((points, timeStamp) :)
+      . filter
+        ( \(_, time) ->
+            time > addUTCTime (fromIntegral $ (-60) * speedCalculationConfig.locationUpdateSampleTime.getMinutes) now
+        )
+      . concat
+      <$> Redis.safeGet driverLocationUpdatesKey
+  Redis.set driverLocationUpdatesKey locationUpdatesList
+
+getDriverAverageSpeed ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    HasSpeedCalculationConfig r
+  ) =>
+  Id DM.Merchant ->
+  Id DP.Person ->
+  m (Maybe Double)
+getDriverAverageSpeed merchantId driverId = Redis.withCrossAppRedis $ do
+  speedCalculationConfig <- asks (.speedCalculationConfig)
+  let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantId driverId
+  locationUpdatesList :: [(LatLong, UTCTime)] <- concat <$> Redis.safeGet driverLocationUpdatesKey
+  let locationUpdatesCount = length locationUpdatesList
+  if locationUpdatesCount > speedCalculationConfig.minLocationUpdates
+    then do
+      let locationUpdatesPairs = zip (drop 1 locationUpdatesList) (take (locationUpdatesCount - 1) locationUpdatesList)
+          (totalDistanceTravelled, totalTimeTaken) :: (HighPrecMeters, Centi) =
+            foldr
+              ( \((locationA, timeA), (locationB, timeB)) (accDis, accTime) -> do
+                  let distance = CD.distanceBetweenInMeters locationB locationA
+                      timeTaken = fromInteger . floor $ diffUTCTime timeB timeA
+                  (accDis + distance, accTime + timeTaken)
+              )
+              (0, 0)
+              locationUpdatesPairs
+      pure . Just . fromRational . toRational $ totalDistanceTravelled.getHighPrecMeters.getCenti / totalTimeTaken
+    else pure Nothing
 
 calculateDriverPool ::
   ( EncFlow m r,
