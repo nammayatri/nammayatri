@@ -61,10 +61,13 @@ mkPersist
       description Text Maybe
       merchantId SMerchant.MerchantTId
       whatsappNotificationEnrollStatus OptApiMethods Maybe
-      createdAt UTCTime
-      updatedAt UTCTime
+      hasTakenRide Bool
       bundleVersion Text Maybe
       clientVersion Text Maybe
+      referralCode Text Maybe
+      referredAt UTCTime Maybe
+      createdAt UTCTime
+      updatedAt UTCTime
       Primary id
       deriving Generic
     |]

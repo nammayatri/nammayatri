@@ -24,6 +24,7 @@ import qualified Domain.Types.FareParameters as DFare
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.RiderDetails as RD
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
@@ -39,6 +40,7 @@ import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.FareParameters as QFare
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
@@ -48,10 +50,15 @@ endRideTransaction ::
   Id SRB.Booking ->
   Ride.Ride ->
   Maybe DFare.FareParameters ->
+  Maybe (Id RD.RiderDetails) ->
   m ()
-endRideTransaction driverId bookingId ride mbFareParams = do
+endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   Esq.runTransaction $ do
+    whenJust mbRiderDetails $ \riderDetails ->
+      unless (riderDetails.hasTakenRide) $
+        QRD.updateHasTakenRide riderDetails.id
     whenJust mbFareParams QFare.create
     QRide.updateAll ride.id ride
     QRide.updateStatus ride.id Ride.COMPLETED

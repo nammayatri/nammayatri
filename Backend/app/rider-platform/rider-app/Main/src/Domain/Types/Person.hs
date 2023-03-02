@@ -94,6 +94,9 @@ data PersonE e = Person
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
+    referralCode :: Maybe Text,
+    referredAt :: Maybe UTCTime,
+    hasTakenRide :: Bool,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version
   }
