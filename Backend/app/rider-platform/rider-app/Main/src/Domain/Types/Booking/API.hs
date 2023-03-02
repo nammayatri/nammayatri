@@ -118,9 +118,9 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups = do
               estimatedDistance = distance
             }
 
-buildBookingAPIEntity :: EsqDBReplicaFlow m r => Booking -> m BookingAPIEntity
+buildBookingAPIEntity :: forall m r. EsqDBReplicaFlow m r => Booking -> m BookingAPIEntity
 buildBookingAPIEntity booking = do
-  mbRide <- runInReplica $ QRide.findActiveByRBId booking.id
-  rideList <- runInReplica $ QRide.findAllByRBId booking.id
-  fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
+  mbRide <- runInReplica $ QRide.findActiveByRBId booking.id (Proxy @m)
+  rideList <- runInReplica $ QRide.findAllByRBId booking.id (Proxy @m)
+  fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id (Proxy @m)
   return $ makeBookingAPIEntity booking mbRide rideList fareBreakups

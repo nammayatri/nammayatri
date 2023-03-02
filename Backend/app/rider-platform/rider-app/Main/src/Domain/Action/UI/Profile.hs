@@ -43,19 +43,19 @@ data UpdateProfileReq = UpdateProfileReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonDetails :: (EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> m ProfileRes
+getPersonDetails :: forall m r. (EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> m ProfileRes
 getPersonDetails personId = do
-  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- runInReplica $ QPerson.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
 
-updatePerson :: (EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
+updatePerson :: forall m r. (EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
 updatePerson personId req = do
-  mPerson <- join <$> QPerson.findByEmail `mapM` req.email
+  mPerson <- join <$> (`QPerson.findByEmail` (Proxy @m)) `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
   runTransaction $
-    QPerson.updatePersonalInfo
+    QPerson.updatePersonalInfo @m
       personId
       (req.firstName)
       (req.middleName)

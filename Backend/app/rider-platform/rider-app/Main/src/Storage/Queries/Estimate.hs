@@ -27,14 +27,14 @@ import Storage.Tabular.Estimate
 import Storage.Tabular.TripTerms
 
 -- order of creating entites make sense!
-create :: Estimate -> SqlDB ()
+create :: Estimate -> SqlDB m ()
 create estimate =
   Esq.withFullEntity estimate $ \(estimateT, estimateBreakupT, mbTripTermsT) -> do
     traverse_ Esq.create' mbTripTermsT
     Esq.create' estimateT
     traverse_ Esq.create' estimateBreakupT
 
-createMany :: [Estimate] -> SqlDB ()
+createMany :: [Estimate] -> SqlDB m ()
 createMany estimates =
   Esq.withFullEntities estimates $ \list -> do
     let estimateTs = map fst3 list
@@ -56,26 +56,26 @@ fullEstimateTable =
                    estimate ^. EstimateTripTermsId ==. mbTripTerms ?. TripTermsTId
                )
 
-findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
-findById estimateId = Esq.buildDType $ do
-  mbFullEstimateT <- Esq.findOne' $ do
+findById :: forall m ma. Transactionable ma m => Id Estimate -> Proxy ma -> m (Maybe Estimate)
+findById estimateId proxy = Esq.buildDType $ do
+  mbFullEstimateT <- Esq.findOne' @m @ma $ do
     (estimate :& mbTripTerms) <- from fullEstimateTable
     where_ $ estimate ^. EstimateTId ==. val (toKey estimateId)
     pure (estimate, mbTripTerms)
-  mapM buildFullEstimate mbFullEstimateT
+  mapM (`buildFullEstimate` proxy) mbFullEstimateT
 
-findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Estimate]
-findAllByRequestId searchRequestId = Esq.buildDType $ do
-  fullEstimateTs <- Esq.findAll' $ do
+findAllByRequestId :: forall m ma. Transactionable ma m => Id SearchRequest -> Proxy ma -> m [Estimate]
+findAllByRequestId searchRequestId proxy = Esq.buildDType $ do
+  fullEstimateTs <- Esq.findAll' @m @ma $ do
     (estimate :& mbTripTerms) <- from fullEstimateTable
     where_ $ estimate ^. EstimateRequestId ==. val (toKey searchRequestId)
     pure (estimate, mbTripTerms)
-  mapM buildFullEstimate fullEstimateTs
+  mapM (`buildFullEstimate` proxy) fullEstimateTs
 
 updateStatus ::
   Id Estimate ->
   Maybe EstimateStatus ->
-  SqlDB ()
+  SqlDB m ()
 updateStatus estimateId status_ = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -87,11 +87,13 @@ updateStatus estimateId status_ = do
     where_ $ tbl ^. EstimateId ==. val (getId estimateId)
 
 getStatus ::
-  (Transactionable m) =>
+  forall m ma.
+  Transactionable ma m =>
   Id Estimate ->
+  Proxy ma ->
   m (Maybe (Maybe EstimateStatus))
-getStatus estimateId = do
-  findOne $ do
+getStatus estimateId _ = do
+  findOne @m @ma $ do
     estimateT <- from $ table @EstimateT
     where_ $
       estimateT ^. EstimateId ==. val (getId estimateId)
@@ -100,7 +102,7 @@ getStatus estimateId = do
 updateStatusbyRequestId ::
   Id SearchRequest ->
   Maybe EstimateStatus ->
-  SqlDB ()
+  SqlDB m ()
 updateStatusbyRequestId searchId status_ = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -111,11 +113,11 @@ updateStatusbyRequestId searchId status_ = do
       ]
     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
 
-findOneEstimateByRequestId :: Transactionable m => Id SearchRequest -> m (Maybe Estimate)
-findOneEstimateByRequestId searchId = Esq.buildDType $ do
-  mbFullEstimateT <- Esq.findOne' $ do
+findOneEstimateByRequestId :: forall m ma. Transactionable ma m => Id SearchRequest -> Proxy ma -> m (Maybe Estimate)
+findOneEstimateByRequestId searchId proxy = Esq.buildDType $ do
+  mbFullEstimateT <- Esq.findOne' @m @ma $ do
     (estimate :& mbTripTerms) <- from fullEstimateTable
     where_ $ estimate ^. EstimateRequestId ==. val (toKey searchId)
     limit 1
     pure (estimate, mbTripTerms)
-  mapM buildFullEstimate mbFullEstimateT
+  mapM (`buildFullEstimate` proxy) mbFullEstimateT

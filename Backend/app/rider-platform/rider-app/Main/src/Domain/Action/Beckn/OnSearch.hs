@@ -135,7 +135,7 @@ onSearchService ::
   DOnSearchReq ->
   Flow ()
 onSearchService transactionId registryUrl DOnSearchReq {..} = do
-  _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+  _searchRequest <- QSearchReq.findById requestId (Proxy @Flow) >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findById _searchRequest.merchantId >>= fromMaybeM (MerchantNotFound _searchRequest.merchantId.getId)
   Metrics.finishSearchMetrics merchant.name transactionId
@@ -145,7 +145,7 @@ onSearchService transactionId registryUrl DOnSearchReq {..} = do
   estimates <- traverse (buildEstimate requestId providerInfo now) estimatesInfo
   quotes <- traverse (buildQuote requestId providerInfo now) quotesInfo
   DB.runTransaction do
-    QEstimate.createMany estimates
+    QEstimate.createMany @Flow estimates
     QQuote.createMany quotes
     QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
 

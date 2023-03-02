@@ -22,21 +22,23 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.Person.PersonFlowStatus
 
-create :: DPFS.PersonFlowStatus -> SqlDB ()
+create :: DPFS.PersonFlowStatus -> SqlDB m ()
 create = Esq.create
 
 getStatus ::
-  (Transactionable m) =>
+  forall m ma.
+  Transactionable ma m =>
   Id Person ->
+  Proxy ma ->
   m (Maybe DPFS.FlowStatus)
-getStatus personId = do
-  findOne $ do
+getStatus personId _ = do
+  findOne @m @ma $ do
     personFlowStatus <- from $ table @PersonFlowStatusT
     where_ $
       personFlowStatus ^. PersonFlowStatusTId ==. val (toKey personId)
     return $ personFlowStatus ^. PersonFlowStatusFlowStatus
 
-updateStatus :: Id Person -> DPFS.FlowStatus -> SqlDB ()
+updateStatus :: Id Person -> DPFS.FlowStatus -> SqlDB m ()
 updateStatus personId flowStatus = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -47,13 +49,13 @@ updateStatus personId flowStatus = do
       ]
     where_ $ tbl ^. PersonFlowStatusTId ==. val (toKey personId)
 
-deleteByPersonId :: Id Person -> SqlDB ()
+deleteByPersonId :: Id Person -> SqlDB m ()
 deleteByPersonId personId = do
   Esq.delete $ do
     personFlowStatus <- from $ table @PersonFlowStatusT
     where_ (personFlowStatus ^. PersonFlowStatusTId ==. val (toKey personId))
 
-updateToIdleMultiple :: [Id Person] -> UTCTime -> SqlDB ()
+updateToIdleMultiple :: [Id Person] -> UTCTime -> SqlDB m ()
 updateToIdleMultiple personIds now = do
   Esq.update $ \tbl -> do
     set

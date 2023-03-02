@@ -57,16 +57,16 @@ data OnSearchStationReq = OnSearchStationReq
   }
   deriving (Generic)
 
-handler :: (EsqDBFlow m r, MonadProducer Kafka.PublicTransportQuoteList m) => OnSearchReq -> m ()
+handler :: forall m r. (EsqDBFlow m r, MonadProducer Kafka.PublicTransportQuoteList m) => OnSearchReq -> m ()
 handler (OnSearchReq searchId quotes transportLocations) = do
-  searchRequest <- QSearch.findById searchId >>= fromMaybeM (SearchRequestDoesNotExist searchId.getId)
+  searchRequest <- QSearch.findById searchId (Proxy @m) >>= fromMaybeM (SearchRequestDoesNotExist searchId.getId)
   publicTransportStations <- forM transportLocations $ \publicTransportStation -> do
-    QStation.findByStationCode publicTransportStation.bppLocationId >>= maybe (createPublicTransportLocation publicTransportStation) return
+    QStation.findByStationCode publicTransportStation.bppLocationId (Proxy @m) >>= maybe (createPublicTransportLocation publicTransportStation) return
   _quotes <- forM quotes $ \quote -> do
     buildQuote publicTransportStations quote
   Esq.runTransaction $ do
-    traverse_ QQuote.create _quotes
-  quoteAggregates <- QQuote.findAllAggregatesBySearchId searchRequest.id
+    traverse_ (QQuote.create @m) _quotes
+  quoteAggregates <- QQuote.findAllAggregatesBySearchId searchRequest.id (Proxy @m)
   sendToKafka searchRequest.id quoteAggregates
 
 sendToKafka :: MonadProducer Kafka.PublicTransportQuoteList m => Id DSearch.Search -> [(DQuote.Quote, DStation.TransportStation, DStation.TransportStation)] -> m ()
@@ -109,10 +109,10 @@ buildQuote transportStations quote = do
         routeCode = quote.routeCode
       }
 
-createPublicTransportLocation :: EsqDBFlow m r => OnSearchStationReq -> m DStation.TransportStation
+createPublicTransportLocation :: forall m r. EsqDBFlow m r => OnSearchStationReq -> m DStation.TransportStation
 createPublicTransportLocation publicTransportLocation = do
   publicTransportStation <- buildPublicTransportLocation publicTransportLocation
-  Esq.runTransaction $ QStation.create publicTransportStation
+  Esq.runTransaction $ QStation.create @m publicTransportStation
   pure publicTransportStation
 
 buildPublicTransportLocation :: MonadGuid m => OnSearchStationReq -> m DStation.TransportStation

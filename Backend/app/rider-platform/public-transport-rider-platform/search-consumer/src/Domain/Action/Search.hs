@@ -33,11 +33,11 @@ data SearchMessage = SearchMessage
     toDate :: UTCTime
   }
 
-search :: EsqDBFlow m r => SearchReq -> m SearchMessage
+search :: forall m r. EsqDBFlow m r => SearchReq -> m SearchMessage
 search req = do
   now <- getCurrentTime
   let searchRequest = makeSearchRequest now
-  _ <- Esq.runTransaction $ QSearch.create searchRequest
+  _ <- Esq.runTransaction $ QSearch.create @m searchRequest
   let searchMessage =
         SearchMessage
           { searchId = searchRequest.id,

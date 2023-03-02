@@ -19,9 +19,9 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Storage.Tabular.CancellationReason
 
-findAll :: Transactionable m => CancellationStage -> m [CancellationReason]
-findAll cancStage =
-  Esq.findAll $ do
+findAll :: forall m ma. Transactionable ma m => CancellationStage -> Proxy ma -> m [CancellationReason]
+findAll cancStage _ =
+  Esq.findAll @m @ma $ do
     cancellationReason <- from $ table @CancellationReasonT
     where_ $
       cancellationReason ^. CancellationReasonEnabled

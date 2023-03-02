@@ -38,6 +38,7 @@ import qualified Tools.Notifications as Notify
 type GetDriverLocRes = MapSearch.LatLong
 
 getDriverLoc ::
+  forall m r.
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
@@ -49,12 +50,12 @@ getDriverLoc ::
   Id SPerson.Person ->
   m GetDriverLocRes
 getDriverLoc rideId personId = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- QRide.findById rideId (Proxy @m) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
     $ throwError $ RideInvalidStatus "Cannot track this ride"
   res <- CallBPP.callGetDriverLocation ride
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- QRB.findById ride.bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let fromLocation = booking.fromLocation
   driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
   driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)

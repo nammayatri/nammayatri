@@ -63,9 +63,9 @@ data CancelSearchRes = CancelSearchRes
     sendToBpp :: Bool
   }
 
-cancel :: (EncFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id Person.Person -> CancelReq -> m CancelRes
+cancel :: forall m r. (EncFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id Person.Person -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
-  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- QRB.findById bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   when (booking.status == SRB.CANCELLED) $ throwError (BookingInvalidStatus "This booking is already cancelled")
   canCancelBooking <- isBookingCancellable booking
   unless canCancelBooking $
@@ -73,7 +73,7 @@ cancel bookingId _ req = do
   when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
   cancellationReason <- buildBookingCancelationReason
-  DB.runTransaction $ QBCR.upsert cancellationReason
+  DB.runTransaction $ QBCR.upsert @m cancellationReason
   return $
     CancelRes
       { bppBookingId = bppBookingId,
@@ -95,34 +95,35 @@ cancel bookingId _ req = do
             ..
           }
 
-isBookingCancellable :: EsqDBFlow m r => SRB.Booking -> m Bool
+isBookingCancellable :: forall m r. EsqDBFlow m r => SRB.Booking -> m Bool
 isBookingCancellable booking
   | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT] = pure True
   | booking.status == SRB.TRIP_ASSIGNED = do
-    ride <- QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
+    ride <- QR.findActiveByRBId booking.id (Proxy @m) >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
     pure (ride.status == Ride.NEW)
   | otherwise = pure False
 
 cancelSearch ::
+  forall m r.
   (EsqDBFlow m r) =>
   Id Person.Person ->
   Id DEstimate.Estimate ->
   m CancelSearchRes
 cancelSearch personId estimateId = do
-  estStatus <- QEstimate.getStatus estimateId >>= fromMaybeM (EstimateStatusDoesNotExist estimateId.getId)
+  estStatus <- QEstimate.getStatus estimateId (Proxy @m) >>= fromMaybeM (EstimateStatusDoesNotExist estimateId.getId)
   let sendToBpp = estStatus /= Just DEstimate.NEW
   if estStatus == Just DEstimate.GOT_DRIVER_QUOTE
     then Esq.runTransaction $ do
-      Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
+      QPFS.updateStatus @m personId DPFS.IDLE
       QEstimate.updateStatus estimateId $ Just DEstimate.DRIVER_QUOTE_CANCELLED
     else do
       Esq.runTransaction $ do
-        Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
+        QPFS.updateStatus @m personId DPFS.IDLE
         QEstimate.updateStatus estimateId $ Just DEstimate.CANCELLED
   buildCancelReq estimateId sendToBpp
   where
     buildCancelReq estId sendToBpp = do
-      estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+      estimate <- QEstimate.findById estimateId (Proxy @m) >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
       let searchRequestId = estimate.requestId
       pure
         CancelSearchRes

@@ -25,13 +25,13 @@ import Kernel.Types.Id
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Ride as Ride
 
-create :: Ride -> SqlDB ()
+create :: Ride -> SqlDB m ()
 create = Esq.create
 
 updateStatus ::
   Id Ride ->
   RideStatus ->
-  SqlDB ()
+  SqlDB m ()
 updateStatus rideId status_ = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -45,7 +45,7 @@ updateStatus rideId status_ = do
 updateTrackingUrl ::
   Id Ride ->
   BaseUrl ->
-  SqlDB ()
+  SqlDB m ()
 updateTrackingUrl rideId url = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -59,7 +59,7 @@ updateTrackingUrl rideId url = do
 updateRideRating ::
   Id Ride ->
   Int ->
-  SqlDB ()
+  SqlDB m ()
 updateRideRating rideId rideRating = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -70,17 +70,17 @@ updateRideRating rideId rideRating = do
       ]
     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-findById :: Transactionable m => Id Ride -> m (Maybe Ride)
-findById = Esq.findById
+findById :: forall m ma. Transactionable ma m => Id Ride -> Proxy ma -> m (Maybe Ride)
+findById rideId _ = Esq.findById @m @ma rideId
 
-findByBPPRideId :: Transactionable m => Id BPPRide -> m (Maybe Ride)
-findByBPPRideId bppRideId_ =
-  findOne $ do
+findByBPPRideId :: forall m ma. Transactionable ma m => Id BPPRide -> Proxy ma -> m (Maybe Ride)
+findByBPPRideId bppRideId_ _ =
+  findOne @m @ma $ do
     ride <- from $ table @RideT
     where_ $ ride ^. RideBppRideId ==. val (getId bppRideId_)
     return ride
 
-updateMultiple :: Id Ride -> Ride -> SqlDB ()
+updateMultiple :: Id Ride -> Ride -> SqlDB m ()
 updateMultiple rideId ride = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -96,24 +96,24 @@ updateMultiple rideId ride = do
       ]
     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
-findActiveByRBId rbId =
-  findOne $ do
+findActiveByRBId :: forall m ma. Transactionable ma m => Id Booking -> Proxy ma -> m (Maybe Ride)
+findActiveByRBId rbId _ =
+  findOne @m @ma $ do
     ride <- from $ table @RideT
     where_ $
       ride ^. RideBookingId ==. val (toKey rbId)
         &&. ride ^. RideStatus !=. val CANCELLED
     return ride
 
-findAllByRBId :: Transactionable m => Id Booking -> m [Ride]
-findAllByRBId bookingId =
-  findAll $ do
+findAllByRBId :: forall m ma. Transactionable ma m => Id Booking -> Proxy ma -> m [Ride]
+findAllByRBId bookingId _ =
+  findAll @m @ma $ do
     ride <- from $ table @RideT
     where_ $ ride ^. RideBookingId ==. val (toKey bookingId)
     orderBy [desc $ ride ^. RideCreatedAt]
     return ride
 
-updateDriverArrival :: Id Ride -> SqlDB ()
+updateDriverArrival :: Id Ride -> SqlDB m ()
 updateDriverArrival rideId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -133,9 +133,9 @@ data StuckRideItem = StuckRideItem
     riderId :: Id Person
   }
 
-findStuckRideItems :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [StuckRideItem]
-findStuckRideItems merchantId bookingIds now = do
-  res <- Esq.findAll $ do
+findStuckRideItems :: forall m ma. Transactionable ma m => Id Merchant -> [Id Booking] -> UTCTime -> Proxy ma -> m [StuckRideItem]
+findStuckRideItems merchantId bookingIds now _ = do
+  res <- Esq.findAll @m @ma $ do
     ride :& booking <-
       from $
         table @RideT
@@ -152,7 +152,7 @@ findStuckRideItems merchantId bookingIds now = do
   where
     mkStuckRideItem (rideId, bookingId, riderId) = StuckRideItem {..}
 
-cancelRides :: [Id Ride] -> UTCTime -> SqlDB ()
+cancelRides :: [Id Ride] -> UTCTime -> SqlDB m ()
 cancelRides rideIds now = do
   Esq.update $ \tbl -> do
     set

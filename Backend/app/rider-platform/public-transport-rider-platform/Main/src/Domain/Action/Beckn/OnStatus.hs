@@ -33,10 +33,10 @@ data OnStatusReq = OnStatusReq
   }
   deriving (Show, Generic, PrettyShow)
 
-handler :: EsqDBFlow m r => OnStatusReq -> m ()
+handler :: forall m r. EsqDBFlow m r => OnStatusReq -> m ()
 handler OnStatusReq {..} = do
-  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
-  paymentDetails <- QPaymentTransaction.findByBookingId booking.id >>= fromMaybeM (PaymentDetailsNotFound booking.id.getId)
+  booking <- QBooking.findById bookingId (Proxy @m) >>= fromMaybeM (BookingNotFound bookingId.getId)
+  paymentDetails <- QPaymentTransaction.findByBookingId booking.id (Proxy @m) >>= fromMaybeM (PaymentDetailsNotFound booking.id.getId)
   runTransaction $ do
-    QBooking.updateStatus booking bookingStatus
+    QBooking.updateStatus @m booking bookingStatus
     QPaymentTransaction.updateTxnDetails paymentDetails.id transactionStatus paymentStatus

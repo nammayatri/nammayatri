@@ -35,14 +35,14 @@ data OnTrackReq = OnTrackReq
     trackUrl :: BaseUrl
   }
 
-onTrack :: (CacheFlow m r, EsqDBFlow m r) => BaseUrl -> OnTrackReq -> m ()
+onTrack :: forall m r. (CacheFlow m r, EsqDBFlow m r) => BaseUrl -> OnTrackReq -> m ()
 onTrack registryUrl req = do
-  ride <- QRide.findByBPPRideId req.bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId:" <> req.bppRideId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  ride <- QRide.findByBPPRideId req.bppRideId (Proxy @m) >>= fromMaybeM (RideDoesNotExist $ "BppRideId:" <> req.bppRideId.getId)
+  booking <- QRB.findById ride.bookingId (Proxy @m) >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
 
   DB.runTransaction $ do
-    QRide.updateTrackingUrl ride.id req.trackUrl
+    QRide.updateTrackingUrl @m ride.id req.trackUrl

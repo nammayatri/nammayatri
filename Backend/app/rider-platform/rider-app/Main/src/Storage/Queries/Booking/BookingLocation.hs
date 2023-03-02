@@ -22,7 +22,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.Booking.BookingLocation
 
-updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
+updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB m ()
 updateAddress blId LocationAddress {..} = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do

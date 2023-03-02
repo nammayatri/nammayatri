@@ -23,10 +23,10 @@ import Kernel.Types.Id
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
 
-create :: SearchRequest -> SqlDB ()
+create :: forall m. Monad m => SearchRequest -> SqlDB m ()
 create dsReq = Esq.runTransaction $
   withFullEntity dsReq $ \(sReq, fromLoc, mbToLoc) -> do
-    Esq.create' fromLoc
+    Esq.create' @SearchReqLocationT @m fromLoc
     traverse_ Esq.create' mbToLoc
     Esq.create' sReq
 
@@ -47,17 +47,17 @@ fullSearchRequestTable =
                    s ^. SearchRequestToLocationId ==. mbLoc2 ?. SearchReqLocationTId
                )
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
-findById searchRequestId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
+findById :: forall m ma. Transactionable ma m => Id SearchRequest -> Proxy ma -> m (Maybe SearchRequest)
+findById searchRequestId _ = Esq.buildDType $ do
+  mbFullSearchReqT <- Esq.findOne' @m @ma $ do
     (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
     pure (sReq, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
 
-findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
-findByPersonId personId searchRequestId = Esq.buildDType $ do
-  mbFullSearchReqT <- Esq.findOne' $ do
+findByPersonId :: forall m ma. Transactionable ma m => Id Person -> Id SearchRequest -> Proxy ma -> m (Maybe SearchRequest)
+findByPersonId personId searchRequestId _ = Esq.buildDType $ do
+  mbFullSearchReqT <- Esq.findOne' @m @ma $ do
     (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $
       searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
@@ -65,9 +65,9 @@ findByPersonId personId searchRequestId = Esq.buildDType $ do
     return (searchRequest, sFromLoc, mbSToLoc)
   pure $ extractSolidType @SearchRequest <$> mbFullSearchReqT
 
-findAllByPerson :: Transactionable m => Id Person -> m [SearchRequest]
-findAllByPerson perId = Esq.buildDType $ do
-  fullSearchRequestsT <- Esq.findAll' $ do
+findAllByPerson :: forall m ma. Transactionable ma m => Id Person -> Proxy ma -> m [SearchRequest]
+findAllByPerson perId _ = Esq.buildDType $ do
+  fullSearchRequestsT <- Esq.findAll' @m @ma $ do
     (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $
       searchRequest ^. SearchRequestRiderId ==. val (toKey perId)

@@ -25,10 +25,10 @@ import qualified Storage.Queries.PaymentTransaction as QPT
 import qualified Storage.Queries.TransportStation as QTransportStation
 import Tools.Error
 
-status :: EsqDBReplicaFlow m r => Id DBooking.Booking -> m DBooking.BookingAPIEntity
+status :: forall m r. EsqDBReplicaFlow m r => Id DBooking.Booking -> m DBooking.BookingAPIEntity
 status bookingId = do
-  booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  departureStation <- runInReplica $ QTransportStation.findById booking.departureStationId >>= fromMaybeM TransportStationNotFound
-  arrivalStation <- runInReplica $ QTransportStation.findById booking.arrivalStationId >>= fromMaybeM TransportStationNotFound
-  paymentTrans <- runInReplica $ QPT.findByBookingId bookingId
+  booking <- runInReplica $ QBooking.findById bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  departureStation <- runInReplica $ QTransportStation.findById booking.departureStationId (Proxy @m) >>= fromMaybeM TransportStationNotFound
+  arrivalStation <- runInReplica $ QTransportStation.findById booking.arrivalStationId (Proxy @m) >>= fromMaybeM TransportStationNotFound
+  paymentTrans <- runInReplica $ QPT.findByBookingId bookingId (Proxy @m)
   return $ DBooking.makeBookingAPIEntity booking departureStation arrivalStation paymentTrans

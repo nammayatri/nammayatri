@@ -33,11 +33,11 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.MerchantServiceUsageConfig as Queries
 
-findByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
+findByMerchantId :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe MerchantServiceUsageConfig)
 findByMerchantId id =
   Hedis.safeGet (makeMerchantIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig a
-    Nothing -> flip whenJust cacheMerchantServiceUsageConfig /=<< Queries.findByMerchantId id
+    Nothing -> flip whenJust cacheMerchantServiceUsageConfig /=<< Queries.findByMerchantId id (Proxy @m)
 
 cacheMerchantServiceUsageConfig :: (CacheFlow m r) => MerchantServiceUsageConfig -> m ()
 cacheMerchantServiceUsageConfig merchantServiceUsageConfig = do
@@ -54,6 +54,9 @@ clearCache merchantId = do
   Hedis.del (makeMerchantIdKey merchantId)
 
 updateMerchantServiceUsageConfig ::
+  Hedis.HedisFlow m r =>
   MerchantServiceUsageConfig ->
-  Esq.SqlDB ()
-updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig
+  Esq.SqlDB m ()
+updateMerchantServiceUsageConfig merchantServiceUsageConfig = do
+  Queries.updateMerchantServiceUsageConfig merchantServiceUsageConfig
+  Esq.finalize $ clearCache merchantServiceUsageConfig.merchantId

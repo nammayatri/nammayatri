@@ -21,5 +21,5 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.RentalSlab
 
-findById' :: (MonadThrow m, Log m, Transactionable m) => Id RentalSlab -> DTypeBuilder m (Maybe RentalSlabT)
-findById' = Esq.findById'
+findById' :: forall m ma. (MonadThrow m, Log m, Transactionable ma m) => Id RentalSlab -> Proxy ma -> DTypeBuilder m (Maybe RentalSlabT)
+findById' rentSlabId _ = Esq.findById' @RentalSlabT @m @ma rentSlabId

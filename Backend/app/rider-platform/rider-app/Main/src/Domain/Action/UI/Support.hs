@@ -63,12 +63,12 @@ validateSendIssueReq SendIssueReq {..} =
 
 type SendIssueRes = APISuccess
 
-sendIssue :: EsqDBFlow m r => Id Person.Person -> SendIssueReq -> m SendIssueRes
+sendIssue :: forall m r. EsqDBFlow m r => Id Person.Person -> SendIssueReq -> m SendIssueRes
 sendIssue personId request@SendIssueReq {..} = do
   runRequestValidation validateSendIssueReq request
   newIssue <- buildDBIssue personId request
   runTransaction $
-    Queries.insertIssue newIssue
+    Queries.insertIssue @m newIssue
   return APISuccess.Success
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> m DIssue.Issue

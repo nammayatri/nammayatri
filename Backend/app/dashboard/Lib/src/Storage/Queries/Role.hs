@@ -25,13 +25,13 @@ create :: Role -> SqlDB ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  Transactionable ma m =>
   Id Role ->
   m (Maybe Role)
 findById = Esq.findById
 
 findByName ::
-  Transactionable m =>
+  Transactionable ma m =>
   Text ->
   m (Maybe Role)
 findByName name = findOne $ do
@@ -41,7 +41,7 @@ findByName name = findOne $ do
   return role
 
 findAllByLimitOffset ::
-  Transactionable m =>
+  Transactionable ma m =>
   Maybe Integer ->
   Maybe Integer ->
   m [Role]
@@ -56,7 +56,7 @@ findAllByLimitOffset mbLimit mbOffset = do
     pure role
 
 findAllWithLimitOffset ::
-  Transactionable m =>
+  Transactionable ma m =>
   Maybe Integer ->
   Maybe Integer ->
   Maybe Text ->

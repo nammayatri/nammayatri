@@ -27,24 +27,28 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Storage.Tabular.Person
 
-create :: Person -> SqlDB ()
+create :: Person -> SqlDB m ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Person ->
+  Proxy ma ->
   m (Maybe Person)
-findById = Esq.findById
+findById personId _ = Esq.findById @m @ma personId
 
 findByEmailAndPassword ::
-  (Transactionable m, EncFlow m r) =>
+  forall m ma r.
+  (Transactionable ma m, EncFlow m r) =>
   Text ->
   Text ->
+  Proxy ma ->
   m (Maybe Person)
-findByEmailAndPassword email_ password = do
+findByEmailAndPassword email_ password _ = do
   emailDbHash <- getDbHash email_
   passwordDbHash <- getDbHash password
-  findOne $ do
+  findOne @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonEmailHash ==. val (Just emailDbHash)
@@ -52,26 +56,30 @@ findByEmailAndPassword email_ password = do
     return person
 
 findByEmail ::
-  (Transactionable m, EncFlow m r) =>
+  forall m ma r.
+  (Transactionable ma m, EncFlow m r) =>
   Text ->
+  Proxy ma ->
   m (Maybe Person)
-findByEmail email_ = do
+findByEmail email_ _ = do
   emailDbHash <- getDbHash email_
-  findOne $ do
+  findOne @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonEmailHash ==. val (Just emailDbHash)
     return person
 
 findByRoleAndMobileNumberAndMerchantId ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Role ->
   Text ->
   DbHash ->
   Id Merchant ->
+  Proxy ma ->
   m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash merchantId = do
-  findOne $ do
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash merchantId _ = do
+  findOne @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonRole ==. val role_
@@ -80,9 +88,9 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash mercha
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
-findByRoleAndMobileNumberAndMerchantIdWithoutCC :: Transactionable m => Role -> DbHash -> Id Merchant -> m (Maybe Person)
-findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash merchantId = do
-  findOne $ do
+findByRoleAndMobileNumberAndMerchantIdWithoutCC :: forall m ma. Transactionable ma m => Role -> DbHash -> Id Merchant -> Proxy ma -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash merchantId _ = do
+  findOne @m @ma $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonRole ==. val role_
@@ -90,7 +98,7 @@ findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumberHash merchantI
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
-updateMultiple :: Id Person -> Person -> SqlDB ()
+updateMultiple :: Id Person -> Person -> SqlDB m ()
 updateMultiple personId person = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -111,7 +119,7 @@ updateMultiple personId person = do
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB ()
+updatePersonVersions :: Person -> Maybe Version -> Maybe Version -> SqlDB m ()
 updatePersonVersions person mbBundleVersion mbClientVersion =
   when
     ((isJust mbBundleVersion || isJust mbClientVersion) && (person.bundleVersion /= mbBundleVersion || person.clientVersion /= mbClientVersion))
@@ -129,7 +137,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion =
         where_ $
           tbl ^. PersonTId ==. val (toKey person.id)
 
-updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
+updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB m ()
 updateDeviceToken personId mbDeviceToken = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -140,7 +148,7 @@ updateDeviceToken personId mbDeviceToken = do
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB ()
+updateWhatsappNotificationEnrollStatus :: Id Person -> Maybe Whatsapp.OptApiMethods -> SqlDB m ()
 updateWhatsappNotificationEnrollStatus personId enrollStatus = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -151,7 +159,7 @@ updateWhatsappNotificationEnrollStatus personId enrollStatus = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-setIsNewFalse :: Id Person -> SqlDB ()
+setIsNewFalse :: Id Person -> SqlDB m ()
 setIsNewFalse personId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -169,7 +177,7 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe (EncryptedHashed Text) ->
   Maybe FCMRecipientToken ->
-  SqlDB ()
+  SqlDB m ()
 updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
@@ -187,7 +195,7 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbEncEmail mbDev
       )
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
-deleteById :: Id Person -> SqlDB ()
+deleteById :: Id Person -> SqlDB m ()
 deleteById personId = do
   Esq.delete $ do
     person <- from $ table @PersonT

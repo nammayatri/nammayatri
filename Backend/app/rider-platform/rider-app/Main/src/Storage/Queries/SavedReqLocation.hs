@@ -21,19 +21,19 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.SavedReqLocation
 
-create :: SavedReqLocation -> SqlDB ()
+create :: SavedReqLocation -> SqlDB m ()
 create = Esq.create
 
-findAllByRiderId :: Transactionable m => Id Person -> m [SavedReqLocation]
-findAllByRiderId perId =
-  Esq.findAll $ do
+findAllByRiderId :: forall m ma. Transactionable ma m => Id Person -> Proxy ma -> m [SavedReqLocation]
+findAllByRiderId perId _ =
+  Esq.findAll @m @ma $ do
     saveReqLocation <- from $ table @SavedReqLocationT
     where_ $
       saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId)
     orderBy [desc $ saveReqLocation ^. SavedReqLocationUpdatedAt]
     return saveReqLocation
 
-deleteByRiderIdAndTag :: Id Person -> Text -> SqlDB ()
+deleteByRiderIdAndTag :: Id Person -> Text -> SqlDB m ()
 deleteByRiderIdAndTag perId addressTag = do
   Esq.delete $ do
     saveReqLocation <- from $ table @SavedReqLocationT
@@ -41,16 +41,16 @@ deleteByRiderIdAndTag perId addressTag = do
       (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId))
         &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
 
-findAllByRiderIdAndTag :: Transactionable m => Id Person -> Text -> m [SavedReqLocation]
-findAllByRiderIdAndTag perId addressTag =
-  Esq.findAll $ do
+findAllByRiderIdAndTag :: forall m ma. Transactionable ma m => Id Person -> Text -> Proxy ma -> m [SavedReqLocation]
+findAllByRiderIdAndTag perId addressTag _ =
+  Esq.findAll @m @ma $ do
     saveReqLocation <- from $ table @SavedReqLocationT
     where_ $
       (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId))
         &&. (saveReqLocation ^. SavedReqLocationTag ==. val addressTag)
     return saveReqLocation
 
-deleteAllByRiderId :: Id Person -> SqlDB ()
+deleteAllByRiderId :: Id Person -> SqlDB m ()
 deleteAllByRiderId personId = do
   Esq.delete $ do
     saveReqLocation <- from $ table @SavedReqLocationT

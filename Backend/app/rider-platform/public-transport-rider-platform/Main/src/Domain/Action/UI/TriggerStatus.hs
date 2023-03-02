@@ -28,9 +28,9 @@ data StatusRes = StatusRes
     bppUrl :: BaseUrl
   }
 
-triggerStatusUpdate :: EsqDBFlow m r => Id DBooking.Booking -> m StatusRes
+triggerStatusUpdate :: forall m r. EsqDBFlow m r => Id DBooking.Booking -> m StatusRes
 triggerStatusUpdate bookingId = do
-  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- QBooking.findById bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   ticketId <- booking.ticketId & fromMaybeM BookingBppOrderIdNotFound
   pure
     StatusRes

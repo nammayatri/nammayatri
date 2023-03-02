@@ -73,7 +73,7 @@ searchCbService context catalog = do
         ..
       }
 
-logOnSearchEvent :: EsqDBFlow m r => OnSearch.OnSearchReq -> m ()
+logOnSearchEvent :: forall m r. EsqDBFlow m r => OnSearch.OnSearchReq -> m ()
 logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   createdAt <- getCurrentTime
   id <- generateGUID
@@ -83,7 +83,7 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   let errorCode = (.code) <$> mbErr
   let errorMessage = (.message) =<< mbErr
   runTransaction $
-    OnSearchEvent.create $
+    OnSearchEvent.create @m $
       OnSearchEvent {..}
 
 buildEstimateOrQuoteInfo ::

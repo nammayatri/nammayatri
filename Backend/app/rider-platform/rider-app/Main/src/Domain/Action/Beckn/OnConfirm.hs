@@ -33,13 +33,13 @@ newtype OnConfirmReq = OnConfirmReq
   { bppBookingId :: Id DRB.BPPBooking
   }
 
-onConfirm :: (CacheFlow m r, EsqDBFlow m r) => BaseUrl -> OnConfirmReq -> m ()
+onConfirm :: forall m r. (CacheFlow m r, EsqDBFlow m r) => BaseUrl -> OnConfirmReq -> m ()
 onConfirm registryUrl req = do
-  booking <- QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> req.bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId req.bppBookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> req.bppBookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
 
   DB.runTransaction $ do
-    QRB.updateStatus booking.id DRB.CONFIRMED
+    QRB.updateStatus @m booking.id DRB.CONFIRMED

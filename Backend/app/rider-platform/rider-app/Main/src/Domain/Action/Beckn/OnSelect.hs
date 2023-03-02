@@ -77,9 +77,9 @@ onSelect ::
   DOnSelectReq ->
   Flow ()
 onSelect registryUrl DOnSelectReq {..} = do
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  estimate <- QEstimate.findById estimateId (Proxy @Flow) >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   searchRequest <-
-    QSR.findById estimate.requestId
+    QSR.findById estimate.requestId (Proxy @Flow)
       >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
@@ -87,22 +87,22 @@ onSelect registryUrl DOnSelectReq {..} = do
   unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
 
   let personId = searchRequest.riderId
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById personId (Proxy @Flow) >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
   quotes <- traverse (buildSelectedQuote estimate providerInfo now) quotesInfo
   logPretty DEBUG "quotes" quotes
   whenM (duplicateCheckCond (quotesInfo <&> (.quoteDetails.bppDriverQuoteId)) providerInfo.providerId) $
     throwError $ InvalidRequest "Duplicate OnSelect quote"
   DB.runTransaction $ do
-    QQuote.createMany quotes
+    QQuote.createMany @Flow quotes
     QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId $ Just DEstimate.GOT_DRIVER_QUOTE
   Notify.notifyOnDriverOfferIncoming estimateId quotes person
   where
-    duplicateCheckCond :: EsqDBFlow m r => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
+    duplicateCheckCond :: forall m r. EsqDBFlow m r => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
-      isJust <$> QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_
+      isJust <$> QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_ (Proxy @m)
 
 buildSelectedQuote ::
   MonadFlow m =>

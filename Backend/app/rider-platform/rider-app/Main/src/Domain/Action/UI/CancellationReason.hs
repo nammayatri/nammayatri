@@ -23,6 +23,6 @@ import Kernel.Storage.Esqueleto (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Storage.Queries.CancellationReason as QCR
 
-list :: EsqDBReplicaFlow m r => DCR.CancellationStage -> m [DCR.CancellationReasonAPIEntity]
+list :: forall m r. EsqDBReplicaFlow m r => DCR.CancellationStage -> m [DCR.CancellationReasonAPIEntity]
 list cancStage = do
-  map DCR.makeCancellationReasonAPIEntity <$> runInReplica (QCR.findAll cancStage)
+  map DCR.makeCancellationReasonAPIEntity <$> runInReplica (QCR.findAll cancStage (Proxy @m))

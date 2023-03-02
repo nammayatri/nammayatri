@@ -39,7 +39,7 @@ findByRoleIdAndEntity roleId apiEntity = findOne $ do
   return accessMatrix
 
 findAllByRoles ::
-  Transactionable m =>
+  Transactionable ma m =>
   [DRole.Role] ->
   m [DMatrix.AccessMatrixItem]
 findAllByRoles roles = do
@@ -51,7 +51,7 @@ findAllByRoles roles = do
     return accessMatrix
 
 findAllByRoleId ::
-  Transactionable m =>
+  Transactionable ma m =>
   Id DRole.Role ->
   m [DMatrix.AccessMatrixItem]
 findAllByRoleId roleId = do

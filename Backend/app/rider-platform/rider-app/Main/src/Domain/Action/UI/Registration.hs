@@ -120,6 +120,7 @@ authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCount"
 
 auth ::
+  forall m r.
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     HasCacheConfig r,
@@ -143,7 +144,7 @@ auth req mbBundleVersion mbClientVersion = do
       >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
   mobileNumberHash <- getDbHash mobileNumber
   person <-
-    Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
+    Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id (Proxy @m)
       >>= maybe (createPerson req mbBundleVersion mbClientVersion merchant.id) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
@@ -154,8 +155,8 @@ auth req mbBundleVersion mbClientVersion = do
 
   if person.enabled
     then do
-      DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion
-      DB.runTransaction (RegistrationToken.create token)
+      DB.runTransaction $ Person.updatePersonVersions @m person mbBundleVersion mbClientVersion
+      DB.runTransaction (RegistrationToken.create @m token)
       whenNothing_ useFakeOtpM $ do
         otpSmsTemplate <- asks (.otpSmsTemplate)
         let otpCode = SR.authValueHash token
@@ -238,6 +239,7 @@ verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
 verify ::
+  forall m r.
   ( HasCacheConfig r,
     HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
@@ -261,14 +263,14 @@ verify tokenId req = do
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
   DB.runTransaction $ do
-    RegistrationToken.deleteByPersonIdExceptNew person.id tokenId
+    RegistrationToken.deleteByPersonIdExceptNew @m person.id tokenId
     RegistrationToken.setVerified tokenId
     Person.updateDeviceToken person.id deviceToken
     when isNewPerson $
       Person.setIsNewFalse person.id
   when isNewPerson $
     Notify.notifyOnRegistration regToken person deviceToken
-  updPerson <- Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
+  updPerson <- Person.findById (Id entityId) (Proxy @m) >>= fromMaybeM (PersonDoesNotExist entityId)
   decPerson <- decrypt updPerson
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
@@ -283,6 +285,7 @@ verify tokenId req = do
         throwError TokenExpired
 
 callWhatsappOptApi ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     CoreMetrics m,
@@ -298,17 +301,17 @@ callWhatsappOptApi mobileNo personId merchantId hasOptedIn = do
   let status = fromMaybe Whatsapp.OPT_IN hasOptedIn
   void $ whatsAppOptAPI merchantId $ Whatsapp.OptApiReq {phoneNumber = mobileNo, method = status}
   DB.runTransaction $
-    Person.updateWhatsappNotificationEnrollStatus personId $ Just status
+    Person.updateWhatsappNotificationEnrollStatus @m personId $ Just status
 
-getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
+getRegistrationTokenE :: forall m r. EsqDBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
 getRegistrationTokenE tokenId =
-  RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
+  RegistrationToken.findById tokenId (Proxy @m) >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
+createPerson :: forall m r. (EncFlow m r, EsqDBFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Id DMerchant.Merchant -> m SP.Person
 createPerson req mbBundleVersion mbClientVersion merchantId = do
   person <- buildPerson req mbBundleVersion mbClientVersion merchantId
   DB.runTransaction $ do
-    Person.create person
+    Person.create @m person
     QDFS.create $ makeIdlePersonFlowStatus person
   pure person
   where
@@ -319,11 +322,12 @@ createPerson req mbBundleVersion mbClientVersion merchantId = do
           updatedAt = person.updatedAt
         }
 
-checkPersonExists :: EsqDBFlow m r => Text -> m SP.Person
+checkPersonExists :: forall m r. EsqDBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
-  Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
+  Person.findById (Id entityId) (Proxy @m) >>= fromMaybeM (PersonDoesNotExist entityId)
 
 resend ::
+  forall m r.
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     EsqDBFlow m r,
@@ -348,17 +352,18 @@ resend tokenId = do
   withLogTag ("personId_" <> entityId) $
     Sms.sendSMS person.merchantId (Sms.constructSendSMSReq otpCode otpHash otpSmsTemplate phoneNumber sender)
       >>= Sms.checkSmsResult
-  DB.runTransaction $ RegistrationToken.updateAttempts (attempts - 1) id
+  DB.runTransaction $ RegistrationToken.updateAttempts @m (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-cleanCachedTokens :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
+cleanCachedTokens :: forall m r. (EsqDBFlow m r, Redis.HedisFlow m r) => Id SP.Person -> m ()
 cleanCachedTokens personId = do
-  regTokens <- RegistrationToken.findAllByPersonId personId
+  regTokens <- RegistrationToken.findAllByPersonId personId (Proxy @m)
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.del key
 
 logout ::
+  forall m r.
   ( EsqDBFlow m r,
     Redis.HedisFlow m r
   ) =>
@@ -367,6 +372,6 @@ logout ::
 logout personId = do
   cleanCachedTokens personId
   DB.runTransaction $ do
-    Person.updateDeviceToken personId Nothing
+    Person.updateDeviceToken @m personId Nothing
     RegistrationToken.deleteByPersonId personId
   pure AP.Success

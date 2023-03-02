@@ -23,12 +23,12 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.FarePolicy.FareBreakup
 
-createMany :: [FareBreakup] -> SqlDB ()
+createMany :: [FareBreakup] -> SqlDB m ()
 createMany = Esq.createMany
 
-findAllByBookingId :: (MonadThrow m, Log m, Transactionable m) => Id Booking -> m [FareBreakup]
-findAllByBookingId bookingId =
-  findAll $ do
+findAllByBookingId :: forall m ma. (MonadThrow m, Log m, Transactionable ma m) => Id Booking -> Proxy ma -> m [FareBreakup]
+findAllByBookingId bookingId _ =
+  findAll @m @ma $ do
     fareBreakup <- from $ table @FareBreakupT
     where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
     return fareBreakup

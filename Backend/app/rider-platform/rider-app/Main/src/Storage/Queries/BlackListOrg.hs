@@ -25,9 +25,9 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.BlackListOrg
 
-findByShortId :: Transactionable m => ShortId BlackListOrg -> m (Maybe BlackListOrg)
-findByShortId shortId_ = do
-  findOne $ do
+findByShortId :: forall m ma. Transactionable ma m => ShortId BlackListOrg -> Proxy ma -> m (Maybe BlackListOrg)
+findByShortId shortId_ _ = do
+  findOne @m @ma $ do
     org <- from $ table @BlackListOrgT
     where_ $ org ^. BlackListOrgShortId ==. val (getShortId shortId_)
     return org

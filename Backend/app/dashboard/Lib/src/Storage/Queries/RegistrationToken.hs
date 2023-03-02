@@ -27,21 +27,21 @@ import Storage.Tabular.RegistrationToken
 create :: RegistrationToken -> SqlDB ()
 create = Esq.create
 
-findByToken :: Transactionable m => RegToken -> m (Maybe RegistrationToken)
+findByToken :: Transactionable ma m => RegToken -> m (Maybe RegistrationToken)
 findByToken token =
   findOne $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenToken ==. val token
     return regToken
 
-findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
+findAllByPersonId :: Transactionable ma m => Id Person -> m [RegistrationToken]
 findAllByPersonId personId =
   findAll $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenPersonId ==. val (toKey personId)
     return regToken
 
-findAllByPersonIdAndMerchantId :: Transactionable m => Id Person -> Id Merchant -> m [RegistrationToken]
+findAllByPersonIdAndMerchantId :: Transactionable ma m => Id Person -> Id Merchant -> m [RegistrationToken]
 findAllByPersonIdAndMerchantId personId merchantId =
   findAll $ do
     regToken <- from $ table @RegistrationTokenT

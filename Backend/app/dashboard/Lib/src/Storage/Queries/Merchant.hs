@@ -21,12 +21,12 @@ import Kernel.Types.Id
 import Storage.Tabular.Merchant
 
 findById ::
-  Transactionable m =>
+  Transactionable ma m =>
   Id Merchant ->
   m (Maybe Merchant)
 findById = Esq.findById
 
-findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: Transactionable ma m => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId = do
   findOne $ do
     merchant <- from $ table @MerchantT

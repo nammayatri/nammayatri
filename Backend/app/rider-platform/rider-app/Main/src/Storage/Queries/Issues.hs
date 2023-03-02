@@ -18,6 +18,6 @@ import Domain.Types.Issue
 import Kernel.Storage.Esqueleto
 import Storage.Tabular.Issue ()
 
-insertIssue :: Issue -> SqlDB ()
+insertIssue :: Issue -> SqlDB m ()
 insertIssue = do
   create

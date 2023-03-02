@@ -58,6 +58,7 @@ data OneWaySearchRes = OneWaySearchRes
   }
 
 oneWaySearch ::
+  forall m r.
   ( HasCacheConfig r,
     EncFlow m r,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
@@ -74,7 +75,7 @@ oneWaySearch ::
   Maybe Version ->
   Maybe Meters ->
   m OneWaySearchRes
-oneWaySearch person merchant req bundleVersion clientVersion distance = do
+oneWaySearch personId req bundleVersion clientVersion = do
   validateServiceability merchant.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   toLocation <- DSearch.buildSearchReqLoc req.destination
@@ -84,8 +85,8 @@ oneWaySearch person merchant req bundleVersion clientVersion distance = do
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
   DB.runTransaction $ do
-    QSearchRequest.create searchRequest
-    QPFS.updateStatus person.id DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
+    QSearchRequest.create @m searchRequest
+    QPFS.updateStatus personId DPFS.SEARCHING {requestId = searchRequest.id, validTill = searchRequest.validTill}
   let dSearchRes =
         OneWaySearchRes
           { origin = req.origin,
@@ -98,5 +99,5 @@ oneWaySearch person merchant req bundleVersion clientVersion distance = do
   return dSearchRes
   where
     validateServiceability geoConfig =
-      unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps (Just req.destination.gps)) $
+      unlessM (rideServiceable geoConfig (\a b -> someGeometriesContain a b (Proxy @m)) req.origin.gps (Just req.destination.gps)) $
         throwError RideNotServiceable

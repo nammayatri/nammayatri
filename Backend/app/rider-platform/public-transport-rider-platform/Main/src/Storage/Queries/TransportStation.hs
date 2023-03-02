@@ -21,24 +21,24 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.TransportStation
 
-findByStationCode :: Transactionable m => Text -> m (Maybe TransportStation)
-findByStationCode stationCode =
-  Esq.findOne $ do
+findByStationCode :: forall m ma. Transactionable ma m => Text -> Proxy ma -> m (Maybe TransportStation)
+findByStationCode stationCode _ =
+  Esq.findOne @m @ma $ do
     parkingLocation <- from $ table @TransportStationT
     where_ $ parkingLocation ^. TransportStationStationCode ==. val stationCode
     return parkingLocation
 
-create :: TransportStation -> SqlDB ()
+create :: TransportStation -> SqlDB m ()
 create = Esq.create
 
-findAll :: Transactionable m => m [TransportStation]
-findAll =
-  Esq.findAll $ do
+findAll :: forall m ma. Transactionable ma m => Proxy ma -> m [TransportStation]
+findAll _ =
+  Esq.findAll @m @ma $ do
     from $ table @TransportStationT
 
-findById :: Transactionable m => Id TransportStation -> m (Maybe TransportStation)
-findById transportStationId =
-  Esq.findOne $ do
+findById :: forall m ma. Transactionable ma m => Id TransportStation -> Proxy ma -> m (Maybe TransportStation)
+findById transportStationId _ =
+  Esq.findOne @m @ma $ do
     transportStation <- from $ table @TransportStationT
     where_ $ transportStation ^. TransportStationTId ==. val (TransportStationTKey $ getId transportStationId)
     return transportStation

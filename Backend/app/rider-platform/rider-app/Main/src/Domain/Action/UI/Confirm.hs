@@ -72,20 +72,20 @@ data ConfirmQuoteDetails
   | ConfirmAutoDetails (Id DDriverOffer.BPPQuote)
   deriving (Show, Generic)
 
-confirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DQuote.Quote -> m DConfirmRes
+confirm :: forall m r. (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DQuote.Quote -> m DConfirmRes
 confirm personId quoteId = do
-  quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+  quote <- QQuote.findById quoteId (Proxy @m) >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
   case quote.quoteDetails of
     DQuote.OneWayDetails _ -> pure ()
     DQuote.RentalDetails _ -> pure ()
     DQuote.DriverOfferDetails driverOffer -> do
-      estimate <- DB.runInReplica $ QEstimate.findOneEstimateByRequestId quote.requestId >>= fromMaybeM EstimateNotFound
+      estimate <- DB.runInReplica $ QEstimate.findOneEstimateByRequestId quote.requestId (Proxy @m) >>= fromMaybeM EstimateNotFound
       checkIfEstimateCancelled estimate.id estimate.status
       when (driverOffer.validTill < now) $
         throwError $ QuoteExpired quote.id.getId
-  searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus
+  searchRequest <- QSReq.findById quote.requestId (Proxy @m) >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
+  activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus (Proxy @m)
   unless (null activeBooking) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
@@ -97,7 +97,7 @@ confirm personId quoteId = do
   booking <- buildBooking searchRequest quote bFromLocation mbBToLocation now
   let details = mkConfirmQuoteDetails quote.quoteDetails
   DB.runTransaction $ do
-    QRideB.create booking
+    QRideB.create @m booking
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill}
     QEstimate.updateStatusbyRequestId quote.requestId $ Just DEstimate.COMPLETED
   return $
@@ -178,12 +178,12 @@ buildBooking searchRequest quote fromLoc mbToLoc now = do
       pure DRB.OneWayBookingDetails {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
-cancelBooking :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()
+cancelBooking :: forall m r. (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()
 cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason booking.id
   DB.runTransaction $ do
-    QRideB.updateStatus booking.id DRB.CANCELLED
+    QRideB.updateStatus @m booking.id DRB.CANCELLED
     QBCR.upsert bookingCancellationReason
   Notify.notifyOnBookingCancelled booking DBCR.ByApplication
   where

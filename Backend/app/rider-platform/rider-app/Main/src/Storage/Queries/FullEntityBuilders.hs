@@ -34,10 +34,12 @@ import Storage.Tabular.RentalSlab
 import Storage.Tabular.TripTerms
 
 buildFullQuote ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   (QuoteT, Maybe TripTermsT, Maybe RentalSlabT, Maybe DriverOfferT) ->
+  Proxy ma ->
   DTypeBuilder m (Maybe (SolidType FullQuoteT))
-buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer) = runMaybeT $ do
+buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer) _ = runMaybeT $ do
   quoteDetailsT <- case fareProductType of
     ONE_WAY -> pure Quote.OneWayDetailsT
     RENTAL -> MaybeT $ pure (Quote.RentalDetailsT <$> mbRentalSlab)
@@ -45,10 +47,12 @@ buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer) =
   return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
 buildFullBooking ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   (BookingT, BookingLocationT, Maybe BookingLocationT, Maybe TripTermsT, Maybe RentalSlabT) ->
+  Proxy ma ->
   DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRentalSlab) = runMaybeT $ do
+buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRentalSlab) _ = runMaybeT $ do
   bookingDetails <- case fareProductType of
     ONE_WAY -> MaybeT $ pure (Booking.OneWayDetailsT <$> mbToLocT)
     RENTAL -> MaybeT $ pure (Booking.RentalDetailsT <$> mbRentalSlab)
@@ -56,9 +60,11 @@ buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRe
   return $ extractSolidType @Booking (bookingT, fromLocT, mbTripTermsT, bookingDetails)
 
 buildFullEstimate ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   (EstimateT, Maybe TripTermsT) ->
+  Proxy ma ->
   DTypeBuilder m (SolidType FullEstimateT)
-buildFullEstimate (estimateT@EstimateT {..}, tripTermsT) = do
-  estimateBreakupT <- QEB.findAllByEstimateId (Id id)
+buildFullEstimate (estimateT@EstimateT {..}, tripTermsT) proxy = do
+  estimateBreakupT <- QEB.findAllByEstimateId (Id id) proxy
   return $ extractSolidType @Estimate (estimateT, estimateBreakupT, tripTermsT)

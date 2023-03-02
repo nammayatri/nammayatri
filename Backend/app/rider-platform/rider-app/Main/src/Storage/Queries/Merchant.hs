@@ -28,30 +28,30 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Tabular.Merchant
 
-findById :: Transactionable m => Id Merchant -> m (Maybe Merchant)
-findById = Esq.findById
+findById :: forall m ma. Transactionable ma m => Id Merchant -> Proxy ma -> m (Maybe Merchant)
+findById merchatId _ = Esq.findById @m @ma merchatId
 
-findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
-findByShortId shortId_ = do
-  findOne $ do
+findByShortId :: forall m ma. Transactionable ma m => ShortId Merchant -> Proxy ma -> m (Maybe Merchant)
+findByShortId shortId_ _ = do
+  findOne @m @ma $ do
     merchant <- from $ table @MerchantT
     where_ $ merchant ^. MerchantShortId ==. val (getShortId shortId_)
     return merchant
 
-findByExoPhone :: Transactionable m => Text -> Text -> m (Maybe Merchant)
-findByExoPhone countryCode exoPhone = do
-  findOne $ do
+findByExoPhone :: forall m ma. Transactionable ma m => Text -> Text -> Proxy ma -> m (Maybe Merchant)
+findByExoPhone countryCode exoPhone _ = do
+  findOne @m @ma $ do
     merchant <- from $ table @MerchantT
     where_ $
       merchant ^. MerchantExoPhoneCountryCode ==. val (Just countryCode)
         &&. merchant ^. MerchantExoPhone ==. val (Just exoPhone)
     return merchant
 
-findAll :: Transactionable m => m [Merchant]
-findAll =
-  Esq.findAll $ do from $ table @MerchantT
+findAll :: forall m ma. Transactionable ma m => Proxy ma -> m [Merchant]
+findAll _ =
+  Esq.findAll @m @ma $ do from $ table @MerchantT
 
-update :: Merchant -> SqlDB ()
+update :: Merchant -> SqlDB m ()
 update merchant = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do

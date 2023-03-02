@@ -83,23 +83,21 @@ data OnUpdateFareBreakup = OnUpdateFareBreakup
   }
 
 onUpdate ::
+  forall m r c.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     CoreMetrics m,
     HasBapInfo r m,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasFlowEnv
-      m
-      r
-      '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
+    HasFlowEnv m r '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
     HedisFlow m r
   ) =>
   BaseUrl ->
   OnUpdateReq ->
   m ()
 onUpdate registryUrl RideAssignedReq {..} = do
-  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bppBookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
@@ -107,7 +105,7 @@ onUpdate registryUrl RideAssignedReq {..} = do
   unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
   ride <- buildRide booking
   DB.runTransaction $ do
-    QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
+    QRB.updateStatus @m booking.id SRB.TRIP_ASSIGNED
     QRide.create ride
     QPFS.updateStatus booking.riderId DPFS.RIDE_ASSIGNED {rideId = ride.id}
   Notify.notifyOnRideAssigned booking ride
@@ -138,13 +136,13 @@ onUpdate registryUrl RideAssignedReq {..} = do
           }
     isAssignable booking = booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT]
 onUpdate registryUrl RideStartedReq {..} = do
-  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bppBookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
 
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  ride <- QRide.findByBPPRideId bppRideId (Proxy @m) >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == SRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
   rideStartTime <- getCurrentTime
@@ -154,16 +152,16 @@ onUpdate registryUrl RideStartedReq {..} = do
              rideEndTime = Nothing
             }
   DB.runTransaction $ do
-    QRide.updateMultiple updRideForStartReq.id updRideForStartReq
+    QRide.updateMultiple @m updRideForStartReq.id updRideForStartReq
   Notify.notifyOnRideStarted booking ride
 onUpdate registryUrl RideCompletedReq {..} = do
-  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bppBookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
 
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  ride <- QRide.findByBPPRideId bppRideId (Proxy @m) >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == SRide.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   rideEndTime <- getCurrentTime
@@ -176,7 +174,7 @@ onUpdate registryUrl RideCompletedReq {..} = do
             }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups
   DB.runTransaction $ do
-    QRB.updateStatus booking.id SRB.COMPLETED
+    QRB.updateStatus @m booking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
     QFareBreakup.createMany breakups
     QPFS.updateStatus booking.riderId DPFS.PENDING_RATING {rideId = ride.id}
@@ -191,7 +189,7 @@ onUpdate registryUrl RideCompletedReq {..} = do
             ..
           }
 onUpdate registryUrl BookingCancelledReq {..} = do
-  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bppBookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
 
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -199,11 +197,11 @@ onUpdate registryUrl BookingCancelledReq {..} = do
 
   unless (isBookingCancellable booking) $
     throwError (BookingInvalidStatus (show booking.status))
-  mbRide <- QRide.findActiveByRBId booking.id
+  mbRide <- QRide.findActiveByRBId booking.id (Proxy @m)
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
   bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource
   DB.runTransaction $ do
-    QRB.updateStatus booking.id SRB.CANCELLED
+    QRB.updateStatus @m booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED
     unless (cancellationSource == SBCR.ByUser) $
       QBCR.upsert bookingCancellationReason
@@ -214,29 +212,29 @@ onUpdate registryUrl BookingCancelledReq {..} = do
     isBookingCancellable booking =
       booking.status `elem` [SRB.NEW, SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
 onUpdate registryUrl BookingReallocationReq {..} = do
-  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-  mbRide <- QRide.findActiveByRBId booking.id
+  booking <- QRB.findByBPPBookingId bppBookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  mbRide <- QRide.findActiveByRBId booking.id (Proxy @m)
   bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource
   -- TODO: this supposed to be temporary solution. Check if we still need it
   merchant <- QMerch.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
 
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  ride <- QRide.findByBPPRideId bppRideId (Proxy @m) >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   DB.runTransaction $ do
-    QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
+    QRB.updateStatus @m booking.id SRB.AWAITING_REASSIGNMENT
     QRide.updateStatus ride.id SRide.CANCELLED
     QBCR.upsert bookingCancellationReason
   -- notify customer
   Notify.notifyOnBookingReallocated booking
 onUpdate registryUrl DriverArrivedReq {..} = do
-  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bppBookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   merchant <- QMerch.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  ride <- QRide.findByBPPRideId bppRideId (Proxy @m) >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus "The ride has already started."
   unless (isJust ride.driverArrivalTime) $
     DB.runTransaction $ do
-      QRide.updateDriverArrival ride.id
+      QRide.updateDriverArrival @m ride.id
   where
     isValidRideStatus status = status == SRide.NEW
 

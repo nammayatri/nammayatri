@@ -50,15 +50,15 @@ validateConfirmReq :: EsqDBFlow m r => QConfirmReq -> m ()
 validateConfirmReq confirmReq = do
   when (confirmReq.quantity <= 0) $ throwError $ InvalidRequest "invalid quantity value"
 
-quoteConfirm :: EsqDBFlow m r => PersonId -> Id DQuote.Quote -> QConfirmReq -> m (QConfirmRes, ConfirmMessageD)
+quoteConfirm :: forall m r. EsqDBFlow m r => PersonId -> Id DQuote.Quote -> QConfirmReq -> m (QConfirmRes, ConfirmMessageD)
 quoteConfirm personId quoteId confirmReq = do
   validateConfirmReq confirmReq
-  quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
+  quote <- QQuote.findById quoteId (Proxy @m) >>= fromMaybeM (QuoteNotFound quoteId.getId)
   bookingId <- generateGUID
   let txnId = bookingId
   now <- getCurrentTime
   let booking = buildBooking now bookingId personId confirmReq quote
-  _ <- Esq.runTransaction $ QBooking.create booking
+  _ <- Esq.runTransaction $ QBooking.create @m booking
   pure (QConfirmRes bookingId, makeConfirmMessageD txnId confirmReq quote booking)
 
 makeConfirmMessageD :: Text -> QConfirmReq -> DQuote.Quote -> DBooking.Booking -> ConfirmMessageD

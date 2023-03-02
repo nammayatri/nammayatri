@@ -31,6 +31,7 @@ import qualified Storage.Queries.Person as QP
 import Tools.Error
 
 checkServiceability ::
+  forall m r.
   ( HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r
@@ -41,11 +42,11 @@ checkServiceability ::
   m Bool
 checkServiceability settingAccessor personId location = do
   person <-
-    QP.findById personId
+    QP.findById personId (Proxy @m)
       >>= fromMaybeM (PersonNotFound personId.getId)
   let merchId = person.merchantId
   geoConfig <- fmap (.geofencingConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
   let geoRestriction = settingAccessor geoConfig
   case geoRestriction of
     Unrestricted -> pure True
-    Regions regions -> someGeometriesContain location regions
+    Regions regions -> someGeometriesContain location regions (Proxy @m)

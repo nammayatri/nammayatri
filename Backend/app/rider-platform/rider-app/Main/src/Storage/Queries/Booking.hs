@@ -31,7 +31,7 @@ import qualified Storage.Tabular.Ride as R
 import qualified Storage.Tabular.TripTerms as TripTerms
 
 -- we already created TripTerms and RentalSlab when created Quote
-create :: Booking -> SqlDB ()
+create :: Booking -> SqlDB m ()
 create booking =
   Esq.withFullEntity booking $ \(bookingT, fromLocT, _mbTripTermsT, bookingDetailsT) -> do
     Esq.create' fromLocT
@@ -41,7 +41,7 @@ create booking =
       DriverOfferDetailsT toLocT -> Esq.create' toLocT
     Esq.create' bookingT
 
-updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
+updateStatus :: Id Booking -> BookingStatus -> SqlDB m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -52,7 +52,7 @@ updateStatus rbId rbStatus = do
       ]
     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 
-updateBPPBookingId :: Id Booking -> Id BPPBooking -> SqlDB ()
+updateBPPBookingId :: Id Booking -> Id BPPBooking -> SqlDB m ()
 updateBPPBookingId rbId bppRbId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -90,36 +90,36 @@ fullBookingTable =
                    s ^. RB.BookingRentalSlabId ==. mbRentalSlab ?. RentalSlab.RentalSlabTId
                )
 
-findById :: Transactionable m => Id Booking -> m (Maybe Booking)
-findById bookingId = Esq.buildDType $ do
-  mbFullBookingT <- Esq.findOne' $ do
+findById :: forall m ma. Transactionable ma m => Id Booking -> Proxy ma -> m (Maybe Booking)
+findById bookingId proxy = Esq.buildDType $ do
+  mbFullBookingT <- Esq.findOne' @m @ma $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
     where_ $ booking ^. RB.BookingTId ==. val (toKey bookingId)
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  join <$> mapM buildFullBooking mbFullBookingT
+  join <$> mapM (`buildFullBooking` proxy) mbFullBookingT
 
-findByBPPBookingId :: Transactionable m => Id BPPBooking -> m (Maybe Booking)
-findByBPPBookingId bppRbId = Esq.buildDType $ do
-  mbFullBookingT <- Esq.findOne' $ do
+findByBPPBookingId :: forall m ma. Transactionable ma m => Id BPPBooking -> Proxy ma -> m (Maybe Booking)
+findByBPPBookingId bppRbId proxy = Esq.buildDType $ do
+  mbFullBookingT <- Esq.findOne' @m @ma $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
     where_ $ booking ^. RB.BookingBppBookingId ==. val (Just $ getId bppRbId)
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  join <$> mapM buildFullBooking mbFullBookingT
+  join <$> mapM (`buildFullBooking` proxy) mbFullBookingT
 
-findByIdAndMerchantId :: Transactionable m => Id Booking -> Id Merchant -> m (Maybe Booking)
-findByIdAndMerchantId bookingId merchantId = Esq.buildDType $ do
-  mbFullBookingT <- Esq.findOne' $ do
+findByIdAndMerchantId :: forall m ma. Transactionable ma m => Id Booking -> Id Merchant -> Proxy ma -> m (Maybe Booking)
+findByIdAndMerchantId bookingId merchantId proxy = Esq.buildDType $ do
+  mbFullBookingT <- Esq.findOne' @m @ma $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
     where_ $
       booking ^. RB.BookingId ==. val bookingId.getId
         &&. booking ^. RB.BookingMerchantId ==. val (toKey merchantId)
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  join <$> mapM buildFullBooking mbFullBookingT
+  join <$> mapM (`buildFullBooking` proxy) mbFullBookingT
 
-findAllByRiderId :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
-findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
+findAllByRiderId :: forall m ma. Transactionable ma m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Proxy ma -> m [Booking]
+findAllByRiderId personId mbLimit mbOffset mbOnlyActive proxy = Esq.buildDType $ do
   let isOnlyActive = Just True == mbOnlyActive
-  fullBookingsT <- Esq.findAll' $ do
+  fullBookingsT <- Esq.findAll' @m @ma $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
@@ -128,22 +128,22 @@ findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     offset $ fromIntegral $ fromMaybe 0 mbOffset
     orderBy [desc $ booking ^. RB.BookingCreatedAt]
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  catMaybes <$> mapM buildFullBooking fullBookingsT
+  catMaybes <$> mapM (`buildFullBooking` proxy) fullBookingsT
 
-findByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m [Booking]
-findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
-  fullBookingsT <- Esq.findAll' $ do
+findByRiderIdAndStatus :: forall m ma. Transactionable ma m => Id Person -> [BookingStatus] -> Proxy ma -> m [Booking]
+findByRiderIdAndStatus personId statusList proxy = Esq.buildDType $ do
+  fullBookingsT <- Esq.findAll' @m @ma $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
         &&. booking ^. RB.BookingStatus `in_` valList statusList
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  catMaybes <$> mapM buildFullBooking fullBookingsT
+  catMaybes <$> mapM (`buildFullBooking` proxy) fullBookingsT
 
-findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
-findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus = Esq.buildDType $ do
+findAllByRiderIdAndRide :: forall m ma. Transactionable ma m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Proxy ma -> m [Booking]
+findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus proxy = Esq.buildDType $ do
   let isOnlyActive = Just True == mbOnlyActive
-  fullBookingsT <- Esq.findAll' $ do
+  fullBookingsT <- Esq.findAll' @m @ma $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab :& _) <-
       from $
         fullBookingTable `innerJoin` table @R.RideT
@@ -157,9 +157,9 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus =
     offset $ fromIntegral $ fromMaybe 0 mbOffset
     orderBy [desc $ booking ^. RB.BookingCreatedAt]
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  catMaybes <$> mapM buildFullBooking fullBookingsT
+  catMaybes <$> mapM (`buildFullBooking` proxy) fullBookingsT
 
-updatePaymentInfo :: Id Booking -> Money -> Maybe Money -> Money -> SqlDB ()
+updatePaymentInfo :: Id Booking -> Money -> Maybe Money -> Money -> SqlDB m ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -173,13 +173,15 @@ updatePaymentInfo rbId estimatedFare discount estimatedTotalFare = do
     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 
 findAllByPersonIdLimitOffset ::
-  Transactionable m =>
+  forall m ma.
+  Transactionable ma m =>
   Id Person ->
   Maybe Integer ->
   Maybe Integer ->
+  Proxy ma ->
   m [Booking]
-findAllByPersonIdLimitOffset personId mlimit moffset = Esq.buildDType $ do
-  fullBookingsT <- Esq.findAll' $ do
+findAllByPersonIdLimitOffset personId mlimit moffset proxy = Esq.buildDType $ do
+  fullBookingsT <- Esq.findAll' @m @ma $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
@@ -187,11 +189,11 @@ findAllByPersonIdLimitOffset personId mlimit moffset = Esq.buildDType $ do
     offset $ fromIntegral $ fromMaybe 0 moffset
     orderBy [desc $ booking ^. RB.BookingCreatedAt]
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
-  catMaybes <$> mapM buildFullBooking fullBookingsT
+  catMaybes <$> mapM (`buildFullBooking` proxy) fullBookingsT
 
-findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
-findStuckBookings merchantId bookingIds now = do
-  Esq.findAll $ do
+findStuckBookings :: forall m ma. Transactionable ma m => Id Merchant -> [Id Booking] -> UTCTime -> Proxy ma -> m [Id Booking]
+findStuckBookings merchantId bookingIds now _ = do
+  Esq.findAll @m @ma $ do
     booking <- from $ table @BookingT
     let upcoming6HrsCond =
           booking ^. BookingCreatedAt +. Esq.interval [Esq.HOUR 6] <=. val now
@@ -201,7 +203,7 @@ findStuckBookings merchantId bookingIds now = do
         &&. (booking ^. BookingStatus ==. val NEW &&. upcoming6HrsCond)
     pure $ booking ^. BookingTId
 
-cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()
+cancelBookings :: [Id Booking] -> UTCTime -> SqlDB m ()
 cancelBookings bookingIds now = do
   Esq.update $ \tbl -> do
     set

@@ -29,13 +29,13 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.BlackListOrg as Queries
 
-findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId BlackListOrg -> m (Maybe BlackListOrg)
+findByShortId :: forall m r. (CacheFlow m r, EsqDBFlow m r) => ShortId BlackListOrg -> m (Maybe BlackListOrg)
 findByShortId shortId_ =
   Hedis.safeGet (makeShortIdKey shortId_) >>= \case
     Just a -> return . Just $ coerce @(BlackListOrgD 'Unsafe) @BlackListOrg a
     Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheOrganization /=<< Queries.findByShortId shortId_
+    findAndCache = flip whenJust cacheOrganization /=<< Queries.findByShortId shortId_ (Proxy @m)
 
 cacheOrganization :: (CacheFlow m r) => BlackListOrg -> m ()
 cacheOrganization org = do

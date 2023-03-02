@@ -41,12 +41,12 @@ deleteCustomer ::
 deleteCustomer merchantShortId customerId = do
   let personId = cast @Common.Customer @DP.Person customerId
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
+  person <- runInReplica $ QP.findById personId (Proxy @Flow) >>= fromMaybeM (PersonNotFound $ getId personId)
   unless (merchant.id == person.merchantId) $ throwError (PersonDoesNotExist $ getId personId)
-  bookings <- runInReplica $ QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
+  bookings <- runInReplica $ QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED] (Proxy @Flow)
   unless (null bookings) $ throwError (InvalidRequest "Can't delete customer, has a valid booking in past.")
   runTransaction $ do
-    QPFS.deleteByPersonId personId
+    QPFS.deleteByPersonId @Flow personId
     QSRL.deleteAllByRiderId personId
     QP.deleteById personId
   pure Success

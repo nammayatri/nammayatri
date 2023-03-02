@@ -45,7 +45,7 @@ onInit (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . wit
   whenJust mbDOnInitReq $ \onInitReq ->
     Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $ do
       onInitRes <- DOnInit.onInit registryUrl onInitReq
-      booking <- QRideB.findById onInitRes.bookingId >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
+      booking <- QRideB.findById onInitRes.bookingId (Proxy @Flow) >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
       handle (errHandler booking) $
         void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
   pure Ack

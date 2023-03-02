@@ -78,9 +78,9 @@ verifyPersonAction ::
   VerificationAction VerifyToken m
 verifyPersonAction = VerificationAction verifyPerson
 
-verifyToken :: EsqDBFlow m r => RegToken -> m SR.RegistrationToken
+verifyToken :: forall m r. EsqDBFlow m r => RegToken -> m SR.RegistrationToken
 verifyToken token =
-  RegistrationToken.findByToken token
+  RegistrationToken.findByToken token (Proxy @m)
     >>= Utils.fromMaybeM (InvalidToken token)
     >>= validateToken
 

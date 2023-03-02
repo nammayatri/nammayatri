@@ -54,8 +54,7 @@ merchantUpdate merchantShortId req = do
                  DM.gatewayUrl = fromMaybe merchant.gatewayUrl req.gatewayUrl,
                  DM.registryUrl = fromMaybe merchant.registryUrl req.registryUrl
                 }
-  Esq.runTransaction $ CQM.update updMerchant
-  CQM.clearCache updMerchant
+  Esq.runTransaction $ CQM.update @Flow updMerchant
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
   pure Success
 
@@ -66,12 +65,10 @@ mapsServiceConfigUpdate ::
   Flow APISuccess
 mapsServiceConfigUpdate merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
-  let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
   Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+    CQMSC.upsertMerchantServiceConfig @Flow merchantServiceConfig
   logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -82,12 +79,10 @@ smsServiceConfigUpdate ::
   Flow APISuccess
 smsServiceConfigUpdate merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
-  let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
   merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
   Esq.runTransaction $ do
-    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+    CQMSC.upsertMerchantServiceConfig @Flow merchantServiceConfig
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -120,8 +115,7 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
                                    autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
                                   }
   Esq.runTransaction $ do
-    CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
-  CQMSUC.clearCache merchant.id
+    CQMSUC.updateMerchantServiceUsageConfig @Flow updMerchantServiceUsageConfig
   logTagInfo "dashboard -> mapsServiceUsageConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -147,7 +141,6 @@ smsServiceUsageConfigUpdate merchantShortId req = do
         merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
                                   }
   Esq.runTransaction $ do
-    CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
-  CQMSUC.clearCache merchant.id
+    CQMSUC.updateMerchantServiceUsageConfig @Flow updMerchantServiceUsageConfig
   logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
   pure Success

@@ -53,12 +53,12 @@ feedback request = do
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let rideId = request.rideId
       feedbackDetails = request.feedbackDetails
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- QRide.findById rideId (Proxy @App.Flow) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus "Feedback available only for completed rides.")
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  booking <- QRB.findById ride.bookingId (Proxy @App.Flow) >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   DB.runTransaction $ do
-    QRide.updateRideRating rideId ratingValue
+    QRide.updateRideRating @App.Flow rideId ratingValue
     QPFS.updateStatus booking.riderId DPFS.IDLE
   pure
     FeedbackRes

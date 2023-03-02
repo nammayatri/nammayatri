@@ -34,9 +34,9 @@ data OnConfirmMessageD = OnConfirmMessageD
     paymentUrl :: BaseUrl
   }
 
-handleOnConfirm :: EsqDBFlow m r => OnConfirmMessageD -> m ()
+handleOnConfirm :: forall m r. EsqDBFlow m r => OnConfirmMessageD -> m ()
 handleOnConfirm msg = do
-  booking <- QBooking.findById msg.bookingId >>= fromMaybeM (BookingDoesNotExist msg.bookingId.getId)
+  booking <- QBooking.findById msg.bookingId (Proxy @m) >>= fromMaybeM (BookingDoesNotExist msg.bookingId.getId)
   now <- getCurrentTime
   let updBooking =
         booking{status = msg.bookingStatus,
@@ -45,7 +45,7 @@ handleOnConfirm msg = do
                }
   paymentData <- buildPaymentData updBooking msg
   runTransaction $ do
-    QBooking.updateStatusAndBppOrderId updBooking
+    QBooking.updateStatusAndBppOrderId @m updBooking
     PaymentTransactionDB.create paymentData
 
 buildPaymentData :: MonadFlow m => Domain.Booking -> OnConfirmMessageD -> m Domain.PaymentTransaction

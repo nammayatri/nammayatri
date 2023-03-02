@@ -18,5 +18,5 @@ import Domain.Types.OnSearchEvent
 import Kernel.Storage.Esqueleto as Esq
 import Storage.Tabular.OnSearchEvent ()
 
-create :: OnSearchEvent -> SqlDB ()
+create :: OnSearchEvent -> SqlDB m ()
 create = Esq.create

@@ -56,6 +56,7 @@ data RentalSearchRes = RentalSearchRes
   }
 
 rentalSearch ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
@@ -69,7 +70,7 @@ rentalSearch ::
   RentalSearchReq ->
   m RentalSearchRes
 rentalSearch personId bundleVersion clientVersion req = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  person <- QPerson.findById personId (Proxy @m) >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchant <-
     QMerchant.findById person.merchantId
       >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
@@ -81,7 +82,7 @@ rentalSearch personId bundleVersion clientVersion req = do
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
   DB.runTransaction $ do
-    QSearchRequest.create searchRequest
+    QSearchRequest.create @m searchRequest
   let dSearchRes =
         RentalSearchRes
           { origin = req.origin,
@@ -93,5 +94,5 @@ rentalSearch personId bundleVersion clientVersion req = do
   return dSearchRes
   where
     validateServiceability geoConfig = do
-      unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps Nothing) $
+      unlessM (rideServiceable geoConfig (\a b -> someGeometriesContain a b (Proxy @m)) req.origin.gps Nothing) $
         throwError RideNotServiceable

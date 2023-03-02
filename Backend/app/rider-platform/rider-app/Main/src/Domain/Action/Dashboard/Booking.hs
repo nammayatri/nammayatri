@@ -49,14 +49,14 @@ stuckBookingsCancel merchantShortId req = do
   merchant <- findMerchantByShortId merchantShortId
   let reqBookingIds = cast @Common.Booking @DBooking.Booking <$> req.bookingIds
   now <- getCurrentTime
-  stuckBookingIds <- Esq.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now
-  stuckRideItems <- Esq.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now
+  stuckBookingIds <- Esq.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now (Proxy @Flow)
+  stuckRideItems <- Esq.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now (Proxy @Flow)
   let bcReasons = mkBookingCancellationReason Common.bookingStuckCode Nothing <$> stuckBookingIds
   let bcReasonsWithRides = (\item -> mkBookingCancellationReason Common.rideStuckCode (Just item.rideId) item.bookingId) <$> stuckRideItems
   let allStuckBookingIds = stuckBookingIds <> (stuckRideItems <&> (.bookingId))
   let stuckPersonIds = stuckRideItems <&> (.riderId)
   Esq.runTransaction $ do
-    QRide.cancelRides (stuckRideItems <&> (.rideId)) now
+    QRide.cancelRides @Flow (stuckRideItems <&> (.rideId)) now
     QBooking.cancelBookings allStuckBookingIds now
     for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
     QPFS.updateToIdleMultiple stuckPersonIds now

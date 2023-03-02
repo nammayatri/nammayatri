@@ -54,26 +54,26 @@ newtype SavedReqLocationsListRes = SavedReqLocationsListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-createSavedReqLocation :: EsqDBFlow m r => Id Person.Person -> CreateSavedReqLocationReq -> m APISuccess.APISuccess
+createSavedReqLocation :: forall m r. EsqDBFlow m r => Id Person.Person -> CreateSavedReqLocationReq -> m APISuccess.APISuccess
 createSavedReqLocation riderId sreq = do
-  savedLocations <- QSavedReqLocation.findAllByRiderIdAndTag riderId sreq.tag
+  savedLocations <- QSavedReqLocation.findAllByRiderIdAndTag riderId sreq.tag (Proxy @m)
   when (sreq.tag == pack "") $ throwError $ InvalidRequest "Location tag cannot be empty"
   unless (null savedLocations) $ throwError $ InvalidRequest "Location with this tag already exists"
   now <- getCurrentTime
   location <- buildSavedReqLocation sreq now riderId
   runTransaction $
-    QSavedReqLocation.create location
+    QSavedReqLocation.create @m location
   return APISuccess.Success
 
-getSavedReqLocations :: EsqDBReplicaFlow m r => Id Person.Person -> m SavedReqLocationsListRes
+getSavedReqLocations :: forall m r. EsqDBReplicaFlow m r => Id Person.Person -> m SavedReqLocationsListRes
 getSavedReqLocations riderId = do
-  savedLocations <- runInReplica $ QSavedReqLocation.findAllByRiderId riderId
+  savedLocations <- runInReplica $ QSavedReqLocation.findAllByRiderId riderId (Proxy @m)
   return $ SavedReqLocationsListRes $ SavedReqLocation.makeSavedReqLocationAPIEntity <$> savedLocations
 
-deleteSavedReqLocation :: EsqDBFlow m r => Id Person.Person -> Text -> m APISuccess.APISuccess
+deleteSavedReqLocation :: forall m r. EsqDBFlow m r => Id Person.Person -> Text -> m APISuccess.APISuccess
 deleteSavedReqLocation riderId tag = do
   runTransaction $
-    QSavedReqLocation.deleteByRiderIdAndTag riderId tag
+    QSavedReqLocation.deleteByRiderIdAndTag @m riderId tag
   return APISuccess.Success
 
 buildSavedReqLocation :: MonadFlow m => CreateSavedReqLocationReq -> UTCTime -> Id Person.Person -> m SavedReqLocation.SavedReqLocation

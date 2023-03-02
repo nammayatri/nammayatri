@@ -79,30 +79,30 @@ data LoginRes = LoginRes
 newtype LogoutRes = LogoutRes {message :: Text}
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
-login :: (EsqDBFlow m r, EncFlow m r) => LoginReq -> m LoginRes
+login :: forall m r. (EsqDBFlow m r, EncFlow m r) => LoginReq -> m LoginRes
 login LoginReq {..} = do
-  person <- Person.findByEmailAndPassword email password >>= fromMaybeM (PersonNotFound email)
+  person <- Person.findByEmailAndPassword email password (Proxy @m) >>= fromMaybeM (PersonNotFound email)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
   token <- generateToken person
   pure $ LoginRes token "Logged in successfully"
 
-generateToken :: EsqDBFlow m r => SP.Person -> m Text
+generateToken :: forall m r. EsqDBFlow m r => SP.Person -> m Text
 generateToken SP.Person {..} = do
   let personId = id
   regToken <- createSupportRegToken $ getId personId
   -- Clean Old Login Session
   -- FIXME We should also cleanup old token from Redis
   runTransaction $ do
-    RegistrationToken.deleteByPersonId personId
+    RegistrationToken.deleteByPersonId @m personId
     RegistrationToken.create regToken
   pure $ regToken.token
 
-logout :: (EsqDBFlow m r) => Id SP.Person -> m LogoutRes
+logout :: forall m r. (EsqDBFlow m r) => Id SP.Person -> m LogoutRes
 logout personId = do
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
   -- FIXME We should also cleanup old token from Redis
-  runTransaction (RegistrationToken.deleteByPersonId person.id)
+  runTransaction (RegistrationToken.deleteByPersonId @m person.id)
   pure $ LogoutRes "Logged out successfully"
 
 createSupportRegToken :: MonadFlow m => Text -> m SR.RegistrationToken
@@ -128,9 +128,9 @@ createSupportRegToken entityId = do
         info = Nothing
       }
 
-listOrder :: (EsqDBReplicaFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
+listOrder :: forall m r. (EsqDBReplicaFlow m r, EncFlow m r) => Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> m [OrderResp]
 listOrder personId mRequestId mMobile mlimit moffset = do
-  supportP <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  supportP <- runInReplica $ Person.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   unless (supportP.role == SP.CUSTOMER_SUPPORT) $
     throwError AccessDenied
   OrderInfo {person, bookings} <- case (mRequestId, mMobile) of
@@ -144,20 +144,20 @@ listOrder personId mRequestId mMobile mlimit moffset = do
       mobileNumberHash <- getDbHash number
       person <-
         runInReplica $
-          Person.findByRoleAndMobileNumberAndMerchantIdWithoutCC SP.USER mobileNumberHash merchantId
+          Person.findByRoleAndMobileNumberAndMerchantIdWithoutCC SP.USER mobileNumberHash merchantId (Proxy @m)
             >>= fromMaybeM (PersonDoesNotExist number)
       bookings <-
-        runInReplica $ QRB.findAllByPersonIdLimitOffset (person.id) (Just limit_) moffset
+        runInReplica $ QRB.findAllByPersonIdLimitOffset (person.id) (Just limit_) moffset (Proxy @m)
       return $ OrderInfo person bookings
     getByRequestId bookingId merchantId = do
       (booking :: DRB.Booking) <-
         runInReplica $
-          QRB.findByIdAndMerchantId (Id bookingId) merchantId
+          QRB.findByIdAndMerchantId (Id bookingId) merchantId (Proxy @m)
             >>= fromMaybeM (BookingDoesNotExist bookingId)
       let requestorId = booking.riderId
       person <-
         runInReplica $
-          Person.findById requestorId
+          Person.findById requestorId (Proxy @m)
             >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
       return $ OrderInfo person [booking]
 

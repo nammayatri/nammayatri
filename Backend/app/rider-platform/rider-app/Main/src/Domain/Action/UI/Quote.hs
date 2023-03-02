@@ -69,9 +69,9 @@ instance FromJSON OfferRes where
 instance ToSchema OfferRes where
   declareNamedSchema = genericDeclareNamedSchema $ S.objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
 
-getQuotes :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
+getQuotes :: forall m r. (HedisFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
-  searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
+  searchRequest <- runInReplica $ QSR.findById searchRequestId (Proxy @m) >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   offers <- getOffers searchRequest
   estimates <- getEstimates searchRequestId
   return $
@@ -82,17 +82,17 @@ getQuotes searchRequestId = do
         estimates
       }
 
-getOffers :: (HedisFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
+getOffers :: forall m r. (HedisFlow m r, EsqDBReplicaFlow m r) => SSR.SearchRequest -> m [OfferRes]
 getOffers searchRequest =
   case searchRequest.toLocation of
     Just _ -> do
-      quoteList <- runInReplica $ QQuote.findAllByRequestId searchRequest.id
+      quoteList <- runInReplica $ QQuote.findAllByRequestId searchRequest.id (Proxy @m)
       let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByNearestDriverDistance quoteList
       metroOffers <- map Metro <$> Metro.getMetroOffers searchRequest.id
       publicTransportOffers <- map PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
     Nothing -> do
-      quoteList <- runInReplica $ QRentalQuote.findAllByRequestId searchRequest.id
+      quoteList <- runInReplica $ QRentalQuote.findAllByRequestId searchRequest.id (Proxy @m)
       let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
       return . sortBy (compare `on` creationTime) $ quotes
   where
@@ -109,9 +109,9 @@ getOffers searchRequest =
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
-getEstimates :: EsqDBReplicaFlow m r => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
+getEstimates :: forall m r. EsqDBReplicaFlow m r => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
 getEstimates searchRequestId = do
-  estimateList <- runInReplica $ QEstimate.findAllByRequestId searchRequestId
+  estimateList <- runInReplica $ QEstimate.findAllByRequestId searchRequestId (Proxy @m)
   let estimates = DEstimate.mkEstimateAPIEntity <$> sortByEstimatedFare estimateList
   return . sortBy (compare `on` (.createdAt)) $ estimates
 

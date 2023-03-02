@@ -23,26 +23,26 @@ import Kernel.Types.Id
 import Storage.Tabular.Quote
 import Storage.Tabular.TransportStation
 
-findById :: Transactionable m => Id Quote -> m (Maybe Quote)
-findById quoteId =
-  Esq.findOne $ do
+findById :: forall m ma. Transactionable ma m => Id Quote -> Proxy ma -> m (Maybe Quote)
+findById quoteId _ =
+  Esq.findOne @m @ma $ do
     quote <- from $ table @QuoteT
     where_ $ quote ^. QuoteId ==. val (getId quoteId)
     return quote
 
-create :: Quote -> SqlDB ()
+create :: Quote -> SqlDB m ()
 create = Esq.create
 
-findAllBySearchId :: Transactionable m => Id Search -> m [Quote]
-findAllBySearchId searchId =
-  Esq.findAll $ do
+findAllBySearchId :: forall m ma. Transactionable ma m => Id Search -> Proxy ma -> m [Quote]
+findAllBySearchId searchId _ =
+  Esq.findAll @m @ma $ do
     quote <- from $ table @QuoteT
     where_ $ quote ^. QuoteSearchId ==. val (toKey searchId)
     return quote
 
-findAllAggregatesBySearchId :: Transactionable m => Id Search -> m [(Quote, TransportStation, TransportStation)]
-findAllAggregatesBySearchId searchId =
-  findAll $ do
+findAllAggregatesBySearchId :: forall m ma. Transactionable ma m => Id Search -> Proxy ma -> m [(Quote, TransportStation, TransportStation)]
+findAllAggregatesBySearchId searchId _ =
+  findAll @m @ma $ do
     (quote :& depStation :& arrStation) <-
       from $
         table @QuoteT

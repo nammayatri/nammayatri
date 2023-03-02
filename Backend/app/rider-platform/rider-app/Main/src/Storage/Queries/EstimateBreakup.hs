@@ -21,9 +21,9 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.EstimateBreakup as SEB
 
-findAllByEstimateId :: (Transactionable m) => Id Estimate -> DTypeBuilder m [EstimateBreakupT]
-findAllByEstimateId estimateId =
-  Esq.findAll' $ do
+findAllByEstimateId :: forall m ma. (Transactionable ma m) => Id Estimate -> Proxy ma -> DTypeBuilder m [EstimateBreakupT]
+findAllByEstimateId estimateId _ =
+  Esq.findAll' @m @ma $ do
     estimateBreakup <- from $ table @SEB.EstimateBreakupT
     where_ $ estimateBreakup ^. EstimateBreakupEstimateId ==. val (toKey estimateId)
     return estimateBreakup

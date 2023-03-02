@@ -22,20 +22,20 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.CallStatus
 
-create :: CallStatus -> SqlDB ()
+create :: CallStatus -> SqlDB m ()
 create = Esq.create
 
-findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
-findById = Esq.findById
+findById :: forall m ma. Transactionable ma m => Id CallStatus -> Proxy ma -> m (Maybe CallStatus)
+findById callStatusId _ = Esq.findById @m @ma callStatusId
 
-findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
-findByCallSid callSid =
-  Esq.findOne $ do
+findByCallSid :: forall m ma. Transactionable ma m => Text -> Proxy ma -> m (Maybe CallStatus)
+findByCallSid callSid _ =
+  Esq.findOne @m @ma $ do
     callStatus <- from $ table @CallStatusT
     where_ $ callStatus ^. CallStatusExotelCallSid ==. val callSid
     return callStatus
 
-updateCallStatus :: Id CallStatus -> ExotelCallStatus -> Int -> BaseUrl -> SqlDB ()
+updateCallStatus :: Id CallStatus -> ExotelCallStatus -> Int -> BaseUrl -> SqlDB m ()
 updateCallStatus callId status conversationDuration recordingUrl = do
   Esq.update $ \tbl -> do
     set

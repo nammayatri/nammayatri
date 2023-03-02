@@ -67,14 +67,14 @@ newtype SelectListRes = SelectListRes
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> Flow DSelectRes
 select personId estimateId = do
   now <- getCurrentTime
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  estimate <- QEstimate.findById estimateId (Proxy @Flow) >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   checkIfEstimateCancelled estimate.id estimate.status
   let searchRequestId = estimate.requestId
-  searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
+  searchRequest <- QSearchRequest.findByPersonId personId searchRequestId (Proxy @Flow) >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
   Esq.runTransaction $ do
-    QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
+    QPFS.updateStatus @Flow searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId $ Just DEstimate.DRIVER_QUOTE_REQUESTED
   pure
     DSelectRes
@@ -84,9 +84,9 @@ select personId estimateId = do
         ..
       }
 
-selectList :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
+selectList :: forall m r. (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
-  estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  estimate <- runInReplica $ QEstimate.findById estimateId (Proxy @m) >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   checkIfEstimateCancelled estimate.id estimate.status
-  selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
+  selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId (Proxy @m)
   pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes

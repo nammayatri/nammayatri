@@ -36,19 +36,19 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
 
-findById :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
+findById :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe Merchant)
 findById id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
-    Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
+    Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id (Proxy @m)
 
-findAll :: (CacheFlow m r, EsqDBFlow m r) => m [Merchant]
+findAll :: forall m r. (CacheFlow m r, EsqDBFlow m r) => m [Merchant]
 findAll =
   Hedis.safeGet makeAllExoPhones >>= \case
     Just a -> return $ map (coerce @(MerchantD 'Unsafe) @Merchant) a
-    Nothing -> cacheAllMerchants /=<< Queries.findAll
+    Nothing -> cacheAllMerchants /=<< Queries.findAll (Proxy @m)
 
-findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: forall m r. (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ =
   Hedis.safeGet (makeShortIdKey shortId_) >>= \case
     Nothing -> findAndCache
@@ -57,9 +57,9 @@ findByShortId shortId_ =
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId_
+    findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId_ (Proxy @m)
 
-findByExoPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Merchant)
+findByExoPhone :: forall m r. (CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Merchant)
 findByExoPhone countryCode exoPhone =
   Hedis.safeGet (makeExoPhoneKey countryCode exoPhone) >>= \case
     Nothing -> findAndCache
@@ -68,7 +68,7 @@ findByExoPhone countryCode exoPhone =
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheMerchant /=<< Queries.findByExoPhone countryCode exoPhone
+    findAndCache = flip whenJust cacheMerchant /=<< Queries.findByExoPhone countryCode exoPhone (Proxy @m)
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Merchant -> m ()
@@ -104,8 +104,10 @@ makeExoPhoneKey countryCode phone = "CachedQueries:Merchant:ExoPhone-" <> countr
 makeAllExoPhones :: Text
 makeAllExoPhones = "CachedQueries:Merchant:All-Merchants"
 
-update :: Merchant -> Esq.SqlDB ()
-update = Queries.update
+update :: Hedis.HedisFlow m r => Merchant -> Esq.SqlDB m ()
+update merchant = do
+  Queries.update merchant
+  Esq.finalize $ clearCache merchant
 
 --TODO Rethink the implementation
 findAllByExoPhone ::

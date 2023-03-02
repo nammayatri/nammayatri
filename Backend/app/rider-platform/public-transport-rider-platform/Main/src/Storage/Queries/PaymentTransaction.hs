@@ -22,24 +22,24 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.PaymentTransaction
 
-findById :: Transactionable m => Id PaymentTransaction -> m (Maybe PaymentTransaction)
-findById paymentTransactionId =
-  Esq.findOne $ do
+findById :: forall m ma. Transactionable ma m => Id PaymentTransaction -> Proxy ma -> m (Maybe PaymentTransaction)
+findById paymentTransactionId _ =
+  Esq.findOne @m @ma $ do
     paymentTransaction <- from $ table @PaymentTransactionT
     where_ $ paymentTransaction ^. PaymentTransactionId ==. val (getId paymentTransactionId)
     return paymentTransaction
 
-findByBookingId :: Transactionable m => Id Booking -> m (Maybe PaymentTransaction)
-findByBookingId bookingId =
-  findOne $ do
+findByBookingId :: forall m ma. Transactionable ma m => Id Booking -> Proxy ma -> m (Maybe PaymentTransaction)
+findByBookingId bookingId _ =
+  findOne @m @ma $ do
     parkingSearch <- from $ table @PaymentTransactionT
     where_ $ parkingSearch ^. PaymentTransactionBookingId ==. val (toKey bookingId)
     return parkingSearch
 
-create :: PaymentTransaction -> SqlDB ()
+create :: PaymentTransaction -> SqlDB m ()
 create = Esq.create
 
-updateStatus :: Id PaymentTransaction -> PaymentStatus -> SqlDB ()
+updateStatus :: Id PaymentTransaction -> PaymentStatus -> SqlDB m ()
 updateStatus paymentTransactionId newStatus = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
@@ -50,7 +50,7 @@ updateStatus paymentTransactionId newStatus = do
       ]
     where_ $ tbl ^. PaymentTransactionId ==. val (getId paymentTransactionId)
 
-updateTxnDetails :: Id PaymentTransaction -> Text -> PaymentStatus -> SqlDB ()
+updateTxnDetails :: Id PaymentTransaction -> Text -> PaymentStatus -> SqlDB m ()
 updateTxnDetails paymentTransactionId paymentGatewayTxnStatus newStatus = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do

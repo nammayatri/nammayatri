@@ -78,6 +78,7 @@ notifyOnDriverOfferIncoming estimateId quotes person = do
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideAssigned ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -90,7 +91,7 @@ notifyOnRideAssigned booking ride = do
   let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   config <- getFCMConfig person.merchantId
   let notificationData =
         FCM.FCMData
@@ -111,6 +112,7 @@ notifyOnRideAssigned booking ride = do
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideStarted ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -123,7 +125,7 @@ notifyOnRideStarted booking ride = do
   let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   config <- getFCMConfig person.merchantId
   let notificationData =
         FCM.FCMData
@@ -144,6 +146,7 @@ notifyOnRideStarted booking ride = do
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideCompleted ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -157,7 +160,7 @@ notifyOnRideCompleted booking ride = do
       rideId = ride.id
       driverName = ride.driverName
       totalFare = ride.totalFare
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   config <- getFCMConfig person.merchantId
   let notificationData =
         FCM.FCMData
@@ -179,6 +182,7 @@ notifyOnRideCompleted booking ride = do
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnExpiration ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -189,7 +193,7 @@ notifyOnExpiration ::
 notifyOnExpiration searchReq = do
   let searchRequestId = searchReq.id
   let personId = searchReq.riderId
-  person <- Person.findById personId
+  person <- Person.findById personId (Proxy @m)
   case person of
     Just p -> do
       let notificationData =
@@ -244,6 +248,7 @@ notifyOnRegistration regToken person mbDeviceToken = do
    in FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId mbDeviceToken
 
 notifyOnBookingCancelled ::
+  forall m r.
   ( HasCacheConfig r,
     CoreMetrics m,
     HedisFlow m r,
@@ -253,7 +258,7 @@ notifyOnBookingCancelled ::
   SBCR.CancellationSource ->
   m ()
 notifyOnBookingCancelled booking cancellationSource = do
-  person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  person <- Person.findById booking.riderId (Proxy @m) >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   config <- getFCMConfig person.merchantId
   FCM.notifyPerson config (notificationData $ booking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where
@@ -304,6 +309,7 @@ notifyOnBookingCancelled booking cancellationSource = do
           ]
 
 notifyOnBookingReallocated ::
+  forall m r.
   ( HasCacheConfig r,
     CoreMetrics m,
     HedisFlow m r,
@@ -312,7 +318,7 @@ notifyOnBookingReallocated ::
   SRB.Booking ->
   m ()
 notifyOnBookingReallocated booking = do
-  person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  person <- Person.findById booking.riderId (Proxy @m) >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   notificationData <- buildNotificationData
   config <- getFCMConfig person.merchantId
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
@@ -340,6 +346,7 @@ notifyOnBookingReallocated booking = do
           ]
 
 notifyOnQuoteReceived ::
+  forall m r.
   ( HasCacheConfig r,
     CoreMetrics m,
     HedisFlow m r,
@@ -348,8 +355,8 @@ notifyOnQuoteReceived ::
   DQuote.Quote ->
   m ()
 notifyOnQuoteReceived quote = do
-  searchRequest <- QSearchReq.findById quote.requestId >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
-  person <- Person.findById searchRequest.riderId >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
+  searchRequest <- QSearchReq.findById quote.requestId (Proxy @m) >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
+  person <- Person.findById searchRequest.riderId (Proxy @m) >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
   config <- getFCMConfig person.merchantId
   let notificationData = mkNotificationData
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
@@ -372,6 +379,7 @@ notifyOnQuoteReceived quote = do
         }
 
 notifyDriverOnTheWay ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -380,7 +388,7 @@ notifyDriverOnTheWay ::
   Id Person ->
   m ()
 notifyDriverOnTheWay personId = do
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   config <- getFCMConfig person.merchantId
   let notificationData =
         FCM.FCMData
@@ -400,6 +408,7 @@ notifyDriverOnTheWay personId = do
   FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyDriverHasReached ::
+  forall m r.
   ( HasCacheConfig r,
     EsqDBFlow m r,
     HedisFlow m r,
@@ -409,7 +418,7 @@ notifyDriverHasReached ::
   SRide.Ride ->
   m ()
 notifyDriverHasReached personId ride = do
-  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- Person.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   config <- getFCMConfig person.merchantId
   let notificationData =
         FCM.FCMData

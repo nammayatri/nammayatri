@@ -21,5 +21,5 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.TripTerms
 
-findById' :: (MonadThrow m, Log m, Transactionable m) => Id TripTerms -> DTypeBuilder m (Maybe TripTermsT)
-findById' = Esq.findById'
+findById' :: forall m ma. (MonadThrow m, Log m, Transactionable ma m) => Id TripTerms -> Proxy ma -> DTypeBuilder m (Maybe TripTermsT)
+findById' tripTermsId _ = Esq.findById' @TripTermsT @m @ma tripTermsId

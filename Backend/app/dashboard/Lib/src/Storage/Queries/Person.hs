@@ -34,7 +34,7 @@ create :: Person -> SqlDB ()
 create = Esq.create
 
 findById ::
-  Transactionable m =>
+  Transactionable ma m =>
   Id Person ->
   m (Maybe Person)
 findById = Esq.findById
@@ -82,7 +82,7 @@ findByMobileNumber mobileNumber mobileCountryCode = do
 
 -- TODO add filtering by role
 findAllWithLimitOffset ::
-  Transactionable m =>
+  Transactionable ma m =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->

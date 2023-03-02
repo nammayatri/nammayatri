@@ -33,12 +33,12 @@ newtype OptAPIRequest = OptAPIRequest
   }
   deriving (Show, Eq, Generic, ToSchema, FromJSON, ToJSON)
 
-whatsAppOptAPI :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DP.Person -> OptAPIRequest -> m APISuccess
+whatsAppOptAPI :: forall m r. (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DP.Person -> OptAPIRequest -> m APISuccess
 whatsAppOptAPI personId OptAPIRequest {..} = do
-  DP.Person {..} <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  DP.Person {..} <- QP.findById personId (Proxy @m) >>= fromMaybeM (PersonNotFound personId.getId)
   mobileNo <- mapM decrypt mobileNumber >>= fromMaybeM (InvalidRequest "Person is not linked with any mobile number")
   unless (whatsappNotificationEnrollStatus == Just status) $
     void $ Whatsapp.whatsAppOptAPI merchantId $ OptApiReq {phoneNumber = mobileNo, method = status}
   DB.runTransaction $
-    void $ QP.updateWhatsappNotificationEnrollStatus personId $ Just status
+    void $ QP.updateWhatsappNotificationEnrollStatus @m personId $ Just status
   return Success
