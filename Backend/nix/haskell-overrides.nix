@@ -31,7 +31,7 @@ in
     beam-postgres = inputs.beam + /beam-postgres;
     beam-sqlite = inputs.beam + /beam-sqlite;
     beckn-gateway = inputs.beckn-gateway + /app/gateway;
-    mobility-core = inputs.beckn-shared-kernel + /lib/mobility-core;
+    mobility-core = inputs.shared-kernel + /lib/mobility-core;
     mock-registry = inputs.beckn-gateway + /app/mock-registry;
     passetto-client = inputs.passetto-hs + /client;
     passetto-core = inputs.passetto-hs + /core;

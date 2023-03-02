@@ -13,8 +13,8 @@
     euler-hs.flake = false;
 
     common.url = "github:nammayatri/common";
-    beckn-shared-kernel.url = "github:nammayatri/shared-kernel/ghc810"; # https://github.com/nammayatri/shared-kernel/pull/12
-    beckn-shared-kernel.flake = false;
+    shared-kernel.url = "github:nammayatri/shared-kernel/ghc810"; # https://github.com/nammayatri/shared-kernel/pull/12
+    shared-kernel.flake = false;
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.flake = false;
 

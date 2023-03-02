@@ -50,23 +50,6 @@
         "type": "github"
       }
     },
-    "beckn-shared-kernel": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1677518641,
-        "narHash": "sha256-2gGzmOp+rx+OXrXazYxjEnNPP1u4ufzxhgkBmGqF5UI=",
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "rev": "655d1f5d8252dab79e28fbbb7f1aedb2ab778283",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nammayatri",
-        "ref": "ghc810",
-        "repo": "shared-kernel",
-        "type": "github"
-      }
-    },
     "cachix-push": {
       "locked": {
         "lastModified": 1677778852,
@@ -340,7 +323,6 @@
         "beam": "beam",
         "beam-mysql": "beam-mysql",
         "beckn-gateway": "beckn-gateway",
-        "beckn-shared-kernel": "beckn-shared-kernel",
         "common": "common",
         "euler-hs": "euler-hs",
         "flake-parts": "flake-parts_2",
@@ -351,6 +333,7 @@
         "nixpkgs": "nixpkgs",
         "passetto-hs": "passetto-hs",
         "sequelize": "sequelize",
+        "shared-kernel": "shared-kernel",
         "treefmt-nix": "treefmt-nix"
       }
     },
@@ -368,6 +351,23 @@
         "owner": "juspay",
         "repo": "haskell-sequelize",
         "rev": "3abc8fe10edde3fd1c9a776ede81d057dc590341",
+        "type": "github"
+      }
+    },
+    "shared-kernel": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1677785596,
+        "narHash": "sha256-IK03kvkPi3rc1QdgDqlqzAeq54h6g+4c/ZOGC65Inag=",
+        "owner": "nammayatri",
+        "repo": "shared-kernel",
+        "rev": "87452e10a80612a24bda08f5489682ba88043790",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nammayatri",
+        "ref": "ghc810",
+        "repo": "shared-kernel",
         "type": "github"
       }
     },
