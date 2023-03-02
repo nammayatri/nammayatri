@@ -99,9 +99,6 @@ in  { esqDBCfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
     , webengageCfg = WebengageConfig
-    , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
-    , inviteSmsTemplate =
-        "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
     , port = +8014
     , metricsPort = +9997
     , hostName = "localhost"
@@ -140,8 +137,6 @@ in  { esqDBCfg
     , defaultEndRideCfg = endRideDefCfg
     , cacheConfig
     , driverLocationUpdateRateLimitOptions
-    , driverLocationUpdateNotificationTemplate =
-        "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , driverPoolCfg
     , driverLocationUpdateTopic = "location-updates"
     , snapToRoadSnippetThreshold = +300

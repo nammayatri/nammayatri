@@ -137,7 +137,7 @@ token: {{token1}}
 content-type: application/json
 
 {
-    "offeredFare": 30,
+    "offeredFare": 10,
     "searchRequestId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchRequestId}}"
 }
 

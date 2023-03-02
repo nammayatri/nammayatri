@@ -12,7 +12,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Person where
@@ -107,8 +106,6 @@ data PersonE e = Person
 type Person = PersonE 'AsEncrypted
 
 type DecryptedPerson = PersonE 'AsUnencrypted
-
-deriving instance Show DecryptedPerson -- remind me if i forgot to remove this comment please
 
 instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)

@@ -114,7 +114,6 @@ updateLocationHandler ::
     CoreMetrics m,
     MonadFlow m,
     HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
-    HasFlowEnv m r '["driverLocationUpdateNotificationTemplate" ::: Text],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["driverLocationUpdateTopic" ::: Text],
     MonadTime m
@@ -152,7 +151,6 @@ checkLocationUpdatesRateLimit ::
     CoreMetrics m,
     MonadFlow m,
     HasFlowEnv m r '["driverLocationUpdateRateLimitOptions" ::: APIRateLimitOptions],
-    HasFlowEnv m r '["driverLocationUpdateNotificationTemplate" ::: Text],
     MonadTime m
   ) =>
   Id Person.Person ->

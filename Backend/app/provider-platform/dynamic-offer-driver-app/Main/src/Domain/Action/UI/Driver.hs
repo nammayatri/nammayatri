@@ -85,6 +85,7 @@ import Kernel.Utils.Validation
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import Storage.CachedQueries.FarePolicy.FarePolicy (findByMerchantIdAndVariant)
@@ -253,7 +254,7 @@ data DriverStatsRes = DriverStatsRes
 
 createDriver ::
   ( HasCacheConfig r,
-    HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
     Redis.HedisFlow m r,
@@ -288,8 +289,12 @@ createDriver admin req = do
   let mobNum = personEntity.mobileNumber
       mobCounCode = personEntity.mobileCountryCode
   smsCfg <- asks (.smsCfg)
-  inviteSmsTemplate <- asks (.inviteSmsTemplate)
-  sendInviteSms smsCfg inviteSmsTemplate (mobCounCode <> mobNum) (org.name)
+  message <-
+    MessageBuilder.buildWelcomeToPlatformMessage person.merchantId $
+      MessageBuilder.WelcomeToPlatformMessageReq
+        { orgName = org.name
+        }
+  sendInviteSms smsCfg (mobCounCode <> mobNum) message
     >>= SF.checkSmsResult
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ OnboardDriverRes personAPIEntity
@@ -477,9 +482,8 @@ sendInviteSms ::
   SmsConfig ->
   Text ->
   Text ->
-  Text ->
   m SMS.SubmitSmsRes
-sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
+sendInviteSms smsCfg phoneNumber message = do
   let url = smsCfg.url
   let smsCred = smsCfg.credConfig
   let sender = smsCfg.sender
@@ -490,7 +494,7 @@ sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
         SMS.password = smsCred.password,
         SMS.from = sender,
         SMS.to = phoneNumber,
-        SMS.text = SF.constructInviteSms orgName inviteTemplate
+        SMS.text = message
       }
 
 buildDriver :: (EncFlow m r) => CreatePerson -> Id DM.Merchant -> m SP.Person

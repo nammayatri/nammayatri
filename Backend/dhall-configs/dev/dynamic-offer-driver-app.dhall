@@ -184,11 +184,8 @@ in  { esqDBCfg
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , apiRateLimitOptions
-    , inviteSmsTemplate =
-        "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
     , slackCfg
     , driverOnboardingConfigs
-    , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
     , smsCfg = smsConfig
     , searchRequestExpirationSeconds = +3600
     , driverQuoteExpirationSeconds = +60
@@ -200,8 +197,6 @@ in  { esqDBCfg
     , metricsSearchDurationTimeout = +45
     , driverLocationUpdateRateLimitOptions
     , driverReachedDistance = +100
-    , driverLocationUpdateNotificationTemplate =
-        "Yatri: Location updates calls are exceeding for driver with {#driver-id#}."
     , cacheTranslationConfig
     , driverPoolCfg
     , intelligentPoolConfig
