@@ -69,11 +69,11 @@
     },
     "cachix-push": {
       "locked": {
-        "lastModified": 1677770204,
-        "narHash": "sha256-C0mjkU9xtGxsm7MIeIqaV41HET4arGdsxWdFKNmF6bA=",
+        "lastModified": 1677778852,
+        "narHash": "sha256-FefOb/BgLNHyv+1Fn3+D9/+Hdaipf+Fy/GAY2XWPsVQ=",
         "owner": "juspay",
         "repo": "cachix-push",
-        "rev": "590aea950c6abecec921b516161bd712a7fbceb5",
+        "rev": "1644299005fffe87df6e366f7e7da87caaa9391e",
         "type": "github"
       },
       "original": {
@@ -84,6 +84,7 @@
     },
     "common": {
       "inputs": {
+        "cachix-push": "cachix-push",
         "flake-parts": "flake-parts",
         "flake-root": "flake-root",
         "haskell-flake": "haskell-flake",
@@ -91,11 +92,11 @@
         "nixpkgs-21_11": "nixpkgs-21_11"
       },
       "locked": {
-        "lastModified": 1677782581,
-        "narHash": "sha256-uXp37YQZ85NVf+bISDFHEe6/PUnL8TMIJhEZbIG7vV4=",
+        "lastModified": 1677785412,
+        "narHash": "sha256-WbyQ3awEkK398aJSkxBzWHtuzl7zkfVHC57NiDZPCYk=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "8ab1f123268c82df6f9c2ee59e10f639cf43f0ce",
+        "rev": "19155f558bda4cc2a68558528939b6aa292ad382",
         "type": "github"
       },
       "original": {
@@ -190,32 +191,30 @@
     },
     "haskell-flake": {
       "locked": {
-        "lastModified": 1677781559,
+        "lastModified": 1677784539,
         "narHash": "sha256-lOhq23Ovg3QEPVjNgctJnPkF/kWq65t+3RCxt78LtrU=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "f55aa00903eea09d099100cd6492054c671abf1e",
+        "rev": "9e2f7f159a03f70f8993e453ac57b004734a83ac",
         "type": "github"
       },
       "original": {
         "owner": "srid",
-        "ref": "outputs",
         "repo": "haskell-flake",
         "type": "github"
       }
     },
     "haskell-flake_2": {
       "locked": {
-        "lastModified": 1677781093,
-        "narHash": "sha256-5oa97U3WgfPipfgbaBAWqcdgdPfB/Ktd1ETgxXKT3Bs=",
+        "lastModified": 1677784539,
+        "narHash": "sha256-lOhq23Ovg3QEPVjNgctJnPkF/kWq65t+3RCxt78LtrU=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "3d4a918896576eb23ad4cd3f2107323501da0b82",
+        "rev": "9e2f7f159a03f70f8993e453ac57b004734a83ac",
         "type": "github"
       },
       "original": {
         "owner": "srid",
-        "ref": "outputs",
         "repo": "haskell-flake",
         "type": "github"
       }
@@ -342,7 +341,6 @@
         "beam-mysql": "beam-mysql",
         "beckn-gateway": "beckn-gateway",
         "beckn-shared-kernel": "beckn-shared-kernel",
-        "cachix-push": "cachix-push",
         "common": "common",
         "euler-hs": "euler-hs",
         "flake-parts": "flake-parts_2",

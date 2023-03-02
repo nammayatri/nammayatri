@@ -3,10 +3,9 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
-    haskell-flake.url = "github:srid/haskell-flake/outputs";
+    haskell-flake.url = "github:srid/haskell-flake";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
-    cachix-push.url = "github:juspay/cachix-push";
 
     flake-root.url = "github:srid/flake-root";
     # Dependencies
@@ -38,7 +37,6 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [
-        inputs.cachix-push.flakeModule
         inputs.common.flakeModule
         ./Backend
       ];
@@ -50,10 +48,7 @@
           config.allowUnfree = true;
         };
 
-        cachix-push = {
-          cacheName = "nammayatri";
-          packages = [ "all" ];
-        };
+        cachix-push.packages = [ "all" ];
 
         packages.default = self'.packages.rider-app;
 
