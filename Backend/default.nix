@@ -1,4 +1,4 @@
-{ self, inputs, config, lib, flake-parts-lib, ... }:
+{ self, inputs, ... }:
 {
   imports = [
     inputs.haskell-flake.flakeModule
@@ -16,9 +16,7 @@
       basePackages = pkgs.haskell.packages.ghc8107;
       devShell = {
         tools = hp: {
-          inherit (pkgs)
-            dhall
-            ;
+          dhall = pkgs.dhall;
         };
       };
       overrides = self: super: with pkgs.haskell.lib; {

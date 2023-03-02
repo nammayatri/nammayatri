@@ -3,7 +3,7 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
-    haskell-flake.url = "github:srid/haskell-flake";
+    haskell-flake.url = "github:srid/haskell-flake/outputs";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     cachix-push.url = "github:juspay/cachix-push";
@@ -57,18 +57,12 @@
 
         packages.default = self'.packages.rider-app;
 
-        # The default package is a dummy one, that builds all (other) packages.
-        # Useful for CI run.
+        # A dummy package to force build of all local Haskell packages. 
+        # Useful in CI.
         packages.all = pkgs.runCommand "packages-combined"
           {
-            packagesss =
-              builtins.attrValues
-                (lib.filterAttrs (k: _: k != "all" && k != "dockerImage")
-                  # TODO: Use 'outputs' from https://github.com/srid/haskell-flake/issues/74#issuecomment-1424309168
-                  self'.packages);
-          } ''
-          echo $packagesss > $out
-        '';
+            all = builtins.attrValues config.haskellProjects.default.outputs.localPackages;
+          } '' echo $all > $out '';
       };
     };
 }
