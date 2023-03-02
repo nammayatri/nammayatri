@@ -6,6 +6,7 @@
     haskell-flake.url = "github:srid/haskell-flake";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+    cachix-push.url = "github:juspay/cachix-push";
 
     flake-root.url = "github:srid/flake-root";
     nixpkgs-140774-workaround.url = "github:srid/nixpkgs-140774-workaround";
@@ -38,9 +39,9 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [
+        inputs.cachix-push.flakeModule
         inputs.common.flakeModules.default
         ./Backend/flake-module.nix
-        ./nix/cachix.nix
       ];
       perSystem = { config, self', system, pkgs, lib, ... }: {
         # Remove this after fixing
@@ -48,6 +49,11 @@
         _module.args.pkgs = import nixpkgs {
           inherit system;
           config.allowUnfree = true;
+        };
+
+        cachix-push = {
+          cacheName = "nammayatri";
+          packages = [ "all" ];
         };
 
         packages.default = self'.packages.rider-app;

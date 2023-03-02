@@ -67,6 +67,21 @@
         "type": "github"
       }
     },
+    "cachix-push": {
+      "locked": {
+        "lastModified": 1677770204,
+        "narHash": "sha256-C0mjkU9xtGxsm7MIeIqaV41HET4arGdsxWdFKNmF6bA=",
+        "owner": "juspay",
+        "repo": "cachix-push",
+        "rev": "590aea950c6abecec921b516161bd712a7fbceb5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "juspay",
+        "repo": "cachix-push",
+        "type": "github"
+      }
+    },
     "common": {
       "inputs": {
         "nixpkgs-21_11": "nixpkgs-21_11"
@@ -255,6 +270,7 @@
         "beam-mysql": "beam-mysql",
         "beckn-gateway": "beckn-gateway",
         "beckn-shared-kernel": "beckn-shared-kernel",
+        "cachix-push": "cachix-push",
         "common": "common",
         "euler-hs": "euler-hs",
         "flake-parts": "flake-parts",
