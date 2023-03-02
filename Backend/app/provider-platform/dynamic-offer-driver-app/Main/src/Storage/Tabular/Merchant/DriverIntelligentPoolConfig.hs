@@ -24,6 +24,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowCounters (PeriodType)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
@@ -45,6 +46,11 @@ mkPersist
       minQuotesToQualifyForIntelligentPool Int
       minQuotesToQualifyForIntelligentPoolWindowOption SWC.SlidingWindowOptions
       intelligentPoolPercentage Int Maybe
+      speedNormalizer Double
+      driverSpeedWeightage Int
+      locationUpdateSampleTime Minutes
+      minLocationUpdates Int
+      defaultDriverSpeed Double
       createdAt UTCTime
       updatedAt UTCTime
       Primary merchantId

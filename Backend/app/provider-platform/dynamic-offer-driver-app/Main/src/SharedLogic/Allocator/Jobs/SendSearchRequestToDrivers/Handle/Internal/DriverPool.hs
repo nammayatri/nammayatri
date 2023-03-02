@@ -239,10 +239,12 @@ sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig dp
       driverIds
   acceptanceRatios <- getRatios (getLatestAcceptanceRatio merchantId) driverIds
   driversAvailableTime <- map (second (sum . catMaybes)) <$> getRatios (getCurrentWindowAvailability merchantId) driverIds
+  averageSpeeds <- getRatios (getDriverAverageSpeed merchantId . cast) driverIds
+  let driverSpeedScore = getSpeedScore (intelligentPoolConfig.driverSpeedWeightage) averageSpeeds
   let driverCancellationScore = getScoreWithWeight (intelligentPoolConfig.cancellationRatioWeightage) cancellationRatios
   let driverAcceptanceScore = getScoreWithWeight (intelligentPoolConfig.acceptanceRatioWeightage) acceptanceRatios
   let driverAvailabilityScore = getScoreWithWeight (intelligentPoolConfig.availabilityTimeWeightage) driversAvailableTime
-  let overallScore = calculateOverallScore [driverAcceptanceScore, driverAvailabilityScore, driverCancellationScore]
+  let overallScore = calculateOverallScore [driverAcceptanceScore, driverAvailabilityScore, driverCancellationScore, driverSpeedScore]
   driverPoolWithoutTie <- breakSameScoreTies $ groupByScore overallScore
   let sortedDriverPool = concatMap snd . sortOn (Down . fst) $ HM.toList driverPoolWithoutTie
   logTagInfo "Driver Acceptance Score" $ show driverAcceptanceScore
@@ -294,6 +296,7 @@ sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig dp
     getRatios fn arr = mapM (\dId -> (dId.getId,) <$> fn dId) arr
     getDriverId = getId . (.driverPoolResult.driverId)
     getScoreWithWeight weight driverParamsValue = HM.fromList $ map (second (fromIntegral weight *)) driverParamsValue
+    getSpeedScore weight driverSpeeds = HM.fromList $ map (\(driverId, driverSpeed) -> (driverId, (1 - driverSpeed / intelligentPoolConfig.speedNormalizer) * fromIntegral weight)) driverSpeeds
 
 randomizeAndLimitSelection ::
   (MonadFlow m) =>
