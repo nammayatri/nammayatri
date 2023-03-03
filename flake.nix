@@ -8,7 +8,7 @@
     euler-hs.url = "github:juspay/euler-hs";
     euler-hs.flake = false;
 
-    shared-kernel.url = "github:nammayatri/shared-kernel/ghc810"; # https://github.com/nammayatri/shared-kernel/pull/12
+    shared-kernel.url = "github:nammayatri/shared-kernel/ghc810--nixify"; # https://github.com/nammayatri/shared-kernel/pull/12
     # shared-kernel.url = "path:/Users/srid/code/nammayatri/shared-kernel";
     shared-kernel.flake = false;
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
@@ -33,7 +33,7 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [
-        inputs.common.flakeModule
+        inputs.common.flakeModules.default
         ./Backend
       ];
       perSystem = { config, self', system, pkgs, lib, ... }: {

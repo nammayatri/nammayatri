@@ -76,11 +76,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1677859284,
-        "narHash": "sha256-ekd0CZP/dw2K4YH9D+XaQuTx7fTOwQGM0EwnzOrIxMo=",
+        "lastModified": 1677860104,
+        "narHash": "sha256-lBWKuWoEPka2DcKJHm9Jyrpki0+9cnLjGjtbL6KgWEs=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "b6841beb5893b205c4703466d7ebceca96c8658e",
+        "rev": "994b11d20122c723d5cadfa04bfddfe3358f1cb1",
         "type": "github"
       },
       "original": {
@@ -324,16 +324,16 @@
     "shared-kernel": {
       "flake": false,
       "locked": {
-        "lastModified": 1677785596,
-        "narHash": "sha256-IK03kvkPi3rc1QdgDqlqzAeq54h6g+4c/ZOGC65Inag=",
+        "lastModified": 1677863771,
+        "narHash": "sha256-Ls2RtEx9UghK1tcBIpHx6CrgDVvie3GEHezgAXgvV1A=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "87452e10a80612a24bda08f5489682ba88043790",
+        "rev": "7ca0695457cf397bc4bdf2be9d25601f188c783c",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "ghc810",
+        "ref": "ghc810--nixify",
         "repo": "shared-kernel",
         "type": "github"
       }
