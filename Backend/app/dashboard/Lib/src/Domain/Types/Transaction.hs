@@ -19,6 +19,7 @@ import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.DriverReferral as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
 import qualified Domain.Types.Merchant as DM
@@ -44,6 +45,7 @@ data Endpoint
   = RideAPI Common.RideEndpoint
   | BookingAPI Common.BookingEndpoint
   | DriverAPI Common.DriverEndpoint
+  | DriverReferralAPI Common.ReferralEndpoint
   | DriverRegistrationAPI Common.DriverRegistrationEndpoint
   | MerchantAPI Common.MerchantEndpoint
   | CustomerAPI Common.CustomerEndpoint

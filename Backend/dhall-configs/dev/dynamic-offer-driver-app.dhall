@@ -203,4 +203,5 @@ in  { esqDBCfg
     , snapToRoadSnippetThreshold = +300
     , mediaFileUrlPattern =
         "http://localhost:8016/ui/message/media/?filePath=<FILE_PATH>"
+    , minTripDistanceForReferralCfg = Some +1000
     }

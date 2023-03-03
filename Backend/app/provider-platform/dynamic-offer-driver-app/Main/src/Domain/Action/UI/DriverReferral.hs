@@ -34,14 +34,15 @@ createDriverReferral ::
     EsqDBFlow m r
   ) =>
   Id SP.Person ->
+  Bool ->
   ReferralLinkReq ->
   m APISuccess
-createDriverReferral driverId ReferralLinkReq {..} = do
+createDriverReferral driverId isDashboard ReferralLinkReq {..} = do
   unless (TU.validateAllDigitWithMinLength 6 referralCode) $
     throwError $ InvalidRequest "Referral Code must have 6 digits."
   person <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound person.merchantId.getId)
-  unless (transporterConfig.referralLinkPassword == referralLinkPassword) $
+  when (transporterConfig.referralLinkPassword /= referralLinkPassword && not isDashboard) $
     throwError $ InvalidRequest "Invalid Password."
   mbLastReferralCodeWithDriver <- Esq.runInReplica $ QRD.findById driverId
   whenJust mbLastReferralCodeWithDriver $ \lastReferralCodeWithDriver ->

@@ -61,7 +61,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of
-          Just distance -> ride.traveledDistance >= distance && maybe True (not . (.hasTakenRide)) mbRiderDetails
+          Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenRide)) mbRiderDetails
           Nothing -> True
   driver <- SQP.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   let referralMessage = "Congratulations!"
