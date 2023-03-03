@@ -83,7 +83,7 @@ extra-deps:
       - app/mock-registry
   # -  ../../shared-kernel/lib/mobility-core
   - git: https://github.com/nammayatri/shared-kernel.git
-    commit: 9c55802cb593344cfc65ffef2bc5e796ad9eefc7
+    commit: 3f6b93f067085848461c88065a0f8069eb697859
     subdirs:
       - lib/mobility-core
   - git: https://github.com/juspay/passetto
