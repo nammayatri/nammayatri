@@ -18,6 +18,7 @@ module Domain.Types.SearchRequest where
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMeters)
 import Kernel.Types.Id
@@ -37,6 +38,7 @@ data SearchRequest = SearchRequest
     merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
     createdAt :: UTCTime,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    language :: Maybe Maps.Language
   }
   deriving (Generic, Show)

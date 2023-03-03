@@ -24,6 +24,7 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DMerchant
 import Kernel.External.Encryption
 import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -86,12 +87,16 @@ data PersonE e = Person
     passwordHash :: Maybe DbHash,
     identifier :: Maybe Text,
     rating :: Maybe Text,
+    language :: Maybe Maps.Language,
     isNew :: Bool,
     enabled :: Bool,
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
+    referralCode :: Maybe Text,
+    referredAt :: Maybe UTCTime,
+    hasTakenRide :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,
@@ -129,7 +134,10 @@ data PersonAPIEntity = PersonAPIEntity
     maskedEmail :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe FCM.FCMRecipientToken,
-    whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods
+    hasTakenRide :: Bool,
+    referralCode :: Maybe Text,
+    whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
+    language :: Maybe Maps.Language
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

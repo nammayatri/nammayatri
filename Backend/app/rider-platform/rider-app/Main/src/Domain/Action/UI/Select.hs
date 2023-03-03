@@ -30,6 +30,7 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica)
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -49,7 +50,8 @@ data DSelectRes = DSelectRes
     estimateId :: Id DEstimate.Estimate,
     providerId :: Text,
     providerUrl :: BaseUrl,
-    variant :: VehicleVariant
+    variant :: VehicleVariant,
+    customerLanguage :: Maybe Maps.Language
   }
 
 newtype DEstimateSelectReq = DEstimateSelect
@@ -81,6 +83,7 @@ select personId estimateId = do
       { providerId = estimate.providerId,
         providerUrl = estimate.providerUrl,
         variant = estimate.vehicleVariant,
+        customerLanguage = searchRequest.language,
         ..
       }
 

@@ -21,6 +21,7 @@
 module Storage.Tabular.SearchRequest where
 
 import qualified Domain.Types.SearchRequest as Domain
+import Kernel.External.Maps (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
@@ -45,6 +46,7 @@ mkPersist
       createdAt UTCTime
       bundleVersion Text Maybe
       clientVersion Text Maybe
+      language Language Maybe
       Primary id
       deriving Generic
     |]

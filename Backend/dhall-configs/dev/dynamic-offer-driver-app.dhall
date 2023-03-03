@@ -103,6 +103,7 @@ let driverPoolCfg =
       , actualDistanceThreshold = Some +7000
       , maxDriverQuotesRequired = +1
       , driverQuoteLimit = +2
+      , driverRequestCountLimit = +3
       }
 
 let intelligentPoolConfig =
@@ -202,4 +203,5 @@ in  { esqDBCfg
     , snapToRoadSnippetThreshold = +300
     , mediaFileUrlPattern =
         "http://localhost:8016/ui/message/media/?filePath=<FILE_PATH>"
+    , minTripDistanceForReferralCfg = Some +1000
     }

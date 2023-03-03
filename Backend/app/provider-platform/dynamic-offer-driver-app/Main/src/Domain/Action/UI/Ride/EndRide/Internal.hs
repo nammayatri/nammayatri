@@ -24,7 +24,9 @@ import qualified Domain.Types.FareParameters as DFare
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.RiderDetails as RD
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -38,20 +40,38 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.FareParameters as QFare
+import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
 import qualified Tools.Metrics as Metrics
+import Tools.Notifications (sendNotificationToDriver)
 
 endRideTransaction ::
-  (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) =>
+  (Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) =>
   Id DP.Driver ->
   Id SRB.Booking ->
   Ride.Ride ->
   Maybe DFare.FareParameters ->
+  Maybe (Id RD.RiderDetails) ->
   m ()
-endRideTransaction driverId bookingId ride mbFareParams = do
+endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
   driverInfo <- CDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
+  minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
+  let shouldUpdateRideComplete =
+        case minTripDistanceForReferralCfg of
+          Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenRide)) mbRiderDetails
+          Nothing -> True
+  driver <- SQP.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  let referralMessage = "Congratulations!"
+  let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
+  when shouldUpdateRideComplete $
+    fork "REFERRAL_ACTIVATED FCM to Driver" $ do
+      sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage (cast driverId) driver.deviceToken
   Esq.runTransaction $ do
+    whenJust mbRiderDetails $ \riderDetails ->
+      when shouldUpdateRideComplete (QRD.updateHasTakenRide riderDetails.id)
     whenJust mbFareParams QFare.create
     QRide.updateAll ride.id ride
     QRide.updateStatus ride.id Ride.COMPLETED

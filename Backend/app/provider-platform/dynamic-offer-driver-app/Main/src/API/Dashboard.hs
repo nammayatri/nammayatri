@@ -16,6 +16,7 @@ module API.Dashboard where
 
 import qualified API.Dashboard.Booking as Booking
 import qualified API.Dashboard.Driver as Driver
+import qualified API.Dashboard.DriverReferral as DriverReferral
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Message as Message
 import qualified API.Dashboard.Ride as Ride
@@ -37,6 +38,7 @@ type API' =
            :<|> Booking.API
            :<|> Merchant.API
            :<|> Message.API
+           :<|> DriverReferral.API
        )
 
 handler :: FlowServer API
@@ -46,3 +48,4 @@ handler merchantId _dashboard =
     :<|> Booking.handler merchantId
     :<|> Merchant.handler merchantId
     :<|> Message.handler merchantId
+    :<|> DriverReferral.handler merchantId

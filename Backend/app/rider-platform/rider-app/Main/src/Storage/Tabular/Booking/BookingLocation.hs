@@ -41,6 +41,8 @@ mkPersist
       building Text Maybe
       areaCode Text Maybe
       area Text Maybe
+      ward Text Maybe
+      placeId Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

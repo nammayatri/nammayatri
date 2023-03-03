@@ -47,6 +47,7 @@ mkPersist
       status Domain.Status
       verified Bool
       enabled Bool
+      internalApiKey Text
       createdAt UTCTime
       updatedAt UTCTime
       originRestriction GeoRestriction

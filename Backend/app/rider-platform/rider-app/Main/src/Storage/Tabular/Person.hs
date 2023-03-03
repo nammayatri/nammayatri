@@ -23,6 +23,7 @@ module Storage.Tabular.Person where
 import qualified Domain.Types.Person as Domain
 import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
 import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.External.Maps (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -34,6 +35,7 @@ derivePersistField "Domain.Role"
 derivePersistField "Domain.Gender"
 derivePersistField "Domain.IdentifierType"
 derivePersistField "OptApiMethods"
+derivePersistField "Language"
 
 mkPersist
   defaultSqlSettings
@@ -55,6 +57,7 @@ mkPersist
       passwordHash DbHash Maybe
       identifier Text Maybe
       rating Text Maybe
+      language Language Maybe
       isNew Bool
       enabled Bool
       deviceToken FCMRecipientToken Maybe
@@ -65,6 +68,9 @@ mkPersist
       updatedAt UTCTime
       bundleVersion Text Maybe
       clientVersion Text Maybe
+      hasTakenRide Bool
+      referralCode Text Maybe
+      referredAt UTCTime Maybe
       Primary id
       deriving Generic
     |]

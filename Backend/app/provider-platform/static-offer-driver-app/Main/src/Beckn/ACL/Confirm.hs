@@ -49,4 +49,4 @@ buildConfirmReq subscriber req = do
       { ..
       }
   where
-    castAddress Confirm.Address {..} = DBL.LocationAddress {areaCode = area_code, ..}
+    castAddress Confirm.Address {..} = DBL.LocationAddress {areaCode = area_code, area = locality, ..}

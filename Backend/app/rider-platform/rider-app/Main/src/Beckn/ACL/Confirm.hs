@@ -83,6 +83,9 @@ mkLocation DBL.LocationAddress {..} =
     { address =
         Confirm.Address
           { area_code = areaCode,
+            locality = area,
+            ward = ward,
+            door = door,
             ..
           }
     }

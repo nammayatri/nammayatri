@@ -46,6 +46,7 @@ mkPersist
       updatedAt UTCTime
       tag  Text
       riderId Person.PersonTId
+      ward Text Maybe
       Primary id
       deriving Generic
     |]

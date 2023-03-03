@@ -20,6 +20,7 @@ where
 
 import qualified API.ProviderPlatform.DynamicOfferDriver.Booking as Booking
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
+import qualified API.ProviderPlatform.DynamicOfferDriver.DriverReferral as DriverReferral
 import qualified API.ProviderPlatform.DynamicOfferDriver.Merchant as Merchant
 import qualified API.ProviderPlatform.DynamicOfferDriver.Message as Message
 import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
@@ -36,6 +37,7 @@ type API =
            :<|> Booking.API
            :<|> Merchant.API
            :<|> Message.API
+           :<|> DriverReferral.API
        )
 
 handler :: FlowServer API
@@ -45,3 +47,4 @@ handler merchantId =
     :<|> Booking.handler merchantId
     :<|> Merchant.handler merchantId
     :<|> Message.handler merchantId
+    :<|> DriverReferral.handler merchantId

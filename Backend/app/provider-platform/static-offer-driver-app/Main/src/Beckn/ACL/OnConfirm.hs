@@ -93,7 +93,7 @@ mkFulfillmentInfo fromLoc mbToLoc startTime =
               }
     }
   where
-    castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, ..}
+    castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, ward = Nothing, locality = area, door = Nothing, ..}
 
 mkPrice :: Money -> Money -> OnConfirm.QuotePrice
 mkPrice estimatedFare estimatedTotalFare =
