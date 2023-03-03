@@ -25,6 +25,8 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Storage.Tabular.DriverReferral (DriverReferralTId)
+import Storage.Tabular.Person (PersonTId)
 
 mkPersist
   defaultSqlSettings
@@ -34,6 +36,10 @@ mkPersist
       mobileCountryCode Text
       mobileNumberEncrypted Text
       mobileNumberHash DbHash
+      referralCode DriverReferralTId Maybe
+      referredByDriver PersonTId Maybe
+      referredAt UTCTime Maybe
+      hasTakenRide Bool
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -50,13 +56,17 @@ instance TType RiderDetailsT Domain.RiderDetails where
     return $
       Domain.RiderDetails
         { id = Id id,
+          referralCode = fromKey <$> referralCode,
           mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+          referredByDriver = fromKey <$> referredByDriver,
           ..
         }
   toTType Domain.RiderDetails {..} =
     RiderDetailsT
       { id = getId id,
+        referralCode = toKey <$> referralCode,
         mobileNumberEncrypted = unEncrypted mobileNumber.encrypted,
         mobileNumberHash = mobileNumber.hash,
+        referredByDriver = fmap toKey referredByDriver,
         ..
       }

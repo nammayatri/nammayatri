@@ -215,7 +215,11 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
             mobileCountryCode = customerMobileCountryCode,
             mobileNumber = customerPhoneNumber,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            referralCode = Nothing,
+            referredByDriver = Nothing,
+            referredAt = Nothing,
+            hasTakenRide = False
           }
 
 buildRideDetails ::

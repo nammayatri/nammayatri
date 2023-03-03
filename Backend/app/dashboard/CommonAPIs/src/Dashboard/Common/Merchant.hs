@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Dashboard.Common.Merchant
   ( module Dashboard.Common.Merchant,
@@ -46,6 +47,7 @@ data MerchantEndpoint
   | MapsServiceConfigUsageUpdateEndpoint
   | SmsServiceConfigUpdateEndpoint
   | SmsServiceConfigUsageUpdateEndpoint
+  | TransporterConfigUpdateEndpoint
   deriving (Show, Read)
 
 derivePersistField "MerchantEndpoint"
@@ -431,3 +433,21 @@ validateSmsServiceUsageConfigUpdateReq :: Validate SmsServiceUsageConfigUpdateRe
 validateSmsServiceUsageConfigUpdateReq SmsServiceUsageConfigUpdateReq {..} = do
   let mkMessage field = "All values in list " <> field <> " should be unique"
   validateField "smsProvidersPriorityList" smsProvidersPriorityList $ PredicateFunc mkMessage (not . anySame @SMS.SmsService)
+
+---------------------------------------------------------
+-- merchant transport config update -------------
+
+type TransporterConfigUpdateAPI =
+  "referralProgram"
+    :> "referralOpsPassword"
+    :> ReqBody '[JSON] TransporterConfigUpdateAPIReq
+    :> Post '[JSON] APISuccess
+
+newtype TransporterConfigUpdateAPIReq = TransporterConfigUpdateAPIReq
+  { referralLinkPassword :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets TransporterConfigUpdateAPIReq where
+  hideSecrets = identity

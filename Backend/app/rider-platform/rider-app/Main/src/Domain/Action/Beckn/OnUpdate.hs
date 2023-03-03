@@ -31,6 +31,7 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareBreakup as QFareBreakup
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -167,6 +168,7 @@ onUpdate registryUrl RideCompletedReq {..} = do
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == SRide.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   rideEndTime <- getCurrentTime
+  rider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let updRide =
         ride{status = SRide.COMPLETED,
              fare = Just fare,
@@ -176,6 +178,8 @@ onUpdate registryUrl RideCompletedReq {..} = do
             }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups
   DB.runTransaction $ do
+    unless rider.hasTakenRide $
+      QP.updateHasTakenRide booking.riderId
     QRB.updateStatus booking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
     QFareBreakup.createMany breakups
