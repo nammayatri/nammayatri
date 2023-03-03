@@ -136,7 +136,8 @@ data PersonAPIEntity = PersonAPIEntity
     maskedDeviceToken :: Maybe FCM.FCMRecipientToken,
     hasTakenRide :: Bool,
     referralCode :: Maybe Text,
-    whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods
+    whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
+    language :: Maybe Maps.Language
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
