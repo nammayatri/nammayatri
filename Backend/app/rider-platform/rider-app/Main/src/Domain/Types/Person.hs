@@ -92,6 +92,9 @@ data PersonE e = Person
     description :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
+    referralCode :: Maybe Text,
+    referredAt :: Maybe UTCTime,
+    hasTakenRide :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,
@@ -129,6 +132,8 @@ data PersonAPIEntity = PersonAPIEntity
     maskedEmail :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe FCM.FCMRecipientToken,
+    hasTakenRide :: Bool,
+    referralCode :: Maybe Text,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

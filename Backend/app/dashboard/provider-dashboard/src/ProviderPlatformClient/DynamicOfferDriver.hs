@@ -91,7 +91,8 @@ data MerchantAPIs = MerchantAPIs
     mapsServiceConfigUpdate :: Common.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     mapsServiceUsageConfigUpdate :: Common.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Common.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceUsageConfigUpdate :: Common.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
+    smsServiceUsageConfigUpdate :: Common.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+    transporterConfigUpdate :: Common.TransporterConfigUpdateAPIReq -> Euler.EulerClient APISuccess
   }
 
 data MessageAPIs = MessageAPIs
@@ -157,7 +158,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> mapsServiceConfigUpdate
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate
-      :<|> smsServiceUsageConfigUpdate = merchantClient
+      :<|> smsServiceUsageConfigUpdate
+      :<|> transporterConfigUpdate = merchantClient
 
     uploadFile
       :<|> addLinkAsMedia

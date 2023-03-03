@@ -65,6 +65,9 @@ mkPersist
       updatedAt UTCTime
       bundleVersion Text Maybe
       clientVersion Text Maybe
+      hasTakenRide Bool
+      referralCode Text Maybe
+      referredAt UTCTime Maybe
       Primary id
       deriving Generic
     |]
