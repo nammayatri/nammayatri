@@ -63,12 +63,16 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
         case minTripDistanceForReferralCfg of
           Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenRide)) mbRiderDetails
           Nothing -> True
-  driver <- SQP.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   let referralMessage = "Congratulations!"
   let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
   when shouldUpdateRideComplete $
     fork "REFERRAL_ACTIVATED FCM to Driver" $ do
-      sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage (cast driverId) driver.deviceToken
+      whenJust mbRiderDetails $ \riderDetails -> do
+        case riderDetails.referredByDriver of
+          Just referredDriverId -> do
+            driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
+            sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
+          Nothing -> pure ()
   Esq.runTransaction $ do
     whenJust mbRiderDetails $ \riderDetails ->
       when shouldUpdateRideComplete (QRD.updateHasTakenRide riderDetails.id)
