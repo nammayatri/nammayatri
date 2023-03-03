@@ -203,6 +203,4 @@ in  { esqDBCfg
     , snapToRoadSnippetThreshold = +300
     , mediaFileUrlPattern =
         "http://localhost:8016/ui/message/media/?filePath=<FILE_PATH>"
-    , speedCalculationConfig =
-      { minLocationUpdates = +3, locationUpdateSampleTime = +3 }
     }
