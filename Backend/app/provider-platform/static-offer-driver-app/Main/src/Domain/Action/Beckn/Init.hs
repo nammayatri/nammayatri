@@ -110,12 +110,13 @@ initOneWayTrip req oneWayReq transporter now = do
     case mbDistRes of
       Nothing -> do
         res <-
-          MapSearch.getDistance transporter.id $
+          MapSearch.getDistance transporter.id
             MapSearch.GetDistanceReq
               { origin = req.fromLocation,
                 destination = oneWayReq.toLocation,
                 travelMode = Just MapSearch.CAR
               }
+            (dataDecider 300)
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
   let estimatedRideDuration = duration
@@ -138,6 +139,24 @@ initOneWayTrip req oneWayReq transporter now = do
   DB.runTransaction $ do
     QRB.create booking
   return booking
+
+dataDecider :: Seconds -> NonEmpty (Meters, Seconds) -> (Meters, Seconds)
+dataDecider threshold (x :| xs) = foldl' decider x xs
+  where
+    decider (distance1, duration1) (distance2, duration2)
+      | distance1 > distance2 =
+        if duration1 < duration2 && duration2 - duration1 < threshold
+          then -- first longer but faster within threshold
+            (distance1, duration1)
+          else -- second shorter and faster or threshold passed
+            (distance2, duration2)
+      | distance1 < distance2 =
+        if duration1 > duration2 && duration1 - duration2 < threshold
+          then -- second longer but faster within threshold
+            (distance2, duration2)
+          else -- first shorter and faster or threshold passed
+            (distance1, duration1)
+      | otherwise = (distance1, min duration1 duration2)
 
 initRentalTrip ::
   ( HasCacheConfig r,

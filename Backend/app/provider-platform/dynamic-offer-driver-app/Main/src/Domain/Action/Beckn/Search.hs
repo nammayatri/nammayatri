@@ -111,13 +111,33 @@ getDistanceAndDuration merchantId fromLocation toLocation routeInfo = case route
   where
     getMapsDistance = do
       response <-
-        Maps.getDistance merchantId $
+        Maps.getDistance
+          merchantId
           Maps.GetDistanceReq
             { origin = fromLocation,
               destination = toLocation,
               travelMode = Just Maps.CAR
             }
+          (dataDecider 300)
       return DistanceAndDuration {distance = response.distance, duration = response.duration}
+
+dataDecider :: Seconds -> NonEmpty (Meters, Seconds) -> (Meters, Seconds)
+dataDecider threshold (x :| xs) = foldl' decider x xs
+  where
+    decider (distance1, duration1) (distance2, duration2)
+      | distance1 > distance2 =
+        if duration1 < duration2 && duration2 - duration1 < threshold
+          then -- first longer but faster within threshold
+            (distance1, duration1)
+          else -- second shorter and faster or threshold passed
+            (distance2, duration2)
+      | distance1 < distance2 =
+        if duration1 > duration2 && duration1 - duration2 < threshold
+          then -- second longer but faster within threshold
+            (distance2, duration2)
+          else -- first shorter and faster or threshold passed
+            (distance1, duration1)
+      | otherwise = (distance1, min duration1 duration2)
 
 handler :: Id DM.Merchant -> DSearchReq -> Flow DSearchRes
 handler merchantId sReq = do

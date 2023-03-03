@@ -85,12 +85,14 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation transac
 
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
   distRes <-
-    MapSearch.getDistance transporterId $
+    MapSearch.getDistance
+      transporterId
       MapSearch.GetDistanceReq
         { origin = fromLocation,
           destination = toLocation,
           travelMode = Just MapSearch.CAR
         }
+      (dataDecider 300)
   let distance = distRes.distance
       estimatedRideDuration = distRes.duration
       estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` searchRequest.startTime
@@ -110,6 +112,24 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation transac
   Esq.runTransaction $
     for_ listOfQuotes QQuote.create
   pure $ mkQuoteInfo fromLocation toLocation now <$> listOfQuotes
+
+dataDecider :: Seconds -> NonEmpty (Meters, Seconds) -> (Meters, Seconds)
+dataDecider threshold (x :| xs) = foldl' decider x xs
+  where
+    decider (distance1, duration1) (distance2, duration2)
+      | distance1 > distance2 =
+        if duration1 < duration2 && duration2 - duration1 < threshold
+          then -- first longer but faster within threshold
+            (distance1, duration1)
+          else -- second shorter and faster or threshold passed
+            (distance2, duration2)
+      | distance1 < distance2 =
+        if duration1 > duration2 && duration1 - duration2 < threshold
+          then -- second longer but faster within threshold
+            (distance2, duration2)
+          else -- first shorter and faster or threshold passed
+            (distance1, duration1)
+      | otherwise = (distance1, min duration1 duration2)
 
 buildOneWayQuote ::
   EsqDBFlow m r =>

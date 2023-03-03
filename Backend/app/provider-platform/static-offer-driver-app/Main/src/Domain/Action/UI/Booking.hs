@@ -158,12 +158,13 @@ getRideInfo bookingId personId = do
             SRB.OneWayDetails details -> Just details.toLocation
             SRB.RentalDetails _ -> Nothing
       distanceDuration <-
-        MapSearch.getDistance booking.providerId $
+        MapSearch.getDistance booking.providerId
           MapSearch.GetDistanceReq
             { origin = driverLocation,
               destination = fromLocation,
               travelMode = Just MapSearch.CAR
             }
+          (dataDecider 300)
       return $
         GetRideInfoRes $
           Just $
@@ -180,6 +181,24 @@ getRideInfo bookingId personId = do
               }
   where
     driverId = cast personId
+
+dataDecider :: Seconds -> NonEmpty (Meters, Seconds) -> (Meters, Seconds)
+dataDecider threshold (x :| xs) = foldl' decider x xs
+  where
+    decider (distance1, duration1) (distance2, duration2)
+      | distance1 > distance2 =
+        if duration1 < duration2 && duration2 - duration1 < threshold
+          then -- first longer but faster within threshold
+            (distance1, duration1)
+          else -- second shorter and faster or threshold passed
+            (distance2, duration2)
+      | distance1 < distance2 =
+        if duration1 > duration2 && duration1 - duration2 < threshold
+          then -- second longer but faster within threshold
+            (distance2, duration2)
+          else -- first shorter and faster or threshold passed
+            (distance1, duration1)
+      | otherwise = (distance1, min duration1 duration2)
 
 responseToEventType :: NotificationStatus -> AllocationEventType
 responseToEventType ACCEPT = AllocationEvent.AcceptedByDriver
