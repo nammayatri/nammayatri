@@ -41,6 +41,7 @@ import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
 import SharedLogic.GoogleMaps
+import SharedService.RouteDecider (dataDecider)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -79,12 +80,14 @@ handler merchant sReq estimate = do
     case mbDistRes of
       Nothing -> do
         res <-
-          Maps.getDistance merchantId $
+          Maps.getDistance
+            merchantId
             Maps.GetDistanceReq
               { origin = fromLocation,
                 destination = toLocation,
                 travelMode = Just Maps.CAR
               }
+            dataDecider
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
   farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId estimate.vehicleVariant >>= fromMaybeM NoFarePolicy

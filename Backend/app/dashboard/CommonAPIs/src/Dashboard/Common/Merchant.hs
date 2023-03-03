@@ -208,14 +208,16 @@ updateMapsTReqConstructorModifier = \case
 data GoogleCfgUpdateReq = GoogleCfgUpdateReq
   { googleMapsUrl :: BaseUrl,
     googleRoadsUrl :: BaseUrl,
-    googleKey :: Text
+    googleKey :: Text,
+    routeDurationDeciderThreshold :: Seconds
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data GoogleCfgUpdateTReq = GoogleCfgUpdateTReq
   { googleMapsUrl :: BaseUrl,
-    googleRoadsUrl :: BaseUrl
+    googleRoadsUrl :: BaseUrl,
+    routeDurationDeciderThreshold :: Seconds
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON)

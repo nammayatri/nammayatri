@@ -52,7 +52,8 @@ content-type: application/json
   "serviceConfig" : {
       "googleMapsUrl" : "http://localhost:8019/",
       "googleRoadsUrl" : "http://localhost:8019/",
-      "googleKey" : "mock-google-key"
+      "googleKey" : "mock-google-key",
+      "routeDurationDeciderThreshold" : 300
   }
 }
 
@@ -68,7 +69,8 @@ content-type: application/json
   "serviceConfig" : {
       "googleMapsUrl" : "https://maps.googleapis.com/maps/api/",
       "googleRoadsUrl" : "https://roads.googleapis.com/",
-      "googleKey" : "{{google-key}}"
+      "googleKey" : "{{google-key}}",
+      "routeDurationDeciderThreshold" : 300
   }
 }
 

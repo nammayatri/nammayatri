@@ -48,6 +48,7 @@ import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool hiding (lat, lon)
 import qualified SharedLogic.Estimate as SHEst
 import SharedLogic.FareCalculator
+import SharedService.RouteDecider (dataDecider)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.TransporterConfig as CTC
@@ -106,12 +107,14 @@ getDistanceAndDuration :: Id DM.Merchant -> LatLong -> LatLong -> Maybe Meters -
 getDistanceAndDuration _ _ _ (Just distance) (Just duration) = return $ DistanceAndDuration {distance, duration}
 getDistanceAndDuration merchantId fromLocation toLocation _ _ = do
   response <-
-    Maps.getDistance merchantId $
+    Maps.getDistance
+      merchantId
       Maps.GetDistanceReq
         { origin = fromLocation,
           destination = toLocation,
           travelMode = Just Maps.CAR
         }
+      dataDecider
   return DistanceAndDuration {distance = response.distance, duration = response.duration}
 
 handler :: DM.Merchant -> DSearchReq -> Flow DSearchRes

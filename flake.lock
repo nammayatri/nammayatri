@@ -2258,11 +2258,11 @@
         "wai-middleware-prometheus": "wai-middleware-prometheus"
       },
       "locked": {
-        "lastModified": 1684506981,
-        "narHash": "sha256-oRTH97oH7l82qF9rYOAD1nFUAKYdp4tvEBc9EAJTaWs=",
+        "lastModified": 1684480014,
+        "narHash": "sha256-SOzkevM/JZCMchSvw7xNCMzbj1VL86LaEEJ6YiFA4/g=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "293e633bf41756120e6365a6fe82401ea5de6c2d",
+        "rev": "eeee1cd9fa5b10186d6bef140eec25ce1cab76d9",
         "type": "github"
       },
       "original": {

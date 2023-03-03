@@ -65,6 +65,7 @@ dependencies:
   - servant-client
   - servant-client-core
   - servant-server
+  - shared-services
   - text
   - wai
   - warp
@@ -102,6 +103,7 @@ library:
     - mobility-core
     - beckn-spec
     - location-updates
+    - shared-services
 
 executables:
   static-offer-driver-app-exe:
@@ -115,6 +117,7 @@ executables:
       - static-offer-driver-app
       - mobility-core
       - beckn-spec
+      - shared-services
 
 tests:
   static-offer-driver-app-tests:
@@ -126,6 +129,7 @@ tests:
       - static-offer-driver-app
       - mobility-core
       - beckn-spec
+      - shared-services
       - tasty
       - tasty-hunit
       - tasty-hspec

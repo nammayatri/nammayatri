@@ -34,6 +34,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.Ride as SRide
+import SharedService.RouteDecider (dataDecider)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -109,10 +110,12 @@ getDistanceBetweenPoints ::
   m Meters
 getDistanceBetweenPoints merchantId a b = do
   distRes <-
-    Maps.getDistance merchantId $
+    Maps.getDistance
+      merchantId
       Maps.GetDistanceReq
         { origin = a,
           destination = b,
           travelMode = Just Maps.CAR
         }
+      dataDecider
   return $ distRes.distance

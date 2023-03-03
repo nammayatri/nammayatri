@@ -24,6 +24,7 @@ library
       SharedService.Common
       SharedService.Common.Issue
       SharedService.ProviderPlatform.Issue
+      SharedService.RouteDecider
   other-modules:
       Paths_shared_services
   hs-source-dirs:

@@ -57,8 +57,10 @@ getDistance ::
   ) =>
   Id Merchant ->
   GetDistanceReq a b ->
+  (Seconds -> NonEmpty (Meters, Seconds) -> (Meters, Seconds)) ->
   m (GetDistanceResp a b)
-getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
+getDistance orgId req dataDecider =
+  runWithServiceConfig (\mapsCfg req' -> Maps.getDistance mapsCfg req' dataDecider) (.getDistances) orgId req
 
 getDistances ::
   ( EncFlow m r,

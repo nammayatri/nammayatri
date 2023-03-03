@@ -51,6 +51,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverLocation as QDrLoc
+import SharedService.RouteDecider (dataDecider)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.CachedQueries.Merchant as QM
@@ -141,7 +142,15 @@ bookingCancel bookingId admin = do
           }
 
 getRideInfo ::
-  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  Id SRB.Booking ->
+  Id SP.Person ->
+  m GetRideInfoRes
 getRideInfo bookingId personId = do
   mbNotification <- Esq.runInReplica $ QNotificationStatus.findActiveNotificationByDriverId driverId bookingId
   case mbNotification of
@@ -158,12 +167,14 @@ getRideInfo bookingId personId = do
             SRB.OneWayDetails details -> Just details.toLocation
             SRB.RentalDetails _ -> Nothing
       distanceDuration <-
-        MapSearch.getDistance booking.providerId $
+        MapSearch.getDistance
+          booking.providerId
           MapSearch.GetDistanceReq
             { origin = driverLocation,
               destination = fromLocation,
               travelMode = Just MapSearch.CAR
             }
+          dataDecider
       return $
         GetRideInfoRes $
           Just $

@@ -34,6 +34,7 @@ import qualified SharedLogic.CacheDistance as CD
 import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.FareCalculator.OneWayFareCalculator
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Flow as Fare
+import SharedService.RouteDecider (dataDecider)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Quote as QQuote
@@ -85,12 +86,14 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation transac
 
   driverEstimatedPickupDuration <- asks (.driverEstimatedPickupDuration)
   distRes <-
-    MapSearch.getDistance transporterId $
+    MapSearch.getDistance
+      transporterId
       MapSearch.GetDistanceReq
         { origin = fromLocation,
           destination = toLocation,
           travelMode = Just MapSearch.CAR
         }
+      dataDecider
   let distance = distRes.distance
       estimatedRideDuration = distRes.duration
       estimatedRideFinishTime = realToFrac (driverEstimatedPickupDuration + estimatedRideDuration) `addUTCTime` searchRequest.startTime

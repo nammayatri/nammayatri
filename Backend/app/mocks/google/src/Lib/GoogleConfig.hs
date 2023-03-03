@@ -15,11 +15,13 @@
 module Lib.GoogleConfig where
 
 import Kernel.Prelude
+import Kernel.Types.Time (Seconds)
 import Kernel.Utils.Dhall (FromDhall)
 
 data GoogleCfgUnencrypted = GoogleCfgUnencrypted
   { googleMapsUrl :: BaseUrl,
     googleRoadsUrl :: BaseUrl,
-    googleKey :: Text
+    googleKey :: Text,
+    routeDurationDeciderThreshold :: Seconds
   }
   deriving (Generic, FromDhall)

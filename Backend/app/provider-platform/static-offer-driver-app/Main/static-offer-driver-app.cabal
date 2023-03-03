@@ -345,6 +345,7 @@ library
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , shared-services
     , singletons
     , stm
     , string-conversions
@@ -423,6 +424,7 @@ executable static-offer-driver-app-exe
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , shared-services
     , singletons
     , static-offer-driver-app
     , stm
@@ -528,6 +530,7 @@ test-suite static-offer-driver-app-tests
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , shared-services
     , singletons
     , static-offer-driver-app
     , stm

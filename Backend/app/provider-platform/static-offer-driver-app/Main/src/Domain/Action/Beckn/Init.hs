@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.FareCalculator.OneWayFareCalculator
+import SharedService.RouteDecider (dataDecider)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
@@ -116,12 +117,14 @@ initOneWayTrip req oneWayReq transporter now = do
     case mbDistRes of
       Nothing -> do
         res <-
-          MapSearch.getDistance transporter.id $
+          MapSearch.getDistance
+            transporter.id
             MapSearch.GetDistanceReq
               { origin = req.fromLocation,
                 destination = oneWayReq.toLocation,
                 travelMode = Just MapSearch.CAR
               }
+            dataDecider
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
   let estimatedRideDuration = duration
