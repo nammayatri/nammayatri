@@ -20,6 +20,7 @@ import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types.VehicleVariant
 import Environment
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
@@ -37,7 +38,7 @@ buildSelectReq dSelectReq autoAssignEnabled = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SELECT messageId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just dSelectReq.providerId) (Just dSelectReq.providerUrl)
-  let order = mkOrder dSelectReq autoAssignEnabled
+  let order = mkOrder dSelectReq autoAssignEnabled dSelectReq.customerLanguage
   pure $ BecknReq context $ Select.SelectMessage order
 
 castVariant :: VehicleVariant -> Common.VehicleVariant
@@ -46,8 +47,8 @@ castVariant HATCHBACK = Common.HATCHBACK
 castVariant SEDAN = Common.SEDAN
 castVariant SUV = Common.SUV
 
-mkOrder :: DSelect.DSelectRes -> Bool -> Select.Order
-mkOrder req autoAssignEnabled = do
+mkOrder :: DSelect.DSelectRes -> Bool -> Maybe Maps.Language -> Select.Order
+mkOrder req autoAssignEnabled customerLanguage = do
   let from = req.searchRequest.fromLocation
       mbTo = req.searchRequest.toLocation
       items =
@@ -71,7 +72,8 @@ mkOrder req autoAssignEnabled = do
         Select.FulfillmentInfo
           { tags =
               Select.Tags
-                { auto_assign_enabled = autoAssignEnabled
+                { auto_assign_enabled = autoAssignEnabled,
+                  customer_language = customerLanguage
                 },
             start =
               Select.StartInfo
@@ -81,13 +83,15 @@ mkOrder req autoAssignEnabled = do
                         address =
                           Just
                             Select.Address
-                              { area = from.address.area,
+                              { locality = from.address.area,
                                 state = from.address.state,
                                 country = from.address.country,
                                 building = from.address.building,
                                 street = from.address.street,
                                 city = from.address.city,
-                                area_code = from.address.areaCode
+                                area_code = from.address.areaCode,
+                                door = from.address.door,
+                                ward = from.address.ward
                               }
                       },
                   time = Select.TimeTimestamp req.searchRequest.startTime
@@ -101,13 +105,15 @@ mkOrder req autoAssignEnabled = do
                           address =
                             Just
                               Select.Address
-                                { area = to.address.area,
+                                { locality = to.address.area,
                                   state = to.address.state,
                                   country = to.address.country,
                                   building = to.address.building,
                                   street = to.address.street,
                                   city = to.address.city,
-                                  area_code = to.address.areaCode
+                                  area_code = to.address.areaCode,
+                                  door = to.address.door,
+                                  ward = to.address.ward
                                 }
                         }
                   }

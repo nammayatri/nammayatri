@@ -24,6 +24,7 @@ import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -47,7 +48,8 @@ data UpdateProfileReq = UpdateProfileReq
     lastName :: Maybe Text,
     email :: Maybe Text,
     deviceToken :: Maybe FCM.FCMRecipientToken,
-    referralCode :: Maybe Text
+    referralCode :: Maybe Text,
+    language :: Maybe Maps.Language
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -73,6 +75,7 @@ updatePerson personId req = do
       refCode
       mbEncEmail
       (req.deviceToken)
+      (req.language)
   pure APISuccess.Success
 
 validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasBapInfo r m, CoreMetrics m) => Id Person.Person -> Text -> m (Maybe Text)

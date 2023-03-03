@@ -61,7 +61,8 @@ buildSelectReq subscriber req = do
         pickupAddress = pickup.location.address,
         dropAddrress = dropOff.location.address,
         variant = castVariant item.descriptor.code.vehicleVariant,
-        autoAssignEnabled = order.fulfillment.tags.auto_assign_enabled
+        autoAssignEnabled = order.fulfillment.tags.auto_assign_enabled,
+        customerLanguage = order.fulfillment.tags.customer_language
       }
 
 castVariant :: OS.VehicleVariant -> Variant

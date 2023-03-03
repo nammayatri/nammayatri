@@ -41,6 +41,7 @@ mkPersist
       building Text Maybe
       areaCode Text Maybe
       area Text Maybe
+      ward Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -54,7 +55,7 @@ instance TEntityKey BookingLocationT where
 
 instance TType BookingLocationT Domain.BookingLocation where
   fromTType BookingLocationT {..} = do
-    let address = Domain.LocationAddress {..}
+    let address = Domain.LocationAddress {placeId = Nothing, ..}
     return $
       Domain.BookingLocation
         { id = Id id,

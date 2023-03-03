@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (maskText)
 import Servant.API
+import qualified Kernel.External.Maps as Maps
 
 data Role
   = USER
@@ -86,6 +87,7 @@ data PersonE e = Person
     passwordHash :: Maybe DbHash,
     identifier :: Maybe Text,
     rating :: Maybe Text,
+    language :: Maybe Maps.Language,
     isNew :: Bool,
     enabled :: Bool,
     deviceToken :: Maybe FCM.FCMRecipientToken,

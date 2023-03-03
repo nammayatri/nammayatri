@@ -26,6 +26,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Storage.Tabular.Person
+import Kernel.External.Maps (Language)
 
 create :: Person -> SqlDB ()
 create = Esq.create
@@ -170,8 +171,9 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe (EncryptedHashed Text) ->
   Maybe FCMRecipientToken ->
+  Maybe Language -> 
   SqlDB ()
-updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken = do
+updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbLanguage = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -187,6 +189,7 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode m
           <> updateWhenJust_ (\x -> PersonDeviceToken =. val (Just x)) mbDeviceToken
           <> updateWhenJust_ (\x -> PersonReferralCode =. val (Just x)) mbReferralCode
           <> updateWhenJust_ (\_ -> PersonReferredAt =. val (Just now)) mbReferralCode
+          <> updateWhenJust_ (\x -> PersonLanguage =. val (Just x)) mbLanguage
       )
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
