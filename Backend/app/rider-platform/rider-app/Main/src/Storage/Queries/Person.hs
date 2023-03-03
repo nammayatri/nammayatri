@@ -19,6 +19,7 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.External.Maps (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -26,7 +27,6 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Storage.Tabular.Person
-import Kernel.External.Maps (Language)
 
 create :: Person -> SqlDB ()
 create = Esq.create
@@ -171,7 +171,7 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe (EncryptedHashed Text) ->
   Maybe FCMRecipientToken ->
-  Maybe Language -> 
+  Maybe Language ->
   SqlDB ()
 updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbLanguage = do
   now <- getCurrentTime

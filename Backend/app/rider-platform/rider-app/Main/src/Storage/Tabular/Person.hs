@@ -23,14 +23,13 @@ module Storage.Tabular.Person where
 import qualified Domain.Types.Person as Domain
 import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
 import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.External.Maps (Language)
 import Kernel.External.Whatsapp.Interface.Types (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Version
 import qualified Storage.Tabular.Merchant as SMerchant
-import Kernel.External.Maps (Language)
-
 
 derivePersistField "Domain.Role"
 derivePersistField "Domain.Gender"
