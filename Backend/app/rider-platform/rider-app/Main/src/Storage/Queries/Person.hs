@@ -19,6 +19,7 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
+import Kernel.External.Maps (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -167,10 +168,12 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe (EncryptedHashed Text) ->
   Maybe FCMRecipientToken ->
+  Maybe Language ->
   SqlDB ()
-updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken = do
+updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbLanguage = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -184,6 +187,9 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbEncEmail mbDev
           <> updateWhenJust_ (\x -> PersonEmailEncrypted =. val (Just x)) mbEmailEncrypted
           <> updateWhenJust_ (\x -> PersonEmailHash =. val (Just x)) mbEmailHash
           <> updateWhenJust_ (\x -> PersonDeviceToken =. val (Just x)) mbDeviceToken
+          <> updateWhenJust_ (\x -> PersonReferralCode =. val (Just x)) mbReferralCode
+          <> updateWhenJust_ (\_ -> PersonReferredAt =. val (Just now)) mbReferralCode
+          <> updateWhenJust_ (\x -> PersonLanguage =. val (Just x)) mbLanguage
       )
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
@@ -192,3 +198,37 @@ deleteById personId = do
   Esq.delete $ do
     person <- from $ table @PersonT
     where_ (person ^. PersonId ==. val (getId personId))
+
+updateHasTakenRide :: Id Person -> SqlDB ()
+updateHasTakenRide personId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonHasTakenRide =. val True,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonId ==. val (getId personId)
+
+updateReferralCodeAndReferredAt :: Id Person -> Maybe Text -> SqlDB ()
+updateReferralCodeAndReferredAt personId referralCode = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonReferredAt =. val (Just now),
+        PersonReferralCode =. val referralCode,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonId ==. val (getId personId)
+
+findByReferralCode ::
+  (Transactionable m, EncFlow m r) =>
+  Text ->
+  m (Maybe Person)
+findByReferralCode referralCode = do
+  findOne $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonReferralCode ==. val (Just referralCode)
+    return person

@@ -21,9 +21,11 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
   )
 where
 
+import qualified Control.Monad as CM
 import Control.Monad.Extra (maybeM)
 import qualified Data.HashMap as HM
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.TransporterConfig (TransporterConfig)
 import EulerHS.Prelude hiding (id)
@@ -105,6 +107,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
                 pure filledBatch
               else do
                 pure driverPoolBatch
+          incrementDriverRequestCount finalPoolBatch searchReq.id
           cacheBatch finalPoolBatch
           pure finalPoolBatch
 
@@ -148,6 +151,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       transporterConfig <- TC.findByMerchantId merchantId
       let batchDriverIds = batch <&> (.driverPoolResult.driverId)
       let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
+      driversWithValidReqAmount <- filterM (\dpr -> checkRequestCount searchReq.id dpr.driverPoolResult.driverId driverPoolCfg) driversNotInBatch
       minQuotesToQualifyForIntelligentPool <- asks (.intelligentPoolConfig.minQuotesToQualifyForIntelligentPool)
       let fillSize = batchSize - length batch
       (batch <>)
@@ -155,9 +159,9 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
           Intelligent -> do
             (sortedDriverPool, randomizedDriverPool) <-
               bimapM (sortWithDriverScore merchantId transporterConfig) randomizeAndLimitSelection
-                =<< splitDriverPoolForSorting minQuotesToQualifyForIntelligentPool driversNotInBatch -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
+                =<< splitDriverPoolForSorting minQuotesToQualifyForIntelligentPool driversWithValidReqAmount -- snd means taking drivers who recieved less then X(config- minQuotesToQualifyForIntelligentPool) quotes
             takeDriversUsingPoolPercentage (sortedDriverPool, randomizedDriverPool) fillSize
-          Random -> pure $ take fillSize driversNotInBatch
+          Random -> pure $ take fillSize driversWithValidReqAmount
     cacheBatch batch = do
       logDebug $ "Caching batch-" <> show batch
       Redis.withCrossAppRedis $ Redis.setExp (driverPoolBatchKey searchReq.id batchNum) batch (60 * 10)
@@ -370,3 +374,19 @@ incrementPoolRadiusStep searchReqId = do
   res <- Redis.withCrossAppRedis $ Redis.incr (poolRadiusStepKey searchReqId)
   logInfo $ "Increment radius step to " <> show res <> "."
   return ()
+
+driverRequestCountKey :: Id DSR.SearchRequest -> Id Driver -> Text
+driverRequestCountKey searchReqId driverId = "Driver-Request-Count-Key:SearchReqId-DriverId" <> searchReqId.getId <> driverId.getId
+
+checkRequestCount :: (Redis.HedisFlow m r, HasDriverPoolConfig r) => Id DSR.SearchRequest -> Id Driver -> DriverPoolConfig -> m Bool
+checkRequestCount searchReqId driverId driverPoolConfig = maybe True (\count -> (count :: Int) < driverPoolConfig.driverRequestCountLimit) <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchReqId driverId))
+
+incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DSR.SearchRequest -> m ()
+incrementDriverRequestCount finalPoolBatch searchReqId = do
+  CM.mapM_
+    ( \dpr ->
+        Redis.withCrossAppRedis do
+          void $ Redis.incr (driverRequestCountKey searchReqId dpr.driverPoolResult.driverId)
+          Redis.expire (driverRequestCountKey searchReqId dpr.driverPoolResult.driverId) 7200
+    )
+    finalPoolBatch

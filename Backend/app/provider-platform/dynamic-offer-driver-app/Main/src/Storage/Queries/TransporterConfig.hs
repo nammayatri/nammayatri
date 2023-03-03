@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.TransporterConfig
   {-# WARNING
@@ -43,6 +44,17 @@ updateFCMConfig merchantId fcmUrl fcmServiceAccount = do
       tbl
       [ TransporterConfigFcmUrl =. val (showBaseUrl fcmUrl),
         TransporterConfigFcmServiceAccount =. val fcmServiceAccount,
+        TransporterConfigUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
+
+updateReferralLinkPassword :: Id Merchant -> Text -> SqlDB ()
+updateReferralLinkPassword merchantId newPassword = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ TransporterConfigReferralLinkPassword =. val newPassword,
         TransporterConfigUpdatedAt =. val now
       ]
     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)

@@ -17,6 +17,8 @@
 module Domain.Types.RiderDetails where
 
 import Data.Time
+import Domain.Types.DriverReferral (DriverReferral)
+import Domain.Types.Person (Person)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
 import Kernel.Types.Id
@@ -26,7 +28,11 @@ data RiderDetailsE e = RiderDetails
     mobileCountryCode :: Text,
     mobileNumber :: EncryptedHashedField e Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    referralCode :: Maybe (Id DriverReferral),
+    referredByDriver :: Maybe (Id Person),
+    referredAt :: Maybe UTCTime,
+    hasTakenRide :: Bool
   }
   deriving (Generic)
 

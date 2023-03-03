@@ -26,6 +26,7 @@ import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
 import qualified Kernel.External.FCM.Types as FCM
+import qualified Kernel.External.Maps as Maps
 import Kernel.External.Types (Language)
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Types.Id
@@ -127,7 +128,8 @@ data PersonAPIEntity = PersonAPIEntity
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe FCM.FCMRecipientToken,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
-    role :: Role
+    role :: Role,
+    language :: Maybe Maps.Language
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

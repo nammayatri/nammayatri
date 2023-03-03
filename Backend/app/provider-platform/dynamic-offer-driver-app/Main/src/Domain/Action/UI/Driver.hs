@@ -48,6 +48,7 @@ import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
+import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy.FarePolicy (ExtraFee)
 import qualified Domain.Types.Merchant as DM
@@ -91,6 +92,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverQuote as QDrQt
+import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
@@ -116,6 +118,7 @@ data DriverInformationRes = DriverInformationRes
     verified :: Bool,
     enabled :: Bool,
     blocked :: Bool,
+    referralCode :: Maybe Text,
     organization :: DM.MerchantAPIEntity,
     language :: Maybe Maps.Language
   }
@@ -335,12 +338,13 @@ getInformation personId = do
   let driverId = cast personId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   let merchantId = person.merchantId
   organization <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  pure $ makeDriverInformationRes driverEntity organization
+  pure $ makeDriverInformationRes driverEntity organization driverReferralCode
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Bool -> m APISuccess.APISuccess
 setActivity personId isActive = do
@@ -458,11 +462,12 @@ updateDriver personId req = do
   Esq.runTransaction $
     QPerson.updatePersonRec personId updPerson
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
+  driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
   let merchantId = person.merchantId
   org <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  return $ makeDriverInformationRes driverEntity org
+  return $ makeDriverInformationRes driverEntity org driverReferralCode
 
 sendInviteSms ::
   ( MonadFlow m,
@@ -544,10 +549,11 @@ buildVehicle req personId merchantId = do
         SV.updatedAt = now
       }
 
-makeDriverInformationRes :: DriverEntityRes -> DM.Merchant -> DriverInformationRes
-makeDriverInformationRes DriverEntityRes {..} org =
+makeDriverInformationRes :: DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverInformationRes
+makeDriverInformationRes DriverEntityRes {..} org referralCode =
   DriverInformationRes
     { organization = DM.makeMerchantAPIEntity org,
+      referralCode = referralCode <&> (.getId),
       ..
     }
 

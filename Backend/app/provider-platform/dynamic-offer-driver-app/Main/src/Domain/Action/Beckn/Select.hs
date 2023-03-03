@@ -17,6 +17,7 @@ module Domain.Action.Beckn.Select where
 
 import qualified Beckn.Types.Core.Taxi.Common.Address as BA
 import qualified Data.Map as M
+import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -55,7 +56,8 @@ data DSelectReq = DSelectReq
     pickupAddress :: Maybe BA.Address,
     dropAddrress :: Maybe BA.Address,
     variant :: Variant,
-    autoAssignEnabled :: Bool
+    autoAssignEnabled :: Bool,
+    customerLanguage :: Maybe Maps.Language
   }
 
 type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
@@ -63,8 +65,8 @@ type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 handler :: Id DM.Merchant -> DSelectReq -> Flow ()
 handler merchantId sReq = do
   sessiontoken <- generateGUIDText
-  fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.pickupLocation
-  toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.dropLocation
+  fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
+  toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
   mbDistRes <- CD.getCacheDistance sReq.transactionId
   logInfo $ "Fetching cached distance and duration" <> show mbDistRes
   (distance, duration) <-
@@ -150,8 +152,31 @@ buildSearchRequest from to merchantId sReq distance duration = do
         autoAssignEnabled = sReq.autoAssignEnabled
       }
 
-buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> LatLong -> m DLoc.SearchReqLocation
-buildSearchReqLocation merchantId sessionToken _ latLong@Maps.LatLong {..} = do
+buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
+buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
+  Address {..} <- case address of
+    Just loc
+      | customerLanguage == Just Maps.ENGLISH && isJust loc.ward ->
+        pure $
+          Address
+            { areaCode = loc.area_code,
+              street = loc.street,
+              city = loc.city,
+              state = loc.state,
+              country = loc.country,
+              building = loc.building,
+              area = loc.ward,
+              full_address = decodeAddress loc
+            }
+    _ -> getAddressByGetPlaceName merchantId sessionToken latLong
+  id <- Id <$> generateGUID
+  now <- getCurrentTime
+  let createdAt = now
+      updatedAt = now
+  pure DLoc.SearchReqLocation {..}
+
+getAddressByGetPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m Address
+getAddressByGetPlaceName merchantId sessionToken latLong = do
   pickupRes <-
     Maps.getPlaceName merchantId $
       Maps.GetPlaceNameReq
@@ -159,9 +184,14 @@ buildSearchReqLocation merchantId sessionToken _ latLong@Maps.LatLong {..} = do
           sessionToken = Just sessionToken,
           language = Nothing
         }
-  Address {..} <- mkLocation pickupRes
-  id <- Id <$> generateGUID
-  now <- getCurrentTime
-  let createdAt = now
-      updatedAt = now
-  pure DLoc.SearchReqLocation {..}
+  mkLocation pickupRes
+
+decodeAddress :: BA.Address -> Maybe Text
+decodeAddress BA.Address {..} = do
+  let strictFields = catMaybes $ filter (not . isEmpty) [door, building, street, locality, city, state, area_code, country]
+  if null strictFields
+    then Nothing
+    else Just $ T.intercalate ", " strictFields
+
+isEmpty :: Maybe Text -> Bool
+isEmpty = maybe True (T.null . T.replace " " "")

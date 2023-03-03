@@ -22,6 +22,7 @@ import Beckn.Types.Core.Taxi.Select.StopInfo
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Types (Language)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 -- If end = Nothing, then bpp sends quotes only for RENTAL
@@ -33,8 +34,9 @@ data FulfillmentInfo = FulfillmentInfo
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
-newtype Tags = Tags
-  { auto_assign_enabled :: Bool
+data Tags = Tags
+  { auto_assign_enabled :: Bool,
+    customer_language :: Maybe Language
   }
   deriving (Generic, Show)
 

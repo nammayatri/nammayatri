@@ -25,6 +25,7 @@ import "dynamic-offer-driver-app" API.Dashboard as BPP
 import qualified Dashboard.Common.Booking as Common
 import qualified Dashboard.ProviderPlatform.Driver as Common
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Common
+import qualified Dashboard.ProviderPlatform.DriverReferral as Common
 import qualified Dashboard.ProviderPlatform.Merchant as Common
 import qualified Dashboard.ProviderPlatform.Message as Common
 import qualified Dashboard.ProviderPlatform.Ride as Common
@@ -46,7 +47,8 @@ data DriverOfferAPIs = DriverOfferAPIs
     rides :: RidesAPIs,
     bookings :: BookingsAPIs,
     merchant :: MerchantAPIs,
-    message :: MessageAPIs
+    message :: MessageAPIs,
+    driverReferral :: DriverReferralAPIs
   }
 
 data DriversAPIs = DriversAPIs
@@ -94,6 +96,11 @@ data MerchantAPIs = MerchantAPIs
     smsServiceUsageConfigUpdate :: Common.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
   }
 
+data DriverReferralAPIs = DriverReferralAPIs
+  { updateReferralLinkPassword :: Common.ReferralLinkPasswordUpdateAPIReq -> Euler.EulerClient APISuccess,
+    linkDriverReferralCode :: (LBS.ByteString, Common.ReferralLinkReq) -> Euler.EulerClient Common.LinkReport
+  }
+
 data MessageAPIs = MessageAPIs
   { uploadFile :: (LBS.ByteString, Common.UploadFileRequest) -> Euler.EulerClient Common.UploadFileResponse,
     addLinkAsMedia :: Common.AddLinkAsMedia -> Euler.EulerClient Common.UploadFileResponse,
@@ -109,6 +116,7 @@ mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
 mkDriverOfferAPIs merchantId token = do
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
+  let driverReferral = DriverReferralAPIs {..}
   let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
   let message = MessageAPIs {..}
@@ -118,7 +126,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> ridesClient
       :<|> bookingsClient
       :<|> merchantClient
-      :<|> messageClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+      :<|> messageClient
+      :<|> driverReferralClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     driverDocumentsInfo
       :<|> listDrivers
@@ -158,6 +167,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate
       :<|> smsServiceUsageConfigUpdate = merchantClient
+
+    updateReferralLinkPassword
+      :<|> linkDriverReferralCode = driverReferralClient
 
     uploadFile
       :<|> addLinkAsMedia
