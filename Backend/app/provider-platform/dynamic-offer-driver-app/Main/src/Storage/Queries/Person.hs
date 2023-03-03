@@ -437,34 +437,31 @@ getNearestDrivers ::
 getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide mbDriverPositionInfoExpiry = do
   now <- getCurrentTime
   res <- Esq.findAll $ do
-    withTable <- with $ do
-      (person :& location :& driverInfo :& vehicle) <-
-        from baseFullPersonQuery
-      where_ $
-        person ^. PersonRole ==. val Person.DRIVER
-          &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-          &&. driverInfo ^. DriverInformationActive
-          &&. (if onlyNotOnRide then not_ (driverInfo ^. DriverInformationOnRide) else val True)
-          &&. not_ (driverInfo ^. DriverInformationBlocked)
-          &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                  ||. (location ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
-              )
-          &&. whenJust_ mbVariant (\var -> vehicle ^. VehicleVariant ==. val var)
-      return
-        ( person ^. PersonTId,
-          person ^. PersonDeviceToken,
-          person ^. PersonLanguage,
-          driverInfo ^. DriverInformationOnRide,
-          location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
-          location ^. DriverLocationLat,
-          location ^. DriverLocationLon,
-          vehicle ^. VehicleVariant
-        )
-    (personId, mbDeviceToken, language, onRide, dist, dlat, dlon, variant) <- from withTable
-    where_ $ dist <. val (fromIntegral radiusMeters)
-    orderBy [asc dist]
-    return (personId, mbDeviceToken, language, onRide, dist, variant, dlat, dlon)
+    (person :& location :& driverInfo :& vehicle) <-
+      from baseFullPersonQuery
+    where_ $
+      person ^. PersonRole ==. val Person.DRIVER
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+        &&. driverInfo ^. DriverInformationActive
+        &&. (if onlyNotOnRide then not_ (driverInfo ^. DriverInformationOnRide) else val True)
+        &&. not_ (driverInfo ^. DriverInformationBlocked)
+        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
+                ||. (location ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
+            )
+        &&. whenJust_ mbVariant (\var -> vehicle ^. VehicleVariant ==. val var)
+        &&. buildRadiusWithin (location ^. DriverLocationPoint) (lat, lon) (val radiusMeters)
+    orderBy [asc (location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
+    return
+      ( person ^. PersonTId,
+        person ^. PersonDeviceToken,
+        person ^. PersonLanguage,
+        driverInfo ^. DriverInformationOnRide,
+        location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
+        location ^. DriverLocationLat,
+        location ^. DriverLocationLon,
+        vehicle ^. VehicleVariant
+      )
   return $ makeNearestDriversResult <$> res
   where
-    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, dist :: Double, variant, dlat, dlon) =
+    makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, dist :: Double, dlat, dlon, variant) =
       NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) variant dlat dlon
