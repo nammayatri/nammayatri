@@ -1,19 +1,15 @@
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    flake-parts.url = "github:hercules-ci/flake-parts";
-    flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
-    haskell-flake.url = "github:srid/haskell-flake";
-    treefmt-nix.url = "github:numtide/treefmt-nix";
-    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+    common.url = "github:nammayatri/common";
+    flake-parts.follows = "common/flake-parts";
 
-    flake-root.url = "github:srid/flake-root";
     # Dependencies
     euler-hs.url = "github:juspay/euler-hs";
     euler-hs.flake = false;
 
-    common.url = "github:nammayatri/common";
     shared-kernel.url = "github:nammayatri/shared-kernel/ghc810"; # https://github.com/nammayatri/shared-kernel/pull/12
+    # shared-kernel.url = "path:/Users/srid/code/nammayatri/shared-kernel";
     shared-kernel.flake = false;
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.flake = false;
@@ -41,13 +37,6 @@
         ./Backend
       ];
       perSystem = { config, self', system, pkgs, lib, ... }: {
-        # Remove this after fixing
-        # https://github.com/nammayatri/nammayatri/issues/13
-        _module.args.pkgs = import nixpkgs {
-          inherit system;
-          config.allowUnfree = true;
-        };
-
         cachix-push.packages = [ "all" ];
 
         packages.default = self'.packages.rider-app;

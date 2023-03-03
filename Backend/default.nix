@@ -1,9 +1,6 @@
 { self, inputs, ... }:
 {
   imports = [
-    inputs.haskell-flake.flakeModule
-    inputs.flake-root.flakeModule
-    inputs.treefmt-nix.flakeModule
     ./nix/docker.nix
   ];
   perSystem = { config, self', system, pkgs, lib, ... }: {

@@ -72,14 +72,15 @@
         "flake-root": "flake-root",
         "haskell-flake": "haskell-flake",
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround",
-        "nixpkgs-21_11": "nixpkgs-21_11"
+        "nixpkgs-21_11": "nixpkgs-21_11",
+        "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1677785412,
-        "narHash": "sha256-WbyQ3awEkK398aJSkxBzWHtuzl7zkfVHC57NiDZPCYk=",
+        "lastModified": 1677859284,
+        "narHash": "sha256-ekd0CZP/dw2K4YH9D+XaQuTx7fTOwQGM0EwnzOrIxMo=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "19155f558bda4cc2a68558528939b6aa292ad382",
+        "rev": "b6841beb5893b205c4703466d7ebceca96c8658e",
         "type": "github"
       },
       "original": {
@@ -122,26 +123,6 @@
         "type": "github"
       }
     },
-    "flake-parts_2": {
-      "inputs": {
-        "nixpkgs-lib": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1675933616,
-        "narHash": "sha256-/rczJkJHtx16IFxMmAWu5nNYcSXNg1YYXTHoGjLrLUA=",
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "rev": "47478a4a003e745402acf63be7f9a092d51b83d7",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "type": "github"
-      }
-    },
     "flake-root": {
       "locked": {
         "lastModified": 1671378805,
@@ -157,37 +138,7 @@
         "type": "github"
       }
     },
-    "flake-root_2": {
-      "locked": {
-        "lastModified": 1671378805,
-        "narHash": "sha256-yqGxyzMN2GuppwG3dTWD1oiKxi+jGYP7D1qUSc5vKhI=",
-        "owner": "srid",
-        "repo": "flake-root",
-        "rev": "dc7ba6166e478804a9da6881aa48c45d300075cf",
-        "type": "github"
-      },
-      "original": {
-        "owner": "srid",
-        "repo": "flake-root",
-        "type": "github"
-      }
-    },
     "haskell-flake": {
-      "locked": {
-        "lastModified": 1677784539,
-        "narHash": "sha256-lOhq23Ovg3QEPVjNgctJnPkF/kWq65t+3RCxt78LtrU=",
-        "owner": "srid",
-        "repo": "haskell-flake",
-        "rev": "9e2f7f159a03f70f8993e453ac57b004734a83ac",
-        "type": "github"
-      },
-      "original": {
-        "owner": "srid",
-        "repo": "haskell-flake",
-        "type": "github"
-      }
-    },
-    "haskell-flake_2": {
       "locked": {
         "lastModified": 1677784539,
         "narHash": "sha256-lOhq23Ovg3QEPVjNgctJnPkF/kWq65t+3RCxt78LtrU=",
@@ -238,16 +189,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1675940568,
-        "narHash": "sha256-epG6pOT9V0kS+FUqd7R6/CWkgnZx2DMT5Veqo+y6G3c=",
+        "lastModified": 1675545634,
+        "narHash": "sha256-TbQeQcM5TA/wIho6xtzG+inUfiGzUXi8ewwttiQWYJE=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "6ccc4a59c3f1b56d039d93da52696633e641bc71",
+        "rev": "0591d6b57bfeb55dfeec99a671843337bc2c3323",
         "type": "github"
       },
       "original": {
         "owner": "nixos",
-        "ref": "nixpkgs-unstable",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -301,6 +252,22 @@
         "type": "github"
       }
     },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1675940568,
+        "narHash": "sha256-epG6pOT9V0kS+FUqd7R6/CWkgnZx2DMT5Veqo+y6G3c=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "6ccc4a59c3f1b56d039d93da52696633e641bc71",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "passetto-hs": {
       "flake": false,
       "locked": {
@@ -325,16 +292,16 @@
         "beckn-gateway": "beckn-gateway",
         "common": "common",
         "euler-hs": "euler-hs",
-        "flake-parts": "flake-parts_2",
-        "flake-root": "flake-root_2",
-        "haskell-flake": "haskell-flake_2",
+        "flake-parts": [
+          "common",
+          "flake-parts"
+        ],
         "hedis": "hedis",
         "mysql-haskell": "mysql-haskell",
-        "nixpkgs": "nixpkgs",
+        "nixpkgs": "nixpkgs_2",
         "passetto-hs": "passetto-hs",
         "sequelize": "sequelize",
-        "shared-kernel": "shared-kernel",
-        "treefmt-nix": "treefmt-nix"
+        "shared-kernel": "shared-kernel"
       }
     },
     "sequelize": {
@@ -373,9 +340,7 @@
     },
     "treefmt-nix": {
       "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
+        "nixpkgs": "nixpkgs"
       },
       "locked": {
         "lastModified": 1677433127,
