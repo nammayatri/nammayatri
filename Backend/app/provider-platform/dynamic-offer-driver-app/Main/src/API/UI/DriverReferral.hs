@@ -23,4 +23,4 @@ handler =
   createDriverReferral
 
 createDriverReferral :: Id SP.Person -> Domain.ReferralLinkReq -> FlowHandler APISuccess
-createDriverReferral driverId = withFlowHandlerAPI . Domain.createDriverReferral driverId
+createDriverReferral driverId = withFlowHandlerAPI . Domain.createDriverReferral driverId False
