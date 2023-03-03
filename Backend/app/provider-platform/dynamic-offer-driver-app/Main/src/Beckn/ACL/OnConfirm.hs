@@ -106,4 +106,4 @@ mkFulfillmentInfo fromLoc toLoc startTime =
             }
     }
   where
-    castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, ..}
+    castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, locality = area, ward = Nothing, door = Nothing, ..}

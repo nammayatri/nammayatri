@@ -192,6 +192,7 @@ buildPerson req bundleVersion clientVersion merchantId = do
         mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,
         rating = Nothing,
+        language = Nothing,
         isNew = True,
         enabled = True,
         deviceToken = Nothing,

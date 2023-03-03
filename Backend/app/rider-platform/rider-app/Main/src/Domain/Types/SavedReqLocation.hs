@@ -34,7 +34,8 @@ data SavedReqLocation = SavedReqLocation
     updatedAt :: UTCTime,
     tag :: Text,
     riderId :: Id Person,
-    placeId :: Maybe Text
+    placeId :: Maybe Text,
+    ward :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -50,7 +51,8 @@ data SavedReqLocationAPIEntity = SavedReqLocationAPIEntity
     areaCode :: Maybe Text,
     area :: Maybe Text,
     tag :: Text,
-    placeId :: Maybe Text
+    placeId :: Maybe Text,
+    ward :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

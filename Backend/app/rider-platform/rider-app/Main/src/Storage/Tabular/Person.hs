@@ -29,11 +29,14 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Version
 import qualified Storage.Tabular.Merchant as SMerchant
+import Kernel.External.Maps (Language)
+
 
 derivePersistField "Domain.Role"
 derivePersistField "Domain.Gender"
 derivePersistField "Domain.IdentifierType"
 derivePersistField "OptApiMethods"
+derivePersistField "Language"
 
 mkPersist
   defaultSqlSettings
@@ -55,6 +58,7 @@ mkPersist
       passwordHash DbHash Maybe
       identifier Text Maybe
       rating Text Maybe
+      language Language Maybe
       isNew Bool
       enabled Bool
       deviceToken FCMRecipientToken Maybe

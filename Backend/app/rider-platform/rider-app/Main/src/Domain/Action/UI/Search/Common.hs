@@ -58,7 +58,8 @@ buildSearchRequest person pickup mbDrop mbDistance now bundleVersion clientVersi
         merchantId = person.merchantId,
         createdAt = now,
         bundleVersion = bundleVersion,
-        clientVersion = clientVersion
+        clientVersion = clientVersion,
+        language = person.language
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

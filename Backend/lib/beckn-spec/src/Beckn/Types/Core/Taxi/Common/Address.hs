@@ -19,13 +19,15 @@ import Kernel.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Address = Address
-  { area :: Maybe Text,
+  { locality :: Maybe Text,
     state :: Maybe Text,
     country :: Maybe Text,
     building :: Maybe Text,
     street :: Maybe Text,
     city :: Maybe Text,
-    area_code :: Maybe Text
+    area_code :: Maybe Text,
+    ward :: Maybe Text,
+    door :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
