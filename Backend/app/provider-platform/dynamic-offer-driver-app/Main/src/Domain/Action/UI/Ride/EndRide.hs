@@ -290,7 +290,7 @@ isTimeOutsideOfThreshold ServiceHandle {..} booking ride now = do
 
 calculateFinalValuesForCorrectDistanceCalculations ::
   (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> UTCTime -> m (Meters, Money, Maybe FareParameters)
-calculateFinalValuesForCorrectDistanceCalculations handle@ServiceHandle {..} booking ride now = do
+calculateFinalValuesForCorrectDistanceCalculations handle booking ride now = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
 
   if distanceDiff < 0
@@ -328,6 +328,6 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
             else recalculateFareForDistance handle booking ride (booking.estimatedDistance + 2000)
 
 returnEstimatesAsFinalValues :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> m (Meters, Money, Maybe FareParameters)
-returnEstimatesAsFinalValues handle@ServiceHandle {..} booking ride = do
+returnEstimatesAsFinalValues handle booking ride = do
   waitingCharge <- getWaitingFare handle ride.tripStartTime ride.driverArrivalTime booking.fareParams.waitingChargePerMin
   pure (booking.estimatedDistance, booking.estimatedFare + waitingCharge, Nothing)
