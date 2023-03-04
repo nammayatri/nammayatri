@@ -8,8 +8,7 @@
     euler-hs.url = "github:juspay/euler-hs";
     euler-hs.flake = false;
 
-    shared-kernel.url = "github:nammayatri/shared-kernel/ghc810--nixify"; # https://github.com/nammayatri/shared-kernel/pull/12
-    # shared-kernel.url = "path:/Users/srid/code/nammayatri/shared-kernel";
+    shared-kernel.url = "github:nammayatri/shared-kernel";
     shared-kernel.flake = false;
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.flake = false;

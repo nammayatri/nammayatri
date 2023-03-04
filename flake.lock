@@ -324,16 +324,15 @@
     "shared-kernel": {
       "flake": false,
       "locked": {
-        "lastModified": 1677863771,
-        "narHash": "sha256-Ls2RtEx9UghK1tcBIpHx6CrgDVvie3GEHezgAXgvV1A=",
+        "lastModified": 1677942870,
+        "narHash": "sha256-E346S4rvLIIhNtkzn1kyIqK1+jkk2InLWGhIVRnTuQk=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "7ca0695457cf397bc4bdf2be9d25601f188c783c",
+        "rev": "cb327a49972f130eeb52fb20e32892c778f066ad",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "ghc810--nixify",
         "repo": "shared-kernel",
         "type": "github"
       }
