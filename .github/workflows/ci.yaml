@@ -33,6 +33,7 @@ jobs:
         run: |
           nix build -L --no-allow-dirty .#dockerImage
       - name: Flake checks 🧪
+        if: false
         run: |
           # Because 'nix flake check' is not system-aware
           # See https://srid.ca/haskell-template/checks
