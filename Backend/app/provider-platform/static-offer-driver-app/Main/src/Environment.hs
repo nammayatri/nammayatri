@@ -26,6 +26,7 @@ module Environment
 where
 
 import qualified Data.Text as T
+import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDefCfg
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Exotel.Types (ExotelCfg)
@@ -90,12 +91,7 @@ data AppCfg = AppCfg
     schedulingReserveTime :: Seconds,
     driverEstimatedPickupDuration :: Seconds,
     dashboardToken :: Text,
-    defaultPickupLocThreshold :: Meters,
-    defaultDropLocThreshold :: Meters,
-    defaultrideTravelledDistThresholdWhenPickupOrDestIsDiff :: Meters,
-    defaultrideTravelledDistThresholdWhenPickupAndDestIsSame :: Meters,
-    defaultRideTimeEstimatedThreshold :: Seconds,
-    defaultWaitingTimeEstimatedThreshold :: Seconds,
+    defaultEndRideCfg :: EndRideDefCfg.EndRideDefaultConfig,
     cacheConfig :: CacheConfig,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,
@@ -145,12 +141,7 @@ data AppEnv = AppEnv
     schedulingReserveTime :: Seconds,
     driverEstimatedPickupDuration :: Seconds,
     dashboardToken :: Text,
-    defaultPickupLocThreshold :: Meters,
-    defaultDropLocThreshold :: Meters,
-    defaultrideTravelledDistThresholdWhenPickupOrDestIsDiff :: Meters,
-    defaultrideTravelledDistThresholdWhenPickupAndDestIsSame :: Meters,
-    defaultRideTimeEstimatedThreshold :: Seconds,
-    defaultWaitingTimeEstimatedThreshold :: Seconds,
+    defaultEndRideCfg :: EndRideDefCfg.EndRideDefaultConfig,
     cacheConfig :: CacheConfig,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverLocationUpdateNotificationTemplate :: Text,

@@ -12,24 +12,17 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Common.Address where
+module Fixtures.EndRideDefaultConfig where
 
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import Kernel.Prelude
-import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDC
 
-data Address = Address
-  { locality :: Maybe Text,
-    state :: Maybe Text,
-    country :: Maybe Text,
-    building :: Maybe Text,
-    street :: Maybe Text,
-    city :: Maybe Text,
-    area_code :: Maybe Text,
-    ward :: Maybe Text,
-    door :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema Address where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+defaultEndRideConfig :: EndRideDC.EndRideDefaultConfig
+defaultEndRideConfig =
+  EndRideDC.EndRideDefaultConfig
+    { pickupLocThreshold = 500,
+      dropLocThreshold = 500,
+      rideTravelledDistThresholdWhenPickupOrDestIsDiff = 700,
+      rideTravelledDistThresholdWhenPickupAndDestIsSame = 1200,
+      rideTimeEstimatedThreshold = 900,
+      waitingTimeEstimatedThreshold = 3
+    }

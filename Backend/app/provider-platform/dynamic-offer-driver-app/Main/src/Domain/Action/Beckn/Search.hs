@@ -150,7 +150,7 @@ handler merchantId sReq = do
 
         let listOfProtoQuotes = nubBy ((==) `on` (.variant)) driverPool
             filteredProtoQuotes = zipMatched farePolicies listOfProtoQuotes
-        estimates <- mapM (mkEstimate org sReq.pickupTime result.distance driverPool) filteredProtoQuotes
+        estimates <- mapM (buildEstimate org sReq.pickupTime result.distance driverPool) filteredProtoQuotes
         logDebug $ "bap uri: " <> show sReq.bapUri
         return estimates
 
@@ -171,7 +171,7 @@ handler merchantId sReq = do
               midx = elemIndex fpVehicleVariant driverPoolVariants
            in fmap (\idx -> (farePolicy, driverPool !! idx)) midx
 
-mkEstimate ::
+buildEstimate ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
   DM.Merchant ->
   UTCTime ->
@@ -179,7 +179,7 @@ mkEstimate ::
   [DriverPoolResult] ->
   (FarePolicy, DriverPoolResult) ->
   m EstimateItem
-mkEstimate org startTime dist driverpool (farePolicy, driverMetadata) = do
+buildEstimate org startTime dist driverpool (farePolicy, driverMetadata) = do
   fareParams <- calculateFare org.id farePolicy dist startTime Nothing
   let baseFare = fareSum fareParams
       currency = "INR"

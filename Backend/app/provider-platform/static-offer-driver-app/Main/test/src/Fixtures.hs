@@ -17,6 +17,7 @@ module Fixtures (module Fixtures) where
 import Fixtures.BaseUrl as Fixtures
 import Fixtures.Booking as Fixtures
 import Fixtures.DriverLocation as Fixtures
+import Fixtures.EndRideDefaultConfig as Fixtures
 import Fixtures.Person as Fixtures
 import Fixtures.Quote as Fixtures
 import Fixtures.RentalFarePolicy as Fixtures

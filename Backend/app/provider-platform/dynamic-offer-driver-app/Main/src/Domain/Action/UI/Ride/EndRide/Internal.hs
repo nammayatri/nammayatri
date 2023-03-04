@@ -15,6 +15,7 @@
 module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
     putDiffMetric,
+    getDistanceBetweenPoints,
   )
 where
 
@@ -44,6 +45,7 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Error
+import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Notifications (sendNotificationToDriver)
 
@@ -63,12 +65,16 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
         case minTripDistanceForReferralCfg of
           Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenRide)) mbRiderDetails
           Nothing -> True
-  driver <- SQP.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   let referralMessage = "Congratulations!"
   let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
   when shouldUpdateRideComplete $
     fork "REFERRAL_ACTIVATED FCM to Driver" $ do
-      sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage (cast driverId) driver.deviceToken
+      whenJust mbRiderDetails $ \riderDetails -> do
+        case riderDetails.referredByDriver of
+          Just referredDriverId -> do
+            driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
+            sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
+          Nothing -> pure ()
   Esq.runTransaction $ do
     whenJust mbRiderDetails $ \riderDetails ->
       when shouldUpdateRideComplete (QRD.updateHasTakenRide riderDetails.id)
@@ -87,3 +93,25 @@ putDiffMetric :: (Metrics.HasBPPMetrics m r, CacheFlow m r, EsqDBFlow m r) => Id
 putDiffMetric merchantId money mtrs = do
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   Metrics.putFareAndDistanceDeviations org.name money mtrs
+
+getDistanceBetweenPoints ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Metrics.CoreMetrics m,
+    Maps.HasCoordinates a,
+    Maps.HasCoordinates b
+  ) =>
+  Id Merchant ->
+  a ->
+  b ->
+  m Meters
+getDistanceBetweenPoints merchantId a b = do
+  distRes <-
+    Maps.getDistance merchantId $
+      Maps.GetDistanceReq
+        { origin = a,
+          destination = b,
+          travelMode = Just Maps.CAR
+        }
+  return $ distRes.distance
