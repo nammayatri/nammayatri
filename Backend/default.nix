@@ -6,13 +6,20 @@
   perSystem = { config, self', system, pkgs, lib, ... }: {
     haskellProjects.default = {
       imports = [
-        ./nix/haskell-overrides.nix
+        inputs.shared-kernel.haskellFlakeProjectModules.output
       ];
       basePackages = config.haskellProjects.ghc810.outputs.finalPackages;
       devShell = {
         tools = hp: {
           dhall = pkgs.dhall;
         };
+      };
+      source-overrides = {
+        # Dependencies from flake inputs.
+        # NOTE: The below boilerplate can be automated once
+        # https://github.com/srid/haskell-flake/issues/84 is done.
+        beckn-gateway = inputs.beckn-gateway + /app/gateway;
+        mock-registry = inputs.beckn-gateway + /app/mock-registry;
       };
       overrides = self: super: with pkgs.haskell.lib; {
         # FIXME: location-updates-tests: Network.Socket.connect: <socket: 6>: does not exist (Connection refused)
