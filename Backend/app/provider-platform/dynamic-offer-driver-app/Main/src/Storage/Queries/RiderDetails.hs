@@ -52,7 +52,8 @@ updateHasTakenRide riderId = do
     set
       tbl
       [ RiderDetailsHasTakenRide =. val True,
-        RiderDetailsUpdatedAt =. val now
+        RiderDetailsUpdatedAt =. val now,
+        RiderDetailsDriverReferralEligibleAt =. val (Just now)
       ]
     where_ $ tbl ^. RiderDetailsTId ==. val (toKey riderId)
 
