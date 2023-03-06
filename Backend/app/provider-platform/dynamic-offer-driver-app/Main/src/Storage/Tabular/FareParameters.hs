@@ -34,6 +34,7 @@ mkPersist
 
       id Text
       baseFare Money
+      deadKmFare Money Maybe
       extraKmFare Money Maybe
       driverSelectedFare Money Maybe
       nightShiftRate Centesimal Maybe

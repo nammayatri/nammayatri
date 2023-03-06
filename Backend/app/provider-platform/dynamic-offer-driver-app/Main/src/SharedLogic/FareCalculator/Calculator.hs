@@ -37,9 +37,14 @@ mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> bre
 mkBreakupList mkPrice mkBreakupItem fareParams = do
   -- TODO: what should be here?
   let dayPartRate = calculateDayPartRate fareParams
-      fareForPickupFinalRounded = roundToIntegral $ fromIntegral fareParams.baseFare * dayPartRate
-      fareForPickupCaption = "BASE_FARE"
-      fareForPickupItem = mkBreakupItem fareForPickupCaption (mkPrice fareForPickupFinalRounded)
+      baseFareFinalRounded = roundToIntegral $ fromIntegral fareParams.baseFare * dayPartRate
+      baseFareCaption = "BASE_FARE"
+      baseFareItem = mkBreakupItem baseFareCaption (mkPrice baseFareFinalRounded)
+
+      deadKmFareCaption = "DEAD_KILOMETER_FARE"
+      deadKmFareItem =
+        fareParams.deadKmFare <&> \deadKmFare ->
+          mkBreakupItem deadKmFareCaption (mkPrice deadKmFare)
 
       mbExtraKmFareRounded = fareParams.extraKmFare <&> roundToIntegral . (* dayPartRate) . fromIntegral
       extraDistanceFareCaption = "EXTRA_DISTANCE_FARE"
@@ -55,12 +60,12 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
       totalFareFinalRounded = fareSum fareParams
       totalFareCaption = "TOTAL_FARE"
       totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
-  catMaybes [Just totalFareItem, Just fareForPickupItem, extraDistanceFareItem, mbSelectedFareItem]
+  catMaybes [Just totalFareItem, Just baseFareItem, deadKmFareItem, extraDistanceFareItem, mbSelectedFareItem]
 
 -- TODO: make some tests for it
 fareSum :: FareParameters -> Money
 fareSum fareParams = do
-  baseFareSum fareParams + fromMaybe 0 fareParams.driverSelectedFare
+  baseFareSum fareParams + fareParams.deadKmFare + fromMaybe 0 fareParams.driverSelectedFare
 
 baseFareSum :: FareParameters -> Money
 baseFareSum fareParams = roundToIntegral $ do
@@ -100,6 +105,7 @@ calculateFareParameters fp distance time mbExtraFare = do
     FareParameters
       { id,
         baseFare = baseDistanceFare,
+        deadKmFare = fp.deadKmFare,
         extraKmFare = mbExtraKmFare,
         driverSelectedFare = mbExtraFare,
         nightShiftRate = fp.nightShiftRate,
