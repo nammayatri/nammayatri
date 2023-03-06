@@ -60,7 +60,7 @@ buildTransaction ::
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.DriverReferralAPI endpoint) apiTokenInfo Nothing Nothing
+  T.buildTransaction (DT.DriverReferralAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing Nothing
 
 updateReferralLinkPassword ::
   ShortId DM.Merchant ->

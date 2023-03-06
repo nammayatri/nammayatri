@@ -12,24 +12,23 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.Transaction where
+module API.Dashboard.Exotel where
 
-import Domain.Types.ServerName as DSN
-import Domain.Types.Transaction as DT
+import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
+import qualified Domain.Action.Dashboard.Exotel as DExotel
+import Environment
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.Transaction
+import Kernel.Types.APISuccess
+import Kernel.Utils.Common
+import Servant hiding (throwError)
 
-create :: Transaction -> SqlDB ()
-create = Esq.create
+type API =
+  "exotel"
+    :> Common.ExotelHeartbeatAPI
 
-fetchLastTransaction :: Transactionable m => DT.Endpoint -> DSN.ServerName -> m (Maybe DT.Transaction)
-fetchLastTransaction endpoint serverName = do
-  findOne $ do
-    transaction <- from $ table @TransactionT
-    where_ $
-      transaction ^. TransactionEndpoint ==. val endpoint
-        &&. transaction ^. TransactionServerName ==. val (Just serverName)
-    orderBy [desc $ transaction ^. TransactionCreatedAt]
-    limit 1
-    return transaction
+handler :: FlowServer API
+handler =
+  exotelHeartbeat
+
+exotelHeartbeat :: Common.ExotelHeartbeatReq -> FlowHandler APISuccess
+exotelHeartbeat = withFlowHandlerAPI . DExotel.exotelHeartbeat

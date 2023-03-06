@@ -1,0 +1,70 @@
+# @name healthcheck
+
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name exotelHeartbeatOK
+
+POST {{bpp-dashboard-host}}/exotel/heartbeat
+content-type: application/json
+
+{
+  "timestamp" : "{{$localDatetime iso8601}}",
+  "status_type" : "OK",
+  "incoming_affected" : null,
+  "outgoing_affected": null,
+  "data": {}
+}
+
+###
+
+# extra comma in docs https://developer.exotel.com/api/heart-beat#heartbeat-webhook:
+# "phone_number": "+918030752522",
+
+# @name exotelHeartbeatWARNING
+
+POST {{bpp-dashboard-host}}/exotel/heartbeat
+content-type: application/json
+
+{
+   "timestamp": "{{$localDatetime iso8601}}",
+   "status_type":"WARNING",
+   "incoming_affected":[
+      "07930061010"
+   ],
+   "outgoing_affected": null,
+   "data":{
+      "07930061010":{
+         "phone_number": "+917930061010"
+      }
+   }
+}
+
+
+###
+
+# @name exotelHeartbeatCRITICAL
+
+POST {{bpp-dashboard-host}}/exotel/heartbeat
+content-type: application/json
+
+{
+   "timestamp": "2018-08-22T15:19:23Z",
+   "status_type":"CRITICAL",
+   "incoming_affected":[
+      "07930061010",
+      "08030752522"
+   ],
+   "outgoing_affected":[
+      "07930061010"
+   ],
+   "data":{
+      "07930061010":{
+         "phone_number": "+917930061010"
+      },
+      "08030752522":{
+          "phone_number": "+918030752522"
+      }
+   }
+}

@@ -98,7 +98,7 @@ buildTransaction ::
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.MessageAPI endpoint) apiTokenInfo Nothing Nothing
+  T.buildTransaction (DT.MessageAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing Nothing
 
 addLinkAsMedia :: ShortId DM.Merchant -> ApiTokenInfo -> Common.AddLinkAsMedia -> FlowHandler Common.UploadFileResponse
 addLinkAsMedia merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
