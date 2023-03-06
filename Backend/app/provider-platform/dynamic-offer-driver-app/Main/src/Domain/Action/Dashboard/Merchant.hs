@@ -51,11 +51,25 @@ merchantUpdate merchantShortId req = do
                  DM.description = (req.description) <|> (merchant.description),
                  DM.enabled = fromMaybe (merchant.enabled) (req.enabled)
                 }
+  -- First solution
   Esq.runTransaction $ do
-    CQM.update updMerchant
+    CQM.update1 (Proxy @Flow) updMerchant
     whenJust req.fcmConfig $
       \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
-  CQM.clearCache updMerchant
+
+  -- Here we can broke finlizer when use different monads within one transaction, like
+    -- Esq.runTransaction $ do
+    --   Esq.finalize (Proxy @IO) $ putStrLn "broken finalizer"
+    --   CQM.update1 (Proxy @Flow) updMerchant
+    -- So, second solution it better
+
+  -- Second solution
+  Esq.runTransactionF $ \finalize -> do
+    CQM.update2 finalize updMerchant
+    whenJust req.fcmConfig $
+      \fcmConfig -> CQTC.updateFCMConfig merchant.id fcmConfig.fcmUrl fcmConfig.fcmServiceAccount
+
+  -- CQM.clearCache updMerchant
   whenJust req.fcmConfig $ \_ -> CQTC.clearCache merchant.id
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
   return $ mkMerchantUpdateRes updMerchant

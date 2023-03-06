@@ -58,7 +58,7 @@ validateUpdateTransporterReq UpdateTransporterReq {..} =
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name
     ]
 
-updateTransporter :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
+updateTransporter :: forall m r. (CacheFlow m r, EsqDBFlow m r) => SP.Person -> Id DM.Merchant -> UpdateTransporterReq -> m UpdateTransporterRes
 updateTransporter admin merchantId req = do
   unless (merchantId == admin.merchantId) $ throwError AccessDenied
   runRequestValidation validateUpdateTransporterReq req
@@ -70,8 +70,8 @@ updateTransporter admin merchantId req = do
             DM.description = (req.description) <|> (org.description),
             DM.enabled = fromMaybe (org.enabled) (req.enabled)
            }
-  Esq.runTransaction $ CQM.update updOrg
-  CQM.clearCache updOrg
+  Esq.runTransaction $ CQM.update (Proxy @m) updOrg
+  -- CQM.clearCache updOrg
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updOrg)
   return $ DM.makeMerchantAPIEntity updOrg
 

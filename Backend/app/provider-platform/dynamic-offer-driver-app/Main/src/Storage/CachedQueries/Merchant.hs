@@ -29,6 +29,7 @@ import Domain.Types.Common
 import Domain.Types.Merchant
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.Class as Esq
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -90,8 +91,18 @@ makeSubscriberIdKey subscriberId = "driver-offer:CachedQueries:Merchant:Subscrib
 makeShortIdKey :: ShortId Merchant -> Text
 makeShortIdKey shortId = "driver-offer:CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 
-update :: Merchant -> Esq.SqlDB ()
-update = Queries.update
+-- TODO fix other queries
+-- solution 1
+update1 :: forall m r. (HedisFlow m r, Esq.Finalize m) => Proxy m -> Merchant -> Esq.SqlDB ()
+update1 _ merchant = do
+  Queries.update merchant
+  Esq.finalize @m $ clearCache merchant
+
+-- solution 2
+update2 :: forall m r. (HedisFlow m r, Esq.Finalize m) => (m () -> SqlDB ()) -> Merchant -> Esq.SqlDB ()
+update2 finalize merchant = do
+  Queries.update merchant
+  finalize $ clearCache merchant
 
 loadAllProviders :: Esq.Transactionable m => m [Merchant]
 loadAllProviders = Queries.loadAllProviders

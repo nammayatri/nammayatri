@@ -21,6 +21,7 @@ import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Kernel.Mock.App
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Esqueleto.Class (Finalize (..))
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, disconnectHedis)
 import Kernel.Types.Common
 import Kernel.Utils.App (Shutdown)
@@ -67,6 +68,9 @@ releaseSchedulerEnv SchedulerEnv {..} = do
 newtype SchedulerM a = SchedulerM {unSchedulerM :: MockM SchedulerEnv a}
   deriving newtype (Functor, Applicative, Monad, MonadReader SchedulerEnv, MonadIO)
   deriving newtype (C.MonadThrow, C.MonadCatch, C.MonadMask, MonadClock, MonadTime, MonadGuid, Log, Forkable, MonadUnliftIO)
+
+instance Finalize SchedulerM where
+  monadType _ = "SchedulerM"
 
 runSchedulerM :: SchedulerEnv -> SchedulerM a -> IO a
 runSchedulerM env action = runMock env $ unSchedulerM action
