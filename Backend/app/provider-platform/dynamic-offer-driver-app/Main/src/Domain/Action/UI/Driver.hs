@@ -484,6 +484,7 @@ deleteDriver admin driverId = do
     QR.deleteByPersonId driverId
     QVehicle.deleteById driverId
     QDriverLocation.deleteById driverId
+    QDFS.deleteById driverId
     QPerson.deleteById driverId
 
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
