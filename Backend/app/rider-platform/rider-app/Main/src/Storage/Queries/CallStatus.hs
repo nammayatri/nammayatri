@@ -23,7 +23,7 @@ import Kernel.Types.Id
 import Storage.Tabular.CallStatus
 
 create :: CallStatus -> SqlDB ()
-create = Esq.create
+create callStatus = void $ Esq.createUnique callStatus
 
 findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
 findById = Esq.findById
