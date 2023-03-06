@@ -40,6 +40,7 @@ mkPersist
       referredByDriver PersonTId Maybe
       referredAt UTCTime Maybe
       hasTakenRide Bool
+      driverReferralEligibleAt UTCTime Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
