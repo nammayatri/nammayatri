@@ -185,7 +185,7 @@ in  { esqDBCfg
     , driverUnlockDelay = +2
     , idfyCfg = common.idfyCfg
     , dashboardToken = sec.dashboardToken
-    , endRideDefCfg = endRideDefCfg
+    , defaultEndRideCfg = endRideDefCfg
     , cacheConfig
     , metricsSearchDurationTimeout = +45
     , driverLocationUpdateRateLimitOptions
