@@ -65,7 +65,7 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
 -- TODO: make some tests for it
 fareSum :: FareParameters -> Money
 fareSum fareParams = do
-  baseFareSum fareParams + fareParams.deadKmFare + fromMaybe 0 fareParams.driverSelectedFare
+  baseFareSum fareParams + (fromMaybe 0 fareParams.deadKmFare) + fromMaybe 0 fareParams.driverSelectedFare
 
 baseFareSum :: FareParameters -> Money
 baseFareSum fareParams = roundToIntegral $ do
@@ -105,7 +105,7 @@ calculateFareParameters fp distance time mbExtraFare = do
     FareParameters
       { id,
         baseFare = baseDistanceFare,
-        deadKmFare = fp.deadKmFare,
+        deadKmFare = Just fp.deadKmFare,
         extraKmFare = mbExtraKmFare,
         driverSelectedFare = mbExtraFare,
         nightShiftRate = fp.nightShiftRate,
