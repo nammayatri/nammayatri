@@ -21,12 +21,14 @@
         beckn-gateway = inputs.beckn-gateway + /app/gateway;
         mock-registry = inputs.beckn-gateway + /app/mock-registry;
       };
-      overrides = self: super: with pkgs.haskell.lib; {
-        # FIXME: location-updates-tests: Network.Socket.connect: <socket: 6>: does not exist (Connection refused)
-        location-updates = dontCheck super.location-updates;
-        # FIXME: tries to find dhall files from wrong CWD
-        beckn-test = dontCheck super.beckn-test;
-      };
+      overrides = self: super:
+        with pkgs.haskell.lib.compose;
+        lib.mapAttrs (k: v: lib.pipe super.${k} v) {
+          # FIXME: location-updates-tests: Network.Socket.connect: <socket: 6>: does not exist (Connection refused)
+          location-updates = [ dontCheck ];
+          # FIXME: tries to find dhall files from wrong CWD
+          beckn-test = [ dontCheck ];
+        };
       packages = {
         beckn-services.root = ./lib/beckn-services;
         beckn-spec.root = ./lib/beckn-spec;
