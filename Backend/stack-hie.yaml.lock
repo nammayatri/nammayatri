@@ -10,13 +10,13 @@ packages:
     version: 0.1.0.0
     git: https://github.com/nammayatri/shared-kernel.git
     pantry-tree:
-      size: 16451
-      sha256: b6b42ef7840ee88eca3bba96000d0f23dcfd24f147fbb43371c5bbff9ecad074
-    commit: b846cc808025559158d4616007cecb7ea1f304e2
+      size: 16452
+      sha256: dad29b1223757e66dccd51baefc68d6d9785597a8265c21a76fd174ee48445f0
+    commit: 767ff3ad4ba0cb6ecb0bd23f46a8c83a99abd43e
   original:
     subdir: lib/mobility-core
     git: https://github.com/nammayatri/shared-kernel.git
-    commit: b846cc808025559158d4616007cecb7ea1f304e2
+    commit: 767ff3ad4ba0cb6ecb0bd23f46a8c83a99abd43e
 - completed:
     subdir: core
     name: passetto-core
