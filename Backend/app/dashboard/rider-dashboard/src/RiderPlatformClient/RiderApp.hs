@@ -16,8 +16,6 @@
 
 module RiderPlatformClient.RiderApp
   ( callRiderApp,
-    CustomerAPIs (..),
-    AppBackendAPIs (..),
   )
 where
 

@@ -156,7 +156,7 @@ verifyDashboard incomingToken = do
   dashboardToken <- asks (.dashboardToken)
   if incomingToken == dashboardToken
     then pure Dashboard
-    else throwError (InvalidToken incomingToken)
+    else throwError (InvalidToken "dashboard token") -- we shouldn't show to dashboard user incoming token
 
 clearDriverSession :: (EsqDBFlow m r, Redis.HedisFlow m r) => Id Person.Person -> m ()
 clearDriverSession personId = do

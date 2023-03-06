@@ -17,6 +17,7 @@ module API.Dashboard where
 import qualified API.Dashboard.Booking as Booking
 import qualified API.Dashboard.Driver as Driver
 import qualified API.Dashboard.DriverReferral as DriverReferral
+import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Message as Message
 import qualified API.Dashboard.Ride as Ride
@@ -28,8 +29,10 @@ import Tools.Auth
 
 type API =
   "dashboard"
-    :> Capture "merchantId" (ShortId DM.Merchant)
-    :> API'
+    :> ( Capture "merchantId" (ShortId DM.Merchant)
+           :> API'
+       )
+    :<|> ExotelAPI
 
 type API' =
   DashboardTokenAuth
@@ -42,10 +45,21 @@ type API' =
        )
 
 handler :: FlowServer API
-handler merchantId _dashboard =
-  Driver.handler merchantId
-    :<|> Ride.handler merchantId
-    :<|> Booking.handler merchantId
-    :<|> Merchant.handler merchantId
-    :<|> Message.handler merchantId
-    :<|> DriverReferral.handler merchantId
+handler =
+  ( \merchantId _dashboard ->
+      Driver.handler merchantId
+        :<|> Ride.handler merchantId
+        :<|> Booking.handler merchantId
+        :<|> Merchant.handler merchantId
+        :<|> Message.handler merchantId
+        :<|> DriverReferral.handler merchantId
+  )
+    :<|> exotelHandler
+
+type ExotelAPI =
+  DashboardTokenAuth
+    :> Exotel.API
+
+exotelHandler :: FlowServer ExotelAPI
+exotelHandler _dashboard =
+  Exotel.handler

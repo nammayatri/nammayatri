@@ -85,7 +85,7 @@ buildTransaction ::
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo rideId =
-  T.buildTransaction (DT.RideAPI endpoint) apiTokenInfo Nothing (Just rideId)
+  T.buildTransaction (DT.RideAPI endpoint) (Just BECKN_TRANSPORT) (Just apiTokenInfo) Nothing (Just rideId)
 
 rideList ::
   ShortId DM.Merchant ->

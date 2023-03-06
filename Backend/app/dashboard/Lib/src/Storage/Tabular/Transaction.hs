@@ -20,6 +20,7 @@
 
 module Storage.Tabular.Transaction where
 
+import qualified Domain.Types.ServerName as DSN
 import qualified Domain.Types.Transaction as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -34,7 +35,8 @@ mkPersist
   [defaultQQ|
     TransactionT sql=transaction
       id Text
-      requestorId PersonTId
+      requestorId PersonTId Maybe
+      serverName DSN.ServerName Maybe
       merchantId MerchantTId Maybe
       commonDriverId Text Maybe
       commonRideId Text Maybe
@@ -57,7 +59,7 @@ instance TType TransactionT Domain.Transaction where
     return $
       Domain.Transaction
         { id = Id id,
-          requestorId = fromKey requestorId,
+          requestorId = fromKey <$> requestorId,
           merchantId = fromKey <$> merchantId,
           commonDriverId = Id <$> commonDriverId,
           commonRideId = Id <$> commonRideId,
@@ -66,7 +68,7 @@ instance TType TransactionT Domain.Transaction where
   toTType Domain.Transaction {..} =
     TransactionT
       { id = getId id,
-        requestorId = toKey requestorId,
+        requestorId = toKey <$> requestorId,
         merchantId = toKey <$> merchantId,
         commonDriverId = getId <$> commonDriverId,
         commonRideId = getId <$> commonRideId,

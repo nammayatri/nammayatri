@@ -46,6 +46,12 @@ let driverOfferBpp =
       , token = sec.driverOfferBppToken
       }
 
+let appBackend =
+      { name = common.ServerName.APP_BACKEND
+      , url = "http://localhost:8013/"
+      , token = sec.appBackendToken
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -65,5 +71,5 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
     , encTools
-    , dataServers = [ becknTransport, driverOfferBpp ]
+    , dataServers = [ becknTransport, driverOfferBpp, appBackend ]
     }

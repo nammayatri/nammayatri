@@ -94,6 +94,7 @@ library:
     - lib-dashboard
     - static-offer-driver-app
     - dynamic-offer-driver-app
+    - rider-app
 
 executables:
   provider-dashboard-exe:

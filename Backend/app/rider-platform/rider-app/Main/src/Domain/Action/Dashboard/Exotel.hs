@@ -12,24 +12,22 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.Transaction where
+module Domain.Action.Dashboard.Exotel
+  ( exotelHeartbeat,
+  )
+where
 
-import Domain.Types.ServerName as DSN
-import Domain.Types.Transaction as DT
+import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
+import Environment
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.Transaction
+import Kernel.Types.APISuccess
+import Kernel.Utils.Common
 
-create :: Transaction -> SqlDB ()
-create = Esq.create
-
-fetchLastTransaction :: Transactionable m => DT.Endpoint -> DSN.ServerName -> m (Maybe DT.Transaction)
-fetchLastTransaction endpoint serverName = do
-  findOne $ do
-    transaction <- from $ table @TransactionT
-    where_ $
-      transaction ^. TransactionEndpoint ==. val endpoint
-        &&. transaction ^. TransactionServerName ==. val (Just serverName)
-    orderBy [desc $ transaction ^. TransactionCreatedAt]
-    limit 1
-    return transaction
+---------------------------------------------------------------------
+exotelHeartbeat ::
+  Common.ExotelHeartbeatReq ->
+  Flow APISuccess
+exotelHeartbeat req = do
+  logTagInfo "dashboard -> exotelHeartbeat: " $ show req.statusType
+  -- TODO What we should do here: store in redis, insert to DB, upsert to DB?
+  pure Success

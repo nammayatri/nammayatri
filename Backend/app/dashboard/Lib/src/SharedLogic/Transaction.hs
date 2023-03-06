@@ -52,12 +52,13 @@ buildTransaction ::
     Common.HideSecrets request
   ) =>
   DT.Endpoint ->
-  ApiTokenInfo ->
+  Maybe ServerName ->
+  Maybe ApiTokenInfo ->
   Maybe (Id Common.Driver) ->
   Maybe (Id Common.Ride) ->
   Maybe request ->
   m DT.Transaction
-buildTransaction endpoint apiTokenInfo commonDriverId commonRideId request = do
+buildTransaction endpoint serverName apiTokenInfo commonDriverId commonRideId request = do
   uid <- generateGUID
   now <- getCurrentTime
   validateId commonDriverId "driver"
@@ -65,8 +66,8 @@ buildTransaction endpoint apiTokenInfo commonDriverId commonRideId request = do
   pure
     DT.Transaction
       { id = uid,
-        requestorId = apiTokenInfo.personId,
-        merchantId = Just apiTokenInfo.merchant.id,
+        requestorId = apiTokenInfo <&> (.personId),
+        merchantId = apiTokenInfo <&> (.merchant.id),
         request = encodeToText . Common.hideSecrets <$> request,
         response = Nothing,
         responseError = Nothing,

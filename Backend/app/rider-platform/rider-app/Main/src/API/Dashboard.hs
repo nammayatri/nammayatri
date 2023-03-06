@@ -16,6 +16,7 @@ module API.Dashboard where
 
 import qualified API.Dashboard.Booking as Booking
 import qualified API.Dashboard.Customer as Customer
+import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.Merchant as Merchant
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -25,8 +26,10 @@ import Tools.Auth (DashboardTokenAuth)
 
 type API =
   "dashboard"
-    :> Capture "merchantId" (ShortId DM.Merchant)
-    :> API'
+    :> ( Capture "merchantId" (ShortId DM.Merchant)
+           :> API'
+       )
+    :<|> ExotelAPI
 
 type API' =
   DashboardTokenAuth
@@ -36,7 +39,18 @@ type API' =
        )
 
 handler :: FlowServer API
-handler merchantId _dashboard =
-  Customer.handler merchantId
-    :<|> Booking.handler merchantId
-    :<|> Merchant.handler merchantId
+handler =
+  ( \merchantId _dashboard ->
+      Customer.handler merchantId
+        :<|> Booking.handler merchantId
+        :<|> Merchant.handler merchantId
+  )
+    :<|> exotelHandler
+
+type ExotelAPI =
+  DashboardTokenAuth
+    :> Exotel.API
+
+exotelHandler :: FlowServer ExotelAPI
+exotelHandler _dashboard =
+  Exotel.handler
