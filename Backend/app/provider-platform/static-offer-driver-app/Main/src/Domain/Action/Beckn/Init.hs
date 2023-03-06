@@ -212,6 +212,7 @@ buildBooking req merchantId estimatedFare discount estimatedTotalFare bookingDet
   return $
     DRB.Booking
       { id = Id id,
+        transactionId = req.transactionId,
         status = DRB.NEW,
         providerId = merchantId,
         primaryExophone = exophone.primaryPhone,

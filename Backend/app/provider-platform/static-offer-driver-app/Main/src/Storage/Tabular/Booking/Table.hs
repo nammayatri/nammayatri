@@ -40,6 +40,7 @@ mkPersist
   [defaultQQ|
     BookingT sql=booking
       id Text
+      transactionId Text
       fareProductType Domain.FareProductType
       status Domain.BookingStatus
       providerId MerchantTId

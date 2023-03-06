@@ -14,8 +14,7 @@
 
 module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType where
 
-import Data.OpenApi (ToSchema)
-import EulerHS.Prelude hiding ((.=))
+import Kernel.Prelude
 
 data OnUpdateEventType
   = RIDE_COMPLETED
@@ -24,4 +23,5 @@ data OnUpdateEventType
   | RIDE_BOOKING_CANCELLED
   | RIDE_BOOKING_REALLOCATION
   | DRIVER_ARRIVED
+  | ESTIMATE_REPETITION
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

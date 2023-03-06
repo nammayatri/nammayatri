@@ -50,10 +50,11 @@ buildSearchReq ::
   Maybe Maps.RouteInfo ->
   m (BecknReq Search.SearchMessage)
 buildSearchReq origin mbDestination searchId startTime mbRouteInfo = do
-  let messageId = getId searchId
+  let transactionId = getId searchId
+      messageId = transactionId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.SEARCH messageId (Just messageId) bapIDs.cabs bapURIs.cabs Nothing Nothing
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapIDs.cabs bapURIs.cabs Nothing Nothing
   let intent = mkIntent origin mbDestination startTime
   let searchMessage = Search.SearchMessage intent mbRouteInfo
   pure $ BecknReq context searchMessage

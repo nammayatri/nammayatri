@@ -21,19 +21,22 @@ where
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent as DriverArrivedOU
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent as EstimateRepetitionOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent as RideAssignedOU
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
-import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
+import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Utils.Common
+import qualified SharedLogic.Estimate as DEstimate
 import SharedLogic.FareCalculator
 import Tools.Error
 
@@ -51,12 +54,18 @@ data OnUpdateBuildReq
         fareParams :: Fare.FareParameters
       }
   | BookingCancelledBuildReq
-      { booking :: SRB.Booking,
+      { booking :: DRB.Booking,
         cancellationSource :: SBCR.CancellationSource
       }
   | DriverArrivedBuildReq
       { ride :: DRide.Ride,
         arrivalTime :: Maybe UTCTime
+      }
+  | EstimateRepetitionBuildReq
+      { ride :: DRide.Ride,
+        booking :: DRB.Booking,
+        estimateItem :: DEstimate.EstimateItem,
+        cancellationSource :: SBCR.CancellationSource
       }
 
 buildOnUpdateMessage ::
@@ -163,6 +172,69 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
             fulfillment = DriverArrivedOU.FulfillmentInfo ride.id.getId,
             arrival_time = arrivalTime
           }
+buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
+  let item = mkQuoteEntities estimateItem
+  return $
+    OnUpdate.OnUpdateMessage $
+      OnUpdate.EstimateRepetition
+        EstimateRepetitionOU.EstimateRepetitionEvent
+          { id = booking.id.getId,
+            update_target = "state,fufillment.state.code",
+            item = item,
+            fulfillment = EstimateRepetitionOU.FulfillmentInfo ride.id.getId,
+            cancellation_reason = castCancellationSource cancellationSource
+          }
+
+mkQuoteEntities :: DEstimate.EstimateItem -> EstimateRepetitionOU.Item
+mkQuoteEntities it = do
+  let variant = castVariant it.vehicleVariant
+      minPriceDecimalValue = EstimateRepetitionOU.DecimalValue $ toRational it.minFare
+      maxPriceDecimalValue = EstimateRepetitionOU.DecimalValue $ toRational it.maxFare
+      estimateBreakupList = buildEstimateBreakUpList <$> it.estimateBreakupList
+  EstimateRepetitionOU.Item
+    { category_id = EstimateRepetitionOU.DRIVER_OFFER_ESTIMATE,
+      price =
+        EstimateRepetitionOU.ItemPrice
+          { currency = "INR",
+            value = minPriceDecimalValue,
+            offered_value = minPriceDecimalValue,
+            minimum_value = minPriceDecimalValue,
+            maximum_value = maxPriceDecimalValue,
+            value_breakup = estimateBreakupList
+          },
+      descriptor =
+        EstimateRepetitionOU.ItemDescriptor
+          { name = "",
+            code = EstimateRepetitionOU.ItemCode EstimateRepetitionOU.DRIVER_OFFER_ESTIMATE variant Nothing Nothing
+          },
+      quote_terms = [],
+      tags =
+        Just $
+          EstimateRepetitionOU.ItemTags
+            { night_shift_multiplier = EstimateRepetitionOU.DecimalValue . toRational <$> ((.nightShiftMultiplier) =<< it.nightShiftRate),
+              night_shift_start = (.nightShiftStart) =<< it.nightShiftRate,
+              night_shift_end = (.nightShiftEnd) =<< it.nightShiftRate,
+              waiting_charge_per_min = it.waitingCharges.waitingChargePerMin,
+              waiting_time_estimated_threshold = it.waitingCharges.waitingTimeEstimatedThreshold,
+              drivers_location = it.driversLatLong
+            }
+    }
+  where
+    buildEstimateBreakUpList DEstimate.BreakupItem {..} = do
+      EstimateRepetitionOU.BreakupItem
+        { title = title,
+          price =
+            EstimateRepetitionOU.BreakupPrice
+              { currency = price.currency,
+                value = realToFrac price.value
+              }
+        }
+
+    castVariant :: Variant.Variant -> EstimateRepetitionOU.VehicleVariant
+    castVariant Variant.SEDAN = EstimateRepetitionOU.SEDAN
+    castVariant Variant.HATCHBACK = EstimateRepetitionOU.HATCHBACK
+    castVariant Variant.SUV = EstimateRepetitionOU.SUV
+    castVariant Variant.AUTO_RICKSHAW = EstimateRepetitionOU.AUTO_RICKSHAW
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource
 castCancellationSource = \case

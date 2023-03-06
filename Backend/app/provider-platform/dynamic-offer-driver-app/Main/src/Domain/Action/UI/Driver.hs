@@ -58,7 +58,7 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.FareParameters as Fare
-import Domain.Types.FarePolicy.FarePolicy (ExtraFee)
+import Domain.Types.FarePolicy (ExtraFee)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person (Person, PersonAPIEntity)
@@ -99,7 +99,7 @@ import SharedLogic.FareCalculator
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
-import Storage.CachedQueries.FarePolicy.FarePolicy (findByMerchantIdAndVariant)
+import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS

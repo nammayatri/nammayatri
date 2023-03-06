@@ -44,7 +44,8 @@ data FeedbackRes = FeedbackRes
     ratingValue :: Int,
     feedbackDetails :: Maybe Text,
     providerId :: Text,
-    providerUrl :: BaseUrl
+    providerUrl :: BaseUrl,
+    transactionId :: Text
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
@@ -64,5 +65,6 @@ feedback request = do
     FeedbackRes
       { providerId = booking.providerId,
         providerUrl = booking.providerUrl,
+        transactionId = booking.transactionId,
         ..
       }

@@ -33,12 +33,13 @@ data TransporterConfigD u = TransporterConfig
     minRidesForCancellationScore :: Maybe Int,
     waitingTimeEstimatedThreshold :: Seconds,
     referralLinkPassword :: Text,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
     fcmConfig :: FCMConfig,
     onboardingTryLimit :: Int,
     onboardingRetryTimeinHours :: Int,
-    checkImageExtractionForDashboard :: Bool
+    checkImageExtractionForDashboard :: Bool,
+    searchRepeatLimit :: Int,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show)
 

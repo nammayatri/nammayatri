@@ -28,7 +28,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
+import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Tools.Metrics as Metrics
@@ -60,8 +60,7 @@ sendSearchRequestToDrivers' ::
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     Metrics.CoreMetrics m,
-    HasCacheConfig r,
-    HedisFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     Log m
   ) =>

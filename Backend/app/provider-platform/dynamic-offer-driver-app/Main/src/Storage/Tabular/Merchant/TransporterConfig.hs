@@ -43,14 +43,16 @@ mkPersist
       minRidesForCancellationScore Int Maybe
       waitingTimeEstimatedThreshold Seconds
       referralLinkPassword Text
-      createdAt UTCTime
-      updatedAt UTCTime
       fcmUrl Text
       fcmServiceAccount Text
       fcmTokenKeyPrefix Text
       onboardingTryLimit Int
       onboardingRetryTimeinHours Int 
       checkImageExtractionForDashboard Bool
+      searchRepeatLimit Int
+      createdAt UTCTime
+      updatedAt UTCTime
+      
       Primary merchantId
       deriving Generic
     |]
