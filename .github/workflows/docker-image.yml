@@ -2,7 +2,7 @@ name: Docker Image CI
 
 on:
   push:
-    branches: ["main", "sandbox", "production"]
+    branches: ["main", "sandbox", "production", "prod-hot-push"]
     paths:
       - 'Backend/**'
 
