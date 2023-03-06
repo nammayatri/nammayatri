@@ -22,6 +22,7 @@ import Kernel.Utils.GenericPretty (PrettyShow)
 data FareParameters = FareParameters
   { id :: Id FareParameters,
     baseFare :: Money,
+    deadKmFare :: Maybe Money,
     extraKmFare :: Maybe Money,
     driverSelectedFare :: Maybe Money,
     nightShiftRate :: Maybe Centesimal,
