@@ -99,7 +99,7 @@ calculateFareParameters fp distance time mbExtraFare = do
   pure
     FareParameters
       { id,
-        baseFare = fp.deadKmFare + baseDistanceFare,
+        baseFare = baseDistanceFare,
         extraKmFare = mbExtraKmFare,
         driverSelectedFare = mbExtraFare,
         nightShiftRate = fp.nightShiftRate,
