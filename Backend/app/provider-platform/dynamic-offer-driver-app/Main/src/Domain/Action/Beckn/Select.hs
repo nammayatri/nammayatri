@@ -85,13 +85,13 @@ handler merchantId sReq = do
   fareParams <- calculateFare merchantId farePolicy distance sReq.pickupTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration
   let driverExtraFare = farePolicy.driverExtraFee
-  let baseFare = fareSum fareParams
+  let estimateFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
       <> "; estimated distance = "
       <> show distance
       <> "; estimated base fare:"
-      <> show baseFare
+      <> show estimateFare
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
   inTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
@@ -99,14 +99,14 @@ handler merchantId sReq = do
     QSReq.create searchReq
 
   driverPoolConfig <- getDriverPoolConfig distance
-  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverExtraFare.minFee driverExtraFare.maxFee
+  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare driverExtraFare.minFee driverExtraFare.maxFee
   case res of
     ReSchedule ut ->
       Esq.runTransaction $ do
         createAllocatorSendSearchRequestToDriverJob inTime $
           SendSearchRequestToDriverJobData
             { requestId = searchReq.id,
-              baseFare = baseFare,
+              baseFare = estimateFare,
               estimatedRideDistance = distance,
               driverMinExtraFee = driverExtraFare.minFee,
               driverMaxExtraFee = driverExtraFare.maxFee
