@@ -5,6 +5,7 @@
     flake-parts.follows = "common/flake-parts";
 
     shared-kernel.url = "github:nammayatri/shared-kernel/ghc810--nixify";
+    shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.flake = false;
   };
@@ -16,7 +17,7 @@
         ./Backend
       ];
       perSystem = { config, self', system, pkgs, lib, ... }: {
-        cachix-push.packages = [ "all" ];
+        cachix-push.packages = [ ]; # Push devshell only
 
         packages.default = self'.packages.rider-app;
 

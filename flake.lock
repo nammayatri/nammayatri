@@ -609,22 +609,6 @@
         "type": "github"
       }
     },
-    "nixpkgs_6": {
-      "locked": {
-        "lastModified": 1677852945,
-        "narHash": "sha256-liiVJjkBTuBTAkRW3hrI8MbPD2ImYzwUpa7kvteiKhM=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "f5ffd5787786dde3a8bf648c7a1b5f78c4e01abb",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "passetto-hs": {
       "flake": false,
       "locked": {
@@ -680,15 +664,17 @@
           "common",
           "flake-parts"
         ],
-        "nixpkgs": "nixpkgs_6",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
         "passetto-hs": "passetto-hs"
       },
       "locked": {
-        "lastModified": 1677950255,
-        "narHash": "sha256-PE/qNKrCStoa2O4x+PYf33MNnwbzEkVOP4CG+DPwd5A=",
+        "lastModified": 1678125626,
+        "narHash": "sha256-5/S2Gv66VytkiOTZ5Txs2Yl+dzorPxWe+KWQEeTYlXU=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "85d1befa12b097a719f3c68e87666fbb9f686bcf",
+        "rev": "913a350ee5d3a2751464012f5697d3f90ff6df96",
         "type": "github"
       },
       "original": {
