@@ -37,6 +37,7 @@ data BookingStatus
   = NEW
   | CONFIRMED
   | AWAITING_REASSIGNMENT
+  | REALLOCATED
   | COMPLETED
   | CANCELLED
   | TRIP_ASSIGNED
@@ -56,6 +57,7 @@ data BPPBooking
 
 data Booking = Booking
   { id :: Id Booking,
+    transactionId :: Text,
     bppBookingId :: Maybe (Id BPPBooking),
     status :: BookingStatus,
     providerId :: Text,

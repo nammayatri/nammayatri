@@ -18,9 +18,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FarePolicy.FarePolicy where
+module Storage.Tabular.FarePolicy where
 
-import qualified Domain.Types.FarePolicy.FarePolicy as Domain
+import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto

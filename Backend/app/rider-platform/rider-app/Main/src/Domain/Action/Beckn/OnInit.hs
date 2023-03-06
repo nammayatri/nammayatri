@@ -47,7 +47,8 @@ data OnInitRes = OnInitRes
     estimatedTotalFare :: Money,
     riderPhoneCountryCode :: Text,
     riderPhoneNumber :: Text,
-    mbRiderName :: Maybe Text
+    mbRiderName :: Maybe Text,
+    transactionId :: Text
   }
   deriving (Generic, Show, PrettyShow)
 
@@ -76,5 +77,6 @@ onInit req = do
         fromLocationAddress = fromLocation.address,
         mbToLocationAddress = mbToLocation <&> (.address),
         mbRiderName = decRider.firstName,
+        transactionId = booking.transactionId,
         ..
       }

@@ -14,10 +14,14 @@
 
 module Beckn.ACL.OnUpdate (buildOnUpdateReq) where
 
+import Beckn.ACL.Common (validatePrices)
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as OnUpdate
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent as EstRepUpd
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (state)
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Product.Validation.Context (validateContext)
@@ -25,6 +29,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Tools.Error (GenericError (InvalidRequest))
 
 buildOnUpdateReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],
@@ -34,8 +39,9 @@ buildOnUpdateReq ::
   m (Maybe DOnUpdate.OnUpdateReq)
 buildOnUpdateReq req = do
   validateContext Context.ON_UPDATE $ req.context
+  transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "transaction_id is not present.")
   handleError req.contents $ \message -> do
-    parseEvent message.order
+    parseEvent transactionId message.order
 
 handleError ::
   (MonadFlow m) =>
@@ -50,8 +56,8 @@ handleError etr action =
       logTagError "on_init req" $ "on_init error: " <> show err
       pure Nothing
 
-parseEvent :: (MonadFlow m) => OnUpdate.OnUpdateEvent -> m DOnUpdate.OnUpdateReq
-parseEvent (OnUpdate.RideAssigned taEvent) =
+parseEvent :: (MonadFlow m) => Text -> OnUpdate.OnUpdateEvent -> m DOnUpdate.OnUpdateReq
+parseEvent _ (OnUpdate.RideAssigned taEvent) =
   return $
     DOnUpdate.RideAssignedReq
       { bppBookingId = Id taEvent.id,
@@ -65,13 +71,13 @@ parseEvent (OnUpdate.RideAssigned taEvent) =
         vehicleColor = taEvent.fulfillment.vehicle.color,
         vehicleModel = taEvent.fulfillment.vehicle.model
       }
-parseEvent (OnUpdate.RideStarted rsEvent) =
+parseEvent _ (OnUpdate.RideStarted rsEvent) =
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
         bppRideId = Id rsEvent.fulfillment.id
       }
-parseEvent (OnUpdate.RideCompleted rcEvent) = do
+parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
   return $
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id rcEvent.id,
@@ -87,26 +93,100 @@ parseEvent (OnUpdate.RideCompleted rcEvent) = do
         { amount = realToFrac breakup.price.value,
           description = breakup.title
         }
-parseEvent (OnUpdate.BookingCancelled tcEvent) =
+parseEvent _ (OnUpdate.BookingCancelled tcEvent) =
   return $
     DOnUpdate.BookingCancelledReq
       { bppBookingId = Id $ tcEvent.id,
         cancellationSource = castCancellationSource tcEvent.cancellation_reason
       }
-parseEvent (OnUpdate.BookingReallocation rbrEvent) =
+parseEvent _ (OnUpdate.BookingReallocation rbrEvent) =
   return $
     DOnUpdate.BookingReallocationReq
       { bppBookingId = Id $ rbrEvent.id,
         bppRideId = Id rbrEvent.fulfillment.id,
         reallocationSource = castCancellationSource rbrEvent.reallocation_reason
       }
-parseEvent (OnUpdate.DriverArrived daEvent) =
+parseEvent _ (OnUpdate.DriverArrived daEvent) =
   return $
     DOnUpdate.DriverArrivedReq
       { bppBookingId = Id daEvent.id,
         bppRideId = Id daEvent.fulfillment.id,
         arrivalTime = daEvent.arrival_time
       }
+parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
+  estimateInfo <- buildEstimateInfo erEvent.item
+  return $
+    DOnUpdate.EstimateRepetitionReq
+      { searchRequestId = Id transactionId,
+        estimateInfo = estimateInfo,
+        bppBookingId = Id $ erEvent.id,
+        bppRideId = Id erEvent.fulfillment.id,
+        cancellationSource = castCancellationSource erEvent.cancellation_reason
+      }
+
+buildEstimateInfo ::
+  (MonadThrow m, Log m) =>
+  EstRepUpd.Item ->
+  m DOnUpdate.EstimateRepetitionEstimateInfo
+buildEstimateInfo item = do
+  let itemCode = item.descriptor.code
+      vehicleVariant = castVehicleVariant itemCode.vehicleVariant
+      estimatedFare = roundToIntegral item.price.value
+      estimatedTotalFare = roundToIntegral item.price.offered_value
+      estimateBreakupList = buildEstimateBreakUpList <$> item.price.value_breakup
+      descriptions = item.quote_terms
+      nightShiftRate = buildNightShiftRate <$> item.tags
+      waitingCharges = buildWaitingChargeInfo <$> item.tags
+      driversLocation = fromMaybe [] $ item.tags <&> (.drivers_location)
+  validatePrices estimatedFare estimatedTotalFare
+
+  let totalFareRange =
+        DEstimate.FareRange
+          { minFare = roundToIntegral item.price.minimum_value,
+            maxFare = roundToIntegral item.price.maximum_value
+          }
+  validateFareRange estimatedTotalFare totalFareRange
+
+  -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
+  let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
+  case item.category_id of
+    EstRepUpd.DRIVER_OFFER_ESTIMATE -> pure DOnUpdate.EstimateRepetitionEstimateInfo {..}
+    _ -> throwError $ InvalidRequest "category_id is not supported, use DRIVER_OFFER_ESTIMATE"
+  where
+    castVehicleVariant = \case
+      EstRepUpd.SEDAN -> VehVar.SEDAN
+      EstRepUpd.SUV -> VehVar.SUV
+      EstRepUpd.HATCHBACK -> VehVar.HATCHBACK
+      EstRepUpd.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
+
+    validateFareRange totalFare DEstimate.FareRange {..} = do
+      when (minFare < 0) $ throwError $ InvalidRequest "Minimum discounted price is less than zero"
+      when (maxFare < 0) $ throwError $ InvalidRequest "Maximum discounted price is less than zero"
+      when (maxFare < minFare) $ throwError $ InvalidRequest "Maximum discounted price is less than minimum discounted price"
+      when (totalFare > maxFare || totalFare < minFare) $ throwError $ InvalidRequest "Discounted price outside of range"
+
+    buildEstimateBreakUpList EstRepUpd.BreakupItem {..} = do
+      DOnUpdate.EstimateBreakupInfo
+        { title = title,
+          price =
+            DOnUpdate.BreakupPriceInfo
+              { currency = price.currency,
+                value = roundToIntegral price.value
+              }
+        }
+
+    buildNightShiftRate itemTags = do
+      DOnUpdate.NightShiftInfo
+        { nightShiftMultiplier = realToFrac <$> itemTags.night_shift_multiplier,
+          nightShiftStart = itemTags.night_shift_start,
+          nightShiftEnd = itemTags.night_shift_end
+        }
+
+    buildWaitingChargeInfo itemTags = do
+      DOnUpdate.WaitingChargesInfo
+        { waitingChargePerMin = itemTags.waiting_charge_per_min,
+          waitingTimeEstimatedThreshold = itemTags.waiting_time_estimated_threshold
+        }
 
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
 castCancellationSource = \case

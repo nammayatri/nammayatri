@@ -39,7 +39,7 @@ import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
 import SharedLogic.GoogleMaps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
-import qualified Storage.CachedQueries.FarePolicy.FarePolicy as FarePolicyS
+import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error (FarePolicyError (NoFarePolicy), MerchantError (MerchantNotFound))
@@ -95,12 +95,13 @@ handler merchantId sReq = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverPoolConfig <- getDriverPoolConfig merchantId distance
   let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
+
   Esq.runTransaction $ do
     QSReq.create searchReq
 
   res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare driverExtraFare.minFee driverExtraFare.maxFee
   case res of
-    ReSchedule ut ->
+    ReSchedule _ -> do
       Esq.runTransaction $ do
         createJobIn @_ @'SendSearchRequestToDriver inTime $
           SendSearchRequestToDriverJobData
@@ -147,8 +148,9 @@ buildSearchRequest from to merchantId sReq distance duration = do
         createdAt = now,
         vehicleVariant = sReq.variant,
         status = DSearchReq.ACTIVE,
-        updatedAt = now,
-        autoAssignEnabled = sReq.autoAssignEnabled
+        autoAssignEnabled = sReq.autoAssignEnabled,
+        searchRepeatCounter = 0,
+        updatedAt = now
       }
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation

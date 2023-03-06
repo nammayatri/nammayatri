@@ -18,8 +18,10 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
@@ -104,7 +106,6 @@ cancelBooking booking transporterId = do
 handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
 handler merchantId req = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  exophone <- findRandomExophone merchantId
   now <- getCurrentTime
   case req.initTypeReq of
     InitNormalReq -> do
@@ -113,77 +114,67 @@ handler merchantId req = do
         throwError $ QuoteExpired driverQuote.id.getId
       searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
       -- do we need to check searchRequest.validTill?
-      booking <- buildBooking searchRequest driverQuote
+      booking <- buildBooking searchRequest driverQuote DRB.NormalBooking now
       Esq.runTransaction $
         QRB.create booking
       pure InitRes {..}
-      where
-        buildBooking searchRequest driverQuote = do
-          id <- Id <$> generateGUID
-          fromLocation <- buildBookingLocation searchRequest.fromLocation
-          toLocation <- buildBookingLocation searchRequest.toLocation
-          pure
-            DRB.Booking
-              { quoteId = req.driverQuoteId,
-                status = DRB.NEW,
-                providerId = merchantId,
-                primaryExophone = exophone.primaryPhone,
-                bapId = req.bapId,
-                bapUri = req.bapUri,
-                startTime = searchRequest.startTime,
-                riderId = Nothing,
-                vehicleVariant = driverQuote.vehicleVariant,
-                estimatedDistance = driverQuote.distance,
-                createdAt = now,
-                updatedAt = now,
-                fromLocation,
-                toLocation,
-                estimatedFare = driverQuote.estimatedFare,
-                riderName = Nothing,
-                estimatedDuration = searchRequest.estimatedDuration,
-                fareParams = driverQuote.fareParams,
-                bookingType = DRB.NormalBooking,
-                specialZoneOtpCode = Nothing,
-                ..
-              }
     InitSpecialZoneReq -> do
       specialZoneQuote <- QSZoneQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
       when (specialZoneQuote.validTill < now) $
         throwError $ QuoteExpired specialZoneQuote.id.getId
       searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
-      booking <- buildBooking searchRequest specialZoneQuote
+      booking <- buildBooking searchRequest specialZoneQuote DRB.SpecialZoneBooking now
       Esq.runTransaction $
         QRB.create booking
       pure InitRes {..}
-      where
-        buildBooking searchRequest driverQuote = do
-          id <- Id <$> generateGUID
-          fromLocation <- buildBookingLocation searchRequest.fromLocation
-          toLocation <- buildBookingLocation searchRequest.toLocation
-          pure
-            DRB.Booking
-              { quoteId = req.driverQuoteId,
-                status = DRB.NEW,
-                providerId = merchantId,
-                primaryExophone = exophone.primaryPhone,
-                bapId = req.bapId,
-                bapUri = req.bapUri,
-                startTime = searchRequest.startTime,
-                riderId = Nothing,
-                vehicleVariant = driverQuote.vehicleVariant,
-                estimatedDistance = driverQuote.distance,
-                createdAt = now,
-                updatedAt = now,
-                fromLocation,
-                toLocation,
-                estimatedFare = driverQuote.estimatedFare,
-                riderName = Nothing,
-                estimatedDuration = searchRequest.estimatedDuration,
-                fareParams = driverQuote.fareParams,
-                bookingType = DRB.SpecialZoneBooking,
-                specialZoneOtpCode = Nothing,
-                ..
-              }
+  where
+    buildBooking ::
+      ( CacheFlow m r,
+        EsqDBFlow m r,
+        HasField "transactionId" sr Text,
+        HasField "fromLocation" sr DLoc.SearchReqLocation,
+        HasField "toLocation" sr DLoc.SearchReqLocation,
+        HasField "startTime" sr UTCTime,
+        HasField "estimatedDuration" sr Seconds,
+        HasField "vehicleVariant" q Veh.Variant,
+        HasField "distance" q Meters,
+        HasField "estimatedFare" q Money,
+        HasField "fareParams" q DFP.FareParameters
+      ) =>
+      sr ->
+      q ->
+      DRB.BookingType ->
+      UTCTime ->
+      m DRB.Booking
+    buildBooking searchRequest driverQuote bookingType now = do
+      id <- Id <$> generateGUID
+      fromLocation <- buildBookingLocation searchRequest.fromLocation
+      toLocation <- buildBookingLocation searchRequest.toLocation
+      exophone <- findRandomExophone merchantId
+      pure
+        DRB.Booking
+          { transactionId = searchRequest.transactionId,
+            quoteId = req.driverQuoteId,
+            status = DRB.NEW,
+            providerId = merchantId,
+            primaryExophone = exophone.primaryPhone,
+            bapId = req.bapId,
+            bapUri = req.bapUri,
+            startTime = searchRequest.startTime,
+            riderId = Nothing,
+            vehicleVariant = driverQuote.vehicleVariant,
+            estimatedDistance = driverQuote.distance,
+            createdAt = now,
+            updatedAt = now,
+            fromLocation,
+            toLocation,
+            estimatedFare = driverQuote.estimatedFare,
+            riderName = Nothing,
+            estimatedDuration = searchRequest.estimatedDuration,
+            fareParams = driverQuote.fareParams,
+            specialZoneOtpCode = Nothing,
+            ..
+          }
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
 findRandomExophone merchantId = do

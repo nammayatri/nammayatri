@@ -18,11 +18,12 @@ module SharedLogic.FareCalculator.Flow
     baseFareSum,
     calculateFareParameters,
     mkBreakupList,
+    isNightShift,
   )
 where
 
 import Domain.Types.FareParameters
-import Domain.Types.FarePolicy.FarePolicy (FarePolicy)
+import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
@@ -31,6 +32,7 @@ import SharedLogic.FareCalculator.Calculator
   ( baseFareSum,
     calculateFareParameters,
     fareSum,
+    isNightShift,
     mkBreakupList,
   )
 

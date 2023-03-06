@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.FarePolicy.FarePolicy where
+module Domain.Types.FarePolicy where
 
 import Domain.Types.Common
 import qualified Domain.Types.Merchant as DM

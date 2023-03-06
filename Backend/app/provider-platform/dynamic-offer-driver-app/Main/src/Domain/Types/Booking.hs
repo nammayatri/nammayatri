@@ -49,6 +49,7 @@ instance ToHttpApiData BookingStatus where
 
 data Booking = Booking
   { id :: Id Booking,
+    transactionId :: Text,
     quoteId :: Text,
     status :: BookingStatus,
     bookingType :: BookingType,
