@@ -127,7 +127,7 @@ in  { esqDBCfg
     , driverEstimatedPickupDuration = +300
     , dashboardToken = sec.dashboardToken
     , driverReachedDistance = +100
-    , endRideDefCfg = endRideDefCfg
+    , defaultEndRideCfg = endRideDefCfg
     , cacheConfig
     , driverLocationUpdateRateLimitOptions
     , driverLocationUpdateNotificationTemplate =
