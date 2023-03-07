@@ -388,40 +388,37 @@ getNearestDrivers LatLong {..} radius merchantId mbPoolVariant fareProductType m
   let isRental = fareProductType == SFP.RENTAL
   now <- getCurrentTime
   res <- Esq.findAll $ do
-    withTable <- with $ do
-      (person :& location :& driverInfo :& vehicle) <- from baseFullPersonQuery
-      where_ $
-        person ^. PersonRole ==. val Person.DRIVER
-          &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-          &&. driverInfo ^. DriverInformationActive
-          &&. driverInfo ^. DriverInformationOptForRental >=. val isRental
-          &&. not_ (driverInfo ^. DriverInformationOnRide)
-          &&. not_ (driverInfo ^. DriverInformationBlocked)
-          &&. ( Esq.isNothing (val mbPoolVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbPoolVariant -- when mbVariant = Nothing, we use all variants, is it correct?
-                  ||. ( case mbPoolVariant of
-                          Just SEDAN ->
-                            driverInfo ^. DriverInformationCanDowngradeToSedan ==. val True
-                              &&. vehicle ^. VehicleVariant ==. val SUV
-                          Just HATCHBACK -> driverInfo ^. DriverInformationCanDowngradeToHatchback ==. val True
-                          _ -> val False
-                      )
-              )
-          &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                  ||. (location ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
-              )
-      return
-        ( person ^. PersonTId,
-          location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
-          vehicle ^. VehicleVariant,
-          driverInfo ^. DriverInformationCanDowngradeToSedan,
-          driverInfo ^. DriverInformationCanDowngradeToHatchback,
-          location ^. DriverLocationLat,
-          location ^. DriverLocationLon
-        )
-    (personId, dist, vehicleVariant, canDowngradeToSedan, canDowngradeToHatchback, dlat, dlon) <- from withTable
-    where_ $ dist <. val (fromIntegral radius)
-    orderBy [asc dist]
-    return (personId, dist, vehicleVariant, canDowngradeToSedan, canDowngradeToHatchback, dlat, dlon)
+    (person :& location :& driverInfo :& vehicle) <- from baseFullPersonQuery
+    where_ $
+      person ^. PersonRole ==. val Person.DRIVER
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+        &&. driverInfo ^. DriverInformationActive
+        &&. driverInfo ^. DriverInformationOptForRental >=. val isRental
+        &&. not_ (driverInfo ^. DriverInformationOnRide)
+        &&. not_ (driverInfo ^. DriverInformationBlocked)
+        &&. ( Esq.isNothing (val mbPoolVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbPoolVariant -- when mbVariant = Nothing, we use all variants, is it correct?
+                ||. ( case mbPoolVariant of
+                        Just SEDAN ->
+                          driverInfo ^. DriverInformationCanDowngradeToSedan ==. val True
+                            &&. vehicle ^. VehicleVariant ==. val SUV
+                        Just HATCHBACK -> driverInfo ^. DriverInformationCanDowngradeToHatchback ==. val True
+                        _ -> val False
+                    )
+            )
+        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
+                ||. (location ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
+            )
+        &&. buildRadiusWithin (location ^. DriverLocationPoint) (lat, lon) (val radius)
+    orderBy [asc (location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
+    return
+      ( person ^. PersonTId,
+        location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
+        vehicle ^. VehicleVariant,
+        driverInfo ^. DriverInformationCanDowngradeToSedan,
+        driverInfo ^. DriverInformationCanDowngradeToHatchback,
+        location ^. DriverLocationLat,
+        location ^. DriverLocationLon
+      )
   return (makeDriverPoolResults =<< res)
   where
     makeDriverPoolResults :: (Id Person, Double, Variant, Bool, Bool, Double, Double) -> [NearestDriversResult]
