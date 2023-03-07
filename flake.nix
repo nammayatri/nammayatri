@@ -6,8 +6,8 @@
 
     shared-kernel.url = "github:nammayatri/shared-kernel/nixify";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
-    beckn-gateway.url = "github:nammayatri/beckn-gateway";
-    beckn-gateway.flake = false;
+    beckn-gateway.url = "github:nammayatri/beckn-gateway/nixify";
+    beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
   };
   outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
