@@ -39,8 +39,8 @@ mkPersist
       referralCode DriverReferralTId Maybe
       referredByDriver PersonTId Maybe
       referredAt UTCTime Maybe
-      hasTakenRide Bool
-      driverReferralEligibleAt UTCTime Maybe
+      hasTakenValidRide Bool
+      hasTakenValidRideAt UTCTime Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

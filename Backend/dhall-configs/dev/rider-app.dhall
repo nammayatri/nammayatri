@@ -140,4 +140,5 @@ in  { esqDBCfg
     , cacheConfig
     , cacheTranslationConfig
     , maxEmergencyNumberCount = +3
+    , minTripDistanceForReferralCfg = Some +1000
     }

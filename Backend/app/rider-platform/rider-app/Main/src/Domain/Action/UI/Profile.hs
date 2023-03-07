@@ -130,7 +130,7 @@ validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasBapInfo r
 validateRefferalCode personId refCode = do
   unless (TU.validateAllDigitWithMinLength 6 refCode) (throwError $ InvalidRequest "Referral Code must have 6 digits")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
-  when (person.hasTakenRide) do
+  when (person.hasTakenValidRide) do
     throwError (InvalidRequest "You have already reffered someone")
   case person.referralCode of
     Just code ->

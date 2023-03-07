@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.rider_details RENAME COLUMN has_taken_ride to has_taken_valid_ride;

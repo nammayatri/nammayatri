@@ -66,6 +66,6 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             referralCode = Just referralCode,
             referredByDriver = Just driverId,
             referredAt = Just now,
-            hasTakenRide = False,
-            driverReferralEligibleAt = Nothing
+            hasTakenValidRide = False,
+            hasTakenValidRideAt = Nothing
           }

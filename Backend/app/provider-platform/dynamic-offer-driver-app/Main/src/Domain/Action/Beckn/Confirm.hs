@@ -219,8 +219,8 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
             referralCode = Nothing,
             referredByDriver = Nothing,
             referredAt = Nothing,
-            hasTakenRide = False,
-            driverReferralEligibleAt = Nothing
+            hasTakenValidRide = False,
+            hasTakenValidRideAt = Nothing
           }
 
 buildRideDetails ::

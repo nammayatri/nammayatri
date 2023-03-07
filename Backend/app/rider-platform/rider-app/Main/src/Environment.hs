@@ -99,7 +99,8 @@ data AppCfg = AppCfg
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
-    maxEmergencyNumberCount :: Int
+    maxEmergencyNumberCount :: Int,
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
   }
   deriving (Generic, FromDhall)
 
@@ -146,7 +147,8 @@ data AppEnv = AppEnv
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
-    maxEmergencyNumberCount :: Int
+    maxEmergencyNumberCount :: Int,
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
   }
   deriving (Generic)
 

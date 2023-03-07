@@ -27,5 +27,5 @@ getDriverPerformance :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => 
 getDriverPerformance driverId = do
   _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   allRefferedCustomers <- QRD.findAllReferredByDriverId driverId
-  let ridesTakenList = filter (.hasTakenRide) allRefferedCustomers
+  let ridesTakenList = filter (.hasTakenValidRide) allRefferedCustomers
   pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList))
