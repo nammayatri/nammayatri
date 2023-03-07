@@ -214,13 +214,13 @@ deleteById personId = do
     person <- from $ table @PersonT
     where_ (person ^. PersonId ==. val (getId personId))
 
-updateHasTakenRide :: Id Person -> SqlDB ()
-updateHasTakenRide personId = do
+updateHasTakenValidRide :: Id Person -> SqlDB ()
+updateHasTakenValidRide personId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ PersonHasTakenRide =. val True,
+      [ PersonHasTakenValidRide =. val True,
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)

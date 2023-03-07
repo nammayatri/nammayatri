@@ -63,7 +63,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
   let shouldUpdateRideComplete =
         case minTripDistanceForReferralCfg of
-          Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenRide)) mbRiderDetails
+          Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
           Nothing -> True
   let referralMessage = "Congratulations!"
   let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
@@ -77,7 +77,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
           Nothing -> pure ()
   Esq.runTransaction $ do
     whenJust mbRiderDetails $ \riderDetails ->
-      when shouldUpdateRideComplete (QRD.updateHasTakenRide riderDetails.id)
+      when shouldUpdateRideComplete (QRD.updateHasTakenValidRide riderDetails.id)
     whenJust mbFareParams QFare.create
     QRide.updateAll ride.id ride
     QRide.updateStatus ride.id Ride.COMPLETED

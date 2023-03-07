@@ -45,15 +45,15 @@ findByMobileNumber mobileNumber_ = do
     where_ $ riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
     return riderDetails
 
-updateHasTakenRide :: Id RiderDetails -> SqlDB ()
-updateHasTakenRide riderId = do
+updateHasTakenValidRide :: Id RiderDetails -> SqlDB ()
+updateHasTakenValidRide riderId = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ RiderDetailsHasTakenRide =. val True,
+      [ RiderDetailsHasTakenValidRide =. val True,
         RiderDetailsUpdatedAt =. val now,
-        RiderDetailsDriverReferralEligibleAt =. val (Just now)
+        RiderDetailsHasTakenValidRideAt =. val (Just now)
       ]
     where_ $ tbl ^. RiderDetailsTId ==. val (toKey riderId)
 
