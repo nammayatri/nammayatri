@@ -40,11 +40,16 @@ type API =
            :<|> RideCancelAPI
            :<|> RideInfoAPI
            :<|> RideSyncAPI
+           :<|> RideRouteAPI
        )
 
 type RideListAPI =
   ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'RIDES
     :> Common.RideListAPI
+
+type RideRouteAPI =
+  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'RIDES
+    :> Common.RideRouteAPI
 
 type RideStartAPI =
   ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'RIDES
@@ -74,6 +79,7 @@ handler merchantId =
     :<|> rideCancel merchantId
     :<|> rideInfo merchantId
     :<|> rideSync merchantId
+    :<|> rideRoute merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -134,3 +140,12 @@ rideSync merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.RideSyncEndpoint apiTokenInfo rideId T.emptyRequest
   T.withResponseTransactionStoring transaction $
     Client.callBecknTransportBPP checkedMerchantId (.rides.rideSync) rideId
+
+rideRoute ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Id Common.Ride ->
+  FlowHandler Common.RideRouteRes
+rideRoute merchantShortId apiTokenInfo rideId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  Client.callBecknTransportBPP checkedMerchantId (.rides.rideRoute) rideId

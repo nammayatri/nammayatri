@@ -114,7 +114,7 @@ dashboard merchantId token = do
 
     _ :<|> rideClient :<|> _ :<|> _ = helperAPIClient merchantId token
 
-    _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> rideSync = rideClient
+    _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> rideSync :<|> _ = rideClient
 
 buildStartRideReq :: Text -> LatLong -> RideAPI.StartRideReq
 buildStartRideReq otp initialPoint =

@@ -22,6 +22,15 @@ let esqDBReplicaCfg =
       , connectSchemaName = esqDBCfg.connectSchemaName
       }
 
+let clickhouseCfg =
+      { username = "xxxx"
+      , host = "xxxxx"
+      , port = 1234
+      , password = "xxxx"
+      , database = "xxxx"
+      , tls = True
+      }
+
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379
@@ -85,6 +94,7 @@ let endRideDefCfg =
 
 in  { esqDBCfg
     , esqDBReplicaCfg
+    , clickhouseCfg
     , hedisCfg = rcfg
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
