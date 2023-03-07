@@ -95,6 +95,22 @@
         "type": "github"
       }
     },
+    "clickhouse-haskell": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1676920142,
+        "narHash": "sha256-uEWtTQU+YIB/BWMf8wf+p8pv34W2Ohhv2xigC8YV1PY=",
+        "owner": "piyushKumar-1",
+        "repo": "clickhouse-haskell",
+        "rev": "5eafcf35b7f2f5619f21dbafb55d98b1e57b1d39",
+        "type": "github"
+      },
+      "original": {
+        "owner": "piyushKumar-1",
+        "repo": "clickhouse-haskell",
+        "type": "github"
+      }
+    },
     "common": {
       "inputs": {
         "cachix-push": "cachix-push",
@@ -657,6 +673,7 @@
     },
     "shared-kernel": {
       "inputs": {
+        "clickhouse-haskell": "clickhouse-haskell",
         "common": "common_2",
         "euler-hs": "euler-hs",
         "flake-parts": [
@@ -670,11 +687,11 @@
         "passetto-hs": "passetto-hs"
       },
       "locked": {
-        "lastModified": 1678142516,
-        "narHash": "sha256-wn1+cUb4su4mSdx/RUgx3k/cCOuTUlAieMi7KxPaoDY=",
+        "lastModified": 1678193265,
+        "narHash": "sha256-1l6tISKverfrM8MtCuQDTQAPOATqcyB020OkfUtdTVE=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "b65edb04997c42b72a1bdb6102cb8474f2e28e3a",
+        "rev": "bf367a95323bed9ff22ed48969289b0c416fcf71",
         "type": "github"
       },
       "original": {
