@@ -15,12 +15,20 @@
 module Domain.Action.UI.Profile
   ( ProfileRes,
     UpdateProfileReq (..),
+    UpdateProfileResp,
+    UpdateProfileDefaultEmergencyNumbersReq (..),
+    PersonDefaultEmergencyNumber (..),
+    UpdateProfileDefaultEmergencyNumbersResp,
+    GetProfileDefaultEmergencyNumbersResp (..),
     getPersonDetails,
     updatePerson,
+    updateDefaultEmergencyNumbers,
+    getDefaultEmergencyNumbers,
   )
 where
 
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.FCM.Types as FCM
@@ -28,17 +36,22 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
+import Kernel.Types.Predicate
+import Kernel.Types.Validation
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.Text as TU
+import Kernel.Utils.Validation
 import SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonDEN
 import Storage.Tabular.Person ()
 import Tools.Error
+import Tools.Metrics
 
 type ProfileRes = Person.PersonAPIEntity
 
@@ -50,6 +63,41 @@ data UpdateProfileReq = UpdateProfileReq
     deviceToken :: Maybe FCM.FCMRecipientToken,
     referralCode :: Maybe Text,
     language :: Maybe Maps.Language
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type UpdateProfileResp = APISuccess.APISuccess
+
+newtype UpdateProfileDefaultEmergencyNumbersReq = UpdateProfileDefaultEmergencyNumbersReq
+  { defaultEmergencyNumbers :: [PersonDefaultEmergencyNumber]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+validateUpdateProfileDefaultEmergencyNumbersReq :: Int -> Validate UpdateProfileDefaultEmergencyNumbersReq
+validateUpdateProfileDefaultEmergencyNumbersReq maxEmergencyNumberCount UpdateProfileDefaultEmergencyNumbersReq {..} =
+  sequenceA_
+    [ validateList "defaultEmergencyNumbers" defaultEmergencyNumbers validatePersonDefaultEmergencyNumber,
+      validateField "defaultEmergencyNumbers" defaultEmergencyNumbers $ MaxLength maxEmergencyNumberCount
+    ]
+
+data PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumber
+  { name :: Text,
+    mobileCountryCode :: Text,
+    mobileNumber :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+validatePersonDefaultEmergencyNumber :: Validate PersonDefaultEmergencyNumber
+validatePersonDefaultEmergencyNumber PersonDefaultEmergencyNumber {..} =
+  sequenceA_
+    [ validateField "mobileNumber" mobileNumber P.mobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode
+    ]
+
+type UpdateProfileDefaultEmergencyNumbersResp = APISuccess.APISuccess
+
+newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumbersResp
+  { defaultEmergencyNumbers :: [DPDEN.PersonDefaultEmergencyNumberAPIEntity]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -96,3 +144,37 @@ validateRefferalCode personId refCode = do
           void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
           return $ Just refCode
         _ -> throwError (InvalidRequest "Mobile number is null")
+
+updateDefaultEmergencyNumbers ::
+  ( EsqDBFlow m r,
+    EncFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["maxEmergencyNumberCount" ::: Int]
+  ) =>
+  Id Person.Person ->
+  UpdateProfileDefaultEmergencyNumbersReq ->
+  m UpdateProfileDefaultEmergencyNumbersResp
+updateDefaultEmergencyNumbers personId req = do
+  maxEmergencyNumberCount <- asks (.maxEmergencyNumberCount)
+  runRequestValidation (validateUpdateProfileDefaultEmergencyNumbersReq maxEmergencyNumberCount) req
+  now <- getCurrentTime
+  newPersonDENList <- buildPersonDefaultEmergencyNumber now `mapM` req.defaultEmergencyNumbers
+  runTransaction $ QPersonDEN.replaceAll personId newPersonDENList
+  pure APISuccess.Success
+  where
+    buildPersonDefaultEmergencyNumber now defEmNum = do
+      encMobNum <- encrypt defEmNum.mobileNumber
+      return $
+        DPDEN.PersonDefaultEmergencyNumber
+          { mobileNumber = encMobNum,
+            name = defEmNum.name,
+            mobileCountryCode = defEmNum.mobileCountryCode,
+            createdAt = now,
+            ..
+          }
+
+getDefaultEmergencyNumbers :: (EsqDBReplicaFlow m r, EncFlow m r) => Id Person.Person -> m GetProfileDefaultEmergencyNumbersResp
+getDefaultEmergencyNumbers personId = do
+  personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
+  decPersonENList <- decrypt `mapM` personENList
+  return . GetProfileDefaultEmergencyNumbersResp $ DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList

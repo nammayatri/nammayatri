@@ -99,7 +99,8 @@ data AppCfg = AppCfg
     rideCfg :: RideConfig,
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
-    cacheTranslationConfig :: CacheTranslationConfig
+    cacheTranslationConfig :: CacheTranslationConfig,
+    maxEmergencyNumberCount :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -146,7 +147,8 @@ data AppEnv = AppEnv
     rideCfg :: RideConfig,
     dashboardToken :: Text,
     cacheConfig :: CacheConfig,
-    cacheTranslationConfig :: CacheTranslationConfig
+    cacheTranslationConfig :: CacheTranslationConfig,
+    maxEmergencyNumberCount :: Int
   }
   deriving (Generic)
 

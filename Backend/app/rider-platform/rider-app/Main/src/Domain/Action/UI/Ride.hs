@@ -13,17 +13,23 @@
 -}
 
 module Domain.Action.UI.Ride
-  ( GetDriverLocRes,
+  ( GetDriverLocResp,
+    GetRideStatusResp (..),
     getDriverLoc,
+    getRideStatus,
   )
 where
 
+import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity, makeBookingLocationAPIEntity)
+import qualified Domain.Types.Booking.Type as DB
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import Environment
-import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -31,56 +37,94 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as MapSearch
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
-type GetDriverLocRes = MapSearch.LatLong
+type GetDriverLocResp = MapSearch.LatLong
+
+data GetRideStatusResp = GetRideStatusResp
+  { fromLocation :: BookingLocationAPIEntity,
+    toLocation :: Maybe BookingLocationAPIEntity,
+    ride :: RideAPIEntity,
+    customer :: SPerson.PersonAPIEntity,
+    driverPosition :: Maybe MapSearch.LatLong
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 getDriverLoc ::
   ( HasCacheConfig r,
     EncFlow m r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m,
     HasField "rideCfg" r RideConfig
   ) =>
   Id SRide.Ride ->
   Id SPerson.Person ->
-  m GetDriverLocRes
+  m GetDriverLocResp
 getDriverLoc rideId personId = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
     $ throwError $ RideInvalidStatus "Cannot track this ride"
   res <- CallBPP.callGetDriverLocation ride
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let fromLocation = Maps.getCoordinates booking.fromLocation
   driverReachedDistance <- asks (.rideCfg.driverReachedDistance)
   driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
-  mbIsOnTheWayNotified <- Redis.get @() (driverOnTheWay rideId)
-  mbHasReachedNotified <- Redis.get @() (driverHasReached rideId)
+  mbIsOnTheWayNotified <- Redis.get @() driverOnTheWay
+  mbHasReachedNotified <- Redis.get @() driverHasReached
   when (ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)) $ do
     let distance = highPrecMetersToMeters $ distanceBetweenInMeters fromLocation res.currPoint
-    mbStartDistance <- Redis.get @Meters (distanceUpdates rideId)
+    mbStartDistance <- Redis.get @Meters distanceUpdates
     case mbStartDistance of
-      Nothing -> Redis.setExp (distanceUpdates rideId) distance 3600
+      Nothing -> Redis.setExp distanceUpdates distance 3600
       Just startDistance -> when (startDistance - 50 > distance) $ do
         unless (isJust mbIsOnTheWayNotified) $ do
           Notify.notifyDriverOnTheWay personId
-          Redis.setExp (driverOnTheWay rideId) () driverOnTheWayNotifyExpiry
+          Redis.setExp driverOnTheWay () driverOnTheWayNotifyExpiry
         when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
           Notify.notifyDriverHasReached personId ride
-          Redis.setExp (driverHasReached rideId) () 1500
+          Redis.setExp driverHasReached () 1500
   return res.currPoint
+  where
+    distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
+    driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
+    driverHasReached = "Ride:GetDriverLoc:DriverHasReached " <> rideId.getId
 
-distanceUpdates :: Id SRide.Ride -> Text
-distanceUpdates (Id rideId) = "BAP: DriverDistance " <> rideId
-
-driverOnTheWay :: Id SRide.Ride -> Text
-driverOnTheWay (Id rideId) = "BAP: DriverIsOnTheWay " <> rideId
-
-driverHasReached :: Id SRide.Ride -> Text
-driverHasReached (Id rideId) = "BAP: DriverHasReached " <> rideId
+getRideStatus ::
+  ( HasCacheConfig r,
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    Redis.HedisFlow m r,
+    CoreMetrics m,
+    HasField "rideCfg" r RideConfig
+  ) =>
+  Id SRide.Ride ->
+  Id SPerson.Person ->
+  m GetRideStatusResp
+getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  mbPos <-
+    if ride.status == COMPLETED || ride.status == CANCELLED
+      then return Nothing
+      else Just <$> CallBPP.callGetDriverLocation ride
+  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  rider <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  decRider <- decrypt rider
+  return $
+    GetRideStatusResp
+      { fromLocation = makeBookingLocationAPIEntity booking.fromLocation,
+        toLocation = case booking.bookingDetails of
+          DB.OneWayDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation
+          DB.RentalDetails _ -> Nothing
+          DB.DriverOfferDetails details -> Just $ makeBookingLocationAPIEntity details.toLocation,
+        ride = makeRideAPIEntity ride,
+        customer = SPerson.makePersonAPIEntity decRider,
+        driverPosition = mbPos <&> (.currPoint)
+      }

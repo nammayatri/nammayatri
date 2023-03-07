@@ -140,4 +140,5 @@ in  { esqDBCfg
     , dashboardToken = sec.dashboardToken
     , cacheConfig
     , cacheTranslationConfig
+    , maxEmergencyNumberCount = 3
     }

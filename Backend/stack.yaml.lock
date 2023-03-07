@@ -5,18 +5,29 @@
 
 packages:
 - completed:
+    name: clickhouse-haskell
+    version: 0.1.2.4
+    git: https://github.com/piyushKumar-1/clickhouse-haskell.git
+    pantry-tree:
+      size: 885
+      sha256: 15eac0cbf78e7d674b11c8d6d260255eb38b362a442ef6a7820e8f65ff8a6b8e
+    commit: 5eafcf35b7f2f5619f21dbafb55d98b1e57b1d39
+  original:
+    git: https://github.com/piyushKumar-1/clickhouse-haskell.git
+    commit: 5eafcf35b7f2f5619f21dbafb55d98b1e57b1d39
+- completed:
     subdir: lib/mobility-core
     name: mobility-core
     version: 0.1.0.0
     git: https://github.com/nammayatri/shared-kernel.git
     pantry-tree:
-      size: 16451
-      sha256: b6b42ef7840ee88eca3bba96000d0f23dcfd24f147fbb43371c5bbff9ecad074
-    commit: b846cc808025559158d4616007cecb7ea1f304e2
+      size: 16775
+      sha256: 1b7ed2f0e7e0cac9fc6f38cc32dab380e7aa4ab1dd2c92587a00ee0733a1d13e
+    commit: 3f6b93f067085848461c88065a0f8069eb697859
   original:
     subdir: lib/mobility-core
     git: https://github.com/nammayatri/shared-kernel.git
-    commit: b846cc808025559158d4616007cecb7ea1f304e2
+    commit: 3f6b93f067085848461c88065a0f8069eb697859
 - completed:
     subdir: core
     name: passetto-core
@@ -420,6 +431,27 @@ packages:
       sha256: c882b6ebe8a0616f1ab3908f1620087ad5c6d8d82d1a72b99226f6487419bfe6
   original:
     hackage: some-1.0.1@sha256:26e5bab7276f48b25ea8660d3fd1166c0f20fd497dac879a40f408e23211f93e,2055
+- completed:
+    hackage: haxl-2.3.0.0@sha256:4c9a7371a2c21df910628d582776cf52db72bcd6c808daa02823be0ab06f1eb9,3974
+    pantry-tree:
+      size: 3076
+      sha256: 2da38564de7cda18d12923fef2fd279c7072a7dbd6ee13a4dfea7f347eb50c8c
+  original:
+    hackage: haxl-2.3.0.0@sha256:4c9a7371a2c21df910628d582776cf52db72bcd6c808daa02823be0ab06f1eb9,3974
+- completed:
+    hackage: tz-0.1.3.6@sha256:1b0c04d8d7f494888f166c66b72e7fcbc2269e57d1d17d48294ac4e19133a3ef,4631
+    pantry-tree:
+      size: 1179
+      sha256: 76bcdabe2c4083a914a6ddc532b2b6f7209e368cac14a9dcbe445a8707e9552d
+  original:
+    hackage: tz-0.1.3.6@sha256:1b0c04d8d7f494888f166c66b72e7fcbc2269e57d1d17d48294ac4e19133a3ef,4631
+- completed:
+    hackage: unordered-containers-0.2.19.1@sha256:db11042bb0356c0adea277d0794743829125b4c99455af6af2bd5f7bd5e88a39,3797
+    pantry-tree:
+      size: 1517
+      sha256: ac7a077274515b8afdf98138177b2fd2293c8bb346c5ec5caf2c5999da495112
+  original:
+    hackage: unordered-containers-0.2.19.1@sha256:db11042bb0356c0adea277d0794743829125b4c99455af6af2bd5f7bd5e88a39,3797
 - completed:
     hackage: c2hs-0.28.8@sha256:980c1a91c93e492d5412e904f2500b2ace34a421e8509529b6d98d89c51f9a2e,9208
     pantry-tree:

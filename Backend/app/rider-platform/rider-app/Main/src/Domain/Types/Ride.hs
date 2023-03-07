@@ -31,7 +31,7 @@ data RideStatus
   | INPROGRESS
   | COMPLETED
   | CANCELLED
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 instance FromHttpApiData RideStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
