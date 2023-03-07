@@ -24,9 +24,9 @@ jobs:
           nix build -L .#all
       - name: Build Docker image 🔨
         id: build-docker
-        if: contains(github.ref, ['refs/heads/main', 'refs/heads/srid/docker-push'])
+        if: ${{ contains(github.ref, ['refs/heads/main', 'refs/heads/srid/docker-push']) }}
         run: |
-          nix build -L --no-allow-dirty .#dockerImage
+          docker load -i $(nix build -L --no-allow-dirty --print-out-paths .#dockerImage)
       - name: Flake checks 🧪
         if: false
         run: |
