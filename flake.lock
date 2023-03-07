@@ -867,11 +867,11 @@
         "passetto-hs": "passetto-hs"
       },
       "locked": {
-        "lastModified": 1678205914,
-        "narHash": "sha256-Ew7/u3L5zIvfM2xRtsHV+v69xIuaagKYdU7svYRcdQk=",
+        "lastModified": 1678232359,
+        "narHash": "sha256-39KwwI08h560LDWer8eh/UsbTgk2g17XFMdr4YEDNt4=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "9297182d4d295b27f557dfa2de021ec7a1c5b82d",
+        "rev": "5caec1fcc8fed6d3805c85d12e66994f8cfdcbef",
         "type": "github"
       },
       "original": {
