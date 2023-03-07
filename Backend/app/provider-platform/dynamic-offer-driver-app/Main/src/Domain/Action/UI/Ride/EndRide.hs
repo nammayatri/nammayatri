@@ -294,7 +294,7 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride now = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
 
   if distanceDiff < 0
-    then recalculateFareForDistance handle booking ride (roundToIntegral $ ride.traveledDistance + abs (distanceDiff * 0.5))
+    then recalculateFareForDistance handle booking ride (roundToIntegral $ ride.traveledDistance + abs (distanceDiff * 0.6))
     else
       if distanceDiff < 1200
         then do
