@@ -108,7 +108,7 @@ type Person = PersonE 'AsEncrypted
 
 type DecryptedPerson = PersonE 'AsUnencrypted
 
-deriving instance Show DecryptedPerson
+deriving instance Show DecryptedPerson -- remind me if i forgot to remove this comment please
 
 instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)

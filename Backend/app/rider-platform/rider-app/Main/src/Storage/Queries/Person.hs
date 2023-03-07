@@ -37,6 +37,21 @@ findById ::
   m (Maybe Person)
 findById = Esq.findById
 
+findByMobileNumberAndMerchantId ::
+  Transactionable m =>
+  Text ->
+  DbHash ->
+  Id Merchant ->
+  m (Maybe Person)
+findByMobileNumberAndMerchantId countryCode mobileNumberHash merchantId = do
+  Esq.findOne $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonMobileCountryCode ==. val (Just countryCode)
+        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+    return person
+
 findByEmailAndPassword ::
   (Transactionable m, EncFlow m r) =>
   Text ->

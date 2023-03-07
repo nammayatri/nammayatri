@@ -1,0 +1,27 @@
+
+# @name updateDefaultEmergencyNumbers
+POST {{app-host}}/profile/defaultEmergencyNumbers
+content-type: application/json
+token: {{app-token}}
+
+{
+  "defaultEmergencyNumbers" : [{
+      "name": "Bob",
+      "mobileCountryCode": "92",
+      "mobileNumber": "8005553535"
+  }]
+}
+
+###
+
+# @name getDefaultEmergencyNumbers
+GET {{app-host}}/profile/defaultEmergencyNumbers
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name getEmergencyRides
+GET {{app-host}}/ride/emergency/list
+content-type: application/json
+token: {{app-token}}

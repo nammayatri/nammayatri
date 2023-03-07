@@ -15,7 +15,8 @@
 module API.UI.Ride
   ( API,
     handler,
-    DRide.GetDriverLocRes,
+    DRide.GetDriverLocResp,
+    DRide.GetRideStatusResp (..),
   )
 where
 
@@ -32,14 +33,24 @@ import Tools.Auth
 
 type API =
   "ride"
-    :> Capture "rideId" (Id SRide.Ride)
-    :> "driver"
-    :> "location"
-    :> TokenAuth
-    :> Post '[JSON] DRide.GetDriverLocRes
+    :> ( Capture "rideId" (Id SRide.Ride)
+           :> ( "driver"
+                  :> "location"
+                  :> TokenAuth
+                  :> Get '[JSON] DRide.GetDriverLocResp
+                  :<|> "status"
+                  :> TokenAuth
+                  :> Get '[JSON] DRide.GetRideStatusResp
+              )
+       )
 
 handler :: FlowServer API
-handler = getDriverLoc
+handler rideId =
+  getDriverLoc rideId
+    :<|> getRideStatus rideId
 
-getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler DRide.GetDriverLocRes
+getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler DRide.GetDriverLocResp
 getDriverLoc rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId personId
+
+getRideStatus :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler DRide.GetRideStatusResp
+getRideStatus rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getRideStatus rideId personId

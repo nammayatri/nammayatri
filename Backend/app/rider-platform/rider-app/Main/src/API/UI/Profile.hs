@@ -15,6 +15,11 @@
 module API.UI.Profile
   ( DProfile.ProfileRes,
     DProfile.UpdateProfileReq (..),
+    DProfile.UpdateProfileResp,
+    DProfile.UpdateProfileDefaultEmergencyNumbersReq (..),
+    DProfile.PersonDefaultEmergencyNumber (..),
+    DProfile.UpdateProfileDefaultEmergencyNumbersResp,
+    DProfile.GetProfileDefaultEmergencyNumbersResp (..),
     API,
     handler,
   )
@@ -37,15 +42,30 @@ type API =
            :<|> TokenAuth
              :> ReqBody '[JSON] DProfile.UpdateProfileReq
              :> Post '[JSON] APISuccess.APISuccess
+           :<|> "defaultEmergencyNumbers"
+             :> ( TokenAuth
+                    :> ReqBody '[JSON] DProfile.UpdateProfileDefaultEmergencyNumbersReq
+                    :> Post '[JSON] DProfile.UpdateProfileDefaultEmergencyNumbersResp
+                      :<|> TokenAuth
+                    :> Get '[JSON] DProfile.GetProfileDefaultEmergencyNumbersResp
+                )
        )
 
 handler :: FlowServer API
 handler =
   getPersonDetails
     :<|> updatePerson
+    :<|> updateDefaultEmergencyNumbers
+    :<|> getDefaultEmergencyNumbers
 
 getPersonDetails :: Id Person.Person -> FlowHandler DProfile.ProfileRes
 getPersonDetails = withFlowHandlerAPI . DProfile.getPersonDetails
 
 updatePerson :: Id Person.Person -> DProfile.UpdateProfileReq -> FlowHandler APISuccess.APISuccess
 updatePerson personId = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updatePerson personId
+
+updateDefaultEmergencyNumbers :: Id Person.Person -> DProfile.UpdateProfileDefaultEmergencyNumbersReq -> FlowHandler DProfile.UpdateProfileDefaultEmergencyNumbersResp
+updateDefaultEmergencyNumbers personId = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updateDefaultEmergencyNumbers personId
+
+getDefaultEmergencyNumbers :: Id Person.Person -> FlowHandler DProfile.GetProfileDefaultEmergencyNumbersResp
+getDefaultEmergencyNumbers = withFlowHandlerAPI . DProfile.getDefaultEmergencyNumbers
