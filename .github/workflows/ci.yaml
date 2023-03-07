@@ -22,13 +22,9 @@ jobs:
         id: build-nix
         run: |
           nix build -L .#all
-      - name: Download from Nix cache + build external deps (Docker)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          nix develop -L -j 4 .#dockerImage -c echo
       - name: Build Docker image 🔨
         id: build-docker
-        if: github.ref == 'refs/heads/main'
+        if: contains(github.ref, ['refs/heads/main', 'refs/heads/srid/docker-push'])
         run: |
           nix build -L --no-allow-dirty .#dockerImage
       - name: Flake checks 🧪
