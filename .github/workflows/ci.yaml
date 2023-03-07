@@ -27,6 +27,7 @@ jobs:
         if: ${{ contains(fromJson('["refs/heads/main", "refs/heads/srid/docker-push"]'), github.ref) }}
         run: |
           docker load -i $(nix build -L --no-allow-dirty --print-out-paths .#dockerImage)
+          docker images
       - name: Flake checks 🧪
         if: false
         run: |
