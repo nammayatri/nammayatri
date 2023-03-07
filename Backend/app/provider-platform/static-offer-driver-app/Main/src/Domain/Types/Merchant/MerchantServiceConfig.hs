@@ -85,6 +85,7 @@ getServiceName osc = case osc.serviceConfig of
   SmsServiceConfig smsCfg -> case smsCfg of
     Sms.ExotelSmsConfig _ -> SmsService Sms.ExotelSms
     Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
+    Sms.GupShupConfig _ -> SmsService Sms.GupShup
 
 buildMerchantServiceConfig ::
   MonadTime m =>
