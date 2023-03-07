@@ -28,6 +28,7 @@ jobs:
         run: |
           docker load -i $(nix build -L --no-allow-dirty --print-out-paths .#dockerImage)
           docker images
+          cat $(nix build --no-allow-dirty .#dockerImageName --print-out-paths)
       - name: Flake checks 🧪
         if: false
         run: |
