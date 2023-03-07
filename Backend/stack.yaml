@@ -72,8 +72,10 @@ packages:
 # extra-deps: []
 
 extra-deps:
-  # - ../beckn-gateway/app/gateway
-  # - ../beckn-gateway/app/mock-registry
+  # - ../../beckn-gateway/app/gateway
+  # - ../../beckn-gateway/app/mock-registry
+  - git: https://github.com/piyushKumar-1/clickhouse-haskell.git
+    commit: 5eafcf35b7f2f5619f21dbafb55d98b1e57b1d39
   - git: https://github.com/nammayatri/beckn-gateway.git
     commit: 7094d2af08055f37ca01f2891d19f3153e619be1
     subdirs:
@@ -81,7 +83,7 @@ extra-deps:
       - app/mock-registry
   # -  ../../shared-kernel/lib/mobility-core
   - git: https://github.com/nammayatri/shared-kernel.git
-    commit: b94d767607d2ac1b1e472c9ce35d97e2cb422dd4
+    commit: 9c55802cb593344cfc65ffef2bc5e796ad9eefc7
     subdirs:
       - lib/mobility-core
   - git: https://github.com/juspay/passetto
@@ -157,6 +159,9 @@ extra-deps:
   - hw-kafka-client-4.0.3@sha256:20e3614454d5afd2a6acfc0709b9bf00bd6ee9a9bc646c2e2e4ccec1d16831a1,4861
   - constraints-0.11.2@sha256:d173efdf7a5d5515075635c686420211dccd9f85bc091a579ecc18b3f138a5fe,2324
   - some-1.0.1@sha256:26e5bab7276f48b25ea8660d3fd1166c0f20fd497dac879a40f408e23211f93e,2055
+  - haxl-2.3.0.0@sha256:4c9a7371a2c21df910628d582776cf52db72bcd6c808daa02823be0ab06f1eb9,3974
+  - tz-0.1.3.6@sha256:1b0c04d8d7f494888f166c66b72e7fcbc2269e57d1d17d48294ac4e19133a3ef,4631
+  - unordered-containers-0.2.19.1@sha256:db11042bb0356c0adea277d0794743829125b4c99455af6af2bd5f7bd5e88a39,3797
 
   # Needed for gcc11 support in Kafka
   - c2hs-0.28.8@sha256:980c1a91c93e492d5412e904f2500b2ace34a421e8509529b6d98d89c51f9a2e,9208

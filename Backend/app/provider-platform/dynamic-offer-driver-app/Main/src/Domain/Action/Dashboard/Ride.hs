@@ -11,16 +11,19 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.Dashboard.Ride
   ( rideList,
     rideInfo,
     rideSync,
+    rideRoute,
   )
 where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Common
 import Data.Coerce (coerce)
+import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.BookingCancellationReason as DBCReason
@@ -32,7 +35,11 @@ import Environment
 import EulerHS.Prelude (whenNothing_)
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
+import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Operators
+import qualified Kernel.Storage.Clickhouse.Queries as CH
+import qualified Kernel.Storage.Clickhouse.Types as CH
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -97,6 +104,41 @@ buildRideListItem QRide.RideItem {..} = do
         bookingStatus,
         rideCreatedAt = rideCreatedAt
       }
+
+---------------------------------------------------------------------------------------------------
+
+getLatLong :: MonadFlow m => Common.DriverEdaKafka -> m LatLong
+getLatLong Common.DriverEdaKafka {..} =
+  case (lat, lon) of
+    (Just lat_, Just lon_) -> do
+      lat' <- readMaybe lat_ & fromMaybeM (InvalidRequest "Couldn't find driver's location.")
+      lon' <- readMaybe lon_ & fromMaybeM (InvalidRequest "Couldn't find driver's location.")
+      pure $ LatLong lat' lon'
+    _ -> throwError $ InvalidRequest "Couldn't find driver's location."
+
+rideRoute :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideRouteRes
+rideRoute merchantShortId reqRideId = do
+  merchant <- findMerchantByShortId merchantShortId
+  let rideId = cast @Common.Ride @DRide.Ride reqRideId
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  unless (merchant.id == booking.providerId) $ throwError (RideDoesNotExist rideId.getId)
+  let rideQId = T.unpack rideId.getId
+      driverQId = T.unpack ride.driverId.getId
+  (rQStart, rQEnd) <- case (ride.tripStartTime, ride.tripEndTime) of
+    (Just x, Just y) -> pure (fetchDate $ show x, fetchDate $ show y)
+    _ -> throwError $ InvalidRequest "The ride has not ended yet."
+  ckhTbl <- CH.findAll (Proxy @Common.DriverEdaKafka) ((("partition_date" =.= rQStart) |.| ("partition_date" =.= rQEnd)) &.& ("driver_id" =.= driverQId) &.& ("rid" =.= rideQId)) Nothing Nothing (Just $ CH.Desc "created_at")
+  actualRoute <- case ckhTbl of
+    Left _ -> pure []
+    Right y -> mapM getLatLong y
+  when (null actualRoute) $ throwError $ InvalidRequest "No route found for this ride."
+  pure
+    Common.RideRouteRes
+      { actualRoute
+      }
+  where
+    fetchDate dateTime = T.unpack $ T.take 10 dateTime
 
 ---------------------------------------------------------------------
 rideInfo :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideInfoRes
