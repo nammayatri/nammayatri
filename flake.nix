@@ -19,7 +19,9 @@
       perSystem = { config, self', system, pkgs, lib, ... }: {
         cachix-push.packages = [ "all" ];
 
-        packages.default = self'.packages.rider-app;
+        packages.default =
+          pkgs.haskell.lib.justStaticExecutables
+            self'.packages.rider-app;
 
         # A dummy package to force build of all local Haskell packages. 
         # Useful in CI.
