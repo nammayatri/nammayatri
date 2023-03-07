@@ -1,5 +1,8 @@
 { self, ... }:
 
+let
+  imageName = "ghcr.io/nammayatri/nammayatri";
+in
 {
   config = {
     perSystem = { self', pkgs, lib, ... }: {
@@ -7,7 +10,7 @@
         dockerImage =
           # TODO: Build a layered image, separating tools and packages
           pkgs.dockerTools.buildImage {
-            name = "beckn";
+            name = imageName;
             created = "now";
             # self.rev will be non-null only when the working tree is clean
             # This is equivalent to `git rev-parse --short HEAD`
