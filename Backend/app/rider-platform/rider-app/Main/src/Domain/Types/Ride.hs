@@ -19,6 +19,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
@@ -71,7 +72,27 @@ data Ride = Ride
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
+
+data ShareRideInfo = ShareRideInfo
+  { id :: Id Ride,
+    bookingId :: Id DRB.Booking,
+    status :: RideStatus,
+    driverName :: Text,
+    driverRating :: Maybe Centesimal,
+    driverMobileNumber :: Text,
+    vehicleNumber :: Text,
+    vehicleModel :: Text,
+    vehicleColor :: Text,
+    trackingUrl :: Maybe BaseUrl,
+    rideStartTime :: Maybe UTCTime,
+    rideEndTime :: Maybe UTCTime,
+    userFirstName :: Maybe Text,
+    userLastName :: Maybe Text,
+    fromLocation :: DLoc.BookingLocation,
+    toLocation :: Maybe DLoc.BookingLocation
+  }
+  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
 data RideAPIEntity = RideAPIEntity
   { id :: Id Ride,

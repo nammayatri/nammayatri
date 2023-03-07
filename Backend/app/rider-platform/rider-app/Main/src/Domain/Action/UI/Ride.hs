@@ -14,16 +14,21 @@
 
 module Domain.Action.UI.Ride
   ( GetDriverLocRes,
+    GetRideInfoRes,
     getDriverLoc,
+    getRideInfo,
   )
 where
 
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps as Maps
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -31,6 +36,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Person as QRP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as MapSearch
@@ -84,3 +90,43 @@ driverOnTheWay (Id rideId) = "BAP: DriverIsOnTheWay " <> rideId
 
 driverHasReached :: Id SRide.Ride -> Text
 driverHasReached (Id rideId) = "BAP: DriverHasReached " <> rideId
+
+-- Action for ride info
+type GetRideInfo = SRide.Ride
+
+type GetRideInfoRes = SRide.ShareRideInfo
+
+getRideInfo ::
+  ( EsqDBReplicaFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id GetRideInfo ->
+  m GetRideInfoRes
+getRideInfo rideId = do
+  ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  person <- runInReplica $ QRP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
+  logInfo $ "bookingDetails: " <> show booking.bookingDetails
+  let mbtoLocation = case booking.bookingDetails of
+        DBooking.OneWayDetails x -> Just x.toLocation
+        DBooking.DriverOfferDetails x -> Just x.toLocation
+        _ -> Nothing
+  return $
+    ShareRideInfo
+      { id = ride.id,
+        bookingId = ride.bookingId,
+        status = ride.status,
+        driverName = ride.driverName,
+        driverRating = ride.driverRating,
+        driverMobileNumber = ride.driverMobileNumber,
+        vehicleNumber = ride.vehicleNumber,
+        vehicleModel = ride.vehicleModel,
+        vehicleColor = ride.vehicleColor,
+        trackingUrl = ride.trackingUrl,
+        rideStartTime = ride.rideStartTime,
+        rideEndTime = ride.rideEndTime,
+        userFirstName = person.firstName,
+        userLastName = person.lastName,
+        fromLocation = booking.fromLocation,
+        toLocation = mbtoLocation
+      }

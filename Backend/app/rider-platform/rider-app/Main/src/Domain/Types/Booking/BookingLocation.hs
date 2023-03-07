@@ -27,7 +27,7 @@ data BookingLocation = BookingLocation
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq, HasCoordinates)
+  deriving (Generic, Show, Eq, HasCoordinates, ToSchema, FromJSON, ToJSON)
 
 data BookingLocationAPIEntity = BookingLocationAPIEntity
   { lat :: Double,

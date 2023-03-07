@@ -32,14 +32,23 @@ import Tools.Auth
 
 type API =
   "ride"
-    :> Capture "rideId" (Id SRide.Ride)
-    :> "driver"
-    :> "location"
-    :> TokenAuth
-    :> Post '[JSON] DRide.GetDriverLocRes
+    :> ( Capture "rideId" (Id SRide.Ride)
+           :> "driver"
+           :> "location"
+           :> TokenAuth
+           :> Post '[JSON] DRide.GetDriverLocRes
+           :<|> "shareRide"
+             :> Capture "rideId" (Id SRide.Ride)
+             :> Get '[JSON] DRide.GetRideInfoRes
+       )
 
 handler :: FlowServer API
-handler = getDriverLoc
+handler =
+  getDriverLoc
+    :<|> getRideInfo
 
 getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler DRide.GetDriverLocRes
 getDriverLoc rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId personId
+
+getRideInfo :: Id SRide.Ride -> FlowHandler DRide.GetRideInfoRes
+getRideInfo rideId = withFlowHandlerAPI $ DRide.getRideInfo rideId
