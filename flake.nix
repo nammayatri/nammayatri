@@ -17,7 +17,7 @@
         ./Backend
       ];
       perSystem = { config, self', system, pkgs, lib, ... }: {
-        cachix-push.packages = [ ]; # Push devshell only
+        cachix-push.packages = [ "all" ];
 
         packages.default = self'.packages.rider-app;
 
