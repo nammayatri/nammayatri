@@ -19,6 +19,7 @@ module API.Exotel
 where
 
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
+import Data.List (nub, sort)
 import qualified Domain.Types.ServerName as DSN
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
@@ -52,26 +53,25 @@ buildTransaction ::
 buildTransaction endpoint serverName =
   T.buildTransaction (DT.ExotelAPI endpoint) (Just serverName) Nothing Nothing Nothing
 
--- store request and call bap/bpp only when status changed OK to not OK and vice versa.
+-- store request and call bap/bpp only when status changed OK to not OK and vice versa, or affected numbers changed.
 exotelHeartbeat :: Common.ExotelHeartbeatReq -> FlowHandler APISuccess
 exotelHeartbeat req = withFlowHandlerAPI $ do
   forM_ [DSN.APP_BACKEND, DSN.BECKN_TRANSPORT, DSN.DRIVER_OFFER_BPP] $ \serverName -> do
     fork ("exotelHeartbeat:" <> show serverName) $ do
-      needToCallApp <-
-        if req.statusType /= Common.OK
-          then pure True
-          else do
-            mbLastTransaction <- Esq.runInReplica $ QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint) serverName
-            let mbLastStatus =
-                  mbLastTransaction
-                    >>= (.request)
-                    >>= decodeFromText @(Common.ReqWithoutSecrets Common.ExotelHeartbeatReq)
-                    <&> (.statusType)
-            let lastTransactionFailed =
-                  mbLastTransaction
-                    >>= (.responseError)
-                    & isJust
-            pure (mbLastStatus /= Just Common.OK || lastTransactionFailed)
+      mbLastTransaction <- Esq.runInReplica $ QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint) serverName
+      let mbLastReq =
+            mbLastTransaction
+              >>= (.request)
+              >>= decodeFromText @(Common.ReqWithoutSecrets Common.ExotelHeartbeatReq)
+      let mbLastStatus = mbLastReq <&> (.statusType)
+      let lastTransactionFailed =
+            mbLastTransaction
+              >>= (.responseError)
+              & isJust
+      let lastStatusWasNotOk = mbLastStatus /= Just Common.OK || lastTransactionFailed
+          lastStatusWasOk = not lastStatusWasNotOk
+          affectedPhonesChanged = Just (getAffectedPhoneNumberSids req) /= (getAffectedPhoneNumberSids <$> mbLastReq)
+          needToCallApp = if req.statusType /= Common.OK then lastStatusWasOk || affectedPhonesChanged else lastStatusWasNotOk
       when needToCallApp $ do
         transaction <- buildTransaction Common.ExotelHeartbeatEndpoint serverName (Just req)
         T.withTransactionStoring transaction $
@@ -81,3 +81,5 @@ exotelHeartbeat req = withFlowHandlerAPI $ do
     callExotelHeartbeat DSN.APP_BACKEND = Client.callRiderAppExotelApi (.exotelHeartbeat) req
     callExotelHeartbeat DSN.BECKN_TRANSPORT = Client.callStaticOfferDriverAppExotelApi (.exotelHeartbeat) req
     callExotelHeartbeat DSN.DRIVER_OFFER_BPP = Client.callDynamicOfferDriverAppExotelApi (.exotelHeartbeat) req
+
+    getAffectedPhoneNumberSids req' = nub . sort . (<&> (.phoneNumberSid)) $ req'.incomingAffected <> req'.outgoingAffected
