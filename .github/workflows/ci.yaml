@@ -7,6 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
       - uses: nixbuild/nix-quick-install-action@v21
         with:
           nix_conf: |
@@ -22,15 +28,15 @@ jobs:
         id: build-nix
         run: |
           nix build -L .#all
-      - name: Download from Nix cache + build external deps (Docker)
-        if: github.ref == 'refs/heads/main'
-        run: |
-          nix develop -L -j 4 .#dockerImage -c echo
       - name: Build Docker image 🔨
         id: build-docker
-        if: github.ref == 'refs/heads/main'
+        if: ${{ contains(fromJson('["refs/heads/main", "refs/heads/nixify"]'), github.ref) }}
         run: |
-          nix build -L --no-allow-dirty .#dockerImage
+          docker load -i $(nix build -L --no-allow-dirty --print-out-paths .#dockerImage)
+          docker images
+      - name: Push Docker image 🚀
+        run: |
+          docker push $(nix eval --raw .#dockerImageName)
       - name: Flake checks 🧪
         if: false
         run: |
