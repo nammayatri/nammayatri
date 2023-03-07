@@ -79,7 +79,7 @@ buildTransaction ::
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.MerchantAPI endpoint) apiTokenInfo Nothing Nothing
+  T.buildTransaction (DT.MerchantAPI endpoint) (Just BECKN_TRANSPORT) (Just apiTokenInfo) Nothing Nothing
 
 merchantUpdate ::
   ShortId DM.Merchant ->

@@ -24,6 +24,7 @@ import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types
@@ -51,6 +52,7 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
+    clickhouseCfg :: ClickhouseCfg,
     port :: Int,
     metricsPort :: Int,
     hostName :: Text,
@@ -122,6 +124,7 @@ data AppEnv = AppEnv
     disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
+    clickhouseEnv :: ClickhouseEnv,
     hedisEnv :: HedisEnv,
     isShuttingDown :: TMVar (),
     loggerEnv :: LoggerEnv,
@@ -204,6 +207,7 @@ buildAppEnv cfg@AppCfg {..} = do
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer
+  clickhouseEnv <- createConn clickhouseCfg
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config

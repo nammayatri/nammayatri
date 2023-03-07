@@ -181,19 +181,19 @@ buildEstimate ::
   m EstimateItem
 buildEstimate org startTime dist driverpool (farePolicy, driverMetadata) = do
   fareParams <- calculateFare org.id farePolicy dist startTime Nothing
-  let baseFare = fareSum fareParams
+  let estimateFare = fareSum fareParams
       currency = "INR"
       estimateBreakups = mkBreakupListItems (BreakupPrice currency) BreakupItem farePolicy
   let filteredPoolByVehVariant = filter (\pool -> pool.variant == driverMetadata.variant) driverpool
   let latlongList = map (\x -> LatLong x.lat x.lon) filteredPoolByVehVariant
-  logDebug $ "baseFare: " <> show baseFare
+  logDebug $ "estimateFare: " <> show estimateFare
   logDebug $ "distanceToPickup: " <> show driverMetadata.distanceToPickup
   pure
     EstimateItem
       { vehicleVariant = driverMetadata.variant,
         distanceToPickup = driverMetadata.distanceToPickup,
-        minFare = baseFare,
-        maxFare = baseFare + farePolicy.driverExtraFee.maxFee,
+        minFare = estimateFare,
+        maxFare = estimateFare + farePolicy.driverExtraFee.maxFee,
         estimateBreakupList = estimateBreakups,
         driversLatLong = latlongList,
         nightShiftRate =

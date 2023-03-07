@@ -14,9 +14,22 @@
 
 module Storage.Queries.Transaction where
 
-import Domain.Types.Transaction as T
+import Domain.Types.ServerName as DSN
+import Domain.Types.Transaction as DT
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.Transaction ()
+import Storage.Tabular.Transaction
 
 create :: Transaction -> SqlDB ()
 create = Esq.create
+
+fetchLastTransaction :: Transactionable m => DT.Endpoint -> DSN.ServerName -> m (Maybe DT.Transaction)
+fetchLastTransaction endpoint serverName = do
+  findOne $ do
+    transaction <- from $ table @TransactionT
+    where_ $
+      transaction ^. TransactionEndpoint ==. val endpoint
+        &&. transaction ^. TransactionServerName ==. val (Just serverName)
+    orderBy [desc $ transaction ^. TransactionCreatedAt]
+    limit 1
+    return transaction

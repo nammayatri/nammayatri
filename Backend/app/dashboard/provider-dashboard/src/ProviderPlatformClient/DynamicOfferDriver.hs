@@ -16,13 +16,13 @@
 
 module ProviderPlatformClient.DynamicOfferDriver
   ( callDriverOfferBPP,
-    DriversAPIs (..),
-    DriverOfferAPIs (..),
+    callDynamicOfferDriverAppExotelApi,
   )
 where
 
 import "dynamic-offer-driver-app" API.Dashboard as BPP
 import qualified Dashboard.Common.Booking as Common
+import qualified Dashboard.Common.Exotel as Common
 import qualified Dashboard.ProviderPlatform.Driver as Common
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified Dashboard.ProviderPlatform.DriverReferral as Common
@@ -81,7 +81,8 @@ data RidesAPIs = RidesAPIs
     rideEnd :: Id Common.Ride -> Common.EndRideReq -> Euler.EulerClient APISuccess,
     rideCancel :: Id Common.Ride -> Common.CancelRideReq -> Euler.EulerClient APISuccess,
     rideInfo :: Id Common.Ride -> Euler.EulerClient Common.RideInfoRes,
-    rideSync :: Id Common.Ride -> Euler.EulerClient Common.RideSyncRes
+    rideSync :: Id Common.Ride -> Euler.EulerClient Common.RideSyncRes,
+    rideRoute :: Id Common.Ride -> Euler.EulerClient Common.RideRouteRes
   }
 
 newtype BookingsAPIs = BookingsAPIs
@@ -158,7 +159,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> rideEnd
       :<|> rideCancel
       :<|> rideInfo
-      :<|> rideSync = ridesClient
+      :<|> rideSync
+      :<|> rideRoute = ridesClient
 
     stuckBookingsCancel = bookingsClient
 
@@ -190,3 +192,23 @@ callDriverOfferBPP ::
   (DriverOfferAPIs -> b) ->
   c
 callDriverOfferBPP merchantId = callServerAPI @_ @m @r DRIVER_OFFER_BPP (mkDriverOfferAPIs merchantId) "callDriverOfferBPP"
+
+newtype ExotelAPIs = ExotelAPIs
+  { exotelHeartbeat :: Common.ExotelHeartbeatReq -> Euler.EulerClient APISuccess
+  }
+
+mkDynamicOfferDriverAppExotelAPIs :: Text -> ExotelAPIs
+mkDynamicOfferDriverAppExotelAPIs token = do
+  ExotelAPIs {..}
+  where
+    exotelHeartbeat = Euler.client (Proxy :: Proxy BPP.ExotelAPI) token
+
+callDynamicOfferDriverAppExotelApi ::
+  forall m r b c.
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DataServer]],
+    CallServerAPI ExotelAPIs m r b c
+  ) =>
+  (ExotelAPIs -> b) ->
+  c
+callDynamicOfferDriverAppExotelApi = callServerAPI @_ @m @r DRIVER_OFFER_BPP mkDynamicOfferDriverAppExotelAPIs "callDynamicOfferDriverAppExotelApi"

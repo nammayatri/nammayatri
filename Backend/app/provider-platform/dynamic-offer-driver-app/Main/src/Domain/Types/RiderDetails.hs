@@ -32,7 +32,8 @@ data RiderDetailsE e = RiderDetails
     referralCode :: Maybe (Id DriverReferral),
     referredByDriver :: Maybe (Id Person),
     referredAt :: Maybe UTCTime,
-    hasTakenRide :: Bool
+    hasTakenRide :: Bool,
+    driverReferralEligibleAt :: Maybe UTCTime
   }
   deriving (Generic)
 

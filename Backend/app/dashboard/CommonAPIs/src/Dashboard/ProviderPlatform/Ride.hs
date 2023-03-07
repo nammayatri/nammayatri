@@ -75,7 +75,8 @@ data RideListItem = RideListItem
     driverPhoneNo :: Maybe Text,
     vehicleNo :: Text,
     fareDiff :: Maybe Money,
-    bookingStatus :: BookingStatus
+    bookingStatus :: BookingStatus,
+    rideCreatedAt :: UTCTime
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -244,3 +245,36 @@ data RideStatus
   | RIDE_CANCELLED
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+---------------------------------------------------------
+-- ride route -------------------------------------------
+
+type RideRouteAPI =
+  Capture "rideId" (Id Ride)
+    :> "route"
+    :> Post '[JSON] RideRouteRes
+
+newtype RideRouteRes = RideRouteRes
+  { actualRoute :: [LatLong]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverEdaKafka = DriverEdaKafka
+  { driver_id :: String,
+    rid :: Maybe String,
+    ts :: String,
+    lat :: Maybe String,
+    lon :: Maybe String,
+    mid :: Maybe String,
+    updated_at :: Maybe String,
+    created_at :: Maybe String,
+    on_ride :: Maybe String,
+    active :: Maybe String,
+    partition_date :: String,
+    date :: String
+  }
+  deriving (Show, Eq, Generic, FromJSON, ToJSON, ToSchema)
+
+instance HideSecrets RideRouteRes where
+  hideSecrets = identity

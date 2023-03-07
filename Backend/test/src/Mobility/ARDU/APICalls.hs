@@ -110,9 +110,11 @@ dashboard merchantId token = do
   let ride = DashboardRideAPIs {..}
   DashboardAPIs {..}
   where
-    _ :<|> rideClient :<|> _ :<|> _ = client (Proxy :: Proxy DashboardAPI.API) merchantId token
+    helperAPIClient :<|> _exotelAPIClient = client (Proxy :: Proxy DashboardAPI.API)
 
-    _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> rideSync = rideClient
+    _ :<|> rideClient :<|> _ :<|> _ = helperAPIClient merchantId token
+
+    _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> rideSync :<|> _ = rideClient
 
 buildStartRideReq :: Text -> LatLong -> RideAPI.StartRideReq
 buildStartRideReq otp initialPoint =

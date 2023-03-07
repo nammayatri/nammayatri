@@ -52,7 +52,7 @@ buildTransaction ::
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.BookingAPI endpoint) apiTokenInfo Nothing Nothing
+  T.buildTransaction (DT.BookingAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing Nothing
 
 stuckBookingsCancel :: ShortId DM.Merchant -> ApiTokenInfo -> Common.StuckBookingsCancelReq -> FlowHandler Common.StuckBookingsCancelRes
 stuckBookingsCancel merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do

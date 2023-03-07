@@ -15,13 +15,13 @@
 
 module ProviderPlatformClient.StaticOfferDriver
   ( callBecknTransportBPP,
-    BecknTransportAPIs (..),
-    DriversAPIs (..),
+    callStaticOfferDriverAppExotelApi,
   )
 where
 
 import "static-offer-driver-app" API.Dashboard as BPP
 import qualified Dashboard.Common.Booking as Common
+import qualified Dashboard.Common.Exotel as Common
 import qualified Dashboard.ProviderPlatform.Driver as Common
 import qualified Dashboard.ProviderPlatform.Merchant as Common
 import qualified Dashboard.ProviderPlatform.Ride as Common
@@ -66,7 +66,8 @@ data RidesAPIs = RidesAPIs
     rideEnd :: Id Common.Ride -> Common.EndRideReq -> Euler.EulerClient APISuccess,
     rideCancel :: Id Common.Ride -> Common.CancelRideReq -> Euler.EulerClient APISuccess,
     rideInfo :: Id Common.Ride -> Euler.EulerClient Common.RideInfoRes,
-    rideSync :: Id Common.Ride -> Euler.EulerClient Common.RideSyncRes
+    rideSync :: Id Common.Ride -> Euler.EulerClient Common.RideSyncRes,
+    rideRoute :: Id Common.Ride -> Euler.EulerClient Common.RideRouteRes
   }
 
 newtype BookingsAPIs = BookingsAPIs
@@ -113,7 +114,8 @@ mkBecknTransportAPIs merchantId token = do
       :<|> rideEnd
       :<|> rideCancel
       :<|> rideInfo
-      :<|> rideSync = ridesClient
+      :<|> rideSync
+      :<|> rideRoute = ridesClient
 
     stuckBookingsCancel = bookingsClient
 
@@ -133,3 +135,23 @@ callBecknTransportBPP ::
   (BecknTransportAPIs -> b) ->
   c
 callBecknTransportBPP merchantId = callServerAPI @_ @m @r BECKN_TRANSPORT (mkBecknTransportAPIs merchantId) "callBecknTransportBPP"
+
+newtype ExotelAPIs = ExotelAPIs
+  { exotelHeartbeat :: Common.ExotelHeartbeatReq -> Euler.EulerClient APISuccess
+  }
+
+mkStaticOfferDriverAppExotelAPIs :: Text -> ExotelAPIs
+mkStaticOfferDriverAppExotelAPIs token = do
+  ExotelAPIs {..}
+  where
+    exotelHeartbeat = Euler.client (Proxy :: Proxy BPP.ExotelAPI) token
+
+callStaticOfferDriverAppExotelApi ::
+  forall m r b c.
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DataServer]],
+    CallServerAPI ExotelAPIs m r b c
+  ) =>
+  (ExotelAPIs -> b) ->
+  c
+callStaticOfferDriverAppExotelApi = callServerAPI @_ @m @r BECKN_TRANSPORT mkStaticOfferDriverAppExotelAPIs "callStaticOfferDriverAppExotelApi"

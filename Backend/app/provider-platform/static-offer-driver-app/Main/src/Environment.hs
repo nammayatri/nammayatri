@@ -32,6 +32,7 @@ import Kernel.External.Encryption (EncTools)
 import Kernel.External.Exotel.Types (ExotelCfg)
 import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
 import Kernel.Sms.Config
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Hedis.AppPrefixes
@@ -57,6 +58,7 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
+    clickhouseCfg :: ClickhouseCfg,
     smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
     webengageCfg :: WebengageConfig,
@@ -131,6 +133,7 @@ data AppEnv = AppEnv
     selfUIUrl :: BaseUrl,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
+    clickhouseEnv :: ClickhouseEnv,
     isShuttingDown :: TMVar (),
     bppMetrics :: BPPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
@@ -161,6 +164,7 @@ buildAppEnv AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
+  clickhouseEnv <- createConn clickhouseCfg
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBPPKafkaEnvs
   hedisEnv <- connectHedis hedisCfg staticOfferDriverAppPrefix
