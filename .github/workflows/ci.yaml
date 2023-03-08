@@ -35,6 +35,7 @@ jobs:
           docker load -i $(nix build -L --no-allow-dirty --print-out-paths .#dockerImage)
           docker images
       - name: Push Docker image 🚀
+        if: ${{ contains(fromJson('["refs/heads/main", "refs/heads/nixify"]'), github.ref) }}
         run: |
           docker push $(nix eval --raw .#dockerImageName)
       - name: Flake checks 🧪
