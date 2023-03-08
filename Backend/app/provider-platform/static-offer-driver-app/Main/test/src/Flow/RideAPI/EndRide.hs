@@ -93,7 +93,16 @@ handle =
       isDistanceCalculationFailed = \_ -> pure False,
       getDefaultConfig = pure Fixtures.defaultEndRideConfig,
       getConfig = pure Fixtures.defaultTransporterConfig,
-      whenWithLocationUpdatesLock = \_driverId action -> action
+      whenWithLocationUpdatesLock = \_driverId action -> action,
+      getDeviationDistances = \_ _ ->
+        pure $
+          GetDistanceResp
+            { origin = LatLong 10 1,
+              destination = LatLong 10 1,
+              distance = 100,
+              duration = 30,
+              status = "OK"
+            }
     }
 
 testDriverEndRideReq :: DriverEndRideReq

@@ -22,6 +22,7 @@ module Domain.Action.UI.Ride.EndRide
   )
 where
 
+import Control.Monad.Catch (Handler (..), catches)
 import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDefCfg
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Types.Booking as SRB
@@ -52,6 +53,7 @@ import qualified Storage.CachedQueries.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Maps as Maps
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq
 
@@ -85,7 +87,8 @@ data ServiceHandle m = ServiceHandle
     getDefaultConfig :: m EndRideDefCfg.EndRideDefaultConfig,
     findConfig :: m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
-    getDistanceBetweenPoints :: LatLong -> LatLong -> m Meters
+    getDistanceBetweenPoints :: LatLong -> LatLong -> m Meters,
+    getDeviationDistances :: Id DM.Merchant -> GetDistanceReq LatLong LatLong -> m (GetDistanceResp LatLong LatLong)
   }
 
 buildEndRideHandle :: Id DM.Merchant -> Flow (ServiceHandle Flow)
@@ -106,11 +109,12 @@ buildEndRideHandle merchantId = do
         getDefaultConfig = asks (.defaultEndRideCfg),
         findConfig = QTConf.findByMerchantId merchantId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
-        getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId
+        getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId,
+        getDeviationDistances = Maps.getDeviationDistances
       }
 
 driverEndRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, MonadCatch m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DriverEndRideReq ->
@@ -121,7 +125,7 @@ driverEndRide handle rideId req =
     $ DriverReq req
 
 dashboardEndRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, MonadCatch m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   DashboardEndRideReq ->
@@ -132,7 +136,7 @@ dashboardEndRide handle rideId req =
     $ DashboardReq req
 
 endRide ::
-  (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
+  (MonadThrow m, Log m, MonadTime m, MonadGuid m, MonadCatch m) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
@@ -233,9 +237,10 @@ getWaitingFare ServiceHandle {..} mbTripStartTime mbDriverArrivalTime waitingCha
       fareableWaitingTime = max 0 (driverWaitingTime / 60 - fromIntegral waitingTimeThreshold)
   pure $ roundToIntegral fareableWaitingTime * fromMaybe 0 waitingChargePerMin
 
-isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> m Bool
-isPickupDropOutsideOfThreshold ServiceHandle {..} booking ride tripEndPoint = do
+isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, MonadCatch m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> m Bool
+isPickupDropOutsideOfThreshold handle@ServiceHandle {..} booking ride tripEndPoint = do
   let mbTripStartLoc = ride.tripStartPos
+  let merchantId = booking.providerId
   mbThresholdConfig <- findConfig
   -- for old trips with mbTripStartLoc = Nothing we always recalculate fare
   case mbTripStartLoc of
@@ -245,8 +250,8 @@ isPickupDropOutsideOfThreshold ServiceHandle {..} booking ride tripEndPoint = do
       defaultDropLocThreshold <- getDefaultConfig <&> (.dropLocThreshold)
       let pickupLocThreshold = metersToHighPrecMeters . fromMaybe defaultPickupLocThreshold . join $ mbThresholdConfig <&> (.pickupLocThreshold)
       let dropLocThreshold = metersToHighPrecMeters . fromMaybe defaultDropLocThreshold . join $ mbThresholdConfig <&> (.dropLocThreshold)
-      let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
-      let dropDifference = abs $ distanceBetweenInMeters (getCoordinates booking.toLocation) tripEndPoint
+      pickupDifference <- calculateDifferenceDistance merchantId (getCoordinates booking.fromLocation) tripStartLoc handle
+      dropDifference <- calculateDifferenceDistance merchantId (getCoordinates booking.toLocation) tripEndPoint handle
       let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
 
       logTagInfo "Locations differences" $
@@ -331,3 +336,28 @@ returnEstimatesAsFinalValues :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) 
 returnEstimatesAsFinalValues handle booking ride = do
   waitingCharge <- getWaitingFare handle ride.tripStartTime ride.driverArrivalTime booking.fareParams.waitingChargePerMin
   pure (booking.estimatedDistance, booking.estimatedFare + waitingCharge, Nothing)
+
+calculateDifferenceDistance ::
+  (MonadThrow m, Log m, MonadCatch m) =>
+  Id DM.Merchant ->
+  LatLong ->
+  LatLong ->
+  ServiceHandle m ->
+  m HighPrecMeters
+calculateDifferenceDistance merchantId from to ServiceHandle {..} = do
+  errorHandler $ do
+    res <-
+      getDeviationDistances merchantId $
+        Maps.GetDistanceReq
+          { origin = from,
+            destination = to,
+            travelMode = Just Maps.CAR
+          }
+    return $ metersToHighPrecMeters res.distance
+  where
+    errorHandler =
+      flip
+        catches
+        [ Handler $ \(InternalError _) -> do
+            pure $ abs $ distanceBetweenInMeters from to
+        ]

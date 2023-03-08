@@ -114,6 +114,8 @@ mapsServiceUsageConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerA
   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   whenJust req.getEstimatedPickupDistances $ \_ ->
     throwError (InvalidRequest "getEstimatedPickupDistances is not allowed for bap")
+  whenJust req.getDeviationDistances $ \_ ->
+    throwError (InvalidRequest "getDeviationDistances is not allowed for bap")
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
   transaction <- buildTransaction Common.MapsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $

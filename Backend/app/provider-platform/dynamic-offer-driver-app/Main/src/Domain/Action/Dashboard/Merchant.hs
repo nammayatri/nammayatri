@@ -129,6 +129,7 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{getDistances = fromMaybe merchantServiceUsageConfig.getDistances req.getDistances,
                                    getEstimatedPickupDistances = fromMaybe merchantServiceUsageConfig.getEstimatedPickupDistances req.getEstimatedPickupDistances,
+                                   getDeviationDistances = fromMaybe merchantServiceUsageConfig.getDeviationDistances req.getDeviationDistances,
                                    getRoutes = fromMaybe merchantServiceUsageConfig.getRoutes req.getRoutes,
                                    snapToRoad = fromMaybe merchantServiceUsageConfig.snapToRoad req.snapToRoad,
                                    getPlaceName = fromMaybe merchantServiceUsageConfig.getPlaceName req.getPlaceName,

@@ -100,6 +100,8 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   whenJust req.getEstimatedPickupDistances $ \_ ->
     throwError (InvalidRequest "getEstimatedPickupDistances is not allowed for bap")
+  whenJust req.getDeviationDistances $ \_ ->
+    throwError (InvalidRequest "getDeviationDistances is not allowed for bap")
   merchant <- findMerchantByShortId merchantShortId
 
   forM_ Maps.availableMapsServices $ \service -> do

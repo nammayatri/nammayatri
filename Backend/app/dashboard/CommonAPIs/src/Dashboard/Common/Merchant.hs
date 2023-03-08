@@ -378,6 +378,7 @@ type MapsServiceUsageConfigUpdateAPI =
 data MapsServiceUsageConfigUpdateReq = MapsServiceUsageConfigUpdateReq
   { getDistances :: Maybe Maps.MapsService,
     getEstimatedPickupDistances :: Maybe Maps.MapsService,
+    getDeviationDistances :: Maybe Maps.MapsService,
     getRoutes :: Maybe Maps.MapsService,
     snapToRoad :: Maybe Maps.MapsService,
     getPlaceName :: Maybe Maps.MapsService,
@@ -388,7 +389,7 @@ data MapsServiceUsageConfigUpdateReq = MapsServiceUsageConfigUpdateReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 mapsServiceUsedInReq :: MapsServiceUsageConfigUpdateReq -> Maps.MapsService -> Bool
-mapsServiceUsedInReq (MapsServiceUsageConfigUpdateReq a b c d e f g) service = service `elem` catMaybes [a, b, c, d, e, f, g]
+mapsServiceUsedInReq (MapsServiceUsageConfigUpdateReq a b c d e f g h) service = service `elem` catMaybes [a, b, c, d, e, f, g, h]
 
 instance HideSecrets MapsServiceUsageConfigUpdateReq where
   hideSecrets = identity
@@ -403,7 +404,8 @@ validateMapsServiceUsageConfigUpdateReq MapsServiceUsageConfigUpdateReq {..} = d
       validateField "snapToRoad" snapToRoad $ InMaybe $ PredicateFunc mkMessage Maps.snapToRoadProvided,
       validateField "getPlaceName" getPlaceName $ InMaybe $ PredicateFunc mkMessage Maps.getPlaceNameProvided,
       validateField "getPlaceDetails" getPlaceDetails $ InMaybe $ PredicateFunc mkMessage Maps.getPlaceDetailsProvided,
-      validateField "autoComplete" autoComplete $ InMaybe $ PredicateFunc mkMessage Maps.autoCompleteProvided
+      validateField "autoComplete" autoComplete $ InMaybe $ PredicateFunc mkMessage Maps.autoCompleteProvided,
+      validateField "getDeviationDistances" getDeviationDistances $ InMaybe $ PredicateFunc mkMessage Maps.getDistancesProvided
     ]
 
 ---------------------------------------------------------

@@ -37,6 +37,7 @@ mkPersist
       merchantId MerchantTId
       getDistances MapsService
       getEstimatedPickupDistances MapsService
+      getDeviationDistances MapsService
       getRoutes MapsService
       snapToRoad MapsService
       getPlaceName MapsService

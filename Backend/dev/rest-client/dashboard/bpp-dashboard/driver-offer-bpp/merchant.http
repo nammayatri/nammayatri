@@ -85,6 +85,7 @@ content-type: application/json
 
 { "getDistances" : "Google",
   "getEstimatedPickupDistances" : "Google",
+  "getDeviationDistances" : "Google",
   "getRoutes" : "Google",
   "snapToRoad" : "OSRM",
   "getPlaceName" : "Google",

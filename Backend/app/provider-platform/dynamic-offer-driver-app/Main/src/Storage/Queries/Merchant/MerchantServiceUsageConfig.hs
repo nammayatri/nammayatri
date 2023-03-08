@@ -46,6 +46,7 @@ updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
       tbl
       [ MerchantServiceUsageConfigGetDistances =. val getDistances,
         MerchantServiceUsageConfigGetEstimatedPickupDistances =. val getEstimatedPickupDistances,
+        MerchantServiceUsageConfigGetDeviationDistances =. val getDeviationDistances,
         MerchantServiceUsageConfigGetRoutes =. val getRoutes,
         MerchantServiceUsageConfigSnapToRoad =. val snapToRoad,
         MerchantServiceUsageConfigGetPlaceName =. val getPlaceName,
