@@ -16,6 +16,7 @@ module Domain.Types.Merchant.MerchantServiceUsageConfig where
 
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import Kernel.External.Call.Types (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.SMS.Types
 import Kernel.External.Whatsapp.Types
@@ -24,6 +25,7 @@ import Kernel.Types.Id
 
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { merchantId :: Id Merchant,
+    initiateCall :: CallService,
     getDistances :: MapsService,
     getRoutes :: MapsService,
     snapToRoad :: MapsService,

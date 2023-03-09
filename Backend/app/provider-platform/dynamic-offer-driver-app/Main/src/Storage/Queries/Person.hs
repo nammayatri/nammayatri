@@ -292,6 +292,24 @@ findByEmailAndMerchant merchantId email_ =
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
+findByRoleAndMobileNumberAndMerchantId ::
+  (Transactionable m, EncFlow m r) =>
+  Role ->
+  Text ->
+  Text ->
+  Id Merchant ->
+  m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ merchantId = do
+  mobileNumberDbHash <- getDbHash mobileNumber_
+  findOne $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonRole ==. val role_
+        &&. person ^. PersonMobileCountryCode ==. val (Just countryCode)
+        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+    return person
+
 updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB ()
 updateMerchantIdAndMakeAdmin personId merchantId = do
   now <- getCurrentTime

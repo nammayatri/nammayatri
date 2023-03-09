@@ -20,8 +20,6 @@ let S3MockConfig =
 
 let S3Config = < S3AwsConf : S3AwsConfig | S3MockConf : S3MockConfig >
 
-let ExotelCfg = { apiKey : Text, apiToken : Text, sid : Text, callerId : Text }
-
 let smsSessionConfig = { attempts = +3, authExpiry = +3, tokenExpiry = +365 }
 
 let loggerConfig =
@@ -46,7 +44,6 @@ in  { smsSessionConfig
     , autoMigrate = False
     , loggerConfig
     , LogLevel
-    , ExotelCfg
     , signatureExpiry = +600
     , mkShard
     , httpClientOptions

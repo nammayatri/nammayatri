@@ -16,11 +16,11 @@
 module Storage.Queries.CallStatus where
 
 import Domain.Types.CallStatus
-import Kernel.External.Exotel.Types (ExotelCallStatus)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.CallStatus
+import qualified Tools.Call as Call
 
 create :: CallStatus -> SqlDB ()
 create callStatus = void $ Esq.createUnique callStatus
@@ -32,10 +32,10 @@ findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
 findByCallSid callSid =
   Esq.findOne $ do
     callStatus <- from $ table @CallStatusT
-    where_ $ callStatus ^. CallStatusExotelCallSid ==. val callSid
+    where_ $ callStatus ^. CallStatusCallId ==. val callSid
     return callStatus
 
-updateCallStatus :: Id CallStatus -> ExotelCallStatus -> Int -> BaseUrl -> SqlDB ()
+updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> SqlDB ()
 updateCallStatus callId status conversationDuration recordingUrl = do
   Esq.update $ \tbl -> do
     set
