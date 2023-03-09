@@ -152,3 +152,9 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
     where_ $
       mr ^. MessageReportMessageId ==. val (toKey messageId)
         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+
+deleteByPersonId :: Id P.Person -> SqlDB ()
+deleteByPersonId personId =
+  Esq.delete $ do
+    messagereport <- from $ table @MessageReportT
+    where_ $ messagereport ^. MessageReportDriverId ==. val (toKey personId)
