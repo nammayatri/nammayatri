@@ -244,7 +244,8 @@ data MessageDeliveryInfoResponse = MessageDeliveryInfoResponse
     success :: Int,
     failed :: Int,
     queued :: Int,
-    sending :: Int
+    sending :: Int,
+    seen :: Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
