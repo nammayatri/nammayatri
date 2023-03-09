@@ -106,7 +106,6 @@ in  { esqDBCfg
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , searchExpiry = Some +7200
-    , exotelCfg = Some common.exotelCfg
     , migrationPath = Some
         (   env:STATIC_OFFER_DRIVER_MIGRATION_PATH as Text
           ? "dev/migrations/static-offer-driver-app"

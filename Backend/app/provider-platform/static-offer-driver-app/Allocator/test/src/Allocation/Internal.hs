@@ -124,6 +124,7 @@ defaultBooking =
     { id = Id "1",
       status = SRB.CONFIRMED,
       providerId = Id "",
+      providerExoPhone = "ExoPhone",
       bapId = "",
       bapUri = defaultUrl,
       startTime = defaultTime,

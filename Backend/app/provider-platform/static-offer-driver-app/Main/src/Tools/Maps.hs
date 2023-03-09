@@ -121,7 +121,7 @@ runWithServiceConfig func getCfg orgId req = do
   orgMapsConfig <- QOMC.findByMerchantId orgId >>= fromMaybeM (MerchantServiceUsageConfigNotFound orgId.getId)
   orgMapsServiceConfig <-
     QOMSC.findByMerchantIdAndService orgId (DOSC.MapsService $ getCfg orgMapsConfig)
-      >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId (getCfg orgMapsConfig))
+      >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId "Maps" (show $ getCfg orgMapsConfig))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown Service Config"

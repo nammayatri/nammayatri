@@ -18,6 +18,8 @@ module Domain.Types.Merchant.MerchantServiceConfig where
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import qualified Kernel.External.Call as Call
+import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
 import Kernel.External.SMS as Sms
@@ -26,13 +28,14 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Text.Show
 
-data ServiceName = MapsService Maps.MapsService | SmsService Sms.SmsService
+data ServiceName = MapsService Maps.MapsService | SmsService Sms.SmsService | CallService Call.CallService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 instance Show ServiceName where
   show (MapsService s) = "Maps_" <> show s
   show (SmsService s) = "Sms_" <> show s
+  show (CallService s) = "Call_" <> show s
 
 instance Read ServiceName where
   readsPrec d' r' =
@@ -47,13 +50,17 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Sms_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (CallService v1, r2)
+                 | r1 <- stripPrefix "Call_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
       r'
     where
       app_prec = 10
       stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
 
-data ServiceConfigD (s :: UsageSafety) = MapsServiceConfig !MapsServiceConfig | SmsServiceConfig !SmsServiceConfig
+data ServiceConfigD (s :: UsageSafety) = MapsServiceConfig !MapsServiceConfig | SmsServiceConfig !SmsServiceConfig | CallServiceConfig !CallServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -85,6 +92,8 @@ getServiceName osc = case osc.serviceConfig of
   SmsServiceConfig smsCfg -> case smsCfg of
     Sms.ExotelSmsConfig _ -> SmsService Sms.ExotelSms
     Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
+  CallServiceConfig callCfg -> case callCfg of
+    Call.ExotelConfig _ -> CallService Call.Exotel
 
 buildMerchantServiceConfig ::
   MonadTime m =>

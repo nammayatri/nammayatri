@@ -39,6 +39,7 @@ mkPersist
       subscriberId Text
       uniqueKeyId Text
       shortId Text
+      exoPhones (PostgresNonEmptyList Text)
       mobileNumber Text Maybe
       mobileCountryCode Text Maybe
       gstin Text Maybe
@@ -76,6 +77,7 @@ instance TType MerchantT Domain.Merchant where
               { origin = originRestriction,
                 destination = destinationRestriction
               },
+          exoPhones = unPostgresNonEmptyList exoPhones,
           ..
         }
   toTType Domain.Merchant {..} =
@@ -85,5 +87,6 @@ instance TType MerchantT Domain.Merchant where
         shortId = getShortId shortId,
         originRestriction = geofencingConfig.origin,
         destinationRestriction = geofencingConfig.destination,
+        exoPhones = PostgresNonEmptyList exoPhones,
         ..
       }

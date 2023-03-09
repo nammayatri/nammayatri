@@ -17,8 +17,9 @@ module API.UI.Call
     handler,
     DCall.CallRes (..),
     DCall.CallCallbackReq,
+    DCall.CallAttachments (..),
     DCall.CallCallbackRes,
-    DCall.MobileNumberResp,
+    DCall.GetDriverMobileNumberResp,
     DCall.GetCallStatusRes,
   )
 where
@@ -29,6 +30,7 @@ import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment
+import Kernel.External.Call.Exotel.Types (ExotelCallStatus)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -44,25 +46,29 @@ handler = backendBasedCallHandler :<|> frontendBasedCallHandler
 -------- Initiate a call (Exotel) APIs --------
 type BackendBasedCallAPI =
   "ride"
-    :> Capture "rideId" (Id SRide.Ride)
-    :> "call"
-    :> ( "driver"
-           :> TokenAuth
-           :> Post '[JSON] DCall.CallRes
-           :<|> "statusCallback"
-           :> ReqBody '[JSON] DCall.CallCallbackReq
-           :> Post '[JSON] DCall.CallCallbackRes
-           :<|> Capture "callId" (Id SCS.CallStatus)
-           :> "status"
-           :> TokenAuth
-           :> Get '[JSON] DCall.GetCallStatusRes
+    :> ( Capture "rideId" (Id SRide.Ride)
+           :> "call"
+           :> ( "driver"
+                  :> TokenAuth
+                  :> Post '[JSON] DCall.CallRes
+                  :<|> Capture "callId" (Id SCS.CallStatus)
+                    :> "status"
+                    :> TokenAuth
+                    :> Get '[JSON] DCall.GetCallStatusRes
+              )
+           :<|> "call"
+             :> "statusCallback"
+             :> ReqBody '[JSON] DCall.CallCallbackReq
+             :> Post '[JSON] DCall.CallCallbackRes
        )
 
 backendBasedCallHandler :: FlowServer BackendBasedCallAPI
-backendBasedCallHandler rideId =
-  initiateCallToDriver rideId
-    :<|> callStatusCallback rideId
-    :<|> getCallStatus rideId
+backendBasedCallHandler =
+  ( \rideId ->
+      initiateCallToDriver rideId
+        :<|> getCallStatus
+  )
+    :<|> callStatusCallback
 
 type FrontendBasedCallAPI =
   "exotel"
@@ -72,11 +78,11 @@ type FrontendBasedCallAPI =
            :> MandatoryQueryParam "CallSid" Text
            :> MandatoryQueryParam "CallFrom" Text
            :> MandatoryQueryParam "CallTo" Text
-           :> MandatoryQueryParam "CallStatus" Text
-           :> Get '[JSON] DCall.MobileNumberResp
+           :> MandatoryQueryParam "CallStatus" ExotelCallStatus
+           :> Get '[JSON] DCall.GetDriverMobileNumberResp
            :<|> "statusCallback"
            :> MandatoryQueryParam "CallSid" Text
-           :> MandatoryQueryParam "DialCallStatus" Text
+           :> MandatoryQueryParam "DialCallStatus" ExotelCallStatus
            :> MandatoryQueryParam "RecordingUrl" Text
            :> QueryParam "Legs[0][OnCallDuration]" Int
            :> Get '[JSON] DCall.CallCallbackRes
@@ -91,14 +97,14 @@ frontendBasedCallHandler =
 initiateCallToDriver :: Id SRide.Ride -> Id Person.Person -> FlowHandler DCall.CallRes
 initiateCallToDriver rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DCall.initiateCallToDriver rideId
 
-callStatusCallback :: Id SRide.Ride -> DCall.CallCallbackReq -> FlowHandler DCall.CallCallbackRes
-callStatusCallback _ = withFlowHandlerAPI . DCall.callStatusCallback
+callStatusCallback :: DCall.CallCallbackReq -> FlowHandler DCall.CallCallbackRes
+callStatusCallback = withFlowHandlerAPI . DCall.callStatusCallback
 
-directCallStatusCallback :: Text -> Text -> Text -> Maybe Int -> FlowHandler DCall.CallCallbackRes
+directCallStatusCallback :: Text -> ExotelCallStatus -> Text -> Maybe Int -> FlowHandler DCall.CallCallbackRes
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ = withFlowHandlerAPI . DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_
 
-getDriverMobileNumber :: Text -> Text -> Text -> Text -> FlowHandler DCall.MobileNumberResp
+getDriverMobileNumber :: Text -> Text -> Text -> ExotelCallStatus -> FlowHandler DCall.GetDriverMobileNumberResp
 getDriverMobileNumber callSid callFrom_ callTo_ = withFlowHandlerAPI . DCall.getDriverMobileNumber callSid callFrom_ callTo_
 
-getCallStatus :: Id SRide.Ride -> Id CallStatus -> Id Person -> FlowHandler DCall.GetCallStatusRes
-getCallStatus _ callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStatusId
+getCallStatus :: Id CallStatus -> Id Person -> FlowHandler DCall.GetCallStatusRes
+getCallStatus callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStatusId

@@ -15,15 +15,15 @@
 module Domain.Types.CallStatus where
 
 import Domain.Types.Ride
-import Kernel.External.Exotel.Types hiding (rideId)
+import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Types.Id
 
 data CallStatus = CallStatus
   { id :: Id CallStatus,
-    exotelCallSid :: Text,
+    callId :: Text,
     rideId :: Id Ride,
-    status :: ExotelCallStatus,
+    status :: Call.CallStatus,
     recordingUrl :: Maybe Text,
     conversationDuration :: Int,
     createdAt :: UTCTime
@@ -33,7 +33,7 @@ data CallStatus = CallStatus
 data CallStatusAPIEntity = CallStatusAPIEntity
   { callId :: Id CallStatus,
     rideId :: Id Ride,
-    status :: ExotelCallStatus
+    status :: Call.CallStatus
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 

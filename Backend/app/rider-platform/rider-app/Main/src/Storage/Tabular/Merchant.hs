@@ -35,9 +35,7 @@ mkPersist
       id Text
       shortId Text
       name Text
-      exoPhone Text Maybe
-      exoPhones (PostgresList Text)
-      exoPhoneCountryCode Text Maybe
+      exoPhones (PostgresNonEmptyList Text)
       fcmUrl Text
       fcmServiceAccount Text
       fcmRedisTokenKeyPrefix Text
@@ -83,7 +81,7 @@ instance TType MerchantT Domain.Merchant where
           shortId = ShortId shortId,
           registryUrl = regUrl,
           gatewayUrl = gwUrl,
-          exoPhones = unPostgresList exoPhones,
+          exoPhones = unPostgresNonEmptyList exoPhones,
           driverOfferBaseUrl = doBaseUrl,
           ..
         }
@@ -100,6 +98,6 @@ instance TType MerchantT Domain.Merchant where
         gatewayUrl = showBaseUrl gatewayUrl,
         registryUrl = showBaseUrl registryUrl,
         driverOfferBaseUrl = showBaseUrl driverOfferBaseUrl,
-        exoPhones = PostgresList exoPhones,
+        exoPhones = PostgresNonEmptyList exoPhones,
         ..
       }

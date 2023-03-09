@@ -19,6 +19,7 @@ import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Veh
 import Kernel.Prelude
+import Kernel.Randomizer (getRandomElement)
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis
@@ -134,7 +135,7 @@ initOneWayTrip req oneWayReq transporter now = do
               DRB.estimatedDuration = estimatedRideDuration
             }
   fromLoc <- buildRBLoc req.fromLocation now
-  booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare owDetails fromLoc now
+  booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare owDetails fromLoc transporter now
   DB.runTransaction $ do
     QRB.create booking
   return booking
@@ -159,7 +160,7 @@ initRentalTrip req rentalReq transporter now = do
   rentalFarePolicy <- QRFP.findByOffer transporter.id req.vehicleVariant rentalReq.distance rentalReq.duration >>= fromMaybeM NoFarePolicy
   let rentDetails = DRB.RentalDetails $ DRB.RentalBookingDetails {rentalFarePolicyId = rentalFarePolicy.id}
   fromLoc <- buildRBLoc req.fromLocation now
-  booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare rentDetails fromLoc now
+  booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare rentDetails fromLoc transporter now
   DB.runTransaction $ do
     QRB.create booking
   return booking
@@ -199,15 +200,18 @@ buildBooking ::
   Money ->
   DRB.BookingDetails ->
   DLoc.BookingLocation ->
+  DM.Merchant ->
   UTCTime ->
   m DRB.Booking
-buildBooking req merchantId estimatedFare discount estimatedTotalFare bookingDetails fromLocation now = do
+buildBooking req merchantId estimatedFare discount estimatedTotalFare bookingDetails fromLocation merchant now = do
   id <- generateGUID
+  exoPhone <- getRandomElement merchant.exoPhones
   return $
     DRB.Booking
       { id = Id id,
         status = DRB.NEW,
         providerId = merchantId,
+        providerExoPhone = exoPhone,
         startTime = req.startTime,
         riderId = Nothing,
         fromLocation,

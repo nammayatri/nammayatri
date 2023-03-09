@@ -38,13 +38,18 @@ findByShortId shortId_ = do
     where_ $ merchant ^. MerchantShortId ==. val (getShortId shortId_)
     return merchant
 
-findByExoPhone :: Transactionable m => Text -> Text -> m (Maybe Merchant)
-findByExoPhone countryCode exoPhone = do
+findByExoPhone :: Transactionable m => Text -> m (Maybe Merchant)
+findByExoPhone exoPhone = do
   findOne $ do
     merchant <- from $ table @MerchantT
     where_ $
-      merchant ^. MerchantExoPhoneCountryCode ==. val (Just countryCode)
-        &&. merchant ^. MerchantExoPhone ==. val (Just exoPhone)
+      Esq.val exoPhone
+        `Esq.in_` subList_select
+          ( do
+              merchant1 <- from $ table @MerchantT
+              where_ $ merchant1 ^. MerchantId ==. merchant ^. MerchantId
+              return $ unnest (merchant1 ^. MerchantExoPhones)
+          )
     return merchant
 
 findAll :: Transactionable m => m [Merchant]
@@ -60,8 +65,7 @@ update merchant = do
       [ MerchantName =. val merchant.name,
         MerchantFcmUrl =. val (showBaseUrl merchant.fcmConfig.fcmUrl),
         MerchantFcmServiceAccount =. val merchant.fcmConfig.fcmServiceAccount,
-        MerchantExoPhone =. val merchant.exoPhone,
-        MerchantExoPhoneCountryCode =. val merchant.exoPhoneCountryCode,
+        MerchantExoPhones =. val (Esq.PostgresNonEmptyList merchant.exoPhones),
         MerchantGatewayUrl =. val (showBaseUrl merchant.gatewayUrl),
         MerchantRegistryUrl =. val (showBaseUrl merchant.registryUrl),
         MerchantUpdatedAt =. val now
