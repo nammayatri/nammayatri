@@ -19,6 +19,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - name: Checking for free space
+        run: |
+          echo "Free space: Before "
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          echo "Free space: After "
+          df -h
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:
@@ -41,10 +51,10 @@ jobs:
             packagePath:
               - '**/package.yaml'
       - name: Build DockerDep image
-        if: steps.filter.outputs.dockerFilePath == 'true' || steps.filter.outputs.stackPath == 'true' || steps.filter.outputs.stackLockPath == 'true' || steps.filter.outputs.packagePath == 'true' 
+        if: steps.filter.outputs.dockerFilePath == 'true' || steps.filter.outputs.stackPath == 'true' || steps.filter.outputs.stackLockPath == 'true' || steps.filter.outputs.packagePath == 'true'
         run: docker build -t $REGISTRY/$REPO_NAME/$DEP_IMAGE:$DEP_LABEL -f Backend/Dockerfile.dep .
       - name: DockerDep Image Push
-        if: steps.filter.outputs.dockerFilePath == 'true' || steps.filter.outputs.stackPath == 'true' || steps.filter.outputs.stackLockPath == 'true' || steps.filter.outputs.packagePath == 'true' 
+        if: steps.filter.outputs.dockerFilePath == 'true' || steps.filter.outputs.stackPath == 'true' || steps.filter.outputs.stackLockPath == 'true' || steps.filter.outputs.packagePath == 'true'
         run: docker push $REGISTRY/$REPO_NAME/$DEP_IMAGE:$DEP_LABEL
       - name: Build the Docker image
         run: docker build -t $REGISTRY/$REPO_NAME/$IMAGE_NAME:$VERSION -f Backend/Dockerfile --build-arg "DEP_LABEL=$DEP_LABEL" --build-arg "DEP_IMAGE_PATH=$REGISTRY/$REPO_NAME/$DEP_IMAGE" .
