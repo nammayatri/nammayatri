@@ -51,6 +51,7 @@ data RegistrationToken = RegistrationToken
     entityType :: RTEntityType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    info :: Maybe Text
+    info :: Maybe Text,
+    alternateNumberAttempts :: Int
   }
   deriving (Generic, Show, Eq)
