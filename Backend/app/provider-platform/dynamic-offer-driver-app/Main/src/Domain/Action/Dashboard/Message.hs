@@ -262,7 +262,7 @@ messageDeliveryInfo merchantShortId messageId = do
   queued <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Queued
   sending <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Sending
   seen <- Esq.runInReplica $ MRQuery.getMessageCountByReadStatus messageId
-  return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending , seen }
+  return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending, seen}
 
 messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
 messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do

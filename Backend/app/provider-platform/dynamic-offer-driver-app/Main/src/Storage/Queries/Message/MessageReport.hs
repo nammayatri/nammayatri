@@ -133,7 +133,7 @@ getMessageCountByReadStatus messageId =
       messageReport <- from $ table @MessageReportT
       where_ $
         messageReport ^. MessageReportMessageId ==. val (toKey messageId)
-          &&. messageReport ^. MessageReportReadStatus 
+          &&. messageReport ^. MessageReportReadStatus
       return (countRows :: SqlExpr (Esq.Value Int))
   where
     mkCount [counter] = counter
