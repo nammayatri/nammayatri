@@ -68,6 +68,7 @@ import qualified Storage.Queries.DriverOnboarding.Image as QImage
 import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
 import qualified Storage.Queries.DriverQuote as QDriverQuote
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Message.MessageReport as QMessage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Ride as QRide
@@ -436,6 +437,7 @@ deleteDriver merchantShortId reqDriverId = do
     QVehicle.deleteById personId
     QDriverInfo.deleteById driverId
     QDriverFlowStatus.deleteById personId
+    QMessage.deleteByPersonId personId
     QPerson.deleteById personId
   CQDriverInfo.clearDriverInfoCache driverId
   logTagInfo "dashboard -> deleteDriver : " (show driverId)
