@@ -21,10 +21,10 @@ let esqDBReplicaCfg =
       }
 
 let clickhouseCfg =
-      { username = "xxxx"
+      { username = sec.clickHouseUsername
       , host = "xxxxx"
       , port = 1234
-      , password = "xxxx"
+      , password = sec.clickHousePassword
       , database = "xxxx"
       , tls = True
       }
