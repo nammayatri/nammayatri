@@ -23,6 +23,7 @@ import Kernel.Types.Id
 data MessageKey
   = SEND_OTP
   | WELCOME_TO_PLATFORM
+  | ALTERNATE_NUMBER_OTP
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage

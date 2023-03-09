@@ -26,6 +26,10 @@ module API.UI.Driver
     DDriver.DriverOfferReq (..),
     DDriver.DriverRespondReq (..),
     DDriver.DriverStatsRes (..),
+    DDriver.DriverAlternateNumberReq (..),
+    DDriver.DriverAlternateNumberRes (..),
+    DDriver.DriverAlternateNumberOtpReq (..),
+    DDriver.ResendAuth (..),
     API,
     handler,
   )
@@ -93,6 +97,23 @@ type API =
                         :> MandatoryQueryParam "day" Day
                         :> Get '[JSON] DDriver.DriverStatsRes
                   )
+             :<|> "alternateNumber"
+               :> ( "validate"
+                      :> TokenAuth
+                      :> ReqBody '[JSON] DDriver.DriverAlternateNumberReq
+                      :> Post '[JSON] DDriver.DriverAlternateNumberRes
+                      :<|> "verify"
+                        :> TokenAuth
+                        :> ReqBody '[JSON] DDriver.DriverAlternateNumberOtpReq
+                        :> Post '[JSON] APISuccess
+                      :<|> "resendOtp"
+                        :> TokenAuth
+                        :> ReqBody '[JSON] DDriver.DriverAlternateNumberReq
+                        :> Post '[JSON] DDriver.ResendAuth
+                      :<|> "remove"
+                        :> TokenAuth
+                        :> Post '[JSON] APISuccess
+                  )
          )
 
 handler :: FlowServer API
@@ -110,6 +131,10 @@ handler =
                       :<|> updateDriver
                       :<|> getStats
                   )
+             :<|> validate
+             :<|> verifyAuth
+             :<|> resendOtp
+             :<|> remove
          )
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes
@@ -152,3 +177,15 @@ respondQuote driverId = withFlowHandlerAPI . DDriver.respondQuote driverId
 
 getStats :: Id SP.Person -> Day -> FlowHandler DDriver.DriverStatsRes
 getStats day = withFlowHandlerAPI . DDriver.getStats day
+
+validate :: Id SP.Person -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.DriverAlternateNumberRes
+validate alternateNumber = withFlowHandlerAPI . DDriver.validate alternateNumber
+
+verifyAuth :: Id SP.Person -> DDriver.DriverAlternateNumberOtpReq -> FlowHandler APISuccess
+verifyAuth otp = withFlowHandlerAPI . DDriver.verifyAuth otp
+
+resendOtp :: Id SP.Person -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.ResendAuth
+resendOtp req = withFlowHandlerAPI . DDriver.resendOtp req
+
+remove :: Id SP.Person -> FlowHandler APISuccess
+remove = withFlowHandlerAPI . DDriver.remove
