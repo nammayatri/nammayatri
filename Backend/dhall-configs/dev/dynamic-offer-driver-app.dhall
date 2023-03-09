@@ -211,4 +211,6 @@ in  { esqDBCfg
     , mediaFileUrlPattern =
         "http://localhost:8016/ui/message/media/?filePath=<FILE_PATH>"
     , minTripDistanceForReferralCfg = Some +1000
+    , speedCalculationConfig =
+        { minLocationUpdates = +3, locationUpdateSampleTime = +3 }
     }

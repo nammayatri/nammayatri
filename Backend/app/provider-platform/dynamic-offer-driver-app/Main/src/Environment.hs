@@ -43,6 +43,7 @@ import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
 import SharedLogic.DriverPool (CancellationScoreRelatedConfig, DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig)
+import SharedLogic.DriverSpeedCalculation
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
@@ -103,7 +104,8 @@ data AppCfg = AppCfg
     maxParallelSearchRequests :: Int,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     mediaFileUrlPattern :: Text,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
+    speedCalculationConfig :: SpeedCalculationConfig
   }
   deriving (Generic, FromDhall)
 
@@ -165,7 +167,8 @@ data AppEnv = AppEnv
     maxParallelSearchRequests :: Int,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     mediaFileUrlPattern :: Text,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
+    speedCalculationConfig :: SpeedCalculationConfig
   }
   deriving (Generic)
 
