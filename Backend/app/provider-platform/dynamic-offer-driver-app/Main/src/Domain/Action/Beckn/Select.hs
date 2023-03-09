@@ -17,7 +17,7 @@ module Domain.Action.Beckn.Select where
 
 import qualified Beckn.Types.Core.Taxi.Common.Address as BA
 import qualified Data.Map as M
-import qualified Data.Text as T
+import qualified Data.Text as DT
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -184,14 +184,45 @@ getAddressByGetPlaceName merchantId sessionToken latLong = do
           sessionToken = Just sessionToken,
           language = Nothing
         }
-  mkLocation pickupRes
+  add <- mkLocation pickupRes
+  if (DT.length <$> add.area) /= Just 0
+    then pure add
+    else do
+      getNearBySearchResp <-
+        Maps.getNearBySearch merchantId $
+          Maps.GetNearBySearchReq
+            { location = getLocation latLong,
+              rankby = "distance"
+            }
+      pure $
+        Address
+          { street = add.street,
+            city = add.city,
+            state = add.state,
+            country = add.country,
+            areaCode = add.areaCode,
+            building = add.building,
+            area = Just getNearBySearchResp,
+            full_address = getfullAddress (Just getNearBySearchResp) add.city add.state add.country
+          }
 
 decodeAddress :: BA.Address -> Maybe Text
 decodeAddress BA.Address {..} = do
   let strictFields = catMaybes $ filter (not . isEmpty) [door, building, street, locality, city, state, area_code, country]
   if null strictFields
     then Nothing
-    else Just $ T.intercalate ", " strictFields
+    else Just $ DT.intercalate ", " strictFields
 
 isEmpty :: Maybe Text -> Bool
-isEmpty = maybe True (T.null . T.replace " " "")
+isEmpty = maybe True (DT.null . DT.replace " " "")
+
+getLocation :: LatLong -> Text
+getLocation latlong = show latlong.lat <> "," <> show latlong.lon
+
+getfullAddress :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text
+getfullAddress area city state country = do
+  let area' = fromMaybe "" area
+  let city' = fromMaybe "" city
+  let state' = fromMaybe "" state
+  let country' = fromMaybe "" country
+  Just $ area' <> "," <> city' <> "," <> state' <> "," <> country'
