@@ -48,6 +48,10 @@ type API =
              :> TokenAuth
              :> ReqBody '[JSON] DMaps.GetPlaceNameReq
              :> Post '[JSON] DMaps.GetPlaceNameResp
+           :<|> "getReverseGeocode"
+             :> TokenAuth
+             :> ReqBody '[JSON] DMaps.ReverseGeocodeReq
+             :> Post '[JSON] DMaps.ReverseGeocodeResp
        )
 
 handler :: FlowServer API
@@ -55,6 +59,7 @@ handler =
   autoComplete
     :<|> getPlaceDetails
     :<|> getPlaceName
+    :<|> getReverseGeocode
 
 autoComplete :: Id Person.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
 autoComplete personId = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.autoComplete personId
@@ -64,3 +69,7 @@ getPlaceDetails personId = withFlowHandlerAPI . withPersonIdLogTag personId . DM
 
 getPlaceName :: Id Person.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
 getPlaceName personId = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceName personId
+
+--This endpoint added for manual testing
+getReverseGeocode :: Id Person.Person -> DMaps.ReverseGeocodeReq -> FlowHandler DMaps.ReverseGeocodeResp
+getReverseGeocode personId = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getReverseGeocode personId

@@ -19,13 +19,17 @@ module Domain.Action.UI.Maps
     Maps.GetPlaceDetailsResp,
     Maps.GetPlaceNameReq,
     Maps.GetPlaceNameResp,
+    MMI.ReverseGeocodeReq,
+    MMI.ReverseGeocodeResp,
     autoComplete,
     getPlaceDetails,
     getPlaceName,
+    getReverseGeocode,
   )
 where
 
 import qualified Domain.Types.Person as DP
+import qualified Kernel.External.Maps.MMI.MapsClient.Types as MMI
 import Kernel.Prelude
 import Kernel.Types.Error (PersonError (PersonNotFound))
 import Kernel.Types.Id
@@ -49,3 +53,9 @@ getPlaceName :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id
 getPlaceName personId req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   Maps.getPlaceName person.merchantId req
+
+--This endpoint added for manual testing
+getReverseGeocode :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DP.Person -> MMI.ReverseGeocodeReq -> m MMI.ReverseGeocodeResp
+getReverseGeocode personId req = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  Maps.getReverseGeocode person.merchantId req
