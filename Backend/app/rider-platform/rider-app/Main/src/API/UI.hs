@@ -37,6 +37,7 @@ import qualified API.UI.SavedReqLocation as SavedReqLocation
 import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
+import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
 import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
 import qualified API.UI.Webengage.Webengage as Webengage
@@ -71,6 +72,7 @@ type API =
            :<|> InfoBIPWebhook.API
            :<|> Frontend.API
            :<|> Whatsapp.API
+           :<|> Sos.API
        )
 
 handler :: FlowServer API
@@ -99,3 +101,4 @@ handler =
     :<|> InfoBIPWebhook.handler
     :<|> Frontend.handler
     :<|> Whatsapp.handler
+    :<|> Sos.handler
