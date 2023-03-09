@@ -79,11 +79,11 @@
     },
     "cachix-push_2": {
       "locked": {
-        "lastModified": 1677962028,
-        "narHash": "sha256-FLATlB98VarJbBdTqAp599jALKjpI0mDNegPcrI6XBQ=",
+        "lastModified": 1678223023,
+        "narHash": "sha256-nZVrSAyh9IAi75UIAy9YNR6Wbdlxv0AHD6A9/DqIVfw=",
         "owner": "juspay",
         "repo": "cachix-push",
-        "rev": "ad6e9b5d1031224a43c1367f3a0d0569479a3c69",
+        "rev": "7f284a373d811ac397a25b113025b34ac249f489",
         "type": "github"
       },
       "original": {
@@ -173,11 +173,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1678142279,
-        "narHash": "sha256-PY8an4+uqrqJ7UJhE9nKyyRlHBW8iehhwRyEJhhkx7w=",
+        "lastModified": 1678459307,
+        "narHash": "sha256-84Ri5x/kaeq7w6eWawlcW1dn34cEvhtfiY2mjPXgPz8=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "503f87cbc901253428089ec790b6e80d907d2c9a",
+        "rev": "bade95506128b93f791edba39f1268bf2c84e09e",
         "type": "github"
       },
       "original": {
@@ -420,11 +420,11 @@
     },
     "haskell-flake_2": {
       "locked": {
-        "lastModified": 1678142255,
-        "narHash": "sha256-O2aAzgmXJQ9rL4D8pWTFo6R9QP2oG5K90ttw/yEj4ig=",
+        "lastModified": 1678459281,
+        "narHash": "sha256-kShzznLRUKN+ahD1CYrdXjkRKBiQ4P1BemfZYYJWndQ=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "7997b6fc5dc2f5beb1bbdbb7a5bbed2e6c530dac",
+        "rev": "56d8d9787ad8914bf54c2580a4dbb80adbe38f35",
         "type": "github"
       },
       "original": {
