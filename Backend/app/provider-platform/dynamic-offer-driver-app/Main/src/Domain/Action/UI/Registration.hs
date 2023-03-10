@@ -131,7 +131,7 @@ auth req mbBundleVersion mbClientVersion = do
     QMerchant.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   person <-
-    QP.findByMobileNumber countryCode mobileNumberHash
+    QP.findByMobileNumberAndMerchant countryCode mobileNumberHash merchant.id
       >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion merchant.id) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id

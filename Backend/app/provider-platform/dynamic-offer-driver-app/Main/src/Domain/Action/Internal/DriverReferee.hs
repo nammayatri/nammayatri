@@ -44,9 +44,9 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
     throwError $ InvalidRequest "Referral Code must have 6 digits"
   numberHash <- getDbHash customerMobileNumber
   driverReferralLinkage <- QDR.findByRefferalCode referralCode >>= fromMaybeM (InvalidRequest "Invalid referral code.")
-  mbRiderDetails <- QRD.findByMobileNumberHash numberHash
+  mbRiderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id
   case mbRiderDetails of
-    Just _ -> ESQ.runTransaction $ QRD.updateReferralInfo numberHash referralCode driverReferralLinkage.driverId
+    Just _ -> ESQ.runTransaction $ QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId
     Nothing -> do
       riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId
       ESQ.runTransaction $ QRD.create riderDetails
@@ -61,11 +61,12 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
           { id = Id id,
             mobileCountryCode = customerMobileCountryCode,
             mobileNumber = encPhoneNumber,
+            merchantId,
             createdAt = now,
             updatedAt = now,
             referralCode = Just referralCode,
             referredByDriver = Just driverId,
             referredAt = Just now,
-            hasTakenRide = False,
-            driverReferralEligibleAt = Nothing
+            hasTakenValidRide = False,
+            hasTakenValidRideAt = Nothing
           }

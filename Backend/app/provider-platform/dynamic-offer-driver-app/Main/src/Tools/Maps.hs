@@ -22,6 +22,8 @@ module Tools.Maps
     getPlaceName,
     getRoutes,
     snapToRoad,
+    getPickupRoutes,
+    getTripRoutes,
   )
 where
 
@@ -88,6 +90,12 @@ getEstimatedPickupDistances = runWithServiceConfig Maps.getDistances (.getEstima
 
 getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
 getRoutes = runWithServiceConfig Maps.getRoutes (.getRoutes)
+
+getPickupRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutes = runWithServiceConfig Maps.getRoutes (.getPickupRoutes)
+
+getTripRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
+getTripRoutes = runWithServiceConfig Maps.getRoutes (.getTripRoutes)
 
 snapToRoad ::
   ( EncFlow m r,

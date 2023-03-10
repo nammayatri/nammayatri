@@ -68,7 +68,7 @@ mkPersist
       updatedAt UTCTime
       bundleVersion Text Maybe
       clientVersion Text Maybe
-      hasTakenRide Bool
+      hasTakenValidRide Bool
       referralCode Text Maybe
       referredAt UTCTime Maybe
       Primary id

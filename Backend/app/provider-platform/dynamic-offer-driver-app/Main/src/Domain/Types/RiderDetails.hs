@@ -18,6 +18,7 @@ module Domain.Types.RiderDetails where
 
 import Data.Time
 import Domain.Types.DriverReferral (DriverReferral)
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person (Person)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
@@ -32,8 +33,9 @@ data RiderDetailsE e = RiderDetails
     referralCode :: Maybe (Id DriverReferral),
     referredByDriver :: Maybe (Id Person),
     referredAt :: Maybe UTCTime,
-    hasTakenRide :: Bool,
-    driverReferralEligibleAt :: Maybe UTCTime
+    hasTakenValidRide :: Bool,
+    hasTakenValidRideAt :: Maybe UTCTime,
+    merchantId :: Id Merchant
   }
   deriving (Generic)
 

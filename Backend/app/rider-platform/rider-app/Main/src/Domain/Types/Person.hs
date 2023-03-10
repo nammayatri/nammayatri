@@ -95,7 +95,7 @@ data PersonE e = Person
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     referralCode :: Maybe Text,
     referredAt :: Maybe UTCTime,
-    hasTakenRide :: Bool,
+    hasTakenValidRide :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,
@@ -132,6 +132,7 @@ data PersonAPIEntity = PersonAPIEntity
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe FCM.FCMRecipientToken,
     hasTakenRide :: Bool,
+    hasTakenValidRide :: Bool,
     referralCode :: Maybe Text,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     language :: Maybe Maps.Language
@@ -144,5 +145,6 @@ makePersonAPIEntity Person {..} =
     { maskedEmail = maskText <$> email,
       maskedMobileNumber = maskText <$> mobileNumber,
       maskedDeviceToken = FCM.FCMRecipientToken . maskText . (.getFCMRecipientToken) <$> deviceToken,
+      hasTakenRide = hasTakenValidRide,
       ..
     }

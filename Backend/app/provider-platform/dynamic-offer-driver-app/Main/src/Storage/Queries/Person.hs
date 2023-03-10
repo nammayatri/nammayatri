@@ -251,39 +251,45 @@ findAdminsByMerchantId merchantId =
         &&. person ^. PersonRole ==. val Person.ADMIN
     return person
 
-findByMobileNumber ::
+findByMobileNumberAndMerchant ::
   (Transactionable m) =>
   Text ->
   DbHash ->
+  Id Merchant ->
   m (Maybe Person)
-findByMobileNumber countryCode mobileNumberHash = do
+findByMobileNumberAndMerchant countryCode mobileNumberHash merchantId = do
   findOne $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonMobileCountryCode ==. val (Just countryCode)
         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
-findByIdentifier ::
+findByIdentifierAndMerchant ::
   Transactionable m =>
+  Id Merchant ->
   Text ->
   m (Maybe Person)
-findByIdentifier identifier_ =
+findByIdentifierAndMerchant merchantId identifier_ =
   findOne $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonIdentifier ==. val (Just identifier_)
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
-findByEmail ::
+findByEmailAndMerchant ::
   Transactionable m =>
+  Id Merchant ->
   Text ->
   m (Maybe Person)
-findByEmail email_ =
+findByEmailAndMerchant merchantId email_ =
   findOne $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonEmail ==. val (Just email_)
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
 updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB ()

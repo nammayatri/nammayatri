@@ -94,7 +94,8 @@ onUpdate ::
       m
       r
       '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
-    HedisFlow m r
+    HedisFlow m r,
+    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
   ) =>
   BaseUrl ->
   OnUpdateReq ->
@@ -168,7 +169,6 @@ onUpdate registryUrl RideCompletedReq {..} = do
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == SRide.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   rideEndTime <- getCurrentTime
-  rider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let updRide =
         ride{status = SRide.COMPLETED,
              fare = Just fare,
@@ -177,9 +177,15 @@ onUpdate registryUrl RideCompletedReq {..} = do
              rideEndTime = Just rideEndTime
             }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups
+  person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
+  let shouldUpdateRideComplete =
+        case minTripDistanceForReferralCfg of
+          Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
+          Nothing -> True
   DB.runTransaction $ do
-    unless rider.hasTakenRide $
-      QP.updateHasTakenRide booking.riderId
+    when shouldUpdateRideComplete $
+      QP.updateHasTakenValidRide booking.riderId
     QRB.updateStatus booking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
     QFareBreakup.createMany breakups

@@ -68,6 +68,7 @@ import qualified Storage.Queries.DriverOnboarding.Image as QImage
 import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
 import qualified Storage.Queries.DriverQuote as QDriverQuote
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Message.MessageReport as QMessage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Ride as QRide
@@ -436,6 +437,7 @@ deleteDriver merchantShortId reqDriverId = do
     QVehicle.deleteById personId
     QDriverInfo.deleteById driverId
     QDriverFlowStatus.deleteById personId
+    QMessage.deleteByPersonId personId
     QPerson.deleteById personId
   CQDriverInfo.clearDriverInfoCache driverId
   logTagInfo "dashboard -> deleteDriver : " (show driverId)
@@ -476,7 +478,7 @@ updatePhoneNumber merchantShortId reqDriverId req = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
   phoneNumberHash <- getDbHash req.newPhoneNumber
-  mbLinkedPerson <- QPerson.findByMobileNumber req.newCountryCode phoneNumberHash
+  mbLinkedPerson <- QPerson.findByMobileNumberAndMerchant req.newCountryCode phoneNumberHash merchant.id
   whenJust mbLinkedPerson $ \linkedPerson -> do
     if linkedPerson.id == driver.id
       then throwError $ InvalidRequest "Person already have the same mobile number"

@@ -126,6 +126,19 @@ getMessageCountByStatus messageId status =
     mkCount [counter] = counter
     mkCount _ = 0
 
+getMessageCountByReadStatus :: Transactionable m => Id Msg.Message -> m Int
+getMessageCountByReadStatus messageId =
+  mkCount <$> do
+    Esq.findAll $ do
+      messageReport <- from $ table @MessageReportT
+      where_ $
+        messageReport ^. MessageReportMessageId ==. val (toKey messageId)
+          &&. messageReport ^. MessageReportReadStatus
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0
+
 updateSeenAndReplyByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> Bool -> Maybe Text -> SqlDB ()
 updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = do
   now <- getCurrentTime
@@ -152,3 +165,9 @@ updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = d
     where_ $
       mr ^. MessageReportMessageId ==. val (toKey messageId)
         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+
+deleteByPersonId :: Id P.Person -> SqlDB ()
+deleteByPersonId personId =
+  Esq.delete $ do
+    messagereport <- from $ table @MessageReportT
+    where_ $ messagereport ^. MessageReportDriverId ==. val (toKey personId)

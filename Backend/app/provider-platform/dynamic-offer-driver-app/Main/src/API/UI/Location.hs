@@ -36,7 +36,7 @@ import Tools.Auth
 -- Location update and get for tracking is as follows
 type API =
   "driver" :> "location"
-    :> ( Capture "rideId" (Id SRide.Ride) -- TODO: add auth
+    :> ( Capture "rideId" (Id SRide.Ride)
            :> Get '[JSON] DLocation.GetLocationRes
            :<|> TokenAuth
              :> ReqBody '[JSON] DLocation.UpdateLocationReq
