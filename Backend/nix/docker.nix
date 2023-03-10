@@ -31,6 +31,7 @@ in
               pathsToLink = [ "/dhall-configs" "/swagger" "/bin" ];
             };
             config = {
+              Env = [ "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];
               Cmd = [ "${pkgs.lib.getExe self'.packages.default}" ];
             };
           };
