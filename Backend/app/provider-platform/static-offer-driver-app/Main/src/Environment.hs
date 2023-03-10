@@ -29,7 +29,6 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDefCfg
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
-import Kernel.External.Exotel.Types (ExotelCfg)
 import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
@@ -69,7 +68,6 @@ data AppCfg = AppCfg
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     searchExpiry :: Maybe Seconds,
-    exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     coreVersion :: Text,
@@ -110,7 +108,6 @@ data AppEnv = AppEnv
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     searchExpiry :: Maybe Seconds,
-    exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,

@@ -53,6 +53,7 @@ data Booking = Booking
     quoteId :: Id DriverQuote,
     status :: BookingStatus,
     providerId :: Id DM.Merchant, -- FIXME merchantId
+    providerExoPhone :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
     startTime :: UTCTime,

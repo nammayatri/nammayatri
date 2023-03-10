@@ -26,8 +26,6 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
             globalCommon.loggerConfig
         //  { logToFile = True, logRawSql = True, prettyPrinting = True }
     , LogLevel = globalCommon.LogLevel
-    , ExotelCfg = globalCommon.ExotelCfg
-    , exotelCfg = sec.exotelCfg
     , s3Config = sec.s3Config
     , idfyCfg = sec.idfyCfg
     , slackToken = sec.slackToken

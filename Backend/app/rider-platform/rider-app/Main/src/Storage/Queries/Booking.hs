@@ -140,6 +140,16 @@ findByRiderIdAndStatus personId statusList = Esq.buildDType $ do
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   catMaybes <$> mapM buildFullBooking fullBookingsT
 
+findAssignedByRiderId :: Transactionable m => Id Person -> m (Maybe Booking)
+findAssignedByRiderId personId = Esq.buildDType $ do
+  fullBookingsT <- Esq.findOne' $ do
+    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+    where_ $
+      booking ^. RB.BookingRiderId ==. val (toKey personId)
+        &&. booking ^. RB.BookingStatus ==. val TRIP_ASSIGNED
+    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+  join <$> mapM buildFullBooking fullBookingsT
+
 findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> m [Booking]
 findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus = Esq.buildDType $ do
   let isOnlyActive = Just True == mbOnlyActive

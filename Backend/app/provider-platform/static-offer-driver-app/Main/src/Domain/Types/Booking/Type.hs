@@ -54,6 +54,7 @@ data Booking = Booking
   { id :: Id Booking,
     status :: BookingStatus,
     providerId :: Id DM.Merchant,
+    providerExoPhone :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
     startTime :: UTCTime,

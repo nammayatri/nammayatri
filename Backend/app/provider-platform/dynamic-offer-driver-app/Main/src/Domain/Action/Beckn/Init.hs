@@ -21,6 +21,7 @@ import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Kernel.Prelude
+import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import Kernel.Tools.Metrics.CoreMetrics
@@ -103,20 +104,22 @@ handler merchantId req = do
     throwError $ QuoteExpired driverQuote.id.getId
   searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
   -- do we need to check searchRequest.validTill?
-  booking <- buildBooking searchRequest driverQuote now
+  booking <- buildBooking searchRequest driverQuote transporter now
   Esq.runTransaction $
     QRB.create booking
   pure InitRes {..}
   where
-    buildBooking searchRequest driverQuote now = do
+    buildBooking searchRequest driverQuote merchant now = do
       id <- Id <$> generateGUID
       fromLocation <- buildBookingLocation searchRequest.fromLocation
       toLocation <- buildBookingLocation searchRequest.toLocation
+      exoPhone <- getRandomElement merchant.exoPhones
       pure
         DRB.Booking
           { quoteId = req.driverQuoteId,
             status = DRB.NEW,
             providerId = merchantId,
+            providerExoPhone = exoPhone,
             bapId = req.bapId,
             bapUri = req.bapUri,
             startTime = searchRequest.startTime,

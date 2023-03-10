@@ -73,7 +73,8 @@ data DriverRideRes = DriverRideRes
     riderName :: Maybe Text,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
-    chargeableDistance :: Maybe Meters
+    chargeableDistance :: Maybe Meters,
+    exoPhone :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -131,7 +132,8 @@ mkDriverRideRes rideDetails driverNumber rideRating (ride, booking) = do
       tripStartTime = ride.tripStartTime,
       tripEndTime = ride.tripEndTime,
       rideRating = rideRating <&> (.ratingValue),
-      chargeableDistance = ride.chargeableDistance
+      chargeableDistance = ride.chargeableDistance,
+      exoPhone = booking.providerExoPhone
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess

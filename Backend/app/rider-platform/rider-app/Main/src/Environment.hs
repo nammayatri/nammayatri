@@ -29,7 +29,6 @@ where
 
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
-import Kernel.External.Exotel.Types (ExotelCfg)
 import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Sms.Config
@@ -70,7 +69,6 @@ data AppCfg = AppCfg
     bapSelfURIs :: BAPs BaseUrl,
     bapSelfUniqueKeyIds :: BAPs Text,
     searchRequestExpiry :: Maybe Seconds,
-    exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     coreVersion :: Text,
@@ -113,7 +111,6 @@ data AppEnv = AppEnv
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,
     searchRequestExpiry :: Maybe Seconds,
-    exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
     googleTranslateUrl :: BaseUrl,

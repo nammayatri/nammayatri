@@ -110,7 +110,6 @@ in  { esqDBCfg
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , searchRequestExpiry = Some +600
-    , exotelCfg = Some common.exotelCfg
     , migrationPath = Some
         (env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app")
     , autoMigrate = True

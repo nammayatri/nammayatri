@@ -43,6 +43,7 @@ mkPersist
       fareProductType Domain.FareProductType
       status Domain.BookingStatus
       providerId MerchantTId
+      providerExoPhone Text
       bapId Text
       bapUri Text
       startTime UTCTime

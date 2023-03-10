@@ -21,7 +21,6 @@ module Domain.Action.Dashboard.Merchant
   )
 where
 
-import Control.Applicative ((<|>))
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
@@ -48,8 +47,7 @@ merchantUpdate merchantShortId req = do
 
   let updMerchant =
         merchant{DM.name = fromMaybe merchant.name req.name,
-                 DM.exoPhone = if req.exoPhone == Just "" then Nothing else req.exoPhone <|> merchant.exoPhone,
-                 DM.exoPhoneCountryCode = if req.exoPhoneCountryCode == Just "" then Nothing else req.exoPhoneCountryCode <|> merchant.exoPhoneCountryCode,
+                 DM.exoPhones = fromMaybe merchant.exoPhones req.exoPhones,
                  DM.fcmConfig = maybe merchant.fcmConfig (Common.mkFCMConfig merchant.fcmConfig.fcmTokenKeyPrefix) req.fcmConfig,
                  DM.gatewayUrl = fromMaybe merchant.gatewayUrl req.gatewayUrl,
                  DM.registryUrl = fromMaybe merchant.registryUrl req.registryUrl

@@ -43,8 +43,9 @@ type API =
     :> "confirm"
     :> Post '[JSON] ConfirmRes
 
-newtype ConfirmRes = ConfirmRes
-  { bookingId :: Id DRB.Booking
+data ConfirmRes = ConfirmRes
+  { bookingId :: Id DRB.Booking,
+    merchantExoPhone :: Text
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
 
@@ -67,7 +68,8 @@ confirm personId quoteId =
       void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
     return $
       ConfirmRes
-        { bookingId = dConfirmRes.booking.id
+        { bookingId = dConfirmRes.booking.id,
+          merchantExoPhone = dConfirmRes.merchantExoPhone
         }
   where
     errHandler booking exc

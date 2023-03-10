@@ -15,8 +15,9 @@
 module Domain.Action.UI.Call
   ( CallRes (..),
     CallCallbackReq,
+    CallAttachments (..),
     CallCallbackRes,
-    MobileNumberResp,
+    GetDriverMobileNumberResp,
     GetCallStatusRes,
     initiateCallToDriver,
     callStatusCallback,
@@ -28,16 +29,14 @@ where
 
 import Data.Text
 import qualified Data.Text as T
-import Data.Text.Conversions
-import Domain.Types.Booking as DRB
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as DCS
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
+import qualified Kernel.External.Call.Exotel.Types as Call
+import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
+import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.External.Encryption
-import Kernel.External.Exotel.Flow
-import Kernel.External.Exotel.Types
-import qualified Kernel.External.Exotel.Types as Call
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -45,13 +44,14 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant.Client (BaseUrl (..))
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as Merchant
+import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
+import qualified Tools.Call as Call
 import Tools.Error
 import Tools.Metrics
 
@@ -60,11 +60,17 @@ newtype CallRes = CallRes
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
-type CallCallbackReq = Call.ExotelCallCallback
+type CallCallbackReq = Call.ExotelCallCallbackReq CallAttachments
+
+data CallAttachments = CallAttachments
+  { callStatusId :: Id DCS.CallStatus,
+    rideId :: Id SRide.Ride
+  }
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
 type CallCallbackRes = AckResponse
 
-type MobileNumberResp = Text
+type GetDriverMobileNumberResp = Text
 
 type GetCallStatusRes = DCS.CallStatusAPIEntity
 
@@ -72,37 +78,37 @@ type GetCallStatusRes = DCS.CallStatusAPIEntity
 initiateCallToDriver ::
   ( EncFlow m r,
     EsqDBFlow m r,
+    CacheFlow m r,
     CoreMetrics m,
-    HasFlowEnv m r '["exotelCfg" ::: Maybe ExotelCfg, "selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   Id SRide.Ride ->
   m CallRes
 initiateCallToDriver rideId = do
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   (customerPhone, providerPhone) <- getCustomerAndDriverPhones rideId
-  callbackUrl <- buildCallbackUrl
-  callId <- generateGUID
-  let attachments = ExotelAttachments {callId = getId callId, rideId = strip (getId rideId)}
-  exotelResponse <- initiateCall customerPhone providerPhone callbackUrl attachments
-  logTagInfo ("RideId: " <> getId rideId) "Call initiated from customer to driver."
-  callStatus <- buildCallStatus rideId callId exotelResponse
-  runTransaction $ QCallStatus.create callStatus
-  return $ CallRes callId
-  where
-    buildCallbackUrl = do
-      bapUIUrl <- asks (.selfUIUrl)
-      let id = T.unpack (strip (getId rideId))
-      return $
-        bapUIUrl
-          { baseUrlPath = baseUrlPath bapUIUrl <> "/ride/" <> id <> "/call/statusCallback"
+  callStatusId <- generateGUID
+  let callReq =
+        Call.InitiateCallReq
+          { fromPhoneNum = customerPhone,
+            toPhoneNum = providerPhone,
+            attachments = Call.Attachments $ CallAttachments {callStatusId = callStatusId, rideId = rideId}
           }
-    buildCallStatus id callId exotelResponse = do
+  exotelResponse <- Call.initiateCall booking.merchantId callReq
+  logTagInfo ("RideId: " <> getId rideId) "Call initiated from customer to driver."
+  callStatus <- buildCallStatus callStatusId exotelResponse
+  runTransaction $ QCallStatus.create callStatus
+  return $ CallRes callStatusId
+  where
+    buildCallStatus callStatusId exotelResponse = do
       now <- getCurrentTime
       return $
         CallStatus
-          { id = callId,
-            exotelCallSid = exotelResponse.exoCall.exoSid.getExotelCallSID,
-            rideId = id,
-            status = exotelResponse.exoCall.exoStatus,
+          { id = callStatusId,
+            callId = exotelResponse.callId,
+            rideId = rideId,
+            status = exotelResponse.callStatus,
             conversationDuration = 0,
             recordingUrl = Nothing,
             createdAt = now
@@ -110,34 +116,31 @@ initiateCallToDriver rideId = do
 
 callStatusCallback :: EsqDBFlow m r => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
-  let callId = Id req.customField.callId
-  _ <- QCallStatus.findById callId >>= fromMaybeM CallStatusDoesNotExist
-  runTransaction $ QCallStatus.updateCallStatus callId req.status req.conversationDuration req.recordingUrl
+  let callStatusId = req.customField.callStatusId
+  _ <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
+  runTransaction $ QCallStatus.updateCallStatus callStatusId (exotelStatusToInterfaceStatus req.status) req.conversationDuration req.recordingUrl
   return Ack
 
-directCallStatusCallback :: EsqDBFlow m r => Text -> Text -> Text -> Maybe Int -> m CallCallbackRes
-directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
-  let dialCallStatus = fromText dialCallStatus_ :: ExotelCallStatus
+directCallStatusCallback :: EsqDBFlow m r => Text -> Call.ExotelCallStatus -> Text -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuration = do
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
   recordingUrl <- parseBaseUrl recordingUrl_
-  runTransaction $ QCallStatus.updateCallStatus callStatus.id dialCallStatus (fromMaybe 0 callDuration) recordingUrl
+  runTransaction $ QCallStatus.updateCallStatus callStatus.id (exotelStatusToInterfaceStatus dialCallStatus) (fromMaybe 0 callDuration) recordingUrl
   return Ack
 
-getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
-getDriverMobileNumber callSid callFrom_ callTo_ callStatus_ = do
-  let callStatus = fromText callStatus_ :: ExotelCallStatus
+getDriverMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Call.ExotelCallStatus -> m GetDriverMobileNumberResp
+getDriverMobileNumber callSid callFrom_ callTo_ callStatus = do
   let callFrom = dropFirstZero callFrom_
   let callTo = dropFirstZero callTo_
-  merchant <- Merchant.findAllByExoPhone "+91" callTo >>= fromMaybeM (MerchantWithExoPhoneNotFound callTo)
+  merchant <- Merchant.findByExoPhone callTo >>= fromMaybeM (MerchantWithExoPhoneNotFound callTo)
   mobileNumberHash <- getDbHash callFrom
   person <-
     runInReplica (Person.findByRoleAndMobileNumberAndMerchantId USER "+91" mobileNumberHash merchant.id)
       >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
-  bookings <- runInReplica $ QRB.findByRiderIdAndStatus person.id [DRB.TRIP_ASSIGNED]
-  booking <- fromMaybeM (BookingForRiderNotFound $ getId person.id) (listToMaybe bookings)
+  booking <- runInReplica $ QRB.findAssignedByRiderId person.id >>= fromMaybeM (BookingForRiderNotFound $ getId person.id)
   ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
   callId <- generateGUID
-  callStatusObj <- buildCallStatus ride.id callId callSid callStatus
+  callStatusObj <- buildCallStatus ride.id callId callSid (exotelStatusToInterfaceStatus callStatus)
   runTransaction $ QCallStatus.create callStatusObj
   return ride.driverMobileNumber
   where
@@ -147,7 +150,7 @@ getDriverMobileNumber callSid callFrom_ callTo_ callStatus_ = do
       return $
         CallStatus
           { id = callId,
-            exotelCallSid = exotelCallId,
+            callId = exotelCallId,
             rideId = rideId,
             status = exoStatus,
             conversationDuration = 0,

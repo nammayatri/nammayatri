@@ -22,6 +22,7 @@ module Storage.Tabular.Merchant.MerchantServiceUsageConfig where
 
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as Domain
+import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types
 import Kernel.External.SMS.Types
 import Kernel.Prelude
@@ -34,6 +35,7 @@ mkPersist
   [defaultQQ|
     MerchantServiceUsageConfigT sql=merchant_service_usage_config
       merchantId MerchantTId
+      initiateCall CallService
       getDistances MapsService
       getEstimatedPickupDistances MapsService
       getRoutes MapsService

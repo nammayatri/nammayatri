@@ -57,7 +57,7 @@ validateMerchantUpdateReq MerchantUpdateReq {..} =
   sequenceA_
     [ validateField "name" name $ InMaybe $ MinLength 3 `And` P.name,
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name,
-      validateMbObject "fcmConfig" fcmConfig validateFCMConfigUpdateReq
+      whenJust fcmConfig $ \cfg -> validateObject "fcmConfig" cfg validateFCMConfigUpdateReq
     ]
 
 data MerchantUpdateRes = MerchantUpdateRes

@@ -36,6 +36,7 @@ defaultBooking = do
     { id = Id "1",
       status = SRB.CONFIRMED,
       providerId = Fixtures.defaultMerchantId,
+      providerExoPhone = "ExoPhone",
       bapId = "",
       bapUri = Fixtures.defaultUrl,
       startTime = Fixtures.defaultTime,
