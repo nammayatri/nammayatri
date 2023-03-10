@@ -37,7 +37,7 @@ type API =
            :> ( "driver"
                   :> "location"
                   :> TokenAuth
-                  :> Get '[JSON] DRide.GetDriverLocResp
+                  :> Post '[JSON] DRide.GetDriverLocResp
                   :<|> "status"
                   :> TokenAuth
                   :> Get '[JSON] DRide.GetRideStatusResp

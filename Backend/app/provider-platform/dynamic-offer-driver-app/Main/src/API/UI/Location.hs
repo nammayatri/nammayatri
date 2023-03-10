@@ -36,19 +36,16 @@ import Tools.Auth
 -- Location update and get for tracking is as follows
 type API =
   "driver" :> "location"
-    :> ( Capture "rideId" (Id SRide.Ride) -- TODO: add auth
-           :> Post '[JSON] DLocation.GetLocationRes
-           :<|> Capture "rideId" (Id SRide.Ride)
-             :> Get '[JSON] DLocation.GetLocationRes
-           :<|> TokenAuth
-             :> ReqBody '[JSON] DLocation.UpdateLocationReq
-             :> Post '[JSON] APISuccess
+    :> ( Capture "rideId" (Id SRide.Ride)
+          :> Get '[JSON] DLocation.GetLocationRes
+          :<|> TokenAuth
+            :> ReqBody '[JSON] DLocation.UpdateLocationReq
+            :> Post '[JSON] APISuccess
        )
 
 handler :: FlowServer API
 handler =
   getLocation
-    :<|> getLocation
     :<|> updateLocation
 
 updateLocation :: Id Person.Person -> DLocation.UpdateLocationReq -> FlowHandler APISuccess
