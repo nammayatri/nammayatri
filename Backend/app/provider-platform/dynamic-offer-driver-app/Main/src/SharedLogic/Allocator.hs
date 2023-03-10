@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -28,10 +29,10 @@ import Lib.Scheduler
 data AllocatorJobType = SendSearchRequestToDriver
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
+instance JobProcessor AllocatorJobType
+
 genSingletons [''AllocatorJobType]
-singEqInstances [''AllocatorJobType]
-singOrdInstances [''AllocatorJobType]
-showSingInstances [''AllocatorJobType]
+showSingInstance ''AllocatorJobType
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { requestId :: Id DSR.SearchRequest,
@@ -41,5 +42,7 @@ data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
     driverMaxExtraFee :: Money
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendSearchRequestToDriver
 
 type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData

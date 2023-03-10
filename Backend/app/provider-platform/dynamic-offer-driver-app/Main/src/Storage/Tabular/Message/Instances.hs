@@ -23,7 +23,7 @@ import Kernel.Types.Id
 import Storage.Tabular.Message.Message
 import Storage.Tabular.Message.MessageTranslation
 
-instance TType MessageT Domain.RawMessage where
+instance FromTType MessageT Domain.RawMessage where
   fromTType MessageT {..} = do
     return $
       Domain.RawMessage
@@ -33,6 +33,8 @@ instance TType MessageT Domain.RawMessage where
           _type = messageType,
           ..
         }
+
+instance ToTType MessageT Domain.RawMessage where
   toTType Domain.RawMessage {..} = do
     MessageT
       { id = getId id,
@@ -44,7 +46,7 @@ instance TType MessageT Domain.RawMessage where
 
 type FullMessageT = (MessageT, [MessageTranslationT])
 
-instance TType FullMessageT Domain.Message where
+instance FromTType FullMessageT Domain.Message where
   fromTType (MessageT {..}, messageTranslationsT) = do
     let messageTranslations = mkMessageTranslation <$> messageTranslationsT
     return $
@@ -55,6 +57,8 @@ instance TType FullMessageT Domain.Message where
           _type = messageType,
           ..
         }
+
+instance ToTType FullMessageT Domain.Message where
   toTType Domain.Message {..} = do
     let messageT =
           MessageT

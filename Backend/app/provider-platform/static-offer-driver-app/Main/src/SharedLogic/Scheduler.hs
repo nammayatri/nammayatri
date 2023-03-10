@@ -31,7 +31,6 @@ data SchedulerJobType
 
 genSingletons [''SchedulerJobType]
 singEqInstances [''SchedulerJobType]
-singOrdInstances [''SchedulerJobType]
 showSingInstances [''SchedulerJobType]
 
 data AllocateRentalJobData = AllocateRentalJobData
@@ -40,4 +39,8 @@ data AllocateRentalJobData = AllocateRentalJobData
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, PrettyShow)
 
+instance JobProcessor SchedulerJobType
+
 type instance JobContent 'AllocateRental = AllocateRentalJobData
+
+instance {-# OVERLAPS #-} JobInfoProcessor 'AllocateRental

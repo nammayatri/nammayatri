@@ -64,7 +64,7 @@ instance TEntityKey BookingT where
   fromKey (BookingTKey _id) = Id _id
   toKey id = BookingTKey id.getId
 
-instance TType BookingT Domain.Booking where
+instance FromTType BookingT Domain.Booking where
   fromTType BookingT {..} = do
     bppUrl_ <- parseBaseUrl bppUrl
     return $
@@ -79,6 +79,8 @@ instance TType BookingT Domain.Booking where
           fare = roundToIntegral fare,
           ..
         }
+
+instance ToTType BookingT Domain.Booking where
   toTType Domain.Booking {..} = do
     BookingT
       { id = id.getId,

@@ -24,7 +24,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Lib.Scheduler
 
-jobsList :: MVar (Map.Map (Id (AnyJob SchedulerJobType)) (AnyJob SchedulerJobType))
+jobsList :: MVar (Map.Map (Id AnyJob) (AnyJob SchedulerJobType))
 {-# NOINLINE jobsList #-}
 jobsList = unsafePerformIO . newMVar $ Map.empty
 
@@ -40,10 +40,10 @@ createJobFunc (AnyJob job@Job {id}) = do
 findAll :: SchedulerM [AnyJob SchedulerJobType]
 findAll = liftIO $ Map.elems <$> readMVar jobsList
 
-findById :: Id (AnyJob SchedulerJobType) -> SchedulerM (Maybe (AnyJob SchedulerJobType))
+findById :: Id AnyJob -> SchedulerM (Maybe (AnyJob SchedulerJobType))
 findById jobId = liftIO $ Map.lookup jobId <$> readMVar jobsList
 
-getTasksById :: [Id (AnyJob SchedulerJobType)] -> SchedulerM [AnyJob SchedulerJobType]
+getTasksById :: [Id AnyJob] -> SchedulerM [AnyJob SchedulerJobType]
 getTasksById ids = liftIO $ filter (\(AnyJob Job {id}) -> id `elem` ids) . Map.elems <$> readMVar jobsList
 
 getReadyTasks :: SchedulerM [AnyJob SchedulerJobType]
@@ -51,10 +51,11 @@ getReadyTasks = do
   now <- getCurrentTime
   liftIO $ filter (filterFunc now) . Map.elems <$> readMVar jobsList
   where
+    filterFunc :: UTCTime -> AnyJob SchedulerJobType -> Bool
     filterFunc now (AnyJob Job {scheduledAt, status}) =
       status == Pending && scheduledAt <= now
 
-updateStatus :: JobStatus -> Id (AnyJob SchedulerJobType) -> SchedulerM ()
+updateStatus :: JobStatus -> Id AnyJob -> SchedulerM ()
 updateStatus newStatus jobId = do
   now <- getCurrentTime
   liftIO $
@@ -62,13 +63,13 @@ updateStatus newStatus jobId = do
       let mbJob = Map.lookup jobId map_
       return $ maybe map_ (\(AnyJob job) -> Map.insert jobId (AnyJob job{status = newStatus, updatedAt = now}) map_) mbJob
 
-markAsComplete :: Id (AnyJob SchedulerJobType) -> SchedulerM ()
+markAsComplete :: Id AnyJob -> SchedulerM ()
 markAsComplete = updateStatus Completed
 
-markAsFailed :: Id (AnyJob SchedulerJobType) -> SchedulerM ()
+markAsFailed :: Id AnyJob -> SchedulerM ()
 markAsFailed = updateStatus Failed
 
-updateErrorCountAndFail :: Id (AnyJob SchedulerJobType) -> Int -> SchedulerM ()
+updateErrorCountAndFail :: Id AnyJob -> Int -> SchedulerM ()
 updateErrorCountAndFail jobId fCount = do
   now <- getCurrentTime
   liftIO $
@@ -76,7 +77,7 @@ updateErrorCountAndFail jobId fCount = do
       let mbJob = Map.lookup jobId map_
       return $ maybe map_ (\(AnyJob job) -> Map.insert jobId (AnyJob job{status = Failed, currErrors = fCount, updatedAt = now}) map_) mbJob
 
-reSchedule :: Id (AnyJob SchedulerJobType) -> UTCTime -> SchedulerM ()
+reSchedule :: Id AnyJob -> UTCTime -> SchedulerM ()
 reSchedule jobId newScheduleTime = do
   now <- getCurrentTime
   liftIO $
@@ -84,7 +85,7 @@ reSchedule jobId newScheduleTime = do
       let mbJob = Map.lookup jobId map_
       return $ maybe map_ (\(AnyJob job) -> Map.insert jobId (AnyJob job{scheduledAt = newScheduleTime, updatedAt = now}) map_) mbJob
 
-updateFailureCount :: Id (AnyJob SchedulerJobType) -> Int -> SchedulerM ()
+updateFailureCount :: Id AnyJob -> Int -> SchedulerM ()
 updateFailureCount jobId newCountValue = do
   now <- getCurrentTime
   liftIO $
@@ -92,7 +93,7 @@ updateFailureCount jobId newCountValue = do
       let mbJob = Map.lookup jobId map_
       return $ maybe map_ (\(AnyJob job) -> Map.insert jobId (AnyJob job{currErrors = newCountValue, updatedAt = now}) map_) mbJob
 
-reScheduleOnError :: Id (AnyJob SchedulerJobType) -> Int -> UTCTime -> SchedulerM ()
+reScheduleOnError :: Id AnyJob -> Int -> UTCTime -> SchedulerM ()
 reScheduleOnError jobId newCountValue newScheduleTime = do
   now <- getCurrentTime
   liftIO $

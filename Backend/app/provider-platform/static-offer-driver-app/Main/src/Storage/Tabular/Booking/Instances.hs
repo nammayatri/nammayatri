@@ -31,7 +31,7 @@ data BookingDetailsT = OneWayDetailsT (BookingLocationT, OneWayBookingT) | Renta
 
 type FullBookingT = (BookingT, BookingLocationT, BookingDetailsT)
 
-instance TType FullBookingT Domain.Booking where
+instance FromTType FullBookingT Domain.Booking where
   fromTType (BookingT {..}, fromLocT, bookingDetailsT) = do
     pUrl <- parseBaseUrl bapUri
     let fromLocation = mkDomainBookingLocation fromLocT
@@ -52,6 +52,8 @@ instance TType FullBookingT Domain.Booking where
           discount = roundToIntegral <$> discount,
           ..
         }
+
+instance ToTType FullBookingT Domain.Booking where
   toTType Domain.Booking {..} = do
     let detailsT = case bookingDetails of
           Domain.OneWayDetails details -> OneWayDetailsT $ toOneWayDetailsT id details

@@ -53,7 +53,7 @@ instance TEntityKey MerchantServiceConfigT where
   fromKey (MerchantServiceConfigTKey _id serviceName) = (fromKey _id, serviceName)
   toKey (id, serviceName) = MerchantServiceConfigTKey (toKey id) serviceName
 
-instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
+instance FromTType MerchantServiceConfigT Domain.MerchantServiceConfig where
   fromTType MerchantServiceConfigT {..} = do
     serviceConfig <- maybe (throwError $ InternalError "Unable to decode MerchantServiceConfigT.configJSON") return $ case serviceName of
       Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> decodeFromText configJSON
@@ -66,6 +66,8 @@ instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
         { merchantId = fromKey merchantId,
           ..
         }
+
+instance ToTType MerchantServiceConfigT Domain.MerchantServiceConfig where
   toTType Domain.MerchantServiceConfig {..} = do
     let (serviceName, configJSON) = getServiceNameConfigJSON serviceConfig
     MerchantServiceConfigT

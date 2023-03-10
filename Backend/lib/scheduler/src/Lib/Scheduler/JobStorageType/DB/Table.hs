@@ -20,28 +20,21 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.SchedulerJob where
+module Lib.Scheduler.JobStorageType.DB.Table where
 
-import Data.Singletons
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.Logging
 import Kernel.Utils.Error
-import Kernel.Utils.Text
 import qualified Lib.Scheduler.Types as ST
-import SharedLogic.Scheduler
-import Tools.Error
-import Unsafe.Coerce (unsafeCoerce)
-
-derivePersistField "SchedulerJobType"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     SchedulerJobT sql=scheduler_job
       id Text
-      jobType SchedulerJobType
+      jobType Text
       jobData Text
       scheduledAt UTCTime
       createdAt UTCTime
@@ -54,38 +47,29 @@ mkPersist
     |]
 
 instance TEntityKey SchedulerJobT where
-  type DomainKey SchedulerJobT = Id (ST.AnyJob SchedulerJobType)
+  type DomainKey SchedulerJobT = Id ST.AnyJob
   fromKey (SchedulerJobTKey _id) = Id _id
   toKey (Id id) = SchedulerJobTKey id
 
-instance TType SchedulerJobT (ST.AnyJob SchedulerJobType) where
-  fromTType :: (MonadThrow m, Log m) => SchedulerJobT -> m (ST.AnyJob SchedulerJobType)
+instance (ST.JobProcessor t) => FromTType SchedulerJobT (ST.AnyJob t) where
   fromTType SchedulerJobT {..} = do
-    case toSing jobType of
-      SomeSing SAllocateRental -> buildAnyJob SAllocateRental
-    where
-      buildAnyJob :: forall (e :: SchedulerJobType) m. (MonadThrow m, Log m, FromJSON (ST.JobContent e), ST.JobTypeConstaints e) => Sing e -> m (ST.AnyJob SchedulerJobType)
-      buildAnyJob jt = do
-        jobDataDecoded <- decodeFromText jobData & fromMaybeM (InternalError $ "Unable to decode " <> show jobType <> ".")
-        return $
-          ST.AnyJob $
-            ST.Job
-              { id = Id id,
-                jobType = jt,
-                jobData = jobDataDecoded,
-                ..
-              }
-
-  toTType (ST.AnyJob job) = do
-    let ST.Job {jobType} = job
-    case jobType of
-      SAllocateRental -> mkSchedulerJobT @'AllocateRental $ unsafeCoerce job
-    where
-      mkSchedulerJobT :: forall (e :: SchedulerJobType). (ToJSON (ST.JobContent e), ST.JobTypeConstaints e) => ST.Job e -> SchedulerJobT
-      mkSchedulerJobT ST.Job {..} = do
-        SchedulerJobT
-          { id = getId id,
-            jobType = fromSing (sing :: Sing e),
-            jobData = encodeToText jobData,
+    (ST.AnyJobInfo anyJobInfo) :: ST.AnyJobInfo t <-
+      ST.restoreAnyJobInfo @t (ST.StoredJobInfo jobType jobData)
+        & fromMaybeM (InternalError "Unable to restore JobInfo.")
+    return $
+      ST.AnyJob $
+        ST.Job
+          { id = Id id,
+            jobInfo = anyJobInfo,
             ..
           }
+
+instance ToTType SchedulerJobT (ST.AnyJob t) where
+  toTType (ST.AnyJob ST.Job {..}) = do
+    let storedJobInfo = ST.storeJobInfo jobInfo
+    SchedulerJobT
+      { id = getId id,
+        jobType = ST.storedJobType storedJobInfo,
+        jobData = ST.storedJobContent storedJobInfo,
+        ..
+      }

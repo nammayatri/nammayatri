@@ -60,7 +60,7 @@ instance TEntityKey MerchantT where
   fromKey (MerchantTKey _id) = Id _id
   toKey (Id id) = MerchantTKey id
 
-instance TType MerchantT Domain.Merchant where
+instance FromTType MerchantT Domain.Merchant where
   fromTType MerchantT {..} = do
     fcmUrl_ <- parseBaseUrl fcmUrl
     let fcmConfig =
@@ -87,6 +87,8 @@ instance TType MerchantT Domain.Merchant where
           driverOfferBaseUrl = doBaseUrl,
           ..
         }
+
+instance ToTType MerchantT Domain.Merchant where
   toTType Domain.Merchant {..} = do
     let FCM.FCMConfig {..} = fcmConfig
         Geo.GeofencingConfig {..} = geofencingConfig

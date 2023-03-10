@@ -47,7 +47,7 @@ instance TEntityKey RestrictedExtraFareT where
   fromKey (RestrictedExtraFareTKey _id) = Id _id
   toKey (Id id) = RestrictedExtraFareTKey id
 
-instance TType RestrictedExtraFareT Domain.RestrictedExtraFare where
+instance FromTType RestrictedExtraFareT Domain.RestrictedExtraFare where
   fromTType RestrictedExtraFareT {..} = do
     return $
       Domain.RestrictedExtraFare
@@ -56,6 +56,7 @@ instance TType RestrictedExtraFareT Domain.RestrictedExtraFare where
           ..
         }
 
+instance ToTType RestrictedExtraFareT Domain.RestrictedExtraFare where
   toTType Domain.RestrictedExtraFare {..} =
     RestrictedExtraFareT
       { id = getId id,

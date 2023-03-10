@@ -45,7 +45,7 @@ instance TEntityKey FareProductT where
   fromKey (FareProductTKey _id) = Id _id
   toKey (Id id) = FareProductTKey id
 
-instance TType FareProductT Domain.FareProduct where
+instance FromTType FareProductT Domain.FareProduct where
   fromTType FareProductT {..} = do
     return $
       Domain.FareProduct
@@ -54,6 +54,8 @@ instance TType FareProductT Domain.FareProduct where
           _type = productType,
           ..
         }
+
+instance ToTType FareProductT Domain.FareProduct where
   toTType Domain.FareProduct {..} =
     FareProductT
       { id = getId id,

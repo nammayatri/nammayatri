@@ -48,13 +48,15 @@ instance TEntityKey DriverLocationT where
   fromKey (DriverLocationTKey _id) = fromKey _id
   toKey id = DriverLocationTKey $ toKey id
 
-instance TType DriverLocationT Domain.DriverLocation where
+instance FromTType DriverLocationT Domain.DriverLocation where
   fromTType DriverLocationT {..} = do
     return $
       Domain.DriverLocation
         { driverId = fromKey driverId,
           ..
         }
+
+instance ToTType DriverLocationT Domain.DriverLocation where
   toTType Domain.DriverLocation {..} =
     DriverLocationT
       { driverId = toKey driverId,

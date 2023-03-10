@@ -30,6 +30,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, logInfo)
+import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
 import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
@@ -40,7 +41,6 @@ import SharedLogic.GoogleMaps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FarePolicy.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
-import Storage.Queries.AllocatorJob (createAllocatorSendSearchRequestToDriverJob)
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error (FarePolicyError (NoFarePolicy), MerchantError (MerchantNotFound))
 import Tools.Maps as Maps
@@ -103,7 +103,7 @@ handler merchantId sReq = do
   case res of
     ReSchedule ut ->
       Esq.runTransaction $ do
-        createAllocatorSendSearchRequestToDriverJob inTime $
+        createJobIn @_ @'SendSearchRequestToDriver inTime $
           SendSearchRequestToDriverJobData
             { requestId = searchReq.id,
               baseFare = estimateFare,

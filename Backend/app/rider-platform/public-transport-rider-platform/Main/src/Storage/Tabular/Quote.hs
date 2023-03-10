@@ -53,7 +53,7 @@ instance TEntityKey QuoteT where
   fromKey (QuoteTKey _id) = Id _id
   toKey id = QuoteTKey id.getId
 
-instance TType QuoteT Domain.Quote where
+instance FromTType QuoteT Domain.Quote where
   fromTType QuoteT {..} = do
     bppUrl_ <- parseBaseUrl bppUrl
     return $
@@ -66,6 +66,8 @@ instance TType QuoteT Domain.Quote where
           fare = roundToIntegral fare,
           ..
         }
+
+instance ToTType QuoteT Domain.Quote where
   toTType Domain.Quote {..} = do
     QuoteT
       { id = id.getId,

@@ -49,7 +49,7 @@ instance TEntityKey IssueT where
   fromKey (IssueTKey _id) = Id _id
   toKey (Id id) = IssueTKey id
 
-instance TType IssueT Domain.Issue where
+instance FromTType IssueT Domain.Issue where
   fromTType IssueT {..} = do
     return $
       Domain.Issue
@@ -58,6 +58,8 @@ instance TType IssueT Domain.Issue where
           bookingId = fromKey <$> bookingId,
           ..
         }
+
+instance ToTType IssueT Domain.Issue where
   toTType Domain.Issue {..} =
     IssueT
       { id = getId id,

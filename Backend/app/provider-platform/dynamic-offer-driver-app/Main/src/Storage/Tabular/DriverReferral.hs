@@ -30,7 +30,7 @@ instance TEntityKey DriverReferralT where
   fromKey (DriverReferralTKey _id) = Id _id
   toKey (Id id) = DriverReferralTKey id
 
-instance TType DriverReferralT Domain.DriverReferral where
+instance FromTType DriverReferralT Domain.DriverReferral where
   fromTType DriverReferralT {..} = do
     return $
       Domain.DriverReferral
@@ -38,6 +38,8 @@ instance TType DriverReferralT Domain.DriverReferral where
           driverId = fromKey driverId,
           ..
         }
+
+instance ToTType DriverReferralT Domain.DriverReferral where
   toTType Domain.DriverReferral {..} =
     DriverReferralT
       { referralCode = referralCode.getId,

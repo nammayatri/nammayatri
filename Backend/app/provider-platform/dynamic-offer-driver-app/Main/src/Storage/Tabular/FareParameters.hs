@@ -50,13 +50,15 @@ instance TEntityKey FareParametersT where
   fromKey (FareParametersTKey _id) = Id _id
   toKey (Id id) = FareParametersTKey id
 
-instance TType FareParametersT Domain.FareParameters where
+instance FromTType FareParametersT Domain.FareParameters where
   fromTType FareParametersT {..} = do
     return $
       Domain.FareParameters
         { id = Id id,
           ..
         }
+
+instance ToTType FareParametersT Domain.FareParameters where
   toTType Domain.FareParameters {..} = do
     FareParametersT
       { id = getId id,

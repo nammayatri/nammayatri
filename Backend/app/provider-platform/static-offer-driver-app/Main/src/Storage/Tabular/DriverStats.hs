@@ -42,13 +42,15 @@ instance TEntityKey DriverStatsT where
   fromKey (DriverStatsTKey _id) = cast $ fromKey _id
   toKey id = DriverStatsTKey . toKey $ cast id
 
-instance TType DriverStatsT Domain.DriverStats where
+instance FromTType DriverStatsT Domain.DriverStats where
   fromTType DriverStatsT {..} = do
     return $
       Domain.DriverStats
         { driverId = cast $ fromKey driverId,
           ..
         }
+
+instance ToTType DriverStatsT Domain.DriverStats where
   toTType Domain.DriverStats {..} =
     DriverStatsT
       { driverId = toKey . cast $ driverId,

@@ -43,7 +43,7 @@ instance TEntityKey SearchT where
   fromKey (SearchTKey _id) = Id _id
   toKey id = SearchTKey id.getId
 
-instance TType SearchT Domain.Search where
+instance FromTType SearchT Domain.Search where
   fromTType SearchT {..} = do
     return $
       Domain.Search
@@ -51,6 +51,8 @@ instance TType SearchT Domain.Search where
           requestorId = Id requestorId,
           ..
         }
+
+instance ToTType SearchT Domain.Search where
   toTType Domain.Search {..} =
     SearchT
       { id = id.getId,

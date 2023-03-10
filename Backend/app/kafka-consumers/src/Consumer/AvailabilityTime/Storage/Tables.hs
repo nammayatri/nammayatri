@@ -51,13 +51,15 @@ instance TEntityKey DriverAvailabilityT where
   fromKey (DriverAvailabilityTKey _id) = Id _id
   toKey (Id id) = DriverAvailabilityTKey id
 
-instance TType DriverAvailabilityT Domain.DriverAvailability where
+instance FromTType DriverAvailabilityT Domain.DriverAvailability where
   fromTType DriverAvailabilityT {..} =
     return
       Domain.DriverAvailability
         { id = Id id,
           ..
         }
+
+instance ToTType DriverAvailabilityT Domain.DriverAvailability where
   toTType Domain.DriverAvailability {..} =
     DriverAvailabilityT
       { id = getId id,

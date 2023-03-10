@@ -64,7 +64,7 @@ instance TEntityKey MerchantT where
   fromKey (MerchantTKey _id) = Id _id
   toKey (Id id) = MerchantTKey id
 
-instance TType MerchantT Domain.Merchant where
+instance FromTType MerchantT Domain.Merchant where
   fromTType MerchantT {..} = do
     return $
       Domain.Merchant
@@ -78,6 +78,8 @@ instance TType MerchantT Domain.Merchant where
               },
           ..
         }
+
+instance ToTType MerchantT Domain.Merchant where
   toTType Domain.Merchant {..} =
     MerchantT
       { id = getId id,

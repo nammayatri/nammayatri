@@ -58,7 +58,7 @@ instance TEntityKey SearchRequestT where
 
 type FullSearchRequestT = (SearchRequestT, SLoc.SearchReqLocationT, Maybe SLoc.SearchReqLocationT)
 
-instance TType FullSearchRequestT Domain.SearchRequest where
+instance FromTType FullSearchRequestT Domain.SearchRequest where
   fromTType (SearchRequestT {..}, fromLoc, mbToLoc) = do
     fromLocation <- fromTType fromLoc
     bundleVersion' <- forM bundleVersion readVersion
@@ -75,6 +75,8 @@ instance TType FullSearchRequestT Domain.SearchRequest where
           clientVersion = clientVersion',
           ..
         }
+
+instance ToTType FullSearchRequestT Domain.SearchRequest where
   toTType Domain.SearchRequest {..} = do
     let fromLoc = toTType fromLocation
         mbToLoc = toTType <$> toLocation

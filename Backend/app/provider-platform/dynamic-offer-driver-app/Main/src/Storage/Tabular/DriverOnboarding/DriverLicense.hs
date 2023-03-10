@@ -61,7 +61,7 @@ instance TEntityKey DriverLicenseT where
   fromKey (DriverLicenseTKey _id) = Id _id
   toKey (Id id) = DriverLicenseTKey id
 
-instance TType DriverLicenseT Domain.DriverLicense where
+instance FromTType DriverLicenseT Domain.DriverLicense where
   fromTType DriverLicenseT {..} = do
     return $
       Domain.DriverLicense
@@ -74,6 +74,8 @@ instance TType DriverLicenseT Domain.DriverLicense where
           failedRules = unPostgresList failedRules,
           ..
         }
+
+instance ToTType DriverLicenseT Domain.DriverLicense where
   toTType Domain.DriverLicense {..} =
     DriverLicenseT
       { id = getId id,

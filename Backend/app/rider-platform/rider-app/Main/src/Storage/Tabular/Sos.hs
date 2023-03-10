@@ -37,7 +37,7 @@ instance TEntityKey SosT where
   fromKey (SosTKey _id) = Id _id
   toKey (Id id) = SosTKey id
 
-instance TType SosT Domain.Sos where
+instance FromTType SosT Domain.Sos where
   fromTType SosT {..} = do
     return $
       Domain.Sos
@@ -46,6 +46,8 @@ instance TType SosT Domain.Sos where
           rideId = fromKey rideId,
           ..
         }
+
+instance ToTType SosT Domain.Sos where
   toTType Domain.Sos {..} =
     SosT
       { id = getId id,

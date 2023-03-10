@@ -59,7 +59,7 @@ instance TEntityKey OneWayFarePolicyT where
 
 type FullOneWayFarePolicyT = (OneWayFarePolicyT, [PerExtraKmRateT], [DiscountT])
 
-instance TType FullOneWayFarePolicyT Domain.OneWayFarePolicy where
+instance FromTType FullOneWayFarePolicyT Domain.OneWayFarePolicy where
   fromTType (OneWayFarePolicyT {..}, perExtraKmRateList_, discountList_) = do
     perExtraKmRateList <- case perExtraKmRateList_ of
       (a : xs) -> do
@@ -74,6 +74,8 @@ instance TType FullOneWayFarePolicyT Domain.OneWayFarePolicy where
           baseFare = roundToIntegral <$> baseFare,
           ..
         }
+
+instance ToTType FullOneWayFarePolicyT Domain.OneWayFarePolicy where
   toTType Domain.OneWayFarePolicy {..} = do
     let fullPerExtraKmRateList = (merchantId,vehicleVariant,) <$> toList perExtraKmRateList
         perExtraKmRateTTypeList = toTType <$> fullPerExtraKmRateList

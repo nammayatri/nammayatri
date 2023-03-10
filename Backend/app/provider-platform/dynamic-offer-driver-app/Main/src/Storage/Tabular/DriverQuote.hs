@@ -65,7 +65,9 @@ instance TEntityKey DriverQuoteT where
   fromKey (DriverQuoteTKey _id) = Id _id
   toKey (Id id) = DriverQuoteTKey id
 
-instance TType (DriverQuoteT, Fare.FareParametersT) Domain.DriverQuote where
+type FullDriverQuoteT = (DriverQuoteT, Fare.FareParametersT)
+
+instance FromTType FullDriverQuoteT Domain.DriverQuote where
   fromTType (DriverQuoteT {..}, fareParamsT) = do
     fareParams <- fromTType fareParamsT
     return $
@@ -77,6 +79,8 @@ instance TType (DriverQuoteT, Fare.FareParametersT) Domain.DriverQuote where
           durationToPickup = roundToIntegral durationToPickup,
           ..
         }
+
+instance ToTType FullDriverQuoteT Domain.DriverQuote where
   toTType Domain.DriverQuote {..} =
     ( DriverQuoteT
         { id = getId id,

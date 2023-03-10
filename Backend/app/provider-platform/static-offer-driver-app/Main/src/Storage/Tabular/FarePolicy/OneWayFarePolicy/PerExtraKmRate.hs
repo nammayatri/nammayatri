@@ -47,7 +47,7 @@ type FullPerExtraKmRate = (Id Merchant, Vehicle.Variant, Domain.PerExtraKmRate)
 getDomainPart :: FullPerExtraKmRate -> Domain.PerExtraKmRate
 getDomainPart (_, _, domain) = domain
 
-instance TType PerExtraKmRateT FullPerExtraKmRate where
+instance FromTType PerExtraKmRateT FullPerExtraKmRate where
   fromTType PerExtraKmRateT {..} = do
     return
       ( fromKey merchantId,
@@ -58,6 +58,8 @@ instance TType PerExtraKmRateT FullPerExtraKmRate where
             ..
           }
       )
+
+instance ToTType PerExtraKmRateT FullPerExtraKmRate where
   toTType (merchantId, vehVar, Domain.PerExtraKmRate {..}) =
     PerExtraKmRateT
       { merchantId = toKey merchantId,

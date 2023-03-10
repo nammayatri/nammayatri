@@ -44,7 +44,7 @@ instance TEntityKey MediaFileT where
   fromKey (MediaFileTKey _id) = Id _id
   toKey (Id id) = MediaFileTKey id
 
-instance TType MediaFileT Domain.MediaFile where
+instance FromTType MediaFileT Domain.MediaFile where
   fromTType MediaFileT {..} = do
     return $
       Domain.MediaFile
@@ -52,6 +52,8 @@ instance TType MediaFileT Domain.MediaFile where
           _type = fileType,
           ..
         }
+
+instance ToTType MediaFileT Domain.MediaFile where
   toTType Domain.MediaFile {..} =
     MediaFileT
       { id = getId id,

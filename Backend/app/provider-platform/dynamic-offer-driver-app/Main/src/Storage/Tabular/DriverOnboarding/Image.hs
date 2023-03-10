@@ -52,7 +52,7 @@ instance TEntityKey ImageT where
   fromKey (ImageTKey _id) = Id _id
   toKey (Id id) = ImageTKey id
 
-instance TType ImageT Domain.Image where
+instance FromTType ImageT Domain.Image where
   fromTType ImageT {..} = do
     return $
       Domain.Image
@@ -62,6 +62,7 @@ instance TType ImageT Domain.Image where
           ..
         }
 
+instance ToTType ImageT Domain.Image where
   toTType Domain.Image {..} =
     ImageT
       { id = getId id,

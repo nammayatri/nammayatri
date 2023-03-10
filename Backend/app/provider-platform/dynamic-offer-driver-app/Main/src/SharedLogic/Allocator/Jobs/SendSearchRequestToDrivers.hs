@@ -49,7 +49,8 @@ sendSearchRequestToDrivers ::
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
-sendSearchRequestToDrivers Job {id, jobData} = withLogTag ("JobId-" <> id.getId) do
+sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+  let jobData = jobInfo.jobData
   let searchReqId = jobData.requestId
   searchReq <- QSR.findById searchReqId >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))

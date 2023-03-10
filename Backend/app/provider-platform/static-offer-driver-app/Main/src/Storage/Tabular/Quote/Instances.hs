@@ -32,7 +32,7 @@ data QuoteDetailsT = OneWayDetailsT OneWayQuoteT | RentalDetailsT (RentalQuoteT,
 
 type FullQuoteT = (QuoteT, QuoteDetailsT)
 
-instance TType FullQuoteT Domain.Quote where
+instance FromTType FullQuoteT Domain.Quote where
   fromTType (QuoteT {..}, tQuoteDetails) = do
     quoteDetails <- case tQuoteDetails of
       RentalDetailsT (_, rental) -> do
@@ -56,6 +56,7 @@ instance TType FullQuoteT Domain.Quote where
           ..
         }
 
+instance ToTType FullQuoteT Domain.Quote where
   toTType Domain.Quote {..} = do
     let details = case quoteDetails of
           Domain.OneWayDetails oneWay -> OneWayDetailsT $ oneWayQuoteToTType id oneWay

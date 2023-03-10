@@ -23,7 +23,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Storage.Tabular.Ride.Table
 
-instance TType RideT Domain.Ride where
+instance FromTType RideT Domain.Ride where
   fromTType RideT {..} = do
     tUrl <- parseBaseUrl trackingUrl
     let mbTripStartLoc = LatLong <$> tripStartLat <*> tripStartLon
@@ -40,6 +40,8 @@ instance TType RideT Domain.Ride where
           fareParametersId = fromKey <$> fareParametersId,
           ..
         }
+
+instance ToTType RideT Domain.Ride where
   toTType Domain.Ride {..} = do
     RideT
       { id = getId id,

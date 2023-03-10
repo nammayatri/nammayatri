@@ -42,13 +42,15 @@ instance TEntityKey RentalSlabT where
   fromKey (RentalSlabTKey _id) = Id _id
   toKey (Id id) = RentalSlabTKey id
 
-instance TType RentalSlabT Domain.RentalSlab where
+instance FromTType RentalSlabT Domain.RentalSlab where
   fromTType RentalSlabT {..} =
     return $
       Domain.RentalSlab
         { id = Id id,
           ..
         }
+
+instance ToTType RentalSlabT Domain.RentalSlab where
   toTType Domain.RentalSlab {..} =
     RentalSlabT
       { id = getId id,

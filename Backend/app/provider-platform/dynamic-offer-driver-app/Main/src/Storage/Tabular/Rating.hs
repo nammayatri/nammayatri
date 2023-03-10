@@ -47,7 +47,7 @@ instance TEntityKey RatingT where
   fromKey (RatingTKey _id) = Id _id
   toKey (Id id) = RatingTKey id
 
-instance TType RatingT Domain.Rating where
+instance FromTType RatingT Domain.Rating where
   fromTType RatingT {..} = do
     return $
       Domain.Rating
@@ -56,6 +56,8 @@ instance TType RatingT Domain.Rating where
           rideId = fromKey rideId,
           ..
         }
+
+instance ToTType RatingT Domain.Rating where
   toTType Domain.Rating {..} =
     RatingT
       { id = getId id,

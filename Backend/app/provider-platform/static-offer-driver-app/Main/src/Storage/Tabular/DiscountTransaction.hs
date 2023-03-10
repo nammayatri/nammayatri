@@ -46,7 +46,7 @@ instance TEntityKey DiscountTransactionT where
   fromKey (DiscountTransactionTKey _id) = fromKey _id
   toKey id = DiscountTransactionTKey $ toKey id
 
-instance TType DiscountTransactionT Domain.DiscountTransaction where
+instance FromTType DiscountTransactionT Domain.DiscountTransaction where
   fromTType DiscountTransactionT {..} = do
     return $
       Domain.DiscountTransaction
@@ -55,6 +55,8 @@ instance TType DiscountTransactionT Domain.DiscountTransaction where
           discount = roundToIntegral discount,
           ..
         }
+
+instance ToTType DiscountTransactionT Domain.DiscountTransaction where
   toTType Domain.DiscountTransaction {..} =
     DiscountTransactionT
       { bookingId = toKey bookingId,

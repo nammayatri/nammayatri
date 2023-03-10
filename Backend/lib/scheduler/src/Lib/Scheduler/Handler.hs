@@ -20,6 +20,7 @@ where
 
 import qualified Control.Monad.Catch as C
 import Control.Monad.Trans.Cont
+import Data.Singletons (fromSing)
 import Kernel.Prelude hiding (mask, throwIO)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common hiding (id)
@@ -33,14 +34,14 @@ import UnliftIO
 
 data SchedulerHandle t = SchedulerHandle
   { jobHandlers :: JobHandlersList t,
-    getTasksById :: [Id (AnyJob t)] -> SchedulerM [AnyJob t],
+    getTasksById :: [Id AnyJob] -> SchedulerM [AnyJob t],
     getReadyTasks :: SchedulerM [AnyJob t],
-    markAsComplete :: Id (AnyJob t) -> SchedulerM (),
-    markAsFailed :: Id (AnyJob t) -> SchedulerM (),
-    updateErrorCountAndFail :: Id (AnyJob t) -> Int -> SchedulerM (),
-    reSchedule :: Id (AnyJob t) -> UTCTime -> SchedulerM (),
-    updateFailureCount :: Id (AnyJob t) -> Int -> SchedulerM (),
-    reScheduleOnError :: Id (AnyJob t) -> Int -> UTCTime -> SchedulerM ()
+    markAsComplete :: Id AnyJob -> SchedulerM (),
+    markAsFailed :: Id AnyJob -> SchedulerM (),
+    updateErrorCountAndFail :: Id AnyJob -> Int -> SchedulerM (),
+    reSchedule :: Id AnyJob -> UTCTime -> SchedulerM (),
+    updateFailureCount :: Id AnyJob -> Int -> SchedulerM (),
+    reScheduleOnError :: Id AnyJob -> Int -> UTCTime -> SchedulerM ()
   }
 
 handler :: SchedulerHandle t -> SchedulerM ()
@@ -59,11 +60,11 @@ handler hnd = do
 errorLogger :: (Log m, Show a) => a -> m ()
 errorLogger e = logError $ "error occured: " <> show e
 
-runnerIteration :: SchedulerHandle t -> SchedulerM ()
+runnerIteration :: forall t. SchedulerHandle t -> SchedulerM ()
 runnerIteration hnd@SchedulerHandle {..} = do
   readyTasks <- getReadyTasks
   logTagDebug "All Tasks - Count" . show $ length readyTasks
-  logTagDebug "All Tasks" . show $ map (\(AnyJob Job {..}) -> id) readyTasks
+  logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}) -> id) readyTasks
   tasksPerIteration <- asks (.tasksPerIteration)
   availableReadyTasksIds <- pickTasks tasksPerIteration $ map (\(AnyJob Job {..}) -> id) readyTasks
   logTagDebug "Available tasks - Count" . show $ length availableReadyTasksIds
@@ -93,14 +94,13 @@ runnerIteration hnd@SchedulerHandle {..} = do
         putMVar termMVar ()
         throwIO e
 
-    withLogTag' Job {..} = withLogTag ("JobId=" <> id.getId)
-
-    runTask anyJob@(AnyJob job@Job {..}) = mask $ \restore -> withLogTag' job $ do
+    runTask :: AnyJob t -> SchedulerM ()
+    runTask anyJob@(AnyJob Job {..}) = mask $ \restore -> withLogTag ("JobId=" <> id.getId) $ do
       res <- measuringDuration registerDuration $ restore (executeTask hnd anyJob) `C.catchAll` defaultCatcher
       registerExecutionResult hnd anyJob res
       releaseLock id
 
-    pickTasks :: Int -> [Id (AnyJob t)] -> SchedulerM [Id (AnyJob t)]
+    pickTasks :: Int -> [Id AnyJob] -> SchedulerM [Id AnyJob]
     pickTasks _ [] = pure []
     pickTasks 0 _ = pure []
     pickTasks tasksRemain (x : xs) = do
@@ -121,14 +121,14 @@ registerDuration millis _ = do
 
 -- TODO: refactor the prometheus metrics to measure data that we really need
 
-attemptTaskLockAtomic :: Id (AnyJob t) -> SchedulerM Bool
+attemptTaskLockAtomic :: Id AnyJob -> SchedulerM Bool
 attemptTaskLockAtomic jobId = do
   expirationTime <- asks (.expirationTime)
   Hedis.tryLockRedis jobId.getId (fromInteger expirationTime)
 
 -- TODO: refactor this function so that there was no duplication with the `tryLockRedis` function
 
-releaseLock :: Id (AnyJob t) -> SchedulerM ()
+releaseLock :: Id AnyJob -> SchedulerM ()
 releaseLock jobId = Hedis.unlockRedis jobId.getId
 
 -- TODO: think about more robust style of working with redis locks
@@ -136,8 +136,8 @@ releaseLock jobId = Hedis.unlockRedis jobId.getId
 
 executeTask :: SchedulerHandle t -> AnyJob t -> SchedulerM ExecutionResult
 executeTask SchedulerHandle {..} (AnyJob job) = do
-  case findJobHandlerFunc (jobType job) jobHandlers of
-    Nothing -> failExecution $ "No handler function found for the job type = " <> show (jobType job)
+  case findJobHandlerFunc job jobHandlers of
+    Nothing -> failExecution $ "No handler function found for the job type = " <> show (fromSing $ jobType $ jobInfo job)
     Just handlerFunc_ -> do
       -- TODO: Fix this logic, that's not how we have to handle this issue
       latestState' <- getTasksById [id job]
@@ -146,7 +146,6 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
           if scheduledAt latestState > scheduledAt job || status latestState /= Pending
             then pure DuplicateExecution
             else do
-              -- we expect to find handler with the same d1.typeName as d, so unsafeCoerce
               handlerFunc_ job
         _ -> failExecution "Found multiple tasks by single it."
   where

@@ -80,7 +80,7 @@ instance TEntityKey PersonT where
   fromKey (PersonTKey _id) = Id _id
   toKey (Id id) = PersonTKey id
 
-instance TType PersonT Domain.Person where
+instance FromTType PersonT Domain.Person where
   fromTType PersonT {..} = do
     bundleVersion' <- forM bundleVersion readVersion
     clientVersion' <- forM clientVersion readVersion
@@ -94,6 +94,8 @@ instance TType PersonT Domain.Person where
           clientVersion = clientVersion',
           ..
         }
+
+instance ToTType PersonT Domain.Person where
   toTType Domain.Person {..} =
     PersonT
       { id = getId id,

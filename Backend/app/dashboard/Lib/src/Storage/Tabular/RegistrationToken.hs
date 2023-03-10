@@ -46,7 +46,7 @@ instance TEntityKey RegistrationTokenT where
   fromKey (RegistrationTokenTKey _id) = Id _id
   toKey (Id id) = RegistrationTokenTKey id
 
-instance TType RegistrationTokenT Domain.RegistrationToken where
+instance FromTType RegistrationTokenT Domain.RegistrationToken where
   fromTType RegistrationTokenT {..} = do
     return $
       Domain.RegistrationToken
@@ -55,6 +55,8 @@ instance TType RegistrationTokenT Domain.RegistrationToken where
           merchantId = fromKey merchantId,
           ..
         }
+
+instance ToTType RegistrationTokenT Domain.RegistrationToken where
   toTType Domain.RegistrationToken {..} =
     RegistrationTokenT
       { id = getId id,

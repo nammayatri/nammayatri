@@ -34,7 +34,7 @@ data QuoteDetailsT
 
 type FullQuoteT = (QuoteT, Maybe STripTerms.TripTermsT, QuoteDetailsT)
 
-instance TType FullQuoteT Domain.Quote where
+instance FromTType FullQuoteT Domain.Quote where
   fromTType (QuoteT {..}, mbTripTermsT, quoteDetailsT) = do
     pUrl <- parseBaseUrl providerUrl
     tripTerms <- forM mbTripTermsT fromTType
@@ -59,6 +59,8 @@ instance TType FullQuoteT Domain.Quote where
           estimatedTotalFare = roundToIntegral estimatedTotalFare,
           ..
         }
+
+instance ToTType FullQuoteT Domain.Quote where
   toTType Domain.Quote {..} = do
     let (fareProductType, quoteDetailsT, distanceToNearestDriver, rentalSlabId, driverOfferId) =
           case quoteDetails of

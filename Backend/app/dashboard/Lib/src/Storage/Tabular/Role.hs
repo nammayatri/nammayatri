@@ -46,13 +46,15 @@ instance TEntityKey RoleT where
   fromKey (RoleTKey _id) = Id _id
   toKey (Id id) = RoleTKey id
 
-instance TType RoleT Domain.Role where
+instance FromTType RoleT Domain.Role where
   fromTType RoleT {..} = do
     return $
       Domain.Role
         { id = Id id,
           ..
         }
+
+instance ToTType RoleT Domain.Role where
   toTType Domain.Role {..} =
     RoleT
       { id = getId id,

@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -19,33 +20,76 @@
 module Lib.Scheduler.Types where
 
 import Data.Singletons
+import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty
 
 -- Job initializer
 -- (here one can think of discarding outdated jobs,
 -- using maximumDelay :: (Maybe Int) field)
-data JobEntry (e :: t) = (JobTypeConstaints e) =>
+data JobEntry (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
   JobEntry
   { jobData :: JobContent e,
     maxErrors :: Int
   }
 
+data StoredJobInfo = StoredJobInfo
+  { storedJobType :: Text,
+    storedJobContent :: Text
+  }
+  deriving (Generic)
+
+data AnyJobInfo t = forall (e :: t). (JobProcessor t, JobInfoProcessor e) => AnyJobInfo (JobInfo e)
+
+data JobInfo (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
+  JobInfo
+  { jobType :: Sing e, -- user defined, one per server
+    jobData :: JobContent e -- user defined, one per job handler
+  }
+
+class (Show t, Read t, Demote t ~ t, SingKind t, Eq t) => JobProcessor t where
+  restoreAnyJobInfo :: StoredJobInfo -> Maybe (AnyJobInfo t)
+  default restoreAnyJobInfo :: StoredJobInfo -> Maybe (AnyJobInfo t)
+  restoreAnyJobInfo storedContent = do
+    jobType :: t <- readMaybe $ T.unpack (storedJobType storedContent)
+    withSomeSing jobType $ \jobTypeSing -> do
+      AnyJobInfo <$> restoreJobInfo jobTypeSing (storedJobContent storedContent)
+
 type family JobContent (e :: t) :: Type
 
-type JobTypeConstaints (e :: t) = (Show (Sing e), SingI e, Eq (Demote t), SingKind t)
+class (JobProcessor t) => JobInfoProcessor (e :: t) where
+  storeJobInfo :: JobInfo (e :: t) -> StoredJobInfo
+  default storeJobInfo :: (ToJSON (JobContent e)) => JobInfo e -> StoredJobInfo
+  storeJobInfo JobInfo {..} =
+    StoredJobInfo
+      { storedJobType = show $ fromSing jobType,
+        storedJobContent = encodeToText jobData
+      }
 
-type JobDataConstraints d = (Show d)
+  restoreJobInfo :: Sing e -> Text -> Maybe (JobInfo (e :: t))
+  default restoreJobInfo :: (FromJSON (JobContent e)) => Sing e -> Text -> Maybe (JobInfo (e :: t))
+  restoreJobInfo jobType storedContent = do
+    content <- decodeFromText storedContent
+    return $ JobInfo jobType content
 
-data AnyJob t = forall (e :: t). (JobTypeConstaints e) => AnyJob (Job e)
+instance {-# OVERLAPPABLE #-} (JobProcessor t) => JobInfoProcessor (e :: t) where
+  storeJobInfo JobInfo {..} =
+    StoredJobInfo
+      { storedJobType = show $ fromSing jobType,
+        storedJobContent = "JobType doesn't have JobInfoProcessor instance."
+      }
 
-data Job (e :: t) = (JobTypeConstaints e) =>
+  restoreJobInfo _ _ = Nothing
+
+data AnyJob t = forall (e :: t). (JobProcessor t, JobInfoProcessor e) => AnyJob (Job e)
+
+data Job (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
   Job
-  { id :: Id (AnyJob t),
-    jobType :: Sing e, -- user defined, one per server
-    jobData :: JobContent e, -- user defined, one per job handler
+  { id :: Id AnyJob,
+    jobInfo :: JobInfo e,
     scheduledAt :: UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,

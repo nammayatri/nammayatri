@@ -52,7 +52,7 @@ instance TEntityKey PaymentTransactionT where
   fromKey (PaymentTransactionTKey _id) = Id _id
   toKey id = PaymentTransactionTKey id.getId
 
-instance TType PaymentTransactionT Domain.PaymentTransaction where
+instance FromTType PaymentTransactionT Domain.PaymentTransaction where
   fromTType PaymentTransactionT {..} = do
     paymentUrl_ <- parseBaseUrl paymentUrl
     return $
@@ -63,6 +63,8 @@ instance TType PaymentTransactionT Domain.PaymentTransaction where
           fare = roundToIntegral fare,
           ..
         }
+
+instance ToTType PaymentTransactionT Domain.PaymentTransaction where
   toTType Domain.PaymentTransaction {..} = do
     PaymentTransactionT
       { id = id.getId,

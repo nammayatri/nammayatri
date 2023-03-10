@@ -29,21 +29,21 @@ import Lib.Scheduler.Types
 
 createJob ::
   forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, JobTypeConstaints e) =>
+  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
   (AnyJob t -> m ()) ->
   JobEntry e ->
-  m (Id (AnyJob t))
+  m (Id AnyJob)
 createJob createJobFunc jobEntry = do
   now <- getCurrentTime
   createJobImpl createJobFunc now jobEntry
 
 createJobIn ::
   forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, JobTypeConstaints e) =>
+  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
   (AnyJob t -> m ()) ->
   NominalDiffTime ->
   JobEntry e ->
-  m (Id (AnyJob t))
+  m (Id AnyJob)
 createJobIn createJobFunc diff jobEntry = do
   now <- getCurrentTime
   when (diff < 0) $ throwError $ InternalError "job can only be scheduled for now or for future"
@@ -52,11 +52,11 @@ createJobIn createJobFunc diff jobEntry = do
 
 createJobByTime ::
   forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, JobTypeConstaints e) =>
+  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
   (AnyJob t -> m ()) ->
   UTCTime ->
   JobEntry e ->
-  m (Id (AnyJob t))
+  m (Id AnyJob)
 createJobByTime createJobFunc scheduledAt jobEntry = do
   now <- getCurrentTime
   when (scheduledAt <= now) $
@@ -69,13 +69,13 @@ createJobByTime createJobFunc scheduledAt jobEntry = do
 
 createJobImpl ::
   forall t (e :: t) m.
-  (MonadTime m, MonadGuid m, MonadThrow m, Log m, JobTypeConstaints e) =>
+  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
   (AnyJob t -> m ()) ->
   UTCTime ->
   JobEntry e ->
-  m (Id (AnyJob t))
-createJobImpl createJobFunc scheduledAt jobEntry = do
-  when (jobEntry.maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
+  m (Id AnyJob)
+createJobImpl createJobFunc scheduledAt JobEntry {..} = do
+  when (maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
   now <- getCurrentTime
   id <- Id <$> generateGUIDText
   let job = makeJob id now
@@ -85,10 +85,9 @@ createJobImpl createJobFunc scheduledAt jobEntry = do
     makeJob id currentTime =
       Job
         { id = id,
-          jobType = sing :: Sing e,
-          jobData = jobEntry.jobData,
+          jobInfo = JobInfo (sing :: Sing e) jobData,
           scheduledAt = scheduledAt,
-          maxErrors = jobEntry.maxErrors,
+          maxErrors = maxErrors,
           createdAt = currentTime,
           updatedAt = currentTime,
           currErrors = 0,

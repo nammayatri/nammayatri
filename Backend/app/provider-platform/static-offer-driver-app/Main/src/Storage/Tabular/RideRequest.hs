@@ -49,7 +49,7 @@ instance TEntityKey RideRequestT where
   fromKey (RideRequestTKey _id) = Id _id
   toKey (Id id) = RideRequestTKey id
 
-instance TType RideRequestT Domain.RideRequest where
+instance FromTType RideRequestT Domain.RideRequest where
   fromTType RideRequestT {..} = do
     decInfo <- for info $ \i -> decodeFromText i & fromMaybeM (InternalError $ "Unable to parse RideRequest.info: " <> show i)
     return $
@@ -61,6 +61,8 @@ instance TType RideRequestT Domain.RideRequest where
           info = decInfo,
           ..
         }
+
+instance ToTType RideRequestT Domain.RideRequest where
   toTType Domain.RideRequest {..} =
     RideRequestT
       { id = getId id,

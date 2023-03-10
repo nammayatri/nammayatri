@@ -48,13 +48,15 @@ instance TEntityKey MessageTranslationT where
   fromKey (MessageTranslationTKey _messageId language) = (fromKey _messageId, language)
   toKey (messageId, language) = MessageTranslationTKey (toKey messageId) language
 
-instance TType MessageTranslationT Domain.MessageTranslation where
+instance FromTType MessageTranslationT Domain.MessageTranslation where
   fromTType MessageTranslationT {..} = do
     return $
       Domain.MessageTranslation
         { messageId = fromKey messageId,
           ..
         }
+
+instance ToTType MessageTranslationT Domain.MessageTranslation where
   toTType Domain.MessageTranslation {..} =
     MessageTranslationT
       { messageId = toKey messageId,

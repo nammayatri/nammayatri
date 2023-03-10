@@ -27,7 +27,7 @@ import Storage.Tabular.Ride.Table
 
 type FullRideT = (RideT, Maybe RatingT)
 
-instance TType FullRideT Domain.Ride where
+instance FromTType FullRideT Domain.Ride where
   fromTType (RideT {..}, mbRatingT) = do
     tUrl <- parseBaseUrl trackingUrl
     let rideRating = mkRideRating <$> mbRatingT
@@ -47,6 +47,8 @@ instance TType FullRideT Domain.Ride where
           tripEndPos = mbTripEndLoc,
           ..
         }
+
+instance ToTType FullRideT Domain.Ride where
   toTType Domain.Ride {..} = do
     let rideT =
           RideT

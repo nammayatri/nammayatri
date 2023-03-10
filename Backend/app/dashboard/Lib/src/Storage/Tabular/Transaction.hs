@@ -54,7 +54,7 @@ instance TEntityKey TransactionT where
   fromKey (TransactionTKey _id) = Id _id
   toKey (Id id) = TransactionTKey id
 
-instance TType TransactionT Domain.Transaction where
+instance FromTType TransactionT Domain.Transaction where
   fromTType TransactionT {..} = do
     return $
       Domain.Transaction
@@ -65,6 +65,8 @@ instance TType TransactionT Domain.Transaction where
           commonRideId = Id <$> commonRideId,
           ..
         }
+
+instance ToTType TransactionT Domain.Transaction where
   toTType Domain.Transaction {..} =
     TransactionT
       { id = getId id,
