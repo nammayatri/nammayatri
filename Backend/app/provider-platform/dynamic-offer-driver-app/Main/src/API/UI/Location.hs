@@ -37,10 +37,10 @@ import Tools.Auth
 type API =
   "driver" :> "location"
     :> ( Capture "rideId" (Id SRide.Ride)
-          :> Get '[JSON] DLocation.GetLocationRes
-          :<|> TokenAuth
-            :> ReqBody '[JSON] DLocation.UpdateLocationReq
-            :> Post '[JSON] APISuccess
+           :> Get '[JSON] DLocation.GetLocationRes
+           :<|> TokenAuth
+             :> ReqBody '[JSON] DLocation.UpdateLocationReq
+             :> Post '[JSON] APISuccess
        )
 
 handler :: FlowServer API
