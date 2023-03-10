@@ -48,17 +48,6 @@ content-type: application/json
 
 ###
 
-# @name getDocs
-
-GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/{{driverId}}/documents/list
-token: {{juspay_admin}}
-
-
-###
-
-@imageId = {{getDocs.response.body.driverLicense[0]}}
-#@imageId = {{getDocs.response.body.vehicleRegistrationCertificate[0]}}
-
 # @name fetchImage
 GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/getDocument/{{imageId}}
 token: {{juspay_admin}}

@@ -15,6 +15,7 @@
 module Storage.Queries.RiderDetails where
 
 import Domain.Types.DriverReferral
+import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.RiderDetails
 import Kernel.External.Encryption
@@ -34,15 +35,18 @@ findById ::
   m (Maybe RiderDetails)
 findById = Esq.findById
 
-findByMobileNumber ::
+findByMobileNumberAndMerchant ::
   (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
   Text ->
+  Id Merchant ->
   m (Maybe RiderDetails)
-findByMobileNumber mobileNumber_ = do
+findByMobileNumberAndMerchant mobileNumber_ merchantId = do
   mobileNumberDbHash <- getDbHash mobileNumber_
   Esq.findOne $ do
     riderDetails <- from $ table @RiderDetailsT
-    where_ $ riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
+    where_ $
+      riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
+        &&. riderDetails ^. RiderDetailsMerchantId ==. val (toKey merchantId)
     return riderDetails
 
 updateHasTakenValidRide :: Id RiderDetails -> SqlDB ()
@@ -64,19 +68,22 @@ findAllReferredByDriverId driverId = do
     where_ $ riderDetails ^. RiderDetailsReferredByDriver ==. val (Just $ toKey driverId)
     return riderDetails
 
-findByMobileNumberHash :: Transactionable m => DbHash -> m (Maybe RiderDetails)
-findByMobileNumberHash mobileNumberDbHash = do
+findByMobileNumberHashAndMerchant :: Transactionable m => DbHash -> Id Merchant -> m (Maybe RiderDetails)
+findByMobileNumberHashAndMerchant mobileNumberDbHash merchantId = do
   Esq.findOne $ do
     riderDetails <- from $ table @RiderDetailsT
-    where_ $ riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
+    where_ $
+      riderDetails ^. RiderDetailsMobileNumberHash ==. val mobileNumberDbHash
+        &&. riderDetails ^. RiderDetailsMerchantId ==. val (toKey merchantId)
     return riderDetails
 
 updateReferralInfo ::
   DbHash ->
+  Id Merchant ->
   Id DriverReferral ->
   Id Person ->
   SqlDB ()
-updateReferralInfo customerNumberHash referralId driverId = do
+updateReferralInfo customerNumberHash merchantId referralId driverId = do
   now <- getCurrentTime
   Esq.update $ \rd -> do
     set
@@ -87,3 +94,4 @@ updateReferralInfo customerNumberHash referralId driverId = do
       ]
     where_ $
       rd ^. RiderDetailsMobileNumberHash ==. val customerNumberHash
+        &&. rd ^. RiderDetailsMerchantId ==. val (toKey merchantId)

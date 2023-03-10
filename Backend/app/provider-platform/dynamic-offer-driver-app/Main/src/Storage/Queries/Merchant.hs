@@ -52,6 +52,10 @@ loadAllProviders =
         &&. org ^. MerchantEnabled
     return org
 
+findAll :: Transactionable m => m [Merchant]
+findAll =
+  Esq.findAll $ do from $ table @MerchantT
+
 update :: Merchant -> SqlDB ()
 update org = do
   now <- getCurrentTime

@@ -26,7 +26,7 @@ import Kernel.ServantMultipart
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
-import Tools.Auth (AdminTokenAuth, TokenAuth)
+import Tools.Auth (TokenAuth)
 
 type API =
   "driver" :> "register"
@@ -54,10 +54,6 @@ type API =
       :> TokenAuth
       :> ReqBody '[JSON] DriverOnboarding.ReferralReq
       :> Post '[JSON] DriverOnboarding.ReferralRes
-    :<|> "driver" :> "getDocs" -- FIXME: Temporary API will move to dashboard later
-      :> AdminTokenAuth
-      :> MandatoryQueryParam "mobileNumber" Text
-      :> Get '[JSON] Image.GetDocsResponse
 
 handler :: FlowServer API
 handler =
@@ -68,7 +64,6 @@ handler =
       :<|> validateImageFile
   )
     :<|> addReferral
-    :<|> getDocs
 
 verifyDL :: Id DP.Person -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
 verifyDL personId = withFlowHandlerAPI . DriverOnboarding.verifyDL False Nothing personId
@@ -87,6 +82,3 @@ validateImageFile personId = withFlowHandlerAPI . Image.validateImageFile False 
 
 addReferral :: Id DP.Person -> DriverOnboarding.ReferralReq -> FlowHandler DriverOnboarding.ReferralRes
 addReferral personId = withFlowHandlerAPI . DriverOnboarding.addReferral personId
-
-getDocs :: DP.Person -> Text -> FlowHandler Image.GetDocsResponse
-getDocs person = withFlowHandlerAPI . Image.getDocs person

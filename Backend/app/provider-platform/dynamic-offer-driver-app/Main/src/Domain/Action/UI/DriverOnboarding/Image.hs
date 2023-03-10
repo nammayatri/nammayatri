@@ -28,7 +28,7 @@ import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
 import qualified Idfy.Flow as Idfy
-import Kernel.External.Encryption (decrypt, getDbHash)
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Types.Common
@@ -38,10 +38,7 @@ import Kernel.Utils.Common
 import Servant.Multipart
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
-import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverOnboarding.Image as Query
-import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.Person as Person
 
 data ImageValidateRequest = ImageValidateRequest
@@ -181,28 +178,6 @@ mkImage personId_ merchantId s3Path imageType_ isValid = do
         failureReason = Nothing,
         createdAt = now
       }
-
--- FIXME: Temporary API will move to dashboard later
-getDocs :: Person.Person -> Text -> Flow GetDocsResponse
-getDocs _admin mobileNumber = do
-  mobileNumberHash <- getDbHash mobileNumber
-  driver <- runInReplica $ Person.findByMobileNumber "+91" mobileNumberHash >>= fromMaybeM (PersonDoesNotExist mobileNumber)
-  let merchantId = driver.merchantId
-  dl <- runInReplica $ DLQuery.findByDriverId driver.id
-  let dlImageId = (.documentImageId1) <$> dl
-
-  association <- DRAQuery.getActiveAssociationByDriver driver.id
-  rc <-
-    maybe
-      (pure Nothing)
-      (\assoc_ -> runInReplica $ RCQuery.findById assoc_.rcId)
-      association
-  let rcImageId = (.documentImageId) <$> rc
-
-  dlImage <- getImage merchantId `mapM` dlImageId
-  rcImage <- getImage merchantId `mapM` rcImageId
-
-  return GetDocsResponse {dlImage, rcImage}
 
 getImage :: Id Merchant -> Id Domain.Image -> Flow Text
 getImage merchantId imageId = do
