@@ -37,7 +37,7 @@ type API =
            :> ( "driver"
                   :> "location"
                   :> TokenAuth
-                  :> Post '[JSON] DRide.GetDriverLocResp
+                  :> Post '[JSON] (Maybe DRide.GetDriverLocResp)
                   :<|> "status"
                   :> TokenAuth
                   :> Get '[JSON] DRide.GetRideStatusResp
@@ -49,7 +49,7 @@ handler rideId =
   getDriverLoc rideId
     :<|> getRideStatus rideId
 
-getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler DRide.GetDriverLocResp
+getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler (Maybe DRide.GetDriverLocResp)
 getDriverLoc rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId personId
 
 getRideStatus :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler DRide.GetRideStatusResp

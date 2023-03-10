@@ -66,7 +66,7 @@ getDriverLoc ::
   ) =>
   Id SRide.Ride ->
   Id SPerson.Person ->
-  m GetDriverLocResp
+  m (Maybe GetDriverLocResp)
 getDriverLoc rideId personId = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   when
@@ -79,19 +79,22 @@ getDriverLoc rideId personId = do
   driverOnTheWayNotifyExpiry <- getSeconds <$> asks (.rideCfg.driverOnTheWayNotifyExpiry)
   mbIsOnTheWayNotified <- Redis.get @() driverOnTheWay
   mbHasReachedNotified <- Redis.get @() driverHasReached
-  when (ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)) $ do
-    let distance = highPrecMetersToMeters $ distanceBetweenInMeters fromLocation res.currPoint
-    mbStartDistance <- Redis.get @Meters distanceUpdates
-    case mbStartDistance of
-      Nothing -> Redis.setExp distanceUpdates distance 3600
-      Just startDistance -> when (startDistance - 50 > distance) $ do
-        unless (isJust mbIsOnTheWayNotified) $ do
-          Notify.notifyDriverOnTheWay personId
-          Redis.setExp driverOnTheWay () driverOnTheWayNotifyExpiry
-        when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
-          Notify.notifyDriverHasReached personId ride
-          Redis.setExp driverHasReached () 1500
-  return res.currPoint
+  case res of
+    Just res' -> do
+      when (ride.status == NEW && (isNothing mbIsOnTheWayNotified || isNothing mbHasReachedNotified)) $ do
+        let distance = highPrecMetersToMeters $ distanceBetweenInMeters fromLocation res'.currPoint
+        mbStartDistance <- Redis.get @Meters distanceUpdates
+        case mbStartDistance of
+          Nothing -> Redis.setExp distanceUpdates distance 3600
+          Just startDistance -> when (startDistance - 50 > distance) $ do
+            unless (isJust mbIsOnTheWayNotified) $ do
+              Notify.notifyDriverOnTheWay personId
+              Redis.setExp driverOnTheWay () driverOnTheWayNotifyExpiry
+            when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
+              Notify.notifyDriverHasReached personId ride
+              Redis.setExp driverHasReached () 1500
+      return (Just res'.currPoint)
+    Nothing -> return Nothing
   where
     distanceUpdates = "Ride:GetDriverLoc:DriverDistance " <> rideId.getId
     driverOnTheWay = "Ride:GetDriverLoc:DriverIsOnTheWay " <> rideId.getId
@@ -113,7 +116,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   mbPos <-
     if ride.status == COMPLETED || ride.status == CANCELLED
       then return Nothing
-      else Just <$> CallBPP.callGetDriverLocation ride
+      else CallBPP.callGetDriverLocation ride
   booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   rider <- runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   decRider <- decrypt rider
