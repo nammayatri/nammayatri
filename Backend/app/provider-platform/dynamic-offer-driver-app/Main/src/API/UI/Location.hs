@@ -38,6 +38,8 @@ type API =
   "driver" :> "location"
     :> ( Capture "rideId" (Id SRide.Ride) -- TODO: add auth
            :> Get '[JSON] DLocation.GetLocationRes
+           :<|> Capture "rideId" (Id SRide.Ride)
+             :> Post '[JSON] DLocation.GetLocationRes
            :<|> TokenAuth
              :> ReqBody '[JSON] DLocation.UpdateLocationReq
              :> Post '[JSON] APISuccess
@@ -46,6 +48,7 @@ type API =
 handler :: FlowServer API
 handler =
   getLocation
+    :<|> getLocation
     :<|> updateLocation
 
 updateLocation :: Id Person.Person -> DLocation.UpdateLocationReq -> FlowHandler APISuccess
