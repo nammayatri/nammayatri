@@ -27,3 +27,20 @@ content-type: application/json
 ###
 
 @token = {{verify.response.body.token}}
+
+
+###
+
+POST {{app-host}}/maps/getReverseGeocode
+content-type: application/json
+token: {{token}}
+
+{
+  "location": {
+    "lat": 28.611895936605354,
+    "lon": 77.21925258636475
+              },
+  "lang": "ENGLISH"
+}
+
+###

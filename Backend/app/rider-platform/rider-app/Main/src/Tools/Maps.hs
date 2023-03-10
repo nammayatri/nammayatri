@@ -21,6 +21,7 @@ module Tools.Maps
     getPlaceName,
     getRoutes,
     snapToRoad,
+    getReverseGeocode,
   )
 where
 
@@ -37,6 +38,8 @@ import Kernel.External.Maps as Reexport hiding
     snapToRoad,
   )
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Maps.Interface.MMI (reverseGeocode)
+import qualified Kernel.External.Maps.MMI.MapsClient.Types as MMI
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -110,4 +113,16 @@ runWithServiceConfig func getCfg merchantId req = do
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId (getCfg merchantConfig))
   case merchantMapsServiceConfig.serviceConfig of
     DMSC.MapsServiceConfig msc -> func msc req
+    _ -> throwError $ InternalError "Unknown Service Config"
+
+--This endpoint added for manual testing
+getReverseGeocode :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> MMI.ReverseGeocodeReq -> m MMI.ReverseGeocodeResp
+getReverseGeocode merchantId req = do
+  mmiServiceConfig <-
+    QMSC.findByMerchantIdAndService merchantId (DMSC.MapsService Maps.MMI)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId Maps.MMI)
+  case mmiServiceConfig.serviceConfig of
+    DMSC.MapsServiceConfig msc -> case msc of
+      MMIConfig mc -> reverseGeocode mc req
+      _ -> throwError $ InternalError "Unknown Service Config"
     _ -> throwError $ InternalError "Unknown Service Config"
