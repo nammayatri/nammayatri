@@ -48,6 +48,8 @@ data MerchantD (s :: UsageSafety) = Merchant
     shortId :: ShortId Merchant,
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,
+    exoPhoneCountryCode :: Maybe Text,
+    exoPhones :: [Text],
     gstin :: Maybe Text,
     fromTime :: Maybe UTCTime,
     toTime :: Maybe UTCTime,

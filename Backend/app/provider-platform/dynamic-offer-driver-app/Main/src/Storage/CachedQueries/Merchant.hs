@@ -17,6 +17,7 @@
 module Storage.CachedQueries.Merchant
   ( findById,
     findByShortId,
+    findAllByExoPhone,
     findBySubscriberId,
     update,
     loadAllProviders,
@@ -41,6 +42,12 @@ findById id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
+
+findAll :: (CacheFlow m r, EsqDBFlow m r) => m [Merchant]
+findAll =
+  Hedis.safeGet makeAllExoPhones >>= \case
+    Just a -> return $ map (coerce @(MerchantD 'Unsafe) @Merchant) a
+    Nothing -> cacheAllMerchants /=<< Queries.findAll
 
 findBySubscriberId :: (HasCacheConfig r, HedisFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
@@ -95,3 +102,16 @@ update = Queries.update
 
 loadAllProviders :: Esq.Transactionable m => m [Merchant]
 loadAllProviders = Queries.loadAllProviders
+
+cacheAllMerchants :: (CacheFlow m r) => [Merchant] -> m ()
+cacheAllMerchants merchants = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.setExp makeAllExoPhones (map (coerce @Merchant @(MerchantD 'Unsafe)) merchants) expTime
+
+makeAllExoPhones :: Text
+makeAllExoPhones = "CachedQueries:Merchant:All-Merchants"
+
+--TODO Rethink the implementation
+findAllByExoPhone ::
+  (CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Merchant)
+findAllByExoPhone countryCode exoPhone = findAll <&> find (\merchant -> (elem exoPhone merchant.exoPhones) && Just countryCode == merchant.exoPhoneCountryCode)

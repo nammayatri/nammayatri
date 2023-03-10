@@ -26,6 +26,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Storage.Tabular.DriverReferral (DriverReferralTId)
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
 
 mkPersist
@@ -36,6 +37,7 @@ mkPersist
       mobileCountryCode Text
       mobileNumberEncrypted Text
       mobileNumberHash DbHash
+      merchantId MerchantTId
       referralCode DriverReferralTId Maybe
       referredByDriver PersonTId Maybe
       referredAt UTCTime Maybe
@@ -60,6 +62,7 @@ instance TType RiderDetailsT Domain.RiderDetails where
           referralCode = fromKey <$> referralCode,
           mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
           referredByDriver = fromKey <$> referredByDriver,
+          merchantId = fromKey merchantId,
           ..
         }
   toTType Domain.RiderDetails {..} =
@@ -69,5 +72,6 @@ instance TType RiderDetailsT Domain.RiderDetails where
         mobileNumberEncrypted = unEncrypted mobileNumber.encrypted,
         mobileNumberHash = mobileNumber.hash,
         referredByDriver = fmap toKey referredByDriver,
+        merchantId = toKey merchantId,
         ..
       }

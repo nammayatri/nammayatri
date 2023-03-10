@@ -272,7 +272,7 @@ createDriver admin req = do
     (QVehicle.findByRegistrationNo req.vehicle.registrationNo)
     "Vehicle with this registration number already exists."
   duplicateCheck
-    (QPerson.findByMobileNumber personEntity.mobileCountryCode mobileNumberHash)
+    (QPerson.findByMobileNumberAndMerchant personEntity.mobileCountryCode mobileNumberHash merchantId)
     "Person with this mobile number already exists"
   person <- buildDriver req.person merchantId
   vehicle <- buildVehicle req.vehicle person.id merchantId

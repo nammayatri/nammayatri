@@ -64,7 +64,7 @@ directCallStatusCallback :: Text -> Text -> Text -> Maybe Int -> FlowHandler DCa
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ = withFlowHandlerAPI . DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_
 
 getCustomerMobileNumber :: Text -> Text -> Text -> Text -> FlowHandler DCall.MobileNumberResp
-getCustomerMobileNumber callSid callFrom_ _ = withFlowHandlerAPI .DCall.getCustomerMobileNumber callSid callFrom_
+getCustomerMobileNumber callSid callFrom_ callTo_ = withFlowHandlerAPI .DCall.getCustomerMobileNumber callSid callFrom_ callTo_
 
 -- getCallStatus :: Id SCS.CallStatus -> FlowHandler DCall.GetCallStatusRes
 -- getCallStatus = withFlowHandlerAPI . DCall.getCallStatus

@@ -32,6 +32,8 @@ import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica, runTransaction)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Merchant as Merchant
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
@@ -53,12 +55,14 @@ directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
   runTransaction $ QCallStatus.updateCallStatus callStatus.id dialCallStatus (fromMaybe 0 callDuration) recordingUrl
   return Ack
 
-getCustomerMobileNumber :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> m MobileNumberResp
-getCustomerMobileNumber callSid callFrom_ callStatus_ = do
+getCustomerMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
+getCustomerMobileNumber callSid callFrom_ callTo_ callStatus_ = do
   let callStatus = fromText callStatus_ :: ExotelCallStatus
   let callFrom = dropFirstZero callFrom_
+  let callTo = dropFirstZero callTo_
   mobileNumberHash <- getDbHash callFrom
-  driver <- runInReplica $ QPerson.findByMobileNumber "+91" mobileNumberHash >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
+  merchant <- Merchant.findAllByExoPhone "+91" callTo >>= fromMaybeM (MerchantWithExoPhoneNotFound callTo)
+  driver <- runInReplica $ QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
   activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
   activeBooking <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   riderId <-

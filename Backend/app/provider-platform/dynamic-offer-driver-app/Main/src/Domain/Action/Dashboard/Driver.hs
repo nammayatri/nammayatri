@@ -478,7 +478,7 @@ updatePhoneNumber merchantShortId reqDriverId req = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
   phoneNumberHash <- getDbHash req.newPhoneNumber
-  mbLinkedPerson <- QPerson.findByMobileNumber req.newCountryCode phoneNumberHash
+  mbLinkedPerson <- QPerson.findByMobileNumberAndMerchant req.newCountryCode phoneNumberHash merchant.id
   whenJust mbLinkedPerson $ \linkedPerson -> do
     if linkedPerson.id == driver.id
       then throwError $ InvalidRequest "Person already have the same mobile number"
