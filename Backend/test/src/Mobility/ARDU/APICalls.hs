@@ -95,7 +95,7 @@ ui = do
                       )
              ) = driverClient
 
-    (_ :<|> updateLocation) = locationClient
+    (_ :<|> _ :<|> updateLocation) = locationClient
 
 newtype DashboardAPIs = DashboardAPIs
   { ride :: DashboardRideAPIs
