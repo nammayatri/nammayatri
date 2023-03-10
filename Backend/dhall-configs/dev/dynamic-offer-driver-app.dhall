@@ -211,4 +211,5 @@ in  { esqDBCfg
     , mediaFileUrlPattern =
         "http://localhost:8016/ui/message/media/?filePath=<FILE_PATH>"
     , minTripDistanceForReferralCfg = Some +1000
+    , searchRepeatLimit = +1
     }

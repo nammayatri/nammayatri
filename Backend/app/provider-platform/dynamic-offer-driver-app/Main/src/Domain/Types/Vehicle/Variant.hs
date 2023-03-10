@@ -28,6 +28,7 @@ data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW
   deriving
     ( Show,
       Eq,
+      Ord,
       Read,
       Generic,
       ToJSON,

@@ -43,6 +43,7 @@ mkPersist
   [defaultQQ|
     BookingT sql=booking
       id Text
+      transactionId Text
       fareProductType DQuote.FareProductType
       bppBookingId Text Maybe sql=bpp_ride_booking_id
       status Domain.BookingStatus

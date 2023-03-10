@@ -15,9 +15,8 @@
 module Beckn.ACL.Search where
 
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
-import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified Domain.Action.Beckn.Search as DSearch
-import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
+import Kernel.External.Maps.Interface (LatLong (..))
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
@@ -48,22 +47,8 @@ buildSearchReq subscriber req = do
         transactionId = transactionId,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
-        pickupLocation = mkLocation pickup.location,
+        pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
         pickupTime = pickup.time.timestamp,
-        dropLocation = mkLocation dropOff.location,
+        dropLocation = LatLong {lat = dropOff.location.gps.lat, lon = dropOff.location.gps.lon},
         routeInfo = req.message.routeInfo
       }
-
-mkLocation :: Search.Location -> Location.SearchReqLocationAPIEntity
-mkLocation (Search.Location Search.Gps {..} _) =
-  Location.SearchReqLocationAPIEntity
-    { areaCode = Nothing,
-      street = Nothing,
-      city = Nothing,
-      state = Nothing,
-      country = Nothing,
-      building = Nothing,
-      area = Nothing,
-      full_address = Nothing,
-      ..
-    }

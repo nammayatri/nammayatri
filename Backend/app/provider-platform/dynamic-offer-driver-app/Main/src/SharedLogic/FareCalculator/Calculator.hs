@@ -17,6 +17,7 @@ module SharedLogic.FareCalculator.Calculator
     fareSum,
     baseFareSum,
     calculateFareParameters,
+    isNightShift,
   )
 where
 
@@ -29,7 +30,7 @@ import Data.Time
     utcToLocalTime,
   )
 import Domain.Types.FareParameters
-import Domain.Types.FarePolicy.FarePolicy
+import Domain.Types.FarePolicy
 import Kernel.Prelude
 import Kernel.Utils.Common
 
@@ -98,7 +99,7 @@ calculateFareParameters fp distance time mbExtraFare = do
         distance - fp.baseDistanceMeters
           & (\dist -> if dist > 0 then Just dist else Nothing)
       mbExtraKmFare = mbExtraDistance <&> \ex -> roundToIntegral $ realToFrac (distanceToKm ex) * fp.perExtraKmFare
-      nightCoefIncluded = defineWhetherNightCoefIncluded fp time
+      nightCoefIncluded = isNightShift fp time
 
   id <- generateGUID
   pure
@@ -116,11 +117,11 @@ calculateFareParameters fp distance time mbExtraFare = do
 distanceToKm :: Meters -> Rational
 distanceToKm x = realToFrac x / 1000
 
-defineWhetherNightCoefIncluded ::
+isNightShift ::
   FarePolicy ->
   UTCTime ->
   Bool
-defineWhetherNightCoefIncluded farePolicy time = do
+isNightShift farePolicy time = do
   let timeOfDay = localTimeOfDay $ utcToLocalTime timeZoneIST time
   let nightShiftStart = fromMaybe midnight $ farePolicy.nightShiftStart
   let nightShiftEnd = fromMaybe midnight $ farePolicy.nightShiftEnd

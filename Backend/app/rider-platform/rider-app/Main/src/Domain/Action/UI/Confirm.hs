@@ -146,6 +146,7 @@ buildBooking searchRequest quote fromLoc mbToLoc now = do
   return $
     DRB.Booking
       { id = Id id,
+        transactionId = searchRequest.id.getId,
         bppBookingId = Nothing,
         status = DRB.NEW,
         providerId = quote.providerId,

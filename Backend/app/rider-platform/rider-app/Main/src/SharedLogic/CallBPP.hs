@@ -117,7 +117,8 @@ callTrack booking ride = do
         TrackACL.TrackBuildReq
           { bppRideId = ride.bppRideId,
             bppId = booking.providerId,
-            bppUrl = booking.providerUrl
+            bppUrl = booking.providerUrl,
+            transactionId = booking.transactionId
           }
   void . callBecknAPIWithSignature "track" API.trackAPI booking.providerUrl =<< TrackACL.buildTrackReq trackBUildReq
 

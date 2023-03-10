@@ -182,7 +182,7 @@ callOnUpdate transporter booking content retryConfig = do
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl transporter.id
   msgId <- generateGUID
-  context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just bppSubscriberId) (Just bppUri)
+  context <- buildTaxiContext Context.ON_UPDATE msgId (Just booking.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri)
   void $ withRetryConfig retryConfig $ void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 buildBppUrl ::

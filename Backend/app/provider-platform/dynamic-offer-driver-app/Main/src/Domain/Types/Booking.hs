@@ -50,6 +50,7 @@ instance ToHttpApiData BookingStatus where
 
 data Booking = Booking
   { id :: Id Booking,
+    transactionId :: Text,
     quoteId :: Id DriverQuote,
     status :: BookingStatus,
     providerId :: Id DM.Merchant, -- FIXME merchantId

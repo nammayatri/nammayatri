@@ -25,6 +25,7 @@ defaultSearchRequest :: SearchRequest.SearchRequest
 defaultSearchRequest =
   SearchRequest.SearchRequest
     { id = Id "1",
+      transactionId = "",
       messageId = "",
       startTime = Fixtures.defaultTime,
       validTill = Fixtures.defaultTime,

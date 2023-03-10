@@ -34,6 +34,7 @@ defaultBooking = do
           }
   SRB.Booking
     { id = Id "1",
+      transactionId = "",
       status = SRB.CONFIRMED,
       providerId = Fixtures.defaultMerchantId,
       bapId = "",

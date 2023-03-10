@@ -12,15 +12,29 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.Beckn.OnUpdate (onUpdate, OnUpdateReq (..), OnUpdateFareBreakup (..)) where
+module Domain.Action.Beckn.OnUpdate
+  ( onUpdate,
+    OnUpdateReq (..),
+    OnUpdateFareBreakup (..),
+    EstimateRepetitionEstimateInfo (..),
+    NightShiftInfo (..),
+    WaitingChargesInfo (..),
+    EstimateBreakupInfo (..),
+    BreakupPriceInfo (..),
+  )
+where
 
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.TripTerms as DTripTerms
+import Domain.Types.VehicleVariant
 import Environment
-import EulerHS.Prelude hiding (state)
+import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis.Config (HedisFlow)
 import Kernel.Types.Id
@@ -30,11 +44,14 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
+import Tools.Maps (LatLong)
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 
@@ -77,10 +94,51 @@ data OnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         arrivalTime :: Maybe UTCTime
       }
+  | EstimateRepetitionReq
+      { searchRequestId :: Id DSR.SearchRequest,
+        estimateInfo :: EstimateRepetitionEstimateInfo,
+        bppBookingId :: Id SRB.BPPBooking,
+        bppRideId :: Id SRide.BPPRide,
+        cancellationSource :: SBCR.CancellationSource
+      }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
   { amount :: HighPrecMoney,
     description :: Text
+  }
+
+data EstimateRepetitionEstimateInfo = EstimateRepetitionEstimateInfo
+  { vehicleVariant :: VehicleVariant,
+    estimatedFare :: Money,
+    discount :: Maybe Money,
+    estimatedTotalFare :: Money,
+    totalFareRange :: DEstimate.FareRange,
+    descriptions :: [Text],
+    estimateBreakupList :: [EstimateBreakupInfo],
+    nightShiftRate :: Maybe NightShiftInfo,
+    waitingCharges :: Maybe WaitingChargesInfo,
+    driversLocation :: [LatLong]
+  }
+
+data NightShiftInfo = NightShiftInfo
+  { nightShiftMultiplier :: Maybe Centesimal,
+    nightShiftStart :: Maybe TimeOfDay,
+    nightShiftEnd :: Maybe TimeOfDay
+  }
+
+data WaitingChargesInfo = WaitingChargesInfo
+  { waitingTimeEstimatedThreshold :: Maybe Seconds,
+    waitingChargePerMin :: Maybe Money
+  }
+
+data EstimateBreakupInfo = EstimateBreakupInfo
+  { title :: Text,
+    price :: BreakupPriceInfo
+  }
+
+data BreakupPriceInfo = BreakupPriceInfo
+  { currency :: Text,
+    value :: Money
   }
 
 onUpdate ::
@@ -249,6 +307,98 @@ onUpdate registryUrl DriverArrivedReq {..} = do
       QRide.updateDriverArrival ride.id
   where
     isValidRideStatus status = status == SRide.NEW
+onUpdate registryUrl EstimateRepetitionReq {..} = do
+  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  -- TODO: this supposed to be temporary solution. Check if we still need it
+  merchant <- QMerch.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  unless (merchant.registryUrl == registryUrl) $ throwError (InvalidRequest "Merchant doesnt't work with passed url.")
+
+  searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  bookingCancellationReason <- buildBookingCancellationReason booking.id (Just ride.id) cancellationSource
+
+  newEstimate <- buildEstimate searchReq.id booking estimateInfo
+
+  DB.runTransaction $ do
+    QRB.updateStatus booking.id SRB.CANCELLED
+    QRide.updateStatus ride.id SRide.CANCELLED
+    QBCR.upsert bookingCancellationReason
+    QEstimate.create newEstimate
+    QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = newEstimate.id, validTill = searchReq.validTill}
+  -- notify customer
+  Notify.notifyOnEstimatedReallocated booking newEstimate.id
+  where
+    buildEstimate ::
+      MonadFlow m =>
+      Id DSR.SearchRequest ->
+      SRB.Booking ->
+      EstimateRepetitionEstimateInfo ->
+      m DEstimate.Estimate
+    buildEstimate requestId booking EstimateRepetitionEstimateInfo {..} = do
+      now <- getCurrentTime
+      uid <- generateGUID
+      tripTerms <- buildTripTerms descriptions
+      estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
+      pure
+        DEstimate.Estimate
+          { id = uid,
+            providerMobileNumber = booking.providerMobileNumber,
+            providerName = booking.providerName,
+            providerCompletedRidesCount = 0, -- FIXME
+            providerId = booking.providerId,
+            providerUrl = booking.providerUrl,
+            createdAt = now,
+            updatedAt = now,
+            status = Just DEstimate.NEW,
+            estimateBreakupList = estimateBreakupList',
+            driversLocation = driversLocation,
+            nightShiftRate =
+              Just $
+                DEstimate.NightShiftRate
+                  { nightShiftMultiplier = nightShiftRate >>= (.nightShiftMultiplier),
+                    nightShiftStart = nightShiftRate >>= (.nightShiftStart),
+                    nightShiftEnd = nightShiftRate >>= (.nightShiftEnd)
+                  },
+            waitingCharges =
+              DEstimate.WaitingCharges
+                { waitingChargePerMin = waitingCharges >>= (.waitingChargePerMin),
+                  waitingTimeEstimatedThreshold = waitingCharges >>= (.waitingTimeEstimatedThreshold)
+                },
+            ..
+          }
+
+    buildTripTerms ::
+      MonadFlow m =>
+      [Text] ->
+      m (Maybe DTripTerms.TripTerms)
+    buildTripTerms [] = pure Nothing
+    buildTripTerms descriptions = do
+      id <- generateGUID
+      pure . Just $ DTripTerms.TripTerms {..}
+
+    buildEstimateBreakUp ::
+      MonadFlow m =>
+      [EstimateBreakupInfo] ->
+      Id DEstimate.Estimate ->
+      m [DEstimate.EstimateBreakup]
+    buildEstimateBreakUp estimatesItems estId =
+      estimatesItems
+        `for` \estimateItem -> do
+          id <- generateGUID
+          price' <- mkEstimatePrice estimateItem.price
+          pure
+            DEstimate.EstimateBreakup
+              { title = estimateItem.title,
+                price = price',
+                estimateId = estId,
+                ..
+              }
+
+    mkEstimatePrice ::
+      MonadFlow m =>
+      BreakupPriceInfo ->
+      m DEstimate.EstimateBreakupPrice
+    mkEstimatePrice BreakupPriceInfo {..} = pure DEstimate.EstimateBreakupPrice {..}
 
 buildBookingCancellationReason ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) =>

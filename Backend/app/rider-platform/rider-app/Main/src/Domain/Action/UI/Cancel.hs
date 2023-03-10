@@ -52,7 +52,8 @@ data CancelRes = CancelRes
   { bppBookingId :: Id SRB.BPPBooking,
     bppId :: Text,
     bppUrl :: BaseUrl,
-    cancellationSource :: SBCR.CancellationSource
+    cancellationSource :: SBCR.CancellationSource,
+    transactionId :: Text
   }
 
 data CancelSearchRes = CancelSearchRes
@@ -79,7 +80,8 @@ cancel bookingId _ req = do
       { bppBookingId = bppBookingId,
         bppId = booking.providerId,
         bppUrl = booking.providerUrl,
-        cancellationSource = SBCR.ByUser
+        cancellationSource = SBCR.ByUser,
+        transactionId = booking.transactionId
       }
   where
     buildBookingCancelationReason = do

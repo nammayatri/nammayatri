@@ -114,7 +114,8 @@ handler merchantId req = do
       toLocation <- buildBookingLocation searchRequest.toLocation
       pure
         DRB.Booking
-          { quoteId = req.driverQuoteId,
+          { transactionId = searchRequest.transactionId,
+            quoteId = req.driverQuoteId,
             status = DRB.NEW,
             providerId = merchantId,
             bapId = req.bapId,

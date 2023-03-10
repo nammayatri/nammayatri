@@ -18,6 +18,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Estimate (Estimate)
+import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Quote (makeQuoteAPIEntity)
@@ -325,6 +326,43 @@ notifyOnBookingReallocated booking = do
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
             fcmEntityIds = getId booking.id,
+            fcmEntityData = (),
+            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
+          }
+    title = FCMNotificationTitle $ T.pack "Ride cancelled!"
+    buildBody = do
+      FCMNotificationBody <$> getReallocationText
+    getReallocationText =
+      return $
+        unwords
+          [ "The driver had to cancel the ride for",
+            showTimeIst (booking.startTime) <> ".",
+            "Please wait until we allocate other driver."
+          ]
+
+notifyOnEstimatedReallocated ::
+  ( HasCacheConfig r,
+    CoreMetrics m,
+    HedisFlow m r,
+    EsqDBFlow m r
+  ) =>
+  SRB.Booking ->
+  Id DEst.Estimate ->
+  m ()
+notifyOnEstimatedReallocated booking estimateId = do
+  person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  notificationData <- buildNotificationData
+  config <- getFCMConfig person.merchantId
+  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  where
+    buildNotificationData = do
+      body <- buildBody
+      return $
+        FCM.FCMData
+          { fcmNotificationType = FCM.REALLOCATE_PRODUCT,
+            fcmShowNotification = FCM.SHOW,
+            fcmEntityType = FCM.Product,
+            fcmEntityIds = getId estimateId,
             fcmEntityData = (),
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
           }

@@ -45,7 +45,8 @@ data SearchRequest = SearchRequest
     updatedAt :: UTCTime,
     vehicleVariant :: Variant.Variant,
     status :: SearchRequestStatus,
-    autoAssignEnabled :: Bool
+    autoAssignEnabled :: Bool,
+    searchRepeatCounter :: Int
   }
   deriving (Generic, PrettyShow, Show)
 

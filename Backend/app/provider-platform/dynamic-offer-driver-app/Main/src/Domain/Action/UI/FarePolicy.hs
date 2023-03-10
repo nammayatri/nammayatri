@@ -22,8 +22,8 @@ module Domain.Action.UI.FarePolicy
 where
 
 import Data.Time
-import Domain.Types.FarePolicy.FarePolicy
-import qualified Domain.Types.FarePolicy.FarePolicy as DFarePolicy
+import Domain.Types.FarePolicy
+import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Person as SP
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -34,7 +34,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.FarePolicy.FarePolicy as SFarePolicy
+import qualified Storage.CachedQueries.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics

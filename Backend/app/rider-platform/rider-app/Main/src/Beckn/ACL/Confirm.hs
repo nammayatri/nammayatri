@@ -33,7 +33,7 @@ buildConfirmReq res = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   messageId <- generateGUID
-  context <- buildTaxiContext Context.CONFIRM messageId Nothing bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl)
+  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl)
   pure $ BecknReq context $ mkConfirmMessage res
 
 mkConfirmMessage :: DOnInit.OnInitRes -> Confirm.ConfirmMessage

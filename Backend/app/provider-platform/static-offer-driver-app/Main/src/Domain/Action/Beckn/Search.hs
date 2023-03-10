@@ -124,6 +124,7 @@ buildSearchRequest DSearchReq {..} transporterId now validity fromLocation mbToL
   pure
     DSR.SearchRequest
       { id = Id uuid,
+        transactionId = transactionId,
         messageId = messageId,
         startTime = pickupTime,
         validTill = validity,

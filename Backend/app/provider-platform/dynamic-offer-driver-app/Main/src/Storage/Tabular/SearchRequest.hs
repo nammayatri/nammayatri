@@ -49,9 +49,10 @@ mkPersist
       estimatedDistance Meters
       estimatedDuration Seconds
       status Domain.SearchRequestStatus
+      searchRepeatCounter Int
+      vehicleVariant Variant.Variant
       createdAt UTCTime
       updatedAt UTCTime
-      vehicleVariant Variant.Variant
       Primary id
       autoAssignEnabled Bool
       deriving Generic

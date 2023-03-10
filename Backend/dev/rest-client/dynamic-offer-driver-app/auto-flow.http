@@ -313,7 +313,19 @@ content-type: application/json
 
 ###
 
-# @name cancel
+# @name rideCancelByDriver
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/cancel
+token: {{token1}}
+content-type: application/json
+
+{
+  "reasonCode": "OTHER",
+  "additionalInfo" : "Rider is too cute"
+}
+
+###
+
+# @name rideCancelByUser
 POST {{app-host}}/rideBooking/{{bookingId}}/cancel
 content-type: application/json
 token: {{app-token}}

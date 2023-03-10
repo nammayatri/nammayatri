@@ -103,7 +103,8 @@ data AppCfg = AppCfg
     maxParallelSearchRequests :: Int,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     mediaFileUrlPattern :: Text,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
+    searchRepeatLimit :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -165,7 +166,8 @@ data AppEnv = AppEnv
     maxParallelSearchRequests :: Int,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     mediaFileUrlPattern :: Text,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
+    searchRepeatLimit :: Int
   }
   deriving (Generic)
 

@@ -122,6 +122,7 @@ defaultBooking :: SRB.Booking
 defaultBooking =
   SRB.Booking
     { id = Id "1",
+      transactionId = "",
       status = SRB.CONFIRMED,
       providerId = Id "",
       bapId = "",

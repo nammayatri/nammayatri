@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.FarePolicy.FarePolicy
+module Storage.CachedQueries.FarePolicy
   ( findById,
     findByMerchantIdAndVariant,
     findAllByMerchantId,
@@ -26,7 +26,7 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.FarePolicy.FarePolicy
+import Domain.Types.FarePolicy
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Vehicle as Vehicle
 import Kernel.Prelude
@@ -37,7 +37,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import Storage.CachedQueries.FarePolicy.RestrictedExtraFare (findRestrictedFareListByMerchant, findRestrictedFareListByMerchantAndVehicle)
-import qualified Storage.Queries.FarePolicy.FarePolicy as Queries
+import qualified Storage.Queries.FarePolicy as Queries
 
 getUpdatedFarePolicy :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Maybe Vehicle.Variant -> Meters -> FarePolicy -> m FarePolicy
 getUpdatedFarePolicy mId varId distance farePolicy = do

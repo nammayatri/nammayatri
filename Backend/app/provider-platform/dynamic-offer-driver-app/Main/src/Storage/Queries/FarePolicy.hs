@@ -12,21 +12,21 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.FarePolicy.FarePolicy
+module Storage.Queries.FarePolicy
   {-# WARNING
     "This module contains direct calls to the table. \
   \ But most likely you need a version from CachedQueries with caching results feature."
     #-}
 where
 
-import Domain.Types.FarePolicy.FarePolicy
+import Domain.Types.FarePolicy
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.FarePolicy.FarePolicy
+import Storage.Tabular.FarePolicy
 
 findAllByMerchantId ::
   Transactionable m =>

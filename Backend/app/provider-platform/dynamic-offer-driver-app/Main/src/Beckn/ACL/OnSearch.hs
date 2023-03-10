@@ -20,6 +20,7 @@ import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
+import qualified SharedLogic.Estimate as DEstimate
 
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =
@@ -102,7 +103,7 @@ data QuoteEntities = QuoteEntities
 currency' :: Text
 currency' = "INR"
 
-mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DSearch.EstimateItem -> QuoteEntities
+mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DEstimate.EstimateItem -> QuoteEntities
 mkQuoteEntities start end it = do
   let variant = castVariant it.vehicleVariant
       minPriceDecimalValue = OS.DecimalValue $ toRational it.minFare
@@ -155,9 +156,9 @@ mkQuoteEntities start end it = do
     }
 
 buildEstimateBreakUpList ::
-  DSearch.BreakupItem ->
+  DEstimate.BreakupItem ->
   BreakupItem
-buildEstimateBreakUpList DSearch.BreakupItem {..} = do
+buildEstimateBreakUpList DEstimate.BreakupItem {..} = do
   BreakupItem
     { title = title,
       price =
