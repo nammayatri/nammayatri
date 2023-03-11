@@ -24,6 +24,7 @@ import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as Domain
 import Kernel.External.Maps.Types
 import Kernel.External.SMS.Types
+import Kernel.External.Verification.Types
 import Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -46,6 +47,7 @@ mkPersist
       autoComplete MapsService
       smsProvidersPriorityList (PostgresList SmsService)
       whatsappProvidersPriorityList (PostgresList WhatsappService)
+      verificationService VerificationService
       updatedAt UTCTime
       createdAt UTCTime
       Primary merchantId

@@ -32,6 +32,7 @@ import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
 import qualified Kernel.External.SMS.ExotelSms.Types as Exotel
+import qualified Kernel.External.Verification as Verification
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
@@ -47,6 +48,7 @@ data MerchantEndpoint
   | MapsServiceConfigUsageUpdateEndpoint
   | SmsServiceConfigUpdateEndpoint
   | SmsServiceConfigUsageUpdateEndpoint
+  | VerificationServiceConfigUpdateEndpoint
   deriving (Show, Read)
 
 derivePersistField "MerchantEndpoint"
@@ -364,6 +366,105 @@ data ExotelSmsCfgUpdateTReq = ExotelSmsCfgUpdateTReq
 instance HideSecrets ExotelSmsCfgUpdateReq where
   type ReqWithoutSecrets ExotelSmsCfgUpdateReq = ExotelSmsCfgUpdateTReq
   hideSecrets ExotelSmsCfgUpdateReq {..} = ExotelSmsCfgUpdateTReq {..}
+
+---------------------------------------------------------
+-- merchant verification service config update ----------
+
+type VerificationServiceConfigUpdateAPI =
+  "serviceConfig"
+    :> "verification"
+    :> "update"
+    :> ReqBody '[JSON] VerificationServiceConfigUpdateReq
+    :> Post '[JSON] APISuccess
+
+newtype VerificationServiceConfigUpdateReq
+  = IdfyConfigUpdateReq IdfyCfgUpdateReq
+  deriving stock (Show, Generic)
+
+newtype VerificationServiceConfigUpdateTReq
+  = IdfyConfigUpdateTReq IdfyCfgUpdateTReq
+  deriving stock (Generic)
+
+instance HideSecrets VerificationServiceConfigUpdateReq where
+  type ReqWithoutSecrets VerificationServiceConfigUpdateReq = VerificationServiceConfigUpdateTReq
+  hideSecrets = \case
+    IdfyConfigUpdateReq req -> IdfyConfigUpdateTReq $ hideSecrets req
+
+getVerificationServiceFromReq :: VerificationServiceConfigUpdateReq -> Verification.VerificationService
+getVerificationServiceFromReq = \case
+  IdfyConfigUpdateReq _ -> Verification.Idfy
+
+buildVerificationServiceConfig ::
+  EncFlow m r =>
+  VerificationServiceConfigUpdateReq ->
+  m Verification.VerificationServiceConfig
+buildVerificationServiceConfig = \case
+  IdfyConfigUpdateReq IdfyCfgUpdateReq {..} -> do
+    accountId' <- encrypt accountId
+    apiKey' <- encrypt apiKey
+    secret' <- encrypt secret
+    pure . Verification.IdfyConfig $ Verification.IdfyCfg {accountId = accountId', apiKey = apiKey', secret = secret', ..}
+
+instance ToJSON VerificationServiceConfigUpdateReq where
+  toJSON = genericToJSON (updateVerificationReqOptions updateVerificationReqConstructorModifier)
+
+instance FromJSON VerificationServiceConfigUpdateReq where
+  parseJSON = genericParseJSON (updateVerificationReqOptions updateVerificationReqConstructorModifier)
+
+instance ToSchema VerificationServiceConfigUpdateReq where
+  declareNamedSchema = genericDeclareNamedSchema updateVerificationReqSchemaOptions
+
+instance ToJSON VerificationServiceConfigUpdateTReq where
+  toJSON = genericToJSON (updateVerificationReqOptions updateVerificationTReqConstructorModifier)
+
+instance FromJSON VerificationServiceConfigUpdateTReq where
+  parseJSON = genericParseJSON (updateVerificationReqOptions updateVerificationTReqConstructorModifier)
+
+updateVerificationReqOptions :: (String -> String) -> Options
+updateVerificationReqOptions modifier =
+  defaultOptions
+    { sumEncoding = updateReqTaggedObject,
+      constructorTagModifier = modifier
+    }
+
+updateVerificationReqSchemaOptions :: SchemaOptions
+updateVerificationReqSchemaOptions =
+  defaultSchemaOptions
+    { sumEncoding = updateReqTaggedObject,
+      constructorTagModifier = updateVerificationReqConstructorModifier
+    }
+
+updateVerificationReqConstructorModifier :: String -> String
+updateVerificationReqConstructorModifier = \case
+  "IdfyConfigUpdateReq" -> show Verification.Idfy
+  x -> x
+
+updateVerificationTReqConstructorModifier :: String -> String
+updateVerificationTReqConstructorModifier = \case
+  "IdfyConfigUpdateTReq" -> show Verification.Idfy
+  x -> x
+
+-- Verification services
+-- Idfy
+
+data IdfyCfgUpdateReq = IdfyCfgUpdateReq
+  { accountId :: Text,
+    apiKey :: Text,
+    secret :: Text,
+    url :: BaseUrl
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype IdfyCfgUpdateTReq = IdfyCfgUpdateTReq
+  { url :: BaseUrl
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+instance HideSecrets IdfyCfgUpdateReq where
+  type ReqWithoutSecrets IdfyCfgUpdateReq = IdfyCfgUpdateTReq
+  hideSecrets IdfyCfgUpdateReq {..} = IdfyCfgUpdateTReq {..}
 
 ---------------------------------------------------------
 -- merchant maps service config usage update ------------

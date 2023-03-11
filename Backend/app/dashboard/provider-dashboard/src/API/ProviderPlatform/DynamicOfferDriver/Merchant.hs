@@ -40,6 +40,7 @@ type API =
            :<|> MapsServiceUsageConfigUpdateAPI
            :<|> SmsServiceConfigUpdateAPI
            :<|> SmsServiceUsageConfigUpdateAPI
+           :<|> VerificationServiceConfigUpdateAPI
        )
 
 type MerchantUpdateAPI =
@@ -62,6 +63,10 @@ type SmsServiceUsageConfigUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
     :> Common.SmsServiceUsageConfigUpdateAPI
 
+type VerificationServiceConfigUpdateAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+    :> Common.VerificationServiceConfigUpdateAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   merchantUpdate merchantId
@@ -69,6 +74,7 @@ handler merchantId =
     :<|> mapsServiceUsageConfigUpdate merchantId
     :<|> smsServiceConfigUpdate merchantId
     :<|> smsServiceUsageConfigUpdate merchantId
+    :<|> verificationServiceConfigUpdate merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -138,3 +144,14 @@ smsServiceUsageConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAP
   transaction <- buildTransaction Common.SmsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.merchant.smsServiceUsageConfigUpdate) req
+
+verificationServiceConfigUpdate ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Common.VerificationServiceConfigUpdateReq ->
+  FlowHandler APISuccess
+verificationServiceConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.VerificationServiceConfigUpdateEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.verificationServiceConfigUpdate) req

@@ -17,8 +17,7 @@ module Product.Idfy (verifyDL, verifyRC, validateImage, extractDLImage, extractR
 import App.Types
 import Common
 import EulerHS.Prelude
-import Idfy.Types.Request
-import Idfy.Types.Response
+import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Types.Error
 import Kernel.Types.Forkable
 import Kernel.Types.GuidLike
@@ -28,7 +27,7 @@ import Tools.FlowHandling
 import Types.Common
 import Types.Webhook
 
-verifyDL :: Maybe ApiKey -> Maybe AccountId -> DLVerificationRequest -> FlowHandler IdfySuccess
+verifyDL :: Maybe ApiKey -> Maybe AccountId -> Idfy.DLVerificationRequest -> FlowHandler Idfy.IdfySuccess
 verifyDL apiKey accountId req = withFlowHandlerAPI $ do
   verifyAuth apiKey accountId
   reqId <- generateGUID
@@ -37,9 +36,9 @@ verifyDL apiKey accountId req = withFlowHandlerAPI $ do
     waitMilliSec <- asks (.callbackWaitTimeMilliSec)
     threadDelayMilliSec waitMilliSec
     void $ buildSuccessDL req reqId now >>= sendDLVerification
-  pure $ IdfySuccess {request_id = reqId, _a = Nothing}
+  pure $ Idfy.IdfySuccess {request_id = reqId, _a = Nothing}
 
-verifyRC :: Maybe ApiKey -> Maybe AccountId -> RCVerificationRequest -> FlowHandler IdfySuccess
+verifyRC :: Maybe ApiKey -> Maybe AccountId -> Idfy.RCVerificationRequest -> FlowHandler Idfy.IdfySuccess
 verifyRC apiKey accountId req = withFlowHandlerAPI $ do
   verifyAuth apiKey accountId
   reqId <- generateGUID
@@ -48,7 +47,7 @@ verifyRC apiKey accountId req = withFlowHandlerAPI $ do
     waitMilliSec <- asks (.callbackWaitTimeMilliSec)
     threadDelayMilliSec waitMilliSec
     void $ buildSuccessRC req reqId now >>= sendRCVerification
-  pure $ IdfySuccess {request_id = reqId, _a = Nothing}
+  pure $ Idfy.IdfySuccess {request_id = reqId, _a = Nothing}
 
 verifyAuth :: Maybe ApiKey -> Maybe AccountId -> Flow ()
 verifyAuth apiKey accountId = do
@@ -56,24 +55,24 @@ verifyAuth apiKey accountId = do
   clientSecret <- asks (.apiKey)
   unless (Just clientId == accountId && Just clientSecret == apiKey) $ throwError (InvalidRequest "Invalid authentication credentials")
 
-validateImage :: Maybe ApiKey -> Maybe AccountId -> ImageValidateRequest -> FlowHandler ImageValidateResponse
+validateImage :: Maybe ApiKey -> Maybe AccountId -> Idfy.ImageValidateRequest -> FlowHandler Idfy.ImageValidateResponse
 validateImage apiKey accountId req = withFlowHandlerAPI $ do
   verifyAuth apiKey accountId
   let resp =
-        ValidateResponse
+        Idfy.ValidateResponse
           { detected_doc_type = req._data.doc_type,
             is_readable = Just True,
-            readability = ReadabilityBody {confidence = Just 70, dummyField = Nothing} -- currently we check that it was > 60
+            readability = Idfy.ReadabilityBody {confidence = Just 70, dummyField = Nothing} -- currently we check that it was > 60
           }
   buildMeaninglessIdfyResponse $ Just resp
 
-extractDLImage :: Maybe ApiKey -> Maybe AccountId -> ImageExtractRequest -> FlowHandler DLExtractResponse
+extractDLImage :: Maybe ApiKey -> Maybe AccountId -> Idfy.ImageExtractRequest -> FlowHandler Idfy.DLExtractResponse
 extractDLImage apiKey accountId _req = withFlowHandlerAPI $ do
   verifyAuth apiKey accountId
   buildMeaninglessIdfyResponse $
     Just $
-      ExtractionOutput $
-        DLExtractionOutput
+      Idfy.ExtractionOutput $
+        Idfy.DLExtractionOutput
           { id_number = Just "id_number",
             name_on_card = Just "name_on_card",
             fathers_name = Just "fathers_name",
@@ -90,13 +89,13 @@ extractDLImage apiKey accountId _req = withFlowHandlerAPI $ do
             status = Just "status"
           }
 
-extractRCImage :: Maybe ApiKey -> Maybe AccountId -> ImageExtractRequest -> FlowHandler RCExtractResponse
+extractRCImage :: Maybe ApiKey -> Maybe AccountId -> Idfy.ImageExtractRequest -> FlowHandler Idfy.RCExtractResponse
 extractRCImage apiKey accountId _req = withFlowHandlerAPI $ do
   verifyAuth apiKey accountId
   buildMeaninglessIdfyResponse $
     Just $
-      ExtractionOutput $
-        RCExtractionOutput
+      Idfy.ExtractionOutput $
+        Idfy.RCExtractionOutput
           { address = Just "address",
             body = Just "body",
             chassis_number = Just "chassis_number",
