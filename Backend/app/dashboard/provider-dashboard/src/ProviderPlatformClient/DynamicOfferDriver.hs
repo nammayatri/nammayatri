@@ -94,7 +94,8 @@ data MerchantAPIs = MerchantAPIs
     mapsServiceConfigUpdate :: Common.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     mapsServiceUsageConfigUpdate :: Common.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
     smsServiceConfigUpdate :: Common.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceUsageConfigUpdate :: Common.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
+    smsServiceUsageConfigUpdate :: Common.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+    verificationServiceConfigUpdate :: Common.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess
   }
 
 data DriverReferralAPIs = DriverReferralAPIs
@@ -168,7 +169,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> mapsServiceConfigUpdate
       :<|> mapsServiceUsageConfigUpdate
       :<|> smsServiceConfigUpdate
-      :<|> smsServiceUsageConfigUpdate = merchantClient
+      :<|> smsServiceUsageConfigUpdate
+      :<|> verificationServiceConfigUpdate = merchantClient
 
     updateReferralLinkPassword
       :<|> linkDriverReferralCode = driverReferralClient

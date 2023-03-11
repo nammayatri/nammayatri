@@ -81,7 +81,7 @@ extra-deps:
       - app/mock-registry
   # -  ../../shared-kernel/lib/mobility-core
   - git: https://github.com/nammayatri/shared-kernel.git
-    commit: d09348f46006c60ace8c613b75a66ba33fcf9a72
+    commit: 568e60ecc0710a69d8ed2cffe2c63bb59a2e4af6
     subdirs:
       - lib/mobility-core
   - git: https://github.com/piyushKumar-1/clickhouse-haskell.git

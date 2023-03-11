@@ -18,6 +18,7 @@ module Domain.Action.Dashboard.Merchant
     merchantUpdate,
     smsServiceConfigUpdate,
     smsServiceUsageConfigUpdate,
+    verificationServiceConfigUpdate,
   )
 where
 
@@ -166,4 +167,20 @@ smsServiceUsageConfigUpdate merchantShortId req = do
     CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchant.id
   logTagInfo "dashboard -> smsServiceUsageConfigUpdate : " (show merchant.id)
+  pure Success
+
+---------------------------------------------------------------------
+verificationServiceConfigUpdate ::
+  ShortId DM.Merchant ->
+  Common.VerificationServiceConfigUpdateReq ->
+  Flow APISuccess
+verificationServiceConfigUpdate merchantShortId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  let serviceName = DMSC.VerificationService $ Common.getVerificationServiceFromReq req
+  serviceConfig <- DMSC.VerificationServiceConfig <$> Common.buildVerificationServiceConfig req
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
+  Esq.runTransaction $ do
+    CQMSC.upsertMerchantServiceConfig merchantServiceConfig
+  CQMSC.clearCache merchant.id serviceName
+  logTagInfo "dashboard -> verificationServiceConfigUpdate : " (show merchant.id)
   pure Success

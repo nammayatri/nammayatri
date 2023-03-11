@@ -17,8 +17,7 @@ module Common (sendDLVerification, sendRCVerification, buildMeaninglessIdfyRespo
 import App.Types
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import Idfy.Flow
-import Idfy.Types.Response
+import Kernel.External.Verification.Interface.Idfy
 import Kernel.Utils.Common hiding (Error)
 import Types.Common
 

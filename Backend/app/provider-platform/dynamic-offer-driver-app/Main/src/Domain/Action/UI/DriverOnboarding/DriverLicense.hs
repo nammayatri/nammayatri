@@ -35,9 +35,8 @@ import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment
-import qualified Idfy.Flow as Idfy
-import qualified Idfy.Types as Idfy
 import Kernel.External.Encryption
+import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Types.APISuccess
@@ -56,6 +55,7 @@ import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
 import qualified Storage.Queries.DriverOnboarding.OperatingCity as QCity
 import qualified Storage.Queries.Person as Person
 import Tools.Error
+import qualified Tools.Verification as Verification
 
 data DriverDLReq = DriverDLReq
   { driverLicenseNumber :: Text,
@@ -110,10 +110,12 @@ verifyDL isDashboard mbMerchant personId req@DriverDLReq {..} = do
     $ do
       image1 <- getImage imageId1
       image2 <- getImage `mapM` imageId2
-      resp <- Idfy.extractDLImage image1 image2
-      case resp.result of
-        Just result -> do
-          let extractDLNumber = removeSpaceAndDash <$> result.extraction_output.id_number
+      resp <-
+        Verification.extractDLImage person.merchantId $
+          Verification.ExtractImageReq {image1, image2}
+      case resp.extractedDL of
+        Just extractedDL -> do
+          let extractDLNumber = removeSpaceAndDash <$> extractedDL.dlNumber
           let dlNumber = removeSpaceAndDash <$> Just driverLicenseNumber
           -- disable this check for debugging with mock-idfy
           unless (extractDLNumber == dlNumber) $
@@ -125,11 +127,11 @@ verifyDL isDashboard mbMerchant personId req@DriverDLReq {..} = do
     Just driverLicense -> do
       unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
       unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
+      verifyDLFlow person driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
     Nothing -> do
       mDriverDL <- Query.findByDriverId personId
       when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
-      verifyDLFlow personId driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
+      verifyDLFlow person driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -141,17 +143,19 @@ verifyDL isDashboard mbMerchant personId req@DriverDLReq {..} = do
         throwError (ImageInvalidType (show Image.DriverLicense) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-verifyDLFlow :: Id Person.Person -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Flow ()
-verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue = do
+verifyDLFlow :: Person.Person -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Flow ()
+verifyDLFlow person dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue = do
   now <- getCurrentTime
   configs <- asks (.driverOnboardingConfigs)
   let imageExtractionValidation =
         if isNothing dateOfIssue && configs.checkImageExtraction
           then Domain.Success
           else Domain.Skipped
-  idfyRes <- Idfy.verifyDL dlNumber driverDateOfBirth
+  verifyRes <-
+    Verification.verifyDLAsync person.merchantId $
+      Verification.VerifyDLAsyncReq {dlNumber, dateOfBirth = driverDateOfBirth}
   encryptedDL <- encrypt dlNumber
-  idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now imageExtractionValidation encryptedDL
+  idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedDL
   runTransaction $ IVQuery.create idfyVerificationEntity
   where
     mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedDL = do
@@ -159,7 +163,7 @@ verifyDLFlow personId dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue =
       return $
         Domain.IdfyVerification
           { id,
-            driverId = personId,
+            driverId = person.id,
             documentImageId1 = imageId1,
             documentImageId2 = imageId2,
             requestId,

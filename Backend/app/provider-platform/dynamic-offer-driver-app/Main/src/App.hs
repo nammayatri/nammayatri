@@ -20,8 +20,8 @@ import qualified Data.Text as T
 import Environment
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import Idfy.Auth
 import Kernel.Exit
+import Kernel.External.Verification.Interface.Idfy
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App

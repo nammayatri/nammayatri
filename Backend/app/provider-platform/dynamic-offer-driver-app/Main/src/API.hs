@@ -18,16 +18,15 @@ import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
 import qualified API.Internal as Internal
 import qualified API.UI as UI
--- import Domain.Action.UI.DriverOnboarding.DriverLicense as DriverOnboarding
--- import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
-
 import qualified Data.ByteString as BS
 import Data.OpenApi
-import Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
+import qualified Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
+import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
-import qualified Idfy.Flow as Idfy
-import Kernel.Utils.Servant.Client
+import qualified Kernel.External.Verification.Interface.Idfy as Idfy
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp)
 import Servant.OpenApi
@@ -42,6 +41,9 @@ type MainAPI =
   UI.API
     :<|> Beckn.API
     :<|> Idfy.IdfyWebhookAPI
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> Idfy.IdfyWebhookAPI
+         )
     :<|> Dashboard.API
     :<|> Internal.API
 
@@ -52,7 +54,8 @@ mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
     :<|> Beckn.handler
-    :<|> Idfy.idfyWebhookHandler DriverOnboarding.onVerify
+    :<|> oldIdfyWebhookHandler
+    :<|> idfyWebhookHandler
     :<|> Dashboard.handler
     :<|> Internal.handler
 
@@ -83,3 +86,18 @@ writeSwaggerHTMLFlow = lift $ BS.readFile "swagger/index.html"
 
 writeOpenAPIFlow :: FlowServer OpenAPI
 writeOpenAPIFlow = pure openAPI
+
+idfyWebhookHandler ::
+  ShortId DM.Merchant ->
+  Maybe Text ->
+  Value ->
+  FlowHandler AckResponse
+idfyWebhookHandler merchantShortId secret =
+  withFlowHandlerAPI . DriverOnboarding.idfyWebhookHandler merchantShortId secret
+
+oldIdfyWebhookHandler ::
+  Maybe Text ->
+  Value ->
+  FlowHandler AckResponse
+oldIdfyWebhookHandler secret =
+  withFlowHandlerAPI . DriverOnboarding.oldIdfyWebhookHandler secret

@@ -134,3 +134,27 @@ content-type: application/json
 
 { "smsProvidersPriorityList" : ["ExotelSms","MyValueFirst"]
 }
+
+###
+
+# @name merchantIdfyVerificationConfigUpdate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/serviceConfig/verification/update
+token: {{juspay_admin}}
+content-type: application/json
+
+{ "accountId" : "xxxxxxx",
+  "apiKey" : "xxxxxxx",
+  "secret" : "xxxxxxx",
+  "url" : "http://localhost:6235"
+}
+
+#  this will work when we will add second service
+# { "serviceName" : "Idfy",
+#   "serviceConfig" : {
+#       "accountId" : "xxxxxxx",
+#       "apiKey" : "xxxxxxx",
+#       "secret" : "xxxxxxx",
+#       "url" : "http://localhost:6235"
+#   }
+# }
