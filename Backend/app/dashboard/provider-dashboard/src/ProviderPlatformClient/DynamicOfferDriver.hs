@@ -29,6 +29,7 @@ import qualified Dashboard.ProviderPlatform.DriverReferral as Common
 import qualified Dashboard.ProviderPlatform.Merchant as Common
 import qualified Dashboard.ProviderPlatform.Message as Common
 import qualified Dashboard.ProviderPlatform.Ride as Common
+import qualified Dashboard.ProviderPlatform.Issue as Common
 import qualified Data.ByteString.Lazy as LBS
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
@@ -48,7 +49,8 @@ data DriverOfferAPIs = DriverOfferAPIs
     bookings :: BookingsAPIs,
     merchant :: MerchantAPIs,
     message :: MessageAPIs,
-    driverReferral :: DriverReferralAPIs
+    driverReferral :: DriverReferralAPIs,
+    issue :: IssueAPIs
   }
 
 data DriversAPIs = DriversAPIs
@@ -114,6 +116,12 @@ data MessageAPIs = MessageAPIs
     messageReceiverList :: Id Common.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Euler.EulerClient Common.MessageReceiverListResponse
   }
 
+data IssueAPIs = IssueAPIs
+  { issueList :: Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe Text -> Maybe Text -> Euler.EulerClient Common.IssueReportListResponse,
+    issueUpdate :: Id Common.IssueReport -> Common.IssueUpdateReq -> Euler.EulerClient APISuccess,
+    issueAddComment :: Id Common.IssueReport -> Common.IssueAddCommentReq -> Euler.EulerClient APISuccess
+  }
+
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
 mkDriverOfferAPIs merchantId token = do
   let drivers = DriversAPIs {..}
@@ -122,6 +130,7 @@ mkDriverOfferAPIs merchantId token = do
   let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
   let message = MessageAPIs {..}
+  let issue = IssueAPIs {..}
   DriverOfferAPIs {..}
   where
     driversClient
@@ -129,7 +138,8 @@ mkDriverOfferAPIs merchantId token = do
       :<|> bookingsClient
       :<|> merchantClient
       :<|> messageClient
-      :<|> driverReferralClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
+      :<|> driverReferralClient
+      :<|> issueClient = clientWithMerchant (Proxy :: Proxy BPP.API') merchantId token
 
     driverDocumentsInfo
       :<|> listDrivers
@@ -183,6 +193,10 @@ mkDriverOfferAPIs merchantId token = do
       :<|> messageInfo
       :<|> messageDeliveryInfo
       :<|> messageReceiverList = messageClient
+    
+    issueList
+      :<|> issueUpdate
+      :<|> issueAddComment = issueClient
 
 callDriverOfferBPP ::
   forall m r b c.
