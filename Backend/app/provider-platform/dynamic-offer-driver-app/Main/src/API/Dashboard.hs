@@ -18,6 +18,7 @@ import qualified API.Dashboard.Booking as Booking
 import qualified API.Dashboard.Driver as Driver
 import qualified API.Dashboard.DriverReferral as DriverReferral
 import qualified API.Dashboard.Exotel as Exotel
+import qualified API.Dashboard.Issue as Issue
 import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Message as Message
 import qualified API.Dashboard.Ride as Ride
@@ -42,6 +43,7 @@ type API' =
            :<|> Merchant.API
            :<|> Message.API
            :<|> DriverReferral.API
+           :<|> Issue.API
        )
 
 handler :: FlowServer API
@@ -53,6 +55,7 @@ handler =
         :<|> Merchant.handler merchantId
         :<|> Message.handler merchantId
         :<|> DriverReferral.handler merchantId
+        :<|> Issue.handler merchantId
   )
     :<|> exotelHandler
 
