@@ -1,0 +1,55 @@
+name: "CI"
+on:
+  push:
+  pull_request:
+jobs:
+  Nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+      - uses: nixbuild/nix-quick-install-action@v21
+        with:
+          nix_conf: |
+            experimental-features = nix-command flakes
+      - uses: cachix/cachix-action@v12
+        with:
+          name: nammayatri
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Download from Nix cache + build external deps
+        run: |
+          nix develop -L -j 4
+      - name: Build all packages 🔨
+        id: build-nix
+        run: |
+          nix build -L .#all
+      - name: Build Docker image 🔨
+        id: build-docker
+        if: ${{ contains(fromJson('["refs/heads/main", "refs/heads/nixify"]'), github.ref) }}
+        run: |
+          docker load -i $(nix build -L --no-allow-dirty --print-out-paths .#dockerImage)
+          docker images
+      - name: Push Docker image 🚀
+        if: ${{ contains(fromJson('["refs/heads/main", "refs/heads/nixify"]'), github.ref) }}
+        run: |
+          docker push $(nix eval --raw .#dockerImageName)
+      - name: Flake checks 🧪
+        if: false
+        run: |
+          # Because 'nix flake check' is not system-aware
+          # See https://srid.ca/haskell-template/checks
+          nix run nixpkgs#sd \
+            'systems = nixpkgs.lib.systems.flakeExposed' \
+            'systems = [ "x86_64-linux" ]' \
+            flake.nix
+
+          # Sandbox must be disabed for:
+          # https://github.com/srid/haskell-flake/issues/21
+          nix \
+            --option sandbox false \
+            flake check -L

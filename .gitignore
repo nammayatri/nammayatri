@@ -1,1 +1,5 @@
 .vscode/
+
+# Nix files
+.direnv
+/result
