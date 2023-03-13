@@ -12,29 +12,22 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module App.Routes where
+module Storage.Queries.Location.TagCategoryMapping where
 
-import App.Types
-import EulerHS.Prelude
-import Kernel.External.Verification.Idfy.Client
-import Kernel.Types.App (FlowServerR)
-import qualified Product.Idfy as P
-import Servant hiding (throwError)
+import qualified Domain.Types.Location.TagCategoryMapping as D
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Storage.Tabular.Location.TagCategoryMapping
 
-type MockIdfyAPI =
-  VerifyDLAPI
-    :<|> VerifyRCAPI
-    :<|> ValidateImage
-    :<|> ExtractDLImage
-    :<|> ExtractRCAPI
+create :: D.TagCategoryMapping -> SqlDB ()
+create = Esq.create
 
-mockIdfyAPI :: Proxy MockIdfyAPI
-mockIdfyAPI = Proxy
+findById :: Transactionable m => Id D.TagCategoryMapping -> m (Maybe D.TagCategoryMapping)
+findById = Esq.findById
 
-mockIdfyServer :: FlowServerR AppEnv MockIdfyAPI
-mockIdfyServer =
-  P.verifyDL
-    :<|> P.verifyRC
-    :<|> P.validateImage
-    :<|> P.extractDLImage
-    :<|> P.extractRCImage
+findByTag :: Transactionable m => Text -> m (Maybe D.TagCategoryMapping)
+findByTag tag = findOne $ do
+  tagCatMapping <- from $ table @TagCategoryMappingT
+  where_ $ tagCatMapping ^. TagCategoryMappingTag ==. val tag
+  pure tagCatMapping

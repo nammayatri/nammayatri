@@ -35,9 +35,8 @@ import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment
-import qualified Idfy.Flow as Idfy
-import qualified Idfy.Types as Idfy
 import Kernel.External.Encryption
+import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Types.APISuccess
@@ -56,6 +55,7 @@ import qualified Storage.Queries.DriverOnboarding.OperatingCity as QCity
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
+import qualified Tools.Verification as Verification
 
 data DriverRCReq = DriverRCReq
   { vehicleRegistrationCertNumber :: Text,
@@ -100,10 +100,12 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
     )
     $ do
       image <- getImage imageId
-      resp <- Idfy.extractRCImage image Nothing
-      case resp.result of
-        Just result -> do
-          let extractRCNumber = removeSpaceAndDash <$> result.extraction_output.registration_number
+      resp <-
+        Verification.extractRCImage person.merchantId $
+          Verification.ExtractImageReq {image1 = image, image2 = Nothing}
+      case resp.extractedRC of
+        Just extractedRC -> do
+          let extractRCNumber = removeSpaceAndDash <$> extractedRC.rcNumber
           let rcNumber = removeSpaceAndDash <$> Just vehicleRegistrationCertNumber
           -- disable this check for debugging with mock-idfy
           unless (extractRCNumber == rcNumber) $
@@ -119,16 +121,16 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
       rcNumber <- decrypt driverRC.certificateNumber
       unless (rcNumber == vehicleRegistrationCertNumber) $ throwImageError imageId DriverAlreadyLinked
       unless (driverRC.fitnessExpiry < now) $ throwImageError imageId RCAlreadyUpdated -- RC not expired
-      verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration
+      verifyRCFlow person vehicleRegistrationCertNumber imageId dateOfRegistration
     Nothing -> do
       mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber
       case mVehicleRC of
         Just vehicleRC -> do
           mRCAssociation <- DAQuery.getActiveAssociationByRC vehicleRC.id
           when (isJust mRCAssociation) $ throwImageError imageId RCAlreadyLinked
-          verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration
+          verifyRCFlow person vehicleRegistrationCertNumber imageId dateOfRegistration
         Nothing -> do
-          verifyRCFlow personId vehicleRegistrationCertNumber imageId dateOfRegistration
+          verifyRCFlow person vehicleRegistrationCertNumber imageId dateOfRegistration
 
   return Success
   where
@@ -141,8 +143,8 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
         throwError (ImageInvalidType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-verifyRCFlow :: Id Person.Person -> Text -> Id Image.Image -> Maybe UTCTime -> Flow ()
-verifyRCFlow personId rcNumber imageId dateOfRegistration = do
+verifyRCFlow :: Person.Person -> Text -> Id Image.Image -> Maybe UTCTime -> Flow ()
+verifyRCFlow person rcNumber imageId dateOfRegistration = do
   now <- getCurrentTime
   encryptedRC <- encrypt rcNumber
   configs <- asks (.driverOnboardingConfigs)
@@ -150,8 +152,10 @@ verifyRCFlow personId rcNumber imageId dateOfRegistration = do
         if isNothing dateOfRegistration && configs.checkImageExtraction
           then Domain.Success
           else Domain.Skipped
-  idfyRes <- Idfy.verifyRC rcNumber
-  idfyVerificationEntity <- mkIdfyVerificationEntity idfyRes.request_id now imageExtractionValidation encryptedRC
+  verifyRes <-
+    Verification.verifyRCAsync person.merchantId $
+      Verification.VerifyRCAsyncReq {rcNumber}
+  idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedRC
   runTransaction $ IVQuery.create idfyVerificationEntity
   where
     mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedRC = do
@@ -159,7 +163,7 @@ verifyRCFlow personId rcNumber imageId dateOfRegistration = do
       return $
         Domain.IdfyVerification
           { id,
-            driverId = personId,
+            driverId = person.id,
             documentImageId1 = imageId,
             documentImageId2 = Nothing,
             requestId,

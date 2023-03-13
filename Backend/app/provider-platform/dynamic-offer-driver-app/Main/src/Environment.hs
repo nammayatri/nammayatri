@@ -19,7 +19,6 @@ import AWS.S3
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDefCfg
 import EulerHS.Prelude
-import qualified Idfy.Types.IdfyConfig as Idfy
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude (NominalDiffTime)
@@ -83,7 +82,6 @@ data AppCfg = AppCfg
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     driverUnlockDelay :: Seconds,
-    idfyCfg :: Idfy.IdfyConfig,
     dashboardToken :: Text,
     defaultEndRideCfg :: EndRideDefCfg.EndRideDefaultConfig,
     cacheConfig :: CacheConfig,
@@ -144,7 +142,6 @@ data AppEnv = AppEnv
     searchRequestExpirationSeconds :: NominalDiffTime,
     driverQuoteExpirationSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
-    idfyCfg :: Idfy.IdfyConfig,
     dashboardToken :: Text,
     defaultEndRideCfg :: EndRideDefCfg.EndRideDefaultConfig,
     cacheConfig :: CacheConfig,

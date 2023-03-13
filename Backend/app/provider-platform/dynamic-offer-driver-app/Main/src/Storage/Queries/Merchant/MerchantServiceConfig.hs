@@ -36,6 +36,16 @@ findByMerchantIdAndService merchantId serviceName =
       merchantServiceConfig ^. MerchantServiceConfigTId ==. val (toKey (merchantId, serviceName))
     return merchantServiceConfig
 
+-- FIXME this query created for backward compatibility
+findOne :: Transactionable m => ServiceName -> m (Maybe MerchantServiceConfig)
+findOne serviceName =
+  Esq.findOne $ do
+    merchantServiceConfig <- from $ table @MerchantServiceConfigT
+    where_ $
+      merchantServiceConfig ^. MerchantServiceConfigServiceName ==. val serviceName
+    limit 1
+    return merchantServiceConfig
+
 upsertMerchantServiceConfig :: MerchantServiceConfig -> SqlDB ()
 upsertMerchantServiceConfig merchantServiceConfig = do
   now <- getCurrentTime

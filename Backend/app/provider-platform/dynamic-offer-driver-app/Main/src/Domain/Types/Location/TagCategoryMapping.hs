@@ -12,12 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Idfy.Types
-  ( VerificationResponse,
-    RCVerificationOutput,
-    DLVerificationOutput,
-    IdfyResult,
-  )
-where
+module Domain.Types.Location.TagCategoryMapping where
 
-import Idfy.Types.Response
+import Domain.Types.Location.SpecialLocation
+import Kernel.Prelude
+import Kernel.Types.Id
+
+data TagCategoryMapping = TagCategoryMapping
+  { id :: Id TagCategoryMapping,
+    category :: Category,
+    tag :: Text,
+    createdAt :: UTCTime
+  }

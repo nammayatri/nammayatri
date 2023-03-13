@@ -25,6 +25,7 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.SMS.Interface as Sms
+import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -64,6 +65,7 @@ instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
       Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> decodeFromText configJSON
       Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> decodeFromText configJSON
       Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> decodeFromText configJSON
+      Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> decodeFromText configJSON
     return $
       Domain.MerchantServiceConfig
         { merchantId = fromKey merchantId,
@@ -87,3 +89,5 @@ getServiceNameConfigJSON = \case
     Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, encodeToText cfg)
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, encodeToText cfg)
+  Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
+    Verification.IdfyConfig cfg -> (Domain.VerificationService Verification.Idfy, encodeToText cfg)

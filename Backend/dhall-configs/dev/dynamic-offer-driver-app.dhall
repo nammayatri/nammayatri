@@ -190,7 +190,6 @@ in  { esqDBCfg
     , searchRequestExpirationSeconds = +3600
     , driverQuoteExpirationSeconds = +60
     , driverUnlockDelay = +2
-    , idfyCfg = common.idfyCfg
     , dashboardToken = sec.dashboardToken
     , defaultEndRideCfg = endRideDefCfg
     , cacheConfig

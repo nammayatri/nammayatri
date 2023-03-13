@@ -18,20 +18,12 @@ let mockS3Config1 =
 
 let mockS3Config = globalCommon.S3Config.S3MockConf mockS3Config1
 
-let idfyCfg =
-      { account_id = "xxxxxxx"
-      , api_key = "xxxxxxx"
-      , secret = "xxxxxxx"
-      , url = "http://localhost:6235"
-      }
-
 let InfoBIPConfig = { username = "xxxxx", password = "xxxxx", token = "xxxxx" }
 
 in  { smsUserName = "xxxxxxx"
     , smsPassword = "yyyyyyy"
     , exotelCfg
     , s3Config = mockS3Config
-    , idfyCfg
     , googleKey = topSecret.googleKey
     , googleTranslateKey = topSecret.googleTranslateKey
     , slackToken = "xxxxxxx"

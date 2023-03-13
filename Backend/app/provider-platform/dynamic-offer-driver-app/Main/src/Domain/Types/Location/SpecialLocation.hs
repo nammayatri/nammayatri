@@ -12,24 +12,29 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Idfy.Types.IdfyConfig where
+module Domain.Types.Location.SpecialLocation where
 
-import Data.Aeson hiding (Error)
-import Data.OpenApi hiding (url)
-import EulerHS.Prelude hiding (state)
-import Kernel.Types.App
-import Kernel.Utils.Dhall (FromDhall)
+import Kernel.External.Maps (LatLong)
+import Kernel.Prelude
+import Kernel.Types.Id
 
-data IdfyConfig = IdfyConfig
-  { account_id :: AccountId,
-    api_key :: ApiKey,
-    secret :: Text,
-    url :: BaseUrl
+data Category
+  = SureMetro
+  | SureAirport
+  | SureSchool
+  | SureHospital
+  | SureStation
+  | UnSureMetro
+  | UnSureAirport
+  | UnSureSchool
+  | UnSureHospital
+  | UnSureStation
+  deriving (Read, Show)
+
+data SpecialLocation = SpecialLocation
+  { id :: Id SpecialLocation,
+    locationName :: Text,
+    category :: Category,
+    gates :: [LatLong],
+    createdAt :: UTCTime
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema, FromDhall)
-
-type AccountId = Text
-
-type ApiKey = Text
-
-data StatusCheck = VALID | INVALID deriving (Generic, ToJSON, Show, FromJSON, ToSchema)

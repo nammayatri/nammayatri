@@ -27,7 +27,6 @@ import qualified Domain.Types.Person as Person
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
-import qualified Idfy.Flow as Idfy
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
@@ -40,6 +39,7 @@ import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverOnboarding.Image as Query
 import qualified Storage.Queries.Person as Person
+import qualified Tools.Verification as Verification
 
 data ImageValidateRequest = ImageValidateRequest
   { image :: Text,
@@ -89,15 +89,6 @@ createPath driverId merchantId imageType = do
         <> ".png"
     )
 
-getDocType :: Domain.ImageType -> Text
-getDocType Domain.DriverLicense = "ind_driving_license"
-getDocType Domain.VehicleRegistrationCertificate = "ind_rc"
-
-getImageType :: Text -> Domain.ImageType
-getImageType "ind_driving_license" = Domain.DriverLicense
-getImageType "ind_rc" = Domain.VehicleRegistrationCertificate
-getImageType _ = Domain.VehicleRegistrationCertificate
-
 validateImage ::
   Bool ->
   Maybe Merchant ->
@@ -130,22 +121,28 @@ validateImage isDashboard mbMerchant personId ImageValidateRequest {..} = do
   runTransaction $ Query.create imageEntity
 
   -- skipping validation for rc as validation not available in idfy
-  unless (imageType == Domain.VehicleRegistrationCertificate) $ do
-    validationOutput <- Idfy.validateImage image (getDocType imageType)
-    checkErrors imageEntity.id imageType validationOutput.result
+  validationOutput <-
+    Verification.validateImage merchantId $
+      Verification.ValidateImageReq {image, imageType = castImageType imageType}
+  when validationOutput.validationAvailable $ do
+    checkErrors imageEntity.id imageType validationOutput.detectedImage
   runTransaction $ Query.updateToValid imageEntity.id
 
   return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed
-    checkErrors id_ imgType (Just result) = do
-      let outputImageType = getImageType result.detected_doc_type
-      unless (outputImageType == imgType) $ throwImageError id_ (ImageInvalidType (show imgType) (show outputImageType))
+    checkErrors id_ imgType (Just detectedImage) = do
+      let outputImageType = detectedImage.imageType
+      unless (outputImageType == castImageType imgType) $ throwImageError id_ (ImageInvalidType (show imgType) (show outputImageType))
 
-      unless (fromMaybe False result.is_readable) $ throwImageError id_ ImageNotReadable
+      unless (fromMaybe False detectedImage.isReadable) $ throwImageError id_ ImageNotReadable
 
-      unless (maybe False (60 <) result.readability.confidence) $
+      unless (maybe False (60 <) detectedImage.confidence) $
         throwImageError id_ ImageLowQuality
+
+castImageType :: Domain.ImageType -> Verification.ImageType
+castImageType Domain.DriverLicense = Verification.DriverLicense
+castImageType Domain.VehicleRegistrationCertificate = Verification.VehicleRegistrationCertificate
 
 validateImageFile ::
   Bool ->

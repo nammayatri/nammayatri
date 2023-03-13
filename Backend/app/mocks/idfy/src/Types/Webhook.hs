@@ -15,8 +15,7 @@
 module Types.Webhook where
 
 import EulerHS.Prelude
-import Idfy.Types.Request
-import Idfy.Types.Response
+import Kernel.External.Verification.Interface.Idfy
 import Kernel.Randomizer
 import Kernel.Utils.Time
 
