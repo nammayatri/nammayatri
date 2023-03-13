@@ -185,6 +185,7 @@ data RideInfoRes = RideInfoRes
     estimatedRideDuration :: Maybe Minutes,
     estimatedFare :: Money,
     actualFare :: Maybe Money,
+    driverOfferedFare :: Maybe Money,
     pickupDuration :: Maybe Minutes,
     rideDuration :: Maybe Minutes,
     bookingStatus :: BookingStatus,
