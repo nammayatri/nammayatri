@@ -16,6 +16,7 @@ module Domain.Action.Dashboard.Message where
 
 import qualified AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
+import Dashboard.Common.Message (CSVType (..))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -46,6 +47,7 @@ import qualified Storage.Queries.Message.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery
 import qualified Storage.Queries.Message.MessageTranslation as MTQuery
+import qualified Storage.Queries.Person as QP
 
 createFilePath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
@@ -180,7 +182,7 @@ instance FromNamedRecord CSVRow where
 
 sendMessage :: ShortId DM.Merchant -> Common.SendMessageRequest -> Flow APISuccess
 sendMessage merchantShortId Common.SendMessageRequest {..} = do
-  _ <- findMerchantByShortId merchantShortId
+  merchantId <- findMerchantByShortId merchantShortId
   message <- Esq.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
   -- reading of csv file
   csvData <- L.runIO $ BS.readFile csvFile
@@ -188,8 +190,12 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
     case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CSVRow)) of
       Left err -> throwError . InvalidRequest $ show err
       Right (_, v) -> pure $ V.toList $ V.map (Id . T.pack . (.driverId)) v
-
-  fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) driverIds
+  allDriverIds <- case _type of
+    Exclude -> do
+      tempAllDriverIds <- Esq.runInReplica (QP.findAllDriverId (merchantId.id))
+      pure $filter (`notElem` driverIds) tempAllDriverIds
+    Include -> pure driverIds
+  fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) allDriverIds
 
   return Success
   where

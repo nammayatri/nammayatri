@@ -292,6 +292,19 @@ findByEmailAndMerchant merchantId email_ =
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
+findAllDriverId :: Transactionable m => Id Merchant -> m [Id Driver]
+findAllDriverId merchantId = do
+  res <- Esq.findAll $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonRole ==. val Person.DRIVER
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+    return $ person ^. PersonTId
+  pure $ personIdToDrivrId <$> res
+  where
+    personIdToDrivrId :: Id Person -> Id Driver
+    personIdToDrivrId = cast
+
 updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB ()
 updateMerchantIdAndMakeAdmin personId merchantId = do
   now <- getCurrentTime
