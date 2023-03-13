@@ -27,7 +27,8 @@ data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,
     maxNumberOfBatches :: Int,
     minDriverBatchSize :: Int,
-    poolSortingType :: PoolSortingType
+    poolSortingType :: PoolSortingType,
+    driveCurrentlyOnRideThreshold :: Int
   }
   deriving (Generic, FromDhall)
 

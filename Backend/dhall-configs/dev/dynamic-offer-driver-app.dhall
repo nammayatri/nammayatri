@@ -134,6 +134,7 @@ let driverPoolBatchesCfg =
       , minDriverBatchSize = +3
       , maxNumberOfBatches = +3
       , poolSortingType = PoolSortingType.Intelligent
+      , driveCurrentlyOnRideThreshold = +300
       }
 
 let sendSearchRequestJobCfg =

@@ -144,8 +144,10 @@ handler merchantId sReq = do
         return []
       else do
         driverPoolCfg <- getDriverPoolConfig result.distance
-        driverPool <- calculateDriverPool Estimate driverPoolCfg Nothing pickupLatLong org.id True Nothing
-
+        reduceRadiousValue <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.driveCurrentlyOnRideThreshold)
+        driverPoolNotOnRide <- calculateDriverPool Estimate driverPoolCfg Nothing pickupLatLong org.id True Nothing
+        driverPoolCurrentlyOnRide <- calculateDriverPoolCurrentlyOnRide Estimate driverPoolCfg Nothing pickupLatLong org.id Nothing reduceRadiousValue
+        let driverPool = driverPoolNotOnRide ++ map chanegeIntoDriverPoolResult driverPoolCurrentlyOnRide
         logDebug $ "Search handler: driver pool " <> show driverPool
 
         let listOfProtoQuotes = nubBy ((==) `on` (.variant)) driverPool

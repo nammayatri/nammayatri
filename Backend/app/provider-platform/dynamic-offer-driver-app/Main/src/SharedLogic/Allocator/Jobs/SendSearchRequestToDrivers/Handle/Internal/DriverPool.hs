@@ -81,7 +81,10 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
   where
     prepareDriverPoolBatch' previousBatchesDrivers = do
       radiusStep <- getPoolRadiusStep searchReq.id
-      allNearbyDrivers <- calcDriverPool radiusStep
+      allNearbyDriversCurrentlyNotOnRide <- calcDriverPool radiusStep
+      reduceRadiousValue <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.driveCurrentlyOnRideThreshold)
+      allNearbyDriversCurrentlyOnRide <- calcDriverCurrenlyOnRidePool radiusStep reduceRadiousValue
+      let allNearbyDrivers = allNearbyDriversCurrentlyNotOnRide ++ allNearbyDriversCurrentlyOnRide
       sortingType <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.poolSortingType)
       batchSize <- asks (.sendSearchRequestJobCfg.driverPoolBatchesCfg.driverBatchSize)
       logDebug $ "DriverPool-" <> show allNearbyDrivers
@@ -147,6 +150,12 @@ prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-
       let pickupLoc = searchReq.fromLocation
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
       calculateDriverPoolWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId True (Just radiusStep)
+    calcDriverCurrenlyOnRidePool radiusStep reduceRadiousValue = do
+      let vehicleVariant = searchReq.vehicleVariant
+          merchantId = searchReq.providerId
+      let pickupLoc = searchReq.fromLocation
+      let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
+      calculateDriverCurrentlyOnRideWithActualDist DriverSelection driverPoolCfg (Just vehicleVariant) pickupLatLong merchantId (Just radiusStep) reduceRadiousValue
     fillBatch merchantId sortingType batchSize allNearbyDrivers batch = do
       transporterConfig <- TC.findByMerchantId merchantId
       let batchDriverIds = batch <&> (.driverPoolResult.driverId)

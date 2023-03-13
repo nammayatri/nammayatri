@@ -14,6 +14,7 @@
 
 module SharedLogic.DriverPool.Types
   ( DriverPoolResult (..),
+    DriverPoolResultCurrentlyOnRide (..),
     DriverPoolWithActualDistResult (..),
     PoolRadiusStep,
     PoolBatchNum,
@@ -42,6 +43,19 @@ data DriverPoolResult = DriverPoolResult
     variant :: Vehicle.Variant,
     lat :: Double,
     lon :: Double
+  }
+  deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
+
+data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
+  { driverId :: Id Driver,
+    language :: Maybe Maps.Language,
+    driverDeviceToken :: Maybe FCM.FCMRecipientToken,
+    variant :: Vehicle.Variant,
+    lat :: Double,
+    lon :: Double,
+    destinationLat :: Double,
+    destinationLon :: Double,
+    distanceToPickup :: Meters
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
