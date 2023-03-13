@@ -17,6 +17,7 @@ module SharedLogic.MessageBuilder
     buildSendOTPMessage,
     WelcomeToPlatformMessageReq (..),
     buildWelcomeToPlatformMessage,
+    buildSendAlternateNumberOTPMessage,
   )
 where
 
@@ -62,3 +63,13 @@ buildWelcomeToPlatformMessage merchantId req = do
   return $
     merchantMessage.message
       & T.replace (templateText "orgName") req.orgName
+
+buildSendAlternateNumberOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> BuildSendOTPMessageReq -> m Text
+buildSendAlternateNumberOTPMessage merchantId req = do
+  merchantMessage <-
+    QMM.findByMerchantIdAndMessageKey merchantId DMM.ALTERNATE_NUMBER_OTP
+      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.ALTERNATE_NUMBER_OTP))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "otp") req.otp
+      & T.replace (templateText "hash") req.hash

@@ -27,6 +27,10 @@ module Domain.Action.UI.Driver
     DriverOfferReq (..),
     DriverRespondReq (..),
     DriverStatsRes (..),
+    DriverAlternateNumberReq (..),
+    DriverAlternateNumberRes (..),
+    DriverAlternateNumberOtpReq (..),
+    ResendAuth (..),
     getInformation,
     setActivity,
     listDriver,
@@ -39,6 +43,10 @@ module Domain.Action.UI.Driver
     respondQuote,
     offerQuoteLockKey,
     getStats,
+    validate,
+    verifyAuth,
+    resendOtp,
+    remove,
   )
 where
 
@@ -78,9 +86,11 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow)
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.DriverPool as DP
@@ -97,6 +107,7 @@ import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.RegistrationToken as QRegister
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -105,6 +116,7 @@ import qualified Tools.Auth as Auth
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
+import Tools.SMS as Sms hiding (Success)
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
@@ -121,9 +133,10 @@ data DriverInformationRes = DriverInformationRes
     blocked :: Bool,
     referralCode :: Maybe Text,
     organization :: DM.MerchantAPIEntity,
-    language :: Maybe Maps.Language
+    language :: Maybe Maps.Language,
+    alternateNumber :: Maybe Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 newtype ListDriverRes = ListDriverRes
   {list :: [DriverEntityRes]}
@@ -143,7 +156,8 @@ data DriverEntityRes = DriverEntityRes
     blocked :: Bool,
     verified :: Bool,
     registeredAt :: UTCTime,
-    language :: Maybe Maps.Language
+    language :: Maybe Maps.Language,
+    alternateNumber :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -252,6 +266,28 @@ data DriverStatsRes = DriverStatsRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+data DriverAlternateNumberReq = DriverAlternateNumberReq
+  { mobileCountryCode :: Text,
+    alternateNumber :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype DriverAlternateNumberOtpReq = DriverAlternateNumberOtpReq
+  { otp :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data ResendAuth = ResendAuth
+  { auth :: Text,
+    attemptsLeft :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype DriverAlternateNumberRes = DriverAlternateNumberRes
+  { attempts :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 createDriver ::
   ( HasCacheConfig r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
@@ -345,6 +381,7 @@ getInformation personId = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
+  logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
   let merchantId = person.merchantId
   organization <-
     CQM.findById merchantId
@@ -379,6 +416,7 @@ buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r) => (SP.Person, Drive
 buildDriverEntityRes (person, driverInfo) = do
   vehicleMB <- Esq.runInReplica $ QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber
+  decaltMobNum <- mapM decrypt person.alternateMobileNumber
   return $
     DriverEntityRes
       { id = person.id,
@@ -394,7 +432,8 @@ buildDriverEntityRes (person, driverInfo) = do
         blocked = driverInfo.blocked,
         verified = driverInfo.verified,
         registeredAt = person.createdAt,
-        language = person.language
+        language = person.language,
+        alternateNumber = decaltMobNum
       }
 
 changeDriverEnableState ::
@@ -528,7 +567,9 @@ buildDriver req merchantId = do
         SP.updatedAt = now,
         SP.clientVersion = Nothing,
         SP.whatsappNotificationEnrollStatus = Nothing,
-        SP.bundleVersion = Nothing
+        SP.bundleVersion = Nothing,
+        SP.alternateMobileNumber = Nothing,
+        SP.unencryptedAlternateMobileNumber = Nothing
       }
 
 buildVehicle :: MonadFlow m => CreateVehicle -> Id SP.Person -> Id DM.Merchant -> m SV.Vehicle
@@ -738,3 +779,190 @@ getStats driverId date = do
       { totalRidesOfDay = length rides,
         totalEarningsOfDay = sum . catMaybes $ rides <&> (.fare)
       }
+
+makeAlternatePhoneNumberKey :: Id SP.Person -> Text
+makeAlternatePhoneNumberKey id = "DriverAlternatePhoneNumber:PersonId-" <> id.getId
+
+makeAlternateNumberOtpKey :: Id SP.Person -> Text
+makeAlternateNumberOtpKey id = "DriverAlternateNumberOtp:PersonId-" <> id.getId
+
+makeAlternateNumberAttemptsKey :: Id SP.Person -> Text
+makeAlternateNumberAttemptsKey id = "DriverAlternateNumberAttempts:PersonId-" <> id.getId
+
+cacheAlternateNumberInfo :: (CacheFlow m r) => Id SP.Person -> Text -> Text -> Int -> m ()
+cacheAlternateNumberInfo personId phoneNumber otp attemptsLeft = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let alternatePhoneNumberKey = makeAlternatePhoneNumberKey personId
+  let alternateNumberOtpKey = makeAlternateNumberOtpKey personId
+  let alternateNumberAttemptsKey = makeAlternateNumberAttemptsKey personId
+
+  Redis.setExp alternatePhoneNumberKey phoneNumber expTime
+  Redis.setExp alternateNumberOtpKey otp expTime
+  Redis.setExp alternateNumberAttemptsKey attemptsLeft expTime
+
+removeFromCache :: (CacheFlow m r) => Id SP.Person -> m ()
+removeFromCache personId = do
+  let alternatePhoneNumberKey = makeAlternatePhoneNumberKey personId
+      alternateNumberOtpKey = makeAlternateNumberOtpKey personId
+      alternateNumberAttemptsKey = makeAlternateNumberAttemptsKey personId
+
+  Redis.del alternatePhoneNumberKey
+  Redis.del alternateNumberOtpKey
+  Redis.del alternateNumberAttemptsKey
+
+validationCheck :: Validate DriverAlternateNumberReq
+validationCheck DriverAlternateNumberReq {..} = do
+  sequenceA_
+    [ validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode,
+      validateField "alternateNumber" alternateNumber P.mobileNumber
+    ]
+
+validate ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasCacheConfig r,
+    CoreMetrics m,
+    HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig]
+  ) =>
+  Id SP.Person ->
+  DriverAlternateNumberReq ->
+  m DriverAlternateNumberRes
+validate personId phoneNumber = do
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  altNoAttempt <- runInReplica $ QRegister.getAlternateNumberAttempts personId
+  Redis.whenWithLockRedis (makeAlternatePhoneNumberKey personId) 60 $ do
+    runRequestValidation validationCheck phoneNumber
+    mobileNumberHash <- getDbHash phoneNumber.alternateNumber
+    duplicateCheck (QPerson.findByMobileNumber phoneNumber.mobileCountryCode mobileNumberHash) "Person with this mobile number already exists"
+    smsCfg <- asks (.smsCfg)
+    let fakeOtp = show <$> (useFakeSms smsCfg)
+    otpCode <- maybe generateOTPCode return fakeOtp
+    let otpHash = smsCfg.credConfig.otpHash
+    let altPhoneNumber = phoneNumber.mobileCountryCode <> phoneNumber.alternateNumber
+    let sender = smsCfg.sender
+    withLogTag ("personId_" <> getId person.id) $ do
+      message <-
+        MessageBuilder.buildSendAlternateNumberOTPMessage person.merchantId $
+          MessageBuilder.BuildSendOTPMessageReq
+            { otp = otpCode,
+              hash = otpHash
+            }
+      Sms.sendSMS person.merchantId (Sms.SendSMSReq message altPhoneNumber sender)
+        >>= Sms.checkSmsResult
+    cacheAlternateNumberInfo personId phoneNumber.alternateNumber otpCode altNoAttempt
+  return $ DriverAlternateNumberRes {attempts = altNoAttempt}
+  where
+    duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
+
+validateAuthVerifyReq :: Validate DriverAlternateNumberOtpReq
+validateAuthVerifyReq DriverAlternateNumberOtpReq {..} =
+  sequenceA_
+    [ validateField "otp" otp $ ExactLength 4 `And` star P.digit
+    ]
+
+verifyHitsCountKey :: Id SP.Person -> Text
+verifyHitsCountKey id = "Driver:AlternateNumberOtp:verify:" <> getId id <> ":hitsCount"
+
+verifyAuth ::
+  ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    Redis.HedisFlow m r,
+    EncFlow m r,
+    CoreMetrics m,
+    HasCacheConfig r
+  ) =>
+  Id SP.Person ->
+  DriverAlternateNumberOtpReq ->
+  m APISuccess
+verifyAuth personId req = do
+  Redis.whenWithLockRedis (makeAlternatePhoneNumberKey personId) 60 $ do
+    runRequestValidation validateAuthVerifyReq req
+    person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    checkSlidingWindowLimit (verifyHitsCountKey personId)
+    val <- Redis.get (makeAlternateNumberOtpKey personId)
+    authValueHash <- case val of
+      Nothing -> throwError $ InternalError "Auth not found"
+      Just a -> return a
+    unless (authValueHash == req.otp) $ throwError InvalidAuthData
+    altMobNo <- Redis.get (makeAlternatePhoneNumberKey personId) >>= fromMaybeM (InternalError "Alternate Number not found")
+    encNewNum <- encrypt altMobNo
+    let driver =
+          person
+            { SP.unencryptedAlternateMobileNumber = Just altMobNo,
+              SP.alternateMobileNumber = Just encNewNum
+            }
+    Esq.runTransaction $ do
+      QPerson.updateAlternateMobileNumberAndCode driver
+    removeFromCache personId
+  return Success
+
+resendOtp ::
+  ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    CacheFlow m r,
+    CoreMetrics m,
+    Redis.HedisFlow m r
+  ) =>
+  Id SP.Person ->
+  DriverAlternateNumberReq ->
+  m ResendAuth
+resendOtp personId req = do
+  attemptsLeft :: Int <- do
+    res <- Redis.get (makeAlternateNumberAttemptsKey personId)
+    return $ fromMaybe 0 res
+  logDebug $ "attemptsLeft" <> show attemptsLeft
+  unless (attemptsLeft > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
+  smsCfg <- asks (.smsCfg)
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let altNumber = req.alternateNumber
+      counCode = req.mobileCountryCode
+  otpCode <-
+    Redis.get (makeAlternateNumberOtpKey personId) >>= \case
+      Nothing -> do
+        let fakeOtp = show <$> (useFakeSms smsCfg)
+        newOtp <- maybe generateOTPCode return fakeOtp
+        expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+        Redis.setExp (makeAlternateNumberOtpKey personId) newOtp expTime
+        return newOtp
+      Just a -> return a
+  let otpHash = smsCfg.credConfig.otpHash
+      altphoneNumber = counCode <> altNumber
+      sender = smsCfg.sender
+  withLogTag ("personId_" <> getId person.id) $ do
+    message <-
+      MessageBuilder.buildSendAlternateNumberOTPMessage person.merchantId $
+        MessageBuilder.BuildSendOTPMessageReq
+          { otp = otpCode,
+            hash = otpHash
+          }
+    Sms.sendSMS person.merchantId (Sms.SendSMSReq message altphoneNumber sender)
+      >>= Sms.checkSmsResult
+  updAttempts <- Redis.decrby (makeAlternateNumberAttemptsKey personId) 1
+  let updAttempt = fromIntegral updAttempts
+  return $ ResendAuth {auth = otpCode, attemptsLeft = updAttempt}
+
+remove ::
+  ( EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasCacheConfig r,
+    CoreMetrics m
+  ) =>
+  Id SP.Person ->
+  m APISuccess
+remove personId = do
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let driver =
+        person
+          { SP.unencryptedAlternateMobileNumber = Nothing,
+            SP.alternateMobileNumber = Nothing
+          }
+  Esq.runTransaction $ do
+    QPerson.updateAlternateMobileNumberAndCode driver
+  return Success

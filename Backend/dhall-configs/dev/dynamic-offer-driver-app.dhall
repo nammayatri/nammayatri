@@ -186,6 +186,7 @@ in  { esqDBCfg
     , apiRateLimitOptions
     , slackCfg
     , driverOnboardingConfigs
+    , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
     , smsCfg = smsConfig
     , searchRequestExpirationSeconds = +3600
     , driverQuoteExpirationSeconds = +60

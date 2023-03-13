@@ -50,6 +50,7 @@ mkPersist
       info Text Maybe
       Primary id
       deriving Generic
+      alternateNumberAttempts Int
     |]
 
 instance TEntityKey RegistrationTokenT where

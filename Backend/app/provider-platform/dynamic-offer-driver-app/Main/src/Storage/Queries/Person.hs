@@ -471,3 +471,28 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
   where
     makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, dist :: Double, dlat, dlon, variant) =
       NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) variant dlat dlon
+
+updateAlternateMobileNumberAndCode :: Person -> SqlDB ()
+updateAlternateMobileNumberAndCode person = do
+  now <- getCurrentTime
+  let personT = toTType person
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonAlternateMobileNumberEncrypted =. val (TPerson.alternateMobileNumberEncrypted personT),
+        PersonUnencryptedAlternateMobileNumber =. val (TPerson.unencryptedAlternateMobileNumber personT),
+        PersonAlternateMobileNumberHash =. val (TPerson.alternateMobileNumberHash personT),
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+
+findByMobileNumber :: (Transactionable m) => Text -> DbHash -> m (Maybe Person)
+findByMobileNumber countryCode mobileNumberHash = do
+  findOne $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonMobileCountryCode ==. val (Just countryCode)
+        &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
+                ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberHash)
+            )
+    return person

@@ -98,7 +98,9 @@ data PersonE e = Person
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    unencryptedAlternateMobileNumber :: Maybe Text,
+    alternateMobileNumber :: Maybe (EncryptedHashedField e Text)
   }
   deriving (Generic)
 
@@ -110,10 +112,12 @@ instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
   encryptItem (Person {..}, salt) = do
     mobileNumber_ <- encryptItem $ (,salt) <$> mobileNumber
-    return Person {mobileNumber = mobileNumber_, ..}
+    alternateMobileNumber_ <- encryptItem $ (,salt) <$> alternateMobileNumber
+    return Person {mobileNumber = mobileNumber_, alternateMobileNumber = alternateMobileNumber_, ..}
   decryptItem Person {..} = do
     mobileNumber_ <- fmap fst <$> decryptItem mobileNumber
-    return (Person {mobileNumber = mobileNumber_, ..}, "")
+    alternateMobileNumber_ <- fmap fst <$> decryptItem alternateMobileNumber
+    return (Person {mobileNumber = mobileNumber_, alternateMobileNumber = alternateMobileNumber_, ..}, "")
 
 instance EncryptedItem' Person where
   type UnencryptedItem Person = DecryptedPerson
