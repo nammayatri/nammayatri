@@ -94,11 +94,11 @@
     },
     "cachix-push_3": {
       "locked": {
-        "lastModified": 1677778852,
-        "narHash": "sha256-FefOb/BgLNHyv+1Fn3+D9/+Hdaipf+Fy/GAY2XWPsVQ=",
+        "lastModified": 1678223023,
+        "narHash": "sha256-nZVrSAyh9IAi75UIAy9YNR6Wbdlxv0AHD6A9/DqIVfw=",
         "owner": "juspay",
         "repo": "cachix-push",
-        "rev": "1644299005fffe87df6e366f7e7da87caaa9391e",
+        "rev": "7f284a373d811ac397a25b113025b34ac249f489",
         "type": "github"
       },
       "original": {
@@ -173,11 +173,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1678674276,
-        "narHash": "sha256-Le7cApaFgCbakUzVN1BvXFurrGXOScuSQ7Q6D6/rzZk=",
+        "lastModified": 1678676375,
+        "narHash": "sha256-ilXLQnjzZEtDsohFI6rPgJxxKSq/ooIFC4oBnWGL9MA=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "726db5318c85bae7412c8b8cf8157cbfc2235e31",
+        "rev": "3b2e4bd0679693a8289d0466069ed7d50e8af17f",
         "type": "github"
       },
       "original": {
@@ -197,11 +197,11 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1677948923,
-        "narHash": "sha256-chaw+4M/bhpRpuLJWFdN6ASLOjzdWDMdtIwmyDRt87w=",
+        "lastModified": 1678676375,
+        "narHash": "sha256-ilXLQnjzZEtDsohFI6rPgJxxKSq/ooIFC4oBnWGL9MA=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "0c527f30843bc8a7f3e47658291e43fac00e046a",
+        "rev": "3b2e4bd0679693a8289d0466069ed7d50e8af17f",
         "type": "github"
       },
       "original": {
@@ -420,11 +420,11 @@
     },
     "haskell-flake_2": {
       "locked": {
-        "lastModified": 1678674245,
-        "narHash": "sha256-UD8N8pZyOyB3hRRTP0+Wnyuul8o3RJTjegmRUHAQH/8=",
+        "lastModified": 1678676285,
+        "narHash": "sha256-4sL+ybZ0arICu5QZgeXHHqU4iWNNJ4beN1Figg+9TMU=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "49bed5acd842e0d1056f31f893e50f9913b5c421",
+        "rev": "a039db3d84aff794e67e639bb4600f4194659acb",
         "type": "github"
       },
       "original": {
@@ -435,11 +435,11 @@
     },
     "haskell-flake_3": {
       "locked": {
-        "lastModified": 1678142255,
-        "narHash": "sha256-O2aAzgmXJQ9rL4D8pWTFo6R9QP2oG5K90ttw/yEj4ig=",
+        "lastModified": 1678676285,
+        "narHash": "sha256-4sL+ybZ0arICu5QZgeXHHqU4iWNNJ4beN1Figg+9TMU=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "7997b6fc5dc2f5beb1bbdbb7a5bbed2e6c530dac",
+        "rev": "a039db3d84aff794e67e639bb4600f4194659acb",
         "type": "github"
       },
       "original": {
@@ -867,11 +867,11 @@
         "passetto-hs": "passetto-hs"
       },
       "locked": {
-        "lastModified": 1678675989,
-        "narHash": "sha256-UdBG9LyZk3fC9jmJGxu0K4OuVEeKOO97r9OyVRgDoMY=",
+        "lastModified": 1678676408,
+        "narHash": "sha256-NPw/ZsqeQaRvsGZU4m07VfkfNxQaSoFdrVRuGAYGyNU=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "7bec5a00139bc48b2627458d07ce0001b6516647",
+        "rev": "7d973d0d26c2a94065c9ebe125f35544800900ef",
         "type": "github"
       },
       "original": {
