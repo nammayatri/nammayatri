@@ -170,6 +170,7 @@ rideInfo merchantShortId reqRideId = do
         estimatedRideDuration = secondsToMinutes <$> mbEstimatedDuration,
         estimatedFare = booking.estimatedFare,
         actualFare = ride.fare,
+        driverOfferedFare = Nothing,
         pickupDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just ride.createdAt),
         rideDuration = timeDiffInMinutes <$> ride.tripEndTime <*> ride.tripStartTime,
         bookingStatus = mkBookingStatus ride now,
