@@ -34,8 +34,7 @@ import UnliftIO
 
 data SchedulerHandle t = SchedulerHandle
   { jobHandlers :: JobHandlersList t,
-    getTasksById :: [Id AnyJob] -> SchedulerM [AnyJob t],
-    getReadyTasks :: SchedulerM [AnyJob t],
+    takeReadyTasks :: Int -> SchedulerM [AnyJob t],
     markAsComplete :: Id AnyJob -> SchedulerM (),
     markAsFailed :: Id AnyJob -> SchedulerM (),
     updateErrorCountAndFail :: Id AnyJob -> Int -> SchedulerM (),
@@ -62,20 +61,17 @@ errorLogger e = logError $ "error occured: " <> show e
 
 runnerIteration :: forall t. SchedulerHandle t -> SchedulerM ()
 runnerIteration hnd@SchedulerHandle {..} = do
-  readyTasks <- getReadyTasks
-  logTagDebug "All Tasks - Count" . show $ length readyTasks
-  logTagDebug "All Tasks" . show $ map @_ @(Id AnyJob) (\(AnyJob Job {..}) -> id) readyTasks
   tasksPerIteration <- asks (.tasksPerIteration)
-  availableReadyTasksIds <- pickTasks tasksPerIteration $ map (\(AnyJob Job {..}) -> id) readyTasks
-  logTagDebug "Available tasks - Count" . show $ length availableReadyTasksIds
-  logTagDebug "Available tasks" . show $ availableReadyTasksIds
-  takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
+  takenTasks <- takeReadyTasks tasksPerIteration
+  let takenTasksIds :: [Id AnyJob] = takenTasks <&> (\(AnyJob Job {id}) -> id)
+  logTagDebug "Taken tasks - Count" . show $ length takenTasksIds
+  logTagDebug "Taken tasks" . show $ takenTasksIds
   terminationMVar <- newEmptyMVar
   let inspectTermination = modifyMVarMasked_ terminationMVar pure
       waitAll :: MonadUnliftIO m => [Async a] -> m ()
       waitAll = mapConcurrently_ waitCatch
   flip withAsync (waitEitherTerminationOrExecEnd terminationMVar) $
-    withAsyncList (map runTask takenTasksUpdatedInfo) $ \asyncList -> do
+    withAsyncList (map runTask takenTasks) $ \asyncList -> do
       res <- race (waitAll asyncList) inspectTermination
       case res of
         Left _ -> pure ()
@@ -100,15 +96,6 @@ runnerIteration hnd@SchedulerHandle {..} = do
       registerExecutionResult hnd anyJob res
       releaseLock id
 
-    pickTasks :: Int -> [Id AnyJob] -> SchedulerM [Id AnyJob]
-    pickTasks _ [] = pure []
-    pickTasks 0 _ = pure []
-    pickTasks tasksRemain (x : xs) = do
-      gainedLock <- attemptTaskLockAtomic x
-      if gainedLock
-        then (x :) <$> pickTasks (tasksRemain - 1) xs
-        else pickTasks tasksRemain xs
-
 withAsyncList :: MonadUnliftIO m => [m a] -> ([Async a] -> m b) -> m b
 withAsyncList actions func =
   flip runCont func $ traverse (cont . withAsync) actions
@@ -121,13 +108,6 @@ registerDuration millis _ = do
 
 -- TODO: refactor the prometheus metrics to measure data that we really need
 
-attemptTaskLockAtomic :: Id AnyJob -> SchedulerM Bool
-attemptTaskLockAtomic jobId = do
-  expirationTime <- asks (.expirationTime)
-  Hedis.tryLockRedis jobId.getId (fromInteger expirationTime)
-
--- TODO: refactor this function so that there was no duplication with the `tryLockRedis` function
-
 releaseLock :: Id AnyJob -> SchedulerM ()
 releaseLock jobId = Hedis.unlockRedis jobId.getId
 
@@ -139,15 +119,7 @@ executeTask SchedulerHandle {..} (AnyJob job) = do
   case findJobHandlerFunc job jobHandlers of
     Nothing -> failExecution $ "No handler function found for the job type = " <> show (fromSing $ jobType $ jobInfo job)
     Just handlerFunc_ -> do
-      -- TODO: Fix this logic, that's not how we have to handle this issue
-      latestState' <- getTasksById [id job]
-      case latestState' of
-        [AnyJob latestState] ->
-          if scheduledAt latestState > scheduledAt job || status latestState /= Pending
-            then pure DuplicateExecution
-            else do
-              handlerFunc_ job
-        _ -> failExecution "Found multiple tasks by single it."
+      handlerFunc_ job
   where
     failExecution description = do
       logError $ "failed to execute job: " <> description

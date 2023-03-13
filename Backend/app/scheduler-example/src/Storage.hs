@@ -43,17 +43,23 @@ findAll = liftIO $ Map.elems <$> readMVar jobsList
 findById :: Id AnyJob -> SchedulerM (Maybe (AnyJob SchedulerJobType))
 findById jobId = liftIO $ Map.lookup jobId <$> readMVar jobsList
 
-getTasksById :: [Id AnyJob] -> SchedulerM [AnyJob SchedulerJobType]
-getTasksById ids = liftIO $ filter (\(AnyJob Job {id}) -> id `elem` ids) . Map.elems <$> readMVar jobsList
-
-getReadyTasks :: SchedulerM [AnyJob SchedulerJobType]
-getReadyTasks = do
+takeReadyTasks :: Int -> SchedulerM [AnyJob SchedulerJobType]
+takeReadyTasks lim = do
   now <- getCurrentTime
-  liftIO $ filter (filterFunc now) . Map.elems <$> readMVar jobsList
+  liftIO $
+    modifyMVar jobsList $ \map_' -> do
+      let jobs = take lim $ filter (filterFunc now) $ Map.elems map_'
+      return $
+        (,jobs) -- modify map_', but return jobs
+          <$> foldlFlip map_' jobs
+          $ \map_ (AnyJob Job {id = jobId}) -> do
+            let mbJob = Map.lookup jobId map_
+            maybe map_ (\(AnyJob job) -> Map.insert jobId (AnyJob job{status = InProgress, updatedAt = now}) map_) mbJob
   where
     filterFunc :: UTCTime -> AnyJob SchedulerJobType -> Bool
     filterFunc now (AnyJob Job {scheduledAt, status}) =
       status == Pending && scheduledAt <= now
+    foldlFlip m a f = foldl f m a
 
 updateStatus :: JobStatus -> Id AnyJob -> SchedulerM ()
 updateStatus newStatus jobId = do

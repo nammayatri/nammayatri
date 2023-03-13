@@ -36,8 +36,7 @@ import Storage as QSJ
 schedulerHandle :: LoggerResources -> SchedulerHandle SchedulerJobType
 schedulerHandle loggerRes =
   SchedulerHandle
-    { getTasksById = QSJ.getTasksById,
-      getReadyTasks = QSJ.getReadyTasks,
+    { takeReadyTasks = QSJ.takeReadyTasks,
       markAsComplete = QSJ.markAsComplete,
       markAsFailed = QSJ.markAsFailed,
       updateErrorCountAndFail = QSJ.updateErrorCountAndFail,

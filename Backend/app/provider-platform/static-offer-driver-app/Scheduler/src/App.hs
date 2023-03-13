@@ -31,8 +31,7 @@ import qualified Storage.Queries.RideRequest as RideRequest
 schedulerHandle :: SchedulerHandle SchedulerJobType
 schedulerHandle =
   SchedulerHandle
-    { getTasksById = QSJ.getTasksById,
-      getReadyTasks = QSJ.getReadyTasks,
+    { takeReadyTasks = QSJ.takeReadyTasks,
       markAsComplete = QSJ.markAsComplete,
       markAsFailed = QSJ.markAsFailed,
       updateErrorCountAndFail = QSJ.updateErrorCountAndFail,

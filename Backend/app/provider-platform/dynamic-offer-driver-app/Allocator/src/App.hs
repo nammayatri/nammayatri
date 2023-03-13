@@ -34,8 +34,7 @@ import qualified Storage.CachedQueries.Merchant as Storage
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobType
 allocatorHandle flowRt env =
   SchedulerHandle
-    { getTasksById = QAllJ.getTasksById,
-      getReadyTasks = QAllJ.getReadyTasks,
+    { takeReadyTasks = QAllJ.takeReadyTasks,
       markAsComplete = QAllJ.markAsComplete,
       markAsFailed = QAllJ.markAsFailed,
       updateErrorCountAndFail = QAllJ.updateErrorCountAndFail,

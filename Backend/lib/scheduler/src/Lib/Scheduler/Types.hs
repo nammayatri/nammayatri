@@ -96,7 +96,7 @@ data Job (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
     status :: JobStatus
   }
 
-data JobStatus = Pending | Completed | Failed
+data JobStatus = Pending | InProgress | Completed | Failed
   deriving (Show, Eq, Read, Generic)
   deriving (PrettyShow) via Showable JobStatus
 

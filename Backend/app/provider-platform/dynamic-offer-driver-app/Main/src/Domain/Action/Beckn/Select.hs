@@ -31,11 +31,11 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, logInfo)
 import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
-import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
+import Lib.Scheduler.Types
 import SharedLogic.Allocator
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
 import qualified SharedLogic.CacheDistance as CD
-import SharedLogic.DriverPool (getDriverPoolConfig)
+import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import SharedLogic.GoogleMaps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
@@ -88,7 +88,7 @@ handler merchantId sReq = do
   let estimateFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
-      <> "; estimated distance = "
+      <> "; estimated duistance = "
       <> show distance
       <> "; estimated base fare:"
       <> show estimateFare

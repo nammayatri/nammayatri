@@ -17,6 +17,7 @@
 module Lib.Scheduler.JobStorageType.DB.Queries where
 
 import Data.Singletons (SingI)
+import Kernel.Data.HeterogeneousList
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
@@ -59,22 +60,52 @@ findAll = Esq.findAll $ from $ table @SchedulerJobT
 findById :: FromTType SchedulerJobT (AnyJob t) => Id AnyJob -> SchedulerM (Maybe (AnyJob t))
 findById = Esq.findById
 
-getTasksById :: FromTType SchedulerJobT (AnyJob t) => [Id AnyJob] -> SchedulerM [AnyJob t]
-getTasksById ids = Esq.findAll $ do
-  job <- from $ table @SchedulerJobT
-  where_ $ job ^. SchedulerJobId `in_` valList (map (.getId) ids)
-  pure job
+-- WITH ExtraFeeList AS (
+-- 	SELECT id, unnest(driver_extra_fee_list) AS extraFee
+-- 	FROM   atlas_driver_offer_bpp.fare_policy
+-- ), MinMaxExtraFee AS (
+-- 	SELECT id, min (extraFee), max (extraFee)
+-- 	FROM ExtraFeeList
+-- 	GROUP BY id
+-- )
+-- UPDATE atlas_driver_offer_bpp.fare_policy AS T1 SET driver_min_extra_fee = T2.min, driver_max_extra_fee = T2.max
+--   FROM MinMaxExtraFee AS T2
+--   WHERE T1.id = T2.id;
 
-getReadyTasks :: FromTType SchedulerJobT (AnyJob t) => SchedulerM [AnyJob t]
-getReadyTasks = do
+takeReadyTasks :: forall t. FromTType SchedulerJobT (AnyJob t) => Int -> SchedulerM [AnyJob t]
+takeReadyTasks lim = do
   now <- getCurrentTime
-  Esq.findAll $ do
-    job <- from $ table @SchedulerJobT
-    where_ $
-      job ^. SchedulerJobStatus ==. val Pending
-        &&. job ^. SchedulerJobScheduledAt <=. val now
-    orderBy [asc $ job ^. SchedulerJobScheduledAt]
-    pure job
+  Esq.runTransaction $ do
+    Esq.rawSql @(Entity SchedulerJobT) @(AnyJob t)
+      "WITH SelectedJobs AS (  \
+      \ SELECT ?  \
+      \ FROM ?  \
+      \ WHERE ? = ?  \
+      \ LIMIT  ? \
+      \ ) \
+      \ UPDATE ? SET ? = ? \
+      \ WHERE ? IN SelectedJobs \
+      \ RETURNING ?;"
+      ( fieldName SchedulerJobId
+          :<+> tableName @SchedulerJobT
+          :<+> fieldName SchedulerJobStatus
+          :<+> Pending
+          :<+> lim
+          :<+> tableName @SchedulerJobT
+          :<+> (fieldName SchedulerJobStatus, fieldName SchedulerJobScheduledAt)
+          :<+> (InProgress, now)
+          :<+> fieldName SchedulerJobId
+          :<+> fieldName SchedulerJobId
+          :<+> mempty
+      )
+
+-- Esq.findAll $ do
+--   job <- from $ table @SchedulerJobT
+--   where_ $
+--     job ^. SchedulerJobStatus ==. val Pending
+--       &&. job ^. SchedulerJobScheduledAt <=. val now
+--   orderBy [asc $ job ^. SchedulerJobScheduledAt]
+--   pure $ job ^. SchedulerJobTId
 
 updateStatus :: JobStatus -> Id AnyJob -> SchedulerM ()
 updateStatus newStatus jobId = do
@@ -100,7 +131,12 @@ reSchedule :: Id AnyJob -> UTCTime -> SchedulerM ()
 reSchedule jobId newScheduleTime = do
   now <- getCurrentTime
   Esq.runTransaction . Esq.update $ \job -> do
-    set job [SchedulerJobScheduledAt =. val newScheduleTime, SchedulerJobUpdatedAt =. val now]
+    set
+      job
+      [ SchedulerJobScheduledAt =. val newScheduleTime,
+        SchedulerJobUpdatedAt =. val now,
+        SchedulerJobStatus =. val Pending
+      ]
     where_ $ job ^. SchedulerJobId ==. val jobId.getId
 
 updateFailureCount :: Id AnyJob -> Int -> SchedulerM ()
