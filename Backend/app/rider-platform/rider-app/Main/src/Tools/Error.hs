@@ -19,6 +19,9 @@ module Tools.Error (module Tools.Error) where
 import EulerHS.Prelude
 import Kernel.Types.Error as Tools.Error
 import Kernel.Types.Error.BaseError.HTTPError
+import Kernel.Types.Error.BaseError.HTTPError.FromResponse
+import Network.HTTP.Types (Status (statusCode))
+import Servant.Client (ResponseF (responseStatusCode))
 
 data RatingError
   = InvalidRatingValue
@@ -50,3 +53,31 @@ instance IsHTTPError EstimateError where
   toHttpCode _ = E400
 
 instance IsAPIError EstimateError
+
+data TrackUrlError
+  = InvalidRideRequest
+  | TrackingUrlFailed
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''TrackUrlError
+
+instance FromResponse TrackUrlError where
+  fromResponse resp = case statusCode $ responseStatusCode resp of
+    400 -> Just InvalidRideRequest
+    _ -> Just TrackingUrlFailed
+
+instance IsBaseError TrackUrlError where
+  toMessage = \case
+    InvalidRideRequest -> Just "Tracking not available for provided ride."
+    TrackingUrlFailed -> Just "Can't call tracking url"
+
+instance IsHTTPError TrackUrlError where
+  toErrorCode = \case
+    InvalidRideRequest -> "INVALID_RIDE_REQUEST"
+    TrackingUrlFailed -> "TRACKING_URL_FAILED"
+
+  toHttpCode = \case
+    InvalidRideRequest -> E412
+    TrackingUrlFailed -> E500
+
+instance IsAPIError TrackUrlError

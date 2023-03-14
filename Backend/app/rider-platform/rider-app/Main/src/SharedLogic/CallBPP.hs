@@ -37,6 +37,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
 search ::
@@ -141,8 +142,7 @@ callGetDriverLocation ::
 callGetDriverLocation ride = do
   trackingUrl <- ride.trackingUrl & fromMaybeM (RideFieldNotPresent "trackingUrl")
   let eulerClient = Euler.client (Proxy @(Get '[JSON] GetLocationRes))
-  callAPI trackingUrl eulerClient "BPP.driverTrackUrl"
-    >>= fromEitherM (\err -> InternalError $ "Failed to call driverTrackUrl: " <> show err)
+  callApiUnwrappingApiError (identity @TrackUrlError) Nothing (Just "TRACK_URL_NOT_AVAILABLE") trackingUrl eulerClient "BPP.driverTrackUrl"
 
 feedback ::
   ( MonadFlow m,
