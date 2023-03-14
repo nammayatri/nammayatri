@@ -35,6 +35,7 @@ import qualified API.UI.Route as Route
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
 import qualified API.UI.Whatsapp as Whatsapp
+import qualified API.UI.Issue as Issue
 import Environment
 import Kernel.Prelude
 import Servant
@@ -61,6 +62,7 @@ type API =
            :<|> Message.API
            :<|> Performance.API
            :<|> DriverReferral.API
+           :<|> Issue.API
        )
 
 handler :: FlowServer API
@@ -83,3 +85,4 @@ handler =
     :<|> Message.handler
     :<|> Performance.handler
     :<|> DriverReferral.handler
+    :<|> Issue.handler

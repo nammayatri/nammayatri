@@ -18,6 +18,7 @@ import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
+import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.DriverReferral as Common
@@ -54,4 +55,5 @@ data Endpoint
   | CustomerAPI Common.CustomerEndpoint
   | MessageAPI Common.MessageEndpoint
   | ExotelAPI Common.ExotelEndpoint
+  | IssueAPI Common.IssueEndpoint
   deriving (Show, Read)

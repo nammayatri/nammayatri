@@ -1,4 +1,4 @@
-name: dynamic-offer-driver-app
+name: shared-services
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
@@ -88,7 +88,6 @@ dependencies:
   - beckn-services
   - unordered-containers
   - dashboard-helper-api
-  - shared-services
   - extra
   - scheduler
   - singletons
@@ -112,18 +111,3 @@ library:
     - mobility-core
     - beckn-spec
     - location-updates
-
-executables:
-  dynamic-offer-driver-app-exe:
-    main: Main.hs
-    source-dirs: server
-    other-modules: []
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - '"-with-rtsopts=-N -T"'
-    dependencies:
-      - dynamic-offer-driver-app
-      - mobility-core
-      - beckn-spec
-      - beckn-services

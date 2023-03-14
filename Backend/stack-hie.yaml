@@ -61,6 +61,7 @@ packages:
   - app/utils/image-api-helper
   - lib/beckn-spec
   - lib/beckn-services
+  - lib/shared-services
   - lib/location-updates
   - lib/scheduler
   - test

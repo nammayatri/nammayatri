@@ -33,6 +33,8 @@ data Receiver
 
 data Booking
 
+data IssueReport
+
 -- | Hide secrets before storing request (or response) to DB.
 --
 -- By default considered that request type has no secrets.
