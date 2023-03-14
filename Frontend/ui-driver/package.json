@@ -34,8 +34,7 @@
     "push": "bash -xe push.sh",
     "push:sandbox": "bash -xe push.sh --sandbox",
     "clean:s": "sh cleanSpago.sh",
-    "clean:b": "sh cleanBower.sh",
-    "prepare": "cd ../.. && husky install Frontend/ui-driver/.husky"
+    "clean:b": "sh cleanBower.sh"
   },
   "author": "juspay",
   "license": "ISC",
