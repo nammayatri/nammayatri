@@ -83,7 +83,7 @@ let cacheConfig = { configsExpTime = +86400 }
 let driverPoolCfg =
       { defaultRadiusOfSearch = +5000, driverPositionInfoExpiry = Some +36000 }
 
-let endRideDefCfg =
+let defaultEndRideCfg =
       { pickupLocThreshold = +500
       , dropLocThreshold = +500
       , rideTravelledDistThresholdWhenPickupOrDestIsDiff = +700
@@ -134,7 +134,7 @@ in  { esqDBCfg
     , driverEstimatedPickupDuration = +300
     , dashboardToken = sec.dashboardToken
     , driverReachedDistance = +100
-    , defaultEndRideCfg = endRideDefCfg
+    , defaultEndRideCfg
     , cacheConfig
     , driverLocationUpdateRateLimitOptions
     , driverPoolCfg

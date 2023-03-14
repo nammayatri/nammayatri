@@ -141,7 +141,7 @@ let sendSearchRequestJobCfg =
 
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
-let endRideDefCfg =
+let defaultEndRideCfg =
       { pickupLocThreshold = +500
       , dropLocThreshold = +500
       , rideTimeEstimatedThreshold = +900
@@ -191,7 +191,7 @@ in  { esqDBCfg
     , driverQuoteExpirationSeconds = +60
     , driverUnlockDelay = +2
     , dashboardToken = sec.dashboardToken
-    , defaultEndRideCfg = endRideDefCfg
+    , defaultEndRideCfg
     , cacheConfig
     , metricsSearchDurationTimeout = +45
     , driverLocationUpdateRateLimitOptions
