@@ -924,7 +924,7 @@ resendOtp personId req = do
   otpCode <-
     Redis.get (makeAlternateNumberOtpKey personId) >>= \case
       Nothing -> do
-        let fakeOtp = show <$> (useFakeSms smsCfg)
+        let fakeOtp = show <$> useFakeSms smsCfg
         newOtp <- maybe generateOTPCode return fakeOtp
         expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
         Redis.setExp (makeAlternateNumberOtpKey personId) newOtp expTime
