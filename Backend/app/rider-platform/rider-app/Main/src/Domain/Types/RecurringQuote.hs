@@ -3,12 +3,6 @@
 
 module Domain.Types.RecurringQuote where
 
-import Data.OpenApi
-  ( ToSchema (..),
-    genericDeclareNamedSchema,
-  )
-import qualified Domain.Types.DriverOffer as DDriverOffer
-import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
@@ -16,8 +10,6 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import qualified Tools.JSON as J
-import qualified Tools.Schema as S
 
 data RecurringQuote = RecurringQuote
   { id :: Id RecurringQuote,
@@ -27,6 +19,7 @@ data RecurringQuote = RecurringQuote
     estimatedTotalFare :: Money,
     providerId :: Text,
     providerUrl :: BaseUrl,
+    vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,
     quoteDetails :: RecurringQuoteDetails,
     createdAt :: UTCTime
@@ -44,8 +37,6 @@ data RecurringQuoteAPIEntity = RecurringQuoteAPIEntity
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
-    agencyName :: Text,
-    agencyNumber :: Text,
     tripTerms :: [Text],
     quoteDetails :: RecurringQuoteAPIDetails,
     createdAt :: UTCTime

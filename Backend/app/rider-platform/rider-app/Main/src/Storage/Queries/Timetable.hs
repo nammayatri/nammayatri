@@ -5,7 +5,7 @@ module Storage.Queries.Timetable where
 
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TLB
-import Database.Esqueleto.Experimental (SqlBackend, rawExecute)
+import Database.Esqueleto.Experimental (rawExecute)
 import Database.Esqueleto.Internal.Internal as E
 import Database.Persist
 import Database.Persist.SqlBackend
