@@ -140,7 +140,8 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
     unless (driver.role == Person.DRIVER) $ throwError AccessDenied
     LocUpd.whenWithLocationUpdatesLock driver.id $ do
       mbOldLoc <- findDriverLocation
-      case filterNewWaypoints mbOldLoc of
+      filterNewWayPoints <- filterNewWaypointsList mbOldLoc
+      case filterNewWayPoints of
         [] -> logWarning "Incoming points are older than current one, ignoring"
         (a : ax) -> do
           let newWaypoints = a :| ax
@@ -160,9 +161,10 @@ updateLocationHandler UpdateLocationHandle {..} waypoints = withLogTag "driverLo
             mbRideIdAndStatus
     pure Success
   where
-    filterNewWaypoints mbOldLoc = do
+    filterNewWaypointsList mbOldLoc = do
+      currTime <- getCurrentTime
       let sortedWaypoint = toList $ NE.sortWith (.ts) waypoints
-      maybe sortedWaypoint (\oldLoc -> filter ((oldLoc.coordinatesCalculatedAt <) . (.ts)) sortedWaypoint) mbOldLoc
+      pure $ maybe sortedWaypoint (\oldLoc -> filter (\newPoint -> oldLoc.coordinatesCalculatedAt < newPoint.ts && newPoint.ts <= currTime) sortedWaypoint) mbOldLoc
 
 checkLocationUpdatesRateLimit ::
   ( Redis.HedisFlow m r,
