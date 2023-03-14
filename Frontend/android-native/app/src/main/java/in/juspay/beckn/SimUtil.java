@@ -1,4 +1,4 @@
-package in.juspay.beckn;
+package in.juspay.mobility;
 
 
 import android.annotation.TargetApi;

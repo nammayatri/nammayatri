@@ -1,4 +1,4 @@
-package in.juspay.beckn;
+package in.juspay.mobility;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -93,7 +93,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import in.juspay.beckn.utils.NotificationUtils;
+import in.juspay.mobility.utils.NotificationUtils;
 import in.juspay.hypersdk.HyperFragment;
 import in.juspay.hypersdk.core.JBridge;
 import in.juspay.hypersdk.core.JuspayServices;

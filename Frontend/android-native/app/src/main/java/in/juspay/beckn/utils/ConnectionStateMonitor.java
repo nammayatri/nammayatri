@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.content.Context;
 import android.net.ConnectivityManager;

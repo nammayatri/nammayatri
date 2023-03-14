@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.animation.ValueAnimator;
 import android.app.Service;
@@ -56,7 +56,7 @@ import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import in.juspay.beckn.R;
+import in.juspay.mobility.R;
 
 public class OverlaySheetService extends Service implements View.OnTouchListener {
 

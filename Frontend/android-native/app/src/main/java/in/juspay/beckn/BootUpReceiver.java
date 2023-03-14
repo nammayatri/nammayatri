@@ -1,11 +1,11 @@
-package in.juspay.beckn;
+package in.juspay.mobility;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.widget.Toast;
 
-import in.juspay.beckn.utils.LocationUpdateService;
+import in.juspay.mobility.utils.LocationUpdateService;
 
 public class BootUpReceiver extends BroadcastReceiver {
 

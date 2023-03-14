@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.app.Notification;
 import android.app.NotificationManager;

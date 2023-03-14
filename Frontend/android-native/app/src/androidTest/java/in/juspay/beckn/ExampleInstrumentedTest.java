@@ -1,4 +1,4 @@
-package in.juspay.beckn;
+package in.juspay.mobility;
 
 import android.content.Context;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
-        assertEquals("in.juspay.beckn", appContext.getPackageName());
+        assertEquals("in.juspay.mobility", appContext.getPackageName());
     }
 }

@@ -1,4 +1,4 @@
-package in.juspay.beckn;
+package in.juspay.mobility;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;

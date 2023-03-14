@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -6,8 +6,8 @@ import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
-import in.juspay.beckn.CommonJsInterface;
-import in.juspay.beckn.MainActivity;
+import in.juspay.mobility.CommonJsInterface;
+import in.juspay.mobility.MainActivity;
 
 public class NetworkBroadcastReceiver extends BroadcastReceiver {
     Context context;

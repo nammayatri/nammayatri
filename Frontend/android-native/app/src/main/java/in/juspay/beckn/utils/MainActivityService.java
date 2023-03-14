@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.widget.Toast;
 
-import in.juspay.beckn.MainActivity;
+import in.juspay.mobility.MainActivity;
 
 public class MainActivityService extends BroadcastReceiver {
     @Override

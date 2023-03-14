@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.annotation.SuppressLint;
 import android.app.AlarmManager;
@@ -49,8 +49,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.TimeZone;
 
-import in.juspay.beckn.MainActivity;
-import in.juspay.beckn.R;
+import in.juspay.mobility.MainActivity;
+import in.juspay.mobility.R;
 
 import com.google.firebase.analytics.FirebaseAnalytics;
 

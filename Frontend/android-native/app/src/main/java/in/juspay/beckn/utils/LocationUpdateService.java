@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.Manifest;
 import android.app.Application;
@@ -45,8 +45,8 @@ import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import in.juspay.beckn.CommonJsInterface;
-import in.juspay.beckn.R;
+import in.juspay.mobility.CommonJsInterface;
+import in.juspay.mobility.R;
 
 public class LocationUpdateService extends Service {
     private static final String LOG_TAG = "LocationServices";

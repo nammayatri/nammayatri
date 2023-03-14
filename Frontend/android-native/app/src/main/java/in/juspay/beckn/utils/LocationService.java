@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -67,10 +67,10 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
-import in.juspay.beckn.BuildConfig;
-import in.juspay.beckn.R;
-import in.juspay.beckn.BootUpReceiver;
-import in.juspay.beckn.R;
+import in.juspay.mobility.BuildConfig;
+import in.juspay.mobility.R;
+import in.juspay.mobility.BootUpReceiver;
+import in.juspay.mobility.R;
 import in.juspay.hypersdk.core.JuspayServices;
 
 public class LocationService extends Service {

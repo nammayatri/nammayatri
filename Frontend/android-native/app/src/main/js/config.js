@@ -1779,12 +1779,12 @@ var getAppList = function (useBeta, service) {
             "canOpen": []
         },
 
-        "in.juspay.beckn.transporter": {
+        "in.juspay.mobility.transporter": {
             "src": "",
             "version": "1.0rc1",
             "iconUrl": "",
             "assets": {
-                "index_bundle": bucket_path + "/juspay/beckn/in.juspay.beckn.transporter/" + (useBeta ? "beta/" : "release/") + beckn_version + "/v1-index_bundle.zip"
+                "index_bundle": bucket_path + "/juspay/beckn/in.juspay.mobility.transporter/" + (useBeta ? "beta/" : "release/") + beckn_version + "/v1-index_bundle.zip"
             },
             "root": "",
             "entry": "becknbase.html",

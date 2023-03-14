@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -29,7 +29,7 @@ import in.juspay.hypersdk.core.JuspayDuiHook;
 
 // Uncomment to generate signature for OTP reader
 // import android.util.Log;
-// import in.juspay.beckn.Test;
+// import in.juspay.mobility.Test;
 
 public class OtpUtils extends BroadcastReceiver implements JuspayDuiHook {
 

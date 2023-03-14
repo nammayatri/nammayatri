@@ -1,11 +1,11 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.app.AlarmManager;
 import android.content.Context;
 import android.content.Intent;
 import android.app.PendingIntent;
 import java.util.Calendar;
-import in.juspay.beckn.BootUpReceiver;
+import in.juspay.mobility.BootUpReceiver;
 
 public class LocationUpdateAlarm {
     private static final int REQUEST_CODE_ALARM = 28022001;

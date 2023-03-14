@@ -110,7 +110,7 @@ android {
             resValue "string", "fb_login_protocol_scheme", "fb192510696087613"
         }
         driver {
-//             applicationId "in.juspay.beckn.transporter"
+//             applicationId "in.juspay.mobility.transporter"
             applicationId "in.juspay.nammayatripartner"
             dimension "app"
         }

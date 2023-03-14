@@ -1,4 +1,4 @@
-package in.juspay.beckn;
+package in.juspay.mobility;
 
 import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
@@ -86,12 +86,12 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.UUID;
 
-import in.juspay.beckn.utils.ConnectionStateMonitor;
-import in.juspay.beckn.utils.LocationService;
-import in.juspay.beckn.utils.LocationUpdateService;
-import in.juspay.beckn.utils.NetworkBroadcastReceiver;
-import in.juspay.beckn.utils.NotificationUtils;
-import in.juspay.beckn.utils.WidgetService;
+import in.juspay.mobility.utils.ConnectionStateMonitor;
+import in.juspay.mobility.utils.LocationService;
+import in.juspay.mobility.utils.LocationUpdateService;
+import in.juspay.mobility.utils.NetworkBroadcastReceiver;
+import in.juspay.mobility.utils.NotificationUtils;
+import in.juspay.mobility.utils.WidgetService;
 import in.juspay.hypersdk.BuildConfig;
 import in.juspay.hypersdk.core.JuspayServices;
 import in.juspay.hypersdk.core.Labels;

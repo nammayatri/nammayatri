@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import static in.juspay.hypersdk.utils.GPayUtils.LOG_TAG;
 
@@ -36,7 +36,7 @@ import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import in.juspay.beckn.R;
+import in.juspay.mobility.R;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 

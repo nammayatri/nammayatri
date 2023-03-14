@@ -1,4 +1,4 @@
-package in.juspay.beckn;
+package in.juspay.mobility;
 
 import android.Manifest;
 import android.animation.Animator;
@@ -166,14 +166,14 @@ import javax.security.auth.callback.Callback;
 import java.io.ByteArrayOutputStream;
 import java.lang.Math;
 
-import in.juspay.beckn.utils.AcceptRejectOverlaySheetService;
-import in.juspay.beckn.utils.CheckPermissionAutoStart;
-import in.juspay.beckn.utils.CheckPermissionOverlay;
-import in.juspay.beckn.utils.LocationService;
-import in.juspay.beckn.utils.LocationUpdateAlarm;
-import in.juspay.beckn.utils.LocationUpdateService;
-import in.juspay.beckn.utils.NotificationUtils;
-import in.juspay.beckn.utils.OtpUtils;
+import in.juspay.mobility.utils.AcceptRejectOverlaySheetService;
+import in.juspay.mobility.utils.CheckPermissionAutoStart;
+import in.juspay.mobility.utils.CheckPermissionOverlay;
+import in.juspay.mobility.utils.LocationService;
+import in.juspay.mobility.utils.LocationUpdateAlarm;
+import in.juspay.mobility.utils.LocationUpdateService;
+import in.juspay.mobility.utils.NotificationUtils;
+import in.juspay.mobility.utils.OtpUtils;
 import in.juspay.hypersdk.HyperFragment;
 import in.juspay.hypersdk.core.JBridge;
 import in.juspay.hypersdk.core.JuspayDuiHook;

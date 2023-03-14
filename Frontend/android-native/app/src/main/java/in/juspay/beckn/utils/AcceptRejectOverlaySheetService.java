@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.annotation.SuppressLint;
 import android.app.NotificationManager;
@@ -62,7 +62,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
-import in.juspay.beckn.R;
+import in.juspay.mobility.R;
 import in.juspay.hypersdk.core.JuspayServices;
 
 public class AcceptRejectOverlaySheetService extends Service implements View.OnTouchListener {

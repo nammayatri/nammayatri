@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import android.animation.ValueAnimator;
 import android.app.Service;
@@ -23,8 +23,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
 import java.util.Calendar;
-import in.juspay.beckn.MainActivity;
-import in.juspay.beckn.R;
+import in.juspay.mobility.MainActivity;
+import in.juspay.mobility.R;
 
 
 public class WidgetService extends Service {

@@ -20,13 +20,13 @@
                         }
                     }
                 },
-                "in.juspay.beckn.transporter": {
+                "in.juspay.mobility.transporter": {
                     "android": {
                         "beta": {
-                            "common": "s3://$bucket/juspay/beckn/in.juspay.beckn.transporter/beta/1.0rc1/index_bundle.js"
+                            "common": "s3://$bucket/juspay/beckn/in.juspay.mobility.transporter/beta/1.0rc1/index_bundle.js"
                         },
                         "release": {
-                            "common": "s3://$bucket/juspay/beckn/in.juspay.beckn.transporter/release/1.0rc1/index_bundle.js"
+                            "common": "s3://$bucket/juspay/beckn/in.juspay.mobility.transporter/release/1.0rc1/index_bundle.js"
                         }
                     }
                 }

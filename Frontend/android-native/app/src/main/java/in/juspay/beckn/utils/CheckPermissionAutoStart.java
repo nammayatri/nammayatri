@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import static in.juspay.hypersdk.utils.GPayUtils.LOG_TAG;
 

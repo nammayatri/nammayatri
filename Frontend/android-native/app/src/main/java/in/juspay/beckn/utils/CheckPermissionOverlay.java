@@ -1,4 +1,4 @@
-package in.juspay.beckn.utils;
+package in.juspay.mobility.utils;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -14,7 +14,7 @@ import android.util.Log;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import in.juspay.beckn.R;
+import in.juspay.mobility.R;
 
 
 public class CheckPermissionOverlay extends AppCompatActivity {
