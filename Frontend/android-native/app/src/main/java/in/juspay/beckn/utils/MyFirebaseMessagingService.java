@@ -184,7 +184,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     String orderUrl ;
                     if (getString(R.string.service).equals("nammayatripartner")) {
                         orderUrl = baseUrl + "/driver/profile";
-                    } 
+                    }
                     else {
                         orderUrl = baseUrl + "/profile";
                         }
@@ -221,7 +221,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         result.append(inputLine);
                     }
                     System.out.print("in result : " + result.toString());
-                
+
                 } catch (Exception ignored) {
                     System.out.println("Catch in updateFCMToken : " +ignored);
                 }

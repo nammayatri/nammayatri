@@ -84,7 +84,7 @@ public class WidgetService extends Service {
         //layout params for close button
         WindowManager.LayoutParams closeImageParams = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, (int)(50*scale + 0.5f),LAYOUT_FLAG, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT);
         closeImageParams.gravity = Gravity.BOTTOM|Gravity.CENTER;
-        
+
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         imageClose = new ImageView(this);
         try{

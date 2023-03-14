@@ -908,5 +908,5 @@ public class MainActivity extends AppCompatActivity {
   public JuspayServices getJuspayServices(){
         return juspayServicesGlobal;
   }
-  
+
 }

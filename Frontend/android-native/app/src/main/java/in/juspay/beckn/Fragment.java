@@ -27,7 +27,7 @@ public class Fragment extends HyperFragment {
                 this.getDuiInterface().onActivityResult(requestCode, resultCode, data);
         }
     }
-    
+
     protected DuiInterface createDuiInterface(){
         return new JsInterface(this.getActivity(), this.getJuspayServices(), this);
     }

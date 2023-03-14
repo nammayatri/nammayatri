@@ -60,7 +60,7 @@ import javax.net.ssl.HttpsURLConnection;
 public class NotificationUtils extends AppCompatActivity {
 
     private static final String TAG = "NotificationUtils";
-    
+
     public static String CHANNEL_ID = "General";
     public static String FLOATING_NOTIFICATION = "FLOATING_NOTIFICATION";
     public static String ALLOCATION_TYPE = "NEW_RIDE_AVAILABLE";

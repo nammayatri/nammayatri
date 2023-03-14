@@ -233,7 +233,7 @@ public class LocationUpdateService extends Service {
             f.setTimeZone(TimeZone.getTimeZone("UTC"));
             String getCurrTime = f.format(new Date());
             Log.d(LOG_TAG, "orderUrl " + orderUrl);
-            
+
             HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
             if (connection instanceof HttpsURLConnection)
                ((HttpsURLConnection) connection).setSSLSocketFactory(new TLSSocketFactory());

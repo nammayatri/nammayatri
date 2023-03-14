@@ -569,7 +569,7 @@ var merchantConfig = function() {
             "configuration":defaultConfig(["configurator"], true)
         }
     }
-} 
+}
 
 var getPath = function (fileConfig, service, useBeta, fileName) {
     var beta = useBeta ? "beta" : "release";
@@ -884,7 +884,7 @@ if (getOS() == "IOS") {
 
 var newOS = "common"
 switch(getOS()) {
-    case "ANDROID" : 
+    case "ANDROID" :
         newOS = "android"
         break;
     case "IOS":
@@ -893,7 +893,7 @@ switch(getOS()) {
     case "WEB":
         newOS = "web"
         break;
-    default : 
+    default :
         console.error("NO OS AVAILABLE")
 }
 
@@ -1165,7 +1165,7 @@ var getHyperPayConfig = function (useBeta) {
               "iconUrl" : "",
               "assets" : {
                     "index_bundle": bucket_path + "/juspay/payments/in.juspay.hyperpay" + "/" + (useBeta ? "beta" : "release") + OS + "/" + checkout_remotes_version + "/v1-index_bundle.zip",
-                    "ui_config": bucket_path + "/juspay/payments/in.juspay.hyperpay.truefan" + "/" + (useBeta ? "beta" : "release") + OS + "/v1-ui_config.zip", 
+                    "ui_config": bucket_path + "/juspay/payments/in.juspay.hyperpay.truefan" + "/" + (useBeta ? "beta" : "release") + OS + "/v1-ui_config.zip",
                     "strings": bucket_path + "/juspay/payments/in.juspay.hyperpay.truefan" + "/" + (useBeta ? "beta" : "release") + OS + "/v1-strings.zip"
                 },
               "root": "payments/in.juspay.hyperpay/",
@@ -1199,7 +1199,7 @@ var getHyperPayConfig = function (useBeta) {
             "entry": "base.html",
             "canOpen": ["in.juspay.ec"]
         }
-    } 
+    }
     else if (merchantId == "spicexpress") {
         return {
             "src":"",
@@ -1254,7 +1254,7 @@ var getHyperPayConfig = function (useBeta) {
                 "index_bundle": bucket_path + "/juspay/payments/in.juspay.hyperpay" + "/" + (useBeta ? "beta" : "release") + OS + "/" + checkout_remotes_version + "/v1-index_bundle.zip",
                 "ui_config": bucket_path + "/juspay/payments/in.juspay.hyperpay.astroyogi" + "/" + (useBeta ? "beta" : "release") + "/v1-ui_config.zip",
                 "strings": bucket_path + "/juspay/payments/in.juspay.hyperpay.astroyogi" + "/" + (useBeta ? "beta" : "release") + OS + "/v1-strings.zip"
-                
+
             },
             "root": "payments/in.juspay.hyperpay/",
             "entry": "base.html",
@@ -1552,7 +1552,7 @@ var getDOTPAssets = function (useBeta) {
         return {
             "config": bucket_path + "/juspay/payments/in.juspay.dotp/" + (useBeta ? "beta" : "release") + "/v1-config.zip",
             "index_bundle": bucket_path + "/juspay/payments/in.juspay.dotp.tul/" + (useBeta ? "beta" : "release") + "/" + checkout_remotes_version + "/v1-index_bundle.zip"
-        } 
+        }
     } else {
         return {
             "config": bucket_path + "/juspay/payments/in.juspay.dotp/" + (useBeta ? "beta" : "release") + "/v1-config.zip",
