@@ -1,0 +1,263 @@
+def isProdDeployBranch(branch) {
+  (branch =~ /(main|hotfix-)/)
+}
+
+def isVersionBumpCandidateBranch(branch) {
+  (branch =~ /(main|hotfix-)/)
+}
+
+def isSandboxCandidate(branch) {
+  (branch =~ /(main|devqa-bkn-)/)
+}
+
+def setupAWS(env, isProd){
+  if (isProd) {
+      env.ASSUMED_ROLE = "arn:aws:iam::980691203742:role/jenkins-hyper-assets-uploader"
+      env.S3_BUCKET = "jp-remote-assets-buffer"
+      env.CF_DISTRIBUTION_ID = "E23E60KXD46RYC"
+  } else {
+      env.ASSUMED_ROLE = "arn:aws:iam::701342709052:role/jenkins-sdk-assets"
+      env.S3_BUCKET = "beta-hyper-sdk-assets"
+      env.CF_DISTRIBUTION_ID = "E1AIY1MYIYRGLM"
+  }
+
+  env.S3_BASE_PATH = "hyper/bundles/app"
+
+  echo "Assumed role and bucket is - ${ASSUMED_ROLE} and ${S3_BUCKET}"
+  env.AWS_STS_RESPONSE = """${sh(
+          returnStdout: true,
+          script: '''
+          set +x;
+          unset AWS_SECRET_ACCESS_KEY;
+          unset AWS_SESSION_TOKEN;
+          unset AWS_ACCESS_KEY_ID;
+          aws sts assume-role --role-arn ${ASSUMED_ROLE} --role-session-name s3-bucket-access;
+          '''
+      )}"""
+  env.AWS_SECRET_ACCESS_KEY = """${sh(
+          returnStdout: true,
+          script: '''
+          set +x;
+          echo ${AWS_STS_RESPONSE} | jq '.Credentials.SecretAccessKey' | xargs | tr -d '\n';
+          '''
+      )}"""
+  env.AWS_SESSION_TOKEN = """${sh(
+          returnStdout: true,
+          script: '''
+          set +x;
+          echo ${AWS_STS_RESPONSE} | jq '.Credentials.SessionToken' | xargs | tr -d '\n';
+          '''
+      )}"""
+  env.AWS_ACCESS_KEY_ID = """${sh(
+          returnStdout: true,
+          script: '''
+          set +x;
+          echo ${AWS_STS_RESPONSE} | jq '.Credentials.AccessKeyId' | xargs | tr -d '\n';
+          '''
+      )}"""
+}
+
+def s3Upload(env, isProd){
+  env.PACKAGE_VERSION = """${sh(
+          returnStdout: true,
+          script: '''
+          set +x;
+          cat package.json | jq -r '.version' | tr -d '\n';
+          '''
+      )}"""
+
+
+  if (isProd) {
+    env.S3_CODE_PATH_PREFIX = "s3://${S3_BUCKET}/${S3_BASE_PATH}/${APP_NAME}/${PACKAGE_VERSION}"
+    env.PACKAGE_EXISTS = """${sh(
+          returnStdout: true,
+          script: '''
+          set +x;
+          aws s3 ls "${S3_CODE_PATH_PREFIX}/" | wc -l | tr -d '\n';
+          '''
+      )}"""
+
+    if (PACKAGE_EXISTS.toInteger() > 0) {
+      error ("Version ${PACKAGE_VERSION} already exists in S3, possibly incorrect commit messages prevented creating a new release.  Aborting build.")
+    }
+
+  } else {
+    // we allow for branch name in main/dev/dev-qa builds as the package version is not updated in these branches
+    // we also allow mutation of files in this case
+    env.S3_CODE_PATH_PREFIX = "s3://${S3_BUCKET}/${S3_BASE_PATH}/${APP_NAME}/${BRANCH_NAME}/common"
+  }
+
+
+  PLATFORMS.tokenize(",").each { platform ->
+    CACHE_CONTROL_HEADERS = ""
+    if (platform == "web") {
+      CACHE_CONTROL_HEADERS = " --cache-control max-age=${CACHE_AGE}"
+    }
+
+    def files = findFiles(glob: "dist/${platform}/**")
+    for (file in files) {
+      def DEFAULT_ACL = "--acl public-read"
+      if (file.name ==~ /.*js$/ && platform != 'web') {
+        DEFAULT_ACL = ""
+      }
+
+      ADDITIONAL_S3_ARGS = "--metadata '{\"commit-id\":\"'${GIT_COMMIT}'\", \"version\":\"${PACKAGE_VERSION}\",\"last-modified-by\":\"Jenkins\"}' ${CACHE_CONTROL_HEADERS} ${DEFAULT_ACL}"
+
+      env.FULL_S3_PATH = "${S3_CODE_PATH_PREFIX}/${platform}/${file.name}"
+      sh ("aws s3 cp dist/${platform}/${file.name} ${env.FULL_S3_PATH} ${ADDITIONAL_S3_ARGS}")
+
+      env.UPLOADED_FILES += "\n${env.FULL_S3_PATH}"
+
+      // invalidate CloudFront cache if we are not pushing to a versioned path
+      if (!isProd) {
+        env.INVALIDATE_PATH= """${sh(
+          returnStdout: true,
+          script: '''
+          set +x;
+          echo  ${FULL_S3_PATH} | sed -e "s#s3://[^/]*##g"
+          '''
+        )}"""
+        sh("aws cloudfront create-invalidation --distribution-id ${env.CF_DISTRIBUTION_ID} --paths ${env.INVALIDATE_PATH}")
+      }
+    }
+  }
+}
+
+pipeline {
+  agent {
+    label "atlas"
+  }
+  environment {
+      APP_NAME = "in.juspay.nammayatri"
+      AWS_REGION = "ap-south-1"
+      PLATFORMS = "android,ios"
+      CACHE_AGE = "86400"
+      NPM_REPO_REGION = "asia-south1"
+      GCP_PROJECT_ID = "jp-k8s-internal"
+      NPM_REPO_NAME = "hyper-sdk-npm"
+      GIT_AUTHOR_NAME = "Jenkins User"
+      GIT_AUTHOR_EMAIL = "bitbucket.jenkins.read@juspay.in"
+      GIT_COMMITTER_NAME = "Jenkins User"
+      GIT_COMMITTER_EMAIL = "bitbucket.jenkins.read@juspay.in"
+  }
+
+  stages {
+    stage('Checkout') {
+        steps {
+            scmSkip(deleteBuild: false, skipPattern:'.*\\[skip ci\\].*')
+            script {
+              if (sh(script: "git log -1 --pretty=%B | grep -F -ie '[skip ci]' -e '[ci skip]'", returnStatus: true) == 0) {
+                currentBuild.result = 'ABORTED'
+                error 'Aborting because commit message contains [skip ci]'
+              }
+            }
+        }
+    }
+
+    stage("npm install") {
+      steps {
+        script {
+          sh ("npm config set package-lock=false; npm i") // npm config is update so as to ignore package-lock.json
+        }
+      }
+    }
+
+    stage("PS compilation") {
+      steps {
+        script {
+          // build packages to ensure compilation / tests work fine before creating/publishing npm package
+          sh ("npm run spago:compile")
+        }
+      }
+    }
+
+    stage("npm release") {
+      when {
+        anyOf {
+          branch "main"
+        }
+      }
+      steps {
+        script {
+          // bump versions only for main or release branch builds
+          if (isVersionBumpCandidateBranch(env.BRANCH_NAME)) {
+            sh ("npx semantic-release --debug")
+          } else if (isSandboxCandidate(env.BRANCH_NAME)){
+            echo "Not a version bump candidate"
+          } else {
+            currentBuild.result = 'ABORTED'
+            error "This is not a candidate branch for version bump.  Aborting..."
+          }
+        }
+      }
+    }
+
+    stage("Bundle Generation") {
+      when {
+        anyOf {
+          branch "main"
+        }
+      }
+      steps {
+        script {
+          // building platform specific bundles with updated version from release command
+          PLATFORMS.tokenize(",").each { platform ->
+            sh ("npm run bundle:${platform}")
+          }
+        }
+      }
+    }
+
+    stage("SBX: AWS Credentials Setup & Push") {
+      when {
+        anyOf {
+          branch "main"
+        }
+      }
+      steps{
+        script {
+          env.UPLOADED_FILES = ""
+
+          if (isSandboxCandidate(env.BRANCH_NAME)){
+            setupAWS(env, false)
+            s3Upload(env, false)
+            build job: '/SDK Pipelines/Helper Tools/manifest-generator/staging'
+          } else {
+            echo "skipping SBX push"
+          }
+        }
+      }
+    }
+
+    stage("PROD: AWS Credentials Setup & Push") {
+      when {
+        anyOf {
+          branch "main"
+        }
+      }
+      steps{
+        script {
+          if (isProdDeployBranch(env.BRANCH_NAME)){
+            setupAWS(env, true)
+            s3Upload(env, true)
+            build job: '/SDK Pipelines/Helper Tools/manifest-generator/master'
+          } else {
+            echo "skipping PROD push"
+          }
+        }
+      }
+    }
+    stage("Summary"){
+      when {
+        anyOf {
+          branch "main"
+        }
+      }
+      steps {
+        script {
+          echo "Total uploaded files ${env.UPLOADED_FILES}"
+        }
+      }
+    }
+  }
+}

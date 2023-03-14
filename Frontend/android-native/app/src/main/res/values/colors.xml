@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#3D64F4</color>
+    <color name="colorPrimaryActive">#122B57</color>
+    <color name="colorPrimaryDisable">#BAC5D8</color>
+    <color name="colorPrimaryDark">#2C2F3A</color>
+    <color name="colorAccent">#000000</color>
+    <color name="colorWhite">#ffffff</color>
+    <color name="colorGray">#4DDADADA</color>
+    <color name="colorLightBlue">#E0EAFD</color>
+    <color name="colorLightBlueSel">#80E0EAFD</color>
+    <color name="colorCircleButton">#204480</color>
+    <color name="colorSublimePicker">#323643</color>
+    <color name="PrimaryBlue">#0066FF</color>
+</resources>

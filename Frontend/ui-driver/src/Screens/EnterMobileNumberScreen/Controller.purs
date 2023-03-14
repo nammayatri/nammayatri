@@ -1,0 +1,68 @@
+module Screens.EnterMobileNumberScreen.Controller where
+import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, ($), (>))
+import PrestoDOM (Eval, continue, continueWithCmd, exit)
+import Screens.Types (EnterMobileNumberScreenState)
+import Components.PrimaryEditText.Controllers as PrimaryEditText
+import Components.PrimaryButton.Controller as PrimaryButton
+import PrestoDOM.Types.Core (class Loggable)
+import Data.String (length)
+import Data.String.CodeUnits (charAt)
+import Data.Maybe (Maybe(..))
+import JBridge (requestKeyboardShow,hideKeyboardOnNavigation)
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import Effect.Class (liftEffect)
+import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
+import Screens (ScreenName(..), getScreen)
+
+instance showAction :: Show Action where
+  show _ = ""
+
+instance loggableAction :: Loggable Action where
+  performLog action appId = case action of
+    AfterRender -> trackAppScreenRender appId "screen" (getScreen ENTER_MOBILE_NUMBER_SCREEN)
+    BackPressed -> do
+      trackAppBackPress appId (getScreen ENTER_MOBILE_NUMBER_SCREEN)
+      trackAppEndScreen appId (getScreen ENTER_MOBILE_NUMBER_SCREEN)
+    PrimaryEditTextAction act -> case act of
+      PrimaryEditText.OnClick -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_edit_text" "on_click"
+      PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "mobile_number_text_changed" "primary_edit_text"
+      PrimaryEditText.TextClicked -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_edit_text" "text_field_click"
+    PrimaryButtonActionController act -> case act of
+      PrimaryButton.OnClick -> do
+        trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "next_on_click"
+        trackAppEndScreen appId (getScreen ENTER_MOBILE_NUMBER_SCREEN)
+      PrimaryButton.NoAction -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "primary_button" "no_action"
+    NonDisclosureAgreementAction -> trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_discloure_agreement"
+    CheckBoxClicked -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "checkbox_clicked"
+    CheckClickability -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "check_clickability"
+    NoAction -> trackAppScreenEvent appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "in_screen" "no_action"
+
+data ScreenOutput = GoBack | GoToNextScreen EnterMobileNumberScreenState
+data Action = BackPressed 
+            | PrimaryEditTextAction PrimaryEditText.Action
+            | PrimaryButtonActionController PrimaryButton.Action
+            | NoAction
+            | CheckBoxClicked
+            | CheckClickability
+            | AfterRender
+            | NonDisclosureAgreementAction
+
+eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput EnterMobileNumberScreenState
+eval AfterRender state = continue state
+eval BackPressed state = exit GoBack
+eval (PrimaryEditTextAction PrimaryEditText.OnClick) state = continue state
+eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = exit (GoToNextScreen state)
+eval (PrimaryEditTextAction (PrimaryEditText.TextChanged valId newVal)) state = do
+  _ <- if length newVal == 10 then do
+            pure $ hideKeyboardOnNavigation true 
+            else pure unit    
+  let isValidMobileNumber = case (charAt 0 newVal) of 
+                                    Just a -> if a=='0' || a=='1' || a=='2' || a=='5' then false 
+                                                else if a=='3' || a=='4' then
+                                                    if newVal=="4000400040" || newVal=="3000300030" then true else false 
+                                                        else true 
+                                    Nothing -> true 
+  continue state { props = state.props { btnActive = if (length newVal == 10 && isValidMobileNumber) then true else false
+                                        , isValid = not isValidMobileNumber }
+                                        , data = state.data { mobileNumber = if length newVal <= 10 then newVal else state.data.mobileNumber}}
+eval _ state = continue state

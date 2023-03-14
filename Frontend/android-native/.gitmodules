@@ -1,0 +1,6 @@
+[submodule "atlas-ui-driver"]
+	path = atlas-ui-driver
+	url = git@ssh.bitbucket.juspay.net:bec/atlas-ui-driver.git
+[submodule "atlas-ui-customer"]
+	path = atlas-ui-customer
+	url = git@ssh.bitbucket.juspay.net:bec/atlas-ui-customer.git

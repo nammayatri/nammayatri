@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="LOCATION_RESOLUTION_REQUEST_CODE">21345</integer>
+    <integer name="SCAN_QR_REQUEST_CODE">181</integer>
+    <integer name="AUTOCOMPLETE_REQUEST_CODE">545</integer>
+    <integer name="REQUEST_CODE_UPDATE_APP">587</integer>
+    <integer name="WIDGET_MESSAGE_ANIMATION_DURATION">1000</integer>
+    <string name="WIDGET_MESSAGE">widgetMessage</string>
+    <string name="IS_RIDE_ACTIVE">IS_RIDE_ACTIVE</string>
+    <string name="ACTIVITY_STATUS">ACTIVITY_STATUS</string>
+    <string name="REGISTERATION_TOKEN">REGISTERATION_TOKEN</string>
+    <integer name="WIDGET_CORNER_ANIMATION_DURATION">200</integer>
+    <integer name="DURATION_OF_SHOWING_MESSAGE">700</integer>
+    <string name="ERROR_MESSAGE" >errorMessage</string>
+    <string name="ERROR_OCCURRED">Error occurred please try again later</string>
+    <string name="SEARCH_REQUEST_ID">searchRequestId</string>
+    <string name="SEARCH_REQ_VALID_TILL">searchRequestValidTill</string>
+    <string name="BASE_FARE">baseFare</string>
+    <string name="DISTANCE_TO_PICKUP">distanceToPickup</string>
+    <string name="DISTANCE_TO_BE_COVERED">distanceTobeCovered</string>
+    <string name="DURATION_TO_PICKUP">durationToPickup</string>
+    <string name="ADDRESS_PICKUP">addressPickUp</string>
+    <string name="ADDRESS_DROP">addressDrop</string>
+    <string name="OFFERED_FARE">offeredFare</string>
+    <string name="AREA">area</string>
+    <string name="TIME_STAMP_FILE_UPLOAD">TIME_STAMP_FILE_UPLOAD</string>
+    <string name="RIDE_STATUS">RIDE_STATUS</string>
+    <string name="DRIVER_ASSIGNMENT">DRIVER_ASSIGNMENT</string>
+    <integer name="LOADER_WAITING_TIME">10000</integer>
+</resources>

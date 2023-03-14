@@ -1,0 +1,58 @@
+module Components.PrimarySelectItem.View where
+
+import Prelude (Unit, bind, const, pure, unit, (/=), (==), (<>),($))
+import Effect (Effect)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, imageWithFallback)
+
+
+import Components.PrimarySelectItem.Controller (Action(..), PrimarySelectItemState)
+import Font.Style as FontStyle
+import Styles.Colors as Color
+import Font.Size as FontSize
+import Common.Types.App
+
+view :: forall w .  (Action  -> Effect Unit) -> PrimarySelectItemState -> PrestoDOM (Effect Unit) w
+view push state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , padding (Padding 20 30 20 10)
+    , onClick (\action -> do
+                _<- push action
+                pure unit 
+                ) (const (OnClick state))
+    ][ textView
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , textSize FontSize.a_14
+        , text state.label
+        , color Color.greyTextColor
+        , margin (MarginBottom 10)
+        ]
+      , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        , padding (Padding 20 18 20 18)
+        , margin (MarginBottom 5)
+        , background Color.white900
+        , cornerRadius 4.0  
+        , stroke ("1," <> Color.borderColorLight)
+        ][ textView
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , weight 1.0
+            , text if state.selectedItem == "" then state.placeholder else state.selectedItem
+            , alpha if state.selectedItem /= "" then 1.0 else 0.33
+            , textSize FontSize.a_18
+            , fontStyle $ FontStyle.bold LanguageStyle
+            , color Color.greyTextColor
+            ]
+          , imageView
+            [ width ( V 15 )
+            , height ( V 15 )
+            , imageWithFallback "ny_ic_drop_down,https://assets.juspay.in/nammayatri/images/driver/ny_ic_drop_down.png"
+            ]
+        ]
+    ]

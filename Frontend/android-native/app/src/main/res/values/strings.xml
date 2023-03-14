@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="version">1.0</string>
+    <string name="action_ok">OK</string>
+
+    <string name="permission_sms_alert_dialog_title">Permission SMS</string>
+    <string name="permission_sms_dialog_message">You have to use the permission for OTP verification!</string>
+    <string name="loading">Loading</string>
+    <string name="back">Back</string>
+    <string name="preference_file_key">yatri_partner_app_local_keys</string>
+    <string name="bodyTextYatriPartner">Yatri Partner collects location data to enable share your location to monitor driver current location, even when the app is in the background, is closed or not in use.</string>
+</resources>

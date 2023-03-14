@@ -1,0 +1,374 @@
+import java.security.SecureRandom
+import java.util.zip.GZIPOutputStream
+
+apply plugin: 'com.android.application'
+apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.google.firebase.crashlytics'
+// Apply the Performance Monitoring plugin
+apply plugin: 'com.google.firebase.firebase-perf'
+
+static InetAddress getLocalAddress() throws SocketException {
+    List<NetworkInterface> ifaces = Collections.list(NetworkInterface.getNetworkInterfaces())
+    ifaces.sort { a, b -> (a.getName() <=> b.getName()) }
+    Iterator<NetworkInterface> ifaceIterator = ifaces.iterator()
+
+    while (ifaceIterator.hasNext()) {
+        NetworkInterface iface = ifaceIterator.next()
+        Enumeration<InetAddress> addresses = iface.getInetAddresses()
+
+        while(addresses.hasMoreElements()) {
+            InetAddress addr = addresses.nextElement()
+            if(addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
+                return addr
+            }
+        }
+    }
+    return null
+}
+repositories {
+    mavenCentral()
+    google()
+    maven {
+        url "https://maven.juspay.in/jp-build-packages/release/"
+    }
+    maven {
+        url "https://maven.juspay.in/jp-build-packages/beta/"
+    }
+    maven {
+        url "https://maven.juspay.in/jp-build-packages/hyper-sdk/"
+    }
+}
+
+android {
+    compileSdkVersion 31
+    buildToolsVersion "30.0.2"
+
+    defaultConfig {
+        minSdkVersion 23
+        targetSdkVersion 30
+        versionCode 18
+        versionName "1.0.17"
+        multiDexEnabled true
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // If you are not able to generate signed APK uncomment this
+    // packagingOptions {
+    //     exclude 'META-INF/DEPENDENCIES'
+    //     exclude 'META-INF/LICENSE'
+    //     exclude 'META-INF/LICENSE.txt'
+    //     exclude 'META-INF/license.txt'
+    //     exclude 'META-INF/NOTICE'
+    //     exclude 'META-INF/NOTICE.txt'
+    //     exclude 'META-INF/notice.txt'
+    //     exclude 'META-INF/ASL2.0'
+    //     exclude("META-INF/*.kotlin_module")
+    // }
+
+    buildTypes {
+        def host = getLocalAddress()?.getHostAddress() ?: ""
+        debug {
+            resValue "string", "local_ip", host
+            resValue "bool", "debuggable", "true"
+            applicationIdSuffix '.debug'
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
+        }
+        release {
+            resValue "bool", "debuggable", "false"
+            minifyEnabled true
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
+        }
+    }
+    Properties properties = new Properties()
+    if (rootProject.file("local.properties").exists()) {
+        properties.load(rootProject.file("local.properties").newDataInputStream())
+    }
+    flavorDimensions "app", "mode"
+    variantFilter rootProject.ext.becknVariantFilter
+    productFlavors {
+        prod {
+            buildConfigField "String", "flavor", "\"prod\""
+            // Inject the Maps API key into the manifest
+            manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
+            dimension "mode"
+        }
+        dev {
+            buildConfigField "String", "flavor", "\"dev\""
+            // Inject the Maps API key into the manifest
+            manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
+            dimension "mode"
+        }
+        user {
+//             applicationId "in.juspay.becknuser"
+            applicationId  "in.juspay.nammayatri"
+            dimension "app"
+            resValue "string", "facebook_app_id", "192510696087613"
+            resValue "string", "fb_login_protocol_scheme", "fb192510696087613"
+        }
+        driver {
+//             applicationId "in.juspay.beckn.transporter"
+            applicationId "in.juspay.nammayatripartner"
+            dimension "app"
+        }
+    }
+    lintOptions {
+        abortOnError false
+    }
+    sourceSets {
+        dev.res.srcDir 'src/dev/res'
+
+//        Use when required to create hash for otp message
+//        This is to be used only when signature changes.
+//        This is never to be used in production
+//        prod.java.srcDir 'src/generateHashes/java'
+        // dev.java.srcDir 'src/generateHashes/java'
+
+    }
+    compileOptions {
+        targetCompatibility = 1.8
+        sourceCompatibility = 1.8
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation ('in.juspay:hypersdk:2.0.4-rc.78') {
+        exclude group:'in.juspay', module: 'mystique'
+    }
+//    implementation 'in.juspay:mystique:0.2.45'
+//    implementation project (path:':mystique')
+    // api (project(':mystique')) -- to link mystique
+    implementation 'in.juspay:mystique:0.2.49'
+    // Import the BoM for the Firebase platform
+    implementation platform('com.google.firebase:firebase-bom:30.5.0')
+
+    implementation 'com.google.firebase:firebase-dynamic-links'
+    implementation 'com.google.firebase:firebase-analytics'
+
+    implementation 'com.google.firebase:firebase-crashlytics:18.2.13'
+    implementation 'com.google.firebase:firebase-messaging'
+    // userImplementation 'com.google.firebase:firebase-messaging:21.0.1'
+    // transporterImplementation 'com.google.firebase:firebase-messaging:21.0.1'
+    implementation 'com.google.firebase:firebase-installations:17.0.3'
+    implementation 'com.google.firebase:firebase-perf'
+    implementation 'com.google.firebase:firebase-inappmessaging-display'
+
+    implementation 'com.google.android.libraries.places:places:2.6.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation('com.journeyapps:zxing-android-embedded:4.3.0') { transitive = false }
+    implementation 'com.google.zxing:core:3.5.0'
+
+
+    implementation 'com.google.android.material:material:1.1.0-alpha09'
+
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'com.google.maps.android:android-maps-utils:2.4.0'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.4-alpha07'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+    implementation 'com.google.android.gms:play-services-maps:18.1.0'
+    implementation 'com.google.android.gms:play-services-location:20.0.0'
+    implementation 'com.google.android.libraries.places:places:2.6.0'
+    implementation 'com.google.android.gms:play-services-auth:20.3.0'
+    implementation 'com.google.android.gms:play-services-auth-api-phone:18.0.1'
+    userImplementation 'com.appeaser.sublimepickerlibrary:sublimepickerlibrary:2.1.2'
+    implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
+    // implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0" -- new feature
+    implementation 'com.facebook.shimmer:shimmer:0.5.0'
+    implementation 'org.codehaus.groovy:groovy-all:2.4.12'
+//    implementation 'com.facebook.android:facebook-android-sdk:[5,6)'
+    implementation 'com.google.android.play:app-update:2.0.0'
+    implementation 'com.airbnb.android:lottie:3.4.0'
+}
+
+//the following is used for creating jsa files for js files inside src/main/js
+def tmpSource        = "/tmp/juspay"
+def jsSource         = "${projectDir}/src"
+def assetSource      = "${projectDir}/src"
+def shouldMinify     = false
+
+tasks.create(name: 'minifyJsFiles') {
+    def jsFiles = []
+    def minJsFiles = []
+
+    File tmpFolder = new File(tmpSource)
+    if(tmpFolder.exists()) {
+        tmpFolder.deleteDir()
+    }
+
+    File folder = new File(jsSource)
+    def addFilesToQueue
+    addFilesToQueue = { dir, suffix ->
+        File tempFolder = new File(tmpSource + suffix)
+        if(!tempFolder.exists()) {
+            tempFolder.mkdirs()
+        }
+
+        if (dir.isDirectory()) {
+            for (String file: dir.list()) {
+                File curr = new File(dir.getAbsolutePath() + "/" + file)
+                if(!curr.isDirectory() && curr.getName().endsWith(".js")) {
+                    jsFiles.add(dir.getAbsolutePath() + "/" + file)
+
+                    String fileName  = file.substring(0, file.lastIndexOf("."))
+                    String extension = file.substring(file.lastIndexOf(".") + 1, file.length())
+
+                    File tmp = new File(tmpSource + suffix);
+                    if(!tmp.exists()) {
+                        tmp.mkdirs()
+                    }
+
+                    minJsFiles.add(tmpSource + suffix + fileName + ".min." + extension)
+                } else if(curr.isDirectory()) {
+                    if(curr.getName() == "js") {
+                        addFilesToQueue(curr, suffix + "assets" + "/")
+                    } else {
+                        addFilesToQueue(curr, suffix + curr.getName() + "/")
+                    }
+                }
+            }
+        }
+    }
+    addFilesToQueue(folder, "/")
+
+    inputs.files jsFiles
+    outputs.files minJsFiles
+    doLast {
+        jsFiles.eachWithIndex { filePath, index ->
+            String inPath = filePath
+            String outPath = minJsFiles[index]
+
+            println "Processing " + inPath + " " + outPath
+            File outDir = new File(outPath.substring(0, outPath.lastIndexOf("/")));
+            if(!outDir.exists()) {
+                outDir.mkdirs();
+            }
+            browserify(inPath, outPath, !filePath.toString().contains("bundle") && shouldMinify)
+        }
+    }
+}
+
+tasks.create(name: 'createJsaFiles', dependsOn: 'minifyJsFiles') {
+    doLast {
+        def inputFiles = []
+        def jsaFiles = []
+
+        def addFilesToQueue
+        addFilesToQueue = { folderPath, suffix ->
+            File folder = new File(folderPath)
+            if (folder.exists() && folder.isDirectory()) {
+                for (String file : folder.list()) {
+                    File curr = new File(folderPath + "/" + file)
+                    if (!curr.isDirectory()) {
+                        if (!file.endsWith(".js")) {
+                            continue
+                        }
+
+                        inputFiles.add(folder.getAbsolutePath() + "/" + file)
+                        if(suffix.contains("juspay")){
+                            jsaFiles.add(assetSource + suffix + "v1-" + file.substring(0, file.lastIndexOf(".min.js")) + ".jsa")
+                        } else {
+                            jsaFiles.add(assetSource + suffix + "juspay/v1-" + file.substring(0, file.lastIndexOf(".min.js")) + ".jsa")
+                        }
+                    } else {
+                        addFilesToQueue(curr.getAbsolutePath(), suffix + curr.getName() + "/")
+                    }
+                }
+            }
+        }
+        addFilesToQueue(tmpSource, "/")
+
+        println "Creating jsa under " + assetSource
+
+        File assetsDir = new File(assetSource)
+        if (!assetsDir.exists()) {
+            assetsDir.mkdirs()
+        }
+
+        inputFiles.eachWithIndex { filePath, index ->
+            File assetDir = new File(assetsDir.getAbsolutePath() + filePath.substring(tmpSource.length(), filePath.lastIndexOf("/")))
+            if (!assetDir.exists()) {
+                assetDir.mkdirs()
+            }
+            println("Processing File - " + filePath)
+
+            int FRAME_SIZE = 8
+            int KEY_SIZE = 8
+
+            //Generate 8 byte Random Key
+            SecureRandom random = new SecureRandom()
+            byte[] randomKey = new byte[8]
+            random.nextBytes(randomKey)
+
+            //Generate Compressed JSA File
+            byte[] input = file(filePath).getBytes()
+            byte[] compressed = gzipByteArray(input)
+
+            //Generate Obfuscated JSA File
+            int totalBytes = compressed.length;
+            byte[] encodedBytes = new byte[totalBytes + KEY_SIZE];
+            int hiddenCounter = 0;
+            int encodedCounter = 0;
+            for (int compressedCounter = 0; compressedCounter < totalBytes && encodedCounter < totalBytes + KEY_SIZE; encodedCounter++) {
+                if (encodedCounter > 0 && encodedCounter % 10 == 9 && hiddenCounter < KEY_SIZE) {
+                    //Append Key
+                    encodedBytes[encodedCounter] = randomKey[hiddenCounter]
+                    hiddenCounter++
+                } else {
+                    //XOR Byte with KEY Byte
+                    encodedBytes[encodedCounter] = (byte) ((int) compressed[compressedCounter] ^ (int) randomKey[compressedCounter % FRAME_SIZE])
+                    compressedCounter++
+                }
+            }
+            writeByteArray(jsaFiles[index], encodedBytes)
+        }
+    }
+}
+
+/**
+ * Byte processing
+ */
+
+void browserify(String inPath, String outPath, boolean shouldMinify) {
+    println "Processing " + inPath + " " + outPath
+    File outDir = new File(outPath.substring(0, outPath.lastIndexOf("/")));
+    if(!outDir.exists()) {
+        outDir.mkdirs();
+    }
+
+    def result = new StringBuffer()
+
+    Process code = (shouldMinify) ? ('browserify -p /usr/local/lib/node_modules/tinyify ' + inPath + ' -o ' + outPath).execute()
+            : ('cp ' + inPath + ' ' + outPath).execute()
+
+    code.waitForProcessOutput(result, result)
+    if(code.exitValue() != 0) {
+        String error = "Error Occurred while processing " + inPath + "\n"
+        result.append(error)
+        throw new Error(result.toString())
+    }
+    println "Processed and packaged at " + result
+}
+
+
+private void writeByteArray(String filePath, byte[] encrypted) {
+    println("Packaging File - " + filePath)
+    FileOutputStream encryptedOS = new FileOutputStream(file(filePath));
+    encryptedOS.write(encrypted);
+    encryptedOS.close();
+}
+
+private byte[] gzipByteArray(byte[] uncompressed) {
+    ByteArrayOutputStream gzippedBOS = new ByteArrayOutputStream();
+    GZIPOutputStream gzipOutputStream = new GZIPOutputStream(gzippedBOS);
+    gzipOutputStream.write(uncompressed);
+    gzippedBOS.close();
+    gzipOutputStream.close();
+    byte[] compressed = gzippedBOS.toByteArray();
+    compressed
+}
+// -------------------------------------------------------------------------

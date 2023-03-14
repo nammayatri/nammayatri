@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Namma Yatri Partner</string>
+    <string name="client_id">nammayatripartner</string>
+    <string name="service">nammayatripartner</string>
+    <string name="bodyText">Namma Yatri Partner collects location data to enable share your location to monitor driver current location, even when the app is closed or not in use.</string>
+    <string name="dev_port">8080</string>
+    <string name="fileProviderPath">in.juspay.nammayatripartner.fileProvider</string>
+</resources>

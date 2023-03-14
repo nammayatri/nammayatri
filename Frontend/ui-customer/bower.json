@@ -1,0 +1,43 @@
+{
+  "name": "frontend",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-backtrack": "https://github.com/juspay/purescript-backtrack.git#master",
+    "purescript-presto": "git@ssh.bitbucket.juspay.net:picaf/purescript-presto.git#master",
+    "purescript-otp-reader": "git@ssh.bitbucket.juspay.net:picaf/purescript-otp-reader.git#master",
+    "purescript-presto-dom": "git@ssh.bitbucket.juspay.net:picaf/purescript-presto-dom.git#nammaYatri",
+    "purescript-prelude": "^4.1.1",
+    "purescript-console": "^4.2.0",
+    "purescript-effect": "^2.0.1",
+    "purescript-debug": "^4.0.0",
+    "purescript-js-timers": "^4.0.1",
+    "purescript-numbers": "^7.0.0",
+    "purescript-formatters": "^4.0.1",
+    "purescript-integers": "^4.0.0",
+    "purescript-free": "^5.2.0",
+    "purescript-profunctor-lenses": "^6.2.0",
+    "purescript-strings": "^4.0.1",
+    "purescript-enums": "^4.0.1",
+    "purescript-foreign-generic": "^10.0.0",
+    "purescript-beckn-common": "git@ssh.bitbucket.juspay.net:bec/atlas-ui-common.git#main",
+    "purescript-tracker": "git@ssh.bitbucket.juspay.net:picaf/purescript-tracker.git#master"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^4.0.0"
+  },
+  "resolutions": {
+    "purescript-typelevel-prelude": ">=4.0.0 < 6.0.0",
+    "purescript-presto-dom": "nammaYatri",
+    "purescript-ui-components" : "master",
+    "purescript-foreign-object": "^2.0.3",
+    "purescript-record": "^1.0.0",
+    "purescript-tracker": "master",
+    "purescript-presto": "master",
+    "purescript-foreign-generic": "^10.0.0"
+  }
+}

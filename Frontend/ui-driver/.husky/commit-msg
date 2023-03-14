@@ -1,0 +1,9 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+BRANCH_NAME=$(git branch | grep '*' | sed 's/* //')
+
+if [[ $BRANCH_NAME != *"no branch"* ]]
+then
+  npx --no -- commitlint --edit "${1}"
+fi

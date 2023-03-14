@@ -1,0 +1,114 @@
+module Types.ModifyScreenState where
+
+import Debug.Trace (spy)
+import Engineering.Helpers.BackTrack (modifyState)
+import Helpers.Utils (generateUniqueId)
+import JBridge (removeAllPolylines, enableMyLocation)
+import Prelude (Unit, ($), show, discard, unit, pure, bind)
+import Screens.HomeScreen.ScreenData (initData) as HomeScreenData
+import Screens.Types (HomeScreenStage(..))
+import Storage (KeyStore(..), setValueToLocalStore, updateLocalStage)
+import Types.App (FlowBT, GlobalState(..), ScreenType(..), ScreenStage(..))
+
+modifyScreenState :: ScreenType -> FlowBT String Unit 
+modifyScreenState st = 
+  case st of 
+    SplashScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { splashScreen = a state.splashScreen})
+    ChooseLanguageScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { chooseLanguageScreen = a state.chooseLanguageScreen})
+    DriverProfileScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { driverProfileScreen = a state.driverProfileScreen})
+    ApplicationStatusScreenType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { applicationStatusScreen = a state.applicationStatusScreen})
+    EnterMobileNumberScreenType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { mobileNumberScreen = a state.mobileNumberScreen})
+    EnterOTPScreenType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { enterOTPScreen = a state.enterOTPScreen})
+    UploadDrivingLicenseScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { uploadDrivingLicenseScreen = a state.uploadDrivingLicenseScreen})
+    RegisterScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { registrationScreen = a state.registrationScreen})
+    UploadAdhaarScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { uploadAdhaarScreen = a state.uploadAdhaarScreen})
+    AddVehicleDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { addVehicleDetailsScreen = a state.addVehicleDetailsScreen})
+    RideHistoryScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { rideHistoryScreen = a state.rideHistoryScreen})
+    BankDetailScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { bankDetailsScreen = a state.bankDetailsScreen})
+    DriverDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { driverDetailsScreen = a state.driverDetailsScreen})
+    VehicleDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {vehicleDetailsScreen = a state.vehicleDetailsScreen})
+    AboutUsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {aboutUsScreen = a state.aboutUsScreen})
+    SelectLanguageScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {selectedLanguageScreen = a state.selectedLanguageScreen})
+    HelpAndSupportScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {helpAndSupportScreen = a state.helpAndSupportScreen})
+    WriteToUsScreenStateType  a -> modifyState (\(GlobalState state) -> GlobalState $ state {writeToUsScreen = a state.writeToUsScreen})
+    PermissionsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {permissionsScreen = a state.permissionsScreen})
+    HomeScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { homeScreen = a state.homeScreen})
+    RideDetailScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { rideDetailScreen = a state.rideDetailScreen})
+    EditBankDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { editBankDetailsScreen = a state.editBankDetailsScreen})
+    EditAadhaarDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { editAadhaarDetailsScreen = a state.editAadhaarDetailsScreen})
+    TripDetailsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { tripDetailsScreen = a state.tripDetailsScreen})
+    PopUpScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state { popUpScreen = a state.popUpScreen })
+    DriverRideRatingScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { driverRideRatingScreen = a state.driverRideRatingScreen})
+    NotificationsScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { notificationScreen = a state.notificationScreen})
+    ReferralScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state { referralScreen = a state.referralScreen })
+
+
+updateStage :: ScreenStage -> FlowBT String Unit 
+updateStage stage = do 
+  case stage of
+    HomeScreenStage stage' -> do
+      _ <- pure $ enableMyLocation true
+      _ <- pure $ updateLocalStage stage'
+      _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING_ID (generateUniqueId unit)
+      _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING "False"
+      _ <- pure $ spy "UpdateStage" stage'
+      case stage' of 
+        RideRequested ->  
+          modifyScreenState $ 
+            HomeScreenStateType 
+              (\state -> 
+                state 
+                { 
+                  props
+                  {
+                    currentStage = stage'
+                  } 
+                })
+        RideAccepted -> do  
+          modifyScreenState $ 
+            HomeScreenStateType 
+              (\state -> 
+                state 
+                { props
+                  {
+                    rideActionModal = true,
+                    routeVisible = false,
+                    currentStage = stage'
+                  } 
+                })
+        RideStarted -> do 
+          modifyScreenState $ 
+            HomeScreenStateType 
+              (\state -> 
+                state 
+                { data {
+                  activeRide {
+                    isDriverArrived = false
+                  }
+                }
+                , props
+                  { 
+                    cancelRideModalShow = false,
+                    rideActionModal = true,
+                    enterOtpModal = false,
+                    routeVisible = false,
+                    currentStage = stage'
+                  } 
+                }) 
+        RideCompleted ->
+          modifyScreenState $ 
+            HomeScreenStateType 
+              (\state ->
+                state
+                { props
+                  { 
+                    rideActionModal = false,
+                    enterOtpModal = false,
+                    routeVisible = false,
+                    currentStage = stage'
+                  }
+                })
+        HomeScreen -> do 
+          _ <- pure $ removeAllPolylines ""
+          modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData) 
+          

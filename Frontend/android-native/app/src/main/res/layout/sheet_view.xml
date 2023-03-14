@@ -1,0 +1,431 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/relative_layout"
+    android:background="@android:color/transparent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <RelativeLayout
+        android:id="@+id/containerLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:layout_marginLeft="24dp"
+        android:layout_marginRight="24dp">
+
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="35dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:background="@drawable/ic_roundcorner_overlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:paddingHorizontal="15dp"
+                android:paddingVertical="10dp">
+
+
+
+
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingVertical="10dp">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="30dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="25dp"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:id="@+id/journeySource"
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:fontFamily="@font/plus_jakartasans_medium"
+                                android:lines="3"
+                                android:textColor="#454545"
+                                android:textSize="14sp"
+                                android:text="Source Address"/>
+                        </LinearLayout>
+
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="25dp"
+                            android:layout_marginTop="75dp"
+                            android:gravity="center_vertical"
+                            android:orientation="vertical">
+                            <TextView
+                                android:id="@+id/destinationArea"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"
+                                android:fontFamily="@font/plus_jakartasans_medium"
+                                android:lines="1"
+                                android:textColor="#454545"
+                                android:textSize="17dp"
+                                android:textStyle="bold"
+                                android:ellipsize= "end"
+                                android:text= "Area"/>
+                            <TextView
+                                android:id="@+id/journeyDestination"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center_vertical"
+                                android:fontFamily="@font/plus_jakartasans_medium"
+                                android:lines="3"
+                                android:textColor="#454545"
+                                android:textSize="15dp"
+                                android:text="Dest Address"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:layout_marginTop="5dp"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:orientation="vertical">
+
+                                <com.google.android.material.card.MaterialCardView
+                                    android:layout_width="15dp"
+                                    android:layout_height="15dp"
+                                    android:theme="@style/Theme.MaterialComponents.Light"
+                                    app:cardCornerRadius="45dp"
+                                    app:strokeColor="#2BB631"
+                                    app:strokeWidth="3dp" />
+
+                                <ImageView
+                                    android:layout_width="3dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="center_horizontal"
+                                    android:layout_marginTop="2dp"
+                                    android:layout_marginBottom="2dp"
+                                    android:layout_weight="1"
+                                    android:layerType="software"
+                                    android:src="@drawable/dashed_line" />
+
+                                <com.google.android.material.card.MaterialCardView
+                                    android:layout_width="15dp"
+                                    android:layout_height="15dp"
+                                    android:layout_marginBottom="40dp"
+                                    android:theme="@style/Theme.MaterialComponents.Light"
+                                    app:cardCornerRadius="45dp"
+                                    app:strokeColor="#ED4D41"
+                                    app:strokeWidth="3dp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </FrameLayout>
+                </LinearLayout>
+
+                <RelativeLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center">
+                    <LinearLayout
+                        android:layout_marginTop="5dp"
+                        android:layout_marginLeft="40dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingVertical="10dp"
+                        android:layout_gravity="left"
+                        android:layout_alignParentLeft="true">
+
+                        <TextView
+                            android:fontFamily="@font/plus_jakartasans_regular"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_vertical"
+                            android:textColor="#6D7280"
+                            android:textSize="18dp"
+                            android:text="Pickup" />
+                        <TextView
+                            android:id="@+id/distancePickUp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="25dp"
+                            android:textColor="#2C2F3A"
+                            android:layout_marginTop="5dp"
+                            android:text="1.2 km"
+                            android:textFontWeight="700"
+                            android:textSize="18dp"
+                            android:fontFamily="@font/plus_jakartasans_medium"
+                            android:textStyle="bold"/>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="right"
+                        android:layout_marginRight="40dp"
+                        android:gravity="right"
+                        android:layout_marginTop="5dp"
+                        android:orientation="vertical"
+                        android:paddingVertical="10dp"
+                        android:layout_alignParentRight="true">
+
+                        <TextView
+                            android:layout_width= "match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_vertical"
+                            android:fontFamily="@font/plus_jakartasans_regular"
+                            android:text="Trip"
+                            android:textColor="#6D7280"
+                            android:textSize="18dp" />
+                        <TextView
+                            android:id="@+id/distanceToBeCovered"
+                            android:layout_width="match_parent"
+                            android:layout_height="25dp"
+                            android:textColor="#2C2F3A"
+                            android:layout_marginTop="5dp"
+                            android:textFontWeight="700"
+                            android:textSize="18dp"
+                            android:textAlignment="center"
+                            android:fontFamily="@font/plus_jakartasans_medium"
+                            android:textStyle="bold"
+                            android:text="12 km"/>
+
+
+                    </LinearLayout>
+
+                </RelativeLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginBottom="5dp"
+                    android:background="#F1F1F1"/>
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="4dp"
+                    android:background="#F4F4F6"
+                    app:cardCornerRadius="10dp"
+                    app:cardElevation="0dp"
+                    app:cardPreventCornerOverlap="true"
+                    android:layout_marginTop="20dp">
+                    <LinearLayout
+
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:background="#F4F4F6"
+                        android:padding="4dp"
+                        >
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:theme="@style/Theme.MaterialComponents.Light"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            app:cardCornerRadius="10dp"
+                            app:contentPadding="5dp"
+                            app:contentPaddingLeft="10dp"
+                            app:contentPaddingRight="0dp"
+                            app:cardElevation="0dp"
+                            android:alpha="0.5"
+                            android:visibility="invisible"
+                            android:background="@color/white" 
+                            android:id="@+id/buttonDecreasePrice">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:layout_gravity="center"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="5dp">
+
+                                <TextView
+                                    android:id="@+id/btnAddExtraMinus"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center"
+                                    android:text=" - "
+                                    android:textSize="25dp"
+                                    android:textColor="#454545"/>
+
+                                <TextView
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="center_vertical"
+                                    android:text=" 10 "
+                                    android:textColor="#454545"
+                                    android:textSize="18dp" />
+
+                            </LinearLayout>
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:orientation="horizontal"
+                            android:gravity="center">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:gravity="center"
+                                android:textColor="#1C1919"
+                                android:textFontWeight="600"
+                                android:text="₹"
+                                android:paddingTop="4dp"
+                                android:textSize="25dp" />
+
+                            <TextView
+                                android:layout_marginLeft="2dp"
+                                android:id="@+id/basePrice"
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:fontFamily="@font/plus_jakarta_sans_bold"
+                                android:gravity="center"
+                                android:textColor="#2C2F3A"
+                                android:text="125"
+                                android:textFontWeight="700"
+                                android:textSize="23dp"/>
+                        </LinearLayout>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:theme="@style/Theme.MaterialComponents.Light"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            app:cardCornerRadius="10dp"
+                            app:contentPadding="5dp"
+                            app:contentPaddingLeft="0dp"
+                            app:cardElevation="0dp"
+                            app:contentPaddingRight="10dp"
+                            android:id="@+id/buttonIncreasePrice"
+                            android:visibility="invisible"
+                            android:clickable="true">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:layout_gravity="center"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="5dp">
+
+                                <TextView
+                                    android:id="@+id/btnAddExtraPlus"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center"
+                                    android:text=" + "
+                                    android:textSize="25dp"
+                                    android:textColor="#454545"/>
+
+                                <TextView
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:id="@+id/txtAddExtra"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="center_vertical"
+                                    android:text=" 10 "
+                                    android:textSize="18dp"
+                                    android:textColor="#454545"/>
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:orientation="horizontal"
+                    android:weightSum="12">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:theme="@style/Theme.MaterialComponents.Light"
+                        android:id="@+id/rejButton"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="6"
+                        android:paddingHorizontal="15dp"
+                        android:paddingVertical="14dp"
+                        android:fontFamily="@font/plus_jakartasans_semibold"
+                        android:text="Decline"
+                        android:textSize="14dp"
+                        android:textAllCaps="false"
+                        android:textColor="#6D7280"
+                        app:strokeColor="#6D7280"
+                        app:cornerRadius="8dp"/>
+
+
+                    <com.google.android.material.button.MaterialButton
+                        android:theme="@style/Theme.MaterialComponents.Light"
+                        android:id="@+id/reqButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="12dp"
+                        android:layout_weight="6"
+                        android:backgroundTint="#53BB64"
+                        android:paddingHorizontal="15dp"
+                        android:paddingVertical="14dp"
+                        android:text="Request"
+                        android:textSize="14dp"
+                        android:fontFamily="@font/plus_jakartasans_semibold"
+                        android:textAllCaps="false"
+                        app:cornerRadius="8dp" />
+
+
+                </LinearLayout>
+            </LinearLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="65dp"
+            android:layout_height="65dp"
+            android:layout_centerHorizontal="true"
+            app:cardCornerRadius="45dp">
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:indeterminate="true"
+                android:indeterminateDrawable="@drawable/rotate_drawable" />
+
+            <TextView
+                android:id="@+id/acceptRejTimer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="60s"
+                android:textColor="#454545"
+                android:textSize="18dp" />
+
+        </androidx.cardview.widget.CardView>
+
+    </RelativeLayout>
+
+</RelativeLayout>

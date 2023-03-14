@@ -1,0 +1,26 @@
+module Screens.NoInternetScreen.Handler where
+
+import Prelude (bind, ($), pure, (<$>))
+import Engineering.Helpers.BackTrack (getState)
+import Control.Monad.Except.Trans (lift)
+import Control.Transformers.Back.Trans as App 
+import PrestoDOM.Core.Types.Language.Flow (runScreenWithNameSpace, initUIWithNameSpace)
+import Screens.NoInternetScreen.View as NoInternetScreen
+import Presto.Core.Types.Language.Flow (doAff)
+import Data.Maybe
+import PrestoDOM.Core2(terminateUI)
+import Effect.Class (liftEffect)
+import Screens.NoInternetScreen.Controller (ScreenOutput(..))
+import Types.App (FlowBT, GlobalState(..), NO_INTERNET_SCREEN_OUTPUT(..))
+
+noInternetScreen :: String -> FlowBT String NO_INTERNET_SCREEN_OUTPUT 
+noInternetScreen triggertype= do 
+  (GlobalState state) <- getState
+  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "NoInternetScreen" Nothing
+  act <- lift $ lift $ runScreenWithNameSpace $ NoInternetScreen.screen state.noInternetScreen triggertype
+  _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "NoInternetScreen"
+  case act of
+    GoBack -> App.BackT $ pure App.GoBack 
+    Refresh -> App.BackT $ App.BackPoint <$> (pure REFRESH_INTERNET)
+    LocationCallBack updatedState -> App.BackT $ App.NoBack <$> (pure TURN_ON_GPS)
+    InternetCallBack updatedState -> App.BackT $ App.NoBack <$> (pure CHECK_INTERNET)

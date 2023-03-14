@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+    <include layout="@layout/splash" />
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/cl_dui_container" />
+
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:visibility="gone"
+        android:layout_height="match_parent"/>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:background="#99000000"
+        android:id="@+id/loaderLayout"
+        android:visibility="gone"
+        android:layout_height="match_parent">
+        <include layout="@layout/loader"/>
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/betaBanner"
+        android:layout_width="106dp"
+        android:layout_height="106dp"
+        android:background="#FFC063"
+        android:gravity="bottom|center_horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="1dp"
+        android:rotation="45"
+        android:text="BETA"
+        android:textColor="#2B2A2A"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:translationX="65dp"
+        android:translationY="-65dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
