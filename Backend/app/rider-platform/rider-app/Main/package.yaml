@@ -81,6 +81,7 @@ dependencies:
   - extra
   - text-conversions
   - dashboard-helper-api
+  - http-types
 
 ghc-options:
   - -fwrite-ide-info
