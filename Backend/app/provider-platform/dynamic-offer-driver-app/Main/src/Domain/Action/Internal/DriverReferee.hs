@@ -50,6 +50,8 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
     Nothing -> do
       riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId
       ESQ.runTransaction $ QRD.create riderDetails
+  driverReferral <- QDR.findById driverReferralLinkage.driverId >>= fromMaybeM (PersonNotFound driverReferralLinkage.driverId.getId)
+  ESQ.runTransaction $ QDR.increaseReferredCustomerCount driverReferralLinkage.driverId driverReferral.referredCustomerCount
   pure Success
   where
     mkRiderDetailsObj driverId = do

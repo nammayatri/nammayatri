@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.DriverReferral where
 
 import Domain.Types.DriverReferral
@@ -22,3 +24,21 @@ findById driverId = do
     driverReferral <- from $ table @DriverReferralT
     where_ $ driverReferral ^. DriverReferralDriverId ==. val (toKey driverId)
     return driverReferral
+
+increaseTotalActivatedCustomerCount :: Id SP.Person -> Int -> SqlDB ()
+increaseTotalActivatedCustomerCount driverId activatedCustomerCount = do
+  Esq.update $ \tab -> do
+    set
+      tab
+      [ DriverReferralActivatedCustomerCount =. val (activatedCustomerCount + 1)
+      ]
+    where_ $ tab ^. DriverReferralDriverId ==. val (toKey driverId)
+
+increaseReferredCustomerCount :: Id SP.Person -> Int -> SqlDB ()
+increaseReferredCustomerCount driverId referredCustomerCount = do
+  Esq.update $ \tab -> do
+    set
+      tab
+      [ DriverReferralReferredCustomerCount =. val (referredCustomerCount + 1)
+      ]
+    where_ $ tab ^. DriverReferralDriverId ==. val (toKey driverId)

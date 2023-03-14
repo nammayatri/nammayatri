@@ -1,16 +1,13 @@
 module Domain.Action.UI.Performance where
 
 import qualified Domain.Types.Person as SP
-import Domain.Types.RiderDetails ()
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBFlow, EsqDBReplicaFlow)
-import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Error (PersonError (PersonNotFound))
+import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM)
+import Kernel.Utils.Error (fromMaybeM)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
-import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.RiderDetails as QRD
+import Storage.Queries.DriverReferral as SQD
 
 data Results = Results
   { totalReferredCustomers :: Int,
@@ -25,7 +22,5 @@ newtype PerformanceRes = PerformanceRes
 
 getDriverPerformance :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SP.Person -> m PerformanceRes
 getDriverPerformance driverId = do
-  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  allRefferedCustomers <- QRD.findAllReferredByDriverId driverId
-  let ridesTakenList = filter (.hasTakenValidRide) allRefferedCustomers
-  pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList))
+  driverReferral <- SQD.findById driverId >>= fromMaybeM (InvalidRequest "Driver doesn't have referralCode")
+  pure $ PerformanceRes (Results (driverReferral.referredCustomerCount) (driverReferral.activatedCustomerCount))

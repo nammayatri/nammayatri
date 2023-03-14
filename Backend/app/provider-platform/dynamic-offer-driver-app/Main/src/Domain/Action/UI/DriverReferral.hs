@@ -14,7 +14,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
-import Storage.CachedQueries.CacheConfig (HasCacheConfig)
+import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverReferral as QRD
 import qualified Storage.Queries.Person as QP
@@ -28,6 +28,7 @@ data ReferralLinkReq = ReferralLinkReq
 
 createDriverReferral ::
   ( HasCacheConfig r,
+    CacheFlow m r,
     Redis.HedisFlow m r,
     MonadFlow m,
     EsqDBReplicaFlow m r,
@@ -61,5 +62,7 @@ createDriverReferral driverId isDashboard ReferralLinkReq {..} = do
         D.DriverReferral
           { referralCode = Id rc,
             driverId = cast driverId,
+            referredCustomerCount = 0,
+            activatedCustomerCount = 0,
             linkedAt = now
           }

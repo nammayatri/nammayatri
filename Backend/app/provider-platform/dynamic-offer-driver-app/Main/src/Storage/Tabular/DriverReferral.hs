@@ -19,6 +19,8 @@ mkPersist
     DriverReferralT sql=driver_referral
       referralCode Text
       driverId PersonTId
+      referredCustomerCount Int
+      activatedCustomerCount Int
       linkedAt UTCTime
       Primary referralCode
       Unique DriverReferralDriverId

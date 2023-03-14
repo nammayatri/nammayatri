@@ -21,6 +21,8 @@ import Kernel.Types.Id
 data DriverReferral = DriverReferral
   { referralCode :: Id DriverReferral,
     driverId :: Id Person,
+    referredCustomerCount :: Int,
+    activatedCustomerCount :: Int,
     linkedAt :: UTCTime
   }
   deriving (Generic, Show, Eq)

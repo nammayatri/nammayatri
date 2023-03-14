@@ -39,6 +39,7 @@ import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.Queries.DriverReferral as SQD
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.Person as SQP
@@ -76,8 +77,12 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
             sendNotificationToDriver driver.merchantId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver.id driver.deviceToken
           Nothing -> pure ()
   Esq.runTransaction $ do
-    whenJust mbRiderDetails $ \riderDetails ->
-      when shouldUpdateRideComplete (QRD.updateHasTakenValidRide riderDetails.id)
+    whenJust mbRiderDetails $ \riderDetails -> do
+      when shouldUpdateRideComplete do
+        QRD.updateHasTakenValidRide riderDetails.id
+        whenJust riderDetails.referredByDriver $ \referredDriverId -> do
+          driverReferral <- SQD.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
+          SQD.increaseTotalActivatedCustomerCount referredDriverId driverReferral.activatedCustomerCount
     whenJust mbFareParams QFare.create
     QRide.updateAll ride.id ride
     QRide.updateStatus ride.id Ride.COMPLETED
