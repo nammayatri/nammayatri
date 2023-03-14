@@ -100,7 +100,9 @@ data AppCfg = AppCfg
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
     maxEmergencyNumberCount :: Int,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
+    appPrefix :: Text,
+    snapToRoadSnippetThreshold :: HighPrecMeters
   }
   deriving (Generic, FromDhall)
 
@@ -148,7 +150,9 @@ data AppEnv = AppEnv
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
     maxEmergencyNumberCount :: Int,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
+    appPrefix :: Text,
+    snapToRoadSnippetThreshold :: HighPrecMeters
   }
   deriving (Generic)
 

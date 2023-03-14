@@ -29,6 +29,7 @@ import Kernel.Prelude
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
@@ -65,7 +66,9 @@ oneWaySearch ::
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m,
-    HasBAPMetrics m r
+    HasBAPMetrics m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Person.Person ->
   Merchant.Merchant ->

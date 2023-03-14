@@ -141,4 +141,6 @@ in  { esqDBCfg
     , cacheTranslationConfig
     , maxEmergencyNumberCount = +3
     , minTripDistanceForReferralCfg = Some +1000
+    , appPrefix = "rider-app"
+    , snapToRoadSnippetThreshold = +300
     }

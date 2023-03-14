@@ -27,3 +27,111 @@ content-type: application/json
 ###
 
 @token = {{verify.response.body.token}}
+
+
+# @name testAutoComplete
+POST {{app-host}}/maps/autoComplete
+content-type: application/json
+token: {{token}}
+
+{
+  "sessionToken": "string",
+  "location": "string",
+  "radius": 0,
+  "input": "string",
+  "language": "ENGLISH"
+}
+
+###
+
+# @name testGetPlaceDetails
+POST {{app-host}}/maps/getPlaceDetails
+content-type: application/json
+token: {{token}}
+
+{
+  "sessionToken": "string",
+  "placeId": "ChIJHce3CwwUrjsR4jhVqN8GECs"
+}
+
+###
+
+# @name testGetPlaceName
+POST {{app-host}}/maps/getPlaceName
+content-type: application/json
+token: {{token}}
+
+{
+  "sessionToken": "string",
+  "language": "ENGLISH",
+  "getBy": {
+    "contents": {
+      "lat": 9.935467566937517,
+      "lon": 76.38175342367484
+    },
+    "tag": "ByLatLong"
+  }
+}
+
+###
+
+# @name testGetDistance
+POST {{app-host}}/maps/getDistance
+content-type: application/json
+token: {{token}}
+
+{
+  "origin": {
+    "lat": 9.935467566937517,
+    "lon": 76.38175342367484
+  },
+  "travelMode": "CAR",
+  "destination": {
+    "lat": 9.933390994696952,
+    "lon": 76.3859161884565
+  }
+}
+
+###
+
+# @name testGetRoutes
+POST {{app-host}}/maps/getRoutes
+content-type: application/json
+token: {{token}}
+
+{
+  "mode": "CAR",
+  "calcPoints": true,
+  "waypoints": [
+    {
+      "lat": 9.935467566937517,
+      "lon": 76.38175342367484
+    },
+    {
+      "lat": 9.933390994696952,
+      "lon": 76.3859161884565
+    }
+  ]
+}
+
+###
+
+# @name testSnapToRoad
+POST {{app-host}}/maps/snapToRoad
+content-type: application/json
+token: {{token}}
+
+{
+  "points": [
+    {
+      "lat": 9.933338154695385,
+      "lon": 76.38589473078405
+    },
+    {
+      "lat": 9.933042250528894,
+      "lon": 76.38353438681385
+    }
+  ]
+}
+
+###

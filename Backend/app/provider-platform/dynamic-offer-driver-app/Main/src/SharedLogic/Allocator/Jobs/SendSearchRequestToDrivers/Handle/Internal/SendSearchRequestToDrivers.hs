@@ -129,12 +129,12 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
               }
       pure searchRequestForDriver
 
-buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => DLoc.SearchReqLocation -> Maybe Maps.Language -> m DLoc.SearchReqLocation
-buildTranslatedSearchReqLocation DLoc.SearchReqLocation {..} mbLanguage = do
+buildTranslatedSearchReqLocation :: (TranslateFlow m r, EsqDBFlow m r, CacheFlow m r) => Text -> DLoc.SearchReqLocation -> Maybe Maps.Language -> m DLoc.SearchReqLocation
+buildTranslatedSearchReqLocation someId DLoc.SearchReqLocation {..} mbLanguage = do
   areaRegional <- case mbLanguage of
     Nothing -> return area
     Just lang -> do
-      mAreaObj <- translate ENGLISH lang `mapM` area
+      mAreaObj <- translate someId ENGLISH lang `mapM` area
       let translation = (\areaObj -> listToMaybe areaObj._data.translations) =<< mAreaObj
       return $ (.translatedText) <$> translation
   pure
@@ -152,8 +152,8 @@ translateSearchReq ::
   Maps.Language ->
   m DSearchReq.SearchRequest
 translateSearchReq DSearchReq.SearchRequest {..} language = do
-  from <- buildTranslatedSearchReqLocation fromLocation (Just language)
-  to <- buildTranslatedSearchReqLocation toLocation (Just language)
+  from <- buildTranslatedSearchReqLocation (getId providerId) fromLocation (Just language)
+  to <- buildTranslatedSearchReqLocation (getId providerId) toLocation (Just language)
   pure
     DSearchReq.SearchRequest
       { fromLocation = from,

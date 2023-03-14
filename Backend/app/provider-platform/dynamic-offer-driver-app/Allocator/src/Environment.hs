@@ -28,6 +28,8 @@ import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, disconnectHedis)
+import Kernel.Streaming.Kafka.Producer (buildKafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Common
 import Kernel.Types.Flow
@@ -72,7 +74,9 @@ data HandlerEnv = HandlerEnv
     overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
-    maxParallelSearchRequests :: Int
+    maxParallelSearchRequests :: Int,
+    kafkaProducerTools :: KafkaProducerTools,
+    appPrefix :: Text
   }
   deriving (Generic)
 
@@ -86,6 +90,7 @@ buildHandlerEnv HandlerCfg {..} = do
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   let overrideDriverPoolConfig = fromMaybe [] overrideDriverPoolCfg
   return HandlerEnv {..}
 

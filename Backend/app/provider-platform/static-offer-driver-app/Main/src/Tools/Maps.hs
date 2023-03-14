@@ -46,6 +46,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC
 import Tools.Error
 import Tools.Metrics
+import Tools.Streaming.Kafka (KafkaProducerTools)
 
 getDistance ::
   ( EncFlow m r,
@@ -53,12 +54,16 @@ getDistance ::
     EsqDBFlow m r,
     CoreMetrics m,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id Merchant ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
-getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
+getDistance merchantId = runWithServiceConfig (Maps.getDistance (getId merchantId)) (.getDistances) merchantId
 
 getDistances ::
   ( EncFlow m r,
@@ -66,12 +71,16 @@ getDistances ::
     EsqDBFlow m r,
     CoreMetrics m,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id Merchant ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
-getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
+getDistances merchantId = runWithServiceConfig (Maps.getDistances (getId merchantId)) (.getDistances) merchantId
 
 getEstimatedPickupDistances ::
   ( EncFlow m r,
@@ -79,36 +88,82 @@ getEstimatedPickupDistances ::
     EsqDBFlow m r,
     CoreMetrics m,
     HasCoordinates a,
-    HasCoordinates b
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id Merchant ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
-getEstimatedPickupDistances = runWithServiceConfig Maps.getDistances (.getEstimatedPickupDistances)
+getEstimatedPickupDistances merchantId = runWithServiceConfig (Maps.getDistances (getId merchantId)) (.getEstimatedPickupDistances) merchantId
 
-getRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
-getRoutes = runWithServiceConfig Maps.getRoutes (.getRoutes)
+getRoutes ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id Merchant ->
+  GetRoutesReq ->
+  m GetRoutesResp
+getRoutes merchantId = runWithServiceConfig (Maps.getRoutes (getId merchantId)) (.getRoutes) merchantId
 
 snapToRoad ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
     CoreMetrics m,
-    HasField "snapToRoadSnippetThreshold" r HighPrecMeters
+    HasField "snapToRoadSnippetThreshold" r HighPrecMeters,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id Merchant ->
   SnapToRoadReq ->
   m SnapToRoadResp
-snapToRoad = runWithServiceConfig Maps.snapToRoad (.snapToRoad)
+snapToRoad merchantId = runWithServiceConfig (Maps.snapToRoad (getId merchantId)) (.snapToRoad) merchantId
 
-autoComplete :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> AutoCompleteReq -> m AutoCompleteResp
-autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)
+autoComplete ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id Merchant ->
+  AutoCompleteReq ->
+  m AutoCompleteResp
+autoComplete merchantId = runWithServiceConfig (Maps.autoComplete (getId merchantId)) (.autoComplete) merchantId
 
-getPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceNameReq -> m GetPlaceNameResp
-getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
+getPlaceName ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id Merchant ->
+  GetPlaceNameReq ->
+  m GetPlaceNameResp
+getPlaceName merchantId = runWithServiceConfig (Maps.getPlaceName (getId merchantId)) (.getPlaceName) merchantId
 
-getPlaceDetails :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
-getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
+getPlaceDetails ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id Merchant ->
+  GetPlaceDetailsReq ->
+  m GetPlaceDetailsResp
+getPlaceDetails merchantId = runWithServiceConfig (Maps.getPlaceDetails (getId merchantId)) (.getPlaceDetails) merchantId
 
 runWithServiceConfig ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>

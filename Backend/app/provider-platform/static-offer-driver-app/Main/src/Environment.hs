@@ -97,7 +97,8 @@ data AppCfg = AppCfg
     driverReachedDistance :: HighPrecMeters,
     driverPoolCfg :: DriverPoolConfig,
     driverLocationUpdateTopic :: Text,
-    snapToRoadSnippetThreshold :: HighPrecMeters
+    snapToRoadSnippetThreshold :: HighPrecMeters,
+    appPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -145,7 +146,8 @@ data AppEnv = AppEnv
     driverReachedDistance :: HighPrecMeters,
     driverPoolCfg :: DriverPoolConfig,
     driverLocationUpdateTopic :: Text,
-    snapToRoadSnippetThreshold :: HighPrecMeters
+    snapToRoadSnippetThreshold :: HighPrecMeters,
+    appPrefix :: Text
   }
   deriving (Generic)
 

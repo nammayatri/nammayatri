@@ -19,6 +19,7 @@ import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -45,7 +46,9 @@ sendSearchRequestToDrivers ::
     HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
-    Log m
+    Log m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -67,7 +70,9 @@ sendSearchRequestToDrivers' ::
     HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
-    Log m
+    Log m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   DriverPoolConfig ->
   SearchRequest ->

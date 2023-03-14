@@ -42,6 +42,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Streaming.Kafka.Topic.PublicTransportSearch
 import Kernel.Streaming.MonadProducer
 import Kernel.Types.Common hiding (id)
@@ -134,7 +135,9 @@ oneWaySearch ::
     CoreMetrics m,
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds, "gatewayUrl" ::: BaseUrl],
     HasBAPMetrics m r,
-    MonadProducer PublicTransportSearch m
+    MonadProducer PublicTransportSearch m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id Person.Person ->
   Maybe Version ->

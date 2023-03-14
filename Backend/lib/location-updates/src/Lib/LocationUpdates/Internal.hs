@@ -34,9 +34,11 @@ import GHC.Records.Extra
 import Kernel.External.Maps as Maps
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
-import Kernel.Types.Id (Id)
+import Kernel.Types.Field
+import Kernel.Types.Id (Id, getId)
 import Kernel.Utils.Logging
 
 data RideInterpolationHandler person m = RideInterpolationHandler
@@ -46,7 +48,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     getWaypointsNumber :: Id person -> m Integer,
     getFirstNwaypoints :: Id person -> Integer -> m [LatLong],
     deleteFirstNwaypoints :: Id person -> Integer -> m (),
-    interpolatePointsAndCalculateDistance :: [LatLong] -> m (HighPrecMeters, [LatLong]),
+    interpolatePointsAndCalculateDistance :: Id person -> [LatLong] -> m (HighPrecMeters, [LatLong]),
     wrapDistanceCalculation :: Id person -> m () -> m (),
     isDistanceCalculationFailed :: Id person -> m Bool,
     updateDistance :: Id person -> HighPrecMeters -> m ()
@@ -117,7 +119,7 @@ recalcDistanceBatchStep ::
   m HighPrecMeters
 recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
   batchWaypoints <- getFirstNwaypoints driverId (batchSize + 1)
-  (distance, interpolatedWps) <- interpolatePointsAndCalculateDistance batchWaypoints
+  (distance, interpolatedWps) <- interpolatePointsAndCalculateDistance driverId batchWaypoints
   logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
   logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
   deleteFirstNwaypoints driverId batchSize
@@ -130,7 +132,9 @@ mkRideInterpolationHandler ::
     HasCallStack,
     Metrics.CoreMetrics m,
     EncFlow m env,
-    HasField "snapToRoadSnippetThreshold" env HighPrecMeters
+    HasField "snapToRoadSnippetThreshold" env HighPrecMeters,
+    HasFlowEnv m env '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m env '["appPrefix" ::: Text]
   ) =>
   Bool ->
   MapsServiceConfig ->
@@ -180,17 +184,20 @@ interpolatePointsAndCalculateDistanceImplementation ::
   ( HasCallStack,
     EncFlow m r,
     Metrics.CoreMetrics m,
-    HasField "snapToRoadSnippetThreshold" r HighPrecMeters
+    HasField "snapToRoadSnippetThreshold" r HighPrecMeters,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Bool ->
   MapsServiceConfig ->
+  Id person ->
   [LatLong] ->
   m (HighPrecMeters, [LatLong])
-interpolatePointsAndCalculateDistanceImplementation isEndRide mapsCfg wps = do
+interpolatePointsAndCalculateDistanceImplementation isEndRide mapsCfg someId wps = do
   if isEndRide && isAllPointsEqual wps
     then pure (0, take 1 wps)
     else do
-      res <- Maps.snapToRoad mapsCfg $ Maps.SnapToRoadReq {points = wps}
+      res <- Maps.snapToRoad (getId someId) mapsCfg $ Maps.SnapToRoadReq {points = wps}
       pure (res.distance, res.snappedPoints)
 
 isAllPointsEqual :: [LatLong] -> Bool

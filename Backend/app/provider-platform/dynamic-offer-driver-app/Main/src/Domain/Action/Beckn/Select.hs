@@ -26,10 +26,11 @@ import Domain.Types.Vehicle.Variant (Variant)
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, logDebug, logInfo)
+import Kernel.Utils.Common (fromMaybeM, logDebug, logInfo, (:::))
 import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
@@ -152,7 +153,20 @@ buildSearchRequest from to merchantId sReq distance duration = do
         autoAssignEnabled = sReq.autoAssignEnabled
       }
 
-buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
+buildSearchReqLocation ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id DM.Merchant ->
+  Text ->
+  Maybe BA.Address ->
+  Maybe Maps.Language ->
+  LatLong ->
+  m DLoc.SearchReqLocation
 buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
   Address {..} <- case address of
     Just loc
@@ -175,7 +189,18 @@ buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@
       updatedAt = now
   pure DLoc.SearchReqLocation {..}
 
-getAddressByGetPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m Address
+getAddressByGetPlaceName ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id DM.Merchant ->
+  Text ->
+  LatLong ->
+  m Address
 getAddressByGetPlaceName merchantId sessionToken latLong = do
   pickupRes <-
     Maps.getPlaceName merchantId $

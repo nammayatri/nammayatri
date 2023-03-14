@@ -46,6 +46,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.APISuccess
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
@@ -113,7 +114,12 @@ bookingList person mbLimit mbOffset mbOnlyActive mbBookingStatus = do
   BookingListRes <$> traverse buildBookingAPIEntity rbList
 
 bookingCancel ::
-  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
   Id SRB.Booking ->
   SP.Person ->
   m APISuccess
@@ -141,7 +147,17 @@ bookingCancel bookingId admin = do
           }
 
 getRideInfo ::
-  (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  ) =>
+  Id SRB.Booking ->
+  Id SP.Person ->
+  m GetRideInfoRes
 getRideInfo bookingId personId = do
   mbNotification <- Esq.runInReplica $ QNotificationStatus.findActiveNotificationByDriverId driverId bookingId
   case mbNotification of

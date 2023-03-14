@@ -27,6 +27,7 @@ import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.External.Maps.Types as MapSearch
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -60,6 +61,8 @@ onSearchCallback ::
     HedisFlow m r,
     DrPool.HasDriverPoolConfig r,
     HasFlowEnv m r '["driverEstimatedPickupDuration" ::: Seconds],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text],
     HasBPPMetrics m r,
     CoreMetrics m
   ) =>

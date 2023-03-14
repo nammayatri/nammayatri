@@ -31,6 +31,7 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
@@ -62,7 +63,9 @@ getDriverLoc ::
     EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m,
-    HasField "rideCfg" r RideConfig
+    HasField "rideCfg" r RideConfig,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id SRide.Ride ->
   Id SPerson.Person ->

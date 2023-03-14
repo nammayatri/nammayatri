@@ -25,6 +25,7 @@ import Environment (Flow)
 import Kernel.Prelude
 import Kernel.Randomizer (randomizeList)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -60,7 +61,9 @@ prepareDriverPoolBatch ::
     EsqDBFlow m r,
     Redis.HedisFlow m r,
     HasDriverPoolConfig r,
-    HasDriverPoolBatchesConfig r
+    HasDriverPoolBatchesConfig r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id SRB.Booking ->
   PoolBatchNum ->
@@ -104,7 +107,9 @@ prepareDriverPoolBatch bookingId batchNum = withLogTag ("BatchNum-" <> show batc
         CoreMetrics m,
         EsqDBFlow m r,
         Redis.HedisFlow m r,
-        HasDriverPoolConfig r
+        HasDriverPoolConfig r,
+        HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+        HasFlowEnv m r '["appPrefix" ::: Text]
       ) =>
       SRB.Booking ->
       PoolRadiusStep ->

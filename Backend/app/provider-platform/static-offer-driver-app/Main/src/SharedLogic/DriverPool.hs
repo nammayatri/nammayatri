@@ -24,6 +24,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as SV
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverPool.Config as Reexport
@@ -43,7 +44,9 @@ calculateDriverPool ::
     Redis.HedisFlow m r,
     HasDriverPoolConfig r,
     CoreMetrics m,
-    HasCoordinates a
+    HasCoordinates a,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   a ->
   Id DM.Merchant ->
@@ -86,7 +89,9 @@ buildDriverPoolResults ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id DM.Merchant ->
   LatLong ->

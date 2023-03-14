@@ -45,4 +45,4 @@ handler =
   translate
 
 translate :: Id Person.Person -> Maps.Language -> Maps.Language -> Text -> FlowHandler GoogleTranslate.TranslateResp
-translate personId source target = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleTranslate.translate source target
+translate personId source target = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleTranslate.translate (getId personId) source target

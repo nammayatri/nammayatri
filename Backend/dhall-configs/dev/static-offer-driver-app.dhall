@@ -140,4 +140,5 @@ in  { esqDBCfg
     , driverPoolCfg
     , driverLocationUpdateTopic = "location-updates"
     , snapToRoadSnippetThreshold = +300
+    , appPrefix = "static-offer-driver-app"
     }

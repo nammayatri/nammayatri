@@ -69,10 +69,10 @@ data Booking = Booking
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, ToJSON)
 
 data BookingDetails = OneWayDetails OneWayBookingDetails | RentalDetails RentalBookingDetails
-  deriving (Generic, Eq)
+  deriving (Generic, Eq, ToJSON)
 
 data OneWayBookingDetails = OneWayBookingDetails
   { toLocation :: DLoc.BookingLocation,
@@ -80,12 +80,12 @@ data OneWayBookingDetails = OneWayBookingDetails
     estimatedFinishTime :: UTCTime,
     estimatedDuration :: Seconds
   }
-  deriving (Eq)
+  deriving (Eq, Generic, ToJSON)
 
 newtype RentalBookingDetails = RentalBookingDetails
   { rentalFarePolicyId :: Id DRentalFP.RentalFarePolicy
   }
-  deriving (Eq)
+  deriving (Eq, Generic, ToJSON)
 
 mkRentalBookingDetails :: Id DRentalFP.RentalFarePolicy -> BookingDetails
 mkRentalBookingDetails rentalFarePolicyId = RentalDetails $ RentalBookingDetails {..}

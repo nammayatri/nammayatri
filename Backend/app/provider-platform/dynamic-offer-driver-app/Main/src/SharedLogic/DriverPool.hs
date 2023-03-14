@@ -47,6 +47,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
@@ -347,7 +348,10 @@ calculateDriverPool ::
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasCoordinates a,
-    HasMaxParallelSearchRequests r
+    HasMaxParallelSearchRequests r,
+    ToJSON a,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->
@@ -401,7 +405,10 @@ calculateDriverPoolWithActualDist ::
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasDriverPoolConfig r,
-    HasCoordinates a
+    HasCoordinates a,
+    ToJSON a,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   PoolCalculationStage ->
   DriverPoolConfig ->
@@ -431,7 +438,10 @@ computeActualDistance ::
     EsqDBFlow m r,
     EncFlow m r,
     HasDriverPoolConfig r,
-    HasCoordinates a
+    HasCoordinates a,
+    ToJSON a,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
   ) =>
   Id DM.Merchant ->
   a ->

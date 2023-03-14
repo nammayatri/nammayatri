@@ -27,7 +27,10 @@ import Kernel.External.GoogleTranslate.Types
 import qualified Kernel.External.GoogleTranslate.Types as GoogleTranslate
 import Kernel.Prelude (HasField (..))
 import Kernel.Storage.Hedis as Hedis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.App (HasFlowEnv)
+import Kernel.Types.Field
 import Kernel.Utils.Common (BaseUrl, MonadFlow, Seconds, logDebug)
 import Kernel.Utils.Dhall
 import Servant (ToHttpApiData (toUrlPiece))
@@ -40,10 +43,19 @@ newtype CacheTranslationConfig = CacheTranslationConfig
 
 type HasCacheTranslationConfig r = HasField "cacheTranslationConfig" r CacheTranslationConfig
 
-type TranslateFlow m r = (HasCacheTranslationConfig r, HedisFlow m r, EncFlow m r, MonadFlow m, GoogleTranslate.HasGoogleTranslate m r, CoreMetrics m)
+type TranslateFlow m r =
+  ( HasCacheTranslationConfig r,
+    HedisFlow m r,
+    EncFlow m r,
+    MonadFlow m,
+    GoogleTranslate.HasGoogleTranslate m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["appPrefix" ::: Text]
+  )
 
-translate :: TranslateFlow m r => Maps.Language -> Maps.Language -> Text -> m GoogleTranslate.TranslateResp
-translate source target q = do
+translate :: TranslateFlow m r => Text -> Maps.Language -> Maps.Language -> Text -> m GoogleTranslate.TranslateResp
+translate someId source target q = do
   url <- asks (.googleTranslateUrl)
   apiKey <- asks (.googleTranslateKey)
   let srcEnc = toUrlPiece source
@@ -84,6 +96,6 @@ translate source target q = do
                 _error = Nothing
               }
         Nothing -> do
-          response <- ClientGoogleTranslate.translate url apiKey (toUrlPiece source) (toUrlPiece target) q
+          response <- ClientGoogleTranslate.translate url apiKey (toUrlPiece source) (toUrlPiece target) q someId
           cacheTranslation translationKey tgtEnc (_data response)
           return response

@@ -65,7 +65,8 @@ data AppCfg = AppCfg
     selfUIUrl :: BaseUrl,
     cacheConfig :: CacheConfig,
     driverPoolCfg :: DriverPoolConfig,
-    driverPoolBatchesCfg :: DriverPoolBatchesConfig
+    driverPoolBatchesCfg :: DriverPoolBatchesConfig,
+    appPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -95,7 +96,8 @@ data AppEnv = AppEnv
     selfUIUrl :: BaseUrl,
     cacheConfig :: CacheConfig,
     driverPoolCfg :: DriverPoolConfig,
-    driverPoolBatchesCfg :: DriverPoolBatchesConfig
+    driverPoolBatchesCfg :: DriverPoolBatchesConfig,
+    appPrefix :: Text
   }
   deriving (Generic)
 
