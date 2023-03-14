@@ -18,9 +18,9 @@ data SimpleRecurringBooking = SimpleRecurringBooking
     providerId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
-    farePolicy :: Id DFarePolicy.FarePolicy,
-    fromLocation :: Id DLoc.BookingLocation,
-    toLocation :: Id DLoc.BookingLocation
+    farePolicyId :: Id DFarePolicy.FarePolicy,
+    fromLocationId :: Id DLoc.BookingLocation,
+    toLocationId :: Id DLoc.BookingLocation
   }
   deriving (Generic, Show)
 

@@ -26,11 +26,12 @@ data Timetable = Timetable
 data UpcomingBooking = UpcomingBooking
   { id :: Id Timetable,
     pickupTime :: LocalTime,
+    recurringBookingId :: Id DRBooking.RecurringBooking,
     bookingId :: Maybe (Id DBooking.Booking),
     providerId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
     farePolicy :: DFarePolicy.FarePolicy,
-    fromLocation :: Id DLoc.BookingLocation,
-    toLocation :: Id DLoc.BookingLocation
+    fromLocation :: DLoc.BookingLocation,
+    toLocation :: DLoc.BookingLocation
   }

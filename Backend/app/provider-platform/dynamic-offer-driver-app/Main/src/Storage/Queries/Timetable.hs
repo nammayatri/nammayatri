@@ -9,16 +9,21 @@ import qualified Data.Text.Lazy.Builder as TLB
 import Data.Time.LocalTime (LocalTime (..))
 import qualified Database.Esqueleto.Experimental as Ex
 import qualified Database.Esqueleto.Internal.Internal as EI
-import qualified Database.Esqueleto.PostgreSQL as EPQ
 import Database.Persist (unFieldNameDB)
 import Database.Persist.SqlBackend
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.RecurringBooking as DRecurringBooking
 import Domain.Types.TimeRange (TimeRange)
 import Domain.Types.Timetable (Timetable)
 import qualified Domain.Types.Timetable as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+<<<<<<< HEAD
 import Storage.Tabular.FarePolicy
+=======
+import Kernel.Types.Id
+import Storage.Tabular.FarePolicy.FarePolicy
+>>>>>>> 9a1becd9d (backend/feat: #11 Work on allocation driver for upcoming booking)
 import Storage.Tabular.RecurringBooking
 import Storage.Tabular.Timetable as STimetable
 
@@ -27,12 +32,36 @@ instance FromTType (TimetableT, RecurringBookingT, FarePolicyT) Domain.UpcomingB
     tt <- fromTType @_ @Domain.Timetable timetableT
     DRecurringBooking.SimpleRecurringBooking {..} <- fromTType bookingT
     farePolicy <- fromTType farePolicyT
+<<<<<<< HEAD
     pure $ Domain.UpcomingBooking {id = tt.id, pickupTime = tt.pickupTime, ..}
+=======
+    pure $ Domain.UpcomingBooking {id = tt.id, pickupTime = tt.pickupTime, bookingId = Nothing, ..}
+  toTType _ =
+    error "this is a read model"
+>>>>>>> 9a1becd9d (backend/feat: #11 Work on allocation driver for upcoming booking)
 
-findAllUnscheduledAndActiveDuring :: Transactionable m => TimeRange -> m [Domain.UpcomingBooking]
-findAllUnscheduledAndActiveDuring timeRange = Esq.buildDType $
+findAllUnscheduledAndActiveDuring :: Transactionable m => TimeRange -> m [Id Timetable]
+findAllUnscheduledAndActiveDuring timeRange =
+  Esq.findAll $ do
+    tt <- allUnscheduledAndActiveDuring timeRange
+    pure $ tt ^. TimetableTId
+
+allUnscheduledAndActiveDuring :: TimeRange -> SqlQuery (SqlExpr (Entity TimetableT))
+allUnscheduledAndActiveDuring timeRange = do
+  tt <- from $ table @TimetableT
+  where_ $
+    tt ^. TimetableStatus ==. val Domain.Active
+      &&. Esq.isNothing (tt ^. TimetableBookingId)
+      &&. tt ^. TimetablePickupTime >=. val (localTimeOfDay timeRange.start)
+      &&. tt ^. TimetablePickupTime <=. val (localTimeOfDay timeRange.end)
+      &&. tt ^. TimetablePickupDate >=. val (localDay timeRange.start)
+      &&. tt ^. TimetablePickupDate <=. val (localDay timeRange.end)
+  pure tt
+
+findUpcomingBooking :: Transactionable m => Id Timetable -> m (Maybe Domain.UpcomingBooking)
+findUpcomingBooking ttId = Esq.buildDType $
   fmap (fmap $ extractSolidType @Domain.UpcomingBooking) $
-    Esq.findAll' $ do
+    Esq.findOne' $ do
       (tt :& rbt :& fpt) <-
         from $
           table @TimetableT
@@ -40,30 +69,22 @@ findAllUnscheduledAndActiveDuring timeRange = Esq.buildDType $
             `Esq.on` (\(tt :& rbt) -> tt ^. TimetableRecurringBookingId ==. rbt ^. RecurringBookingTId)
             `innerJoin` table @FarePolicyT
             `Esq.on` (\(_ :& rbt :& fpt) -> rbt ^. RecurringBookingFarePolicyId ==. fpt ^. FarePolicyTId)
-      where_ $
-        tt ^. TimetableStatus ==. val Domain.Active
-          &&. Esq.isNothing (tt ^. TimetableBookingId)
-          &&. tt ^. TimetablePickupTime >=. val (localTimeOfDay timeRange.start)
-          &&. tt ^. TimetablePickupTime <=. val (localTimeOfDay timeRange.end)
-          &&. tt ^. TimetablePickupDate >=. val (localDay timeRange.start)
-          &&. tt ^. TimetablePickupDate <=. val (localDay timeRange.end)
 
+      where_ $ tt ^. TimetableTId ==. val (toKey ttId)
       pure (tt, rbt, fpt)
 
-updateTimetablesBookingId :: [Timetable] -> SqlDB ()
+updateTimetablesBookingId :: [(Id Timetable, Id DBooking.Booking)] -> SqlDB ()
 updateTimetablesBookingId timetables = do
-  let timetableToValues timetable =
-        ( val (STimetable.id timetable),
-          val (bookingId timetable)
-        )
-  for_ (NE.nonEmpty $ fmap (timetableToValues . toTType) timetables) $ \timetablesForUpdate -> do
+  let timetableToValues (timetableId, bookingId) =
+        (val $ toKey timetableId, val $ toKey bookingId)
+  for_ (NE.nonEmpty $ fmap timetableToValues timetables) $ \timetablesForUpdate -> do
     Esq.update $ \currentTimetable -> do
       (ttId, ttBookingId) <- from $ values timetablesForUpdate
       set
         currentTimetable
-        [ TimetableBookingId =. ttBookingId
+        [ TimetableBookingId =. just ttBookingId
         ]
-      where_ $ currentTimetable ^. TimetableId ==. ttId
+      where_ $ currentTimetable ^. TimetableTId ==. ttId
 
 -- NOTE: This was copied from esqueleto 3.5.2.3 need to update version
 values :: (EI.ToSomeValues a, Ex.ToAliasReference a, Ex.ToAlias a) => NE.NonEmpty a -> Ex.From a
