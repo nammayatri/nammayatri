@@ -18,10 +18,10 @@ module Storage.CachedQueries.Issue.IssueCategory where
 
 import Domain.Types.Issue.IssueCategory
 import Domain.Types.Issue.IssueTranslation
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.External.Types (Language)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Issue.IssueCategory as Queries
 

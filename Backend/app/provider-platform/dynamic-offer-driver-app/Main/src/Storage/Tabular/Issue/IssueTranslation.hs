@@ -8,10 +8,10 @@
 module Storage.Tabular.Issue.IssueTranslation where
 
 import qualified Domain.Types.Issue.IssueTranslation as Domain
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Kernel.External.Types (Language)
 
 derivePersistField "Language"
 
@@ -32,13 +32,15 @@ instance TEntityKey IssueTranslationT where
   fromKey (IssueTranslationTKey id) = Id id
   toKey (Id id) = IssueTranslationTKey id
 
-instance TType IssueTranslationT Domain.IssueTranslation where
+instance FromTType IssueTranslationT Domain.IssueTranslation where
   fromTType IssueTranslationT {..} = do
     return $
-      Domain.IssueTranslation 
+      Domain.IssueTranslation
         { id = Id id,
           ..
         }
+
+instance ToTType IssueTranslationT Domain.IssueTranslation where
   toTType Domain.IssueTranslation {..} =
     IssueTranslationT
       { id = getId id,

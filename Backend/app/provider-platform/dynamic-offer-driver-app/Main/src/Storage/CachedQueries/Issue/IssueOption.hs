@@ -16,14 +16,14 @@
 
 module Storage.CachedQueries.Issue.IssueOption where
 
-import Domain.Types.Issue.IssueOption
 import Domain.Types.Issue.IssueCategory
+import Domain.Types.Issue.IssueOption
 import Domain.Types.Issue.IssueTranslation
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.External.Types (Language)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Issue.IssueOption as Queries
 

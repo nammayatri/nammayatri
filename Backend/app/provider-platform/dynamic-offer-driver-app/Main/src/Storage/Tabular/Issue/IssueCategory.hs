@@ -22,19 +22,21 @@ mkPersist
       Primary id
       deriving Generic
     |]
-    
+
 instance TEntityKey IssueCategoryT where
   type DomainKey IssueCategoryT = Id Domain.IssueCategory
   fromKey (IssueCategoryTKey id) = Id id
   toKey (Id id) = IssueCategoryTKey id
 
-instance TType IssueCategoryT Domain.IssueCategory where
+instance FromTType IssueCategoryT Domain.IssueCategory where
   fromTType IssueCategoryT {..} = do
     return $
-      Domain.IssueCategory 
+      Domain.IssueCategory
         { id = Id id,
           ..
         }
+
+instance ToTType IssueCategoryT Domain.IssueCategory where
   toTType Domain.IssueCategory {..} =
     IssueCategoryT
       { id = getId id,

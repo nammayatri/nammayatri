@@ -26,10 +26,10 @@ import qualified Dashboard.Common.Exotel as Common
 import qualified Dashboard.ProviderPlatform.Driver as Common
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified Dashboard.ProviderPlatform.DriverReferral as Common
+import qualified Dashboard.ProviderPlatform.Issue as Common
 import qualified Dashboard.ProviderPlatform.Merchant as Common
 import qualified Dashboard.ProviderPlatform.Message as Common
 import qualified Dashboard.ProviderPlatform.Ride as Common
-import qualified Dashboard.ProviderPlatform.Issue as Common
 import qualified Data.ByteString.Lazy as LBS
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
@@ -193,7 +193,7 @@ mkDriverOfferAPIs merchantId token = do
       :<|> messageInfo
       :<|> messageDeliveryInfo
       :<|> messageReceiverList = messageClient
-    
+
     issueList
       :<|> issueUpdate
       :<|> issueAddComment = issueClient

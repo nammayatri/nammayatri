@@ -1,8 +1,8 @@
 module Domain.Types.Issue.IssueTranslation where
 
 import EulerHS.Prelude hiding (id)
-import Kernel.Types.Id
 import Kernel.External.Types (Language)
+import Kernel.Types.Id
 
 data IssueTranslation = IssueTranslation
   { id :: Id IssueTranslation,
