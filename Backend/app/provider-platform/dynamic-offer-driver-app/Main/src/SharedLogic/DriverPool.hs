@@ -375,18 +375,18 @@ updateDriverSpeedInRedis merchantId driverId points timeStamp = Redis.withCrossA
 
 getDriverAverageSpeed ::
   ( CacheFlow m r,
-    EsqDBFlow m r,
-    HasSpeedCalculationConfig r
+    EsqDBFlow m r
   ) =>
   Id DM.Merchant ->
   Id DP.Person ->
   m (Maybe Double)
 getDriverAverageSpeed merchantId driverId = Redis.withCrossAppRedis $ do
-  speedCalculationConfig <- asks (.speedCalculationConfig)
+  -- minLocationUpdates' <- (fromMaybe 3)  . (fmap (.minLocationUpdates)) <$> TC.findByMerchantId merchantId -- :: (Maybe TC)
+  minLocationUpdates <- maybe 3 (.minLocationUpdates) <$> TC.findByMerchantId merchantId
   let driverLocationUpdatesKey = mkDriverLocationUpdatesKey merchantId driverId
   locationUpdatesList :: [(LatLong, UTCTime)] <- concat <$> Redis.safeGet driverLocationUpdatesKey
   let locationUpdatesCount = length locationUpdatesList
-  if locationUpdatesCount > speedCalculationConfig.minLocationUpdates
+  if locationUpdatesCount > minLocationUpdates
     then do
       let locationUpdatesPairs = zip (drop 1 locationUpdatesList) (take (locationUpdatesCount - 1) locationUpdatesList)
           (totalDistanceTravelled, totalTimeTaken) :: (HighPrecMeters, Centi) =
@@ -435,7 +435,7 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
   maxParallelSearchRequests <- asks (.maxParallelSearchRequests)
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
-    Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
+    Estimate -> pure approxDriverPool -- estimate stage we dont need to consider actual parallel request counts
   pure $ makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   where
     getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
