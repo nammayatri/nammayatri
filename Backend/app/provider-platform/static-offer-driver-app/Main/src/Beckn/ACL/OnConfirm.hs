@@ -75,7 +75,8 @@ mkFulfillmentInfo fromLoc mbToLoc startTime =
                       },
                   address = castAddress fromLoc.address
                 },
-            time = OnConfirm.TimeTimestamp startTime
+            time = OnConfirm.TimeTimestamp startTime,
+            authorization = Nothing
           },
       end =
         mbToLoc >>= \toLoc ->

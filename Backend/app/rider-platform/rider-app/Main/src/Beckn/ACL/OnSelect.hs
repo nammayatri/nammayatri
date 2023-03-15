@@ -78,6 +78,7 @@ buildQuoteInfo item = do
     OnSelect.RENTAL_TRIP -> throwError $ InvalidRequest "select not supported for rental trip"
     OnSelect.DRIVER_OFFER -> buildDriverOfferQuoteDetails item
     OnSelect.DRIVER_OFFER_ESTIMATE -> throwError $ InvalidRequest "Estimates are only supported in on_search"
+    OnSelect.ONE_WAY_SPECIAL_ZONE -> throwError $ InvalidRequest "select not supported for one way special zone trip"
   let itemCode = item.descriptor.code
       vehicleVariant = itemCode.vehicleVariant
       estimatedFare = roundToIntegral item.price.value

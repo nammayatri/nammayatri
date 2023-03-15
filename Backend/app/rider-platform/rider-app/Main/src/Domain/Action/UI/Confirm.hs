@@ -74,6 +74,7 @@ data ConfirmQuoteDetails
   = ConfirmOneWayDetails
   | ConfirmRentalDetails RentalSlabAPIEntity
   | ConfirmAutoDetails (Id DDriverOffer.BPPQuote)
+  | ConfirmOneWaySpecialZoneDetails Text
   deriving (Show, Generic)
 
 confirm :: (EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Id DQuote.Quote -> m DConfirmRes
@@ -88,6 +89,7 @@ confirm personId quoteId = do
       checkIfEstimateCancelled estimate.id estimate.status
       when (driverOffer.validTill < now) $
         throwError $ QuoteExpired quote.id.getId
+    DQuote.OneWaySpecialZoneDetails _ -> pure ()
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus
   unless (null activeBooking) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
@@ -99,7 +101,7 @@ confirm personId quoteId = do
   bFromLocation <- buildBookingLocation now fromLocation
   mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
   merchant <- QMerchant.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
-  booking <- buildBooking searchRequest quote bFromLocation mbBToLocation merchant now
+  booking <- buildBooking searchRequest quote bFromLocation mbBToLocation merchant now Nothing
   let details = mkConfirmQuoteDetails quote.quoteDetails
   DB.runTransaction $ do
     QRideB.create booking
@@ -124,6 +126,7 @@ confirm personId quoteId = do
       DQuote.OneWayDetails _ -> ConfirmOneWayDetails
       DQuote.RentalDetails RentalSlab {..} -> ConfirmRentalDetails $ RentalSlabAPIEntity {..}
       DQuote.DriverOfferDetails driverOffer -> ConfirmAutoDetails driverOffer.bppQuoteId
+      DQuote.OneWaySpecialZoneDetails details -> ConfirmOneWaySpecialZoneDetails details.quoteId
 
 buildBookingLocation :: MonadGuid m => UTCTime -> DSRLoc.SearchReqLocation -> m DBL.BookingLocation
 buildBookingLocation now DSRLoc.SearchReqLocation {..} = do
@@ -146,8 +149,9 @@ buildBooking ::
   Maybe DBL.BookingLocation ->
   DMerc.Merchant ->
   UTCTime ->
+  Maybe Text ->
   m DRB.Booking
-buildBooking searchRequest quote fromLoc mbToLoc merchant now = do
+buildBooking searchRequest quote fromLoc mbToLoc merchant now otpCode = do
   id <- generateGUID
   exoPhone <- getRandomElement merchant.exoPhones
   bookingDetails <- buildBookingDetails
@@ -180,11 +184,18 @@ buildBooking searchRequest quote fromLoc mbToLoc merchant now = do
       DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails
       DQuote.RentalDetails rentalSlab -> pure $ DRB.RentalDetails rentalSlab
       DQuote.DriverOfferDetails _ -> DRB.DriverOfferDetails <$> buildOneWayDetails
+      DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
     buildOneWayDetails = do
       -- we need to throw errors here because of some redundancy of our domain model
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWayBookingDetails {..}
+
+    buildOneWaySpecialZoneDetails = do
+      -- we need to throw errors here because of some redundancy of our domain model
+      toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
+      distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
+      pure DRB.OneWaySpecialZoneBookingDetails {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
 cancelBooking :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()

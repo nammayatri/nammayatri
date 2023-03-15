@@ -15,6 +15,7 @@
 module Beckn.ACL.Init where
 
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
+import qualified Beckn.Types.Core.Taxi.Init as Init
 import qualified Domain.Action.Beckn.Init as DInit
 import Kernel.Prelude
 import qualified Kernel.Product.Validation.Context as Context
@@ -22,7 +23,6 @@ import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Field
-import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Error.Throwing
 
@@ -40,6 +40,7 @@ buildInitReq subscriber req = do
   item <- case order.items of
     [it] -> pure it
     _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
+  let initTypeReq = buildInitTypeReq item
   itemId <- item.id & fromMaybeM (InvalidRequest "Item id required")
   -- should we check start time and other details?
   unless (subscriber.subscriber_id == context.bap_id) $
@@ -49,7 +50,14 @@ buildInitReq subscriber req = do
 
   pure
     DInit.InitReq
-      { driverQuoteId = Id itemId,
+      { driverQuoteId = itemId,
         bapId = subscriber.subscriber_id,
-        bapUri = subscriber.subscriber_url
+        bapUri = subscriber.subscriber_url,
+        ..
       }
+  where
+    buildInitTypeReq item = do
+      let itemCode = item.descriptor.code
+      case itemCode.fareProductType of
+        Init.ONE_WAY_SPECIAL_ZONE -> DInit.InitSpecialZoneReq
+        _ -> DInit.InitNormalReq

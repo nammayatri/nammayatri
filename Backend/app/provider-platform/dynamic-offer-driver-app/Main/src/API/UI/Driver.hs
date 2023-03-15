@@ -131,10 +131,11 @@ handler =
                       :<|> updateDriver
                       :<|> getStats
                   )
-             :<|> validate
-             :<|> verifyAuth
-             :<|> resendOtp
-             :<|> remove
+             :<|> ( validate
+                      :<|> verifyAuth
+                      :<|> resendOtp
+                      :<|> remove
+                  )
          )
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes

@@ -21,7 +21,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.Booking.BookingLocation as DLoc
-import Domain.Types.DriverQuote
 import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as DRD
@@ -50,8 +49,10 @@ instance ToHttpApiData BookingStatus where
 
 data Booking = Booking
   { id :: Id Booking,
-    quoteId :: Id DriverQuote,
+    quoteId :: Text,
     status :: BookingStatus,
+    bookingType :: BookingType,
+    specialZoneOtpCode :: Maybe Text,
     providerId :: Id DM.Merchant, -- FIXME merchantId
     providerExoPhone :: Text,
     bapId :: Text,
@@ -70,3 +71,6 @@ data Booking = Booking
     updatedAt :: UTCTime
   }
   deriving (Generic)
+
+data BookingType = SpecialZoneBooking | NormalBooking
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

@@ -26,6 +26,7 @@ data FareProductType
   | RENTAL_TRIP
   | DRIVER_OFFER_ESTIMATE
   | DRIVER_OFFER
+  | ONE_WAY_SPECIAL_ZONE
   deriving
     ( Eq,
       Ord,
