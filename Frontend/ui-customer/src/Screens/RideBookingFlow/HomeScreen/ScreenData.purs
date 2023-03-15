@@ -109,6 +109,8 @@ initData = {
     , emergencyHelpModal : false
     , estimatedDistance : Nothing
     , showCallPolicePopUp : false
+    , showCallContactPopUp : false
+    , showCallSuccessfulPopUp : false
     , showContactSupportPopUp : false
     , emergencyContactData : dummyContactData
     , waitingTimeTimerId : "-1"
@@ -119,16 +121,20 @@ initData = {
     , hasTakenRide : true
     , isReferred : false
     , storeCurrentLocs : false
+    , currentlySelectedContact : selectedContactData
+    , sosId : ""
+    , sosStatus : ""
     }
 }
 
 
 dummyContactData :: Array Contact
-dummyContactData = [ 
-  { name : "", phoneNo : "" }, 
-  { name : "", phoneNo : "" },
-  { name : "", phoneNo : "" }
-]
+dummyContactData = []
+
+selectedContactData ::  Contact
+selectedContactData = 
+  { name : "", phoneNo : "" } 
+
 
 dummyQuoteList :: Array QuoteListItemState
 dummyQuoteList = [

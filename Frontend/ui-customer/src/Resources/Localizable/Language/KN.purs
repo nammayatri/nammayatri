@@ -363,3 +363,4 @@ getKN script = case script of
   HEY -> "ಹಾಯ್"
   INVALID_CODE_PLEASE_RE_ENTER -> "ಅಮಾನ್ಯ ಕೋಡ್. ದಯವಿಟ್ಟು ಮರು-ನಮೂದಿಸಿ"
   LET_TRY_THAT_AGAIN -> "ಅದನ್ನು ಮತ್ತೊಮ್ಮೆ ಪ್ರಯತ್ನಿಸೋಣ..."
+  CALL_EMERGENCY_CONTACTS -> "ತುರ್ತು ಸಂಪರ್ಕಗಳಿಗೆ ಕರೆ ಮಾಡಿ"

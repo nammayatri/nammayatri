@@ -462,3 +462,6 @@ grey700 = "#F4F4F6"
 
 black650 :: Color
 black650 = "#868B98"
+
+green900 :: Color
+green900 = "#53BB6F"

@@ -25,22 +25,36 @@ import Styles.Colors as Color
 data Action = NoAction 
             | CallPolicePopup
             | ContactSupportPopup
+            | CallSuccessfulPopup
+            | CallContactPopUp Contact
             | CallPolice PopUpModalController.Action
             | ContactSupport PopUpModalController.Action
+            | CallEmergencyContact PopUpModalController.Action
+            | CallSuccessful PopUpModalController.Action
             | GenericHeaderAC GenericHeaderController.Action
 
 type EmergencyHelpModelState = {
      showContactSupportPopUp :: Boolean,
      showCallPolicePopUp :: Boolean, 
-     emergencyContactData :: Array Contact
+     showCallContactPopUp :: Boolean,
+     showCallSuccessfulPopUp :: Boolean,
+     emergencyContactData :: Array Contact,
+     currentlySelectedContact :: Contact
 }
 
 config :: EmergencyHelpModelState 
 config = {
      showContactSupportPopUp : false
    , showCallPolicePopUp : false
+   , showCallContactPopUp : false
+   , showCallSuccessfulPopUp : false
    , emergencyContactData : []
+   , currentlySelectedContact : selectedContactData
 }
+
+selectedContactData ::  Contact
+selectedContactData = 
+  { name : "", phoneNo : "" } 
 
 contactColorsList :: Array (Array Color)
 contactColorsList = [

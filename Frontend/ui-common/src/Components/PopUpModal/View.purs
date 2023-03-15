@@ -133,6 +133,46 @@ view push state =
           , text $ state.secondaryText.text  
           , visibility $ state.secondaryText.visibility  
           ]
+          ,
+          linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , margin state.contactViewMargin
+            , stroke ("1," <> Color.borderColorLight)
+            , padding state.contactViewPadding
+            , cornerRadius 8.0
+            , visibility state.contactViewConfig.visibility
+            ][ linearLayout
+                [ height WRAP_CONTENT
+                , width  MATCH_PARENT
+                , gravity LEFT
+                ][ linearLayout
+                    [ height $ V 24
+                    , width $ V 24
+                    , background Color.yellow900
+                    , cornerRadius 12.0
+                    , gravity CENTER
+                    ][ textView
+                        [text state.contactViewConfig.nameInitials
+                        , color Color.black800
+                        , textSize FontSize.a_12
+                        ]
+                      ]
+                      ,  
+                      linearLayout 
+                        [  height  WRAP_CONTENT
+                        , width  WRAP_CONTENT
+                         , padding state.contactViewConfig.padding
+                        ][ textView
+                            [text state.contactViewConfig.fullName
+                            , color Color.black800
+                            , textSize FontSize.a_16
+                            , lineHeight "20"
+                            , fontStyle $ FontStyle.semiBold LanguageStyle
+                            ]
+                          ]
+                   ]
+          ]
           ,linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT

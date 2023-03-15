@@ -124,3 +124,9 @@ notifyFlowEvent dummy = (getBaseUrl "34") <> "/frontend/notifyEvent"
 
 cancelEstimate :: String -> String 
 cancelEstimate estimateId = (getBaseUrl "35") <> "/estimate/" <> estimateId <> "/cancel"
+
+userSos :: String -> String
+userSos _ = (getBaseUrl "36") <> "/sos/create"
+
+userSosStatus :: String -> String
+userSosStatus sosId = (getBaseUrl "37") <> "/sos/" <> sosId <>"/status"

@@ -366,3 +366,4 @@ getEN script = case script of
   LET_TRY_THAT_AGAIN -> "Let's try that again..."
 
 
+  CALL_EMERGENCY_CONTACTS -> "Call Emergency Contacts"

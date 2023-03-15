@@ -1504,3 +1504,88 @@ instance standardEncodeCancelEstimateReq :: StandardEncode CancelEstimateReq whe
 instance showCancelEstimateReq :: Show CancelEstimateReq where show = genericShow
 instance decodeCancelEstimateReq :: Decode CancelEstimateReq where decode = defaultDecode
 instance encodeCancelEstimateReq  :: Encode CancelEstimateReq where encode = defaultEncode
+
+----------------------------------------------------------------------- userCreateSos api -------------------------------------------------------------------
+
+newtype UserSosReq = UserSosReq 
+  {
+     flow :: UserSosFlow,
+     rideId :: String
+  }
+
+newtype UserSosFlow = UserSosFlow
+  {
+    tag :: String,
+    contents :: String
+  }
+
+newtype UserSosRes = UserSosRes
+  {
+    sosId :: String 
+  }
+
+instance makeUserSosReq :: RestEndpoint UserSosReq UserSosRes where
+ makeRequest reqBody headers = defaultMakeRequest POST (EP.userSos "") headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericUserSosReq :: Generic UserSosReq _
+derive instance newtypeUserSosReq:: Newtype UserSosReq _
+instance standardEncodeUserSosReq :: StandardEncode UserSosReq where standardEncode (UserSosReq req) = standardEncode req
+instance showUserSosReq :: Show UserSosReq where show = genericShow
+instance decodeUserSosReq :: Decode UserSosReq where decode = defaultDecode
+instance encodeUserSosReq :: Encode UserSosReq where encode = defaultEncode
+
+derive instance genericUserSosRes :: Generic UserSosRes _
+derive instance newtypeUserSosRes :: Newtype UserSosRes _
+instance standardEncodeUserSosRes :: StandardEncode UserSosRes where standardEncode (UserSosRes res) = standardEncode res
+instance showUserSosRes :: Show UserSosRes where show = genericShow
+instance decodeUserSosRes :: Decode UserSosRes where decode = defaultDecode
+instance encodeUserSosRes :: Encode UserSosRes where encode = defaultEncode
+
+derive instance genericUserSosFlow :: Generic UserSosFlow _
+derive instance newtypeUserSosFlow :: Newtype UserSosFlow _
+instance standardEncodeUserSosFlow :: StandardEncode UserSosFlow where standardEncode (UserSosFlow res) = standardEncode res
+instance showUserSosFlow :: Show UserSosFlow where show = genericShow
+instance decodeUserSosFlow :: Decode UserSosFlow where decode = defaultDecode
+instance encodeUserSosFlow :: Encode UserSosFlow where encode = defaultEncode
+
+
+----------------------------------------------------------------------- userUpdateeSos api -------------------------------------------------------------------
+
+data UserSosStatusReq = UserSosStatusReq String SosStatus
+
+newtype SosStatus = SosStatus
+  {
+    status :: String
+  }
+
+newtype UserSosStatusRes = UserSosStatusRes
+  {
+    result :: String
+  }
+
+instance makeUserSosStatusReq :: RestEndpoint UserSosStatusReq UserSosStatusRes where
+ makeRequest reqBody@(UserSosStatusReq sosId (SosStatus rqBody)) headers = defaultMakeRequest POST (EP.userSosStatus sosId) headers reqBody
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericUserSosStatusReq :: Generic UserSosStatusReq _
+instance standardEncodeUserSosStatusReq :: StandardEncode UserSosStatusReq where standardEncode (UserSosStatusReq sosId req) = standardEncode req
+instance showUserSosStatusReq :: Show UserSosStatusReq where show = genericShow
+instance decodeUserSosStatusReq :: Decode UserSosStatusReq where decode = defaultDecode
+instance encodeUserSosStatusReq :: Encode UserSosStatusReq where encode = defaultEncode
+
+derive instance genericUserSosStatusRes :: Generic UserSosStatusRes _
+derive instance newtypeUserSosStausRes :: Newtype UserSosStatusRes _
+instance standardEncodeUserSosStatusRes :: StandardEncode UserSosStatusRes where standardEncode (UserSosStatusRes res) = standardEncode res
+instance showUserSosStausRes :: Show UserSosStatusRes where show = genericShow
+instance decodeUserSosStausRes :: Decode UserSosStatusRes where decode = defaultDecode
+instance encodeUserSosStatusRes :: Encode UserSosStatusRes where encode = defaultEncode
+
+derive instance genericSosStatus :: Generic SosStatus _
+derive instance newtypeSosStaus :: Newtype SosStatus _
+instance standardEncodeSosStatus :: StandardEncode SosStatus where standardEncode (SosStatus res) = standardEncode res
+instance showSosStatus :: Show SosStatus where show = genericShow
+instance decodeSosStatus:: Decode SosStatus where decode = defaultDecode
+instance encodeSosStatus :: Encode SosStatus where encode = defaultEncode

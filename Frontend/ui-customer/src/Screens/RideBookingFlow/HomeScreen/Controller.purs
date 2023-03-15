@@ -286,9 +286,25 @@ instance loggableAction :: Loggable Action where
         GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "generic_header_action" "forward_icon"
       EmergencyHelpController.CallPolicePopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_police_popup"
       EmergencyHelpController.ContactSupportPopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "contact_support_popup"
+      EmergencyHelpController.CallSuccessfulPopup -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_successful_popup"
+      EmergencyHelpController.CallContactPopUp contact -> trackAppActionClick appId (getScreen HOME_SCREEN) "emergency_help_modal" "call_contact_popup"
       EmergencyHelpController.CallPolice act -> case act of
         PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_police_cancel"
         PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_police_accept"
+        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "no_action"
+        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "image"
+        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "primary_edit_text"
+        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "countdown_updated"
+      EmergencyHelpController.CallEmergencyContact act -> case act of
+        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_contact_cancel"
+        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_contact_accept"
+        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "no_action"
+        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "image"
+        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "primary_edit_text"
+        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "countdown_updated"
+      EmergencyHelpController.CallSuccessful act -> case act of
+        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_feedback_cancel"
+        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "call_feedback_accept"
         PopUpModal.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "no_action"
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HOME_SCREEN) "popup_modal_emergency_help" "primary_edit_text"
@@ -393,6 +409,10 @@ data ScreenOutput = LogoutUser
                   | CheckFavDistance HomeScreenState
                   | SaveFavourite HomeScreenState
                   | GoToReferral HomeScreenState
+                  | CallContact HomeScreenState
+                  | CallSupport HomeScreenState
+                  | CallPolice HomeScreenState
+                  | UpdateSosStatus HomeScreenState
 
 data Action = NoAction 
             | BackPressed 
@@ -724,15 +744,28 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolicePopup)) state = co
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupportPopup)) state = continue state{props{showContactSupportPopUp = true}} 
 
+eval (EmergencyHelpModalAC (EmergencyHelpController.CallContactPopUp item)) state= continue state{props{showCallContactPopUp = true, currentlySelectedContact = item}} 
+
+eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton1Click)) state = continue state{props{showCallContactPopUp = false}}
+
+eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton2Click)) state = do
+    void <- pure $ showDialer state.props.currentlySelectedContact.phoneNo
+    updateAndExit state{props{showCallContactPopUp = false}} $ CallContact state {props {showCallContactPopUp = false}}
+
+eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.OnButton1Click)) state = do 
+    updateAndExit state{props{showCallSuccessfulPopUp = false, sosStatus = "NotResolved"}} $ UpdateSosStatus state {props {showCallSuccessfulPopUp = false, sosStatus = "NotResolved"}}
+eval (EmergencyHelpModalAC (EmergencyHelpController.CallSuccessful PopUpModal.OnButton2Click)) state = do
+    updateAndExit state{props{showCallSuccessfulPopUp = false, sosStatus = "Resolved"}} $ UpdateSosStatus state {props {showCallSuccessfulPopUp = false, sosStatus = "Resolved"}}
+
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton1Click)) state = continue state{props{showCallPolicePopUp = false}}
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallPolice PopUpModal.OnButton2Click)) state = do
     void $ pure $  showDialer "100"
-    continue state
+    updateAndExit state{props{showCallPolicePopUp = false}} $ CallPolice state {props {showCallPolicePopUp = false}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton1Click)) state = continue state{props{showContactSupportPopUp = false}}
 eval (EmergencyHelpModalAC (EmergencyHelpController.ContactSupport PopUpModal.OnButton2Click)) state = do 
     void $ pure $  showDialer $ getSupportNumber ""
-    continue state
+    updateAndExit state{props{showContactSupportPopUp = false}} $ CallSupport state {props {showContactSupportPopUp = false}}
 
 eval (CancelRidePopUpAction (CancelRidePopUp.Button1 PrimaryButtonController.OnClick)) state = continue state { props { isCancelRide = false } }
 

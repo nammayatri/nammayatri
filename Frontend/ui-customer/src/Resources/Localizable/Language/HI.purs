@@ -363,3 +363,4 @@ getHI script = case script of
   HEY -> "नमस्ते"
   INVALID_CODE_PLEASE_RE_ENTER -> "अवैध कोड। कृपया पुनः दर्ज करें"
   LET_TRY_THAT_AGAIN ->  "आइए फिर से कोशिश करें..."
+  CALL_EMERGENCY_CONTACTS -> "आपातकालीन संपर्कों को कॉल करें"

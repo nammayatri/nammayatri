@@ -511,6 +511,11 @@ type HomeScreenStateProps =
   , hasTakenRide :: Boolean
   , isReferred :: Boolean
   , storeCurrentLocs :: Boolean
+  , currentlySelectedContact :: Contact
+  , showCallSuccessfulPopUp :: Boolean
+  , showCallContactPopUp :: Boolean
+  , sosId :: String
+  , sosStatus :: String
   }
 
 type Contact = {
