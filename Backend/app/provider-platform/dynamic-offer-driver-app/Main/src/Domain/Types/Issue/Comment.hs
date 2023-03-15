@@ -1,8 +1,8 @@
 module Domain.Types.Issue.Comment where
 
-import EulerHS.Prelude hiding (id)
 import Data.Time
 import qualified Domain.Types.Issue.IssueReport as D
+import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 
 data Comment = Comment

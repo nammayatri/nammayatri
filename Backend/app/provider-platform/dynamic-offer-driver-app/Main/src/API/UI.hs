@@ -25,6 +25,7 @@ import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverReferral as DriverReferral
 import qualified API.UI.FarePolicy as FarePolicy
 import qualified API.UI.Frontend as Frontend
+import qualified API.UI.Issue as Issue
 import qualified API.UI.Location as Location
 import qualified API.UI.Message as Message
 import qualified API.UI.OrgAdmin as OrgAdmin
@@ -35,7 +36,6 @@ import qualified API.UI.Route as Route
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
 import qualified API.UI.Whatsapp as Whatsapp
-import qualified API.UI.Issue as Issue
 import Environment
 import Kernel.Prelude
 import Servant

@@ -11,9 +11,9 @@ import Dashboard.Common as Reexport
 import Data.Aeson
 import qualified Data.Bifunctor as BF
 import Data.ByteString.Lazy as BSL
-import Data.Time
 import Data.Text as T
 import Data.Text.Encoding as DT
+import Data.Time
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
@@ -42,8 +42,8 @@ type IssueListAPI =
     :> Get '[JSON] IssueReportListResponse
 
 data IssueReportListResponse = IssueReportListResponse
-  { issues :: [IssueReportListItem]
-  , summary :: Summary
+  { issues :: [IssueReportListItem],
+    summary :: Summary
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -112,8 +112,8 @@ instance ToHttpApiData IssueStatus where
 type IssueUpdateAPI =
   Capture "issueId" (Id IssueReport)
     :> ( "update"
-          :> ReqBody '[JSON] IssueUpdateReq
-          :> Put '[JSON] APISuccess
+           :> ReqBody '[JSON] IssueUpdateReq
+           :> Put '[JSON] APISuccess
        )
 
 data IssueUpdateReq = IssueUpdateReq
@@ -132,8 +132,8 @@ instance HideSecrets IssueUpdateReq where
 type IssueAddCommentAPI =
   Capture "issueId" (Id IssueReport)
     :> ( "comment"
-          :> ReqBody '[JSON] IssueAddCommentReq
-          :> Post '[JSON] APISuccess
+           :> ReqBody '[JSON] IssueAddCommentReq
+           :> Post '[JSON] APISuccess
        )
 
 data IssueAddCommentReq = IssueAddCommentReq

@@ -42,7 +42,7 @@ instance TEntityKey IssueReportT where
   fromKey (IssueReportTKey _id) = Id _id
   toKey (Id id) = IssueReportTKey id
 
-instance TType IssueReportT Domain.IssueReport where
+instance FromTType IssueReportT Domain.IssueReport where
   fromTType IssueReportT {..} = do
     return $
       Domain.IssueReport
@@ -52,6 +52,8 @@ instance TType IssueReportT Domain.IssueReport where
           rideId = fromKey <$> rideId,
           ..
         }
+
+instance ToTType IssueReportT Domain.IssueReport where
   toTType Domain.IssueReport {..} =
     IssueReportT
       { id = getId id,

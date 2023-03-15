@@ -4,9 +4,9 @@ module Domain.Types.Issue.IssueReport where
 
 import Data.Aeson
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.Message.MediaFile as D
 import qualified Domain.Types.Person as D
 import qualified Domain.Types.Ride as D
-import qualified Domain.Types.Message.MediaFile as D
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as BP
 import Kernel.Types.Id

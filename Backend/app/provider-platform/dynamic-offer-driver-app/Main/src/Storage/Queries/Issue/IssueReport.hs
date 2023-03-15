@@ -13,8 +13,7 @@ create = Esq.create
 
 findAll :: Transactionable m => m [IssueReport]
 findAll = Esq.findAll $ do
-    issueReport <- from $ table @IssueReportT
-    pure issueReport
+    from $ table @IssueReportT
 
 findAllByDriver :: Id SP.Person -> Transactionable m => m [IssueReport]
 findAllByDriver driverId = Esq.findAll $ do

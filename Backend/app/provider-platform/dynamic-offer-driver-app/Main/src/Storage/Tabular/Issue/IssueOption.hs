@@ -29,14 +29,16 @@ instance TEntityKey IssueOptionT where
   fromKey (IssueOptionTKey id) = Id id
   toKey (Id id) = IssueOptionTKey id
 
-instance TType IssueOptionT Domain.IssueOption where
+instance FromTType IssueOptionT Domain.IssueOption where
   fromTType IssueOptionT {..} = do
     return $
-      Domain.IssueOption 
+      Domain.IssueOption
         { id = Id id,
           issueCategoryId = fromKey issueCategoryId,
           ..
         }
+
+instance ToTType IssueOptionT Domain.IssueOption where
   toTType Domain.IssueOption {..} =
     IssueOptionT
       { id = getId id,

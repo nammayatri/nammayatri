@@ -1,20 +1,20 @@
 module Domain.Action.Dashboard.Issue where
 
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Issue as Common
+import qualified Domain.Types.Issue.Comment as DC
+import qualified Domain.Types.Issue.IssueReport as DIR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Message.MediaFile as DMF
-import qualified Domain.Types.Issue.IssueReport as DIR
-import qualified Domain.Types.Issue.Comment as DC
 import qualified Domain.Types.Person as DP
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Issue as Common
 import Environment
+import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.APISuccess (APISuccess(Success))
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.External.Encryption (decrypt)
-import qualified Storage.Queries.Issue.IssueReport as QIR
 import qualified Storage.Queries.Issue.Comment as QC
+import qualified Storage.Queries.Issue.IssueReport as QIR
 import qualified Storage.Queries.Message.MediaFile as QMF
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -35,9 +35,9 @@ issueList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Common.Issue
 issueList _merchantShortId mbLimit mbOffset mbStatus mbCategory mbAssignee = do
   issueReports <- Esq.runInReplica $ QIR.findAllWithLimitOffsetStatus mbLimit mbOffset (toDomainIssueStatus <$> mbStatus) mbCategory mbAssignee
   let count = length issueReports
-  let summary = Common.Summary { totalCount = count, count }
+  let summary = Common.Summary {totalCount = count, count}
   issues <- mapM mkIssueReport issueReports
-  return $ Common.IssueReportListResponse { issues, summary }
+  return $ Common.IssueReportListResponse {issues, summary}
   where
     mkIssueReportComment :: DC.Comment -> Common.IssueReportCommentItem
     mkIssueReportComment DC.Comment {..} =
@@ -53,7 +53,7 @@ issueList _merchantShortId mbLimit mbOffset mbStatus mbCategory mbAssignee = do
               DMF.Audio -> Common.MediaFile Common.Audio mediaFile.url : commonMediaFileList
               DMF.Image -> Common.MediaFile Common.Image mediaFile.url : commonMediaFileList
               _ -> commonMediaFileList
-        ) 
+        )
         []
     mkDriverDetail :: DP.Person -> Flow Common.DriverDetail
     mkDriverDetail driverDetail = do
@@ -98,7 +98,7 @@ issueUpdate _merchantShortId issueReportId Common.IssueUpdateReq {..} = do
       Esq.runTransaction $ QIR.updateAssignee issueReportId justAssignee
       pure Success
     (Nothing, Nothing) -> throwError $ InvalidRequest "Empty request, no fields to update."
-      
+
 issueAddComment :: ShortId DM.Merchant -> Id DIR.IssueReport -> Common.IssueAddCommentReq -> Flow APISuccess
 issueAddComment _merchantShortId issueReportId Common.IssueAddCommentReq {..} = do
   Esq.runTransaction $ QC.create =<< mkComment

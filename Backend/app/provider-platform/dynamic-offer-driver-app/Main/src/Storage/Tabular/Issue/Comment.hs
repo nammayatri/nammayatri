@@ -7,8 +7,8 @@
 
 module Storage.Tabular.Issue.Comment where
 
-import qualified Domain.Types.Issue.Comment as Domain
 import Data.Time
+import qualified Domain.Types.Issue.Comment as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
@@ -32,14 +32,16 @@ instance TEntityKey CommentT where
   fromKey (CommentTKey _id) = Id _id
   toKey (Id id) = CommentTKey id
 
-instance TType CommentT Domain.Comment where
+instance FromTType CommentT Domain.Comment where
   fromTType CommentT {..} = do
     return $
-      Domain.Comment 
+      Domain.Comment
         { id = Id id,
           issueReportId = fromKey issueReportId,
           ..
         }
+
+instance ToTType CommentT Domain.Comment where
   toTType Domain.Comment {..} =
     CommentT
       { id = getId id,

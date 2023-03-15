@@ -13,8 +13,8 @@ import Servant hiding (Unauthorized, throwError)
 type API =
   "issue"
     :> ( Common.IssueListAPI
-          :<|> Common.IssueUpdateAPI
-          :<|> Common.IssueAddCommentAPI
+           :<|> Common.IssueUpdateAPI
+           :<|> Common.IssueAddCommentAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API

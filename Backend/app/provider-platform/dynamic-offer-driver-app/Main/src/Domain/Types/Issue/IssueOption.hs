@@ -1,8 +1,8 @@
 module Domain.Types.Issue.IssueOption where
 
+import Domain.Types.Issue.IssueCategory (IssueCategory)
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
-import Domain.Types.Issue.IssueCategory (IssueCategory)
 
 data IssueOption = IssueOption
   { id :: Id IssueOption,

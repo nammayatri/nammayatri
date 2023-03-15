@@ -1,5 +1,5 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 
 module SharedService.Common.Issue
   ( module SharedService.Common.Issue,
@@ -7,24 +7,24 @@ module SharedService.Common.Issue
   )
 where
 
-import SharedService.Common as Reexport
 import Data.Aeson
-import Data.OpenApi (ToSchema, ToParamSchema)
-import Data.Text.Encoding as DT
-import Data.Text as T hiding (map)
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Bifunctor as BF
+import qualified Data.ByteString.Lazy as BSL
+import Data.OpenApi (ToParamSchema, ToSchema)
+import Data.Text as T hiding (map)
+import Data.Text.Encoding as DT
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Types (Language)
 import Kernel.ServantMultipart
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.External.Types (Language)
 import Servant
+import SharedService.Common as Reexport
 
 type IssueCreateAPI =
   ReqBody '[JSON] IssueReportReq
-  :> Post '[JSON] IssueReportRes
+    :> Post '[JSON] IssueReportRes
 
 data IssueReportReq = IssueReportReq
   { rideId :: Maybe (Id Ride),
@@ -35,7 +35,7 @@ data IssueReportReq = IssueReportReq
   }
   deriving (Generic, FromJSON, ToSchema)
 
-data IssueReportRes = IssueReportRes
+newtype IssueReportRes = IssueReportRes
   { issueReportId :: Id IssueReport
   }
   deriving stock (Eq, Show, Generic)
@@ -46,7 +46,7 @@ data IssueReportRes = IssueReportRes
 type IssueListAPI =
   Get '[JSON] IssueReportDriverListRes
 
-data IssueReportDriverListRes = IssueReportDriverListRes
+newtype IssueReportDriverListRes = IssueReportDriverListRes
   { issues :: [IssueReportDriverListItem]
   }
   deriving stock (Eq, Show, Generic)
@@ -93,7 +93,7 @@ instance ToHttpApiData IssueStatus where
 
 type IssueUploadAPI =
   MultipartForm Tmp IssueMediaUploadReq
-  :> Post '[JSON] IssueMediaUploadRes
+    :> Post '[JSON] IssueMediaUploadRes
 
 data IssueMediaUploadReq = IssueMediaUploadReq
   { file :: FilePath,
@@ -116,7 +116,7 @@ instance ToMultipart Tmp IssueMediaUploadReq where
       [Input "fileType" (show issueMediaUploadReq.fileType)]
       [FileData "file" (T.pack issueMediaUploadReq.file) "" (issueMediaUploadReq.file)]
 
-data IssueMediaUploadRes = IssueMediaUploadRes
+newtype IssueMediaUploadRes = IssueMediaUploadRes
   { fileId :: Id MediaFile
   }
   deriving stock (Eq, Show, Generic)
@@ -126,7 +126,7 @@ data IssueMediaUploadRes = IssueMediaUploadRes
 
 type IssueFetchMediaAPI =
   MandatoryQueryParam "filePath" Text
-  :> Get '[JSON] Text
+    :> Get '[JSON] Text
 
 -------------------------------------------------------------------------
 
@@ -137,9 +137,9 @@ type IssueDeleteAPI =
 
 type IssueUpdateAPI =
   ReqBody '[JSON] IssueUpdateReq
-  :> Put '[JSON] APISuccess
+    :> Put '[JSON] APISuccess
 
-data IssueUpdateReq = IssueUpdateReq
+newtype IssueUpdateReq = IssueUpdateReq
   { option :: Maybe Text
   }
   deriving (Generic, FromJSON, ToSchema)
@@ -148,7 +148,7 @@ data IssueUpdateReq = IssueUpdateReq
 
 type IssueCategoryAPI =
   QueryParam "language" Language
-  :> Get '[JSON] IssueCategoryListRes
+    :> Get '[JSON] IssueCategoryListRes
 
 data IssueCategoryRes = IssueCategoryRes
   { issueCategoryId :: Id IssueCategory,
@@ -158,7 +158,7 @@ data IssueCategoryRes = IssueCategoryRes
   }
   deriving (Generic, Show, ToJSON, ToSchema)
 
-data IssueCategoryListRes = IssueCategoryListRes
+newtype IssueCategoryListRes = IssueCategoryListRes
   { categories :: [IssueCategoryRes]
   }
   deriving (Generic, Show, ToJSON, ToSchema)
@@ -167,8 +167,8 @@ data IssueCategoryListRes = IssueCategoryListRes
 
 type IssueOptionAPI =
   MandatoryQueryParam "categoryId" (Id IssueCategory)
-  :> QueryParam "language" Language
-  :> Get '[JSON] IssueOptionListRes
+    :> QueryParam "language" Language
+    :> Get '[JSON] IssueOptionListRes
 
 data IssueOptionRes = IssueOptionRes
   { issueOptionId :: Id IssueOption,
@@ -177,7 +177,7 @@ data IssueOptionRes = IssueOptionRes
   }
   deriving (Generic, Show, ToJSON, ToSchema)
 
-data IssueOptionListRes = IssueOptionListRes
+newtype IssueOptionListRes = IssueOptionListRes
   { options :: [IssueOptionRes]
   }
   deriving (Generic, Show, ToJSON, ToSchema)
