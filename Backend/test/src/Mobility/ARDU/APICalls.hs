@@ -97,10 +97,10 @@ ui = do
                         :<|> _
                         :<|> _
                       )
-               :<|> validate
-               :<|> verifyAuth
-               :<|> resendOtp
-               :<|> remove
+               :<|> (validate
+                        :<|> verifyAuth
+                        :<|> resendOtp
+                        :<|> remove)
                :<|> _
              ) = driverClient
 
