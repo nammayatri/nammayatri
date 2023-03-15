@@ -4,35 +4,35 @@ module Domain.Action.UI.Issue where
 
 import qualified AWS.S3 as S3
 import qualified Data.ByteString as BS
-import qualified Domain.Types.Issue.IssueReport as D
+import Data.Text as T hiding (map)
+import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Types.Issue.IssueCategory as D
 import qualified Domain.Types.Issue.IssueOption as D
+import qualified Domain.Types.Issue.IssueReport as D
 import qualified Domain.Types.Issue.IssueTranslation as D
-import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Message.MediaFile as D
 import qualified Domain.Types.Person as SP
-import Data.Time.Format.ISO8601 (iso8601Show)
-import Data.Text as T hiding (map)
+import qualified Domain.Types.Ride as DRide
+import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
-import Environment
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess(Success))
-import Kernel.Types.Id
-import Kernel.External.Types (Language(ENGLISH))
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified "shared-services" SharedService.ProviderPlatform.Issue as Common
-import qualified Storage.Queries.Issue.IssueReport as QIR
-import qualified Storage.Queries.Message.MediaFile as QMF
 import qualified Storage.CachedQueries.Issue.IssueCategory as CQIC
 import qualified Storage.CachedQueries.Issue.IssueOption as CQIO
+import qualified Storage.Queries.Issue.IssueReport as QIR
+import qualified Storage.Queries.Message.MediaFile as QMF
 import Tools.Error
 
 getIssueCategory :: Id SP.Person -> Maybe Language -> Flow Common.IssueCategoryListRes
 getIssueCategory _driverId language = do
   issueCategoryTranslationList <- CQIC.findByLanguage (fromMaybe ENGLISH language)
-  pure $ Common.IssueCategoryListRes { categories = mkIssueCategory <$> issueCategoryTranslationList }
+  pure $ Common.IssueCategoryListRes {categories = mkIssueCategory <$> issueCategoryTranslationList}
   where
     mkIssueCategory :: (D.IssueCategory, Maybe D.IssueTranslation) -> Common.IssueCategoryRes
     mkIssueCategory (issueCategory, issueTranslation) =
@@ -46,21 +46,21 @@ getIssueCategory _driverId language = do
 getIssueOption :: Id SP.Person -> Id D.IssueCategory -> Maybe Language -> Flow Common.IssueOptionListRes
 getIssueOption _driverId issueCategoryId language = do
   issueOptionTranslationList <- CQIO.findAllByCategoryAndLanguage issueCategoryId (fromMaybe ENGLISH language)
-  pure $ Common.IssueOptionListRes { options = mkIssueOptionList <$> issueOptionTranslationList }
+  pure $ Common.IssueOptionListRes {options = mkIssueOptionList <$> issueOptionTranslationList}
   where
     mkIssueOptionList :: (D.IssueOption, Maybe D.IssueTranslation) -> Common.IssueOptionRes
     mkIssueOptionList (issueOption, issueTranslation) =
       Common.IssueOptionRes
-        { issueOptionId = cast issueOption.id
-        , label = issueOption.option & T.toUpper & T.replace " " "_"
-        , option = fromMaybe issueOption.option $ (.translation) <$> issueTranslation
+        { issueOptionId = cast issueOption.id,
+          label = issueOption.option & T.toUpper & T.replace " " "_",
+          option = fromMaybe issueOption.option $ (.translation) <$> issueTranslation
         }
 
 issueReportDriverList :: Id SP.Person -> Flow Common.IssueReportDriverListRes
 issueReportDriverList driverId = do
   issueReports <- Esq.runInReplica $ QIR.findAllByDriver driverId
   issues <- mapM mkIssueReport issueReports
-  return $ Common.IssueReportDriverListRes { issues }
+  return $ Common.IssueReportDriverListRes {issues}
   where
     mkMediaFiles :: [D.MediaFile] -> [Common.MediaFile_]
     mkMediaFiles =
@@ -70,7 +70,7 @@ issueReportDriverList driverId = do
               D.Audio -> Common.MediaFile_ Common.Audio mediaFile.url : mediaFileList
               D.Image -> Common.MediaFile_ Common.Image mediaFile.url : mediaFileList
               _ -> mediaFileList
-        ) 
+        )
         []
     toCommonIssueStatus :: D.IssueStatus -> Common.IssueStatus
     toCommonIssueStatus = \case
@@ -103,11 +103,12 @@ createFilePath driverId fileType validatedFileExtention = do
         <> fileName
         <> validatedFileExtention
     )
+
 createMediaEntry :: Text -> Common.FileType -> Flow Common.IssueMediaUploadRes
 createMediaEntry url fileType = do
   fileEntity <- mkFile url
   Esq.runTransaction $ QMF.create fileEntity
-  return $ Common.IssueMediaUploadRes { fileId = cast $ fileEntity.id }
+  return $ Common.IssueMediaUploadRes {fileId = cast $ fileEntity.id}
   where
     mapToMediaFileType = \case
       Common.Audio -> D.Audio
@@ -128,7 +129,7 @@ issueMediaUpload driverId Common.IssueMediaUploadReq {..} = do
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
   filePath <- createFilePath driverId.getId fileType ""
   mediaFileUrlPattern <- asks (.mediaFileUrlPattern)
-  let fileUrl = 
+  let fileUrl =
         mediaFileUrlPattern
           & T.replace "<DOMAIN>" "issue"
           & T.replace "<FILE_PATH>" filePath
@@ -143,7 +144,7 @@ createIssueReport :: Id SP.Person -> Common.IssueReportReq -> Flow Common.IssueR
 createIssueReport driverId Common.IssueReportReq {..} = do
   issueReport <- mkIssueReport
   Esq.runTransaction $ QIR.create issueReport
-  pure $ Common.IssueReportRes { issueReportId = cast issueReport.id }
+  pure $ Common.IssueReportRes {issueReportId = cast issueReport.id}
   where
     mkIssueReport = do
       id <- generateGUID
@@ -159,12 +160,12 @@ createIssueReport driverId Common.IssueReportReq {..} = do
             updatedAt = now,
             ..
           }
-  
+
 updateIssue :: Id D.IssueReport -> Id SP.Person -> Common.IssueUpdateReq -> Flow APISuccess
 updateIssue issueReportId _driverId Common.IssueUpdateReq {..} = do
   when (isNothing option) $
     throwError $ InvalidRequest "Option Not Found in request body."
-  whenJust option $ \justOption -> 
+  whenJust option $ \justOption ->
     Esq.runTransaction $ QIR.updateOption issueReportId justOption
   pure Success
 
@@ -172,4 +173,3 @@ deleteIssue :: Id D.IssueReport -> Id SP.Person -> Flow APISuccess
 deleteIssue issueReportId driverId = do
   Esq.runTransaction $ QIR.updateAsDeleted issueReportId driverId
   pure Success
-  
