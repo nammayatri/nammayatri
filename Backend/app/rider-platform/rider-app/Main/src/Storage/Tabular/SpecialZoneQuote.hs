@@ -40,15 +40,13 @@ instance TEntityKey SpecialZoneQuoteT where
   fromKey (SpecialZoneQuoteTKey _id) = Id _id
   toKey (Id id) = SpecialZoneQuoteTKey id
 
-instance FromTType SpecialZoneQuoteT Domain.SpecialZoneQuote where
+instance TType SpecialZoneQuoteT Domain.SpecialZoneQuote where
   fromTType SpecialZoneQuoteT {..} =
     return $
       Domain.SpecialZoneQuote
         { id = Id id,
           ..
         }
-
-instance ToTType SpecialZoneQuoteT Domain.SpecialZoneQuote where
   toTType Domain.SpecialZoneQuote {..} =
     SpecialZoneQuoteT
       { id = getId id,

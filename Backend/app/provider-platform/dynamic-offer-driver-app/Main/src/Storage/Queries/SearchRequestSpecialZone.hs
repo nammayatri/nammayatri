@@ -11,17 +11,16 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.SearchRequestSpecialZone where
 
-import Domain.Types.Merchant
 import Domain.Types.SearchRequestSpecialZone as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Domain.Types.Merchant
 import Kernel.Types.Id
-import Storage.Tabular.SearchRequest.SearchReqLocation
 import Storage.Tabular.SearchRequestSpecialZone
+import Storage.Tabular.SearchRequest.SearchReqLocation
 
 create :: SearchRequestSpecialZone -> SqlDB ()
 create dsReq = Esq.runTransaction $
@@ -53,6 +52,8 @@ fullSearchRequestTable =
   table @SearchRequestSpecialZoneT
     `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestSpecialZoneFromLocationId ==. loc1 ^. SearchReqLocationTId)
     `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestSpecialZoneToLocationId ==. loc2 ^. SearchReqLocationTId)
+
+
 
 getRequestIdfromTransactionId ::
   (Transactionable m) =>

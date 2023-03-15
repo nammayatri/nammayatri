@@ -97,7 +97,7 @@ mklocation loc =
     castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, locality = area, ward = Nothing, door = Nothing, ..}
 
 mkFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> UTCTime -> OnConfirm.FulfillmentInfo
-mkFulfillmentInfo fromLoc toLoc startTime =
+mkFulfillmentInfo fromLoc toLoc startTime = do
   OnConfirm.FulfillmentInfo
     { state = OnConfirm.FulfillmentState "TRIP_ASSIGNED",
       start =

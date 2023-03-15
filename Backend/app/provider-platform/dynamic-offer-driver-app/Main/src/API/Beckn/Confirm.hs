@@ -21,6 +21,7 @@ import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Booking as DBooking
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
@@ -85,6 +86,11 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
     errHandler dConfirmRes transporter driver exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking driver transporter
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking driver transporter
+      | otherwise = throwM exc
+    
+    errHandler' dConfirmRes transporter exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking Nothing transporter
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking Nothing transporter
       | otherwise = throwM exc
 
     errHandler' dConfirmRes transporter exc

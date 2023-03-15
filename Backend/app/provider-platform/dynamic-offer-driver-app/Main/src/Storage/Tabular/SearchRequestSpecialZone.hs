@@ -56,7 +56,7 @@ instance TEntityKey SearchRequestSpecialZoneT where
   fromKey (SearchRequestSpecialZoneTKey _id) = Id _id
   toKey (Id id) = SearchRequestSpecialZoneTKey id
 
-instance FromTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLocationT) Domain.SearchRequestSpecialZone where
+instance TType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLocationT) Domain.SearchRequestSpecialZone where
   fromTType (SearchRequestSpecialZoneT {..}, fromLoc, toLoc) = do
     pUrl <- parseBaseUrl bapUri
     let fromLoc_ = mkDomainSearchReqLocation fromLoc
@@ -71,8 +71,6 @@ instance FromTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLoca
           bapUri = pUrl,
           ..
         }
-
-instance ToTType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLocationT) Domain.SearchRequestSpecialZone where
   toTType Domain.SearchRequestSpecialZone {..} =
     ( SearchRequestSpecialZoneT
         { id = getId id,

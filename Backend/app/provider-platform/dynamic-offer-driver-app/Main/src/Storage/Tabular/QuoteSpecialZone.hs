@@ -56,7 +56,7 @@ instance TEntityKey QuoteSpecialZoneT where
   fromKey (QuoteSpecialZoneTKey _id) = Id _id
   toKey (Id id) = QuoteSpecialZoneTKey id
 
-instance FromTType (QuoteSpecialZoneT, Fare.FareParametersT) Domain.QuoteSpecialZone where
+instance TType (QuoteSpecialZoneT, Fare.FareParametersT) Domain.QuoteSpecialZone where
   fromTType (QuoteSpecialZoneT {..}, fareParamsT) = do
     fareParams <- fromTType fareParamsT
     return $
@@ -67,7 +67,6 @@ instance FromTType (QuoteSpecialZoneT, Fare.FareParametersT) Domain.QuoteSpecial
           ..
         }
 
-instance ToTType (QuoteSpecialZoneT, Fare.FareParametersT) Domain.QuoteSpecialZone where
   toTType Domain.QuoteSpecialZone {..} =
     ( QuoteSpecialZoneT
         { id = getId id,
