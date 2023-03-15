@@ -28,7 +28,7 @@ import qualified Domain.Types.Ride as SRide
 import Environment
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
-import Kernel.Prelude
+import Kernel.Prelude hiding (HasField)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
