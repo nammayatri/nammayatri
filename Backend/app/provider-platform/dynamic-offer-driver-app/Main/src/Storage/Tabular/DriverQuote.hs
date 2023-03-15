@@ -28,6 +28,7 @@ import Kernel.Types.Common (Centesimal, Meters (..))
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id
 import qualified Storage.Tabular.FareParameters as Fare
+import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
 import qualified Storage.Tabular.SearchRequest as SReq
 import qualified Storage.Tabular.SearchRequestForDriver as SRFD
@@ -53,6 +54,7 @@ mkPersist
       validTill UTCTime
       estimatedFare Common.Money
       fareParametersId Fare.FareParametersTId
+      providerId MerchantTId 
       createdAt UTCTime
       updatedAt UTCTime
 
@@ -77,6 +79,7 @@ instance FromTType FullDriverQuoteT Domain.DriverQuote where
           searchRequestForDriverId = fromKey <$> searchRequestForDriverId,
           driverId = fromKey driverId,
           durationToPickup = roundToIntegral durationToPickup,
+          providerId = fromKey providerId,
           ..
         }
 
@@ -89,6 +92,7 @@ instance ToTType FullDriverQuoteT Domain.DriverQuote where
           driverId = toKey driverId,
           durationToPickup = realToFrac durationToPickup,
           fareParametersId = toKey fareParams.id,
+          providerId = toKey providerId,
           ..
         },
       toTType fareParams

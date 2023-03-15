@@ -28,6 +28,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (HighPrecMeters, HighPrecMoney)
 import Kernel.Types.Id
 import qualified Storage.Tabular.DriverOffer as SDriverOffer
+import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
 import qualified Storage.Tabular.SearchRequest as SSearchRequest
 import qualified Storage.Tabular.TripTerms as STripTerms
@@ -52,6 +53,7 @@ mkPersist
       tripTermsId STripTerms.TripTermsTId Maybe
       rentalSlabId SRentalSlab.RentalSlabTId Maybe
       driverOfferId SDriverOffer.DriverOfferTId Maybe
+      merchantId SMerchant.MerchantTId
       createdAt UTCTime
       Primary id
       deriving Generic
