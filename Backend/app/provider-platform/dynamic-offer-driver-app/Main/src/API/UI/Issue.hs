@@ -1,58 +1,58 @@
 module API.UI.Issue where
 
-import qualified "shared-services" SharedService.ProviderPlatform.Issue as Common
 import qualified Domain.Action.UI.Issue as Domain
-import qualified Domain.Types.Person as SP
-import qualified Domain.Types.Issue.IssueReport as Domain
 import qualified Domain.Types.Issue.IssueCategory as Domain
+import qualified Domain.Types.Issue.IssueReport as Domain
+import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Types (Language)
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.External.Types (Language)
 import Servant
+import qualified "shared-services" SharedService.ProviderPlatform.Issue as Common
 import Tools.Auth
 
 type API =
   "issue"
     :> ( TokenAuth
-            :> Common.IssueCreateAPI
-         :<|> "list"
-            :> TokenAuth
-            :> Common.IssueListAPI
-         :<|> "upload"
-            :> TokenAuth
-            :> Common.IssueUploadAPI
-         :<|> "media"
-            :> TokenAuth
-            :> Common.IssueFetchMediaAPI
-         :<|> Capture "issueId" (Id Domain.IssueReport)
-            :> "update"
-            :> TokenAuth
-            :> Common.IssueUpdateAPI
-         :<|> Capture "issueId" (Id Domain.IssueReport)
-            :> "delete"
-            :> TokenAuth
-            :> Common.IssueDeleteAPI
-         :<|> "category"
-            :> TokenAuth
-            :> Common.IssueCategoryAPI
-         :<|> "option"
-            :> TokenAuth
-            :> Common.IssueOptionAPI
-        )
+           :> Common.IssueCreateAPI
+           :<|> "list"
+             :> TokenAuth
+             :> Common.IssueListAPI
+           :<|> "upload"
+             :> TokenAuth
+             :> Common.IssueUploadAPI
+           :<|> "media"
+             :> TokenAuth
+             :> Common.IssueFetchMediaAPI
+           :<|> Capture "issueId" (Id Domain.IssueReport)
+             :> "update"
+             :> TokenAuth
+             :> Common.IssueUpdateAPI
+           :<|> Capture "issueId" (Id Domain.IssueReport)
+             :> "delete"
+             :> TokenAuth
+             :> Common.IssueDeleteAPI
+           :<|> "category"
+             :> TokenAuth
+             :> Common.IssueCategoryAPI
+           :<|> "option"
+             :> TokenAuth
+             :> Common.IssueOptionAPI
+       )
 
 handler :: FlowServer API
 handler =
-   createIssueReport
-      :<|> issueReportDriverList
-      :<|> issueMediaUpload
-      :<|> fetchMedia
-      :<|> updateIssue
-      :<|> deleteIssue
-      :<|> getIssueCategory
-      :<|> getIssueOption
+  createIssueReport
+    :<|> issueReportDriverList
+    :<|> issueMediaUpload
+    :<|> fetchMedia
+    :<|> updateIssue
+    :<|> deleteIssue
+    :<|> getIssueCategory
+    :<|> getIssueOption
 
 issueReportDriverList :: Id SP.Person -> FlowHandler Common.IssueReportDriverListRes
 issueReportDriverList = withFlowHandlerAPI . Domain.issueReportDriverList

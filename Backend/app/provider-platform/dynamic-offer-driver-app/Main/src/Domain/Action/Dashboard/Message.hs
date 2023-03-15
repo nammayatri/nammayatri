@@ -102,7 +102,7 @@ uploadFile merchantShortId Common.UploadFileRequest {..} = do
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
   filePath <- createFilePath merchant.id.getId fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
   mediaFileUrlPattern <- asks (.mediaFileUrlPattern)
-  let fileUrl = 
+  let fileUrl =
         mediaFileUrlPattern
           & T.replace "<DOMAIN>" "message"
           & T.replace "<FILE_PATH>" filePath
