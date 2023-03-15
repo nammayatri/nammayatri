@@ -35,9 +35,25 @@ type API =
     :> TokenAuth
     :> ReqBody '[JSON] Maps.GetRoutesReq
     :> Post '[JSON] Maps.GetRoutesResp
+    :<|> "pickup"
+      :> "route"
+      :> TokenAuth
+      :> ReqBody '[JSON] Maps.GetRoutesReq
+      :> Post '[JSON] Maps.GetRoutesResp
+    :<|> "trip"
+      :> "route"
+      :> TokenAuth
+      :> ReqBody '[JSON] Maps.GetRoutesReq
+      :> Post '[JSON] Maps.GetRoutesResp
 
 handler :: FlowServer API
-handler = getRoute
+handler = getRoute :<|> getPickupRoute :<|> getTripRoute
 
 getRoute :: Id Person.Person -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
 getRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getRoutes personId
+
+getPickupRoute :: Id Person.Person -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
+getPickupRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getPickupRoutes personId
+
+getTripRoute :: Id Person.Person -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
+getTripRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getTripRoutes personId

@@ -41,6 +41,8 @@ mkPersist
       getRoutes MapsService
       snapToRoad MapsService
       getPlaceName MapsService
+      getPickupRoutes MapsService
+      getTripRoutes MapsService
       getPlaceDetails MapsService
       autoComplete MapsService
       smsProvidersPriorityList (PostgresList SmsService)
