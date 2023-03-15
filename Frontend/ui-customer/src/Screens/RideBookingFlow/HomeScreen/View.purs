@@ -59,7 +59,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, isPreviousVersion, getCurrentLocationMarker, getPreviousVersion)
+import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, isPreviousVersion, getCurrentLocationMarker, getPreviousVersion, initialWebViewSetUp)
 import JBridge (drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -67,7 +67,7 @@ import Log (printLog)
 import Prelude (Unit,Ordering,compare, bind, const, discard, map, negate, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (>=), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, imageWithFallback)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, imageWithFallback, webView, url)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -280,9 +280,29 @@ view push state =
             , if state.props.emergencyHelpModal then (emergencyHelpModal push state) else emptyTextView state
             , if state.props.showShareAppPopUp then (shareAppPopUp push state) else emptyTextView state
             , if state.props.showMultipleRideInfo then (requestInfoCardView push state) else emptyTextView state
+            , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             ]
         ]
     ]
+
+showLiveStatsDashboard :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+showLiveStatsDashboard push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.grey800
+  , afterRender
+        ( \action -> do
+            initialWebViewSetUp push (getNewIDWithTag "webview") HideLiveDashboard
+            pure unit
+        )
+        (const NoAction)
+  ] [ webView 
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , id (getNewIDWithTag "webview")
+      , url "https://nammayatri.in/open/"
+      ]]
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 searchLocationView push state =
@@ -354,7 +374,7 @@ referralView push state =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , visibility if state.props.hasTakenRide then GONE else VISIBLE
+    , visibility if (state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide then GONE else VISIBLE
     , stroke $ "1," <> if not state.props.isReferred then Color.blue900 else Color.black700
     , margin (MarginHorizontal 16 13)
     , cornerRadius 20.0
@@ -375,6 +395,34 @@ referralView push state =
       , height WRAP_CONTENT
       , color if not state.props.isReferred then Color.blue900 else Color.black700
       , text if not state.props.isReferred then (getString HAVE_REFERRAL_CODE) else (getString REFERRAL_CODE_APPLIED)
+      ] <> FontStyle.tags TypoGraphy
+    ]
+
+liveStatsDashboardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+liveStatsDashboardView push state =
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , visibility if (state.props.isReferred || state.props.hasTakenRide) && state.props.currentStage == RideStarted then VISIBLE else GONE
+    , stroke $ "1," <> Color.blue900 
+    , margin (MarginHorizontal 16 13)
+    , cornerRadius 20.0
+    , background Color.white900
+    , gravity RIGHT
+    , padding (Padding 16 12 16 12)
+    , onClick push $ const $ LiveDashboardAction
+    ][
+      imageView [
+        imageWithFallback "ic_graph_blue,https://assets.juspay.in/nammayatri/images/user/ic_graph_blue.png"
+        , width $ V 20
+        , height $ V 15
+        , margin (Margin 0 0 5 0)
+      ]
+      , textView $ [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , color Color.blue900 
+      , text (getString CHECK_OUT_LIVE_STATS)
       ] <> FontStyle.tags TypoGraphy
     ]
 
@@ -563,7 +611,7 @@ homeScreenTopIconView push state =
             , onClick push $ const OpenSettings
             ]
             [ imageView
-                [ imageWithFallback "ny_ic_hamburger,https://assets.juspay.in/nammayatri/images/user/ny_ic_hamburger.png"
+                [ imageWithFallback if checkVersion "LazyCheck" then "ic_menu_notify,https://assets.juspay.in/nammayatri/images/user/ic_menu_notify.png" else "ny_ic_hamburger,https://assets.juspay.in/nammayatri/images/user/ny_ic_hamburger.png"
                 , height $ V 24
                 , width $ V 24
                 , margin (Margin 16 16 16 16)
@@ -616,6 +664,10 @@ homeScreenTopIconView push state =
         ]
   where
   homeScreenAnimation direction = PrestoAnim.animationSet [ translateYAnimFromTop $ translateYAnimHomeConfig direction ]
+
+checkVersion :: String -> Boolean
+checkVersion str = getValueToLocalStore LIVE_DASHBOARD /= "LIVE_DASHBOARD_SELECTED" && not (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1"))
+
 ------------------------------- rideRequestFlowView --------------------------
 rideRequestFlowView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideRequestFlowView push state =
@@ -791,7 +843,7 @@ topLeftIconView state push =
           , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
           ]
           [ imageView
-              [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png" else "ny_ic_hamburger,https://assets.juspay.in/nammayatri/images/user/ny_ic_hamburger.png"
+              [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png" else if checkVersion "LazyCheck" then "ic_menu_notify,https://assets.juspay.in/nammayatri/images/user/ic_menu_notify.png" else "ny_ic_hamburger,https://assets.juspay.in/nammayatri/images/user/ny_ic_hamburger.png"
               , height $ V 25
               , clickable true
               , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
@@ -803,6 +855,7 @@ topLeftIconView state push =
           , weight 1.0
           ][]
         , referralView push state
+        , if (not (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1"))) then liveStatsDashboardView push state else emptyTextView state
       ]
 
 ----------- suggestedPriceView -------------

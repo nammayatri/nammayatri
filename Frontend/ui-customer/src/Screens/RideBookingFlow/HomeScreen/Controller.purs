@@ -52,8 +52,8 @@ import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
 import Global (readFloat)
-import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, removeAllPolylines, requestKeyboardShow, requestLocation, showDialer, toast, toggleBtnLoader, shareTextMessage, firebaseLogEventWithTwoParams, removeMarker)
+import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts, goBackPrevWebPage)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, removeAllPolylines, requestKeyboardShow, requestLocation, showDialer, toast, toggleBtnLoader, shareTextMessage, firebaseLogEventWithTwoParams, removeMarker, openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -90,6 +90,8 @@ instance loggableAction :: Loggable Action where
     OpenPricingTutorial -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "open_pricing_tutorial"
     OpenSearchLocation -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "open_search_modal"
     UpdateSource lat lon name -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "update_source_address"
+    HideLiveDashboard val -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "hide_live_stats_dashboard"
+    LiveDashboardAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "live_Dashboard_action"
     PrimaryButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "onclick"
       PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "primary_button" "no_action"
@@ -130,6 +132,10 @@ instance loggableAction :: Loggable Action where
       SettingSideBarController.GoToEmergencyContacts -> do
         trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_emergency_contacts_onclick"
         trackAppEndScreen appId (getScreen HOME_SCREEN) 
+        trackAppEndScreen appId (getScreen HOME_SCREEN)      
+      SettingSideBarController.LiveStatsDashboard -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_live_stats_dashboard"
+        trackAppEndScreen appId (getScreen HOME_SCREEN)      
       SettingSideBarController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "no_action"
     PricingTutorialModelActionController (PricingTutorialModelController.Close) -> trackAppActionClick appId (getScreen HOME_SCREEN) "pricing_tutorial" "close_icon"
     SearchLocationModelActionController act -> case act of
@@ -497,6 +503,8 @@ data Action = NoAction
             | UpdateSourceFromPastLocations
             | UpdateLocAndLatLong String String
             | UpdateSavedLoc (Array LocationListItemState)
+            | HideLiveDashboard String
+            | LiveDashboardAction
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -554,12 +562,15 @@ eval BackPressed state = do
                           else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}}
                           else if state.props.emergencyHelpModelState.showContactSupportPopUp then continue state {props {emergencyHelpModelState{showContactSupportPopUp = false}}}
                           else if state.props.emergencyHelpModelState.showCallPolicePopUp then continue state {props{emergencyHelpModelState{showCallPolicePopUp = false}}}
+                          else if state.props.showLiveDashboard then do
+                            continueWithCmd state [do
+                              _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
+                              pure NoAction
+                            ]
                           else if state.props.emergencyHelpModal then continue state {props {emergencyHelpModal = false}}
                           else do
                             _ <- pure $ minimizeApp ""
                             continue state
-
-
 
 eval GoBackToSearchLocationModal state = do
   _ <- pure $ updateLocalStage SearchLocationModel
@@ -572,6 +583,16 @@ eval HandleCallback state = do
 eval (UpdateSource lat lng name) state = do
   _ <- pure $ printLog "Name::" name
   exit $ UpdatedState state { data { source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId}, props { sourceLat = fromMaybe 0.0 (fromString lat), sourceLong = fromMaybe 0.0 (fromString lng) } } true
+
+eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard =false}}
+  
+eval LiveDashboardAction state =
+  if os == "IOS" then do
+      continueWithCmd state [do
+        _ <- openUrlInApp "https://nammayatri.in/open/"
+        pure NoAction
+      ]
+  else continue state {props {showLiveDashboard = true}}
 
 
 eval (UpdateSourceName lat lon name) state = continue state {data{source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId}}
@@ -642,21 +663,35 @@ eval (SettingSideBarActionController (SettingSideBarController.EditProfile)) sta
 eval (SettingSideBarActionController (SettingSideBarController.OnClosed)) state = continue state{ data{settingSideBar {opened = SettingSideBarController.CLOSED}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.OnClose)) state = 
-  if state.props.isPopUp == Logout then 
-    continue state {props{isPopUp = NoPopUp}}
-    else case state.data.settingSideBar.opened of
-              SettingSideBarController.CLOSED -> do 
-                                                  if state.props.currentStage == HomeScreen then do
-                                                    _ <- pure $ minimizeApp ""
-                                                    continue state
-                                                    else continueWithCmd state [pure $ BackPressed]
-              _                               -> continue state {data{settingSideBar{opened = SettingSideBarController.CLOSING}}}
+  if state.props.showLiveDashboard then do
+    continueWithCmd state [do
+      _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
+      pure NoAction
+    ]
+    else if state.props.isPopUp == Logout then 
+      continue state {props{isPopUp = NoPopUp}}
+      else case state.data.settingSideBar.opened of
+                SettingSideBarController.CLOSED -> do 
+                                                    if state.props.currentStage == HomeScreen then do
+                                                      _ <- pure $ minimizeApp ""
+                                                      continue state
+                                                      else continueWithCmd state [pure $ BackPressed]
+                _                               -> continue state {data{settingSideBar{opened = SettingSideBarController.CLOSING}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.OnLogout)) state = continue state { props { isPopUp = Logout } }
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToFavourites)) state = exit $ GoToFavourites state {data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToMyProfile)) state = exit $ GoToMyProfile state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+
+eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboard)) state = do
+  _ <- pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
+  if os == "IOS" then do
+    continueWithCmd state [do
+      _ <- openUrlInApp "https://nammayatri.in/open/"
+      pure NoAction
+    ]
+  else continue state {props {showLiveDashboard = true}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do 
   _ <- pure $ exitLocateOnMap ""

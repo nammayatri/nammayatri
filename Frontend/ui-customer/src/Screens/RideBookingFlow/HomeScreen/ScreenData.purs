@@ -117,6 +117,7 @@ initData = {
     , isReferred : false
     , storeCurrentLocs : false
     , emergencyHelpModelState : emergencyHelpModalData
+    , showLiveDashboard : false
     }
 }
 

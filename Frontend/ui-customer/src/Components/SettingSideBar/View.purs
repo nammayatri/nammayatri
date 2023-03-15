@@ -23,8 +23,8 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback)
+import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
@@ -61,8 +61,14 @@ view push state =
               , orientation VERTICAL
               , clickable true
               ][  profileView state push
-                , settingsView state push
-                , logoutView state push
+                , scrollView
+                  [ height MATCH_PARENT
+                  , width MATCH_PARENT
+                  , scrollBarY true
+                  ]
+                  [
+                    settingsView state push
+                  ]
                 ]
             ]
       ]
@@ -74,17 +80,26 @@ settingsView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , padding (Padding 18 24 18 24)
+  , padding (Padding 18 24 18 8)
   , orientation VERTICAL
   ][
-     settingsMenuView {imageUrl : "ny_ic_past_rides,https://assets.juspay.in/nammayatri/images/user/ny_ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES} push
-    , settingsMenuView {imageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES} push
+     settingsMenuView {imageUrl : "ic_past_rides,https://assets.juspay.in/nammayatri/images/user/ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES, iconUrl : ""} push
+    , settingsMenuView {imageUrl : "ic_fav,https://assets.juspay.in/nammayatri/images/user/ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
     , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout
-      else settingsMenuView {imageUrl : "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS} push
-    , settingsMenuView {imageUrl : "ny_ic_change_language,https://assets.juspay.in/nammayatri/images/user/ny_ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE} push
-    , settingsMenuView {imageUrl : "ny_ic_help,https://assets.juspay.in/nammayatri/images/user/ny_ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP} push
-    , settingsMenuView {imageUrl : "ny_ic_share,https://assets.juspay.in/nammayatri/images/user/ny_ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP} push
-    , settingsMenuView {imageUrl : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png", text : (getString ABOUT), tag : SETTINGS_ABOUT} push
+      else settingsMenuView {imageUrl : "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
+    , settingsMenuView {imageUrl : "ic_help,https://assets.juspay.in/nammayatri/images/user/ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP, iconUrl : ""} push
+    , settingsMenuView {imageUrl : "ic_change_language,https://assets.juspay.in/nammayatri/images/user/ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE, iconUrl : ""} push
+    , linearLayout
+      [ width MATCH_PARENT
+      , height (V 1)
+      , background Color.grey900
+      , margin ( MarginVertical 8 8 )
+      ][]
+    , settingsMenuView {imageUrl : "ic_share,https://assets.juspay.in/nammayatri/images/user/ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP, iconUrl : ""} push
+    , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout 
+      else settingsMenuView {imageUrl : "ic_graph_black,https://assets.juspay.in/nammayatri/images/user/ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon,https://assets.juspay.in/nammayatri/images/user/ic_red_icon.png"} push
+    , settingsMenuView {imageUrl : "ic_info,https://assets.juspay.in/nammayatri/images/user/ic_information_grey.png", text : (getString ABOUT), tag : SETTINGS_ABOUT, iconUrl : ""} push
+    , logoutView state push
   ]
   
 ------------------------------ emptylayout --------------------------------
@@ -99,17 +114,15 @@ logoutView state push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ,  gravity BOTTOM
   , orientation VERTICAL
-  , padding (Padding 0 0 0 safeMarginBottom)
-  , margin (MarginBottom 10) 
+  , margin ( MarginBottom 100 )
   ][ linearLayout
       [ width MATCH_PARENT
       , height (V 1)
-      , background Color.greyDark
-      , margin (Margin 20 0 20 0)
+      , background Color.grey900
+      , margin ( MarginVertical 8 8 )
       ][]
-  , settingsMenuView {imageUrl : "ny_ic_logout,https://assets.juspay.in/nammayatri/images/user/ny_ic_logout.png", text : (getString LOGOUT_), tag : SETTINGS_LOGOUT} push
+  , settingsMenuView {imageUrl : "ic_logout,https://assets.juspay.in/nammayatri/images/user/ic_logout.png", text : (getString LOGOUT_), tag : SETTINGS_LOGOUT, iconUrl : ""} push
     ]
 
 ------------------------------ profileView --------------------------------
@@ -173,7 +186,7 @@ settingsMenuView item push  =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , disableClickFeedback false
-  , padding if item.tag == SETTINGS_LOGOUT  then (Padding 16 16 16 16 ) else (Padding 0 16 16 16 )
+  , padding (Padding 0 16 16 16 )
   , onClick push $ ( const case item.tag of 
                               SETTINGS_RIDES          -> PastRides 
                               SETTINGS_FAVOURITES     -> GoToFavourites
@@ -182,7 +195,8 @@ settingsMenuView item push  =
                               SETTINGS_ABOUT          -> GoToAbout 
                               SETTINGS_LOGOUT         -> OnLogout
                               SETTINGS_SHARE_APP      -> ShareAppLink
-                              SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts)
+                              SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts
+                              SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard)
   ][  imageView
       [ width ( V 25 )
       , height ( V 25 )
@@ -196,7 +210,14 @@ settingsMenuView item push  =
       , color Color.charcoalGrey
       , fontStyle $ FontStyle.medium LanguageStyle
       , padding (PaddingLeft 20)
-      ]  
+      ] 
+    , imageView
+      [ width ( V 8 )
+      , height ( V 8 )
+      , visibility if item.tag == SETTINGS_LIVE_DASHBOARD && getValueToLocalStore LIVE_DASHBOARD /= "LIVE_DASHBOARD_SELECTED" then VISIBLE else GONE
+      , margin ( Margin 6 1 0 0)
+      , imageWithFallback item.iconUrl
+      ] 
     ]
 
             
