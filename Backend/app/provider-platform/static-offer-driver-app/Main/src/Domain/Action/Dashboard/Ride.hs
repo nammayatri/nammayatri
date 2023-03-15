@@ -167,6 +167,7 @@ rideInfo merchantShortId reqRideId = do
         rideEndTime = ride.tripEndTime,
         rideDistanceEstimated = mbEstimatedDistance,
         rideDistanceActual = roundToIntegral ride.traveledDistance,
+        chargeableDistance = ride.chargeableDistance,
         estimatedRideDuration = secondsToMinutes <$> mbEstimatedDuration,
         estimatedFare = booking.estimatedFare,
         actualFare = ride.fare,
