@@ -834,7 +834,7 @@ validate personId phoneNumber = do
   altNoAttempt <- runInReplica $ QRegister.getAlternateNumberAttempts personId
   runRequestValidation validationCheck phoneNumber
   mobileNumberHash <- getDbHash phoneNumber.alternateNumber
-  duplicateCheck (QPerson.findByMobileNumber phoneNumber.mobileCountryCode mobileNumberHash) "Person with this mobile number already exists"
+  duplicateCheck (QPerson.findByMobileNumberAndMerchantForAltNo phoneNumber.mobileCountryCode mobileNumberHash person.merchantId) "Person with this mobile number already exists"
   smsCfg <- asks (.smsCfg)
   let useFakeOtpM = useFakeSms smsCfg
   otpCode <- maybe generateOTPCode return (show <$> useFakeOtpM)
