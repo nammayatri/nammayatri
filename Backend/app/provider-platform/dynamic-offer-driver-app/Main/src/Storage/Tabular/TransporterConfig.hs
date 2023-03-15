@@ -36,18 +36,16 @@ mkPersist
   [defaultQQ|
     TransporterConfigT sql=transporter_config
       merchantId MerchantTId
-      pickupLocThreshold Meters Maybe
-      dropLocThreshold Meters Maybe
-      rideTravelledDistThresholdWhenPickupOrDestIsDiff Meters Maybe
-      rideTravelledDistThresholdWhenPickupAndDestIsSame Meters Maybe
-      rideTimeEstimatedThreshold Seconds Maybe
+      pickupLocThreshold Meters
+      dropLocThreshold Meters
+      rideTimeEstimatedThreshold Seconds
       availabilityTimeWeightage Int
       availabilityTimeWindowOption SWC.SlidingWindowOptions
       acceptanceRatioWeightage Int
       acceptanceRatioWindowOption SWC.SlidingWindowOptions
       cancellationRatioWeightage Int
       cancellationRatioWindowOption SWC.SlidingWindowOptions
-      waitingTimeEstimatedThreshold Seconds Maybe
+      waitingTimeEstimatedThreshold Seconds
       referralLinkPassword Text
       createdAt UTCTime
       updatedAt UTCTime
