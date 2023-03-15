@@ -48,6 +48,9 @@ mkPersist
       fcmUrl Text
       fcmServiceAccount Text
       fcmTokenKeyPrefix Text
+      onboardingTryLimit Int
+      onboardingRetryTimeinHours Int 
+      checkImageExtractionForDashboard Bool
       Primary merchantId
       deriving Generic
     |]

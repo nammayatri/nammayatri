@@ -60,34 +60,6 @@ let slackCfg =
       , slackToken = common.slackToken
       }
 
-let driverOnboardingConfigs =
-      { onboardingTryLimit = +3
-      , onboardingRetryTimeinHours = +24
-      , onboardSupportSmsTemplate =
-          ''
-          Driver Onboarding Alert!!
-           Driver is facing following issues while onboarding to ({#org#}).
-          Reasons:
-           {#reasons#}
-          Please contact him +91-{#driver-phone#}.''
-      , checkRCInsuranceExpiry = False
-      , checkRCExpiry = False
-      , checkRCVehicleClass = True
-      , checkDLExpiry = True
-      , checkDLVehicleClass = True
-      , checkImageExtraction = False
-      , checkImageExtractionForDashboard = True
-      , validDLVehicleClassInfixes =
-        [ "AUTORICKSHAW"
-        , "LMV"
-        , "3W-NT"
-        , "3WT"
-        , "3W-T"
-        , "LIGHT MOTOR VEHICLE"
-        , "3W-CAB"
-        ]
-      }
-
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let driverLocationUpdateRateLimitOptions =
@@ -135,7 +107,6 @@ in  { esqDBCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , apiRateLimitOptions
     , slackCfg
-    , driverOnboardingConfigs
     , smsCfg = smsConfig
     , searchRequestExpirationSeconds = +3600
     , driverQuoteExpirationSeconds = +60
