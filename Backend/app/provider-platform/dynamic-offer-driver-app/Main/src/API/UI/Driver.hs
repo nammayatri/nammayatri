@@ -137,10 +137,11 @@ handler =
                       :<|> updateDriver
                       :<|> getStats
                   )
-             :<|> validate
-             :<|> verifyAuth
-             :<|> resendOtp
-             :<|> remove
+             :<|> ( validate
+                      :<|> verifyAuth
+                      :<|> resendOtp
+                      :<|> remove
+                  )
              :<|> Ride.otpRideCreateAndStart
          )
 
