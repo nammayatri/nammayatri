@@ -151,6 +151,8 @@ foreign import parseFloat :: forall a. a -> Int -> String
 foreign import clearWaitingTimer :: String -> Unit
 foreign import contactPermission :: Unit -> Effect Unit
 
+foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
+foreign import goBackPrevWebPage ::  String -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 data TimeUnit

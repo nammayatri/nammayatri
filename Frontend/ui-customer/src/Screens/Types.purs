@@ -520,6 +520,7 @@ type HomeScreenStateProps =
   , isReferred :: Boolean
   , storeCurrentLocs :: Boolean
   , emergencyHelpModelState :: EmergencyHelpModelState
+  , showLiveDashboard :: Boolean
   }
 
 type Contact = {

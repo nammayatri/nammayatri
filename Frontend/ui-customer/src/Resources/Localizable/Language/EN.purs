@@ -378,3 +378,7 @@ getEN script = case script of
   SEARCH_CONTACTS -> "Search Contacts"
   SELECTED_CONTACT_IS_INVALID -> "The selected contact is invalid. Please recheck the number and try again"
   CALL_EMERGENCY_CONTACTS -> "Call Emergency Contacts"
+  LIVE_STATS_DASHBOARD -> "Live Stats Dashboard"
+  CHECK_OUT_LIVE_STATS -> "Check out live stats"
+
+

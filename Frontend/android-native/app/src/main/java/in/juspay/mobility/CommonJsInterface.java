@@ -236,6 +236,10 @@ import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.content.Context.WINDOW_SERVICE;
 import static android.content.Context.ACTIVITY_SERVICE;
 import static android.view.View.LAYER_TYPE_SOFTWARE;
+import java.net.URISyntaxException;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.content.pm.ResolveInfo;
 
 public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.core.JSI {
 
@@ -282,6 +286,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private static String storeMapCallBack = null;
     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
     public static ArrayList<MediaPlayerView> audioPlayers = new ArrayList<>();
+    public static String webViewCallBack = null;
 
     public CommonJsInterface(){
         super();
@@ -1708,6 +1713,66 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 }
             });
         }
+    }
+
+    @JavascriptInterface
+    public void initialWebViewSetUp(String callback, String id) {
+        webViewCallBack = callback;
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                WebView webView= (WebView) activity.findViewById(Integer.parseInt(id));
+                webView.setWebViewClient(new WebViewClient(){
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+
+                        if (url.startsWith("intent://")) {
+                            try {
+                                Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                                if (intent != null) {
+                                    PackageManager packageManager = context.getPackageManager();
+                                    ResolveInfo info = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
+                                    if (info != null) {
+                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                        context.startActivity(intent);
+                                        return true;
+                                    }
+                                }
+                            } catch (URISyntaxException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        return false;
+                    }
+                });
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void goBackPrevWebPage(String id) {
+        WebView webView = (WebView) activity.findViewById(Integer.parseInt(id));
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (webView.canGoBack()) {
+                    webView.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (webView!=null){
+                                webView.goBack();
+                            }
+                        }
+                    });
+                }else{
+                    if (webViewCallBack != null && dynamicUI != null && juspayServices.getDynamicUI() != null) {
+                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                                webViewCallBack, String.valueOf("TRUE"));
+                        dynamicUI.addJsToWebView(javascript);
+                    }
+                }
+            }
+        });
     }
 
     @JavascriptInterface

@@ -377,3 +377,5 @@ getHI script = case script of
   SEARCH_CONTACTS -> "संपर्क खोजें"
   SELECTED_CONTACT_IS_INVALID -> "चयनित संपर्क अमान्य है। कृपया एक वैध संपर्क चुनें।"
   CALL_EMERGENCY_CONTACTS -> "आपातकालीन संपर्कों को कॉल करें"
+  LIVE_STATS_DASHBOARD -> "लाइव आँकड़े डैशबोर्ड"
+  CHECK_OUT_LIVE_STATS -> "लाइव आंकड़े देखें"

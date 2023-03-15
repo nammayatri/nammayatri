@@ -377,3 +377,5 @@ getKN script = case script of
   SEARCH_CONTACTS -> "ಸಂಪರ್ಕಗಳನ್ನು ಹುಡುಕಿ"
   SELECTED_CONTACT_IS_INVALID -> "ಆಯ್ಕೆಮಾಡಿದ ಸಂಪರ್ಕವು ಅಮಾನ್ಯವಾಗಿದೆ. ದಯವಿಟ್ಟು ಸಂಖ್ಯೆಯನ್ನು ಮರುಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
   CALL_EMERGENCY_CONTACTS -> "ತುರ್ತು ಸಂಪರ್ಕಗಳಿಗೆ ಕರೆ ಮಾಡಿ"
+  LIVE_STATS_DASHBOARD -> "ಲೈವ್ ಸ್ಥಿತಿ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್"
+  CHECK_OUT_LIVE_STATS -> "ಲೈವ್ ಅಂಕಿಅಂಶಗಳನ್ನು ಪರಿಶೀಲಿಸಿ"

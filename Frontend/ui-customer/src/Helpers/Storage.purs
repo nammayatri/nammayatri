@@ -55,6 +55,7 @@ data KeyStore
   | TEST_MINIMUM_POLLING_COUNT
   | TEST_POLLING_INTERVAL
   | TEST_POLLING_COUNT
+  | LIVE_DASHBOARD
 
 derive instance genericKeyStore :: Generic KeyStore _
 
