@@ -16,12 +16,39 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Domain.Types.FarePolicy.FareProductType where
+module Storage.Tabular.SpecialZoneQuote where
 
+import qualified Domain.Types.SpecialZoneQuote as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Id
 
-data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | ONE_WAY_SPECIAL_ZONE deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
+mkPersist
+  defaultSqlSettings
+  [defaultQQ|
+    SpecialZoneQuoteT sql=special_zone_quote
+      id Text
+      quoteId Text
+      Primary id
+      deriving Generic
+    |]
 
-derivePersistField "FareProductType"
+instance TEntityKey SpecialZoneQuoteT where
+  type DomainKey SpecialZoneQuoteT = Id Domain.SpecialZoneQuote
+  fromKey (SpecialZoneQuoteTKey _id) = Id _id
+  toKey (Id id) = SpecialZoneQuoteTKey id
+
+instance TType SpecialZoneQuoteT Domain.SpecialZoneQuote where
+  fromTType SpecialZoneQuoteT {..} =
+    return $
+      Domain.SpecialZoneQuote
+        { id = Id id,
+          ..
+        }
+  toTType Domain.SpecialZoneQuote {..} =
+    SpecialZoneQuoteT
+      { id = getId id,
+        ..
+      }

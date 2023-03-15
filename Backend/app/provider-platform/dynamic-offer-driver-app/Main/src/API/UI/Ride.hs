@@ -18,8 +18,10 @@ module API.UI.Ride
     CancelRideReq (..),
     DRide.DriverRideListRes (..),
     DRide.DriverRideRes (..),
+    DRide.OTPRideReq (..),
     API,
     handler,
+    otpRideCreateAndStart,
   )
 where
 
@@ -103,6 +105,16 @@ startRide requestorId rideId StartRideReq {rideOtp, point} = withFlowHandlerAPI 
   let driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
   shandle <- RideStart.buildStartRideHandle requestor.merchantId
   RideStart.driverStartRide shandle rideId driverReq
+
+otpRideCreateAndStart :: Id SP.Person -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
+otpRideCreateAndStart requestorId req@DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
+  requestor <- findPerson requestorId
+  ride <- DRide.otpRideCreateAndStart requestor req
+  let rideOtp = req.specialZoneOtpCode
+      driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
+  shandle <- RideStart.buildStartRideHandle requestor.merchantId
+  void $ RideStart.driverStartRide shandle ride.id driverReq
+  return ride
 
 endRide :: Id SP.Person -> Id Ride.Ride -> EndRideReq -> FlowHandler APISuccess
 endRide requestorId rideId EndRideReq {point} = withFlowHandlerAPI $ do

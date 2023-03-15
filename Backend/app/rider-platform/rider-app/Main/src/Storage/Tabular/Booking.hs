@@ -60,6 +60,7 @@ mkPersist
       discount HighPrecMoney Maybe
       estimatedTotalFare HighPrecMoney
       distance HighPrecMeters Maybe
+      otpCode Text Maybe
       vehicleVariant VehVar.VehicleVariant
       tripTermsId STripTerms.TripTermsTId Maybe
       rentalSlabId SRentalSlab.RentalSlabTId Maybe
@@ -75,7 +76,7 @@ instance TEntityKey BookingT where
   fromKey (BookingTKey _id) = Id _id
   toKey (Id id) = BookingTKey id
 
-data BookingDetailsT = OneWayDetailsT SLoc.BookingLocationT | RentalDetailsT SRentalSlab.RentalSlabT | DriverOfferDetailsT SLoc.BookingLocationT
+data BookingDetailsT = OneWayDetailsT SLoc.BookingLocationT | RentalDetailsT SRentalSlab.RentalSlabT | DriverOfferDetailsT SLoc.BookingLocationT | OneWaySpecialZoneDetailsT SLoc.BookingLocationT
 
 type FullBookingT = (BookingT, SLoc.BookingLocationT, Maybe STripTerms.TripTermsT, BookingDetailsT)
 
@@ -88,6 +89,7 @@ instance FromTType FullBookingT Domain.Booking where
       OneWayDetailsT toLocT -> Domain.OneWayDetails <$> buildOneWayDetails toLocT
       RentalDetailsT rentalSlabT -> Domain.RentalDetails <$> fromTType rentalSlabT
       DriverOfferDetailsT toLocT -> Domain.DriverOfferDetails <$> buildOneWayDetails toLocT
+      OneWaySpecialZoneDetailsT toLocT -> Domain.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocT
     return $
       Domain.Booking
         { id = Id id,
@@ -110,19 +112,31 @@ instance FromTType FullBookingT Domain.Booking where
             { toLocation,
               distance = distance'
             }
+      buildOneWaySpecialZoneDetails toLocT = do
+        toLocation <- fromTType toLocT
+        distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
+        pure
+          Domain.OneWaySpecialZoneBookingDetails
+            { distance = distance',
+              ..
+            }
 
 instance ToTType FullBookingT Domain.Booking where
   toTType Domain.Booking {..} = do
-    let (fareProductType, bookingDetailsT, toLocationId, distance, rentalSlabId) = case bookingDetails of
+    let (fareProductType, bookingDetailsT, toLocationId, distance, rentalSlabId, otpCode) = case bookingDetails of
           Domain.OneWayDetails details -> do
             let toLocT = toTType details.toLocation
-            (DQuote.ONE_WAY, OneWayDetailsT toLocT, Just . toKey $ details.toLocation.id, Just details.distance, Nothing)
+            (DQuote.ONE_WAY, OneWayDetailsT toLocT, Just . toKey $ details.toLocation.id, Just details.distance, Nothing, Nothing)
           Domain.RentalDetails rentalSlab -> do
             let rentalSlabT = toTType rentalSlab
-            (DQuote.RENTAL, RentalDetailsT rentalSlabT, Nothing, Nothing, Just . toKey $ rentalSlab.id)
+            (DQuote.RENTAL, RentalDetailsT rentalSlabT, Nothing, Nothing, Just . toKey $ rentalSlab.id, Nothing)
           Domain.DriverOfferDetails details -> do
             let toLocT = toTType details.toLocation
-            (DQuote.DRIVER_OFFER, DriverOfferDetailsT toLocT, Just . toKey $ details.toLocation.id, Just details.distance, Nothing)
+            (DQuote.DRIVER_OFFER, DriverOfferDetailsT toLocT, Just . toKey $ details.toLocation.id, Just details.distance, Nothing, Nothing)
+          Domain.OneWaySpecialZoneDetails details -> do
+            let toLocT = toTType details.toLocation
+            (DQuote.ONE_WAY_SPECIAL_ZONE, OneWaySpecialZoneDetailsT toLocT, Just . toKey $ details.toLocation.id, Just details.distance, Nothing, details.otpCode)
+
     let bookingT =
           BookingT
             { id = getId id,

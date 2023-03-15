@@ -19,6 +19,7 @@ module Domain.Action.Beckn.OnSearch
     QuoteInfo (..),
     QuoteDetails (..),
     OneWayQuoteDetails (..),
+    OneWaySpecialZoneQuoteDetails (..),
     RentalQuoteDetails (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
@@ -34,6 +35,7 @@ import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchReq
+import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
@@ -112,9 +114,14 @@ data QuoteInfo = QuoteInfo
 data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
   | RentalDetails RentalQuoteDetails
+  | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: HighPrecMeters
+  }
+
+newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
+  { quoteId :: Text
   }
 
 data RentalQuoteDetails = RentalQuoteDetails
@@ -200,6 +207,8 @@ buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
       pure . DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
     RentalDetails rentalSlab -> do
       DQuote.RentalDetails <$> buildRentalSlab rentalSlab
+    OneWaySpecialZoneDetails details -> do
+      DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
   pure
     DQuote.Quote
       { id = uid,
@@ -216,6 +225,11 @@ buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
 
 mkOneWayQuoteDetails :: OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
 mkOneWayQuoteDetails OneWayQuoteDetails {..} = DQuote.OneWayQuoteDetails {..}
+
+buildOneWaySpecialZoneQuoteDetails :: MonadFlow m => OneWaySpecialZoneQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
+buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
+  id <- generateGUID
+  pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
 buildRentalSlab :: MonadFlow m => RentalQuoteDetails -> m DRentalSlab.RentalSlab
 buildRentalSlab RentalQuoteDetails {..} = do

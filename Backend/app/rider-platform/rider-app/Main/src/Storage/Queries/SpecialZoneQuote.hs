@@ -11,17 +11,15 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 
-module Domain.Types.FarePolicy.FareProductType where
+module Storage.Queries.SpecialZoneQuote where
 
+import Domain.Types.SpecialZoneQuote
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common
+import Kernel.Types.Id
+import Storage.Tabular.SpecialZoneQuote
 
-data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | ONE_WAY_SPECIAL_ZONE deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
-
-derivePersistField "FareProductType"
+findById' :: (MonadThrow m, Log m, Transactionable m) => Id SpecialZoneQuote -> DTypeBuilder m (Maybe SpecialZoneQuoteT)
+findById' = Esq.findById'

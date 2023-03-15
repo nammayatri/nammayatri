@@ -148,7 +148,7 @@ rideInfo merchantShortId reqRideId = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   rideDetails <- runInReplica $ QRideDetails.findById rideId >>= fromMaybeM (RideNotFound rideId.getId) -- FIXME RideDetailsNotFound
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound rideId.getId)
-  quote <- runInReplica $ DQ.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+  quote <- runInReplica $ DQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
   let driverId = ride.driverId
 
   -- merchant access checking

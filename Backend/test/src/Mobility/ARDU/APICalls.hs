@@ -101,6 +101,7 @@ ui = do
                :<|> verifyAuth
                :<|> resendOtp
                :<|> remove
+               :<|> _
              ) = driverClient
 
     (_ :<|> updateLocation) = locationClient

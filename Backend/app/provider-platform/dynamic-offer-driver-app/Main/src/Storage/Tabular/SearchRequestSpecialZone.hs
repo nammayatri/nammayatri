@@ -18,90 +18,68 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Booking where
+module Storage.Tabular.SearchRequestSpecialZone where
 
-import qualified Domain.Types.Booking as Domain
-import qualified Domain.Types.Vehicle.Variant as Veh
+import qualified Domain.Types.SearchRequestSpecialZone as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
-import Storage.Tabular.Booking.BookingLocation hiding (createdAt, id, updatedAt)
-import qualified Storage.Tabular.FareParameters as Fare
+import Kernel.Utils.Common hiding (id)
 import Storage.Tabular.Merchant (MerchantTId)
-import Storage.Tabular.RiderDetails (RiderDetailsTId)
+import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
-
-derivePersistField "Domain.BookingStatus"
-derivePersistField "Domain.BookingType"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    BookingT sql=booking
+    SearchRequestSpecialZoneT sql=search_request_special_zone
       id Text
-      quoteId Text
-      status Domain.BookingStatus
-      bookingType Domain.BookingType
-      specialZoneOtpCode Text Maybe
+      transactionId Text
+      messageId Text
+      startTime UTCTime
+      validTill UTCTime
       providerId MerchantTId
-      providerExoPhone Text
+      fromLocationId SearchReqLocationTId
+      toLocationId SearchReqLocationTId
       bapId Text
       bapUri Text
-      startTime UTCTime
-      riderId RiderDetailsTId Maybe
-      fromLocationId BookingLocationTId
-      toLocationId BookingLocationTId
-      vehicleVariant Veh.Variant
       estimatedDistance Meters
-      estimatedFare Money
       estimatedDuration Seconds
-      fareParametersId Fare.FareParametersTId
-      riderName Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
-
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey BookingT where
-  type DomainKey BookingT = Id Domain.Booking
-  fromKey (BookingTKey _id) = Id _id
-  toKey (Id id) = BookingTKey id
+instance TEntityKey SearchRequestSpecialZoneT where
+  type DomainKey SearchRequestSpecialZoneT = Id Domain.SearchRequestSpecialZone
+  fromKey (SearchRequestSpecialZoneTKey _id) = Id _id
+  toKey (Id id) = SearchRequestSpecialZoneTKey id
 
-type FullBookingT = (BookingT, BookingLocationT, BookingLocationT, Fare.FareParametersT)
-
-instance FromTType FullBookingT Domain.Booking where
-  fromTType (BookingT {..}, fromLoc, toLoc, fareParametersT) = do
+instance TType (SearchRequestSpecialZoneT, SearchReqLocationT, SearchReqLocationT) Domain.SearchRequestSpecialZone where
+  fromTType (SearchRequestSpecialZoneT {..}, fromLoc, toLoc) = do
     pUrl <- parseBaseUrl bapUri
-    let fromLoc_ = mkDomainBookingLocation fromLoc
-        toLoc_ = mkDomainBookingLocation toLoc
-    fareParams <- fromTType fareParametersT
+    let fromLoc_ = mkDomainSearchReqLocation fromLoc
+        toLoc_ = mkDomainSearchReqLocation toLoc
+
     return $
-      Domain.Booking
+      Domain.SearchRequestSpecialZone
         { id = Id id,
           providerId = fromKey providerId,
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
-          riderId = fromKey <$> riderId,
           ..
         }
-
-instance ToTType FullBookingT Domain.Booking where
-  toTType Domain.Booking {..} =
-    ( BookingT
+  toTType Domain.SearchRequestSpecialZone {..} =
+    ( SearchRequestSpecialZoneT
         { id = getId id,
           providerId = toKey providerId,
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
-          riderId = toKey <$> riderId,
-          fareParametersId = toKey fareParams.id,
           ..
         },
-      mkTabularBookingLocation fromLocation,
-      mkTabularBookingLocation toLocation,
-      toTType fareParams
+      mkTabularSearchReqLocation fromLocation,
+      mkTabularSearchReqLocation toLocation
     )

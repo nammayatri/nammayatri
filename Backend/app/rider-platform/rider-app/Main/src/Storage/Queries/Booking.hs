@@ -39,6 +39,7 @@ create booking =
       OneWayDetailsT toLocT -> Esq.create' toLocT
       RentalDetailsT _rentalSlabT -> pure ()
       DriverOfferDetailsT toLocT -> Esq.create' toLocT
+      OneWaySpecialZoneDetailsT toLocT -> Esq.create' toLocT
     Esq.create' bookingT
 
 updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
@@ -60,6 +61,17 @@ updateBPPBookingId rbId bppRbId = do
       tbl
       [ RB.BookingUpdatedAt =. val now,
         RB.BookingBppBookingId =. val (Just $ getId bppRbId)
+      ]
+    where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
+
+updateOtpCodeBookingId :: Id Booking -> Text -> SqlDB ()
+updateOtpCodeBookingId rbId otp = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RB.BookingUpdatedAt =. val now,
+        RB.BookingOtpCode =. val (Just otp)
       ]
     where_ $ tbl ^. RB.BookingId ==. val (getId rbId)
 

@@ -50,7 +50,7 @@ init transporterId (SignatureAuthResult _ subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Init API Flow" "Reached"
     dInitReq <- ACL.buildInitReq subscriber req
-    Redis.whenWithLockRedis (initLockKey dInitReq.driverQuoteId.getId) 60 $ do
+    Redis.whenWithLockRedis (initLockKey dInitReq.driverQuoteId) 60 $ do
       let context = req.context
       dInitRes <- DInit.handler transporterId dInitReq
       void . handle (errHandler dInitRes.booking) $

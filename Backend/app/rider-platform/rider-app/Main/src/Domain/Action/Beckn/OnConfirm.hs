@@ -27,12 +27,16 @@ import Kernel.Utils.Common
 import qualified Storage.Queries.Booking as QRB
 import Tools.Error
 
-newtype OnConfirmReq = OnConfirmReq
-  { bppBookingId :: Id DRB.BPPBooking
+data OnConfirmReq = OnConfirmReq
+  { bppBookingId :: Id DRB.BPPBooking,
+    specialZoneOtp :: Maybe Text
   }
 
 onConfirm :: EsqDBFlow m r => OnConfirmReq -> m ()
 onConfirm req = do
   booking <- QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> req.bppBookingId.getId)
+  whenJust req.specialZoneOtp $ \otp ->
+    DB.runTransaction $ do
+      QRB.updateOtpCodeBookingId booking.id otp
   DB.runTransaction $ do
     QRB.updateStatus booking.id DRB.CONFIRMED

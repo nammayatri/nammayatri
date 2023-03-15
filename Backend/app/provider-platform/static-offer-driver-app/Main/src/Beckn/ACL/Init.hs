@@ -82,3 +82,4 @@ buildInitReq subscriber req = do
               }
         Init.DRIVER_OFFER_ESTIMATE -> throwError $ InvalidRequest "Driver offer is not supported by this BPP"
         Init.DRIVER_OFFER -> throwError $ InvalidRequest "Driver offer is not supported by this BPP"
+        Init.ONE_WAY_SPECIAL_ZONE -> throwError $ InvalidRequest "one way special zone is not supported by this BPP"

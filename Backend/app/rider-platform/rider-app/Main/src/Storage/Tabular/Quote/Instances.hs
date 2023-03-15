@@ -24,6 +24,7 @@ import Kernel.Utils.Error
 import qualified Storage.Tabular.DriverOffer as SDriverOffer
 import Storage.Tabular.Quote
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
+import qualified Storage.Tabular.SpecialZoneQuote as SSpecialZoneQuote
 import qualified Storage.Tabular.TripTerms as STripTerms
 import Tools.Error
 
@@ -31,6 +32,7 @@ data QuoteDetailsT
   = OneWayDetailsT
   | RentalDetailsT SRentalSlab.RentalSlabT
   | DriverOfferDetailsT SDriverOffer.DriverOfferT
+  | OneWaySpecialZoneDetailsT SSpecialZoneQuote.SpecialZoneQuoteT
 
 type FullQuoteT = (QuoteT, Maybe STripTerms.TripTermsT, QuoteDetailsT)
 
@@ -49,6 +51,8 @@ instance FromTType FullQuoteT Domain.Quote where
         Domain.RentalDetails <$> fromTType rentalSlabT
       DriverOfferDetailsT driverOfferT ->
         Domain.DriverOfferDetails <$> fromTType driverOfferT
+      OneWaySpecialZoneDetailsT specialZoneQuoteT ->
+        Domain.OneWaySpecialZoneDetails <$> fromTType specialZoneQuoteT
     return $
       Domain.Quote
         { id = Id id,
@@ -63,16 +67,19 @@ instance FromTType FullQuoteT Domain.Quote where
 
 instance ToTType FullQuoteT Domain.Quote where
   toTType Domain.Quote {..} = do
-    let (fareProductType, quoteDetailsT, distanceToNearestDriver, rentalSlabId, driverOfferId) =
+    let (fareProductType, quoteDetailsT, distanceToNearestDriver, rentalSlabId, driverOfferId, specialZoneQuoteId) =
           case quoteDetails of
             Domain.OneWayDetails details ->
-              (Domain.ONE_WAY, OneWayDetailsT, Just $ details.distanceToNearestDriver, Nothing, Nothing)
+              (Domain.ONE_WAY, OneWayDetailsT, Just $ details.distanceToNearestDriver, Nothing, Nothing, Nothing)
             Domain.RentalDetails rentalSlab -> do
               let rentalSlabT = toTType rentalSlab
-              (Domain.RENTAL, RentalDetailsT rentalSlabT, Nothing, Just $ toKey rentalSlab.id, Nothing)
+              (Domain.RENTAL, RentalDetailsT rentalSlabT, Nothing, Just $ toKey rentalSlab.id, Nothing, Nothing)
             Domain.DriverOfferDetails driverOffer -> do
               let driverOfferT = toTType driverOffer
-              (Domain.DRIVER_OFFER, DriverOfferDetailsT driverOfferT, Nothing, Nothing, Just $ toKey driverOffer.id)
+              (Domain.DRIVER_OFFER, DriverOfferDetailsT driverOfferT, Nothing, Nothing, Just $ toKey driverOffer.id, Nothing)
+            Domain.OneWaySpecialZoneDetails specialZoneQuote -> do
+              let specialZoneQuoteT = toTType specialZoneQuote
+              (Domain.ONE_WAY_SPECIAL_ZONE, OneWaySpecialZoneDetailsT specialZoneQuoteT, Nothing, Nothing, Nothing, Just $ toKey specialZoneQuote.id)
         quoteT =
           QuoteT
             { id = getId id,
