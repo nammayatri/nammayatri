@@ -41,7 +41,12 @@ data TransporterConfigD u = TransporterConfig
     referralLinkPassword :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    fcmConfig :: FCMConfig
+    fcmConfig :: FCMConfig,
+    driverMaxSpeed :: Double,
+    driverSpeedWeightage :: Int,
+    minLocationUpdates :: Int,
+    locationUpdateSampleTime :: Minutes,
+    defaultDriverSpeed :: Double
   }
   deriving (Generic, Show)
 

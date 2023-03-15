@@ -54,6 +54,12 @@ mkPersist
       fcmUrl Text
       fcmServiceAccount Text
       fcmTokenKeyPrefix Text
+      driverMaxSpeed Double
+      driverSpeedWeightage Int
+      locationUpdateSampleTime Minutes
+      minLocationUpdates Int
+      defaultDriverSpeed Double
+
       Primary merchantId
       deriving Generic
     |]
