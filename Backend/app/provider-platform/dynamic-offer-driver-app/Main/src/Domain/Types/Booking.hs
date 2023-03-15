@@ -66,7 +66,7 @@ data SimpleBooking = SimpleBooking
     estimatedDistance :: Meters,
     estimatedFare :: Money,
     estimatedDuration :: Seconds,
-    fareParams :: FareParameters,
+    fareParamsId :: Id FareParameters,
     riderName :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

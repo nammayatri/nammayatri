@@ -19,7 +19,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..), SendSearchRequestToDriverJobData (..))
-import SharedLogic.FareCalculator (calculateFare, fareSum)
+import SharedLogic.FareCalculator (calculateFare)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.AllocatorJob as QAllocatorJob
 import qualified Storage.Queries.DriverQuote as QDriverQuote
@@ -60,14 +60,17 @@ handle ::
   m ExecutionResult
 handle (Job {jobData}) =
   Exception.handle (\(SomeException e) -> pure $ Terminate (show e)) $
-    withoutDuplicateExecution lockKey (fromIntegral timeout) $ do
+    withoutDuplicateExecution lockKey timeout $ do
       upcomingBooking <- fromMaybeM BookingNotFound =<< QTimetable.findUpcomingBooking jobData.timetableId
       searchRequest <- createSearchForUpcomingBooking upcomingBooking
-      quote <- createQuoteForSearchRequest (Id upcomingBooking.providerId) upcomingBooking.farePolicy searchRequest
-      booking <- createBookingForQuote quote
-      updateTimetableWithBookingId upcomingBooking.id booking.id
-      pure Complete
+      quote <- findQuoteForSearchRequest (Id upcomingBooking.providerId) upcomingBooking.farePolicy searchRequest
+      booking <- createBooking upcomingBooking searchRequest quote
+      Complete <$ notifyScheduledRide booking
   where
+    notifyScheduledRide _booking =
+      -- throwM NotImplemented
+      pure ()
+
     timeout =
       60
 
@@ -149,13 +152,13 @@ searchRequestLocationFromBookingLocation now location = do
         updatedAt = now
       }
 
-createQuoteForSearchRequest ::
+findQuoteForSearchRequest ::
   (Redis.HedisFlow m r, EsqDBFlow m r, MonadThrow m) =>
   Id DMerchant.Merchant ->
   FarePolicy.FarePolicy ->
   DSearchReq.SearchRequest ->
   m DDriverQuote.DriverQuote
-createQuoteForSearchRequest merchantId farePolicy searchRequest = do
+findQuoteForSearchRequest merchantId farePolicy searchRequest = do
   let distance = searchRequest.estimatedDistance
   fareParams <- calculateFare merchantId farePolicy distance searchRequest.startTime Nothing
   let driverExtraFare = farePolicy.driverExtraFee
@@ -179,7 +182,7 @@ createQuoteForSearchRequest merchantId farePolicy searchRequest = do
         Redis.runHedis $
           Hedis.xreadOpts [(key, "0-0")] $
             Hedis.XReadOpts
-              { block = Just tenSeconds,
+              { block = Just thirtySeconds,
                 recordCount = Just 1
               }
       let mDriverQuoteId =
@@ -187,20 +190,47 @@ createQuoteForSearchRequest merchantId farePolicy searchRequest = do
               Just [xreadResponse] ->
                 case Hedis.records xreadResponse of
                   [xreadResponseRecord] ->
-                    fmap decodeUtf8 $ lookup "driverQuoteId" $ Hedis.keyValues xreadResponseRecord
-                  _ -> Nothing
+                    fmap (Id . decodeUtf8) $ lookup "driverQuoteId" $ Hedis.keyValues xreadResponseRecord
+                  _ ->
+                    Nothing
               _ -> Nothing
-
       case mDriverQuoteId of
-        Just quoteId ->
-          QDriverQuote.findById (Id quoteId)
+        Just driverQuoteId ->
+          QDriverQuote.findById driverQuoteId
         Nothing ->
           pure Nothing
 
-createBookingForQuote :: MonadThrow m => DDriverQuote.DriverQuote -> m Booking.Booking
-createBookingForQuote quote =
-  throw NotImplemented
-
-updateTimetableWithBookingId :: MonadThrow m => Id Timetable.Timetable -> Id Booking.Booking -> m ()
-updateTimetableWithBookingId timetableId bookingId =
-  throw NotImplemented
+createBooking ::
+  (MonadTime m, MonadGuid m, EsqDBFlow m r, MonadThrow m) =>
+  Timetable.UpcomingBooking ->
+  DSearchReq.SearchRequest ->
+  DDriverQuote.DriverQuote ->
+  m Booking.SimpleBooking
+createBooking upcomingBooking searchRequest quote = do
+  now <- getCurrentTime
+  bookingId <- generateGUID
+  let booking =
+        Booking.SimpleBooking
+          { id = bookingId,
+            quoteId = quote.id,
+            status = Booking.NEW,
+            providerId = searchRequest.providerId,
+            bapId = upcomingBooking.bapId,
+            bapUri = upcomingBooking.bapUri,
+            startTime = searchRequest.startTime,
+            riderId = Nothing,
+            riderName = Nothing,
+            fromLocation = upcomingBooking.fromLocation.id,
+            toLocation = upcomingBooking.toLocation.id,
+            vehicleVariant = quote.vehicleVariant,
+            estimatedDistance = quote.distance,
+            estimatedFare = quote.estimatedFare,
+            estimatedDuration = searchRequest.estimatedDuration,
+            fareParamsId = quote.fareParams.id,
+            createdAt = now,
+            updatedAt = now
+          }
+  Esq.runTransaction $ do
+    Esq.create booking
+    QTimetable.updateTimetableWithBookingId upcomingBooking.id bookingId
+  pure booking

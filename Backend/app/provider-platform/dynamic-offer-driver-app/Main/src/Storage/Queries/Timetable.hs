@@ -73,18 +73,14 @@ findUpcomingBooking ttId = Esq.buildDType $
       where_ $ tt ^. TimetableTId ==. val (toKey ttId)
       pure (tt, rbt, fpt)
 
-updateTimetablesBookingId :: [(Id Timetable, Id DBooking.Booking)] -> SqlDB ()
-updateTimetablesBookingId timetables = do
-  let timetableToValues (timetableId, bookingId) =
-        (val $ toKey timetableId, val $ toKey bookingId)
-  for_ (NE.nonEmpty $ fmap timetableToValues timetables) $ \timetablesForUpdate -> do
-    Esq.update $ \currentTimetable -> do
-      (ttId, ttBookingId) <- from $ values timetablesForUpdate
-      set
-        currentTimetable
-        [ TimetableBookingId =. just ttBookingId
-        ]
-      where_ $ currentTimetable ^. TimetableTId ==. ttId
+updateTimetableWithBookingId :: Id Timetable -> Id DBooking.Booking -> SqlDB ()
+updateTimetableWithBookingId timetableId bookingId =
+  Esq.update $ \tt -> do
+    set
+      tt
+      [ TimetableBookingId =. just (val $ toKey bookingId)
+      ]
+    where_ $ tt ^. TimetableTId ==. val (toKey timetableId)
 
 -- NOTE: This was copied from esqueleto 3.5.2.3 need to update version
 values :: (EI.ToSomeValues a, Ex.ToAliasReference a, Ex.ToAlias a) => NE.NonEmpty a -> Ex.From a

@@ -71,11 +71,16 @@ instance TEntityKey BookingT where
   fromKey (BookingTKey _id) = Id _id
   toKey (Id id) = BookingTKey id
 
+<<<<<<< HEAD
 type FullBookingT = (BookingT, BookingLocationT, BookingLocationT, Fare.FareParametersT)
 
 instance FromTType (BookingT, Fare.FareParametersT) Domain.SimpleBooking where
   fromTType (BookingT {..}, fareParamsT) = do
     fareParams <- fromTType fareParamsT
+=======
+instance TType BookingT Domain.SimpleBooking where
+  fromTType BookingT {..} = do
+>>>>>>> 668c0080a (backend/feat: #11 Add automated_search_flag migration to dynamic offers db; Create booking with the first quote returned and update timetable with the bookingId.)
     pUrl <- parseBaseUrl bapUri
     return $
       Domain.SimpleBooking
@@ -86,6 +91,7 @@ instance FromTType (BookingT, Fare.FareParametersT) Domain.SimpleBooking where
           toLocation = fromKey toLocationId,
           bapUri = pUrl,
           riderId = fromKey <$> riderId,
+          fareParamsId = fromKey fareParametersId,
           ..
         }
 instance ToTType (BookingT, Fare.FareParametersT) Domain.SimpleBooking where
