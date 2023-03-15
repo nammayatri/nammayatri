@@ -57,6 +57,7 @@ instance FromTType FullQuoteT Domain.Quote where
           estimatedFare = roundToIntegral estimatedFare,
           discount = roundToIntegral <$> discount,
           estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          merchantId = fromKey merchantId,
           ..
         }
 
@@ -81,6 +82,7 @@ instance ToTType FullQuoteT Domain.Quote where
               estimatedFare = realToFrac estimatedFare,
               discount = realToFrac <$> discount,
               estimatedTotalFare = realToFrac estimatedTotalFare,
+              merchantId = toKey merchantId,
               ..
             }
     let mbTripTermsT = toTType <$> tripTerms
