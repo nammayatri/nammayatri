@@ -1,0 +1,134 @@
+{
+  "name": "atlas-ui-driver",
+  "version": "1.7.5",
+  "description": "Atlas Driver",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "bundle:purs": "pulp --then \"echo 'module.exports = PS;' >> dist/pulp.js \" build --skip-entry-point --to dist/pulp.js",
+    "bundle:android": "webpack --env prod --mode=production --progress --config webpack.android.js",
+    "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
+    "prod:android": "npm-run-all bundle:purs \"bundle:android\" encrypt",
+    "spago:prod:android": "npm-run-all spago:compile \"bundle:android\"",
+    "prod:ios": "npm-run-all compile:purs compile:bundle:ios encrypt",
+    "compile2": "pulp -w --then \"echo 'module.exports = PS;' >> dist/pulp.js && webpack -p --progress --colors\" build  --skip-entry-point --to dist/pulp.js",
+    "compileAndCreateJsa": "sh compileAndCreateJsa.sh",
+    "encrypt": "node encrypt.js",
+    "compile:purs": "pulp --then \"echo 'module.exports = PS;' >> dist/pulp.js\" build --skip-entry-point --to dist/pulp.js",
+    "spago:compile": "spago bundle-module --to dist/pulp.js",
+    "spago:watch:compile": "spago bundle-module -w --then \"node ./scripts/notify.js 'SUCCESS' \" --else \" node ./scripts/notify.js 'FAILURE' \" --to dist/pulp.js --purs-args '--censor-codes=ImplicitImport,UnusedExplicitImport,ImplicitQualifiedImport'",
+    "compile:bundle:ios": "webpack --env prod --mode=production --progress --colors --config webpack.ios.js",
+    "pulp-dev": "pulp -w --then \"echo 'module.exports = PS;' >> dist/pulp.js\" build  --skip-entry-point --to dist/pulp.js",
+    "win-pulp-dev": "pulp -w --then \"echo module.exports = PS; >> dist/pulp.js\" build  --skip-entry-point --to dist/pulp.js",
+    "webpack-dev": "webpack-dev-server --mode development --config webpack.config.js --host",
+    "webpack-dev-sandbox": "webpack-dev-server --env sandbox --mode development --config webpack.config.js --host",
+    "webpack-dev-master": "webpack-dev-server --env master --mode development --config webpack.config.js --host",
+    "webpack-dev-prod": "webpack-dev-server --env prod --mode development --config webpack.config.js --host",
+    "start:master": "npm-run-all -p spago:watch:compile webpack-dev-master",
+    "start:sandbox": "npm-run-all -p spago:watch:compile webpack-dev-sandbox",
+    "start:prod": "npm-run-all -p spago:watch:compile webpack-dev-prod",
+    "win-start": "npm-run-all -p win-pulp-dev webpack-dev",
+    "start:android:sandbox": "npm-run-all -p pulp-dev webpack-dev-sandbox",
+    "start:android:master": "npm-run-all -p pulp-dev webpack-dev-master",
+    "start:android:prod": "npm-run-all -p pulp-dev webpack-dev-prod",
+    "push": "bash -xe push.sh",
+    "push:sandbox": "bash -xe push.sh --sandbox",
+    "clean:s": "sh cleanSpago.sh",
+    "clean:b": "sh cleanBower.sh"
+  },
+  "author": "juspay",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.7.7",
+    "@babel/preset-env": "^7.7.7",
+    "@commitlint/cli": "^17.1.2",
+    "@commitlint/config-conventional": "^17.1.0",
+    "@digitalroute/cz-conventional-changelog-for-jira": "^7.4.1",
+    "jsa-tools": "git+ssh://git@ssh.bitbucket.juspay.net:picaf/jsa-tools.git#v1.1.57",
+    "@semantic-release/changelog": "^6.0.1",
+    "@semantic-release/commit-analyzer": "^9.0.2",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/npm": "^9.0.1",
+    "@semantic-release/release-notes-generator": "^10.0.3",
+    "babel-loader": "^8.0.6",
+    "commitlint-config-jira": "^1.6.4",
+    "commitlint-plugin-jira-rules": "^1.6.4",
+    "cz-conventional-changelog": "^3.3.0",
+    "husky": "^8.0.1",
+    "node-notifier": "^10.0.1",
+    "npm-run-all": "^4.1.5",
+    "pulp": "^15.0.0",
+    "purescript": "^0.13.8",
+    "purescript-psa": "^0.8.2",
+    "semantic-release": "^19.0.5",
+    "spago": "^0.20.9",
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10",
+    "webpack-dev-server": "^3.10.1",
+    "webpack-merge": "^5.8.0"
+  },
+  "dependencies": {
+    "axios": "^0.27.1",
+    "core-js": "^2.6.11",
+    "moment": "^2.27.0",
+    "presto-ui": "git+ssh://git@ssh.bitbucket.juspay.net:picaf/presto-ui.git#release",
+    "ramda": "^0.26.1",
+    "regenerator-runtime": "^0.13.5"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/@digitalroute/cz-conventional-changelog-for-jira",
+      "jiraPrefix": "BKN",
+      "jiraLocation": "post-type",
+      "jiraAppend": ":"
+    }
+  },
+  "commitlint": {
+    "plugins": [
+      "commitlint-plugin-jira-rules"
+    ],
+    "extends": [
+      "jira"
+    ],
+    "rules": {
+      "jira-task-id-max-length": [
+        0
+      ],
+      "jira-commit-message-separator": [
+        0
+      ],
+      "jira-commit-status-case": [
+        0
+      ],
+      "jira-task-id-project-key": [
+        0
+      ],
+      "jira-task-id-separator": [
+        0
+      ],
+      "jira-task-id-case": [
+        0
+      ],
+      "jira-task-id-min-length": [
+        0
+      ]
+    }
+  },
+  "release": {
+    "branches": [
+      "main",
+      {
+        "name": "hotfix-[0-9]+",
+        "prerelease": true
+      }
+    ],
+    "repositoryUrl": "git@ssh.bitbucket.juspay.net:bec/atlas-ui-driver.git",
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/npm",
+      "@semantic-release/changelog",
+      "@semantic-release/git"
+    ]
+  }
+}

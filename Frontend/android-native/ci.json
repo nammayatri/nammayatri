@@ -1,0 +1,36 @@
+{
+    "release-asset": {
+        "enabled": true,
+        "bucket": {
+            "sandbox": "beta-hyper-sdk-assets",
+            "production": "jp-remote-assets"
+        },
+        "serviceId": "in.juspay.becknuser",
+        "serviceName": "Beckn",
+        "version": "2.0rc1",
+        "remotePath": {
+            "v1": {
+                "in.juspay.becknuser": {
+                    "android": {
+                        "beta": {
+                            "common": "s3://$bucket/juspay/beckn/in.juspay.becknuser/beta/1.0rc1/index_bundle.js"
+                        },
+                        "release": {
+                            "common": "s3://$bucket/juspay/beckn/in.juspay.becknuser/release/1.0rc1/index_bundle.js"
+                        }
+                    }
+                },
+                "in.juspay.beckn.transporter": {
+                    "android": {
+                        "beta": {
+                            "common": "s3://$bucket/juspay/beckn/in.juspay.beckn.transporter/beta/1.0rc1/index_bundle.js"
+                        },
+                        "release": {
+                            "common": "s3://$bucket/juspay/beckn/in.juspay.beckn.transporter/release/1.0rc1/index_bundle.js"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

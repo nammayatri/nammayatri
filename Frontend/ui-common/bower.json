@@ -1,0 +1,17 @@
+{
+  "name": "purescript-beckn-common",
+  "authors": [
+    "Juspay Technologies"
+  ],
+  "description": "Beckn UI common library",
+  "main": "",
+  "homepage": "http://www.juspay.com",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
