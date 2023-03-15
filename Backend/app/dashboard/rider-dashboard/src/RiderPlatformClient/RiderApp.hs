@@ -22,6 +22,7 @@ where
 import qualified "rider-app" API.Dashboard as BAP
 import qualified Dashboard.Common.Booking as Common
 import qualified Dashboard.RiderPlatform.Merchant as Common
+import qualified Dashboard.RiderPlatform.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as BAP
 import Domain.Types.ServerName
@@ -38,7 +39,8 @@ import Tools.Client
 data AppBackendAPIs = AppBackendAPIs
   { customers :: CustomerAPIs,
     bookings :: BookingsAPIs,
-    merchant :: MerchantAPIs
+    merchant :: MerchantAPIs,
+    rides :: RidesAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -49,6 +51,10 @@ data CustomerAPIs = CustomerAPIs
 
 newtype BookingsAPIs = BookingsAPIs
   { stuckBookingsCancel :: Common.StuckBookingsCancelReq -> Euler.EulerClient Common.StuckBookingsCancelRes
+  }
+
+newtype RidesAPIs = RidesAPIs
+  { shareRideInfo :: Id Common.Ride -> Euler.EulerClient Common.ShareRideInfoRes
   }
 
 data MerchantAPIs = MerchantAPIs
@@ -64,17 +70,21 @@ mkAppBackendAPIs merchantId token = do
   let customers = CustomerAPIs {..}
   let bookings = BookingsAPIs {..}
   let merchant = MerchantAPIs {..}
+  let rides = RidesAPIs {..}
   AppBackendAPIs {..}
   where
     customersClient
       :<|> bookingsClient
-      :<|> merchantClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
+      :<|> merchantClient
+      :<|> ridesClient = clientWithMerchant (Proxy :: Proxy BAP.API') merchantId token
 
     customerList
       :<|> customerUpdate
       :<|> customerDelete = customersClient
 
     stuckBookingsCancel = bookingsClient
+
+    shareRideInfo = ridesClient
 
     merchantUpdate
       :<|> mapsServiceConfigUpdate
