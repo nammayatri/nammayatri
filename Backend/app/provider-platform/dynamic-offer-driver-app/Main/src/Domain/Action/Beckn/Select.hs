@@ -151,6 +151,7 @@ buildSearchRequest from to merchantId sReq distance duration = do
         autoAssignEnabled = sReq.autoAssignEnabled,
         searchRepeatCounter = 0,
         updatedAt = now
+        automatedSearch = False
       }
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation

@@ -2,6 +2,7 @@ module SharedLogic.Allocator.Jobs.AllocateDriverForUpcomingRide where
 
 import qualified Control.Monad.Catch as Exception
 import Data.Time.LocalTime
+import qualified Database.Redis as Hedis
 import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.Booking.BookingLocation as Booking
 import qualified Domain.Types.DriverQuote as DDriverQuote
@@ -21,6 +22,7 @@ import SharedLogic.Allocator (AllocatorJobType (..), SendSearchRequestToDriverJo
 import SharedLogic.FareCalculator (calculateFare, fareSum)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.AllocatorJob as QAllocatorJob
+import qualified Storage.Queries.DriverQuote as QDriverQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import qualified Storage.Queries.Timetable as QTimetable
 import Tools.Maps as Maps
@@ -41,6 +43,9 @@ data NotImplemented = NotImplemented
   deriving (Show, Exception, IsBaseError)
 
 data BookingNotFound = BookingNotFound
+  deriving (Show, Exception, IsBaseError)
+
+data QuoteError = QuoteError
   deriving (Show, Exception, IsBaseError)
 
 handle ::
@@ -114,7 +119,8 @@ createSearchForUpcomingBooking upcomingBooking = do
             vehicleVariant = upcomingBooking.farePolicy.vehicleVariant,
             status = DSearchReq.ACTIVE,
             updatedAt = now,
-            autoAssignEnabled = True
+            autoAssignEnabled = True,
+            automatedSearch = True
           }
   Esq.runTransaction $ QSearchReq.create sReq
   pure sReq
@@ -144,7 +150,7 @@ searchRequestLocationFromBookingLocation now location = do
       }
 
 createQuoteForSearchRequest ::
-  (EsqDBFlow m r, MonadThrow m) =>
+  (Redis.HedisFlow m r, EsqDBFlow m r, MonadThrow m) =>
   Id DMerchant.Merchant ->
   FarePolicy.FarePolicy ->
   DSearchReq.SearchRequest ->
@@ -162,10 +168,34 @@ createQuoteForSearchRequest merchantId farePolicy searchRequest = do
           driverMinExtraFee = driverExtraFare.minFee,
           driverMaxExtraFee = driverExtraFare.maxFee
         }
-  waitForQuoteSomehow
+  fromMaybeM QuoteError =<< getFirstQuote
   where
-    waitForQuoteSomehow =
-      throw NotImplemented
+    -- Wait for first driver to respond with a quote by blocking on a redis stream
+    -- we will wait up to 30 seconds for driver to respond.
+    getFirstQuote = do
+      key <- Redis.buildKey $ "searchRequest:" <> getId searchRequest.id <> ":quotes"
+      let thirtySeconds = 30000
+      records <-
+        Redis.runHedis $
+          Hedis.xreadOpts [(key, "0-0")] $
+            Hedis.XReadOpts
+              { block = Just tenSeconds,
+                recordCount = Just 1
+              }
+      let mDriverQuoteId =
+            case records of
+              Just [xreadResponse] ->
+                case Hedis.records xreadResponse of
+                  [xreadResponseRecord] ->
+                    fmap decodeUtf8 $ lookup "driverQuoteId" $ Hedis.keyValues xreadResponseRecord
+                  _ -> Nothing
+              _ -> Nothing
+
+      case mDriverQuoteId of
+        Just quoteId ->
+          QDriverQuote.findById (Id quoteId)
+        Nothing ->
+          pure Nothing
 
 createBookingForQuote :: MonadThrow m => DDriverQuote.DriverQuote -> m Booking.Booking
 createBookingForQuote quote =

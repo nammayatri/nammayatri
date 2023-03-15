@@ -55,6 +55,7 @@ mkPersist
       updatedAt UTCTime
       Primary id
       autoAssignEnabled Bool
+      automatedSearch Bool Maybe
       deriving Generic
     |]
 
@@ -78,6 +79,7 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
+          automatedSearch = fromMaybe False automatedSearch,
           ..
         }
 
@@ -89,6 +91,7 @@ instance ToTType FullSearchRequestT Domain.SearchRequest where
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
+          automatedSearch = Just automatedSearch,
           ..
         },
       mkTabularSearchReqLocation fromLocation,

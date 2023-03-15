@@ -52,6 +52,7 @@ where
 
 import Data.OpenApi (ToSchema)
 import Data.Time (Day)
+import qualified Database.Redis as Hedis
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -715,12 +716,17 @@ respondQuote driverId req = do
         DP.incrementQuoteAcceptedCount sReq.providerId driverId
         -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
         when ((quoteCount + 1) >= quoteLimit || sReq.autoAssignEnabled) $ sendRemoveRideRequestNotification organization.id driverQuote
-        sendDriverOffer organization sReq driverQuote
+        if sReq.automatedSearch
+          then sendDriverOfferToRedis sReq.id driverQuote.id
+          else sendDriverOffer organization sReq driverQuote
       Reject -> do
         Esq.runTransaction $ do
           QSRD.updateDriverResponse sReqFD.id req.response
   pure Success
   where
+    sendDriverOfferToRedis searchRequestId driverQuoteId = do
+      key <- Redis.buildKey $ "searchRequest:" <> getId searchRequestId <> ":quotes"
+      void $ Redis.runHedis $ Hedis.xadd key "*" [("driverQuoteId", encodeUtf8 $ getId driverQuoteId)]
     buildDriverQuote ::
       (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime) =>
       SP.Person ->

@@ -59,6 +59,7 @@ dependencies:
   - containers
   - euler-hs
   - exceptions
+  - hedis
   - hspec
   - http-client
   - lens
