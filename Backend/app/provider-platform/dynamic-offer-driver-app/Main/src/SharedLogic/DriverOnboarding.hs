@@ -17,26 +17,33 @@ module SharedLogic.DriverOnboarding where
 import qualified Data.Text as T
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.Image as Domain
+import qualified Domain.Types.Merchant as DTM
+import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import Environment
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.Queries.DriverOnboarding.Image as Query
 
 notifyErrorToSupport ::
+  Id DTM.Merchant ->
   Maybe T.Text ->
   T.Text ->
   [Maybe DriverOnboardingError] ->
   Flow ()
-notifyErrorToSupport driverPhone orgName errs = do
+notifyErrorToSupport merchantId driverPhone orgName errs = do
   let reasons = catMaybes $ catMaybes $ toMsg <$> errs
-  onboardSupportSmsTemplate <- asks (.driverOnboardingConfigs.onboardSupportSmsTemplate)
+  onboardSupportSmsTemplate <-
+    QMM.findByMerchantIdAndMessageKey merchantId DMM.ONBOARD_SUPPORT_SMS_TEMPLATE
+      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.ONBOARD_SUPPORT_SMS_TEMPLATE))
   let message =
         T.replace "{#reasons#}" (show reasons) $
           T.replace "{#driver-phone#}" (fromMaybe "" driverPhone) $
-            T.replace "{#org#}" orgName onboardSupportSmsTemplate
+            T.replace "{#org#}" orgName $ show onboardSupportSmsTemplate
   _ <- SF.postMessage message
   return ()
   where

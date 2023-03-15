@@ -39,6 +39,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Error
 import qualified Storage.CachedQueries.DriverInformation as DIQuery
+import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
@@ -64,33 +65,33 @@ data StatusRes = StatusRes
 statusHandler :: Id SP.Person -> Flow StatusRes
 statusHandler personId = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-
-  (dlStatus, mDL) <- getDLAndStatus personId
-  (rcStatus, mRC) <- getRCAndStatus personId
+  transporterConfig <- findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+  (dlStatus, mDL) <- getDLAndStatus personId transporterConfig.onboardingTryLimit
+  (rcStatus, mRC) <- getRCAndStatus personId transporterConfig.onboardingTryLimit
 
   when (dlStatus == VALID && rcStatus == VALID) $
     enableDriver personId person.merchantId mRC mDL
   return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus}
 
-getDLAndStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe DL.DriverLicense)
-getDLAndStatus driverId = do
+getDLAndStatus :: Id SP.Person -> Int -> Flow (ResponseStatus, Maybe DL.DriverLicense)
+getDLAndStatus driverId onboardingTryLimit = do
   mDriverLicense <- DLQuery.findByDriverId driverId
   status <-
     case mDriverLicense of
       Just driverLicense -> return $ mapStatus driverLicense.verificationStatus
       Nothing -> do
-        checkIfInVerification driverId Image.DriverLicense
+        checkIfInVerification driverId onboardingTryLimit Image.DriverLicense
   return (status, mDriverLicense)
 
-getRCAndStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate)
-getRCAndStatus driverId = do
+getRCAndStatus :: Id SP.Person -> Int -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate)
+getRCAndStatus driverId onboardingTryLimit = do
   mDriverAssociation <- DRAQuery.getActiveAssociationByDriver driverId
   case mDriverAssociation of
     Just driverAssociation -> do
       vehicleRC <- RCQuery.findById driverAssociation.rcId >>= fromMaybeM (InternalError "Associated rc not found")
       return (mapStatus vehicleRC.verificationStatus, Just vehicleRC)
     Nothing -> do
-      status <- checkIfInVerification driverId Image.VehicleRegistrationCertificate
+      status <- checkIfInVerification driverId onboardingTryLimit Image.VehicleRegistrationCertificate
       return (status, Nothing)
 
 mapStatus :: IV.VerificationStatus -> ResponseStatus
@@ -99,11 +100,10 @@ mapStatus = \case
   IV.VALID -> VALID
   IV.INVALID -> INVALID
 
-checkIfInVerification :: Id SP.Person -> Image.ImageType -> Flow ResponseStatus
-checkIfInVerification driverId docType = do
+checkIfInVerification :: Id SP.Person -> Int -> Image.ImageType -> Flow ResponseStatus
+checkIfInVerification driverId onboardingTryLimit docType = do
   verificationReq <- IVQuery.findLatestByDriverIdAndDocType driverId docType
   images <- IQuery.findRecentByPersonIdAndImageType driverId docType
-  onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
   pure $ verificationStatus onboardingTryLimit (length images) verificationReq
 
 verificationStatus :: Int -> Int -> Maybe IV.IdfyVerification -> ResponseStatus

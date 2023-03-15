@@ -37,6 +37,7 @@ import Kernel.Utils.Common
 import Servant.Multipart
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.DriverOnboarding.Image as Query
 import qualified Storage.Queries.Person as Person
 import qualified Tools.Verification as Verification
@@ -109,10 +110,11 @@ validateImage isDashboard mbMerchant personId ImageValidateRequest {..} = do
 
   images <- Query.findRecentByPersonIdAndImageType personId imageType
   unless isDashboard $ do
-    onboardingTryLimit <- asks (.driverOnboardingConfigs.onboardingTryLimit)
+    transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+    let onboardingTryLimit = transporterConfig.onboardingTryLimit
     when (length images > onboardingTryLimit) $ do
       driverPhone <- mapM decrypt person.mobileNumber
-      notifyErrorToSupport driverPhone org.name ((.failureReason) <$> images)
+      notifyErrorToSupport org.id driverPhone org.name ((.failureReason) <$> images)
       throwError (ImageValidationExceedLimit personId.getId)
 
   imagePath <- createPath personId.getId merchantId.getId imageType
