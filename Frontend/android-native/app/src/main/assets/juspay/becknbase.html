@@ -1,0 +1,41 @@
+<html>
+<head>
+    <title>ATLAS - RELEASE</title>
+</head>
+<body>
+</body>
+<script type="text/javascript">
+    window.__OS = "ANDROID";
+    window.JBridge = top.JBridge;
+    window.Android = top.Android;
+    window.DUIGatekeeper = JBridge;
+    window.onFileUpdated = function (){
+      console.log("arguments -=>", arguments)
+      if ((arguments[0].includes("v1-index_bundle.zip")) && ((arguments[0].includes("in.juspay.nammayatri")) || (arguments[0].includes("in.juspay.nammayatripartner"))) ){
+        // JBridge.toast("BUNDLE UPDATE AVAILABLE");
+        JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
+            event: "reboot",
+            service: "in.juspay.nammayatri",
+            payload: {},
+            error: false,
+            errorMessage: "",
+            errorCode: ""
+          }), "");
+        console.log("arguments after -=>", arguments)
+      }
+      
+    }
+    window.JOS.addEventListener("onFileUpdated")();
+
+
+    </script>
+<script type="text/javascript">
+        console.log("Here is the Release file")
+        var headID = document.getElementsByTagName("head")[0];
+        var newScript = document.createElement('script');
+        newScript.type = 'text/javascript';
+        newScript.id = 'mystique';
+        newScript.innerHTML = JBridge.loadFileInDUI('v1-index_bundle.jsa');
+        headID.appendChild(newScript);
+    </script>
+</html>
