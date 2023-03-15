@@ -30,6 +30,8 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getRoutes :: MapsService,
     snapToRoad :: MapsService,
     getPlaceName :: MapsService,
+    getPickupRoutes :: MapsService,
+    getTripRoutes :: MapsService,
     getPlaceDetails :: MapsService,
     autoComplete :: MapsService,
     smsProvidersPriorityList :: [SmsService],
