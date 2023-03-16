@@ -37,6 +37,7 @@ mkPersist
       id Text
       jobType Text
       jobData Text
+      shardId Int
       scheduledAt UTCTime
       createdAt UTCTime
       updatedAt UTCTime

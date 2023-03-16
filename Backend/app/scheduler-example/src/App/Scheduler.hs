@@ -82,7 +82,7 @@ createBananasCountingJob :: NominalDiffTime -> Flow (Id AnyJob)
 createBananasCountingJob scheduleIn = do
   now <- getCurrentTime
   bCount <- getRandomInRange (1, 10 :: Int)
-  createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'PrintBananasCount $ makeJobData now bCount
+  createJobIn createJobFunc scheduleIn 1 $ makeTestJobEntry @'PrintBananasCount $ makeJobData now bCount
   where
     makeJobData now_ bCount_ =
       BananasCount
@@ -100,7 +100,7 @@ bananasCounterHandler job = do
 
 createTimePrinterJob :: NominalDiffTime -> Flow (Id AnyJob)
 createTimePrinterJob scheduleIn =
-  createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'PrintCurrentTimeWithErrorProbability ()
+  createJobIn createJobFunc scheduleIn 1 $ makeTestJobEntry @'PrintCurrentTimeWithErrorProbability ()
 
 timePrinterHandler :: Job 'PrintCurrentTimeWithErrorProbability -> SchedulerT ExecutionResult
 timePrinterHandler _ = do
@@ -117,13 +117,13 @@ timePrinterHandler _ = do
 
 createFakeJob :: NominalDiffTime -> Flow (Id AnyJob)
 createFakeJob scheduleIn =
-  createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'FakeJobType ()
+  createJobIn createJobFunc scheduleIn 1 $ makeTestJobEntry @'FakeJobType ()
 
 -----------------
 
 createIncorrectDataJob :: NominalDiffTime -> Flow (Id AnyJob)
 createIncorrectDataJob scheduleIn =
-  createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'IncorrectDataJobType val
+  createJobIn createJobFunc scheduleIn 1 $ makeTestJobEntry @'IncorrectDataJobType val
   where
     val = IncSer 2 "quux"
 
@@ -136,7 +136,7 @@ incorrectDataJobHandler _ = do
 
 createTestTerminationJob :: NominalDiffTime -> Flow (Id AnyJob)
 createTestTerminationJob scheduleIn =
-  createJobIn createJobFunc scheduleIn $ makeTestJobEntry @'TestTermination ()
+  createJobIn createJobFunc scheduleIn 1 $ makeTestJobEntry @'TestTermination ()
 
 testTerminationHandler :: Job 'TestTermination -> SchedulerT ExecutionResult
 testTerminationHandler _ = flip C.catchAll (\_ -> pure Retry) $ do

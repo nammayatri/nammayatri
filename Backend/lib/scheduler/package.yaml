@@ -63,6 +63,7 @@ dependencies:
   - prometheus-client
   - servant-server
   - singletons
+  - uuid
 
 ghc-options:
   - -fwrite-ide-info

@@ -124,4 +124,5 @@ in  { esqDBCfg
     , mediaFileUrlPattern =
         "http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>"
     , minTripDistanceForReferralCfg = Some +1000
+    , maxShards = +5
     }

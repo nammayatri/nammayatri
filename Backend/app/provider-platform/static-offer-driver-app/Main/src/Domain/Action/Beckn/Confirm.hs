@@ -136,7 +136,7 @@ confirm transporterId subscriber req = do
         EQ -> finalTransaction $ RideRequest.create rideRequest
         GT ->
           finalTransaction $
-            createJobByTime @_ @'AllocateRental scheduledTime $
+            createJobByTime @_ @'AllocateRental scheduledTime 1 $
               AllocateRentalJobData
                 { bookingId = booking.id,
                   shortOrgId = transporter.subscriberId

@@ -95,15 +95,15 @@ handler merchantId sReq = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverPoolConfig <- getDriverPoolConfig merchantId distance
   let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
-
   Esq.runTransaction $ do
     QSReq.create searchReq
 
   res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare driverExtraFare.minFee driverExtraFare.maxFee
   case res of
     ReSchedule _ -> do
+      maxShards <- asks (.maxShards)
       Esq.runTransaction $ do
-        createJobIn @_ @'SendSearchRequestToDriver inTime $
+        createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
           SendSearchRequestToDriverJobData
             { requestId = searchReq.id,
               baseFare = estimateFare,

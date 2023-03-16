@@ -32,7 +32,7 @@ schedulerHandle :: SchedulerHandle SchedulerJobType
 schedulerHandle =
   SchedulerHandle
     { getTasksById = QSJ.getTasksById,
-      getReadyTasks = QSJ.getReadyTasks,
+      getReadyTasks = QSJ.getReadyTasks Nothing,
       markAsComplete = QSJ.markAsComplete,
       markAsFailed = QSJ.markAsFailed,
       updateErrorCountAndFail = QSJ.updateErrorCountAndFail,
