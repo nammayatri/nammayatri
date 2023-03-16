@@ -65,6 +65,7 @@ cancelRideImpl ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
+    HasField "maxShards" r Int,
     HasCacheConfig r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
@@ -134,6 +135,7 @@ repeatSearch ::
     Esq.EsqDBReplicaFlow m r,
     HasSendSearchRequestToDriverMetrics m r,
     HasHttpClientOptions r c,
+    HasField "maxShards" r Int,
     HasShortDurationRetryCfg r c,
     CacheFlow m r
   ) =>
@@ -170,8 +172,9 @@ repeatSearch merchant farePolicy searchReq booking ride cancellationSource now d
   case res of
     ReSchedule _ -> do
       let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
+      maxShards <- asks (.maxShards)
       Esq.runTransaction $ do
-        createJobIn @_ @'SendSearchRequestToDriver inTime $
+        createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
           SendSearchRequestToDriverJobData
             { requestId = newSearchReq.id,
               baseFare = baseFare,

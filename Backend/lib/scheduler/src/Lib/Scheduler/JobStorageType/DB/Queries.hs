@@ -19,6 +19,7 @@ module Lib.Scheduler.JobStorageType.DB.Queries where
 import Data.Singletons (SingI)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Lib.Scheduler.Environment
@@ -26,28 +27,28 @@ import Lib.Scheduler.JobStorageType.DB.Table
 import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
 import Lib.Scheduler.Types
 
-createJob :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => JobContent e -> Esq.SqlDB ()
-createJob jobData = do
+createJob :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => Int -> JobContent e -> Esq.SqlDB ()
+createJob maxShards jobData = do
   void $
-    ScheduleJob.createJob @t @e @Esq.SqlDB Esq.create $
+    ScheduleJob.createJob @t @e @Esq.SqlDB Esq.create maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
         }
 
-createJobIn :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => NominalDiffTime -> JobContent e -> Esq.SqlDB ()
-createJobIn inTime jobData = do
+createJobIn :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => NominalDiffTime -> Int -> JobContent e -> Esq.SqlDB ()
+createJobIn inTime maxShards jobData = do
   void $
-    ScheduleJob.createJobIn @t @e @Esq.SqlDB Esq.create inTime $
+    ScheduleJob.createJobIn @t @e @Esq.SqlDB Esq.create inTime maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
         }
 
-createJobByTime :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => UTCTime -> JobContent e -> Esq.SqlDB ()
-createJobByTime byTime jobData = do
+createJobByTime :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => UTCTime -> Int -> JobContent e -> Esq.SqlDB ()
+createJobByTime byTime maxShards jobData = do
   void $
-    ScheduleJob.createJobByTime @t @e @Esq.SqlDB Esq.create byTime $
+    ScheduleJob.createJobByTime @t @e @Esq.SqlDB Esq.create byTime maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
@@ -65,14 +66,22 @@ getTasksById ids = Esq.findAll $ do
   where_ $ job ^. SchedulerJobId `in_` valList (map (.getId) ids)
   pure job
 
-getReadyTasks :: FromTType SchedulerJobT (AnyJob t) => SchedulerM [AnyJob t]
-getReadyTasks = do
+getShardIdKey :: Text
+getShardIdKey = "DriverOffer:Jobs:ShardId"
+
+getReadyTasks :: FromTType SchedulerJobT (AnyJob t) => Maybe Int -> SchedulerM [AnyJob t]
+getReadyTasks mbMaxShards = do
   now <- getCurrentTime
+  shardId <-
+    case mbMaxShards of
+      Just maxShards -> ((`mod` maxShards) . fromIntegral) <$> Hedis.incr getShardIdKey
+      Nothing -> pure 0 -- wouldn't be used to fetch jobs in case of nothing
   Esq.findAll $ do
     job <- from $ table @SchedulerJobT
     where_ $
       job ^. SchedulerJobStatus ==. val Pending
         &&. job ^. SchedulerJobScheduledAt <=. val now
+        &&. whenJust_ mbMaxShards (\_ -> job ^. SchedulerJobShardId ==. val shardId)
     orderBy [asc $ job ^. SchedulerJobScheduledAt]
     pure job
 

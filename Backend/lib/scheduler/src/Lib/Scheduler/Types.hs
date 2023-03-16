@@ -88,6 +88,7 @@ data Job (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
   Job
   { id :: Id AnyJob,
     jobInfo :: JobInfo e,
+    shardId :: Int,
     scheduledAt :: UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
