@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -57,11 +58,11 @@ getReadyTasks :: Int -> SchedulerM [AnyJob AllocatorJobType]
 getReadyTasks maxShards = do
   now <- getCurrentTime
   shardVal <- fromIntegral <$> Hedis.incr getShardIdKey
-  shardId <- 
-    if shardVal >= maxShards 
-      then do 
-        Hedis.set getShardIdKey (0 :: Int) 
-        pure 0 
+  shardId <-
+    if shardVal >= maxShards
+      then do
+        Hedis.set getShardIdKey (0 :: Int)
+        pure 0
       else pure shardVal
   Esq.findAll $ do
     job <- from $ table @AllocatorJobT

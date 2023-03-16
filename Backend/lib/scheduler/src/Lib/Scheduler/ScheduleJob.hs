@@ -82,7 +82,7 @@ createJobImpl ::
 createJobImpl createJobFunc scheduledAt maxShards jobEntry = do
   when (jobEntry.maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
   now <- getCurrentTime
-  uuid <- generateGUIDText 
+  uuid <- generateGUIDText
   let id = Id uuid
   let shardId :: Int = idToShardNumber . fromJust $ UU.fromText uuid -- using fromJust because its never going to fail
   let job = makeJob shardId id now
