@@ -21,13 +21,25 @@ in
             copyToRoot = pkgs.buildEnv {
               paths = with pkgs; [
                 cacert
-                self'.packages.default
                 awscli
                 coreutils
                 bash
                 # Add project root to paths to copy dhall-configs and swagger dirs
                 self
-              ];
+              ] ++ (with self'.packages;
+                let inherit (pkgs.haskell.lib) justStaticExecutables;
+                # TODO: Refactor
+                in builtins.map justStaticExecutables [
+                  rider-app
+                  dynamic-offer-driver-app
+                  static-offer-driver-app
+                  static-offer-driver-app-allocator
+                  static-offer-driver-app-scheduler
+                  driver-offer-allocator
+                  rider-dashboard
+                  provider-dashboard
+                  driver-tracking-healthcheck
+                ]);
               name = "beckn-root";
               pathsToLink = [ "/dhall-configs" "/swagger" "/bin" ];
             };
