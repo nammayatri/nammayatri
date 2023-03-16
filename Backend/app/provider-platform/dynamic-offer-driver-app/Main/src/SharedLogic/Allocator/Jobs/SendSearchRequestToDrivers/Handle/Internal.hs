@@ -24,6 +24,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
   )
 where
 
+import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest as SR
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
@@ -31,10 +32,8 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error (SearchRequestError (SearchRequestDoesNotExist))
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as Reexport
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers as Reexport
-import SharedLogic.DriverPool (DriverPoolConfig)
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -90,38 +89,34 @@ isReceivedMaxDriverQuotes driverPoolCfg searchReqId = do
 
 getRescheduleTime ::
   ( HasCacheConfig r,
-    HasSendSearchRequestJobConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
     Log m
   ) =>
+  Seconds ->
   m UTCTime
-getRescheduleTime = do
+getRescheduleTime singleBatchProcessTime = do
   now <- getCurrentTime
-  singleBatchProcessTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
-  return $ singleBatchProcessTime `addUTCTime` now
+  return $ fromIntegral singleBatchProcessTime `addUTCTime` now
 
 setBatchDurationLock ::
-  ( HasSendSearchRequestJobConfig r,
-    MonadFlow m,
+  ( MonadFlow m,
     HedisFlow m r
   ) =>
   Id SearchRequest ->
+  Seconds ->
   m (Maybe UTCTime)
-setBatchDurationLock searchRequestId = do
+setBatchDurationLock searchRequestId singleBatchProcessTime = do
   now <- getCurrentTime
-  singleBatchProcessTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
-  res <- Hedis.setNxExpire (getId searchRequestId) singleBatchProcessTime now
+  res <- Hedis.setNxExpire (getId searchRequestId) (fromIntegral singleBatchProcessTime) now
   if not res
     then do Hedis.get (getId searchRequestId)
     else return Nothing
 
 createRescheduleTime ::
-  ( HasSendSearchRequestJobConfig r,
-    MonadReader r m
-  ) =>
+  MonadReader r m =>
+  Seconds ->
   UTCTime ->
   m UTCTime
-createRescheduleTime lastProcTime = do
-  singleBatchProcessTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
-  return $ singleBatchProcessTime `addUTCTime` lastProcTime
+createRescheduleTime singleBatchProcessTime lastProcTime = do
+  return $ fromIntegral singleBatchProcessTime `addUTCTime` lastProcTime

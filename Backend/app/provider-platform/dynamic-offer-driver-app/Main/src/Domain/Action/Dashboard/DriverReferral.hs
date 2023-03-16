@@ -38,7 +38,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.CachedQueries.TransporterConfig as CQTC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import Tools.Error
 
 ---------------------------------------------------------------------

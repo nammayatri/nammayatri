@@ -184,7 +184,6 @@ otpRideCreate ::
     Redis.HedisFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
-    HasDriverPoolConfig r,
     HasHttpClientOptions r c,
     EncFlow m r,
     HasShortDurationRetryCfg r c,

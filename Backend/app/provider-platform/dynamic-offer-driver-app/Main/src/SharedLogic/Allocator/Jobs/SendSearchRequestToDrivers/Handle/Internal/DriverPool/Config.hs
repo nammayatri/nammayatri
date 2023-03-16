@@ -36,4 +36,4 @@ type HasDriverPoolBatchesConfig r =
   )
 
 data PoolSortingType = Intelligent | Random
-  deriving (Generic, FromDhall)
+  deriving (Generic, FromDhall, Show, Read, FromJSON, ToJSON)

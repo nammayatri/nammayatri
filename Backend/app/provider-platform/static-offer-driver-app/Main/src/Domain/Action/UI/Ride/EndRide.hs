@@ -29,9 +29,9 @@ import qualified Domain.Types.DriverLocation as DrLoc
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.Vehicle as Vehicle
 import Environment (Flow)
 import EulerHS.Prelude
@@ -50,7 +50,7 @@ import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Calculator as F
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Flow as Fare
 import qualified SharedLogic.FareCalculator.RentalFareCalculator.Flow as RentalFare
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFP
-import qualified Storage.CachedQueries.TransporterConfig as QTConf
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error

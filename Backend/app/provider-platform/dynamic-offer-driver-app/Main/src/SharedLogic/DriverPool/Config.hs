@@ -14,69 +14,29 @@
 
 module SharedLogic.DriverPool.Config where
 
+import Domain.Types.Merchant
+import Domain.Types.Merchant.DriverPoolConfig
 import Kernel.Prelude
 import Kernel.Types.Common
-import qualified Kernel.Types.SlidingWindowCounters as SWC
-import Kernel.Utils.Dhall (FromDhall)
-
-data IntelligentPoolConfig = IntelligentPoolConfig
-  { minQuotesToQualifyForIntelligentPool :: Int,
-    minQuotesToQualifyForIntelligentPoolWindowOption :: SWC.SlidingWindowOptions
-  }
-  deriving (Generic, FromDhall)
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Error
+import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
   { popupDelayToAddAsPenalty :: Maybe Seconds,
     thresholdCancellationScore :: Maybe Int,
-    thresholdRidesCount :: Maybe Int
+    minRidesForCancellationScore :: Maybe Int
   }
-  deriving (Generic, FromDhall)
+  deriving (Generic)
 
-data DriverPoolConfig = DriverPoolConfig
-  { minRadiusOfSearch :: Meters,
-    maxRadiusOfSearch :: Meters,
-    radiusStepSize :: Meters,
-    driverPositionInfoExpiry :: Maybe Seconds,
-    actualDistanceThreshold :: Maybe Meters,
-    maxDriverQuotesRequired :: Int,
-    driverQuoteLimit :: Int,
-    intelligentPoolPercentage :: Maybe Int,
-    driverRequestCountLimit :: Int
-  }
-  deriving (Generic, FromDhall)
-
-data OverrideDriverPoolConfigRange = OverrideDriverPoolConfigRange
-  { startDistance :: Meters,
-    endDistance :: Maybe Meters
-  }
-  deriving (Generic, FromDhall)
-
-data OverrideDriverPoolConfig = OverrideDriverPoolConfig
-  { configRange :: OverrideDriverPoolConfigRange,
-    driverPoolCfg :: DriverPoolConfig
-  }
-  deriving (Generic, FromDhall)
-
-type HasDriverPoolConfig r =
-  ( HasField "driverPoolCfg" r DriverPoolConfig,
-    HasField "overrideDriverPoolConfig" r [OverrideDriverPoolConfig],
-    HasField "intelligentPoolConfig" r IntelligentPoolConfig,
-    HasField "cancellationScoreRelatedConfig" r CancellationScoreRelatedConfig,
-    HasField "defaultPopupDelay" r Seconds,
-    HasMaxParallelSearchRequests r
-  )
-
-type HasMaxParallelSearchRequests r =
-  ( HasField "maxParallelSearchRequests" r Int
-  )
-
-getDriverPoolConfig :: (MonadFlow m, MonadReader r m, HasDriverPoolConfig r) => Meters -> m DriverPoolConfig
-getDriverPoolConfig dist = do
-  defaultConfig <- asks (.driverPoolCfg)
-  overrideConfigs <- asks (.overrideDriverPoolConfig)
-  let applicableConfig = find filterByDist overrideConfigs
-  return $ maybe defaultConfig (.driverPoolCfg) applicableConfig
+getDriverPoolConfig :: (MonadFlow m, MonadReader r m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Meters -> m DriverPoolConfig
+getDriverPoolConfig merchantId dist = do
+  configs <- CDP.findAllByMerchantId merchantId
+  let applicableConfig = find filterByDist configs
+  case configs of
+    [] -> throwError $ InvalidRequest "DriverPoolConfig not found"
+    (config : _) -> pure $ maybe config identity applicableConfig
   where
-    filterByDist cfg =
-      (dist >= cfg.configRange.startDistance)
-        && maybe True (dist <=) cfg.configRange.endDistance
+    filterByDist cfg = dist >= cfg.tripDistance

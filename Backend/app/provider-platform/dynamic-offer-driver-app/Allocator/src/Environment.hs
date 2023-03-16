@@ -36,8 +36,6 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Environment (SchedulerConfig (..))
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
-import SharedLogic.DriverPool (CancellationScoreRelatedConfig, DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheConfig)
 import System.Environment (lookupEnv)
@@ -65,14 +63,7 @@ data HandlerEnv = HandlerEnv
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     coreMetrics :: CoreMetricsContainer,
-    intelligentPoolConfig :: IntelligentPoolConfig,
-    driverPoolCfg :: DriverPoolConfig,
-    defaultPopupDelay :: Seconds,
-    cancellationScoreRelatedConfig :: CancellationScoreRelatedConfig,
-    overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
-    sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
-    ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
-    maxParallelSearchRequests :: Int
+    ssrMetrics :: SendSearchRequestToDriverMetricsContainer
   }
   deriving (Generic)
 
@@ -86,7 +77,6 @@ buildHandlerEnv HandlerCfg {..} = do
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- registerCoreMetricsContainer
-  let overrideDriverPoolConfig = fromMaybe [] overrideDriverPoolCfg
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

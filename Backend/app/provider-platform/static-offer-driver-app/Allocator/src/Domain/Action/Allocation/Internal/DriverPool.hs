@@ -32,7 +32,7 @@ import SharedLogic.DriverPool (calculateDriverPool)
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.TransporterConfig as QTConf
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QBooking
 import Tools.Metrics
 

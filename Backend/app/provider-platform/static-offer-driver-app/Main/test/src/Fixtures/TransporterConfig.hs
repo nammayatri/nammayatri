@@ -14,7 +14,7 @@
 
 module Fixtures.TransporterConfig (defaultTransporterConfig) where
 
-import qualified Domain.Types.TransporterConfig as DTConf
+import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import EulerHS.Prelude
 import qualified Fixtures.BaseUrl as Fixtures
 import qualified Fixtures.Person as Fixtures

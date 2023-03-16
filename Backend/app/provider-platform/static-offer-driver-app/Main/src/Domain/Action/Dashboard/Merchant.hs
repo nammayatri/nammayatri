@@ -38,7 +38,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.CachedQueries.TransporterConfig as CQTC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import Tools.Error
 
 ---------------------------------------------------------------------

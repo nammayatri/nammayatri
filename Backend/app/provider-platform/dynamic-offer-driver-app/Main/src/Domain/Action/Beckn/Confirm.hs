@@ -85,7 +85,6 @@ handler ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HedisFlow m r,
-    DP.HasDriverPoolConfig r,
     HasPrettyLogger m r,
     HasHttpClientOptions r c,
     EncFlow m r,

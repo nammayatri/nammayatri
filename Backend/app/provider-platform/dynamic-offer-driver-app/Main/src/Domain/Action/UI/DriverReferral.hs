@@ -15,7 +15,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
-import qualified Storage.CachedQueries.TransporterConfig as QTC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.DriverReferral as QRD
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -41,7 +41,7 @@ createDriverReferral driverId isDashboard ReferralLinkReq {..} = do
   unless (TU.validateAllDigitWithMinLength 6 referralCode) $
     throwError $ InvalidRequest "Referral Code must have 6 digits."
   person <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound person.merchantId.getId)
+  transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
   when (transporterConfig.referralLinkPassword /= referralLinkPassword && not isDashboard) $
     throwError $ InvalidRequest "Invalid Password."
   mbLastReferralCodeWithDriver <- Esq.runInReplica $ QRD.findById driverId

@@ -18,69 +18,55 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.TransporterConfig where
+module Storage.Tabular.Merchant.DriverIntelligentPoolConfig where
 
-import qualified Domain.Types.Merchant as Domain
-import qualified Domain.Types.TransporterConfig as Domain
-import qualified Kernel.External.FCM.Types as FCM
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
-import Kernel.Types.Common (Meters)
 import Kernel.Types.Id
+import Kernel.Types.SlidingWindowCounters (PeriodType)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
-import Kernel.Types.Time
 import Storage.Tabular.Merchant (MerchantTId)
+
+derivePersistField "PeriodType"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    TransporterConfigT sql=transporter_config
+    DriverIntelligentPoolConfigT sql=driver_intelligent_pool_config
       merchantId MerchantTId
-      pickupLocThreshold Meters
-      dropLocThreshold Meters
-      rideTimeEstimatedThreshold Seconds
       availabilityTimeWeightage Int
       availabilityTimeWindowOption SWC.SlidingWindowOptions
       acceptanceRatioWeightage Int
       acceptanceRatioWindowOption SWC.SlidingWindowOptions
       cancellationRatioWeightage Int
       cancellationRatioWindowOption SWC.SlidingWindowOptions
-      waitingTimeEstimatedThreshold Seconds
-      referralLinkPassword Text
+      minQuotesToQualifyForIntelligentPool Int
+      minQuotesToQualifyForIntelligentPoolWindowOption SWC.SlidingWindowOptions
+      intelligentPoolPercentage Int Maybe
       createdAt UTCTime
       updatedAt UTCTime
-      fcmUrl Text
-      fcmServiceAccount Text
-      fcmTokenKeyPrefix Text
       Primary merchantId
       deriving Generic
     |]
 
-instance TEntityKey TransporterConfigT where
-  type DomainKey TransporterConfigT = Id Domain.Merchant
-  fromKey (TransporterConfigTKey _id) = fromKey _id
-  toKey id = TransporterConfigTKey $ toKey id
+instance TEntityKey DriverIntelligentPoolConfigT where
+  type DomainKey DriverIntelligentPoolConfigT = Id DM.Merchant
+  fromKey (DriverIntelligentPoolConfigTKey _id) = fromKey _id
+  toKey id = DriverIntelligentPoolConfigTKey $ toKey id
 
-instance FromTType TransporterConfigT Domain.TransporterConfig where
-  fromTType TransporterConfigT {..} = do
-    fcmUrl' <- parseBaseUrl fcmUrl
+instance FromTType DriverIntelligentPoolConfigT Domain.DriverIntelligentPoolConfig where
+  fromTType DriverIntelligentPoolConfigT {..} = do
     return $
-      Domain.TransporterConfig
+      Domain.DriverIntelligentPoolConfig
         { merchantId = fromKey merchantId,
-          fcmConfig =
-            FCM.FCMConfig
-              { fcmUrl = fcmUrl',
-                ..
-              },
           ..
         }
 
-instance ToTType TransporterConfigT Domain.TransporterConfig where
-  toTType Domain.TransporterConfig {..} =
-    TransporterConfigT
+instance ToTType DriverIntelligentPoolConfigT Domain.DriverIntelligentPoolConfig where
+  toTType Domain.DriverIntelligentPoolConfig {..} =
+    DriverIntelligentPoolConfigT
       { merchantId = toKey merchantId,
-        fcmUrl = showBaseUrl fcmConfig.fcmUrl,
-        fcmServiceAccount = fcmConfig.fcmServiceAccount,
-        fcmTokenKeyPrefix = fcmConfig.fcmTokenKeyPrefix,
         ..
       }

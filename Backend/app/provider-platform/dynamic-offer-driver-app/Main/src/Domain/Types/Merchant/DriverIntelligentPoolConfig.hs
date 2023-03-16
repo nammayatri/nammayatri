@@ -12,39 +12,33 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.TransporterConfig where
+module Domain.Types.Merchant.DriverIntelligentPoolConfig where
 
 import Data.Time (UTCTime)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
-import Kernel.External.FCM.Types (FCMConfig)
-import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 
--- ProviderConfig?
-data TransporterConfigD u = TransporterConfig
+data DriverIntelligentPoolConfigD u = DriverIntelligentPoolConfig
   { merchantId :: Id Merchant,
-    pickupLocThreshold :: Meters,
-    dropLocThreshold :: Meters,
-    rideTimeEstimatedThreshold :: Seconds,
     availabilityTimeWeightage :: Int,
     availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
     acceptanceRatioWeightage :: Int,
     acceptanceRatioWindowOption :: SWC.SlidingWindowOptions,
     cancellationRatioWeightage :: Int,
     cancellationRatioWindowOption :: SWC.SlidingWindowOptions,
-    waitingTimeEstimatedThreshold :: Seconds,
-    referralLinkPassword :: Text,
+    minQuotesToQualifyForIntelligentPool :: Int,
+    minQuotesToQualifyForIntelligentPoolWindowOption :: SWC.SlidingWindowOptions,
+    intelligentPoolPercentage :: Maybe Int,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    fcmConfig :: FCMConfig
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show)
 
-type TransporterConfig = TransporterConfigD 'Safe
+type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigD 'Safe
 
-instance FromJSON (TransporterConfigD 'Unsafe)
+instance FromJSON (DriverIntelligentPoolConfigD 'Unsafe)
 
-instance ToJSON (TransporterConfigD 'Unsafe)
+instance ToJSON (DriverIntelligentPoolConfigD 'Unsafe)

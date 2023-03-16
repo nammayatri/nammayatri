@@ -14,7 +14,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Domain.Types.TransporterConfig where
+module Domain.Types.Merchant.TransporterConfig where
 
 import Data.Time (UTCTime)
 import Domain.Types.Common
