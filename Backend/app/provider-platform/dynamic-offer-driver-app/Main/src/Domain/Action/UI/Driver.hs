@@ -746,6 +746,7 @@ respondQuote driverId req = do
             createdAt = now,
             updatedAt = now,
             validTill = addUTCTime driverQuoteExpirationSeconds now,
+            providerId = s.providerId,
             estimatedFare,
             fareParams
           }

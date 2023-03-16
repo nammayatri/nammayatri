@@ -29,6 +29,7 @@ module Domain.Action.Beckn.OnSearch
 where
 
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
@@ -138,7 +139,7 @@ onSearchService transactionId DOnSearchReq {..} = do
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
   estimates <- traverse (buildEstimate requestId providerInfo now) estimatesInfo
-  quotes <- traverse (buildQuote requestId providerInfo now) quotesInfo
+  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
   DB.runTransaction do
     QEstimate.createMany estimates
     QQuote.createMany quotes
@@ -188,9 +189,10 @@ buildQuote ::
   Id DSearchReq.SearchRequest ->
   ProviderInfo ->
   UTCTime ->
+  Id DMerchant.Merchant ->
   QuoteInfo ->
   m DQuote.Quote
-buildQuote requestId providerInfo now QuoteInfo {..} = do
+buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   quoteDetails' <- case quoteDetails of
@@ -208,6 +210,7 @@ buildQuote requestId providerInfo now QuoteInfo {..} = do
         providerUrl = providerInfo.url,
         createdAt = now,
         quoteDetails = quoteDetails',
+        merchantId,
         ..
       }
 

@@ -19,6 +19,7 @@ where
 
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.TripTerms as DTripTerms
@@ -82,7 +83,7 @@ onSelect DOnSelectReq {..} = do
   let personId = searchRequest.riderId
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
-  quotes <- traverse (buildSelectedQuote estimate providerInfo now) quotesInfo
+  quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest.merchantId) quotesInfo
   logPretty DEBUG "quotes" quotes
   whenM (duplicateCheckCond (quotesInfo <&> (.quoteDetails.bppDriverQuoteId)) providerInfo.providerId) $
     throwError $ InvalidRequest "Duplicate OnSelect quote"
@@ -102,9 +103,10 @@ buildSelectedQuote ::
   DEstimate.Estimate ->
   ProviderInfo ->
   UTCTime ->
+  Id DMerchant.Merchant ->
   QuoteInfo ->
   m DQuote.Quote
-buildSelectedQuote estimate providerInfo now QuoteInfo {..} = do
+buildSelectedQuote estimate providerInfo now merchantId QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   driverOffer <- buildDriverOffer estimate.id quoteDetails
@@ -119,6 +121,7 @@ buildSelectedQuote estimate providerInfo now QuoteInfo {..} = do
             createdAt = now,
             quoteDetails = DQuote.DriverOfferDetails driverOffer,
             requestId = estimate.requestId,
+            merchantId,
             ..
           }
   pure quote

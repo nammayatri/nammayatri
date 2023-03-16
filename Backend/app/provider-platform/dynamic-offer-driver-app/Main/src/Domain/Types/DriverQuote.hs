@@ -16,6 +16,7 @@
 module Domain.Types.DriverQuote where
 
 import qualified Domain.Types.FareParameters as Params
+import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import Domain.Types.SearchRequestForDriver
@@ -45,6 +46,7 @@ data DriverQuote = DriverQuote
     updatedAt :: UTCTime,
     validTill :: UTCTime,
     estimatedFare :: Money,
-    fareParams :: Params.FareParameters
+    fareParams :: Params.FareParameters,
+    providerId :: Id DMerchant.Merchant
   }
   deriving (Generic, Show, PrettyShow)

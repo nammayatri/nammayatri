@@ -18,6 +18,7 @@ module Domain.Types.Quote where
 
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Types.DriverOffer as DDriverOffer
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
@@ -43,6 +44,7 @@ data Quote = Quote
     vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,
     quoteDetails :: QuoteDetails,
+    merchantId :: Id DMerchant.Merchant,
     createdAt :: UTCTime
   }
   deriving (Generic, Show, PrettyShow)
