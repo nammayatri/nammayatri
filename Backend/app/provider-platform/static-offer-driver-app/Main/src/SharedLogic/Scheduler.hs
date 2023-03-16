@@ -33,13 +33,15 @@ genSingletons [''SchedulerJobType]
 singEqInstances [''SchedulerJobType]
 showSingInstances [''SchedulerJobType]
 
+instance JobProcessor SchedulerJobType where
+  restoreAnyJobInfo :: Sing (e :: SchedulerJobType) -> Text -> Maybe (AnyJobInfo SchedulerJobType)
+  restoreAnyJobInfo SAllocateRental jobData = AnyJobInfo <$> restoreJobInfo SAllocateRental jobData
+
 data AllocateRentalJobData = AllocateRentalJobData
   { bookingId :: Id DRB.Booking,
     shortOrgId :: ShortId DM.Subscriber
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, PrettyShow)
-
-instance JobProcessor SchedulerJobType
 
 type instance JobContent 'AllocateRental = AllocateRentalJobData
 
