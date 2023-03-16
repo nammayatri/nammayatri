@@ -46,6 +46,7 @@ data Job (e :: t) = (JobTypeConstaints e) =>
   { id :: Id (AnyJob t),
     jobType :: Sing e, -- user defined, one per server
     jobData :: JobContent e, -- user defined, one per job handler
+    shardId :: Int,
     scheduledAt :: UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,

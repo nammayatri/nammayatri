@@ -28,7 +28,7 @@ import Storage.Tabular.SchedulerJob
 createScheduleRentalRideRequestJob :: UTCTime -> AllocateRentalJobData -> Esq.SqlDB ()
 createScheduleRentalRideRequestJob scheduledAt jobData =
   void $
-    createJobByTime Storage.Queries.SchedulerJob.create scheduledAt jobEntry
+    createJobByTime Storage.Queries.SchedulerJob.create scheduledAt 1 jobEntry
   where
     jobEntry :: JobEntry 'AllocateRental =
       JobEntry
