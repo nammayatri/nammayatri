@@ -4,7 +4,7 @@ let
   imageName = "ghcr.io/nammayatri/nammayatri";
   # self.rev will be non-null only when the working tree is clean
   # This is equivalent to `git rev-parse --short HEAD`
-  imageTag = builtins.substring 0 9 (self.rev or "dev");
+  imageTag = builtins.substring 0 6 (self.rev or "dev");
 in
 {
   config = {
