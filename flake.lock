@@ -48,11 +48,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1678206833,
-        "narHash": "sha256-qQ1L3Wj6AljPqIycNpcWDrHreeGg23xIobU3Pfors6w=",
+        "lastModified": 1678988956,
+        "narHash": "sha256-dQ+yAT4CJCKZEmkJZgeomrCAizl45FYAhZIjxEGV3XI=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "7b63a194ed26cd1a5a8e1622f3d2bfa9da17f393",
+        "rev": "47f8f87bc016762a0efa5f4f9b699b4529b5df35",
         "type": "github"
       },
       "original": {
@@ -64,11 +64,11 @@
     },
     "cachix-push": {
       "locked": {
-        "lastModified": 1677962028,
-        "narHash": "sha256-FLATlB98VarJbBdTqAp599jALKjpI0mDNegPcrI6XBQ=",
+        "lastModified": 1678223023,
+        "narHash": "sha256-nZVrSAyh9IAi75UIAy9YNR6Wbdlxv0AHD6A9/DqIVfw=",
         "owner": "juspay",
         "repo": "cachix-push",
-        "rev": "ad6e9b5d1031224a43c1367f3a0d0569479a3c69",
+        "rev": "7f284a373d811ac397a25b113025b34ac249f489",
         "type": "github"
       },
       "original": {
@@ -149,11 +149,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1678142279,
-        "narHash": "sha256-PY8an4+uqrqJ7UJhE9nKyyRlHBW8iehhwRyEJhhkx7w=",
+        "lastModified": 1678816079,
+        "narHash": "sha256-IgmWx7Dh+jlUg71Uk/u8NRbfUd8A5BtVbcPF2e/wyjY=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "503f87cbc901253428089ec790b6e80d907d2c9a",
+        "rev": "a6ea5ca69c52bfcc0c7adbbd79c3e86c941656a0",
         "type": "github"
       },
       "original": {
@@ -173,11 +173,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1678676375,
-        "narHash": "sha256-ilXLQnjzZEtDsohFI6rPgJxxKSq/ooIFC4oBnWGL9MA=",
+        "lastModified": 1678816079,
+        "narHash": "sha256-IgmWx7Dh+jlUg71Uk/u8NRbfUd8A5BtVbcPF2e/wyjY=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "3b2e4bd0679693a8289d0466069ed7d50e8af17f",
+        "rev": "a6ea5ca69c52bfcc0c7adbbd79c3e86c941656a0",
         "type": "github"
       },
       "original": {
@@ -405,11 +405,11 @@
     },
     "haskell-flake": {
       "locked": {
-        "lastModified": 1678142255,
-        "narHash": "sha256-O2aAzgmXJQ9rL4D8pWTFo6R9QP2oG5K90ttw/yEj4ig=",
+        "lastModified": 1678808888,
+        "narHash": "sha256-3P7eMUEQ4RFVqXKZvqC/JSBzSe0vnqmMfdpqwLdzwZo=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "7997b6fc5dc2f5beb1bbdbb7a5bbed2e6c530dac",
+        "rev": "b47c95681bc384a2547898b01fc1f4bb831b8154",
         "type": "github"
       },
       "original": {
@@ -420,11 +420,11 @@
     },
     "haskell-flake_2": {
       "locked": {
-        "lastModified": 1678676285,
-        "narHash": "sha256-4sL+ybZ0arICu5QZgeXHHqU4iWNNJ4beN1Figg+9TMU=",
+        "lastModified": 1678808888,
+        "narHash": "sha256-3P7eMUEQ4RFVqXKZvqC/JSBzSe0vnqmMfdpqwLdzwZo=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "a039db3d84aff794e67e639bb4600f4194659acb",
+        "rev": "b47c95681bc384a2547898b01fc1f4bb831b8154",
         "type": "github"
       },
       "original": {
@@ -711,11 +711,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1678116888,
-        "narHash": "sha256-/Y4RTkPq+RVJjkoM/mYyCREFLZhvtISc/rLcgM1vLvo=",
+        "lastModified": 1675940568,
+        "narHash": "sha256-epG6pOT9V0kS+FUqd7R6/CWkgnZx2DMT5Veqo+y6G3c=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "49596eb4e50b18337aad3b73317371bcd4e3b047",
+        "rev": "6ccc4a59c3f1b56d039d93da52696633e641bc71",
         "type": "github"
       },
       "original": {
@@ -867,11 +867,11 @@
         "passetto-hs": "passetto-hs"
       },
       "locked": {
-        "lastModified": 1678676408,
-        "narHash": "sha256-NPw/ZsqeQaRvsGZU4m07VfkfNxQaSoFdrVRuGAYGyNU=",
+        "lastModified": 1678988890,
+        "narHash": "sha256-mBjcSY7hY5daQKD7LwxiHKHwsAOc5Kmysd0pvgv3FIc=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "7d973d0d26c2a94065c9ebe125f35544800900ef",
+        "rev": "94bddc603f8769da93031b6cfa60e6dc4dd7f19f",
         "type": "github"
       },
       "original": {
