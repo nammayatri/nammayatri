@@ -32,7 +32,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
-import Storage.CachedQueries.TransporterConfig
+import Storage.CachedQueries.Merchant.TransporterConfig
 
 notifyOnNewSearchRequestAvailable ::
   ( MonadFlow m,

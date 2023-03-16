@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -11,10 +12,10 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.TransporterConfig
+module Storage.CachedQueries.Merchant.TransporterConfig
   ( findByMerchantId,
     clearCache,
     updateFCMConfig,
@@ -25,14 +26,14 @@ where
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.TransporterConfig
+import Domain.Types.Merchant.TransporterConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.Queries.TransporterConfig as Queries
+import qualified Storage.Queries.Merchant.TransporterConfig as Queries
 
 findByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe TransporterConfig)
 findByMerchantId id =

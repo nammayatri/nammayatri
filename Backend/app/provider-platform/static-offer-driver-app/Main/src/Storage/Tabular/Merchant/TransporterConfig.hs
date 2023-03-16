@@ -18,10 +18,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.TransporterConfig where
+module Storage.Tabular.Merchant.TransporterConfig where
 
 import qualified Domain.Types.Merchant as Domain
-import qualified Domain.Types.TransporterConfig as Domain
+import qualified Domain.Types.Merchant.TransporterConfig as Domain
 import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto

@@ -12,45 +12,36 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.TransporterConfig
+module Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
   ( findByMerchantId,
-    clearCache,
-    updateFCMConfig,
   )
 where
 
+import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.TransporterConfig
-import GHC.Base (coerce)
+import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.Queries.TransporterConfig as Queries
+import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
 
-findByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe TransporterConfig)
+findByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantId id =
-  Hedis.safeGet (makeMerchantIdKey id) >>= \case
-    Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
-    Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantId id
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
+    Just a -> return . Just $ coerce @(DriverIntelligentPoolConfigD 'Unsafe) @DriverIntelligentPoolConfig a
+    Nothing -> flip whenJust cacheDriverIntelligentPoolConfig /=<< Queries.findByMerchantId id
 
-cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
-cacheTransporterConfig cfg = do
+cacheDriverIntelligentPoolConfig :: CacheFlow m r => DriverIntelligentPoolConfig -> m ()
+cacheDriverIntelligentPoolConfig cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let merchantIdKey = makeMerchantIdKey cfg.merchantId
-  Hedis.setExp merchantIdKey (coerce @TransporterConfig @(TransporterConfigD 'Unsafe) cfg) expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (coerce @DriverIntelligentPoolConfig @(DriverIntelligentPoolConfigD 'Unsafe) cfg) expTime
 
 makeMerchantIdKey :: Id Merchant -> Text
-makeMerchantIdKey id = "CachedQueries:TransporterConfig:MerchantId-" <> id.getId
-
--- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
-clearCache = Hedis.del . makeMerchantIdKey
-
-updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> Esq.SqlDB ()
-updateFCMConfig = Queries.updateFCMConfig
+makeMerchantIdKey id = "driver-offer:CachedQueries:DriverIntelligentPoolConfig:MerchantId-" <> id.getId

@@ -11,8 +11,9 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
-module Storage.Queries.TransporterConfig
+module Storage.Queries.Merchant.TransporterConfig
   {-# WARNING
     "This module contains direct calls to the table. \
   \ But most likely you need a version from CachedQueries with caching results feature."
@@ -20,12 +21,12 @@ module Storage.Queries.TransporterConfig
 where
 
 import Domain.Types.Merchant
-import Domain.Types.TransporterConfig
+import Domain.Types.Merchant.TransporterConfig
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.TransporterConfig
+import Storage.Tabular.Merchant.TransporterConfig
 
 findByMerchantId :: Transactionable m => Id Merchant -> m (Maybe TransporterConfig)
 findByMerchantId merchantId =
@@ -43,6 +44,17 @@ updateFCMConfig merchantId fcmUrl fcmServiceAccount = do
       tbl
       [ TransporterConfigFcmUrl =. val (showBaseUrl fcmUrl),
         TransporterConfigFcmServiceAccount =. val fcmServiceAccount,
+        TransporterConfigUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
+
+updateReferralLinkPassword :: Id Merchant -> Text -> SqlDB ()
+updateReferralLinkPassword merchantId newPassword = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ TransporterConfigReferralLinkPassword =. val newPassword,
         TransporterConfigUpdatedAt =. val now
       ]
     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)

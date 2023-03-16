@@ -93,12 +93,11 @@ handler merchantId sReq = do
       <> "; estimated base fare:"
       <> show estimateFare
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-
-  inTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
+  driverPoolConfig <- getDriverPoolConfig merchantId distance
+  let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
   Esq.runTransaction $ do
     QSReq.create searchReq
 
-  driverPoolConfig <- getDriverPoolConfig distance
   res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare driverExtraFare.minFee driverExtraFare.maxFee
   case res of
     ReSchedule ut ->

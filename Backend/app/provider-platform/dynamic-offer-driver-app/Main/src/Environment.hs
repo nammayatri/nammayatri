@@ -39,8 +39,6 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
-import SharedLogic.DriverPool (CancellationScoreRelatedConfig, DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)
@@ -87,16 +85,9 @@ data AppCfg = AppCfg
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverReachedDistance :: HighPrecMeters,
     cacheTranslationConfig :: CacheTranslationConfig,
-    driverPoolCfg :: DriverPoolConfig,
-    intelligentPoolConfig :: IntelligentPoolConfig,
-    defaultPopupDelay :: Seconds,
-    cancellationScoreRelatedConfig :: CancellationScoreRelatedConfig,
-    overrideDriverPoolCfg :: Maybe [OverrideDriverPoolConfig],
-    sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
     driverLocationUpdateTopic :: Text,
     broadcastMessageTopic :: Text,
-    maxParallelSearchRequests :: Int,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     mediaFileUrlPattern :: Text,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters
@@ -146,17 +137,10 @@ data AppEnv = AppEnv
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
     driverReachedDistance :: HighPrecMeters,
     cacheTranslationConfig :: CacheTranslationConfig,
-    driverPoolCfg :: DriverPoolConfig,
-    intelligentPoolConfig :: IntelligentPoolConfig,
-    defaultPopupDelay :: Seconds,
-    cancellationScoreRelatedConfig :: CancellationScoreRelatedConfig,
-    overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
-    sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
     kafkaProducerTools :: KafkaProducerTools,
     driverLocationUpdateTopic :: Text,
     broadcastMessageTopic :: Text,
-    maxParallelSearchRequests :: Int,
     snapToRoadSnippetThreshold :: HighPrecMeters,
     mediaFileUrlPattern :: Text,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters
@@ -199,7 +183,6 @@ buildAppEnv cfg@AppCfg {..} = do
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
-      overrideDriverPoolConfig = fromMaybe [] overrideDriverPoolCfg
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
