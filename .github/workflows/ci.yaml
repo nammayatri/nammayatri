@@ -1,7 +1,6 @@
 name: "CI"
 on:
   push:
-  pull_request:
 jobs:
   Nix:
     runs-on: ubuntu-latest
