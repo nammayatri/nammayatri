@@ -35,7 +35,7 @@ We welcome contributions from the community. Please read through our
 
 We're excited to share our product roadmap with you, which outlines the features and improvements we plan to make to our product in the coming months. Our roadmap is dynamic and subject to change as we receive feedback from our users and as we continue to iterate on our product.
 
-Check out our product roadmap [here](https://docs.google.com/spreadsheets/d/e/2PACX-1vRPdBJDIKyKHmAprGdLGfGb6Lt8j25xBHhV1[…]gAB5Fl-zvT4GjzNxwWzy81B1fDO/pubhtml?gid=685751497&single=true) to learn more about what we have planned for the future.
+Check out our product roadmap [here](https://docs.google.com/spreadsheets/d/e/2PACX-1vRPdBJDIKyKHmAprGdLGfGb6Lt8j25xBHhV1Dr8f0kY8xhcP5DbBgAB5Fl-zvT4GjzNxwWzy81B1fDO/pubhtml?gid=685751497&single=true) to learn more about what we have planned for the future.
 
 If you have any suggestions or feedback on our roadmap, please don't hesitate to reach out to us through nammayatri.support@juspay.in or GitHub Issues. We'd love to hear from you!
 
