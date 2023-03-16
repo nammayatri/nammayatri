@@ -42,6 +42,11 @@ in
                 ]);
               name = "beckn-root";
               pathsToLink = [ "/dhall-configs" "/swagger" "/bin" ];
+              postBuild = ''
+                # Legacy k8s deployment expects the app to be in /opt/app
+                mkdir $out/opt
+                cp -r $out/bin $out/opt/app
+              '';
             };
             config = {
               Env = [ "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];
