@@ -35,7 +35,7 @@ allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobTy
 allocatorHandle flowRt env =
   SchedulerHandle
     { getTasksById = QAllJ.getTasksById,
-      getReadyTasks = QAllJ.getReadyTasks,
+      getReadyTasks = QAllJ.getReadyTasks env.maxShards,
       markAsComplete = QAllJ.markAsComplete,
       markAsFailed = QAllJ.markAsFailed,
       updateErrorCountAndFail = QAllJ.updateErrorCountAndFail,

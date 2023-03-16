@@ -72,7 +72,8 @@ data HandlerEnv = HandlerEnv
     overrideDriverPoolConfig :: [OverrideDriverPoolConfig],
     sendSearchRequestJobCfg :: SendSearchRequestJobConfig,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
-    maxParallelSearchRequests :: Int
+    maxParallelSearchRequests :: Int,
+    maxShards :: Int
   }
   deriving (Generic)
 

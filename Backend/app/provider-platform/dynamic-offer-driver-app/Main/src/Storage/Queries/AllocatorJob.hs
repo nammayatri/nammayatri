@@ -17,6 +17,7 @@ module Storage.Queries.AllocatorJob where
 
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Lib.Scheduler.Environment
@@ -25,10 +26,13 @@ import Lib.Scheduler.Types
 import SharedLogic.Allocator
 import Storage.Tabular.AllocatorJob
 
-createAllocatorSendSearchRequestToDriverJob :: NominalDiffTime -> SendSearchRequestToDriverJobData -> Esq.SqlDB ()
-createAllocatorSendSearchRequestToDriverJob inTime jobData = do
+getShardIdKey :: Text
+getShardIdKey = "DriverOffer:Jobs:ShardId"
+
+createAllocatorSendSearchRequestToDriverJob :: NominalDiffTime -> Int -> SendSearchRequestToDriverJobData -> Esq.SqlDB ()
+createAllocatorSendSearchRequestToDriverJob inTime maxShards jobData = do
   void $
-    createJobIn @_ @'SendSearchRequestToDriver Storage.Queries.AllocatorJob.create inTime $
+    createJobIn @_ @'SendSearchRequestToDriver Storage.Queries.AllocatorJob.create inTime maxShards $
       JobEntry
         { jobData = jobData,
           maxErrors = 5
@@ -49,14 +53,22 @@ getTasksById ids = Esq.findAll $ do
   where_ $ job ^. AllocatorJobId `in_` valList (map (.getId) ids)
   pure job
 
-getReadyTasks :: SchedulerM [AnyJob AllocatorJobType]
-getReadyTasks = do
+getReadyTasks :: Int -> SchedulerM [AnyJob AllocatorJobType]
+getReadyTasks maxShards = do
   now <- getCurrentTime
+  shardVal <- fromIntegral <$> Hedis.incr getShardIdKey
+  shardId <- 
+    if shardVal >= maxShards 
+      then do 
+        Hedis.set getShardIdKey (0 :: Int) 
+        pure 0 
+      else pure shardVal
   Esq.findAll $ do
     job <- from $ table @AllocatorJobT
     where_ $
       job ^. AllocatorJobStatus ==. val Pending
         &&. job ^. AllocatorJobScheduledAt <=. val now
+        &&. job ^. AllocatorJobShardId ==. val shardId
     orderBy [asc $ job ^. AllocatorJobScheduledAt]
     pure job
 

@@ -73,6 +73,7 @@ instance TType SchedulerJobT (ST.AnyJob SchedulerJobType) where
               { id = Id id,
                 jobType = jt,
                 jobData = jobDataDecoded,
+                shardId = 0, -- not implemented for static-offer
                 ..
               }
 

@@ -95,6 +95,7 @@ handler merchantId sReq = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
   inTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
+  maxShards <- asks (.maxShards)
   Esq.runTransaction $ do
     QSReq.create searchReq
 
@@ -103,7 +104,7 @@ handler merchantId sReq = do
   case res of
     ReSchedule ut ->
       Esq.runTransaction $ do
-        createAllocatorSendSearchRequestToDriverJob inTime $
+        createAllocatorSendSearchRequestToDriverJob inTime maxShards $
           SendSearchRequestToDriverJobData
             { requestId = searchReq.id,
               baseFare = estimateFare,
