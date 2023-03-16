@@ -7,7 +7,7 @@ x-client-version: 1.0.0
 {
   "mobileCountryCode": "+91",
   "mobileNumber" : "7777777777",
-  "merchantId" : "JUSPAY.CABS.BAP"
+  "merchantId" : "YATRI"
 }
 
 ###
@@ -27,3 +27,17 @@ content-type: application/json
 ###
 
 @token = {{verify.response.body.token}}
+
+
+# @name testGetPlaceDetails
+POST {{app-host}}/maps/getPlaceDetails
+content-type: application/json
+token: {{token}}
+
+{
+  "sessionToken": "string",
+  "placeId": "ChIJHce3CwwUrjsR4jhVqN8GECs"
+
+}
+### placeId for Google, not for MMI
+###
