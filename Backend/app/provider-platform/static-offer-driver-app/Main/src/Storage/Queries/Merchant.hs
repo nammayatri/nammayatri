@@ -66,3 +66,17 @@ update org = do
         MerchantFromTime =. val org.fromTime
       ]
     where_ $ tbl ^. MerchantTId ==. val (toKey org.id)
+
+findByExoPhone :: Transactionable m => Text -> m (Maybe Merchant)
+findByExoPhone exoPhone = do
+  findOne $ do
+    merchant <- from $ table @MerchantT
+    where_ $
+      Esq.val exoPhone
+        `Esq.in_` subList_select
+          ( do
+              merchant1 <- from $ table @MerchantT
+              where_ $ merchant1 ^. MerchantId ==. merchant ^. MerchantId
+              return $ unnest (merchant1 ^. MerchantExoPhones)
+          )
+    return merchant

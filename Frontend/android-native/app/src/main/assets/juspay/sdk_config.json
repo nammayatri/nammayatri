@@ -1,0 +1,21 @@
+{
+  "logsConfig": {
+    "logsUrlKey": "https://logs.juspay.in/logs",
+    "logsUrlKeySandbox": "https://beta.logs.juspay.in/logs",
+    "pusherTimerKey": "10.0",
+    "encryptionLevelKey": "encryption",
+    "shouldPush": true,
+    "publicKeySandbox": {
+      "kty": "RSA",
+      "kid": "sandbox-log-24-03-2021",
+      "e": "AQAB",
+      "n": "v9SaTMmbyyPiFEv8NbqQo-y7nmcKLneS8jPkL9Xby04B9xI3wXkezAEjE9dNCd_vs8QEYVJTDIxOsxPTBHc5sm9WzswZMrs7qkr4FAdVpO-UOiiOTBbv8r2GdIR5Do8BFsAAeil1XsiXz15_r2VzawZujjnj6poUbpvfZ3wI2QV4ArVmpoSkGPBKEnpKeILXoz4xZrPCwjaLrAy8qeIWwbm13f0LxSJNHSpk3E0zdf4ZtgzWClqgnJEc4Rq53XNB6h3CaFNBKti5Dcoe3eUABafniOJC4K3gwWwQJ3kQUitpgMy0MnsfGjt2UgqLJTAx8ZZJVrNyFnjYq0QsZibsFw"
+    },
+    "publicKey": {
+      "kty": "RSA",
+      "kid": "production_log_public_key_26_03_2021",
+      "e": "AQAB",
+      "n": "pUyBiSZDILfVtVnYO1Qa6qNGg9KRqxswcWYOlIYSwSL7E-RZ177n3NOWAu7w2InU6q1uTViRS13PNEgX0i4_4d9CQbK10WIJGBsfI_xSEs7E6hXroOaDBDQcShktoRurmicEDWUwORT0wn-vw6NreRFlteiw4wojU0tb4qig33M_0z4VaoWRghOh9eeT8cS6wapU7mSjaE3loSRQrtY-ll2EJ5xhXPqntJ4VVzxas-RPoKJgGKgOZ1i5nSO-i_73EIGUNUmY5wJYkrlvGzH5t6EKxHkRwfmDxEdC17whLssSF0QLnEOPik7HQxDkl_ChxcUA-lefplsXluk0_ODlpQ"
+    }
+  }
+}

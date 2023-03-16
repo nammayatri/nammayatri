@@ -36,6 +36,7 @@ import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber (..))
 import Kernel.Utils.Common
+import Lib.Scheduler.JobStorageType.DB.Queries (createJobByTime)
 import SharedLogic.Scheduler
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
@@ -46,7 +47,6 @@ import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD
-import Storage.Queries.SchedulerJob (createScheduleRentalRideRequestJob)
 import Tools.Error
 import Tools.Metrics
 
@@ -136,7 +136,7 @@ confirm transporterId subscriber req = do
         EQ -> finalTransaction $ RideRequest.create rideRequest
         GT ->
           finalTransaction $
-            createScheduleRentalRideRequestJob scheduledTime $
+            createJobByTime @_ @'AllocateRental scheduledTime $
               AllocateRentalJobData
                 { bookingId = booking.id,
                   shortOrgId = transporter.subscriberId

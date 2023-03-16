@@ -32,7 +32,7 @@ mkPersist
   [defaultQQ|
     BlackListOrgT sql=black_list_org
       id Text
-      shortId Text
+      subscriberId Text
       orgType Domain.BlackListOrgType sql=type
       Primary id
       Unique OrganizationShortId
@@ -44,19 +44,21 @@ instance TEntityKey BlackListOrgT where
   fromKey (BlackListOrgTKey _id) = Id _id
   toKey (Id id) = BlackListOrgTKey id
 
-instance TType BlackListOrgT Domain.BlackListOrg where
+instance FromTType BlackListOrgT Domain.BlackListOrg where
   fromTType BlackListOrgT {..} = do
     return $
       Domain.BlackListOrg
         { id = Id id,
-          shortId = ShortId shortId,
+          subscriberId = ShortId subscriberId,
           _type = orgType,
           ..
         }
+
+instance ToTType BlackListOrgT Domain.BlackListOrg where
   toTType Domain.BlackListOrg {..} =
     BlackListOrgT
       { id = getId id,
-        shortId = getShortId shortId,
+        subscriberId = getShortId subscriberId,
         orgType = _type,
         ..
       }

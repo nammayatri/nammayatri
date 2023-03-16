@@ -77,3 +77,11 @@ findAllByPersonId personId =
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
     return regToken
+
+getAlternateNumberAttempts :: Transactionable m => Id Person -> m Int
+getAlternateNumberAttempts personId =
+  fromMaybe 5 . listToMaybe
+    <$> Esq.findAll do
+      attempts <- from $ table @RegistrationTokenT
+      where_ $ attempts ^. RegistrationTokenEntityId ==. val (getId personId)
+      return $ attempts ^. RegistrationTokenAlternateNumberAttempts

@@ -57,13 +57,15 @@ instance TEntityKey PersonFlowStatusT where
   fromKey (PersonFlowStatusTKey _id) = fromKey _id
   toKey id = PersonFlowStatusTKey $ toKey id
 
-instance TType PersonFlowStatusT Domain.PersonFlowStatus where
+instance FromTType PersonFlowStatusT Domain.PersonFlowStatus where
   fromTType PersonFlowStatusT {..} =
     return $
       Domain.PersonFlowStatus
         { personId = fromKey personId,
           ..
         }
+
+instance ToTType PersonFlowStatusT Domain.PersonFlowStatus where
   toTType Domain.PersonFlowStatus {..} =
     PersonFlowStatusT
       { personId = toKey personId,

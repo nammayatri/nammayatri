@@ -88,6 +88,7 @@ dependencies:
   - beckn-services
   - unordered-containers
   - dashboard-helper-api
+  - shared-services
   - extra
   - scheduler
   - singletons

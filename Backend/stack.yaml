@@ -57,6 +57,7 @@ packages:
   - app/utils/image-api-helper
   - lib/beckn-spec
   - lib/beckn-services
+  - lib/shared-services
   - lib/location-updates
   - lib/scheduler
   - test
@@ -77,13 +78,13 @@ extra-deps:
   # - ../../beckn-gateway/app/gateway
   # - ../../beckn-gateway/app/mock-registry
   - git: https://github.com/nammayatri/beckn-gateway.git
-    commit: 7094d2af08055f37ca01f2891d19f3153e619be1
+    commit: 17c14267f36a597bfcf3562357d4b7c64c57b80c
     subdirs:
       - app/gateway
       - app/mock-registry
   # -  ../../shared-kernel/lib/mobility-core
   - git: https://github.com/nammayatri/shared-kernel.git
-    commit: 568e60ecc0710a69d8ed2cffe2c63bb59a2e4af6
+    commit: f88c889d75868d18463cc7c000dea38da340ee83
     subdirs:
       - lib/mobility-core
   - git: https://github.com/piyushKumar-1/clickhouse-haskell.git

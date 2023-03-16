@@ -16,7 +16,7 @@ module Storage.Queries.CallStatus where
 
 import Domain.Types.CallStatus
 import Domain.Types.Ride
-import Kernel.External.Exotel.Types (ExotelCallStatus)
+import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -32,7 +32,7 @@ findByCallSid :: Transactionable m => Text -> m (Maybe CallStatus)
 findByCallSid callSid =
   Esq.findOne $ do
     callStatus <- from $ table @CallStatusT
-    where_ $ callStatus ^. CallStatusExotelCallSid ==. val callSid
+    where_ $ callStatus ^. CallStatusCallId ==. val callSid
     return callStatus
 
 countCallsByRideId :: Transactionable m => Id Ride -> m Int
@@ -43,8 +43,8 @@ countCallsByRideId rideId = (fromMaybe 0 <$>) $
     groupBy $ callStatus ^. CallStatusRideId
     pure $ count @Int $ callStatus ^. CallStatusTId
 
-updateCallStatus :: Id CallStatus -> ExotelCallStatus -> Int -> BaseUrl -> SqlDB ()
-updateCallStatus callId status conversationDuration recordingUrl = do
+updateCallStatus :: Id CallStatus -> Call.CallStatus -> Int -> BaseUrl -> SqlDB ()
+updateCallStatus callId status conversationDuration recordingUrl =
   Esq.update $ \tbl -> do
     set
       tbl

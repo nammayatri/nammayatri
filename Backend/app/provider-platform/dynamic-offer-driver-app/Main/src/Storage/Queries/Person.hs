@@ -292,6 +292,24 @@ findByEmailAndMerchant merchantId email_ =
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
+findByRoleAndMobileNumberAndMerchantId ::
+  (Transactionable m, EncFlow m r) =>
+  Role ->
+  Text ->
+  Text ->
+  Id Merchant ->
+  m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ merchantId = do
+  mobileNumberDbHash <- getDbHash mobileNumber_
+  findOne $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonRole ==. val role_
+        &&. person ^. PersonMobileCountryCode ==. val (Just countryCode)
+        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+    return person
+
 updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB ()
 updateMerchantIdAndMakeAdmin personId merchantId = do
   now <- getCurrentTime
@@ -471,3 +489,29 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters merchantId onlyNotOnRide m
   where
     makeNearestDriversResult (personId, mbDeviceToken, mblang, onRide, dist :: Double, dlat, dlon, variant) =
       NearestDriversResult (cast personId) mbDeviceToken mblang onRide (roundToIntegral dist) variant dlat dlon
+
+updateAlternateMobileNumberAndCode :: Person -> SqlDB ()
+updateAlternateMobileNumberAndCode person = do
+  now <- getCurrentTime
+  let personT = toTType person
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonAlternateMobileNumberEncrypted =. val (TPerson.alternateMobileNumberEncrypted personT),
+        PersonUnencryptedAlternateMobileNumber =. val (TPerson.unencryptedAlternateMobileNumber personT),
+        PersonAlternateMobileNumberHash =. val (TPerson.alternateMobileNumberHash personT),
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey person.id)
+
+findByMobileNumberAndMerchantForAltNo :: (Transactionable m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
+findByMobileNumberAndMerchantForAltNo countryCode mobileNumberHash merchantId = do
+  findOne $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonMobileCountryCode ==. val (Just countryCode)
+        &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
+                ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberHash)
+            )
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
+    return person

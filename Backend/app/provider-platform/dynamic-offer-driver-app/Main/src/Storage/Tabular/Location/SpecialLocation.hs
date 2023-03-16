@@ -49,14 +49,16 @@ instance TEntityKey SpecialLocationT where
   fromKey (SpecialLocationTKey _id) = Id _id
   toKey (Id id) = SpecialLocationTKey id
 
-instance TType SpecialLocationT Domain.SpecialLocation where
-  fromTType SpecialLocationT {..} = do
+instance FromTType SpecialLocationT Domain.SpecialLocation where
+  fromTType SpecialLocationT {..} =
     return $
       Domain.SpecialLocation
         { id = Id id,
           gates = unPostgresList gates,
           ..
         }
+
+instance ToTType SpecialLocationT Domain.SpecialLocation where
   toTType Domain.SpecialLocation {..} =
     SpecialLocationT
       { id = getId id,

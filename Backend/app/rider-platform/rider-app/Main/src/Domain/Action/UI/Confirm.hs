@@ -25,6 +25,7 @@ import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
@@ -34,6 +35,7 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
+import Kernel.Randomizer (getRandomElement)
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisFlow)
@@ -41,6 +43,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Estimate (checkIfEstimateCancelled)
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
@@ -62,7 +65,8 @@ data DConfirmRes = DConfirmRes
     quoteDetails :: ConfirmQuoteDetails,
     startTime :: UTCTime,
     booking :: DRB.Booking,
-    searchRequestId :: Id DSReq.SearchRequest
+    searchRequestId :: Id DSReq.SearchRequest,
+    merchantExoPhone :: Text
   }
   deriving (Show, Generic)
 
@@ -72,7 +76,7 @@ data ConfirmQuoteDetails
   | ConfirmAutoDetails (Id DDriverOffer.BPPQuote)
   deriving (Show, Generic)
 
-confirm :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DQuote.Quote -> m DConfirmRes
+confirm :: (EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Id DQuote.Quote -> m DConfirmRes
 confirm personId quoteId = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
@@ -80,7 +84,7 @@ confirm personId quoteId = do
     DQuote.OneWayDetails _ -> pure ()
     DQuote.RentalDetails _ -> pure ()
     DQuote.DriverOfferDetails driverOffer -> do
-      estimate <- DB.runInReplica $ QEstimate.findOneEstimateByRequestId quote.requestId >>= fromMaybeM EstimateNotFound
+      estimate <- QEstimate.findOneEstimateByRequestId quote.requestId >>= fromMaybeM EstimateNotFound
       checkIfEstimateCancelled estimate.id estimate.status
       when (driverOffer.validTill < now) $
         throwError $ QuoteExpired quote.id.getId
@@ -94,7 +98,8 @@ confirm personId quoteId = do
       mbToLocation = searchRequest.toLocation
   bFromLocation <- buildBookingLocation now fromLocation
   mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
-  booking <- buildBooking searchRequest quote bFromLocation mbBToLocation now
+  merchant <- QMerchant.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+  booking <- buildBooking searchRequest quote bFromLocation mbBToLocation merchant now
   let details = mkConfirmQuoteDetails quote.quoteDetails
   DB.runTransaction $ do
     QRideB.create booking
@@ -110,7 +115,8 @@ confirm personId quoteId = do
         vehicleVariant = quote.vehicleVariant,
         quoteDetails = details,
         startTime = searchRequest.startTime,
-        searchRequestId = searchRequest.id
+        searchRequestId = searchRequest.id,
+        merchantExoPhone = booking.providerExoPhone
       }
   where
     mkConfirmQuoteDetails :: DQuote.QuoteDetails -> ConfirmQuoteDetails
@@ -138,10 +144,12 @@ buildBooking ::
   DQuote.Quote ->
   DBL.BookingLocation ->
   Maybe DBL.BookingLocation ->
+  DMerc.Merchant ->
   UTCTime ->
   m DRB.Booking
-buildBooking searchRequest quote fromLoc mbToLoc now = do
+buildBooking searchRequest quote fromLoc mbToLoc merchant now = do
   id <- generateGUID
+  exoPhone <- getRandomElement merchant.exoPhones
   bookingDetails <- buildBookingDetails
   return $
     DRB.Booking
@@ -153,6 +161,7 @@ buildBooking searchRequest quote fromLoc mbToLoc now = do
         providerUrl = quote.providerUrl,
         providerName = quote.providerName,
         providerMobileNumber = quote.providerMobileNumber,
+        providerExoPhone = exoPhone,
         startTime = searchRequest.startTime,
         riderId = searchRequest.riderId,
         fromLocation = fromLoc,

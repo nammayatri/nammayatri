@@ -50,6 +50,7 @@ mkPersist
       info Text Maybe
       Primary id
       deriving Generic
+      alternateNumberAttempts Int
     |]
 
 instance TEntityKey RegistrationTokenT where
@@ -57,13 +58,15 @@ instance TEntityKey RegistrationTokenT where
   fromKey (RegistrationTokenTKey _id) = Id _id
   toKey (Id id) = RegistrationTokenTKey id
 
-instance TType RegistrationTokenT Domain.RegistrationToken where
+instance FromTType RegistrationTokenT Domain.RegistrationToken where
   fromTType RegistrationTokenT {..} = do
     return $
       Domain.RegistrationToken
         { id = Id id,
           ..
         }
+
+instance ToTType RegistrationTokenT Domain.RegistrationToken where
   toTType Domain.RegistrationToken {..} =
     RegistrationTokenT
       { id = getId id,

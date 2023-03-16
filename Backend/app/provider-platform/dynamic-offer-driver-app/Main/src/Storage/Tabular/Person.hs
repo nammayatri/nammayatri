@@ -63,6 +63,9 @@ mkPersist
       language Language Maybe
       whatsappNotificationEnrollStatus OptApiMethods Maybe
       description Text Maybe
+      alternateMobileNumberEncrypted Text Maybe
+      unencryptedAlternateMobileNumber Text Maybe
+      alternateMobileNumberHash DbHash Maybe
       createdAt UTCTime
       updatedAt UTCTime
       bundleVersion Text Maybe
@@ -76,7 +79,7 @@ instance TEntityKey PersonT where
   fromKey (PersonTKey _id) = Id _id
   toKey (Id id) = PersonTKey id
 
-instance TType PersonT Domain.Person where
+instance FromTType PersonT Domain.Person where
   fromTType PersonT {..} = do
     bundleVersion' <- forM bundleVersion readVersion
     clientVersion' <- forM clientVersion readVersion
@@ -87,8 +90,11 @@ instance TType PersonT Domain.Person where
           merchantId = fromKey merchantId,
           bundleVersion = bundleVersion',
           clientVersion = clientVersion',
+          alternateMobileNumber = EncryptedHashed <$> (Encrypted <$> alternateMobileNumberEncrypted) <*> alternateMobileNumberHash,
           ..
         }
+
+instance ToTType PersonT Domain.Person where
   toTType Domain.Person {..} =
     PersonT
       { id = getId id,
@@ -97,5 +103,7 @@ instance TType PersonT Domain.Person where
         merchantId = toKey merchantId,
         bundleVersion = versionToText <$> bundleVersion,
         clientVersion = versionToText <$> clientVersion,
+        alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted),
+        alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
         ..
       }

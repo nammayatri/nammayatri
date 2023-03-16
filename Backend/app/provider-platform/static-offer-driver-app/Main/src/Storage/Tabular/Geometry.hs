@@ -40,13 +40,15 @@ instance TEntityKey GeometryT where
   fromKey (GeometryTKey _id) = Id _id
   toKey (Id id) = GeometryTKey id
 
-instance TType GeometryT Domain.Geometry where
+instance FromTType GeometryT Domain.Geometry where
   fromTType GeometryT {..} = do
     return $
       Domain.Geometry
         { id = Id id,
           ..
         }
+
+instance ToTType GeometryT Domain.Geometry where
   toTType Domain.Geometry {..} =
     GeometryT
       { id = getId id,

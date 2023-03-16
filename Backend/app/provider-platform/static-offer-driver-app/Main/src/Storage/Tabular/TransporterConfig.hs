@@ -63,7 +63,7 @@ instance TEntityKey TransporterConfigT where
   fromKey (TransporterConfigTKey _id) = fromKey _id
   toKey id = TransporterConfigTKey $ toKey id
 
-instance TType TransporterConfigT Domain.TransporterConfig where
+instance FromTType TransporterConfigT Domain.TransporterConfig where
   fromTType TransporterConfigT {..} = do
     fcmUrl' <- parseBaseUrl fcmUrl
     return $
@@ -76,6 +76,8 @@ instance TType TransporterConfigT Domain.TransporterConfig where
               },
           ..
         }
+
+instance ToTType TransporterConfigT Domain.TransporterConfig where
   toTType Domain.TransporterConfig {..} =
     TransporterConfigT
       { merchantId = toKey merchantId,

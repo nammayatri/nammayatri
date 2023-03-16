@@ -53,7 +53,7 @@ instance TEntityKey RideDetailsT where
   fromKey (RideDetailsTKey _id) = fromKey _id
   toKey id = RideDetailsTKey $ toKey id
 
-instance TType RideDetailsT Domain.RideDetails where
+instance FromTType RideDetailsT Domain.RideDetails where
   fromTType RideDetailsT {..} = do
     return $
       Domain.RideDetails
@@ -62,6 +62,7 @@ instance TType RideDetailsT Domain.RideDetails where
           ..
         }
 
+instance ToTType RideDetailsT Domain.RideDetails where
   toTType Domain.RideDetails {..} =
     RideDetailsT
       { id = toKey id,

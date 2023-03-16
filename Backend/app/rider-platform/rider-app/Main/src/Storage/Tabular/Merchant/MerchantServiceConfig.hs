@@ -23,6 +23,7 @@ module Storage.Tabular.Merchant.MerchantServiceConfig where
 
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
+import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface as Maps
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
@@ -55,7 +56,7 @@ instance TEntityKey MerchantServiceConfigT where
   fromKey (MerchantServiceConfigTKey _id serviceName) = (fromKey _id, serviceName)
   toKey (id, serviceName) = MerchantServiceConfigTKey (toKey id) serviceName
 
-instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
+instance FromTType MerchantServiceConfigT Domain.MerchantServiceConfig where
   fromTType MerchantServiceConfigT {..} = do
     serviceConfig <- maybe (throwError $ InternalError "Unable to decode MerchantServiceConfigT.configJSON") return $ case serviceName of
       Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> decodeFromText configJSON
@@ -64,12 +65,14 @@ instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
       Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> decodeFromText configJSON
       Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> decodeFromText configJSON
       Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> decodeFromText configJSON
+      Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> decodeFromText configJSON
     return $
       Domain.MerchantServiceConfig
         { merchantId = fromKey merchantId,
           ..
         }
-  toTType :: Domain.MerchantServiceConfig -> MerchantServiceConfigT
+
+instance ToTType MerchantServiceConfigT Domain.MerchantServiceConfig where
   toTType Domain.MerchantServiceConfig {..} = do
     let (serviceName, configJSON) = getServiceNameConfigJSON serviceConfig
     MerchantServiceConfigT
@@ -88,3 +91,5 @@ getServiceNameConfigJSON = \case
     Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, encodeToText cfg)
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, encodeToText cfg)
+  Domain.CallServiceConfig callCfg -> case callCfg of
+    Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, encodeToText cfg)

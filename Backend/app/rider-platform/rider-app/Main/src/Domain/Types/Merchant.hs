@@ -19,14 +19,14 @@ import Kernel.External.FCM.Types
 import Kernel.Prelude
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
+import Kernel.Types.Registry (Subscriber)
 
 data MerchantD (s :: UsageSafety) = Merchant
   { id :: Id Merchant,
+    subscriberId :: ShortId Subscriber,
     shortId :: ShortId Merchant,
     name :: Text,
-    exoPhone :: Maybe Text,
-    exoPhones :: [Text],
-    exoPhoneCountryCode :: Maybe Text,
+    exoPhones :: NonEmpty Text,
     fcmConfig :: FCMConfig,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,

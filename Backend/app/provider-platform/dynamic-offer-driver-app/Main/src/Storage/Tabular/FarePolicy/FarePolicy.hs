@@ -66,7 +66,7 @@ instance TEntityKey FarePolicyT where
   fromKey (FarePolicyTKey _id) = Id _id
   toKey (Id id) = FarePolicyTKey id
 
-instance TType FarePolicyT Domain.FarePolicy where
+instance FromTType FarePolicyT Domain.FarePolicy where
   fromTType FarePolicyT {..} = do
     let driverExtraFee =
           Domain.ExtraFee
@@ -80,6 +80,7 @@ instance TType FarePolicyT Domain.FarePolicy where
           ..
         }
 
+instance ToTType FarePolicyT Domain.FarePolicy where
   toTType Domain.FarePolicy {..} =
     FarePolicyT
       { id = getId id,

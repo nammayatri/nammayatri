@@ -34,10 +34,9 @@ mkPersist
     MerchantT sql=merchant
       id Text
       shortId Text
+      subscriberId Text
       name Text
-      exoPhone Text Maybe
-      exoPhones (PostgresList Text)
-      exoPhoneCountryCode Text Maybe
+      exoPhones (PostgresNonEmptyList Text)
       fcmUrl Text
       fcmServiceAccount Text
       fcmRedisTokenKeyPrefix Text
@@ -60,7 +59,7 @@ instance TEntityKey MerchantT where
   fromKey (MerchantTKey _id) = Id _id
   toKey (Id id) = MerchantTKey id
 
-instance TType MerchantT Domain.Merchant where
+instance FromTType MerchantT Domain.Merchant where
   fromTType MerchantT {..} = do
     fcmUrl_ <- parseBaseUrl fcmUrl
     let fcmConfig =
@@ -81,18 +80,22 @@ instance TType MerchantT Domain.Merchant where
       Domain.Merchant
         { id = Id id,
           shortId = ShortId shortId,
+          subscriberId = ShortId subscriberId,
           registryUrl = regUrl,
           gatewayUrl = gwUrl,
-          exoPhones = unPostgresList exoPhones,
+          exoPhones = unPostgresNonEmptyList exoPhones,
           driverOfferBaseUrl = doBaseUrl,
           ..
         }
+
+instance ToTType MerchantT Domain.Merchant where
   toTType Domain.Merchant {..} = do
     let FCM.FCMConfig {..} = fcmConfig
         Geo.GeofencingConfig {..} = geofencingConfig
     MerchantT
       { id = getId id,
         shortId = getShortId shortId,
+        subscriberId = getShortId subscriberId,
         fcmUrl = showBaseUrl fcmUrl,
         fcmRedisTokenKeyPrefix = fcmTokenKeyPrefix,
         originRestriction = origin,
@@ -100,6 +103,6 @@ instance TType MerchantT Domain.Merchant where
         gatewayUrl = showBaseUrl gatewayUrl,
         registryUrl = showBaseUrl registryUrl,
         driverOfferBaseUrl = showBaseUrl driverOfferBaseUrl,
-        exoPhones = PostgresList exoPhones,
+        exoPhones = PostgresNonEmptyList exoPhones,
         ..
       }

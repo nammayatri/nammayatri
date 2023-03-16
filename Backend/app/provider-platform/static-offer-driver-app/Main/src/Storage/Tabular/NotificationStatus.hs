@@ -47,7 +47,7 @@ instance TEntityKey NotificationStatusT where
   fromKey (NotificationStatusTKey _id) = Id _id
   toKey (Id id) = NotificationStatusTKey id
 
-instance TType NotificationStatusT Domain.NotificationStatus where
+instance FromTType NotificationStatusT Domain.NotificationStatus where
   fromTType NotificationStatusT {..} = do
     return $
       Domain.NotificationStatus
@@ -56,6 +56,8 @@ instance TType NotificationStatusT Domain.NotificationStatus where
           bookingId = fromKey bookingId,
           ..
         }
+
+instance ToTType NotificationStatusT Domain.NotificationStatus where
   toTType Domain.NotificationStatus {..} =
     NotificationStatusT
       { id = getId id,

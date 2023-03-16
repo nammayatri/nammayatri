@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ride_rejected"> Ride Rejected</string>
+    <string name="request">Request</string>
+    <string name="decline">Decline</string>
+    <string name="pickup">Pickup</string>
+    <string name="trip">Trip</string>
+    <string name="new_ride_assigned">New Ride Assigned</string>
+    <string name="ride_cancelled" >Ride Cancelled</string>
+    <string name="waiting_for_customer_response">Waiting for customer response</string>
+    <string name="sending_request_to_customer">Sending request to customer</string>
+    <string name="ride_assigned">Ride assigned to you!</string>
+    <string name="please_allow_permission_to_capture_the_image">Please allow permissions to capture the image</string>
+    <string name="we_have_updated_your_app_kindly_relaunch">We have updated your app , The application will re-load now.</string>
+    <string name="okay_got_it">OKAY,GOT IT</string>
+    <string name="not_interested">Not Interested</string>
+    <string name="too_far">Too far</string>
+    <string name="on_another_ride">On Another Ride</string>
+    <string name="accept_offer">Accept Offer</string>
+    <string name="extra">Extra</string>
+    <string name="upload_image">Upload Image</string>
+    <string name="open_settings">1. Open Settings</string>
+    <string name="tap_on_permission">2. Tap on Permissions</string>
+    <string name="required_permission">3. Tap on the required permission</string>
+    <string name="select_allow">4. Select Allow</string>
+    <string name="tap_on">3. Tap on </string>
+    <string name="location">Location</string>
+    <string name="phone">Phone</string>
+    <string name="includes_pickup_charges_10">Includes Pickup Charges ₹ 10</string>
+    <string name="away" >away</string>
+    <string name="we_made_you_online">We made you Online</string>
+    <string name="location_is_turned_on">Location is turned on</string>
+    <string name="waiting_for_gps_signal">Waiting for GPS Signal</string>
+    <string name="your_location_is_being_updated">Your location is being updated</string>
+    <string name="we_made_you_offline">We made you Offline</string>
+    <string name="location_is_turned_off_permission_is_disabled">Location is turned off / permission is disabled</string>
+    <string name="ride_assigned_to_another_driver">Ride assigned to another driver</string>
+    <string name="select_date">Select Date</string>
+    <string name="new_ride_req">New Ride Request</string>
+    <string name="new_ride_available_for_offering">New ride available for offering</string>
+</resources>

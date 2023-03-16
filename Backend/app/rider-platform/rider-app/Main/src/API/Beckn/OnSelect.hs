@@ -33,11 +33,11 @@ onSelect ::
   SignatureAuthResult ->
   OnSelect.OnSelectReq ->
   FlowHandler AckResponse
-onSelect (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onSelect _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnSelectReq <- ACL.buildOnSelectReq req
   whenJust mbDOnSelectReq $ \onSelectReq ->
     Redis.whenWithLockRedis (onSelectLockKey req.context.message_id) 60 $
-      DOnSelect.onSelect registryUrl onSelectReq
+      DOnSelect.onSelect onSelectReq
   pure Ack
 
 onSelectLockKey :: Text -> Text

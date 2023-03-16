@@ -48,7 +48,7 @@ instance TEntityKey PersonDefaultEmergencyNumberT where
   fromKey (PersonDefaultEmergencyNumberTKey _id) = fromKey _id
   toKey id = PersonDefaultEmergencyNumberTKey $ toKey id
 
-instance TType PersonDefaultEmergencyNumberT Domain.PersonDefaultEmergencyNumber where
+instance FromTType PersonDefaultEmergencyNumberT Domain.PersonDefaultEmergencyNumber where
   fromTType PersonDefaultEmergencyNumberT {..} = do
     return $
       Domain.PersonDefaultEmergencyNumber
@@ -56,6 +56,8 @@ instance TType PersonDefaultEmergencyNumberT Domain.PersonDefaultEmergencyNumber
           mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
           ..
         }
+
+instance ToTType PersonDefaultEmergencyNumberT Domain.PersonDefaultEmergencyNumber where
   toTType Domain.PersonDefaultEmergencyNumber {..} =
     PersonDefaultEmergencyNumberT
       { personId = toKey personId,

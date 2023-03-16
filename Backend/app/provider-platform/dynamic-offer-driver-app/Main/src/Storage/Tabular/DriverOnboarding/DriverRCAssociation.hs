@@ -47,7 +47,7 @@ instance TEntityKey DriverRCAssociationT where
   fromKey (DriverRCAssociationTKey _id) = Id _id
   toKey (Id id) = DriverRCAssociationTKey id
 
-instance TType DriverRCAssociationT Domain.DriverRCAssociation where
+instance FromTType DriverRCAssociationT Domain.DriverRCAssociation where
   fromTType DriverRCAssociationT {..} = do
     return $
       Domain.DriverRCAssociation
@@ -57,6 +57,7 @@ instance TType DriverRCAssociationT Domain.DriverRCAssociation where
           ..
         }
 
+instance ToTType DriverRCAssociationT Domain.DriverRCAssociation where
   toTType Domain.DriverRCAssociation {..} =
     DriverRCAssociationT
       { id = getId id,

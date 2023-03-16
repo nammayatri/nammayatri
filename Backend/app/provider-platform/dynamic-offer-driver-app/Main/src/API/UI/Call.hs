@@ -16,13 +16,13 @@ module API.UI.Call
   ( API,
     handler,
     DCall.CallCallbackRes,
-    DCall.GetCallStatusRes,
-    DCall.MobileNumberResp,
+    DCall.GetCustomerMobileNumberResp,
   )
 where
 
 import qualified Domain.Action.UI.Call as DCall
 import Environment
+import Kernel.External.Call.Exotel.Types (ExotelCallStatus)
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Servant
@@ -36,35 +36,23 @@ type API =
            :> MandatoryQueryParam "CallSid" Text
            :> MandatoryQueryParam "CallFrom" Text
            :> MandatoryQueryParam "CallTo" Text
-           :> MandatoryQueryParam "CallStatus" Text
-           :> Get '[JSON] DCall.MobileNumberResp
+           :> MandatoryQueryParam "CallStatus" ExotelCallStatus
+           :> Get '[JSON] DCall.GetCustomerMobileNumberResp
            :<|> "statusCallback"
            :> MandatoryQueryParam "CallSid" Text
-           :> MandatoryQueryParam "DialCallStatus" Text
+           :> MandatoryQueryParam "DialCallStatus" ExotelCallStatus
            :> MandatoryQueryParam "RecordingUrl" Text
            :> QueryParam "Legs[0][OnCallDuration]" Int
            :> Get '[JSON] DCall.CallCallbackRes
        )
-
--- :<|> "ride"
---   :> Capture "rideId" (Id DRide.Ride)
---   :> "call"
---   :> "status"
---   :> TokenAuth
---   :> Get '[JSON] CallAPI.GetCallStatusRes
 
 handler :: FlowServer API
 handler =
   getCustomerMobileNumber
     :<|> directCallStatusCallback
 
--- :<|> getCallStatus
-
-directCallStatusCallback :: Text -> Text -> Text -> Maybe Int -> FlowHandler DCall.CallCallbackRes
+directCallStatusCallback :: Text -> ExotelCallStatus -> Text -> Maybe Int -> FlowHandler DCall.CallCallbackRes
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ = withFlowHandlerAPI . DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_
 
-getCustomerMobileNumber :: Text -> Text -> Text -> Text -> FlowHandler DCall.MobileNumberResp
-getCustomerMobileNumber callSid callFrom_ callTo_ = withFlowHandlerAPI .DCall.getCustomerMobileNumber callSid callFrom_ callTo_
-
--- getCallStatus :: Id SCS.CallStatus -> FlowHandler DCall.GetCallStatusRes
--- getCallStatus = withFlowHandlerAPI . DCall.getCallStatus
+getCustomerMobileNumber :: Text -> Text -> Text -> ExotelCallStatus -> FlowHandler DCall.GetCustomerMobileNumberResp
+getCustomerMobileNumber callSid callFrom_ callTo_ = withFlowHandlerAPI . DCall.getCustomerMobileNumber callSid callFrom_ callTo_

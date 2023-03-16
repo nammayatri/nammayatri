@@ -59,7 +59,7 @@ instance TEntityKey MerchantServiceUsageConfigT where
   fromKey (MerchantServiceUsageConfigTKey _id) = fromKey _id
   toKey id = MerchantServiceUsageConfigTKey $ toKey id
 
-instance TType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig where
+instance FromTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig where
   fromTType MerchantServiceUsageConfigT {..} = do
     return $
       Domain.MerchantServiceUsageConfig
@@ -68,6 +68,8 @@ instance TType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig whe
           whatsappProvidersPriorityList = unPostgresList whatsappProvidersPriorityList,
           ..
         }
+
+instance ToTType MerchantServiceUsageConfigT Domain.MerchantServiceUsageConfig where
   toTType Domain.MerchantServiceUsageConfig {..} = do
     MerchantServiceUsageConfigT
       { merchantId = toKey merchantId,

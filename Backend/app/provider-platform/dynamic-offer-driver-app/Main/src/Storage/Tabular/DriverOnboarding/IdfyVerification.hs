@@ -59,7 +59,7 @@ instance TEntityKey IdfyVerificationT where
   fromKey (IdfyVerificationTKey _id) = Id _id
   toKey (Id id) = IdfyVerificationTKey id
 
-instance TType IdfyVerificationT Domain.IdfyVerification where
+instance FromTType IdfyVerificationT Domain.IdfyVerification where
   fromTType IdfyVerificationT {..} = do
     return $
       Domain.IdfyVerification
@@ -71,6 +71,7 @@ instance TType IdfyVerificationT Domain.IdfyVerification where
           ..
         }
 
+instance ToTType IdfyVerificationT Domain.IdfyVerification where
   toTType Domain.IdfyVerification {..} =
     IdfyVerificationT
       { id = getId id,

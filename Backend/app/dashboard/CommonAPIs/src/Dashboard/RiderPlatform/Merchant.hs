@@ -37,8 +37,7 @@ type MerchantUpdateAPI =
 
 data MerchantUpdateReq = MerchantUpdateReq
   { name :: Maybe Text,
-    exoPhone :: Maybe Text,
-    exoPhoneCountryCode :: Maybe Text,
+    exoPhones :: Maybe (NonEmpty Text),
     fcmConfig :: Maybe FCMConfigUpdateReq,
     gatewayUrl :: Maybe BaseUrl,
     registryUrl :: Maybe BaseUrl
@@ -48,8 +47,7 @@ data MerchantUpdateReq = MerchantUpdateReq
 
 data MerchantUpdateTReq = MerchantUpdateTReq
   { name :: Maybe Text,
-    exoPhone :: Maybe Text,
-    exoPhoneCountryCode :: Maybe Text,
+    exoPhones :: Maybe (NonEmpty Text),
     fcmConfig :: Maybe FCMConfigUpdateTReq,
     gatewayUrl :: Maybe BaseUrl,
     registryUrl :: Maybe BaseUrl
@@ -61,9 +59,8 @@ validateMerchantUpdateReq :: Validate MerchantUpdateReq
 validateMerchantUpdateReq MerchantUpdateReq {..} =
   sequenceA_
     [ validateField "name" name $ InMaybe $ MinLength 3 `And` P.name,
-      validateField "exoPhone" exoPhone $ InMaybe P.mobileNumber,
-      validateField "exoPhoneCountryCode" exoPhoneCountryCode $ InMaybe P.mobileCountryCode,
-      validateMbObject "fcmConfig" fcmConfig validateFCMConfigUpdateReq
+      whenJust exoPhones $ \phones -> for_ phones $ \phone -> validateField "exoPhones" phone P.fullMobilePhone,
+      whenJust fcmConfig $ \cfg -> validateObject "fcmConfig" cfg validateFCMConfigUpdateReq
     ]
 
 instance HideSecrets MerchantUpdateReq where

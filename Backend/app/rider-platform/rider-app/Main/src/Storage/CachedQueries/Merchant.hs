@@ -16,9 +16,8 @@
 
 module Storage.CachedQueries.Merchant
   ( findById,
-    findAll,
-    findAllByExoPhone,
     findByShortId,
+    findBySubscriberId,
     findByExoPhone,
     update,
     clearCache,
@@ -32,6 +31,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
+import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant as Queries
@@ -41,12 +41,6 @@ findById id =
   Hedis.safeGet (makeIdKey id) >>= \case
     Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
     Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
-
-findAll :: (CacheFlow m r, EsqDBFlow m r) => m [Merchant]
-findAll =
-  Hedis.safeGet makeAllExoPhones >>= \case
-    Just a -> return $ map (coerce @(MerchantD 'Unsafe) @Merchant) a
-    Nothing -> cacheAllMerchants /=<< Queries.findAll
 
 findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ =
@@ -59,24 +53,35 @@ findByShortId shortId_ =
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId_
 
-findByExoPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Merchant)
-findByExoPhone countryCode exoPhone =
-  Hedis.safeGet (makeExoPhoneKey countryCode exoPhone) >>= \case
+findBySubscriberId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId subscriberId =
+  Hedis.get (makeSubscriberIdKey subscriberId) >>= \case
+    Nothing -> findAndCache
+    Just id ->
+      Hedis.get (makeIdKey id) >>= \case
+        Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
+        Nothing -> findAndCache
+  where
+    findAndCache = flip whenJust cacheMerchant /=<< Queries.findBySubscriberId subscriberId
+
+findByExoPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Merchant)
+findByExoPhone exoPhone =
+  Hedis.safeGet (makeExoPhoneKey exoPhone) >>= \case
     Nothing -> findAndCache
     Just id ->
       Hedis.safeGet (makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
-    findAndCache = flip whenJust cacheMerchant /=<< Queries.findByExoPhone countryCode exoPhone
+    findAndCache = flip whenJust cacheMerchant /=<< Queries.findByExoPhone exoPhone
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Merchant -> m ()
 clearCache merchant = do
   Hedis.del (makeIdKey merchant.id)
   Hedis.del (makeShortIdKey merchant.shortId)
-  whenJust ((,) <$> merchant.exoPhoneCountryCode <*> merchant.exoPhone) $ \(exoPhoneCountryCode, exoPhone) ->
-    Hedis.del (makeExoPhoneKey exoPhoneCountryCode exoPhone)
+  forM_ merchant.exoPhones $ \exoPhone ->
+    Hedis.del (makeExoPhoneKey exoPhone)
 
 cacheMerchant :: (CacheFlow m r) => Merchant -> m ()
 cacheMerchant merchant = do
@@ -84,13 +89,9 @@ cacheMerchant merchant = do
   let idKey = makeIdKey merchant.id
   Hedis.setExp idKey (coerce @Merchant @(MerchantD 'Unsafe) merchant) expTime
   Hedis.setExp (makeShortIdKey merchant.shortId) idKey expTime
-  whenJust ((,) <$> merchant.exoPhoneCountryCode <*> merchant.exoPhone) $ \(exoPhoneCountryCode, exoPhone) ->
-    Hedis.setExp (makeExoPhoneKey exoPhoneCountryCode exoPhone) idKey expTime
-
-cacheAllMerchants :: (CacheFlow m r) => [Merchant] -> m ()
-cacheAllMerchants merchants = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.setExp makeAllExoPhones (map (coerce @Merchant @(MerchantD 'Unsafe)) merchants) expTime
+  Hedis.setExp (makeSubscriberIdKey merchant.subscriberId) idKey expTime
+  forM_ merchant.exoPhones $ \exoPhone ->
+    Hedis.setExp (makeExoPhoneKey exoPhone) idKey expTime
 
 makeIdKey :: Id Merchant -> Text
 makeIdKey id = "CachedQueries:Merchant:Id-" <> id.getId
@@ -98,16 +99,11 @@ makeIdKey id = "CachedQueries:Merchant:Id-" <> id.getId
 makeShortIdKey :: ShortId Merchant -> Text
 makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 
-makeExoPhoneKey :: Text -> Text -> Text
-makeExoPhoneKey countryCode phone = "CachedQueries:Merchant:ExoPhone-" <> countryCode <> phone
+makeExoPhoneKey :: Text -> Text
+makeExoPhoneKey phone = "CachedQueries:Merchant:ExoPhone-" <> phone
 
-makeAllExoPhones :: Text
-makeAllExoPhones = "CachedQueries:Merchant:All-Merchants"
+makeSubscriberIdKey :: ShortId Subscriber -> Text
+makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> subscriberId.getShortId
 
 update :: Merchant -> Esq.SqlDB ()
 update = Queries.update
-
---TODO Rethink the implementation
-findAllByExoPhone ::
-  (CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Merchant)
-findAllByExoPhone countryCode exoPhone = findAll <&> find (\merchant -> (elem exoPhone merchant.exoPhones) && Just countryCode == merchant.exoPhoneCountryCode)

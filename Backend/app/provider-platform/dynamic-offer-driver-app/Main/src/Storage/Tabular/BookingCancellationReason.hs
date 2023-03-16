@@ -45,7 +45,7 @@ mkPersist
       deriving Generic
     |]
 
-instance TType BookingCancellationReasonT Domain.BookingCancellationReason where
+instance FromTType BookingCancellationReasonT Domain.BookingCancellationReason where
   fromTType BookingCancellationReasonT {..} = do
     return $
       Domain.BookingCancellationReason
@@ -55,6 +55,8 @@ instance TType BookingCancellationReasonT Domain.BookingCancellationReason where
           driverId = fromKey <$> driverId,
           ..
         }
+
+instance ToTType BookingCancellationReasonT Domain.BookingCancellationReason where
   toTType Domain.BookingCancellationReason {..} =
     BookingCancellationReasonT
       { driverId = toKey <$> driverId,

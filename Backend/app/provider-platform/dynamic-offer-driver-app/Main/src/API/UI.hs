@@ -25,6 +25,7 @@ import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverReferral as DriverReferral
 import qualified API.UI.FarePolicy as FarePolicy
 import qualified API.UI.Frontend as Frontend
+import qualified API.UI.Issue as Issue
 import qualified API.UI.Location as Location
 import qualified API.UI.Message as Message
 import qualified API.UI.OrgAdmin as OrgAdmin
@@ -61,6 +62,7 @@ type API =
            :<|> Message.API
            :<|> Performance.API
            :<|> DriverReferral.API
+           :<|> Issue.API
        )
 
 handler :: FlowServer API
@@ -83,3 +85,4 @@ handler =
     :<|> Message.handler
     :<|> Performance.handler
     :<|> DriverReferral.handler
+    :<|> Issue.handler

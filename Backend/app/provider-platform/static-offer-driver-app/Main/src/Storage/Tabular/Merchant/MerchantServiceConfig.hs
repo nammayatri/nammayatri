@@ -22,7 +22,8 @@ module Storage.Tabular.Merchant.MerchantServiceConfig where
 
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
-import qualified Kernel.External.Maps as Maps
+import qualified Kernel.External.Call as Call
+import qualified Kernel.External.Maps.Interface as Maps
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -53,7 +54,7 @@ instance TEntityKey MerchantServiceConfigT where
   fromKey (MerchantServiceConfigTKey _id serviceName) = (fromKey _id, serviceName)
   toKey (id, serviceName) = MerchantServiceConfigTKey (toKey id) serviceName
 
-instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
+instance FromTType MerchantServiceConfigT Domain.MerchantServiceConfig where
   fromTType MerchantServiceConfigT {..} = do
     serviceConfig <- maybe (throwError $ InternalError "Unable to decode MerchantServiceConfigT.configJSON") return $ case serviceName of
       Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> decodeFromText configJSON
@@ -61,11 +62,14 @@ instance TType MerchantServiceConfigT Domain.MerchantServiceConfig where
       Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> decodeFromText configJSON
       Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> decodeFromText configJSON
       Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> decodeFromText configJSON
+      Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> decodeFromText configJSON
     return $
       Domain.MerchantServiceConfig
         { merchantId = fromKey merchantId,
           ..
         }
+
+instance ToTType MerchantServiceConfigT Domain.MerchantServiceConfig where
   toTType Domain.MerchantServiceConfig {..} = do
     let (serviceName, configJSON) = getServiceNameConfigJSON serviceConfig
     MerchantServiceConfigT
@@ -82,3 +86,5 @@ getServiceNameConfigJSON = \case
   Domain.SmsServiceConfig smsCfg -> case smsCfg of
     Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, encodeToText cfg)
     Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, encodeToText cfg)
+  Domain.CallServiceConfig callCfg -> case callCfg of
+    Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, encodeToText cfg)

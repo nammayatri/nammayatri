@@ -40,7 +40,7 @@ buildRideInterpolationHandler orgId isEndRide = do
   orgMapsConfig <- QOMC.findByMerchantId orgId >>= fromMaybeM (MerchantServiceUsageConfigNotFound orgId.getId)
   orgMapsServiceConfig <-
     QOMSC.findByMerchantIdAndService orgId (DOSC.MapsService orgMapsConfig.snapToRoad)
-      >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId orgMapsConfig.snapToRoad)
+      >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId "Maps" (show orgMapsConfig.snapToRoad))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig cfg ->
       return $

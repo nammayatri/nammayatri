@@ -48,7 +48,11 @@ data DriverAPIs = DriverAPIs
     getNearbySearchRequests :: RegToken -> ClientM DriverAPI.GetNearbySearchRequestsRes,
     offerQuote :: RegToken -> DriverAPI.DriverOfferReq -> ClientM APISuccess,
     respondQuote :: RegToken -> DriverAPI.DriverRespondReq -> ClientM APISuccess,
-    setDriverOnline :: Text -> Bool -> ClientM APISuccess
+    setDriverOnline :: Text -> Bool -> ClientM APISuccess,
+    validate :: Text -> DriverAPI.DriverAlternateNumberReq -> ClientM DriverAPI.DriverAlternateNumberRes,
+    verifyAuth :: Text -> DriverAPI.DriverAlternateNumberOtpReq -> ClientM APISuccess,
+    resendOtp :: Text -> DriverAPI.DriverAlternateNumberReq -> ClientM DriverAPI.ResendAuth,
+    remove :: Text -> ClientM APISuccess
   }
 
 newtype LocationAPIs = LocationAPIs
@@ -93,6 +97,10 @@ ui = do
                         :<|> _
                         :<|> _
                       )
+               :<|> validate
+               :<|> verifyAuth
+               :<|> resendOtp
+               :<|> remove
              ) = driverClient
 
     (_ :<|> updateLocation) = locationClient

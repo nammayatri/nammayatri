@@ -1,0 +1,5 @@
+rootProject.name='mobility'
+include ':app'
+include ':android-magnessdk-4.0.3'
+include ':hyper-sdk'
+include ':hyper-upi'

@@ -21,7 +21,7 @@
 module Storage.Tabular.CallStatus where
 
 import qualified Domain.Types.CallStatus as Domain
-import Kernel.External.Exotel.Types (ExotelCallStatus)
+import qualified Kernel.External.Call.Interface as CallTypes
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
@@ -32,9 +32,9 @@ mkPersist
   [defaultQQ|
     CallStatusT sql=call_status
       id Text
-      exotelCallSid Text
+      callId Text
       rideId RideTId
-      status ExotelCallStatus
+      status CallTypes.CallStatus
       recordingUrl Text Maybe
       conversationDuration Int
       createdAt UTCTime
@@ -48,7 +48,7 @@ instance TEntityKey CallStatusT where
   fromKey (CallStatusTKey _id) = Id _id
   toKey (Id id) = CallStatusTKey id
 
-instance TType CallStatusT Domain.CallStatus where
+instance FromTType CallStatusT Domain.CallStatus where
   fromTType CallStatusT {..} = do
     return $
       Domain.CallStatus
@@ -56,6 +56,8 @@ instance TType CallStatusT Domain.CallStatus where
           rideId = fromKey rideId,
           ..
         }
+
+instance ToTType CallStatusT Domain.CallStatus where
   toTType Domain.CallStatus {..} =
     CallStatusT
       { id = getId id,

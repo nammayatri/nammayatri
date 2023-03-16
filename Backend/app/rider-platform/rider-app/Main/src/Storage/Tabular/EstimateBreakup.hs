@@ -45,7 +45,7 @@ instance TEntityKey EstimateBreakupT where
   fromKey (EstimateBreakupTKey _id) = Id _id
   toKey (Id id) = EstimateBreakupTKey id
 
-instance TType EstimateBreakupT Domain.EstimateBreakup where
+instance FromTType EstimateBreakupT Domain.EstimateBreakup where
   fromTType EstimateBreakupT {..} = do
     return $
       Domain.EstimateBreakup
@@ -58,6 +58,8 @@ instance TType EstimateBreakupT Domain.EstimateBreakup where
           estimateId = fromKey estimateId,
           ..
         }
+
+instance ToTType EstimateBreakupT Domain.EstimateBreakup where
   toTType Domain.EstimateBreakup {..} =
     EstimateBreakupT
       { id = getId id,

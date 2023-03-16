@@ -23,11 +23,12 @@ import Domain.Types.BlackListOrg
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Kernel.Types.Registry.Subscriber (Subscriber)
 import Storage.Tabular.BlackListOrg
 
-findByShortId :: Transactionable m => ShortId BlackListOrg -> m (Maybe BlackListOrg)
-findByShortId shortId_ = do
+findBySubscriberId :: Transactionable m => ShortId Subscriber -> m (Maybe BlackListOrg)
+findBySubscriberId subscriberId = do
   findOne $ do
     org <- from $ table @BlackListOrgT
-    where_ $ org ^. BlackListOrgShortId ==. val (getShortId shortId_)
+    where_ $ org ^. BlackListOrgSubscriberId ==. val (getShortId subscriberId)
     return org

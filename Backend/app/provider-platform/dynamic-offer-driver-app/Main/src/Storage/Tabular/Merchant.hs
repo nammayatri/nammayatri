@@ -37,9 +37,8 @@ mkPersist
       description Text Maybe
       subscriberId Text
       uniqueKeyId Text
-      exoPhones (PostgresList Text)
-      exoPhoneCountryCode Text Maybe
       shortId Text
+      exoPhones (PostgresNonEmptyList Text)
       mobileNumber Text Maybe
       mobileCountryCode Text Maybe
       gstin Text Maybe
@@ -66,7 +65,7 @@ instance TEntityKey MerchantT where
   fromKey (MerchantTKey _id) = Id _id
   toKey (Id id) = MerchantTKey id
 
-instance TType MerchantT Domain.Merchant where
+instance FromTType MerchantT Domain.Merchant where
   fromTType MerchantT {..} = do
     return $
       Domain.Merchant
@@ -78,9 +77,11 @@ instance TType MerchantT Domain.Merchant where
               { origin = originRestriction,
                 destination = destinationRestriction
               },
-          exoPhones = unPostgresList exoPhones,
+          exoPhones = unPostgresNonEmptyList exoPhones,
           ..
         }
+
+instance ToTType MerchantT Domain.Merchant where
   toTType Domain.Merchant {..} =
     MerchantT
       { id = getId id,
@@ -88,6 +89,6 @@ instance TType MerchantT Domain.Merchant where
         shortId = getShortId shortId,
         originRestriction = geofencingConfig.origin,
         destinationRestriction = geofencingConfig.destination,
-        exoPhones = PostgresList exoPhones,
+        exoPhones = PostgresNonEmptyList exoPhones,
         ..
       }

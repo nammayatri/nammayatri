@@ -27,11 +27,12 @@ module Environment
   )
 where
 
-import EulerHS.Prelude
+import qualified Data.Map as M
+import EulerHS.Prelude (newEmptyTMVarIO)
 import Kernel.External.Encryption (EncTools)
-import Kernel.External.Exotel.Types (ExotelCfg)
 import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
 import Kernel.External.Slack.Types (SlackConfig)
+import Kernel.Prelude
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis
@@ -51,7 +52,7 @@ import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
 import SharedLogic.GoogleTranslate
-import Storage.CachedQueries.BlackListOrg (findByShortId)
+import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
 import Tools.Streaming.Kafka
@@ -70,7 +71,6 @@ data AppCfg = AppCfg
     bapSelfURIs :: BAPs BaseUrl,
     bapSelfUniqueKeyIds :: BAPs Text,
     searchRequestExpiry :: Maybe Seconds,
-    exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     coreVersion :: Text,
@@ -87,11 +87,9 @@ data AppCfg = AppCfg
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     authTokenCacheExpiry :: Seconds,
-    registryUrl :: BaseUrl,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     disableSignatureAuth :: Bool,
-    gatewayUrl :: BaseUrl,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
     selfUIUrl :: BaseUrl,
@@ -100,7 +98,8 @@ data AppCfg = AppCfg
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
     maxEmergencyNumberCount :: Int,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
+    registryMap :: M.Map Text BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -113,7 +112,6 @@ data AppEnv = AppEnv
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,
     searchRequestExpiry :: Maybe Seconds,
-    exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,
     googleTranslateUrl :: BaseUrl,
@@ -127,11 +125,9 @@ data AppEnv = AppEnv
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
     authTokenCacheExpiry :: Seconds,
-    registryUrl :: BaseUrl,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     disableSignatureAuth :: Bool,
-    gatewayUrl :: BaseUrl,
     encTools :: EncTools,
     selfUIUrl :: BaseUrl,
     hedisEnv :: HedisEnv,
@@ -148,7 +144,8 @@ data AppEnv = AppEnv
     cacheConfig :: CacheConfig,
     cacheTranslationConfig :: CacheTranslationConfig,
     maxEmergencyNumberCount :: Int,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters
+    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
+    registryMap :: M.Map Text BaseUrl
   }
   deriving (Generic)
 
@@ -197,11 +194,14 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = (.signatureExpiry)
 
 instance Registry Flow where
-  registryLookup registryUrl =
-    Registry.withSubscriberCache $
-      Registry.whitelisting isWhiteListed <=< Registry.registryLookup registryUrl
+  registryLookup =
+    Registry.withSubscriberCache $ \sub -> do
+      asks (.registryMap) <&> M.lookup sub.subscriber_id
+        >>>= \registryUrl ->
+          Registry.registryLookup registryUrl sub
+            >>= Registry.whitelisting isWhiteListed
     where
-      isWhiteListed subscriberId = findByShortId (ShortId subscriberId) <&> isNothing
+      isWhiteListed subscriberId = QBlackList.findBySubscriberId (ShortId subscriberId) <&> isNothing
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest

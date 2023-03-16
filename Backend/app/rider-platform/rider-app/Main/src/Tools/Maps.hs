@@ -21,6 +21,8 @@ module Tools.Maps
     getPlaceName,
     getRoutes,
     snapToRoad,
+    getPickupRoutes,
+    getTripRoutes,
   )
 where
 
@@ -75,6 +77,12 @@ getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
 getRoutes :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
 getRoutes = runWithServiceConfig Maps.getRoutes (.getRoutes)
 
+getPickupRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutes = runWithServiceConfig Maps.getRoutes (.getPickupRoutes)
+
+getTripRoutes :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id Merchant -> GetRoutesReq -> m GetRoutesResp
+getTripRoutes = runWithServiceConfig Maps.getRoutes (.getTripRoutes)
+
 snapToRoad ::
   ( EncFlow m r,
     EsqDBFlow m r,
@@ -107,7 +115,7 @@ runWithServiceConfig func getCfg merchantId req = do
   merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   merchantMapsServiceConfig <-
     QMSC.findByMerchantIdAndService merchantId (DMSC.MapsService $ getCfg merchantConfig)
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId (getCfg merchantConfig))
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show $ getCfg merchantConfig))
   case merchantMapsServiceConfig.serviceConfig of
     DMSC.MapsServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown Service Config"

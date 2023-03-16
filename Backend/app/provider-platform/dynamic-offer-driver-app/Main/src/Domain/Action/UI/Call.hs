@@ -14,19 +14,17 @@
 
 module Domain.Action.UI.Call
   ( CallCallbackRes,
-    GetCallStatusRes,
-    MobileNumberResp,
+    GetCustomerMobileNumberResp,
     directCallStatusCallback,
     getCustomerMobileNumber,
-    getCallStatus,
   )
 where
 
 import qualified Data.Text as T
-import Data.Text.Conversions
 import qualified Domain.Types.CallStatus as SCS
+import Kernel.External.Call.Exotel.Types
+import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import Kernel.External.Encryption (decrypt, getDbHash)
-import Kernel.External.Exotel.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica, runTransaction)
 import Kernel.Types.Beckn.Ack
@@ -43,26 +41,22 @@ import Tools.Error
 
 type CallCallbackRes = AckResponse
 
-type GetCallStatusRes = SCS.CallStatusAPIEntity
+type GetCustomerMobileNumberResp = Text
 
-type MobileNumberResp = Text
-
-directCallStatusCallback :: EsqDBFlow m r => Text -> Text -> Text -> Maybe Int -> m CallCallbackRes
-directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration = do
-  let dialCallStatus = fromText dialCallStatus_ :: ExotelCallStatus
+directCallStatusCallback :: EsqDBFlow m r => Text -> ExotelCallStatus -> Text -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuration = do
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
   recordingUrl <- parseBaseUrl recordingUrl_
-  runTransaction $ QCallStatus.updateCallStatus callStatus.id dialCallStatus (fromMaybe 0 callDuration) recordingUrl
+  runTransaction $ QCallStatus.updateCallStatus callStatus.id (exotelStatusToInterfaceStatus dialCallStatus) (fromMaybe 0 callDuration) recordingUrl
   return Ack
 
-getCustomerMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> Text -> m MobileNumberResp
-getCustomerMobileNumber callSid callFrom_ callTo_ callStatus_ = do
-  let callStatus = fromText callStatus_ :: ExotelCallStatus
+getCustomerMobileNumber :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Text -> Text -> Text -> ExotelCallStatus -> m GetCustomerMobileNumberResp
+getCustomerMobileNumber callSid callFrom_ callTo_ callStatus = do
   let callFrom = dropFirstZero callFrom_
   let callTo = dropFirstZero callTo_
   mobileNumberHash <- getDbHash callFrom
-  merchant <- Merchant.findAllByExoPhone "+91" callTo >>= fromMaybeM (MerchantWithExoPhoneNotFound callTo)
-  driver <- runInReplica $ QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
+  merchant <- Merchant.findByExoPhone callTo >>= fromMaybeM (MerchantWithExoPhoneNotFound callTo)
+  driver <- runInReplica $ QPerson.findByMobileNumberAndMerchantForAltNo "+91" mobileNumberHash merchant.id >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
   activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
   activeBooking <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   riderId <-
@@ -74,7 +68,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ callStatus_ = do
         >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   requestorPhone <- decrypt riderDetails.mobileNumber
   callId <- generateGUID
-  callStatusObj <- buildCallStatus activeRide.id callId callSid callStatus
+  callStatusObj <- buildCallStatus activeRide.id callId callSid (exotelStatusToInterfaceStatus callStatus)
   runTransaction $ QCallStatus.create callStatusObj
   return requestorPhone
   where
@@ -84,14 +78,10 @@ getCustomerMobileNumber callSid callFrom_ callTo_ callStatus_ = do
       return $
         SCS.CallStatus
           { id = callId,
-            exotelCallSid = exotelCallId,
+            callId = exotelCallId,
             rideId = rideId,
             status = exoStatus,
             conversationDuration = 0,
             recordingUrl = Nothing,
             createdAt = now
           }
-
-getCallStatus :: (EsqDBFlow m r) => Id SCS.CallStatus -> m GetCallStatusRes
-getCallStatus callStatusId = do
-  QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity

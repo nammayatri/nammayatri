@@ -38,6 +38,7 @@ import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common as BC
@@ -112,6 +113,7 @@ auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     HasCacheConfig r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r,
     CoreMetrics m
@@ -211,11 +213,15 @@ makePerson req mbBundleVersion mbClientVersion merchantId = do
         updatedAt = now,
         bundleVersion = mbBundleVersion,
         clientVersion = mbClientVersion,
-        whatsappNotificationEnrollStatus = Nothing
+        whatsappNotificationEnrollStatus = Nothing,
+        unencryptedAlternateMobileNumber = Nothing,
+        alternateMobileNumber = Nothing
       }
 
 makeSession ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    EsqDBReplicaFlow m r
+  ) =>
   SmsSessionConfig ->
   Text ->
   SR.RTEntityType ->
@@ -225,6 +231,7 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- generateGUID
   token <- generateGUID
+  altNumAttempts <- Esq.runInReplica $ QR.getAlternateNumberAttempts (Id entityId)
   now <- getCurrentTime
   return $
     SR.RegistrationToken
@@ -241,7 +248,8 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
         entityType = entityType,
         createdAt = now,
         updatedAt = now,
-        info = Nothing
+        info = Nothing,
+        alternateNumberAttempts = altNumAttempts
       }
 
 verifyHitsCountKey :: Id SP.Person -> Text
