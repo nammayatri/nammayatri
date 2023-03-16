@@ -1,5 +1,8 @@
 module SharedLogic.Allocator.Jobs.AllocateDriverForUpcomingRide where
 
+import qualified Beckn.ACL.OnInit as ACL
+import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
+import qualified Beckn.Types.Core.Taxi.OnInit.Fulfillment as OnInit
 import qualified Control.Monad.Catch as Exception
 import qualified Data.ByteString as BS
 import Data.Time.LocalTime
@@ -16,12 +19,18 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
+import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
+import Kernel.Utils.Servant.SignatureAuth (getHttpManagerKey)
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..), SendSearchRequestToDriverJobData (..))
+import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.FareCalculator (calculateFare)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.AllocatorJob as QAllocatorJob
 import qualified Storage.Queries.DriverQuote as QDriverQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
@@ -40,7 +49,7 @@ withoutDuplicateExecution key timeout action =
     (bool (Redis.unlockRedis key) (pure ()))
     (bool action (pure DuplicateExecution))
 
-data NotImplemented = NotImplemented
+data MerchantNotFound = MerchantNotFound
   deriving (Show, Exception, IsBaseError)
 
 data BookingNotFound = BookingNotFound
@@ -52,6 +61,9 @@ data QuoteError = QuoteError
 handle ::
   ( EncFlow m r,
     EsqDBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasShortDurationRetryCfg r c,
+    HasHttpClientOptions r c,
     CacheFlow m r,
     Redis.HedisFlow m r,
     CoreMetrics m,
@@ -63,15 +75,12 @@ handle (Job {jobData}) =
   Exception.handle (\(SomeException e) -> pure $ Terminate (show e)) $
     withoutDuplicateExecution lockKey timeout $ do
       upcomingBooking <- fromMaybeM BookingNotFound =<< QTimetable.findUpcomingBooking jobData.timetableId
+      transporter <- fromMaybeM MerchantNotFound =<< QMerchant.findById (Id upcomingBooking.providerId)
       searchRequest <- createSearchForUpcomingBooking upcomingBooking
-      quote <- findQuoteForSearchRequest (Id upcomingBooking.providerId) upcomingBooking.farePolicy searchRequest
+      quote <- findQuoteForSearchRequest transporter.id upcomingBooking.farePolicy searchRequest
       booking <- createBooking upcomingBooking searchRequest quote
-      Complete <$ notifyScheduledRide booking
+      Complete <$ notifyScheduledRide upcomingBooking transporter quote booking
   where
-    notifyScheduledRide _booking =
-      -- throwM NotImplemented
-      pure ()
-
     timeout =
       60
 
@@ -241,3 +250,39 @@ createBooking upcomingBooking searchRequest quote = do
     Esq.create booking
     QTimetable.updateTimetableWithBookingId upcomingBooking.id bookingId
   pure booking
+
+notifyScheduledRide ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Timetable.UpcomingBooking ->
+  DMerchant.Merchant ->
+  DDriverQuote.DriverQuote ->
+  Booking.SimpleBooking ->
+  m ()
+notifyScheduledRide upcomingBooking transporter quote booking = do
+  let bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
+  bppUri <- CallBAP.buildBppUrl transporter.id
+  context <-
+    buildTaxiContext
+      Context.ON_INIT
+      (getId booking.id)
+      Nothing
+      booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri)
+  let scheduledRideFulfillment =
+        OnInit.Fulfillment
+          { id = upcomingBooking.recurringBookingId.getId,
+            _type = Just "SCHEDULED_RIDE",
+            start = Just (OnInit.FulfillmentDetail $ OnInit.TimeTimestamp booking.startTime),
+            end = Nothing
+          }
+
+  void $
+    withShortRetry $
+      Beckn.callBecknAPI (Just authKey) Nothing (show Context.INIT) OnInit.onInitAPI booking.bapUri $
+        BecknCallbackReq context $
+          Right $
+            ACL.mkOnInitMessage' booking.id.getId quote.estimatedFare quote.fareParams (Just scheduledRideFulfillment)

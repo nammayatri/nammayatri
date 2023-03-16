@@ -1,6 +1,10 @@
-module Beckn.Types.Core.Taxi.OnInit.Fulfillment where
+module Beckn.Types.Core.Taxi.OnInit.Fulfillment
+  ( module Beckn.Types.Core.Taxi.OnInit.Fulfillment,
+    module Reexport,
+  )
+where
 
-import Beckn.Types.Core.Taxi.Common.TimeTimestamp
+import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Reexport
 import Data.OpenApi
   ( ToSchema (..),
     defaultSchemaOptions,
