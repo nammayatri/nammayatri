@@ -16,6 +16,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Lib.Scheduler.Types where
 
@@ -51,18 +52,24 @@ data JobInfo (e :: t) = (JobProcessor t, JobInfoProcessor e) =>
   }
 
 class (Show t, Read t, Demote t ~ t, SingKind t, Eq t) => JobProcessor t where
-  restoreAnyJobInfo :: StoredJobInfo -> Maybe (AnyJobInfo t)
-  default restoreAnyJobInfo :: StoredJobInfo -> Maybe (AnyJobInfo t)
-  restoreAnyJobInfo storedContent = do
-    jobType :: t <- readMaybe $ T.unpack (storedJobType storedContent)
+  restoreAnyJobInfoMain :: StoredJobInfo -> Maybe (AnyJobInfo t)
+  default restoreAnyJobInfoMain :: StoredJobInfo -> Maybe (AnyJobInfo t)
+  restoreAnyJobInfoMain storedContent = do
+    jobType :: t <- restoreJobType (storedJobType storedContent)
     withSomeSing jobType $ \jobTypeSing -> do
-      AnyJobInfo <$> restoreJobInfo jobTypeSing (storedJobContent storedContent)
+      restoreAnyJobInfo jobTypeSing $ storedJobContent storedContent
+
+  restoreJobType :: Text -> Maybe t
+  default restoreJobType :: (Read t) => Text -> Maybe t
+  restoreJobType storedJobType = readMaybe $ T.unpack storedJobType
+
+  restoreAnyJobInfo :: Sing (e :: t) -> Text -> Maybe (AnyJobInfo t)
 
 type family JobContent (e :: t) :: Type
 
 class (JobProcessor t) => JobInfoProcessor (e :: t) where
   storeJobInfo :: JobInfo (e :: t) -> StoredJobInfo
-  default storeJobInfo :: (ToJSON (JobContent e)) => JobInfo e -> StoredJobInfo
+  default storeJobInfo :: (Show t, ToJSON (JobContent e)) => JobInfo e -> StoredJobInfo
   storeJobInfo JobInfo {..} =
     StoredJobInfo
       { storedJobType = show $ fromSing jobType,
@@ -74,15 +81,6 @@ class (JobProcessor t) => JobInfoProcessor (e :: t) where
   restoreJobInfo jobType storedContent = do
     content <- decodeFromText storedContent
     return $ JobInfo jobType content
-
-instance {-# OVERLAPPABLE #-} (JobProcessor t) => JobInfoProcessor (e :: t) where
-  storeJobInfo JobInfo {..} =
-    StoredJobInfo
-      { storedJobType = show $ fromSing jobType,
-        storedJobContent = "JobType doesn't have JobInfoProcessor instance."
-      }
-
-  restoreJobInfo _ _ = Nothing
 
 data AnyJob t = forall (e :: t). (JobProcessor t, JobInfoProcessor e) => AnyJob (Job e)
 

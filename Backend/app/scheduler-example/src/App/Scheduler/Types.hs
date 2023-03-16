@@ -36,12 +36,18 @@ data SchedulerJobType
   deriving anyclass (FromJSON, ToJSON, FromDhall)
   deriving (PrettyShow) via Showable SchedulerJobType
 
-instance JobProcessor SchedulerJobType
-
 genSingletons [''SchedulerJobType]
 singEqInstances [''SchedulerJobType]
 singOrdInstances [''SchedulerJobType]
 showSingInstances [''SchedulerJobType]
+
+instance JobProcessor SchedulerJobType where
+  restoreAnyJobInfo :: Sing (e :: SchedulerJobType) -> Text -> Maybe (AnyJobInfo SchedulerJobType)
+  restoreAnyJobInfo SPrintBananasCount jobData = AnyJobInfo <$> restoreJobInfo SPrintBananasCount jobData
+  restoreAnyJobInfo SPrintCurrentTimeWithErrorProbability jobData = AnyJobInfo <$> restoreJobInfo SPrintCurrentTimeWithErrorProbability jobData
+  restoreAnyJobInfo SIncorrectDataJobType jobData = AnyJobInfo <$> restoreJobInfo SIncorrectDataJobType jobData
+  restoreAnyJobInfo SFakeJobType jobData = AnyJobInfo <$> restoreJobInfo SFakeJobType jobData
+  restoreAnyJobInfo STestTermination jobData = AnyJobInfo <$> restoreJobInfo STestTermination jobData
 
 -----------------
 data BananasCount = BananasCount

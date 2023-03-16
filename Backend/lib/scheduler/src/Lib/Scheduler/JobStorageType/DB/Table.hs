@@ -22,6 +22,7 @@
 
 module Lib.Scheduler.JobStorageType.DB.Table where
 
+-- import GHC.IO (unsafePerformIO)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Error
@@ -54,8 +55,8 @@ instance TEntityKey SchedulerJobT where
 instance (ST.JobProcessor t) => FromTType SchedulerJobT (ST.AnyJob t) where
   fromTType SchedulerJobT {..} = do
     (ST.AnyJobInfo anyJobInfo) :: ST.AnyJobInfo t <-
-      ST.restoreAnyJobInfo @t (ST.StoredJobInfo jobType jobData)
-        & fromMaybeM (InternalError "Unable to restore JobInfo.")
+      ST.restoreAnyJobInfoMain @t (ST.StoredJobInfo jobType jobData)
+        & fromMaybeM (InternalError ("Unable to restore JobInfo. " <> jobType <> ": " <> jobData))
     return $
       ST.AnyJob $
         ST.Job

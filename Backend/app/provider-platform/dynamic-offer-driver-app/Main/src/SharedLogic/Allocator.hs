@@ -29,10 +29,12 @@ import Lib.Scheduler
 data AllocatorJobType = SendSearchRequestToDriver
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
-instance JobProcessor AllocatorJobType
-
 genSingletons [''AllocatorJobType]
 showSingInstance ''AllocatorJobType
+
+instance JobProcessor AllocatorJobType where
+  restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
+  restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { requestId :: Id DSR.SearchRequest,
