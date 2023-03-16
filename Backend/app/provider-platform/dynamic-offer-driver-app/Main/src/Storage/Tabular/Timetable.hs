@@ -10,11 +10,13 @@ module Storage.Tabular.Timetable where
 
 import Data.Time.Calendar (Day)
 import Data.Time.LocalTime (LocalTime (..))
+import qualified Domain.Types.RecurringBooking as DRecurringBooking
 import qualified Domain.Types.Timetable as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import qualified Storage.Tabular.Booking as SBooking
+import qualified Storage.Tabular.FarePolicy.FarePolicy as SFarePolicy
 import qualified Storage.Tabular.RecurringBooking as SRBooking
 
 derivePersistField "Domain.Status"
@@ -61,3 +63,19 @@ instance FromTType TimetableT Domain.Timetable where
           pickupTime = LocalTime (pickupDate timetableT) (pickupTime timetableT),
           status = status timetableT
         }
+
+instance
+  TType
+    ( TimetableT,
+      SRBooking.FullRecurringBookingT,
+      SFarePolicy.FarePolicyT
+    )
+    Domain.UpcomingBooking
+  where
+  fromTType (timetableT, bookingT, farePolicyT) = do
+    tt <- fromTType @_ @Domain.Timetable timetableT
+    DRecurringBooking.RecurringBooking {id = recurringBookingId, ..} <- fromTType bookingT
+    farePolicy <- fromTType farePolicyT
+    pure $ Domain.UpcomingBooking {id = tt.id, pickupTime = tt.pickupTime, bookingId = Nothing, ..}
+  toTType _ =
+    error "this is a read model"

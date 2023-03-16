@@ -36,13 +36,6 @@ create dBooking = Esq.runTransaction $
     Esq.create' toLoc
     Esq.create' booking
 
-createSimpleBookings :: [SimpleBooking] -> SqlDB ()
-createSimpleBookings dBooking = Esq.runTransaction $
-  withFullEntities dBooking $ \bookingEntities -> do
-    let (bookings, fareParams) = unzip bookingEntities
-    Esq.createMany' bookings
-    Esq.createMany' fareParams
-
 baseBookingTable ::
   From
     ( Table BookingT

@@ -8,22 +8,6 @@ import qualified Domain.Types.FarePolicy as DFarePolicy
 import Kernel.Prelude
 import Kernel.Types.Id
 
-data SimpleRecurringBooking = SimpleRecurringBooking
-  { id :: Id RecurringBooking,
-    scheduledDays :: Set DayOfWeek,
-    startDate :: Day,
-    endDate :: Maybe Day,
-    pickupTime :: TimeOfDay,
-    status :: Status,
-    providerId :: Text,
-    bapId :: Text,
-    bapUri :: BaseUrl,
-    farePolicyId :: Id DFarePolicy.FarePolicy,
-    fromLocationId :: Id DLoc.BookingLocation,
-    toLocationId :: Id DLoc.BookingLocation
-  }
-  deriving (Generic, Show)
-
 data RecurringBooking = RecurringBooking
   { id :: Id RecurringBooking,
     scheduledDays :: Set DayOfWeek,

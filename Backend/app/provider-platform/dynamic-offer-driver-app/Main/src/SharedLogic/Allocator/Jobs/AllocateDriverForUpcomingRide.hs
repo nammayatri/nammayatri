@@ -1,6 +1,7 @@
 module SharedLogic.Allocator.Jobs.AllocateDriverForUpcomingRide where
 
 import qualified Control.Monad.Catch as Exception
+import qualified Data.ByteString as BS
 import Data.Time.LocalTime
 import qualified Database.Redis as Hedis
 import qualified Domain.Types.Booking as Booking
@@ -176,29 +177,35 @@ findQuoteForSearchRequest merchantId farePolicy searchRequest = do
     -- Wait for first driver to respond with a quote by blocking on a redis stream
     -- we will wait up to 30 seconds for driver to respond.
     getFirstQuote = do
-      key <- Redis.buildKey $ "searchRequest:" <> getId searchRequest.id <> ":quotes"
-      let thirtySeconds = 30000
-      records <-
-        Redis.runHedis $
-          Hedis.xreadOpts [(key, "0-0")] $
-            Hedis.XReadOpts
-              { block = Just thirtySeconds,
-                recordCount = Just 1
-              }
-      let mDriverQuoteId =
-            case records of
-              Just [xreadResponse] ->
-                case Hedis.records xreadResponse of
-                  [xreadResponseRecord] ->
-                    fmap (Id . decodeUtf8) $ lookup "driverQuoteId" $ Hedis.keyValues xreadResponseRecord
-                  _ ->
-                    Nothing
-              _ -> Nothing
+      mDriverQuoteId <- listenForSearchRequestQuote searchRequest.id 30
       case mDriverQuoteId of
         Just driverQuoteId ->
           QDriverQuote.findById driverQuoteId
         Nothing ->
           pure Nothing
+
+buildSearchRequestKey :: Redis.HedisFlow m r => Id DSearchReq.SearchRequest -> m BS.ByteString
+buildSearchRequestKey searchRequestId =
+  Redis.buildKey $ "searchRequest:" <> getId searchRequestId <> ":quotes"
+
+notifySearchRequestQuote ::
+  Redis.HedisFlow m r =>
+  Id DSearchReq.SearchRequest ->
+  Id DDriverQuote.DriverQuote ->
+  m ()
+notifySearchRequestQuote searchRequestId driverQuoteId = do
+  let timeoutInSeconds = 30 -- Since we are listening in the running job 30 seconds should be more than enough time
+  key <- buildSearchRequestKey searchRequestId
+  void $
+    Redis.runHedis $ do
+      void $ Hedis.lpush key [encodeUtf8 $ getId driverQuoteId]
+      Hedis.expire key timeoutInSeconds
+
+listenForSearchRequestQuote :: Redis.HedisFlow m r => Id DSearchReq.SearchRequest -> Integer -> m (Maybe (Id DDriverQuote.DriverQuote))
+listenForSearchRequestQuote searchRequestId timeoutInSeconds = do
+  key <- buildSearchRequestKey searchRequestId
+  record <- Redis.runHedis $ Hedis.brpop [key] timeoutInSeconds
+  pure $ fmap (Id . decodeUtf8 . snd) record
 
 createBooking ::
   (MonadTime m, MonadGuid m, EsqDBFlow m r, MonadThrow m) =>

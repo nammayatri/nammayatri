@@ -12,18 +12,14 @@ import qualified Database.Esqueleto.Internal.Internal as EI
 import Database.Persist (unFieldNameDB)
 import Database.Persist.SqlBackend
 import qualified Domain.Types.Booking as DBooking
-import qualified Domain.Types.RecurringBooking as DRecurringBooking
 import Domain.Types.TimeRange (TimeRange)
 import Domain.Types.Timetable (Timetable)
 import qualified Domain.Types.Timetable as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-<<<<<<< HEAD
 import Storage.Tabular.FarePolicy
-=======
 import Kernel.Types.Id
-import Storage.Tabular.FarePolicy.FarePolicy
->>>>>>> 9a1becd9d (backend/feat: #11 Work on allocation driver for upcoming booking)
+import Storage.Queries.RecurringBooking (fullRecurringBookingT)
 import Storage.Tabular.RecurringBooking
 import Storage.Tabular.Timetable as STimetable
 
@@ -32,13 +28,7 @@ instance FromTType (TimetableT, RecurringBookingT, FarePolicyT) Domain.UpcomingB
     tt <- fromTType @_ @Domain.Timetable timetableT
     DRecurringBooking.SimpleRecurringBooking {..} <- fromTType bookingT
     farePolicy <- fromTType farePolicyT
-<<<<<<< HEAD
-    pure $ Domain.UpcomingBooking {id = tt.id, pickupTime = tt.pickupTime, ..}
-=======
     pure $ Domain.UpcomingBooking {id = tt.id, pickupTime = tt.pickupTime, bookingId = Nothing, ..}
-  toTType _ =
-    error "this is a read model"
->>>>>>> 9a1becd9d (backend/feat: #11 Work on allocation driver for upcoming booking)
 
 findAllUnscheduledAndActiveDuring :: Transactionable m => TimeRange -> m [Id Timetable]
 findAllUnscheduledAndActiveDuring timeRange =
@@ -62,16 +52,16 @@ findUpcomingBooking :: Transactionable m => Id Timetable -> m (Maybe Domain.Upco
 findUpcomingBooking ttId = Esq.buildDType $
   fmap (fmap $ extractSolidType @Domain.UpcomingBooking) $
     Esq.findOne' $ do
-      (tt :& rbt :& fpt) <-
+      (tt :& (rbt :& fromLocT :& toLocT) :& fpt) <-
         from $
           table @TimetableT
-            `innerJoin` table @RecurringBookingT
-            `Esq.on` (\(tt :& rbt) -> tt ^. TimetableRecurringBookingId ==. rbt ^. RecurringBookingTId)
+            `innerJoin` fullRecurringBookingT
+            `Esq.on` (\(tt :& (rbt :& _ :& _)) -> tt ^. TimetableRecurringBookingId ==. rbt ^. RecurringBookingTId)
             `innerJoin` table @FarePolicyT
-            `Esq.on` (\(_ :& rbt :& fpt) -> rbt ^. RecurringBookingFarePolicyId ==. fpt ^. FarePolicyTId)
+            `Esq.on` (\(_ :& (rbt :& _ :& _) :& fpt) -> rbt ^. RecurringBookingFarePolicyId ==. fpt ^. FarePolicyTId)
 
       where_ $ tt ^. TimetableTId ==. val (toKey ttId)
-      pure (tt, rbt, fpt)
+      pure (tt, (rbt, fromLocT, toLocT), fpt)
 
 updateTimetableWithBookingId :: Id Timetable -> Id DBooking.Booking -> SqlDB ()
 updateTimetableWithBookingId timetableId bookingId =
