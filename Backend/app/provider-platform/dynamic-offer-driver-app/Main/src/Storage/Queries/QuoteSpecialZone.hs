@@ -11,18 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.QuoteSpecialZone where
 
 import Data.Int (Int32)
-
 import Domain.Types.QuoteSpecialZone
 import Domain.Types.SearchRequestSpecialZone
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Storage.Tabular.FareParameters as Fare
-
 import Storage.Tabular.QuoteSpecialZone
 
 create :: QuoteSpecialZone -> SqlDB ()
@@ -31,14 +30,13 @@ create quote = Esq.runTransaction $
     Esq.create' fareParamsT
     Esq.create' quoteT
 
-
 countAllByRequestId :: Transactionable m => Id SearchRequestSpecialZone -> m Int32
 countAllByRequestId searchReqId = do
   fmap (fromMaybe 0) $
     Esq.findOne $ do
       dQuote <- from $ table @QuoteSpecialZoneT
       where_ $
-        dQuote ^.QuoteSpecialZoneSearchRequestId ==. val (toKey searchReqId)
+        dQuote ^. QuoteSpecialZoneSearchRequestId ==. val (toKey searchReqId)
       pure (countRows @Int32)
 
 baseQuoteSpecialZoneQuery ::
@@ -52,7 +50,6 @@ baseQuoteSpecialZoneQuery =
       `Esq.on` ( \(rb :& farePars) ->
                    rb ^. QuoteSpecialZoneFareParametersId ==. farePars ^. Fare.FareParametersTId
                )
-
 
 findById :: (Transactionable m) => Id QuoteSpecialZone -> m (Maybe QuoteSpecialZone)
 findById dQuoteId = buildDType $

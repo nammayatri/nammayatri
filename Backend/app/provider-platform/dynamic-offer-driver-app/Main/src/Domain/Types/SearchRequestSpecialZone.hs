@@ -39,4 +39,3 @@ data SearchRequestSpecialZone = SearchRequestSpecialZone
     updatedAt :: UTCTime
   }
   deriving (Generic, PrettyShow, Show)
-

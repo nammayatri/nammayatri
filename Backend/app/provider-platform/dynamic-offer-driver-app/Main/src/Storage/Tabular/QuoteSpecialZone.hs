@@ -28,11 +28,9 @@ import Kernel.Types.Common (Meters (..))
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id
 import qualified Storage.Tabular.FareParameters as Fare
-
 import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.SearchRequestSpecialZone as SReq
 import Storage.Tabular.Vehicle ()
-
 
 mkPersist
   defaultSqlSettings

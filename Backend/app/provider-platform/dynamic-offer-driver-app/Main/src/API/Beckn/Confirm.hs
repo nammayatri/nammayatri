@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module API.Beckn.Confirm (API, handler) where
 
@@ -18,8 +19,8 @@ import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnConfirm as ACL
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
@@ -85,7 +86,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking driver transporter
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking driver transporter
       | otherwise = throwM exc
-    
+
     errHandler' dConfirmRes transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking Nothing transporter
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking Nothing transporter

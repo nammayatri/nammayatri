@@ -11,12 +11,12 @@ packages:
     git: https://github.com/nammayatri/shared-kernel.git
     pantry-tree:
       size: 18496
-      sha256: 2fea244d009072b0be3838d792b5d165313f32f87439bf00ffeb0642eee3fd8f
-    commit: 9bc2617248966668339c396bd39718e07ab95d80
+      sha256: 309617b401bce860ae0b5a03994f189081f8d08be35ae73ed8c0556d2cc86fd6
+    commit: 51d6d5b04c080516180025c6a28436ce5dacf8ca
   original:
     subdir: lib/mobility-core
     git: https://github.com/nammayatri/shared-kernel.git
-    commit: 9bc2617248966668339c396bd39718e07ab95d80
+    commit: 51d6d5b04c080516180025c6a28436ce5dacf8ca
 - completed:
     name: clickhouse-haskell
     version: 0.1.2.4

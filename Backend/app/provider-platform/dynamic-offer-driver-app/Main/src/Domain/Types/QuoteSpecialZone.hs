@@ -24,7 +24,6 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 
-
 data QuoteSpecialZone = QuoteSpecialZone
   { id :: Id QuoteSpecialZone,
     searchRequestId :: Id SearchRequestSpecialZone,
