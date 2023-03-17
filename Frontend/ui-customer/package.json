@@ -52,7 +52,6 @@
     "@commitlint/cli": "^17.1.2",
     "@commitlint/config-conventional": "^17.1.0",
     "@digitalroute/cz-conventional-changelog-for-jira": "^7.4.1",
-    "jsa-tools": "git+ssh://git@ssh.bitbucket.juspay.net:picaf/jsa-tools.git#v1.1.57",
     "@semantic-release/changelog": "^6.0.1",
     "@semantic-release/commit-analyzer": "^9.0.2",
     "@semantic-release/git": "^10.0.1",
@@ -80,7 +79,7 @@
     "axios": "^0.27.1",
     "core-js": "^2.6.11",
     "moment": "^2.27.0",
-    "presto-ui": "git+ssh://git@ssh.bitbucket.juspay.net:picaf/presto-ui.git#release",
+    "presto-ui": "git+https://github.com/juspay/presto-ui.git#master",
     "purty": "^7.0.0",
     "ramda": "^0.26.1",
     "regenerator-runtime": "^0.13.5"
