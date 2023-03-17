@@ -753,7 +753,9 @@ eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnC
                       else exit $ CancelRide newState{props{cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode }}
       Nothing    -> continue state
 
-eval (PredictionClickedAction (LocationListItemController.OnClick item)) state = locationSelected item false state{data{source = "Current Location"}}
+eval (PredictionClickedAction (LocationListItemController.OnClick item)) state = do
+  _ <- pure $ firebaseLogEvent "ny_user_prediction_list_item"
+  locationSelected item false state{data{source = "Current Location"}, props{isSource = Just false}}
 
 eval (PredictionClickedAction (LocationListItemController.FavClick item)) state = do 
   if (length state.data.savedLocations >= 20) then do 
@@ -778,7 +780,7 @@ eval (FavouriteLocationModelAC (FavouriteLocationModelController.GenericHeaderAC
 
 eval (FavouriteLocationModelAC (FavouriteLocationModelController.FavouriteLocationAC (SavedLocationCardController.CardClicked item))) state = do
   if state.props.isSource == Just true then do
-    let newState = state {data{ source = item.savedLocation, sourceAddress = item.fullAddress},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = false }}
+    let newState = state {data{ source = item.savedLocation, sourceAddress = item.fullAddress},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = true }}
     continueWithCmd newState [do 
         _ <- (setText' (getNewIDWithTag "SourceEditText") item.savedLocation )
         pure $ ExitLocationSelected item false
@@ -817,8 +819,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Debounc
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SourceChanged input)) state = do
   _ <- pure $ (setText' (getNewIDWithTag "SourceEditText") input)
-  let
-    newState = state { props { sourceSelectedOnMap = state.props.locateOnMap } }
+  let 
+    newState = state {props{sourceSelectedOnMap = if (state.props.locateOnMap) then true else state.props.sourceSelectedOnMap}}
   if (input /= state.data.source) then do
     continueWithCmd newState { props { isRideServiceable = true } }
       [ do
@@ -896,7 +898,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)
 eval (SearchLocationModelActionController (SearchLocationModelController.SetCurrentLocation)) state = do
   _ <- pure $ currentPosition ""
   _ <- pure $ firebaseLogEvent "ny_user_currentlocation_click"
-  continue state
+  continue state{props{ sourceSelectedOnMap = if (state.props.isSource == Just true) then false else state.props.sourceSelectedOnMap}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
   _ <- pure $ locateOnMap true 0.0 0.0
@@ -1012,7 +1014,6 @@ eval (StartLocationTracking item) state = do
     _ -> continue state
 
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
-  _ <- pure $ firebaseLogEvent "ny_user_estimate"
   let
     estimatedQuotes = quotesRes.estimates
 
@@ -1065,7 +1066,8 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
     nightCharges = withinTimeRange nightShiftStart nightShiftEnd
 
     showRateCardIcon = if (null estimateFareBreakup) then false else true
-  if ((not (null estimatedVarient)) && (isLocalStageOn FindingEstimate)) then
+  if ((not (null estimatedVarient)) && (isLocalStageOn FindingEstimate)) then do
+    _ <- pure $ firebaseLogEvent "ny_user_estimate"
     exit
       $ SelectEstimate
           state
@@ -1387,7 +1389,7 @@ tagClickEvent savedAddressType arrItem state =
             else updateAndExit state{props{tagType = Just savedAddressType}}  $ CheckFavDistance state{props{tagType = Just savedAddressType}}
         _,Just item  -> do
           if state.props.isSource == Just true then do
-            let newState = state {data{ source = item.description, sourceAddress = item.fullAddress},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = false }}
+            let newState = state {data{ source = item.description, sourceAddress = item.fullAddress},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = true }}
             continueWithCmd newState [do 
               _ <- (setText' (getNewIDWithTag "SourceEditText") item.description )
               _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))

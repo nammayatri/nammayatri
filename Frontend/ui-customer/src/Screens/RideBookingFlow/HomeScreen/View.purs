@@ -1216,6 +1216,7 @@ loaderView push state =
                 ( case state.props.currentStage of
                     ConfirmingRide -> (getString CONFIRMING_THE_RIDE_FOR_YOU)
                     FindingEstimate -> (getString GETTING_ESTIMATES_FOR_YOU)
+                    TryAgain -> (getString LET_TRY_THAT_AGAIN)
                     _ -> (getString GETTING_ESTIMATES_FOR_YOU)
                 )
             , textSize FontSize.a_16
@@ -1642,7 +1643,7 @@ trackDriverLocationTemp actionRoute duration push state = do
 
 confirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 confirmRide action count duration push state = do
-  if (count /= 0) then do
+  if (count /= 0) && (isLocalStageOn ConfirmingRide) then do
     resp <- rideBooking (state.props.bookingId)
     _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
     case resp of
@@ -1650,7 +1651,10 @@ confirmRide action count duration push state = do
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
         case resp.status of
-          "TRIP_ASSIGNED" -> doAff do liftEffect $ push $ action response
+          "TRIP_ASSIGNED" -> do
+            doAff do liftEffect $ push $ action response
+            _ <- pure $ firebaseLogEvent "ny_user_ride_assigned"
+            pure unit
           _ -> do
             void $ delay $ Milliseconds duration
             confirmRide action (count - 1) duration push state

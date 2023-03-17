@@ -22,7 +22,7 @@ import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Control.Monad.Except.Trans (lift)
-import Data.Array (catMaybes, filter, length, null, snoc, (!!), any, sortBy, head)
+import Data.Array (catMaybes, filter, length, null, snoc, (!!), any, sortBy, head, uncons)
 import Data.Array as Arr
 import Data.Either (Either(..))
 import Data.Int as INT
@@ -73,7 +73,7 @@ baseAppFlow gPayload = do
   versionCode <- lift $ lift $ liftFlow $ getVersionCode
   versionName <- lift $ lift $ liftFlow $ getVersionName
   checkVersion versionCode versionName
-  setValueToLocalStore VERSION_NAME (take 5 versionName)
+  setValueToLocalStore VERSION_NAME $ concatString $ Arr.take 3 $ split (Pattern ".") versionName
   setValueToLocalStore BUNDLE_VERSION bundle
   setValueToLocalNativeStore BUNDLE_VERSION bundle
   _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
@@ -87,6 +87,11 @@ baseAppFlow gPayload = do
   _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_app_version" "version" (versionName))
   if getValueToLocalStore REGISTERATION_TOKEN /= "__failed" && getValueToLocalStore REGISTERATION_TOKEN /= "(null)" then currentRideFlow else enterMobileNumberScreenFlow -- Removed choose langauge screen
 
+
+concatString :: Array String -> String
+concatString arr = case uncons arr of
+  Just { head: x, tail: xs } -> x <> (if length xs == 0 then "" else ".") <> concatString xs
+  Nothing -> ""
 
 -- IOS latest version : 1.2.4
 updatedIOSversion = {
@@ -271,6 +276,7 @@ enterMobileNumberScreenFlow = do
             (resp) <- lift $ lift $  Remote.verifyToken (Remote.makeVerifyOTPReq state.data.otp) state.data.tokenId
             case resp of 
               Right resp -> do
+                    _ <- pure $ firebaseLogEvent "ny_user_verify_otp"
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false}})
                     let (VerifyTokenResp response) = resp
                         customerId = ((response.person)^. _id)
@@ -298,7 +304,6 @@ enterMobileNumberScreenFlow = do
     GoToOTP state -> do 
             setValueToLocalStore MOBILE_NUMBER (state.data.mobileNumber)
             (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber)
-            _ <- pure $ firebaseLogEvent "ny_user_otp_triggered"
             modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = triggerOtpResp.authId, attempts = triggerOtpResp.attempts}, props {enterOTP = true,resendEnable = true}})
             modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{data{settingSideBar{number = state.data.mobileNumber}}})
             enterMobileNumberScreenFlow
@@ -317,8 +322,6 @@ accountSetUpScreenFlow = do
     GO_HOME state -> do
       void $ lift $ lift $ toggleLoader false
       resp <- lift $ lift $ Remote.updateProfile (Remote.makeUpdateProfileRequest (Just state.data.name) Nothing)
-      _ <- pure $ firebaseLogEvent "ny_user_onboarded"
-      _ <- lift $ lift $ liftFlow $(firebaseLogEventWithParams "ny_user_setup_acc_name" "name" (state.data.name))
       case resp of 
         Right response -> do
           setValueToLocalStore USER_NAME state.data.name
@@ -525,7 +528,7 @@ homeScreenFlow = do
       _ <- updateLocalStage HomeScreen
       _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
-      _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled"
+      _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled_by_user"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       homeScreenFlow
     FCM_NOTIFICATION notification state-> do 
@@ -544,6 +547,7 @@ homeScreenFlow = do
             pure unit 
         case notification of 
             "TRIP_STARTED"        -> do -- OTP ENTERED
+                                      _ <- pure $ firebaseLogEvent "ny_user_ride_started"
                                       let shareAppCount = getValueToLocalStore SHARE_APP_COUNT
                                       if shareAppCount == "__failed" then do
                                         setValueToLocalStore SHARE_APP_COUNT "1"
@@ -557,6 +561,7 @@ homeScreenFlow = do
                                       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
                                       homeScreenFlow
             "TRIP_FINISHED"       -> do -- TRIP FINISHED
+                                      _ <- pure $ firebaseLogEvent "ny_user_ride_completed"
                                       _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing
                                       _ <- pure $ enableMyLocation true
                                       _ <- updateLocalStage HomeScreen
@@ -569,6 +574,7 @@ homeScreenFlow = do
                                       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = (convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A"), startedAtUTC = ((fromMaybe "" resp.rideStartTime)),endedAt = (convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A"), finalAmount = finalAmount, previousRideRatingState {distanceDifference = differenceOfDistance}},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
                                       homeScreenFlow
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES
+                                      _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled"
                                       _ <- pure $ removeAllPolylines ""
                                       _ <- pure $ enableMyLocation true
                                       _ <- updateLocalStage HomeScreen
