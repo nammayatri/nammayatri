@@ -164,11 +164,11 @@ import com.google.maps.android.PolyUtil;
 import com.google.maps.android.SphericalUtil;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerListener;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.ui.DefaultPlayerUiController;
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.ui.menu.YouTubePlayerMenu;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -245,6 +245,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private static final String CURRENT_LOCATION_LATLON = "Current Location";
     public static final int LOCATION_PERMISSION_REQ_CODE = 1;
     public static final int STORAGE_PERMISSION = 67;
+    public static float videoDuration = 0;
     private Activity activity;
     private JuspayServices juspayServices;
     private Context context;
@@ -270,8 +271,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public static boolean permissionCheck = false;
     public static String storeCallBackPopUp = null;
     private LottieAnimationView animationView;
-    private YouTubePlayerView youTubePlayerView;
-    private YouTubePlayer youtubePlayer = null;
+    public static YouTubePlayerView youTubePlayerView;
+    public static YouTubePlayer youtubePlayer;
     private int distanceRemaining = -1;
     private static final int DATEPICKER_SPINNER_COUNT = 3;
     private static String storeMapCallBack = null;
@@ -3061,36 +3062,63 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             @Override
             public void run() {
                 double source_lat, source_lng, destination_lat, destination_lng;
+
                 Log.i("json_coordinates", String.valueOf(json_coordinates));
                 ArrayList<Double> all_latitudes = new ArrayList<Double>();
                 ArrayList<Double> all_longitudes = new ArrayList<Double>();
-                LatLngBounds.Builder newBounds = LatLngBounds.builder();
                 for (int i = 0; i < json_coordinates.length(); i++) {
                     JSONObject each_json_coordinates = null;
                     try {
                         each_json_coordinates = (JSONObject) json_coordinates.get(i);
+                        ArrayList<Double> each_coordinates = new ArrayList<Double>();
                         double lon = each_json_coordinates.getDouble("lng");
                         double lat = each_json_coordinates.getDouble("lat");
                         all_latitudes.add(lat);
                         all_longitudes.add(lon);
-                        LatLng newLatLng = new LatLng(lat,lon);
-                        newBounds.include(newLatLng);
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
-
                 }
+                Log.i("all_latitudes", String.valueOf(all_latitudes));
+                Log.i("all_longitudes", String.valueOf(all_longitudes));
+                double minimum_latitude = Collections.min(all_latitudes);
+                double maximum_latitude = Collections.max(all_latitudes);
+                double minimum_longitude = Collections.min(all_longitudes);
+                double maximum_longitude = Collections.max(all_longitudes);
+                Log.i("minimum_latitude", String.valueOf(minimum_latitude));
+                Log.i("maximum_latitude", String.valueOf(maximum_latitude));
+
+                if (source_latitude <= destination_latitude) {
+                    source_lat = minimum_latitude - 1.3*(maximum_latitude - minimum_latitude);
+                    destination_lat = maximum_latitude + 0.1*(maximum_latitude - minimum_latitude);
+                } else {
+                    source_lat = maximum_latitude + 0.1*(maximum_latitude - minimum_latitude);
+                    destination_lat = minimum_latitude - 1.3*(maximum_latitude - minimum_latitude);
+                }
+                if (source_longitude <= destination_longitude) {
+                    source_lng = minimum_longitude - 0.09*(maximum_longitude - minimum_longitude);
+                    destination_lng = maximum_longitude + 0.09*(maximum_longitude - minimum_longitude);
+                } else {
+                    source_lng = maximum_longitude + 0.09*(maximum_longitude - minimum_longitude);
+                    destination_lng = minimum_longitude - 0.09*(maximum_longitude - minimum_longitude);
+                }
+
+                Log.i("coordinates points", String.valueOf(json_coordinates));
 
                 if(googleMap!=null) {
                     try {
-                        googleMap.setPadding(220, 220, 220, getScreenHeight()/2);
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(newBounds.build(), 0));
-                        googleMap.setPadding(0, 0, 0, 0);
+                        LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                        LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                        LatLngBounds bounds = LatLngBounds.builder().include(pickupLatLng).include(destinationLatLng).build();
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 200));
                     } catch (IllegalArgumentException e) {
-                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(newBounds.build(), 0));
+                        LatLng pickupLatLng = new LatLng(source_lat, source_lng);
+                        LatLng destinationLatLng = new LatLng(destination_lat, destination_lng);
+                        LatLngBounds bounds = LatLngBounds.builder().include(destinationLatLng).include(pickupLatLng).build();
+                        googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 200));
                     }
                     catch(Exception e){
-                        Log.e(LOG_TAG, "Exception in get current position", e);
+                        System.out.println("In mmove camera in catch exception" + e);
                     }
                 }
             }
@@ -3446,6 +3474,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void setYoutubePlayer(String rawJson, final String playerId, String videoStatus){
+        videoDuration = 0;
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -3462,6 +3491,11 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             boolean showSeekBar = json.getBoolean("showSeekBar");
                             String videoTitle = json.getString("videoTitle");
                             String videoId = json.getString("videoId");
+                            String videoType = "VIDEO";
+                            if (json.has("videoType"))
+                                {
+                                    videoType = json.getString("videoType");
+                                }
                             youTubePlayerView = new YouTubePlayerView(context);
                             LinearLayout layout = activity.findViewById(Integer.parseInt(playerId));
                             layout.addView(youTubePlayerView);
@@ -3470,27 +3504,49 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                 @Override
                                 public void onReady(YouTubePlayer youTubePlayer) {
                                     try {
-                                        youTubePlayer = youTubePlayer;
+                                        youtubePlayer = youTubePlayer;
                                         DefaultPlayerUiController playerUiController = new DefaultPlayerUiController(youTubePlayerView, youTubePlayer);
                                         playerUiController.showMenuButton(showMenuButton);
                                         playerUiController.showDuration(showDuration);
                                         playerUiController.showSeekBar(showSeekBar);
-                                        playerUiController.showFullscreenButton(false);
+                                        playerUiController.showFullscreenButton(true);
                                         if (setVideoTitle){
                                             playerUiController.setVideoTitle(videoTitle);
                                         }
                                         playerUiController.showYouTubeButton(false);
                                         youTubePlayerView.setCustomPlayerUi(playerUiController.getRootView());
 
-                                        youTubePlayer.seekTo(0);
+                                        youTubePlayer.seekTo(videoDuration);
                                         youTubePlayer.loadVideo(videoId, 0);
                                         youTubePlayer.play();
 
                                     } catch (Exception e) {
                                         Log.e("error inside setYoutubePlayer onReady", String.valueOf(e));
                                     }
+
+                                }
+                                @Override
+                                public void onCurrentSecond(@NonNull YouTubePlayer youTubePlayer, float second){
+                                    videoDuration = second;
                                 }
                             };
+
+                        String finalVideoType = videoType;
+                        youTubePlayerView.addFullScreenListener(new  YouTubePlayerFullScreenListener() {
+                                @Override
+                                public void onYouTubePlayerExitFullScreen() {
+                                }
+
+                                @Override
+                                public void onYouTubePlayerEnterFullScreen() {
+                                    Intent newIntent = new Intent(MainActivity.getInstance().getApplicationContext(), YoutubeVideoView.class );
+                                    newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    newIntent.putExtra("videoId", videoId);
+                                    newIntent.putExtra("videoDuration", videoDuration);
+                                    newIntent.putExtra("videoType", finalVideoType);
+                                    MainActivity.getInstance().getApplicationContext().startActivity(newIntent);
+                                }
+                            });
 
                             IFramePlayerOptions options = new IFramePlayerOptions.Builder().controls(0).rel(0).build();
                             youTubePlayerView.initialize(youTubePlayerListener, options);
