@@ -28,7 +28,6 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
-
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
@@ -197,7 +196,7 @@ otpRideCreate ::
   m DriverRideRes
 otpRideCreate driver req = do
   now <- getCurrentTime
-  bookingId <- runInReplica $ QBooking.findBookingBySpecialZoneOTP req.specialZoneOtpCode now >>= fromMaybeM (BookingDoesNotExist "") --need to replace the error
+  bookingId <- runInReplica $ QBooking.findBookingBySpecialZoneOTP req.specialZoneOtpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp req.specialZoneOtpCode)
   booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   transporter <-
     QM.findById booking.providerId
@@ -205,7 +204,7 @@ otpRideCreate driver req = do
 
   driverInfo <- QDriverInformation.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   when driverInfo.onRide $ throwError DriverOnRide
-  otpCode <- booking.specialZoneOtpCode & fromMaybeM (BookingNotFound booking.id.getId) -- replace with this error OtpNotFoundForSpecialZoneBooking
+  let otpCode = req.specialZoneOtpCode
   ride <- buildRide booking otpCode driver.id
   rideDetails <- buildRideDetails ride
   Esq.runTransaction $ do

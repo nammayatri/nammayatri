@@ -158,7 +158,7 @@ mkQuoteEntities start end it = do
                     night_shift_end = (.nightShiftEnd) =<< it.nightShiftRate,
                     waiting_charge_per_min = it.waitingCharges.waitingChargePerMin,
                     waiting_time_estimated_threshold = it.waitingCharges.waitingTimeEstimatedThreshold,
-                    drivers_location = it.driversLatLong 
+                    drivers_location = it.driversLatLong
                   },
             base_distance = Nothing,
             base_duration = Nothing

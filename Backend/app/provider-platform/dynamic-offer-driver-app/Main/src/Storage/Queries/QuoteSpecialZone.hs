@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.QuoteSpecialZone where
 
@@ -35,7 +36,7 @@ countAllByRequestId searchReqId = do
     Esq.findOne $ do
       dQuote <- from $ table @QuoteSpecialZoneT
       where_ $
-        dQuote ^.QuoteSpecialZoneSearchRequestId ==. val (toKey searchReqId)
+        dQuote ^. QuoteSpecialZoneSearchRequestId ==. val (toKey searchReqId)
       pure (countRows @Int32)
 
 baseQuoteSpecialZoneQuery ::

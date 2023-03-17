@@ -97,10 +97,11 @@ ui = do
                         :<|> _
                         :<|> _
                       )
-               :<|> (validate
+               :<|> ( validate
                         :<|> verifyAuth
                         :<|> resendOtp
-                        :<|> remove)
+                        :<|> remove
+                      )
              ) = driverClient
 
     (_ :<|> updateLocation) = locationClient

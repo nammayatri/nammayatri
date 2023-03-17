@@ -41,13 +41,12 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Geometry as QGeometry
+import qualified Storage.Queries.Location.SpecialLocation as QSpecialLocation
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
-import qualified Storage.Queries.Location.SpecialLocation as QSpecialLocation
-import qualified Domain.Types.Location.SpecialLocation as DSpecialLocation
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
@@ -127,7 +126,7 @@ data DistanceAndDuration = DistanceAndDuration
 
 isSpecialZone :: [DSpecialLocation.SpecialLocation] -> Bool
 isSpecialZone [] = False
-isSpecialZone (_:_) = True  
+isSpecialZone (_ : _) = True
 
 getDistanceAndDuration :: Id DM.Merchant -> DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> Maybe Maps.RouteInfo -> Flow DistanceAndDuration
 getDistanceAndDuration merchantId fromLocation toLocation routeInfo = case routeInfo of
@@ -189,8 +188,7 @@ handler merchantId sReq = do
         Esq.runTransaction $
           for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         pure (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
-      else
-      do
+      else do
         estimates <-
           if null farePolicies
             then do
