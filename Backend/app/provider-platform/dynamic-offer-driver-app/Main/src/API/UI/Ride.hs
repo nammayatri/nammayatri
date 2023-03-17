@@ -49,7 +49,8 @@ type API =
     :> "start"
     :> ReqBody '[JSON] DRide.OTPRideReq
     :> Post '[JSON] DRide.DriverRideRes
-    :<|> ( "ride"
+    :<|> "driver"
+      :> ( "ride"
              :> ( "list"
                     :> TokenAuth
                     :> QueryParam "limit" Integer
