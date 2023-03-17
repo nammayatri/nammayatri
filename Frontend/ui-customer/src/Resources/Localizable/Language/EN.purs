@@ -363,5 +363,6 @@ getEN script = case script of
   REFERRAL_CODE_APPLIED -> "Referral Applied!"
   HEY -> "Hey"
   INVALID_CODE_PLEASE_RE_ENTER -> "Invalid Code. Please Re-enter"
+  LET_TRY_THAT_AGAIN -> "Let's try that again..."
 
 

@@ -362,3 +362,4 @@ getKN script = case script of
   REFERRAL_CODE_APPLIED -> "ರೆಫರಲ್ ಅನ್ವಯಿಸಲಾಗಿದೆ!"
   HEY -> "ಹಾಯ್"
   INVALID_CODE_PLEASE_RE_ENTER -> "ಅಮಾನ್ಯ ಕೋಡ್. ದಯವಿಟ್ಟು ಮರು-ನಮೂದಿಸಿ"
+  LET_TRY_THAT_AGAIN -> "ಅದನ್ನು ಮತ್ತೊಮ್ಮೆ ಪ್ರಯತ್ನಿಸೋಣ..."

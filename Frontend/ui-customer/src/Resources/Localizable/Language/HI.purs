@@ -362,3 +362,4 @@ getHI script = case script of
   REFERRAL_CODE_APPLIED -> "रेफ़रल लागू!"
   HEY -> "नमस्ते"
   INVALID_CODE_PLEASE_RE_ENTER -> "अवैध कोड। कृपया पुनः दर्ज करें"
+  LET_TRY_THAT_AGAIN ->  "आइए फिर से कोशिश करें..."
