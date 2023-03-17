@@ -112,7 +112,7 @@ type API =
                         :> Post '[JSON] DDriver.ResendAuth
                       :<|> "remove"
                         :> TokenAuth
-                        :> Post '[JSON] APISuccess
+                        :> Delete '[JSON] APISuccess
                   )
          )
 

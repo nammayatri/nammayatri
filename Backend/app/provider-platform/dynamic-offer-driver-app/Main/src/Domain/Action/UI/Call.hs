@@ -56,7 +56,7 @@ getCustomerMobileNumber callSid callFrom_ callTo_ callStatus = do
   let callTo = dropFirstZero callTo_
   mobileNumberHash <- getDbHash callFrom
   merchant <- Merchant.findByExoPhone callTo >>= fromMaybeM (MerchantWithExoPhoneNotFound callTo)
-  driver <- runInReplica $ QPerson.findByMobileNumberAndMerchantForAltNo "+91" mobileNumberHash merchant.id >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
+  driver <- runInReplica $ QPerson.findByMobileNumberAndMerchant "+91" mobileNumberHash merchant.id >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
   activeRide <- runInReplica $ QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
   activeBooking <- runInReplica $ QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   riderId <-

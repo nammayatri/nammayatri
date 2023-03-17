@@ -262,7 +262,9 @@ findByMobileNumberAndMerchant countryCode mobileNumberHash merchantId = do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonMobileCountryCode ==. val (Just countryCode)
-        &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
+        &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
+                ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberHash)
+            )
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
@@ -503,15 +505,3 @@ updateAlternateMobileNumberAndCode person = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey person.id)
-
-findByMobileNumberAndMerchantForAltNo :: (Transactionable m) => Text -> DbHash -> Id Merchant -> m (Maybe Person)
-findByMobileNumberAndMerchantForAltNo countryCode mobileNumberHash merchantId = do
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonMobileCountryCode ==. val (Just countryCode)
-        &&. ( person ^. PersonMobileNumberHash ==. val (Just mobileNumberHash)
-                ||. person ^. PersonAlternateMobileNumberHash ==. val (Just mobileNumberHash)
-            )
-        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
-    return person

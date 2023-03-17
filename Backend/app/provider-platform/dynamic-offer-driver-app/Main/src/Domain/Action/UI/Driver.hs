@@ -790,16 +790,21 @@ makeAlternateNumberOtpKey id = "DriverAlternateNumberOtp:PersonId-" <> id.getId
 makeAlternateNumberAttemptsKey :: Id SP.Person -> Text
 makeAlternateNumberAttemptsKey id = "DriverAlternateNumberAttempts:PersonId-" <> id.getId
 
-cacheAlternateNumberInfo :: (CacheFlow m r) => Id SP.Person -> Text -> Text -> Int -> m ()
-cacheAlternateNumberInfo personId phoneNumber otp attemptsLeft = do
+makeAlternateNumberVerifiedKey :: Id SP.Person -> Text
+makeAlternateNumberVerifiedKey id = "DriverAlternateNumberVerified:PersonId-" <> id.getId
+
+cacheAlternateNumberInfo :: (CacheFlow m r) => Id SP.Person -> Text -> Text -> Int -> Bool -> m ()
+cacheAlternateNumberInfo personId phoneNumber otp attemptsLeft verified = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let alternatePhoneNumberKey = makeAlternatePhoneNumberKey personId
-  let alternateNumberOtpKey = makeAlternateNumberOtpKey personId
-  let alternateNumberAttemptsKey = makeAlternateNumberAttemptsKey personId
+      alternateNumberOtpKey = makeAlternateNumberOtpKey personId
+      alternateNumberAttemptsKey = makeAlternateNumberAttemptsKey personId
+      alternateNumberVerifiedKey = makeAlternateNumberVerifiedKey personId
 
   Redis.setExp alternatePhoneNumberKey phoneNumber expTime
   Redis.setExp alternateNumberOtpKey otp expTime
   Redis.setExp alternateNumberAttemptsKey attemptsLeft expTime
+  Redis.setExp alternateNumberVerifiedKey verified expTime
 
 invalidateAlternateNoCache :: (CacheFlow m r) => Id SP.Person -> m ()
 invalidateAlternateNoCache personId = do
@@ -835,7 +840,7 @@ validate personId phoneNumber = do
   altNoAttempt <- runInReplica $ QRegister.getAlternateNumberAttempts personId
   runRequestValidation validationCheck phoneNumber
   mobileNumberHash <- getDbHash phoneNumber.alternateNumber
-  duplicateCheck (QPerson.findByMobileNumberAndMerchantForAltNo phoneNumber.mobileCountryCode mobileNumberHash person.merchantId) "Person with this mobile number already exists"
+  duplicateCheck (QPerson.findByMobileNumberAndMerchant phoneNumber.mobileCountryCode mobileNumberHash person.merchantId) "Person with this mobile number already exists"
   smsCfg <- asks (.smsCfg)
   let useFakeOtpM = useFakeSms smsCfg
   otpCode <- maybe generateOTPCode return (show <$> useFakeOtpM)
@@ -852,7 +857,8 @@ validate personId phoneNumber = do
             }
       Sms.sendSMS person.merchantId (Sms.SendSMSReq message altPhoneNumber sender)
         >>= Sms.checkSmsResult
-  cacheAlternateNumberInfo personId phoneNumber.alternateNumber otpCode altNoAttempt
+  let verified = False
+  cacheAlternateNumberInfo personId phoneNumber.alternateNumber otpCode altNoAttempt verified
   return $ DriverAlternateNumberRes {attempts = altNoAttempt}
   where
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
@@ -883,12 +889,14 @@ verifyAuth personId req = do
     runRequestValidation validateAuthVerifyReq req
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     checkSlidingWindowLimit (verifyHitsCountKey personId)
+    verified <- Redis.get (makeAlternateNumberVerifiedKey personId) >>= fromMaybeM (InvalidRequest "Verified not found")
+    when verified $ throwError $ AuthBlocked "Already verified."
+    altMobNo <- Redis.get (makeAlternatePhoneNumberKey personId) >>= fromMaybeM (InvalidRequest "Alternate Number not found")
     val <- Redis.get (makeAlternateNumberOtpKey personId)
     authValueHash <- case val of
       Nothing -> throwError $ InternalError "Auth not found"
       Just a -> return a
     unless (authValueHash == req.otp) $ throwError InvalidAuthData
-    altMobNo <- Redis.get (makeAlternatePhoneNumberKey personId) >>= fromMaybeM (InternalError "Alternate Number not found")
     encNewNum <- encrypt altMobNo
     let driver =
           person
@@ -897,6 +905,8 @@ verifyAuth personId req = do
             }
     Esq.runTransaction $ do
       QPerson.updateAlternateMobileNumberAndCode driver
+    expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+    Redis.setExp (makeAlternateNumberVerifiedKey personId) True expTime
     invalidateAlternateNoCache personId
   return Success
 
