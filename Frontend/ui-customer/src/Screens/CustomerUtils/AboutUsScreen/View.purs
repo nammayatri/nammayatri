@@ -179,7 +179,8 @@ termsAndConditionsView state =
         , fontStyle $ FontStyle.regular LanguageStyle
         , color Color.blue900
         , onClick (\action -> do
-            _ <- JB.openUrlInApp "https://drive.google.com/file/d/1xKyhxGyK_xLusd8nX7s4AuXnTW9YrkO_/view?usp=sharing"
+            _ <- pure action
+            _ <- JB.openUrlInApp "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
             pure unit
           ) (const TermsAndConditions)
         , margin (Margin 0 20 0 0)
@@ -198,7 +199,6 @@ privacyPolicyView =
     [ height WRAP_CONTENT
     , orientation VERTICAL
     , width WRAP_CONTENT
-    , visibility GONE
     ][  textView
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -207,6 +207,11 @@ privacyPolicyView =
         , fontStyle $ FontStyle.regular LanguageStyle
         , color Color.blue900
         , margin (Margin 0 20 0 0)
+        , onClick (\action -> do
+            _ <- pure action
+            _ <- JB.openUrlInApp "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
+            pure unit
+          ) (const PrivacyPolicy)
         ]
       , linearLayout
         [ width MATCH_PARENT

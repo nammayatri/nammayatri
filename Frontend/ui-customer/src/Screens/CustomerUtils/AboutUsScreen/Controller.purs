@@ -38,11 +38,13 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen ABOUT_US_SCREEN)
       GenericHeaderController.SuffixImgOnClick -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "generic_header_action" "forward_icon"
     TermsAndConditions -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "t_&_c"
+    PrivacyPolicy -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "in_screen" "privacy_policy"
 
 data Action = GenericHeaderActionController GenericHeaderController.Action
             | BackPressed
             | TermsAndConditions
             | AfterRender
+            | PrivacyPolicy
 
 data ScreenOutput = GoToHomeScreen
 eval :: Action -> AboutUsScreenState -> Eval Action ScreenOutput AboutUsScreenState
