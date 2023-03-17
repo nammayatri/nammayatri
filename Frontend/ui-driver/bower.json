@@ -24,7 +24,7 @@
     "purescript-strings": "^4.0.1",
     "purescript-enums": "^4.0.1",
     "purescript-foreign-generic": "^10.0.0",
-    "purescript-beckn-common": "git@ssh.bitbucket.juspay.net:bec/atlas-ui-common.git#main",
+    "purescript-beckn-common": "../ui-common",
     "purescript-tracker": "https://github.com/juspay/purescript-tracker.git#master"
   },
   "devDependencies": {
@@ -32,7 +32,7 @@
   },
   "resolutions": {
     "purescript-typelevel-prelude": ">=4.0.0 < 6.0.0",
-    "purescript-presto-dom": "nammaYatri",
+    "purescript-presto-dom": "main",
     "purescript-foreign-object": "^2.0.3",
     "purescript-record": "^1.0.0",
     "purescript-tracker": "master",
