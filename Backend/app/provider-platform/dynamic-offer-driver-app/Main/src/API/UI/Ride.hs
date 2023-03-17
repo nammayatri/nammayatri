@@ -119,7 +119,7 @@ startRide requestorId rideId StartRideReq {rideOtp, point} = withFlowHandlerAPI 
 otpRideCreateAndStart :: Id SP.Person -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
 otpRideCreateAndStart requestorId req@DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
-  ride <- DRide.otpRideCreateAndStart requestor req
+  ride <- DRide.otpRideCreate requestor req
   let rideOtp = req.specialZoneOtpCode
       driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
   shandle <- RideStart.buildStartRideHandle requestor.merchantId

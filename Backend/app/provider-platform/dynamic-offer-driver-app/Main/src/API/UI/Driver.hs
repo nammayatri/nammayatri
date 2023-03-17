@@ -35,7 +35,7 @@ module API.UI.Driver
   )
 where
 
-import qualified API.UI.Ride as Ride
+-- import qualified API.UI.Ride as Ride
 import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Types.Person as SP
@@ -115,11 +115,6 @@ type API =
                         :> TokenAuth
                         :> Delete '[JSON] APISuccess
                   )
-             :<|> "otpRide"
-               :> TokenAuth
-               :> "start"
-               :> ReqBody '[JSON] Ride.OTPRideReq
-               :> Post '[JSON] Ride.DriverRideRes
          )
 
 handler :: FlowServer API
@@ -142,7 +137,6 @@ handler =
                       :<|> resendOtp
                       :<|> remove
                   )
-             :<|> Ride.otpRideCreateAndStart
          )
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes

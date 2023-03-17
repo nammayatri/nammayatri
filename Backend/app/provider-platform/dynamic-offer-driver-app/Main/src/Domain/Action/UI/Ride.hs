@@ -19,7 +19,7 @@ module Domain.Action.UI.Ride
     OTPRideReq (..),
     listDriverRides,
     arrivedAtPickup,
-    otpRideCreateAndStart,
+    otpRideCreate,
   )
 where
 
@@ -178,7 +178,7 @@ arrivedAtPickup rideId req = do
   where
     isValidRideStatus status = status == DRide.NEW
 
-otpRideCreateAndStart ::
+otpRideCreate ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -195,7 +195,7 @@ otpRideCreateAndStart ::
   DP.Person ->
   OTPRideReq ->
   m DriverRideRes
-otpRideCreateAndStart driver req = do
+otpRideCreate driver req = do
   now <- getCurrentTime
   bookingId <- runInReplica $ QBooking.findBookingBySpecialZoneOTP req.specialZoneOtpCode now >>= fromMaybeM (BookingDoesNotExist "") --need to replace the error
   booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
