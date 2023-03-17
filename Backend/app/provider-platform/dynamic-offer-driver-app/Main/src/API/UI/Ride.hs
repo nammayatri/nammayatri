@@ -43,36 +43,44 @@ import SharedLogic.Person (findPerson)
 import Tools.Auth
 
 type API =
-  "driver" :> "ride"
-    :> ( "list"
-           :> TokenAuth
-           :> QueryParam "limit" Integer
-           :> QueryParam "offset" Integer
-           :> QueryParam "onlyActive" Bool
-           :> QueryParam "status" Ride.RideStatus
-           :> Get '[JSON] DRide.DriverRideListRes
-           :<|> TokenAuth
-           :> Capture "rideId" (Id Ride.Ride)
-           :> "arrived"
-           :> "pickup"
-           :> ReqBody '[JSON] LatLong
-           :> Post '[JSON] APISuccess
-           :<|> TokenAuth
-           :> Capture "rideId" (Id Ride.Ride)
-           :> "start"
-           :> ReqBody '[JSON] StartRideReq
-           :> Post '[JSON] APISuccess
-           :<|> TokenAuth
-           :> Capture "rideId" (Id Ride.Ride)
-           :> "end"
-           :> ReqBody '[JSON] EndRideReq
-           :> Post '[JSON] APISuccess
-           :<|> TokenAuth
-           :> Capture "rideId" (Id Ride.Ride)
-           :> "cancel"
-           :> ReqBody '[JSON] CancelRideReq
-           :> Post '[JSON] APISuccess
-       )
+  "driver" 
+    :> ("ride"
+        :> ( "list"
+              :> TokenAuth
+              :> QueryParam "limit" Integer
+              :> QueryParam "offset" Integer
+              :> QueryParam "onlyActive" Bool
+              :> QueryParam "status" Ride.RideStatus
+              :> Get '[JSON] DRide.DriverRideListRes
+              :<|> TokenAuth
+              :> Capture "rideId" (Id Ride.Ride)
+              :> "arrived"
+              :> "pickup"
+              :> ReqBody '[JSON] LatLong
+              :> Post '[JSON] APISuccess
+              :<|> TokenAuth
+              :> Capture "rideId" (Id Ride.Ride)
+              :> "start"
+              :> ReqBody '[JSON] StartRideReq
+              :> Post '[JSON] APISuccess
+              :<|> TokenAuth
+              :> Capture "rideId" (Id Ride.Ride)
+              :> "end"
+              :> ReqBody '[JSON] EndRideReq
+              :> Post '[JSON] APISuccess
+              :<|> TokenAuth
+              :> Capture "rideId" (Id Ride.Ride)
+              :> "cancel"
+              :> ReqBody '[JSON] CancelRideReq
+              :> Post '[JSON] APISuccess
+          )
+    )
+    :<|> "otpRide"
+      :> TokenAuth
+      :> "start"
+      :> ReqBody '[JSON] DRide.OTPRideReq
+      :> Post '[JSON] DRide.DriverRideRes
+
 
 data StartRideReq = StartRideReq
   { rideOtp :: Text,
@@ -93,11 +101,12 @@ data CancelRideReq = CancelRideReq
 
 handler :: FlowServer API
 handler =
-  listDriverRides
+  (listDriverRides
     :<|> arrivedAtPickup
     :<|> startRide
     :<|> endRide
-    :<|> cancelRide
+    :<|> cancelRide)
+  :<|> otpRideCreateAndStart
 
 startRide :: Id SP.Person -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
 startRide requestorId rideId StartRideReq {rideOtp, point} = withFlowHandlerAPI $ do
@@ -109,7 +118,7 @@ startRide requestorId rideId StartRideReq {rideOtp, point} = withFlowHandlerAPI 
 otpRideCreateAndStart :: Id SP.Person -> DRide.OTPRideReq -> FlowHandler DRide.DriverRideRes
 otpRideCreateAndStart requestorId req@DRide.OTPRideReq {..} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
-  ride <- DRide.otpRideCreateAndStart requestor req
+  ride <- DRide.otpRideCreate requestor req
   let rideOtp = req.specialZoneOtpCode
       driverReq = RideStart.DriverStartRideReq {rideOtp, point, requestor}
   shandle <- RideStart.buildStartRideHandle requestor.merchantId

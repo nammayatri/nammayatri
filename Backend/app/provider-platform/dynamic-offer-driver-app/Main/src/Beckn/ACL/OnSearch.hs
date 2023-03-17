@@ -21,7 +21,6 @@ import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 
-
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =
   OS.Category
