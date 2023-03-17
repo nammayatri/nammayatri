@@ -57,7 +57,7 @@ import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, fire
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -74,6 +74,7 @@ import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
+import Data.Int (toNumber, round)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -1030,13 +1031,6 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
       else
         []
 
-    baseFare = case (head (filter (\a -> a ^. _title == "BASE_DISTANCE_FARE") estimateFareBreakup)) of
-      Just a -> a ^. _price
-      Nothing -> 0
-
-    extraFare = case (head (filter (\a -> a ^. _title == "EXTRA_PER_KM_FARE") estimateFareBreakup)) of
-      Just a -> a ^. _price
-      Nothing -> 0
 
     pickUpCharges = case (head (filter (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup)) of
       Just a -> a ^. _price
@@ -1064,6 +1058,14 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
       Nothing -> 0.0
 
     nightCharges = withinTimeRange nightShiftStart nightShiftEnd
+
+    baseFare = case (head (filter (\a -> a ^. _title == "BASE_DISTANCE_FARE") estimateFareBreakup)) of
+      Just a -> round $ (toNumber $ a ^. _price) * (if nightCharges then nightShiftMultiplier else 1.0)
+      Nothing -> 0
+
+    extraFare = case (head (filter (\a -> a ^. _title == "EXTRA_PER_KM_FARE") estimateFareBreakup)) of
+      Just a -> round $ (toNumber $ a ^. _price) * (if nightCharges then nightShiftMultiplier else 1.0)
+      Nothing -> 0
 
     showRateCardIcon = if (null estimateFareBreakup) then false else true
   if ((not (null estimatedVarient)) && (isLocalStageOn FindingEstimate)) then do

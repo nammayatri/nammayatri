@@ -92,7 +92,7 @@ view push config =
            , height WRAP_CONTENT
            , textSize FontSize.a_16
            , color Color.black800
-           , text (getString MIN_FARE_UPTO)
+           , text $ (getString MIN_FARE_UPTO) <> if config.nightCharges then " 🌙" else ""
            ]
          , textView
            [ width WRAP_CONTENT
@@ -115,7 +115,7 @@ view push config =
            , height WRAP_CONTENT
            , textSize FontSize.a_16
            , color Color.black800
-           , text (getString RATE_ABOVE_MIN_FARE)
+           , text $ (getString RATE_ABOVE_MIN_FARE) <> if config.nightCharges then " 🌙" else ""
            ]
          , textView
            [ width WRAP_CONTENT
@@ -182,17 +182,19 @@ view push config =
       , textView
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , color Color.black700
-        , margin (MarginTop 8)
-        , text ((getString TIMES_OF) <> config.nightShiftMultiplier <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT))
-        , textSize FontSize.a_14
+            , color Color.black700
+            , text if config.nightCharges then
+                      (getString NIGHT_TIMES_OF) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
+                   else
+                      (getString DAY_TIME_CHARGES) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
+            , textSize FontSize.a_14
         , padding (Padding 20 0 20 0)
         ]
       , textView
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , color Color.black700
-        , text (getString TOTAL_FARE_MAY_CHANGE_IF_RIDE_DISTANCE_CHANGE)
+        , text (getString TOTAL_FARE_MAY_CHANGE_DUE_TO_CHANGE_IN_ROUTE)
         , margin (Margin 0 8 0 8)
         , textSize FontSize.a_14
         , padding (Padding 20 0 20 0)
