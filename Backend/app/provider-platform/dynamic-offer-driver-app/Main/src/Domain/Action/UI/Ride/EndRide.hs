@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.UI.Ride.EndRide
   ( ServiceHandle (..),
@@ -22,7 +23,6 @@ module Domain.Action.UI.Ride.EndRide
   )
 where
 
-import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDefCfg
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
@@ -82,7 +82,6 @@ data ServiceHandle m = ServiceHandle
     findDriverLoc :: Id DP.Person -> m (Maybe DrLoc.DriverLocation),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
     finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
-    getDefaultConfig :: m EndRideDefCfg.EndRideDefaultConfig,
     findConfig :: m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
     getDistanceBetweenPoints :: LatLong -> LatLong -> m Meters
@@ -103,7 +102,6 @@ buildEndRideHandle merchantId = do
         findDriverLoc = DrLoc.findById,
         isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
         finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler,
-        getDefaultConfig = asks (.defaultEndRideCfg),
         findConfig = QTConf.findByMerchantId merchantId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId
@@ -226,9 +224,8 @@ recalculateFareForDistance handle@ServiceHandle {..} booking ride recalcDistance
 
 getWaitingFare :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> Maybe UTCTime -> Maybe UTCTime -> Maybe Money -> m Money
 getWaitingFare ServiceHandle {..} mbTripStartTime mbDriverArrivalTime waitingChargePerMin = do
-  mbThresholdConfig <- findConfig
-  defaultThreshold <- getDefaultConfig <&> (.waitingTimeEstimatedThreshold)
-  let waitingTimeThreshold = fromMaybe defaultThreshold . join $ mbThresholdConfig <&> (.waitingTimeEstimatedThreshold)
+  thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
+  let waitingTimeThreshold = thresholdConfig.waitingTimeEstimatedThreshold
       driverWaitingTime = fromMaybe 0 (diffUTCTime <$> mbTripStartTime <*> mbDriverArrivalTime)
       fareableWaitingTime = max 0 (driverWaitingTime / 60 - fromIntegral waitingTimeThreshold)
   pure $ roundToIntegral fareableWaitingTime * fromMaybe 0 waitingChargePerMin
@@ -236,15 +233,13 @@ getWaitingFare ServiceHandle {..} mbTripStartTime mbDriverArrivalTime waitingCha
 isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> LatLong -> m Bool
 isPickupDropOutsideOfThreshold ServiceHandle {..} booking ride tripEndPoint = do
   let mbTripStartLoc = ride.tripStartPos
-  mbThresholdConfig <- findConfig
+  thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
   -- for old trips with mbTripStartLoc = Nothing we always recalculate fare
   case mbTripStartLoc of
     Nothing -> pure True
     Just tripStartLoc -> do
-      defaultPickupLocThreshold <- getDefaultConfig <&> (.pickupLocThreshold)
-      defaultDropLocThreshold <- getDefaultConfig <&> (.dropLocThreshold)
-      let pickupLocThreshold = metersToHighPrecMeters . fromMaybe defaultPickupLocThreshold . join $ mbThresholdConfig <&> (.pickupLocThreshold)
-      let dropLocThreshold = metersToHighPrecMeters . fromMaybe defaultDropLocThreshold . join $ mbThresholdConfig <&> (.dropLocThreshold)
+      let pickupLocThreshold = metersToHighPrecMeters thresholdConfig.pickupLocThreshold
+      let dropLocThreshold = metersToHighPrecMeters thresholdConfig.dropLocThreshold
       let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
       let dropDifference = abs $ distanceBetweenInMeters (getCoordinates booking.toLocation) tripEndPoint
       let pickupDropOutsideOfThreshold = (pickupDifference >= pickupLocThreshold) || (dropDifference >= dropLocThreshold)
@@ -268,12 +263,11 @@ getDistanceDiff booking distance = do
 
 isTimeOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> UTCTime -> m Bool
 isTimeOutsideOfThreshold ServiceHandle {..} booking ride now = do
-  mbThresholdConfig <- findConfig
+  thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
   case ride.tripStartTime of
     Nothing -> pure False
     Just tripStartTime -> do
-      defaultRideTimeEstimatedThreshold <- getDefaultConfig <&> (.rideTimeEstimatedThreshold)
-      let rideTimeEstimatedThreshold = fromMaybe defaultRideTimeEstimatedThreshold . join $ mbThresholdConfig <&> (.rideTimeEstimatedThreshold)
+      let rideTimeEstimatedThreshold = thresholdConfig.rideTimeEstimatedThreshold
       let estimatedRideDuration = booking.estimatedDuration
       let actualRideDuration = nominalDiffTimeToSeconds $ tripStartTime `diffUTCTime` now
       let rideTimeDifference = actualRideDuration - estimatedRideDuration

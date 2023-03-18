@@ -31,17 +31,19 @@ import Storage.Tabular.Estimate.Instances
 import Storage.Tabular.Quote as Quote
 import Storage.Tabular.Quote.Instances as Quote
 import Storage.Tabular.RentalSlab
+import Storage.Tabular.SpecialZoneQuote
 import Storage.Tabular.TripTerms
 
 buildFullQuote ::
   Transactionable m =>
-  (QuoteT, Maybe TripTermsT, Maybe RentalSlabT, Maybe DriverOfferT) ->
+  (QuoteT, Maybe TripTermsT, Maybe RentalSlabT, Maybe DriverOfferT, Maybe SpecialZoneQuoteT) ->
   DTypeBuilder m (Maybe (SolidType FullQuoteT))
-buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer) = runMaybeT $ do
+buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote) = runMaybeT $ do
   quoteDetailsT <- case fareProductType of
     ONE_WAY -> pure Quote.OneWayDetailsT
     RENTAL -> MaybeT $ pure (Quote.RentalDetailsT <$> mbRentalSlab)
     DRIVER_OFFER -> MaybeT $ pure (Quote.DriverOfferDetailsT <$> mbDriverOffer)
+    ONE_WAY_SPECIAL_ZONE -> MaybeT $ pure (Quote.OneWaySpecialZoneDetailsT <$> mbspecialZoneQuote)
   return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
 buildFullBooking ::
@@ -53,6 +55,7 @@ buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRe
     ONE_WAY -> MaybeT $ pure (Booking.OneWayDetailsT <$> mbToLocT)
     RENTAL -> MaybeT $ pure (Booking.RentalDetailsT <$> mbRentalSlab)
     DRIVER_OFFER -> MaybeT $ pure (Booking.DriverOfferDetailsT <$> mbToLocT)
+    ONE_WAY_SPECIAL_ZONE -> MaybeT $ pure (Booking.OneWaySpecialZoneDetailsT <$> mbToLocT)
   return $ extractSolidType @Booking (bookingT, fromLocT, mbTripTermsT, bookingDetails)
 
 buildFullEstimate ::

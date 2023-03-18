@@ -98,6 +98,7 @@ eval :: Action -> EnterMobileNumberScreenState -> Eval Action ScreenOutput Enter
 
 eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = continueWithCmd state [
         do
+            _ <- pure $ firebaseLogEvent "ny_user_otp_triggered"
             _ <- pure $ hideKeyboardOnNavigation true
             let value = (if os == "IOS" then "" else " ")
             _ <- (setText' (getNewIDWithTag "EnterOTPNumberEditText") value )
@@ -106,7 +107,6 @@ eval (MobileNumberButtonAction PrimaryButtonController.OnClick) state = continue
 
 eval (VerifyOTPButtonAction PrimaryButtonController.OnClick) state = do 
     _ <- pure $ hideKeyboardOnNavigation true
-    _ <- pure $ firebaseLogEvent "ny_user_verify_otp"
     updateAndExit state $ GoToAccountSetUp state
 
 eval (MobileNumberEditTextAction (PrimaryEditTextController.TextChanged id value)) state = do 

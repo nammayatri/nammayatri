@@ -112,7 +112,7 @@ type API =
                         :> Post '[JSON] DDriver.ResendAuth
                       :<|> "remove"
                         :> TokenAuth
-                        :> Post '[JSON] APISuccess
+                        :> Delete '[JSON] APISuccess
                   )
          )
 
@@ -131,10 +131,11 @@ handler =
                       :<|> updateDriver
                       :<|> getStats
                   )
-             :<|> validate
-             :<|> verifyAuth
-             :<|> resendOtp
-             :<|> remove
+             :<|> ( validate
+                      :<|> verifyAuth
+                      :<|> resendOtp
+                      :<|> remove
+                  )
          )
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes

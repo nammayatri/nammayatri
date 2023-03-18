@@ -120,6 +120,9 @@ buildEstimateOrQuoteInfo item = do
       pure $ Right DOnSearch.QuoteInfo {..}
     OnSearch.DRIVER_OFFER_ESTIMATE -> pure $ Left DOnSearch.EstimateInfo {..}
     OnSearch.DRIVER_OFFER -> throwError $ InvalidRequest "DRIVER_OFFER supported in on_select, use DRIVER_OFFER_ESTIMATE"
+    OnSearch.ONE_WAY_SPECIAL_ZONE -> do
+      quoteDetails <- DOnSearch.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails item
+      pure $ Right DOnSearch.QuoteInfo {..}
   where
     castVehicleVariant = \case
       OnSearch.SEDAN -> VehVar.SEDAN
@@ -138,6 +141,16 @@ buildOneWayQuoteDetails item = do
   pure
     DOnSearch.OneWayQuoteDetails
       { distanceToNearestDriver = realToFrac distanceToNearestDriver
+      }
+
+buildOneWaySpecialZoneQuoteDetails ::
+  (MonadThrow m, Log m) =>
+  OnSearch.Item ->
+  m DOnSearch.OneWaySpecialZoneQuoteDetails
+buildOneWaySpecialZoneQuoteDetails item = do
+  pure
+    DOnSearch.OneWaySpecialZoneQuoteDetails
+      { quoteId = item.id
       }
 
 --FIXME remove round by using Kilometers and Hours in spec

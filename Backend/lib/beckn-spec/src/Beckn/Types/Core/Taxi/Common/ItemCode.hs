@@ -46,6 +46,8 @@ instance Show ItemCode where
     show DRIVER_OFFER_ESTIMATE <> "_" <> show vehVar
   show (ItemCode DRIVER_OFFER vehVar Nothing Nothing) =
     show DRIVER_OFFER <> "_" <> show vehVar
+  show (ItemCode ONE_WAY_SPECIAL_ZONE vehVar Nothing Nothing) =
+    show ONE_WAY_SPECIAL_ZONE <> "_" <> show vehVar
   show _ = error "ItemCode content doesn't correspond its FareProductType/"
 
 instance Read ItemCode where
@@ -71,6 +73,10 @@ instance Read ItemCode where
                ]
             ++ [ (ItemCode DRIVER_OFFER v1 Nothing Nothing, r2)
                  | r1 <- stripPrefix "DRIVER_OFFER_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (ItemCode ONE_WAY_SPECIAL_ZONE v1 Nothing Nothing, r2)
+                 | r1 <- stripPrefix "ONE_WAY_SPECIAL_ZONE_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
       )

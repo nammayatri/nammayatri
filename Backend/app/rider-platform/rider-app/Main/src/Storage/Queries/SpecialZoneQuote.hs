@@ -12,16 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.Ride.EndRide.DefaultConfig where
+module Storage.Queries.SpecialZoneQuote where
 
+import Domain.Types.SpecialZoneQuote
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
-import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Types.Id
+import Storage.Tabular.SpecialZoneQuote
 
-data EndRideDefaultConfig = EndRideDefaultConfig
-  { pickupLocThreshold :: Meters,
-    dropLocThreshold :: Meters,
-    rideTimeEstimatedThreshold :: Seconds,
-    waitingTimeEstimatedThreshold :: Seconds
-  }
-  deriving (Generic, FromDhall)
+findById' :: (MonadThrow m, Log m, Transactionable m) => Id SpecialZoneQuote -> DTypeBuilder m (Maybe SpecialZoneQuoteT)
+findById' = Esq.findById'

@@ -59,6 +59,7 @@ data BookingAPIDetails
   = OneWayAPIDetails OneWayBookingAPIDetails
   | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
   | DriverOfferAPIDetails OneWayBookingAPIDetails
+  | OneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingAPIDetails
   deriving (Show, Generic)
 
 instance ToJSON BookingAPIDetails where
@@ -73,6 +74,13 @@ instance ToSchema BookingAPIDetails where
 data OneWayBookingAPIDetails = OneWayBookingAPIDetails
   { toLocation :: BookingLocationAPIEntity,
     estimatedDistance :: HighPrecMeters
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data OneWaySpecialZoneBookingAPIDetails = OneWaySpecialZoneBookingAPIDetails
+  { toLocation :: BookingLocationAPIEntity,
+    estimatedDistance :: HighPrecMeters,
+    otpCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -111,11 +119,18 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups = do
       OneWayDetails details -> OneWayAPIDetails . mkOneWayAPIDetails $ details
       RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
       DriverOfferDetails details -> DriverOfferAPIDetails . mkOneWayAPIDetails $ details
+      OneWaySpecialZoneDetails details -> OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
       where
         mkOneWayAPIDetails OneWayBookingDetails {..} =
           OneWayBookingAPIDetails
             { toLocation = SLoc.makeBookingLocationAPIEntity toLocation,
               estimatedDistance = distance
+            }
+        mkOneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingDetails {..} =
+          OneWaySpecialZoneBookingAPIDetails
+            { toLocation = SLoc.makeBookingLocationAPIEntity toLocation,
+              estimatedDistance = distance,
+              ..
             }
 
 buildBookingAPIEntity :: EsqDBReplicaFlow m r => Booking -> m BookingAPIEntity

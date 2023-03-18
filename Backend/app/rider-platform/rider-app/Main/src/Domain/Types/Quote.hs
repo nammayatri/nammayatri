@@ -21,6 +21,7 @@ import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchRequest
+import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
@@ -53,6 +54,7 @@ data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
   | RentalDetails DRentalSlab.RentalSlab
   | DriverOfferDetails DDriverOffer.DriverOffer
+  | OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote
   deriving (Generic, Show)
   deriving (PrettyShow) via Showable QuoteDetails
 
@@ -81,6 +83,7 @@ data QuoteAPIDetails
   = OneWayAPIDetails OneWayQuoteAPIDetails
   | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
   | DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity
+  | OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity
   deriving (Show, Generic)
 
 instance ToJSON QuoteAPIDetails where
@@ -97,11 +100,17 @@ newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+newtype OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails
+  { quoteId :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
 mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails = \case
   RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
   DriverOfferDetails DDriverOffer.DriverOffer {..} -> DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {..}
+  OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
 
 makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} = do

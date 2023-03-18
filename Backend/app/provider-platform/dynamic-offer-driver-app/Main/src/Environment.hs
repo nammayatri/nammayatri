@@ -17,7 +17,6 @@ module Environment where
 
 import AWS.S3
 import qualified Data.Text as T
-import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDefCfg
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
@@ -83,7 +82,6 @@ data AppCfg = AppCfg
     longDurationRetryCfg :: RetryCfg,
     driverUnlockDelay :: Seconds,
     dashboardToken :: Text,
-    defaultEndRideCfg :: EndRideDefCfg.EndRideDefaultConfig,
     cacheConfig :: CacheConfig,
     metricsSearchDurationTimeout :: Seconds,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,
@@ -143,7 +141,6 @@ data AppEnv = AppEnv
     driverQuoteExpirationSeconds :: NominalDiffTime,
     driverUnlockDelay :: Seconds,
     dashboardToken :: Text,
-    defaultEndRideCfg :: EndRideDefCfg.EndRideDefaultConfig,
     cacheConfig :: CacheConfig,
     s3Env :: S3Env Flow,
     driverLocationUpdateRateLimitOptions :: APIRateLimitOptions,

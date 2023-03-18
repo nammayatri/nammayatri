@@ -31,14 +31,27 @@ autoOneWayCategory =
           }
     }
 
+oneWaySpecialZoneCategory :: OS.Category
+oneWaySpecialZoneCategory =
+  OS.Category
+    { id = OS.ONE_WAY_SPECIAL_ZONE,
+      descriptor =
+        OS.Descriptor
+          { name = ""
+          }
+    }
+
 mkOnSearchMessage ::
   DSearch.DSearchRes ->
   OS.OnSearchMessage
 mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   let startInfo = mkStartInfo res
   let stopInfo = mkStopInfo res
-  let quoteEntitiesList = map (mkQuoteEntities startInfo stopInfo) estimateList
-      items = map (.item) quoteEntitiesList
+  let quoteEntitiesList = case (estimateList, specialQuoteList) of
+        (Just estimates, _) -> map (mkQuoteEntities startInfo stopInfo) estimates
+        (Nothing, Just quotes) -> map (mkQuoteEntitiesSpecialZone startInfo stopInfo) quotes
+        (_, _) -> map (mkQuoteEntities startInfo stopInfo) [] --this won't happen
+  let items = map (.item) quoteEntitiesList
       fulfillments = map (.fulfillment) quoteEntitiesList
       contacts = fromMaybe "" provider.mobileNumber
       tags =
@@ -58,7 +71,7 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
           { id = provider.subscriberId.getShortId,
             descriptor = OS.Descriptor {name = provider.name},
             locations = [],
-            categories = [autoOneWayCategory],
+            categories = [autoOneWayCategory, oneWaySpecialZoneCategory],
             items,
             offers = [],
             add_ons = [],
@@ -120,6 +133,7 @@ mkQuoteEntities start end it = do
           { category_id = autoOneWayCategory.id,
             fulfillment_id = fulfillment.id,
             offer_id = Nothing,
+            id = show autoOneWayCategory.id,
             price =
               OS.ItemPrice
                 { currency = currency',
@@ -145,6 +159,57 @@ mkQuoteEntities start end it = do
                     waiting_charge_per_min = it.waitingCharges.waitingChargePerMin,
                     waiting_time_estimated_threshold = it.waitingCharges.waitingTimeEstimatedThreshold,
                     drivers_location = it.driversLatLong
+                  },
+            base_distance = Nothing,
+            base_duration = Nothing
+          }
+  QuoteEntities
+    { fulfillment,
+      item
+    }
+
+mkQuoteEntitiesSpecialZone :: OS.StartInfo -> OS.StopInfo -> DSearch.SpecialZoneQuoteInfo -> QuoteEntities
+mkQuoteEntitiesSpecialZone start end it = do
+  let variant = castVariant it.vehicleVariant
+      estimatedFare = OS.DecimalValue $ toRational it.estimatedFare
+      fulfillment =
+        OS.FulfillmentInfo
+          { start,
+            end = Just end,
+            id = "fulf_" <> show it.quoteId,
+            vehicle = OS.FulfillmentVehicle {category = castVariant it.vehicleVariant}
+          }
+      item =
+        OS.Item
+          { id = it.quoteId.getId,
+            category_id = oneWaySpecialZoneCategory.id,
+            fulfillment_id = fulfillment.id,
+            offer_id = Nothing,
+            price =
+              OS.ItemPrice
+                { currency = currency',
+                  value = estimatedFare,
+                  offered_value = estimatedFare,
+                  minimum_value = estimatedFare,
+                  maximum_value = estimatedFare,
+                  value_breakup = []
+                },
+            descriptor =
+              OS.ItemDescriptor
+                { name = "",
+                  code = OS.ItemCode OS.ONE_WAY_SPECIAL_ZONE variant Nothing Nothing
+                },
+            quote_terms = [],
+            tags =
+              Just $
+                OS.ItemTags
+                  { distance_to_nearest_driver = Nothing,
+                    night_shift_multiplier = Nothing,
+                    night_shift_start = Nothing,
+                    night_shift_end = Nothing,
+                    waiting_charge_per_min = Nothing,
+                    waiting_time_estimated_threshold = Nothing,
+                    drivers_location = []
                   },
             base_distance = Nothing,
             base_duration = Nothing

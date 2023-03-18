@@ -28,6 +28,7 @@ import Storage.Tabular.DriverOffer
 import Storage.Tabular.Quote
 import Storage.Tabular.Quote.Instances
 import Storage.Tabular.RentalSlab
+import Storage.Tabular.SpecialZoneQuote
 import Storage.Tabular.TripTerms
 
 createDetails :: QuoteDetailsT -> FullEntitySqlDB ()
@@ -37,6 +38,8 @@ createDetails = \case
     Esq.create' rentalSlabT
   DriverOfferDetailsT driverOfferT -> do
     Esq.create' driverOfferT
+  OneWaySpecialZoneDetailsT specialZoneQuoteT -> do
+    Esq.create' specialZoneQuoteT
 
 -- order of creating entites make sense!
 create :: Quote -> SqlDB ()
@@ -62,6 +65,7 @@ fullQuoteTable ::
         :& MbTable TripTermsT
         :& MbTable RentalSlabT
         :& MbTable DriverOfferT
+        :& MbTable SpecialZoneQuoteT
     )
 fullQuoteTable =
   table @QuoteT
@@ -77,38 +81,42 @@ fullQuoteTable =
       `Esq.on` ( \(quote :& _ :& _ :& mbDriverOffer) ->
                    quote ^. QuoteDriverOfferId ==. mbDriverOffer ?. DriverOfferTId
                )
+    `leftJoin` table @SpecialZoneQuoteT
+      `Esq.on` ( \(quote :& _ :& _ :& _ :& mbspecialZoneQuote) ->
+                   quote ^. QuoteSpecialZoneQuoteId ==. mbspecialZoneQuote ?. SpecialZoneQuoteTId
+               )
 
 findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById quoteId = Esq.buildDType $ do
   mbFullQuoteT <- Esq.findOne' $ do
-    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer) <- from fullQuoteTable
+    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
     where_ $ quote ^. QuoteTId ==. val (toKey quoteId)
-    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer)
+    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   join <$> mapM buildFullQuote mbFullQuoteT
 
 findByBppIdAndBPPQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe Quote)
 findByBppIdAndBPPQuoteId bppId bppQuoteId = buildDType $ do
   mbFullQuoteT <- Esq.findOne' $ do
-    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer) <- from fullQuoteTable
+    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
     where_ $
       quote ^. QuoteProviderId ==. val bppId
         &&. mbDriverOffer ?. DriverOfferBppQuoteId ==. just (val bppQuoteId.getId)
-    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer)
+    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   join <$> mapM buildFullQuote mbFullQuoteT
 
 findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Quote]
 findAllByRequestId searchRequestId = Esq.buildDType $ do
   fullQuoteTs <- Esq.findAll' $ do
-    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer) <- from fullQuoteTable
+    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
     where_ $ quote ^. QuoteRequestId ==. val (toKey searchRequestId)
-    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer)
+    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   catMaybes <$> mapM buildFullQuote fullQuoteTs
 
 findAllByEstimateId :: Transactionable m => Id Estimate -> m [Quote]
 findAllByEstimateId estimateId = buildDType $ do
   fullQuoteTs <- Esq.findAll' $ do
-    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer) <- from fullQuoteTable
+    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
     where_ $
       mbDriverOffer ?. DriverOfferEstimateId ==. just (val $ toKey estimateId)
-    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer)
+    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   catMaybes <$> mapM buildFullQuote fullQuoteTs

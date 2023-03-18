@@ -20,7 +20,7 @@ import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Storage.Tabular.Booking
@@ -70,7 +70,7 @@ findBySearchReq searchReqId = buildDType $
           ( baseBookingTable
               `innerJoin` table @DriverQuote.DriverQuoteT
               `Esq.on` ( \(rb :& _ :& _ :& _ :& dq) ->
-                           rb ^. BookingQuoteId ==. dq ^. DriverQuoteTId
+                           rb ^. BookingQuoteId ==. dq ^. DriverQuoteId
                        )
           )
       where_ $ dq ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
@@ -109,6 +109,17 @@ updateRiderName bookingId riderName = do
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
 
+updateSpecialZoneOtpCode :: Id Booking -> Text -> SqlDB ()
+updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ BookingSpecialZoneOtpCode =. val (Just specialZoneOtpCode),
+        BookingUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. BookingTId ==. val (toKey bookingId)
+
 findStuckBookings :: Transactionable m => Id Merchant -> [Id Booking] -> UTCTime -> m [Id Booking]
 findStuckBookings merchantId bookingIds now = do
   Esq.findAll $ do
@@ -119,6 +130,26 @@ findStuckBookings merchantId bookingIds now = do
       booking ^. BookingProviderId ==. val (toKey merchantId)
         &&. booking ^. BookingTId `in_` valList (toKey <$> bookingIds)
         &&. (booking ^. BookingStatus ==. val NEW &&. upcoming6HrsCond)
+    pure $ booking ^. BookingTId
+
+findBookingBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
+findBookingBySpecialZoneOTP merchantId otpCode now = do
+  bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
+  maybe
+    (return Nothing)
+    findById
+    bookingId
+
+findBookingIdBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
+findBookingIdBySpecialZoneOTP merchantId otpCode now = do
+  Esq.findOne $ do
+    booking <- from $ table @BookingT
+    let otpExpiryCondition =
+          booking ^. BookingCreatedAt +. Esq.interval [Esq.MINUTE 30] >=. val now
+    where_ $
+      booking ^. BookingSpecialZoneOtpCode ==. val (Just otpCode)
+        &&. (booking ^. BookingStatus ==. val NEW &&. otpExpiryCondition)
+        &&. booking ^. BookingProviderId ==. val (toKey merchantId)
     pure $ booking ^. BookingTId
 
 cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()

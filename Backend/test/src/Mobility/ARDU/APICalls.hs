@@ -82,7 +82,7 @@ ui = do
       :<|> locationClient
       :<|> rideClient = client (Proxy :: Proxy UIAPI)
 
-    _ :<|> _ :<|> rideStart :<|> rideEnd :<|> rideCancel = rideClient
+    _ :<|> (_ :<|> _ :<|> rideStart :<|> rideEnd :<|> rideCancel) = rideClient
 
     ( _
         :<|> _
@@ -97,10 +97,11 @@ ui = do
                         :<|> _
                         :<|> _
                       )
-               :<|> validate
-               :<|> verifyAuth
-               :<|> resendOtp
-               :<|> remove
+               :<|> ( validate
+                        :<|> verifyAuth
+                        :<|> resendOtp
+                        :<|> remove
+                      )
              ) = driverClient
 
     (_ :<|> updateLocation) = locationClient
