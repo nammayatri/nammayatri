@@ -35,7 +35,6 @@ module API.UI.Driver
   )
 where
 
--- import qualified API.UI.Ride as Ride
 import Data.Time (Day)
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Types.Person as SP

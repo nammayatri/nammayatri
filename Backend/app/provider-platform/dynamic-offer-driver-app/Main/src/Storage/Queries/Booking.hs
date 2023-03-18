@@ -20,7 +20,7 @@ import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing) 
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Storage.Tabular.Booking
@@ -132,15 +132,24 @@ findStuckBookings merchantId bookingIds now = do
         &&. (booking ^. BookingStatus ==. val NEW &&. upcoming6HrsCond)
     pure $ booking ^. BookingTId
 
-findBookingBySpecialZoneOTP :: Transactionable m => Text -> UTCTime -> m (Maybe (Id Booking))
-findBookingBySpecialZoneOTP bookingIds now = do
+findBookingBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe Booking)
+findBookingBySpecialZoneOTP merchantId otpCode now = do
+  bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
+  maybe
+    (return Nothing) 
+    findById
+    bookingId
+
+findBookingIdBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTime -> m (Maybe (Id Booking))
+findBookingIdBySpecialZoneOTP merchantId otpCode now = do
   Esq.findOne $ do
     booking <- from $ table @BookingT
     let otpExpiryCondition =
           booking ^. BookingCreatedAt +. Esq.interval [Esq.MINUTE 30] >=. val now
     where_ $
-      booking ^. BookingSpecialZoneOtpCode ==. val (Just bookingIds)
+      booking ^. BookingSpecialZoneOtpCode ==. val (Just otpCode)
         &&. (booking ^. BookingStatus ==. val NEW &&. otpExpiryCondition)
+        &&. booking ^. BookingProviderId ==. val (toKey merchantId)
     pure $ booking ^. BookingTId
 
 cancelBookings :: [Id Booking] -> UTCTime -> SqlDB ()

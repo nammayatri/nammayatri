@@ -196,8 +196,7 @@ otpRideCreate ::
   m DriverRideRes
 otpRideCreate driver req = do
   now <- getCurrentTime
-  bookingId <- runInReplica $ QBooking.findBookingBySpecialZoneOTP req.specialZoneOtpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp req.specialZoneOtpCode)
-  booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP driver.merchantId req.specialZoneOtpCode now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp req.specialZoneOtpCode)
   transporter <-
     QM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
