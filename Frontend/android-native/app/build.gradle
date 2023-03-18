@@ -196,190 +196,91 @@ dependencies {
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.+'
 }
 
-//the following is used for creating jsa files for js files inside src/main/js
 def tmpSource        = "/tmp/juspay"
-def jsSource         = "${projectDir}/src"
-def assetSource      = "${projectDir}/src"
-def shouldMinify     = false
+ def jsSource         = "${projectDir}/src"
+ def assetSource      = "${projectDir}/src"
+ def shouldMinify     = false
 
-tasks.create(name: 'minifyJsFiles') {
-    def jsFiles = []
-    def minJsFiles = []
+ tasks.create(name: 'minifyJsFiles') {
+     def jsFiles = []
+     def minJsFiles = []
 
-    File tmpFolder = new File(tmpSource)
-    if(tmpFolder.exists()) {
-        tmpFolder.deleteDir()
-    }
+     File tmpFolder = new File(tmpSource)
+     if(tmpFolder.exists()) {
+         tmpFolder.deleteDir()
+     }
 
-    File folder = new File(jsSource)
-    def addFilesToQueue
-    addFilesToQueue = { dir, suffix ->
-        File tempFolder = new File(tmpSource + suffix)
-        if(!tempFolder.exists()) {
-            tempFolder.mkdirs()
-        }
+     File folder = new File(jsSource)
+     def addFilesToQueue
+     addFilesToQueue = { dir, suffix ->
+         File tempFolder = new File(tmpSource + suffix)
+         if(!tempFolder.exists()) {
+             tempFolder.mkdirs()
+         }
 
-        if (dir.isDirectory()) {
-            for (String file: dir.list()) {
-                File curr = new File(dir.getAbsolutePath() + "/" + file)
-                if(!curr.isDirectory() && curr.getName().endsWith(".js")) {
-                    jsFiles.add(dir.getAbsolutePath() + "/" + file)
+         if (dir.isDirectory()) {
+             for (String file: dir.list()) {
+                 File curr = new File(dir.getAbsolutePath() + "/" + file)
+                 if(!curr.isDirectory() && curr.getName().endsWith(".js")) {
+                     jsFiles.add(dir.getAbsolutePath() + "/" + file)
 
-                    String fileName  = file.substring(0, file.lastIndexOf("."))
-                    String extension = file.substring(file.lastIndexOf(".") + 1, file.length())
+                     String fileName  = file.substring(0, file.lastIndexOf("."))
+                     String extension = file.substring(file.lastIndexOf(".") + 1, file.length())
 
-                    File tmp = new File(tmpSource + suffix);
-                    if(!tmp.exists()) {
-                        tmp.mkdirs()
-                    }
+                     File tmp = new File(tmpSource + suffix);
+                     if(!tmp.exists()) {
+                         tmp.mkdirs()
+                     }
 
-                    minJsFiles.add(tmpSource + suffix + fileName + ".min." + extension)
-                } else if(curr.isDirectory()) {
-                    if(curr.getName() == "js") {
-                        addFilesToQueue(curr, suffix + "assets" + "/")
-                    } else {
-                        addFilesToQueue(curr, suffix + curr.getName() + "/")
-                    }
-                }
-            }
-        }
-    }
-    addFilesToQueue(folder, "/")
+                     minJsFiles.add(tmpSource + suffix + fileName + ".min." + extension)
+                 } else if(curr.isDirectory()) {
+                     if(curr.getName() == "js") {
+                         addFilesToQueue(curr, suffix + "assets" + "/")
+                     } else {
+                         addFilesToQueue(curr, suffix + curr.getName() + "/")
+                     }
+                 }
+             }
+         }
+     }
+     addFilesToQueue(folder, "/")
 
-    inputs.files jsFiles
-    outputs.files minJsFiles
-    doLast {
-        jsFiles.eachWithIndex { filePath, index ->
-            String inPath = filePath
-            String outPath = minJsFiles[index]
+     inputs.files jsFiles
+     outputs.files minJsFiles
+     doLast {
+         jsFiles.eachWithIndex { filePath, index ->
+             String inPath = filePath
+             String outPath = minJsFiles[index]
 
-            println "Processing " + inPath + " " + outPath
-            File outDir = new File(outPath.substring(0, outPath.lastIndexOf("/")));
-            if(!outDir.exists()) {
-                outDir.mkdirs();
-            }
-            browserify(inPath, outPath, !filePath.toString().contains("bundle") && shouldMinify)
-        }
-    }
+             println "Processing " + inPath + " " + outPath
+             File outDir = new File(outPath.substring(0, outPath.lastIndexOf("/")));
+             if(!outDir.exists()) {
+                 outDir.mkdirs();
+             }
+             browserify(inPath, outPath, !filePath.toString().contains("bundle") && shouldMinify)
+         }
+     }
+ }
+
+//Byte processing
+
+ void browserify(String inPath, String outPath, boolean shouldMinify) {
+     println "Processing " + inPath + " " + outPath
+     File outDir = new File(outPath.substring(0, outPath.lastIndexOf("/")));
+if(!outDir.exists()) {
+    outDir.mkdirs();
 }
 
-tasks.create(name: 'createJsaFiles', dependsOn: 'minifyJsFiles') {
-    doLast {
-        def inputFiles = []
-        def jsaFiles = []
+def result = new StringBuffer()
 
-        def addFilesToQueue
-        addFilesToQueue = { folderPath, suffix ->
-            File folder = new File(folderPath)
-            if (folder.exists() && folder.isDirectory()) {
-                for (String file : folder.list()) {
-                    File curr = new File(folderPath + "/" + file)
-                    if (!curr.isDirectory()) {
-                        if (!file.endsWith(".js")) {
-                            continue
-                        }
+Process code = (shouldMinify) ? ('browserify -p /usr/local/lib/node_modules/tinyify ' + inPath + ' -o ' + outPath).execute()
+        : ('cp ' + inPath + ' ' + outPath).execute()
 
-                        inputFiles.add(folder.getAbsolutePath() + "/" + file)
-                        if(suffix.contains("juspay")){
-                            jsaFiles.add(assetSource + suffix + "v1-" + file.substring(0, file.lastIndexOf(".min.js")) + ".jsa")
-                        } else {
-                            jsaFiles.add(assetSource + suffix + "juspay/v1-" + file.substring(0, file.lastIndexOf(".min.js")) + ".jsa")
-                        }
-                    } else {
-                        addFilesToQueue(curr.getAbsolutePath(), suffix + curr.getName() + "/")
-                    }
-                }
-            }
-        }
-        addFilesToQueue(tmpSource, "/")
-
-        println "Creating jsa under " + assetSource
-
-        File assetsDir = new File(assetSource)
-        if (!assetsDir.exists()) {
-            assetsDir.mkdirs()
-        }
-
-        inputFiles.eachWithIndex { filePath, index ->
-            File assetDir = new File(assetsDir.getAbsolutePath() + filePath.substring(tmpSource.length(), filePath.lastIndexOf("/")))
-            if (!assetDir.exists()) {
-                assetDir.mkdirs()
-            }
-            println("Processing File - " + filePath)
-
-            int FRAME_SIZE = 8
-            int KEY_SIZE = 8
-
-            //Generate 8 byte Random Key
-            SecureRandom random = new SecureRandom()
-            byte[] randomKey = new byte[8]
-            random.nextBytes(randomKey)
-
-            //Generate Compressed JSA File
-            byte[] input = file(filePath).getBytes()
-            byte[] compressed = gzipByteArray(input)
-
-            //Generate Obfuscated JSA File
-            int totalBytes = compressed.length;
-            byte[] encodedBytes = new byte[totalBytes + KEY_SIZE];
-            int hiddenCounter = 0;
-            int encodedCounter = 0;
-            for (int compressedCounter = 0; compressedCounter < totalBytes && encodedCounter < totalBytes + KEY_SIZE; encodedCounter++) {
-                if (encodedCounter > 0 && encodedCounter % 10 == 9 && hiddenCounter < KEY_SIZE) {
-                    //Append Key
-                    encodedBytes[encodedCounter] = randomKey[hiddenCounter]
-                    hiddenCounter++
-                } else {
-                    //XOR Byte with KEY Byte
-                    encodedBytes[encodedCounter] = (byte) ((int) compressed[compressedCounter] ^ (int) randomKey[compressedCounter % FRAME_SIZE])
-                    compressedCounter++
-                }
-            }
-            writeByteArray(jsaFiles[index], encodedBytes)
-        }
-    }
+code.waitForProcessOutput(result, result)
+if(code.exitValue() != 0) {
+    String error = "Error Occurred while processing " + inPath + "\n"
+    result.append(error)
+    throw new Error(result.toString())
 }
-
-/**
- * Byte processing
- */
-
-void browserify(String inPath, String outPath, boolean shouldMinify) {
-    println "Processing " + inPath + " " + outPath
-    File outDir = new File(outPath.substring(0, outPath.lastIndexOf("/")));
-    if(!outDir.exists()) {
-        outDir.mkdirs();
-    }
-
-    def result = new StringBuffer()
-
-    Process code = (shouldMinify) ? ('browserify -p /usr/local/lib/node_modules/tinyify ' + inPath + ' -o ' + outPath).execute()
-            : ('cp ' + inPath + ' ' + outPath).execute()
-
-    code.waitForProcessOutput(result, result)
-    if(code.exitValue() != 0) {
-        String error = "Error Occurred while processing " + inPath + "\n"
-        result.append(error)
-        throw new Error(result.toString())
-    }
-    println "Processed and packaged at " + result
+println "Processed and packaged at " + result
 }
-
-
-private void writeByteArray(String filePath, byte[] encrypted) {
-    println("Packaging File - " + filePath)
-    FileOutputStream encryptedOS = new FileOutputStream(file(filePath));
-    encryptedOS.write(encrypted);
-    encryptedOS.close();
-}
-
-private byte[] gzipByteArray(byte[] uncompressed) {
-    ByteArrayOutputStream gzippedBOS = new ByteArrayOutputStream();
-    GZIPOutputStream gzipOutputStream = new GZIPOutputStream(gzippedBOS);
-    gzipOutputStream.write(uncompressed);
-    gzippedBOS.close();
-    gzipOutputStream.close();
-    byte[] compressed = gzippedBOS.toByteArray();
-    compressed
-}
-// -------------------------------------------------------------------------
