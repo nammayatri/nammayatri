@@ -136,7 +136,7 @@ findBookingBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTi
 findBookingBySpecialZoneOTP merchantId otpCode now = do
   bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
   maybe
-    (return Nothing) 
+    (return Nothing)
     findById
     bookingId
 
