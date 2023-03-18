@@ -20,7 +20,7 @@ import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing) 
+import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Storage.Tabular.Booking
@@ -136,7 +136,7 @@ findBookingBySpecialZoneOTP :: Transactionable m => Id Merchant -> Text -> UTCTi
 findBookingBySpecialZoneOTP merchantId otpCode now = do
   bookingId <- findBookingIdBySpecialZoneOTP merchantId otpCode now
   maybe
-    (return Nothing) 
+    (return Nothing)
     findById
     bookingId
 

@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.UI.Ride.EndRide
   ( ServiceHandle (..),
@@ -237,7 +238,7 @@ isPickupDropOutsideOfThreshold ServiceHandle {..} booking ride tripEndPoint = do
   case mbTripStartLoc of
     Nothing -> pure True
     Just tripStartLoc -> do
-      let pickupLocThreshold = metersToHighPrecMeters thresholdConfig.pickupLocThreshold 
+      let pickupLocThreshold = metersToHighPrecMeters thresholdConfig.pickupLocThreshold
       let dropLocThreshold = metersToHighPrecMeters thresholdConfig.dropLocThreshold
       let pickupDifference = abs $ distanceBetweenInMeters (getCoordinates booking.fromLocation) tripStartLoc
       let dropDifference = abs $ distanceBetweenInMeters (getCoordinates booking.toLocation) tripEndPoint
