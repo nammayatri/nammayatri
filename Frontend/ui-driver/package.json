@@ -8,9 +8,9 @@
     "bundle:purs": "pulp --then \"echo 'module.exports = PS;' >> dist/pulp.js \" build --skip-entry-point --to dist/pulp.js",
     "bundle:android": "webpack --env prod --mode=production --progress --config webpack.android.js",
     "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
-    "prod:android": "npm-run-all bundle:purs \"bundle:android\" encrypt",
+    "prod:android": "npm-run-all bundle:purs \"bundle:android\"",
     "spago:prod:android": "npm-run-all spago:compile \"bundle:android\"",
-    "prod:ios": "npm-run-all compile:purs compile:bundle:ios encrypt",
+    "prod:ios": "npm-run-all compile:purs compile:bundle:ios",
     "compile2": "pulp -w --then \"echo 'module.exports = PS;' >> dist/pulp.js && webpack -p --progress --colors\" build  --skip-entry-point --to dist/pulp.js",
     "compileAndCreateJsa": "sh compileAndCreateJsa.sh",
     "encrypt": "node encrypt.js",
@@ -121,7 +121,7 @@
         "prerelease": true
       }
     ],
-    "repositoryUrl": "git@ssh.bitbucket.juspay.net:bec/atlas-ui-driver.git",
+    "repositoryUrl": "https://github.com/nammayatri/nammayatri.git",
     "plugins": [
       "@semantic-release/commit-analyzer",
       "@semantic-release/release-notes-generator",
