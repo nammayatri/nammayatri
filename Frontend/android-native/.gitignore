@@ -22,6 +22,8 @@
 **output.json
 .settings/
 app/.settings/
+app/src/driver/assets/juspay/index_bundle.js
+app/src/user/assets/juspay/index_bundle.js
 app/src/dev/google-services.json
 app/src/release/
 app/src/debug/

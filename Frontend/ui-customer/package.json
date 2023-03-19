@@ -131,7 +131,7 @@
         "prerelease": true
       }
     ],
-    "repositoryUrl": "git@ssh.bitbucket.juspay.net:bec/atlas-ui-customer.git",
+    "repositoryUrl": "https://github.com/nammayatri/nammayatri.git",
     "plugins": [
       "@semantic-release/commit-analyzer",
       "@semantic-release/release-notes-generator",
