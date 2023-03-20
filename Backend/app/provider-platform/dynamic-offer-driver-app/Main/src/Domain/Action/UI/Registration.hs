@@ -129,6 +129,7 @@ auth req mbBundleVersion mbClientVersion = do
       countryCode = req.mobileCountryCode
   mobileNumberHash <- getDbHash mobileNumber
   let merchantId = Id req.merchantId :: Id DO.Merchant
+  whenM (isJust <$> QP.checkForAlternateNumber countryCode mobileNumberHash merchantId) $ throwError $ InvalidRequest "Access Denied"
   merchant <-
     QMerchant.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
