@@ -37,7 +37,7 @@ type MerchantUpdateAPI =
 
 data MerchantUpdateReq = MerchantUpdateReq
   { name :: Maybe Text,
-    exoPhones :: Maybe (NonEmpty Text),
+    exoPhones :: Maybe (NonEmpty ExophoneReq),
     fcmConfig :: Maybe FCMConfigUpdateReq,
     gatewayUrl :: Maybe BaseUrl,
     registryUrl :: Maybe BaseUrl
@@ -47,7 +47,7 @@ data MerchantUpdateReq = MerchantUpdateReq
 
 data MerchantUpdateTReq = MerchantUpdateTReq
   { name :: Maybe Text,
-    exoPhones :: Maybe (NonEmpty Text),
+    exoPhones :: Maybe (NonEmpty ExophoneReq),
     fcmConfig :: Maybe FCMConfigUpdateTReq,
     gatewayUrl :: Maybe BaseUrl,
     registryUrl :: Maybe BaseUrl
@@ -59,7 +59,13 @@ validateMerchantUpdateReq :: Validate MerchantUpdateReq
 validateMerchantUpdateReq MerchantUpdateReq {..} =
   sequenceA_
     [ validateField "name" name $ InMaybe $ MinLength 3 `And` P.name,
-      whenJust exoPhones $ \phones -> for_ phones $ \phone -> validateField "exoPhones" phone P.fullMobilePhone,
+      whenJust exoPhones $ \phones -> do
+        sequenceA_
+          [ validateField "exoPhones" phones $ UniqueField @"primaryPhone",
+            validateField "exoPhones" phones $ UniqueField @"backupPhone"
+          ],
+      whenJust exoPhones $ \phones -> for_ phones $ \exophoneReq -> do
+        validateObject "exoPhones" exophoneReq validateExophoneReq,
       whenJust fcmConfig $ \cfg -> validateObject "fcmConfig" cfg validateFCMConfigUpdateReq
     ]
 

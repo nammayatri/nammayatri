@@ -38,6 +38,7 @@ import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common
 import Kernel.Types.Predicate
+import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Servant
 
@@ -55,6 +56,20 @@ derivePersistField "MerchantEndpoint"
 
 ---------------------------------------------------------
 -- merchant update --------------------------------------
+
+data ExophoneReq = ExophoneReq
+  { primaryPhone :: Text,
+    backupPhone :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+validateExophoneReq :: Validate ExophoneReq
+validateExophoneReq ExophoneReq {..} = do
+  sequenceA_
+    [ validateField "primaryPhone" primaryPhone P.fullMobilePhone,
+      validateField "backupPhone" backupPhone P.fullMobilePhone
+    ]
 
 data FCMConfigUpdateReq = FCMConfigUpdateReq
   { fcmUrl :: BaseUrl,

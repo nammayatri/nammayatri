@@ -22,6 +22,7 @@ where
 
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
+import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
@@ -38,6 +39,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig (CacheFlow)
+import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -77,7 +79,7 @@ newtype DriverRideListRes = DriverRideListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 listDriverRides ::
-  (EsqDBReplicaFlow m r, EncFlow m r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id DP.Person ->
   Maybe Integer ->
   Maybe Integer ->
@@ -88,15 +90,17 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive = do
   driverRideLis <- forM rides $ \(ride, booking) -> do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     driverNumber <- RD.getDriverNumber rideDetail
-    pure $ mkDriverRideRes rideDetail driverNumber (ride, booking)
+    mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+    pure $ mkDriverRideRes rideDetail driverNumber mbExoPhone (ride, booking)
   pure . DriverRideListRes $ driverRideLis
 
 mkDriverRideRes ::
   RD.RideDetails ->
   Maybe Text ->
+  Maybe DExophone.Exophone ->
   (DRide.Ride, DRB.Booking) ->
   DriverRideRes
-mkDriverRideRes rideDetails driverNumber (ride, booking) = do
+mkDriverRideRes rideDetails driverNumber mbExophone (ride, booking) = do
   let mbToLocation = case booking.bookingDetails of
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.RentalDetails _ -> Nothing
@@ -125,7 +129,7 @@ mkDriverRideRes rideDetails driverNumber (ride, booking) = do
       tripStartTime = ride.tripStartTime,
       tripEndTime = ride.tripEndTime,
       chargeableDistance = ride.chargeableDistance,
-      exoPhone = booking.providerExoPhone
+      exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasShortDurationRetryCfg r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess

@@ -18,7 +18,6 @@ module Storage.CachedQueries.Merchant
   ( findById,
     findByShortId,
     findBySubscriberId,
-    findByExoPhone,
     update,
     clearCache,
   )
@@ -64,24 +63,11 @@ findBySubscriberId subscriberId =
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findBySubscriberId subscriberId
 
-findByExoPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Merchant)
-findByExoPhone exoPhone =
-  Hedis.safeGet (makeExoPhoneKey exoPhone) >>= \case
-    Nothing -> findAndCache
-    Just id ->
-      Hedis.safeGet (makeIdKey id) >>= \case
-        Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
-        Nothing -> findAndCache
-  where
-    findAndCache = flip whenJust cacheMerchant /=<< Queries.findByExoPhone exoPhone
-
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Merchant -> m ()
 clearCache merchant = do
   Hedis.del (makeIdKey merchant.id)
   Hedis.del (makeShortIdKey merchant.shortId)
-  forM_ merchant.exoPhones $ \exoPhone ->
-    Hedis.del (makeExoPhoneKey exoPhone)
 
 cacheMerchant :: (CacheFlow m r) => Merchant -> m ()
 cacheMerchant merchant = do
@@ -90,17 +76,12 @@ cacheMerchant merchant = do
   Hedis.setExp idKey (coerce @Merchant @(MerchantD 'Unsafe) merchant) expTime
   Hedis.setExp (makeShortIdKey merchant.shortId) idKey expTime
   Hedis.setExp (makeSubscriberIdKey merchant.subscriberId) idKey expTime
-  forM_ merchant.exoPhones $ \exoPhone ->
-    Hedis.setExp (makeExoPhoneKey exoPhone) idKey expTime
 
 makeIdKey :: Id Merchant -> Text
 makeIdKey id = "CachedQueries:Merchant:Id-" <> id.getId
 
 makeShortIdKey :: ShortId Merchant -> Text
 makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
-
-makeExoPhoneKey :: Text -> Text
-makeExoPhoneKey phone = "CachedQueries:Merchant:ExoPhone-" <> phone
 
 makeSubscriberIdKey :: ShortId Subscriber -> Text
 makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> subscriberId.getShortId

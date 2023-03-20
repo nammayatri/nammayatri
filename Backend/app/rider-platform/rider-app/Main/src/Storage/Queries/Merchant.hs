@@ -46,20 +46,6 @@ findBySubscriberId subscriberId = do
     where_ $ merchant ^. MerchantSubscriberId ==. val (getShortId subscriberId)
     return merchant
 
-findByExoPhone :: Transactionable m => Text -> m (Maybe Merchant)
-findByExoPhone exoPhone = do
-  findOne $ do
-    merchant <- from $ table @MerchantT
-    where_ $
-      Esq.val exoPhone
-        `Esq.in_` subList_select
-          ( do
-              merchant1 <- from $ table @MerchantT
-              where_ $ merchant1 ^. MerchantId ==. merchant ^. MerchantId
-              return $ unnest (merchant1 ^. MerchantExoPhones)
-          )
-    return merchant
-
 findAll :: Transactionable m => m [Merchant]
 findAll =
   Esq.findAll $ do from $ table @MerchantT
@@ -73,7 +59,6 @@ update merchant = do
       [ MerchantName =. val merchant.name,
         MerchantFcmUrl =. val (showBaseUrl merchant.fcmConfig.fcmUrl),
         MerchantFcmServiceAccount =. val merchant.fcmConfig.fcmServiceAccount,
-        MerchantExoPhones =. val (Esq.PostgresNonEmptyList merchant.exoPhones),
         MerchantGatewayUrl =. val (showBaseUrl merchant.gatewayUrl),
         MerchantRegistryUrl =. val (showBaseUrl merchant.registryUrl),
         MerchantUpdatedAt =. val now

@@ -16,6 +16,7 @@ module Domain.Action.Beckn.Init where
 
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
+import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle as Veh
 import Kernel.Prelude
@@ -29,6 +30,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.FareCalculator.OneWayFareCalculator
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
@@ -135,7 +137,8 @@ initOneWayTrip req oneWayReq transporter now = do
               DRB.estimatedDuration = estimatedRideDuration
             }
   fromLoc <- buildRBLoc req.fromLocation now
-  booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare owDetails fromLoc transporter now
+  exophone <- findRandomExophone transporter.id
+  booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare owDetails fromLoc exophone now
   DB.runTransaction $ do
     QRB.create booking
   return booking
@@ -160,7 +163,8 @@ initRentalTrip req rentalReq transporter now = do
   rentalFarePolicy <- QRFP.findByOffer transporter.id req.vehicleVariant rentalReq.distance rentalReq.duration >>= fromMaybeM NoFarePolicy
   let rentDetails = DRB.RentalDetails $ DRB.RentalBookingDetails {rentalFarePolicyId = rentalFarePolicy.id}
   fromLoc <- buildRBLoc req.fromLocation now
-  booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare rentDetails fromLoc transporter now
+  exophone <- findRandomExophone transporter.id
+  booking <- buildBooking req transporter.id estimatedFare discount estimatedTotalFare rentDetails fromLoc exophone now
   DB.runTransaction $ do
     QRB.create booking
   return booking
@@ -200,18 +204,17 @@ buildBooking ::
   Money ->
   DRB.BookingDetails ->
   DLoc.BookingLocation ->
-  DM.Merchant ->
+  DExophone.Exophone ->
   UTCTime ->
   m DRB.Booking
-buildBooking req merchantId estimatedFare discount estimatedTotalFare bookingDetails fromLocation merchant now = do
+buildBooking req merchantId estimatedFare discount estimatedTotalFare bookingDetails fromLocation exophone now = do
   id <- generateGUID
-  exoPhone <- getRandomElement merchant.exoPhones
   return $
     DRB.Booking
       { id = Id id,
         status = DRB.NEW,
         providerId = merchantId,
-        providerExoPhone = exoPhone,
+        primaryExophone = exophone.primaryPhone,
         startTime = req.startTime,
         riderId = Nothing,
         fromLocation,
@@ -227,3 +230,11 @@ buildBooking req merchantId estimatedFare discount estimatedTotalFare bookingDet
         createdAt = now,
         updatedAt = now
       }
+
+findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
+findRandomExophone merchantId = do
+  exophones <- CQExophone.findAllByMerchantId merchantId
+  nonEmptyExophones <- case exophones of
+    [] -> throwError $ ExophoneNotFound merchantId.getId
+    e : es -> pure $ e :| es
+  getRandomElement nonEmptyExophones

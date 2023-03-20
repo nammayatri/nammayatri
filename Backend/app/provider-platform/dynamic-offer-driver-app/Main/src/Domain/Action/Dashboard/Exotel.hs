@@ -20,14 +20,18 @@ where
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Exophone as CQExophone
 
 ---------------------------------------------------------------------
 exotelHeartbeat ::
   Common.ExotelHeartbeatReq ->
   Flow APISuccess
 exotelHeartbeat req = do
+  let affectedPhones = (req.incomingAffected <&> (.phoneNumber)) <> (req.outgoingAffected <&> (.phoneNumber))
+  Esq.runTransaction $ CQExophone.updateAffectedPhones affectedPhones
+  CQExophone.clearAllCache
   logTagInfo "dashboard -> exotelHeartbeat: " $ show req.statusType
-  -- TODO What we should do here: store in redis, insert to DB, upsert to DB?
   pure Success
