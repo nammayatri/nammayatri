@@ -976,7 +976,7 @@ type NotificationDetailModelState = {
   mediaUrl :: String,
   title :: String,
   timeLabel :: String,
-  description :: String,
+  description :: Array String,
   actionText :: String,
   actionVisibility :: Visibility,
   addCommentModelVisibility :: Visibility,
