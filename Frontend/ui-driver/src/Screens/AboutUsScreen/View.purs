@@ -182,8 +182,8 @@ underlinedTextView value push  =
   , orientation VERTICAL
   , onClick (\action -> do
               _<- push action
-              _ <- JB.openUrlInApp if (value == (getString T_C)) then "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
-                else "https://docs.google.com/document/d/1rBuCm58pSSQRGySAzxWQcQxmmmnzI1tZxeL2nM0SUmk/edit?usp=sharing"
+              _ <- JB.openUrlInApp if (value == (getString T_C)) then "https://docs.google.com/document/d/1K68xvtReD9FVpx-IshtKNMt4baQNgKXt/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
+                else "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
               pure unit
               ) (const TermsAndConditionAction)
   , margin (Margin 20 30 0 0)
