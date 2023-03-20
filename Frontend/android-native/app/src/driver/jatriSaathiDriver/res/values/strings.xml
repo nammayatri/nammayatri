@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name" translatable="false">Jatri Saathi Driver</string>
+    <string name="client_id" translatable="false">jatrisaathidriver</string>
+    <string name="service" translatable="false">jatrisaathidriver</string>
+    <string name="bodyText" translatable="false">Jatri Saathi Partner collects location data to enable share your location to monitor driver current location, even when the app is closed or not in use.</string>
+    <string name="dev_port" translatable="false">8083</string>
+</resources>

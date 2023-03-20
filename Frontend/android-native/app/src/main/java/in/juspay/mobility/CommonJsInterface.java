@@ -3151,7 +3151,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
                     SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                     sharedPref.edit().putString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
-                    Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getResources().getString(R.string.fileProviderPath), new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
+                    Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getApplicationInfo().packageName + ".fileProvider", new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
                     takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                     Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                     chooseFromFile.setType("image/*");
@@ -3343,7 +3343,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
             try {
                 pdfDocument.writeTo(new FileOutputStream(file));
-                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getResources().getString(R.string.fileProviderPath), file);
+                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getApplicationInfo().packageName + ".fileProvider", file);
                 Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
                 pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 pdfOpenintent.setDataAndType(path, "application/pdf");
@@ -3385,7 +3385,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
             try {
                 pdfDocument.writeTo(new FileOutputStream(file));
-                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getResources().getString(R.string.fileProviderPath), file);
+                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getApplicationInfo().packageName + ".fileProvider", file);
                 Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
                 pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 pdfOpenintent.setDataAndType(path, "application/pdf");
