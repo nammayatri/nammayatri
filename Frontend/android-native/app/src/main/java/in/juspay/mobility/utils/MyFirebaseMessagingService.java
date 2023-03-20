@@ -117,12 +117,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                     case NotificationTypes.NEW_RIDE_AVAILABLE :
                         sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
-                        NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                        NotificationUtils.showAllocationNotification(this, payload, entity_payload);
                         break;
 
                     case NotificationTypes.CLEARED_FARE :
                         sharedPref.edit().putString(getString(R.string.CLEAR_FARE), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
-                        NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                        NotificationUtils.showAllocationNotification(this, payload, entity_payload);
                         break;
 
                     case NotificationTypes.CANCELLED_PRODUCT :
@@ -168,7 +168,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                     case NotificationTypes.CANCELLED_SEARCH_REQUEST :
                         sharedPref.edit().putString(getString(R.string.CANCELLED_SEARCH_REQUEST), String.valueOf(payload.get(getString(R.string.entity_ids)))).apply();
-                        NotificationUtils.showAllocationNotification(this, title, body, payload, imageUrl, entity_payload);
+                        NotificationUtils.showAllocationNotification(this, payload, entity_payload);
                         break;
 
                     case NotificationTypes.NEW_MESSAGE :
@@ -178,10 +178,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                     case NotificationTypes.REGISTRATION_APPROVED :
                         sharedPref.edit().putString(getString(R.string.REGISTRATION_APPROVED), "true").apply();
+                        NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                         break;
 
                     case NotificationTypes.REFERRAL_ACTIVATED :
                         sharedPref.edit().putString("REFERRAL_ACTIVATED", "true").apply();
+                        NotificationUtils.showNotification(this, title, body, payload, imageUrl);
                         break;
                         
                     default:

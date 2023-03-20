@@ -59,6 +59,7 @@ public class RideRequestActivity extends AppCompatActivity {
     private ArrayList<LinearProgressIndicator> progressIndicatorsList ;
     private ArrayList<LinearLayout> indicatorList ;
     private  RideRequestUtils rideRequestUtils = new RideRequestUtils();
+    private SharedPreferences sharedPref;
 
     private final SheetAdapter sheetAdapter = new SheetAdapter(sheetArrayList, viewPager2, new SheetAdapter.OnItemClickListener() {
         @Override
@@ -207,6 +208,7 @@ public class RideRequestActivity extends AppCompatActivity {
         viewPager2 = findViewById(R.id.viewPager);
         sheetAdapter.setViewPager(viewPager2);
         viewPager2.setAdapter(sheetAdapter);
+        sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         if (getIntent() !=null){
             addToList(getIntent().getExtras());
         }
@@ -438,9 +440,10 @@ public class RideRequestActivity extends AppCompatActivity {
                 findViewById(R.id.progress_indicator_2),
                 findViewById(R.id.progress_indicator_3)));
 
+        if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         for (int i=0; i<sheetArrayList.size(); i++){
             progressCompat = sheetArrayList.get(i).getReqExpiryTime()  + sheetArrayList.get(i).getStartTime() - time;
-            progressIndicatorsList.get(i).setProgressCompat(progressCompat*4, animated); // (100/maxExpiryTime)
+            progressIndicatorsList.get(i).setProgressCompat(progressCompat*(100/Integer.parseInt(sharedPref.getString("MAX_RIDE_REQ_EXPIRY", "30"))), animated); // (100/maxExpiryTime)
             if (progressCompat <= 8){
                 progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.red900));
             }else {

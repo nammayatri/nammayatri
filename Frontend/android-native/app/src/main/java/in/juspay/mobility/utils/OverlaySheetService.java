@@ -91,6 +91,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private ArrayList<LinearProgressIndicator> progressIndicatorsList ;
     private ArrayList<LinearLayout> indicatorList ;
     private Handler mainLooper = new Handler(Looper.getMainLooper());
+    private RideRequestUtils rideRequestUtils = new RideRequestUtils();
 
     public class OverlayBinder extends Binder {
         public OverlaySheetService getService () {
@@ -462,7 +463,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
                         f.setTimeZone(TimeZone.getTimeZone("UTC"));
                         String getCurrTime = f.format(new Date());
-                        int calculatedTime = calculateExpireTimer(searchRequestValidTill,getCurrTime);
+                        int calculatedTime = rideRequestUtils.calculateExpireTimer(searchRequestValidTill,getCurrTime);
                         if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                         int negotiationUnit = Integer.parseInt(sharedPref.getString("NEGOTIATION_UNIT", "10"));
                         int rideRequestedBuffer =  Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
@@ -691,28 +692,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         view.performClick();
         return true;
     }
-    private int calculateExpireTimer(String expireTimeTemp, String currTimeTemp){
-        String[] arrOfA = expireTimeTemp.split("T");
-        String[] arrOfB = currTimeTemp.split("T");
-        if(!arrOfA[0].equals(arrOfB[0])){
-            return -1;
-        }
-        String[] timeTempExpire = arrOfA[1].split(":");
-        String[] timeTempCurrent = arrOfB[1].split(":");
-        timeTempExpire[2] = timeTempExpire[2].substring(0,2);
-        timeTempCurrent[2] = timeTempCurrent[2].substring(0,2);
-        int currTime = 0, expireTime = 0, calculate = 3600;
-        for(int i = 0 ; i < timeTempCurrent.length;i++){
-            currTime+= (Integer.parseInt(timeTempCurrent[i])*calculate);
-            expireTime+= (Integer.parseInt(timeTempExpire[i])*calculate);
-            calculate = calculate/60;
-        }
-        if ((expireTime-currTime) >= 5)
-        {
-            return expireTime-currTime - 5 ;
-        }
-        return 0;
-    }
 
     private void startLoader(String id) {
         countDownTimer.cancel();
@@ -887,9 +866,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 floatyView.findViewById(R.id.progress_indicator_2),
                 floatyView.findViewById(R.id.progress_indicator_3)));
 
+        if (sharedPref == null) sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         for (int i=0; i<sheetArrayList.size(); i++){
             progressCompat = sheetArrayList.get(i).getReqExpiryTime()  + sheetArrayList.get(i).getStartTime() - time;
-            progressIndicatorsList.get(i).setProgressCompat(progressCompat*4, animated); // (100/maxExpiryTime)
+            progressIndicatorsList.get(i).setProgressCompat(progressCompat*(100/Integer.parseInt(sharedPref.getString("MAX_RIDE_REQ_EXPIRY", "30"))), animated); // (100/maxExpiryTime)
             if (progressCompat <= 8){
                 progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.red900));
             }else {

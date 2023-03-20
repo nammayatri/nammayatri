@@ -10,14 +10,9 @@
 package in.juspay.mobility;
 
 import android.app.Activity;
-
 import android.app.DatePickerDialog;
-import android.app.Notification;
 import android.app.TimePickerDialog;
 import android.content.Context;
-import android.content.Intent;
-import android.net.Uri;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -25,35 +20,13 @@ import android.webkit.JavascriptInterface;
 import android.widget.DatePicker;
 import android.widget.TimePicker;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.FragmentActivity;
-
-import com.appeaser.sublimepickerlibrary.datepicker.SelectedDate;
-import com.appeaser.sublimepickerlibrary.helpers.SublimeOptions;
-import com.appeaser.sublimepickerlibrary.recurrencepicker.SublimeRecurrencePicker;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.android.libraries.places.api.Places;
-import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.widget.Autocomplete;
-import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
-
-import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.util.Arrays;
 import java.util.Calendar;
-import java.util.List;
 import java.util.Locale;
-
-import in.juspay.mobility.utils.NotificationUtils;
-import in.juspay.mobility.utils.SublimePickerDialogFragment;
 import in.juspay.hypersdk.core.HyperFragment;
 import in.juspay.hypersdk.core.JuspayServices;
 import in.juspay.hypersdk.core.DuiCallback;
@@ -111,91 +84,6 @@ public class JsInterface extends CommonJsInterface implements in.juspay.hypersdk
             } catch (Exception e) {
                 e.printStackTrace();
             }
-//        polylines = new ArrayList<>();
-
-    }
-
-//     @JavascriptInterface
-//     public void showDialer(String phoneNum) {
-//         Intent intent = new Intent();
-//         intent.setAction(Intent.ACTION_DIAL);
-//         String phoneNumber;
-//         phoneNumber = "tel:" + phoneNum;
-//         intent.setData(Uri.parse(phoneNumber));
-//         activity.startActivity(intent);
-// //        Intent sendIntent = new Intent();
-// //        sendIntent.setAction(Intent.ACTION_SEND);
-// //        sendIntent.putExtra(Intent.EXTRA_TEXT, phoneNum);
-// //        sendIntent.setType("text/plain");
-// //
-// //        Intent shareIntent = Intent.createChooser(sendIntent, null);
-// //        activity.startActivity(shareIntent);
-//     }
-
-    @JavascriptInterface
-    public void dateTimePicker(String callback) {
-        SublimePickerDialogFragment pickerFrag = new SublimePickerDialogFragment();
-        pickerFrag.setCallback(new SublimePickerDialogFragment.Callback() {
-            @Override
-            public void onCancelled() {}
-
-            @Override
-            public void onDateTimeRecurrenceSet(SelectedDate selectedDate, int hourOfDay, int minute, SublimeRecurrencePicker.RecurrenceOption recurrenceOption, String recurrenceRule) {
-                if (selectedDate != null) {
-                    int year = selectedDate.getEndDate().get(Calendar.YEAR);
-                    int month = selectedDate.getEndDate().get(Calendar.MONTH);
-                    int day = selectedDate.getEndDate().get(Calendar.DATE);
-                    Calendar calendar = Calendar.getInstance();
-                    Calendar c = Calendar.getInstance();
-                    calendar.set(year, month, day, hourOfDay, minute);
-                        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s', %d);",
-                                callback, calendar.getTimeInMillis());
-
-                        if (dynamicUI != null) {
-                            dynamicUI.addJsToWebView(javascript);
-                        }
-                } else {
-                    Log.e("DateTimePicker", "selectDate is null");
-                }
-            }
-        });
-        SublimeOptions opts = new SublimeOptions().setDisplayOptions(SublimeOptions.ACTIVATE_DATE_PICKER | SublimeOptions.ACTIVATE_TIME_PICKER).setPickerToShow(SublimeOptions.Picker.DATE_PICKER);
-        opts.setDateRange(Calendar.getInstance().getTimeInMillis(), Long.MIN_VALUE);
-        Bundle bundle = new Bundle();
-        bundle.putParcelable("SUBLIME_OPTIONS", opts);
-        pickerFrag.setArguments(bundle);
-        pickerFrag.setStyle(DialogFragment.STYLE_NO_TITLE, 0);
-        pickerFrag.show(((FragmentActivity) activity).getSupportFragmentManager(), "SUBLIME_PICKER");
-    }
-
-    @JavascriptInterface
-    public void scheduleNotification(final String title, final String content, final String data, final int delay) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Notification notification = NotificationUtils.createNotification(context, title, content, new JSONObject(data));
-                    NotificationUtils.scheduleNotification(context, notification, delay);
-                }catch (JSONException e){
-                    Log.e("Notification", "data not a valid json: " + e.toString());
-                }
-            }
-        });
-    }
-
-    @JavascriptInterface
-    public void showNotification(final String title, final String content, final String data,final String imageUrl) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    NotificationUtils.showNotification(context, title, content, new JSONObject(data),imageUrl);
-                }catch (JSONException e){
-                    Log.e("Notification", "data not a valid json: " + e.toString());
-                }
-
-            }
-        });
     }
 
     @JavascriptInterface
