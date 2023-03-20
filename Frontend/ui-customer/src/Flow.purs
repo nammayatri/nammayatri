@@ -36,7 +36,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion)
 import Foreign.Class (encode)
 import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, convertUTCtoISC, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, getExpiryTime, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts)
-import JBridge (currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker)
+import JBridge (currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker, stopChatListenerService)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -529,6 +529,7 @@ homeScreenFlow = do
       _ <- updateLocalStage HomeScreen
       _ <- Remote.cancelRideBT (Remote.makeCancelRequest state) (state.props.bookingId)
       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
+      removeChatService ""
       _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled_by_user"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       homeScreenFlow
@@ -579,8 +580,9 @@ homeScreenFlow = do
                                       _ <- pure $ removeAllPolylines ""
                                       _ <- pure $ enableMyLocation true
                                       _ <- updateLocalStage HomeScreen
-                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
+                                      removeChatService ""
                                       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
+                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
                                       homeScreenFlow
             _              -> homeScreenFlow
     LOGOUT -> do  
@@ -1535,3 +1537,9 @@ updateDistanceInfo state lat lon = do
 
 dummyLocationListItemState :: LocationListItemState
 dummyLocationListItemState = dummyLocationListState{locationItemType = Just PREDICTION}
+
+removeChatService :: String -> FlowBT String Unit
+removeChatService _ = do
+  _ <- lift $ lift $ liftFlow $ stopChatListenerService
+  _ <- pure $ setValueToLocalStore READ_MESSAGES "0.0"
+  pure unit

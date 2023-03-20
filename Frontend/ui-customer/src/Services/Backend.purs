@@ -33,7 +33,7 @@ import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Presto.Core.Types.API (Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Screens.Types (Address, Stage(..))
-import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines)
+import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, removeAllPolylines, stopChatListenerService)
 import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (&&), (*>), (<<<), (=<<), (==), (<=),(||), show, (<>))
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker.Labels (Label(..))
@@ -80,6 +80,7 @@ withAPIResult url f flow = do
                 _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
                 _ <- pure $ deleteValueFromLocalStore LANGUAGE_KEY
                 _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
+                _ <- liftFlow $ stopChatListenerService
                 _ <- pure $ factoryResetApp ""
                 pure unit -- default if it fails
                 else pure unit -- default if it fails
@@ -107,6 +108,7 @@ withAPIResultBT url f errorHandler flow = do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
                 deleteValueFromLocalStore LANGUAGE_KEY
                 deleteValueFromLocalStore REGISTRATION_APPROVED
+                lift $ lift $ liftFlow $ stopChatListenerService
                 pure $ factoryResetApp ""
                     else if (err.code == 400 && userMessage == "Invalid start time.") then
                         pure unit

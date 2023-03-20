@@ -124,7 +124,7 @@ data STR = LETS_GET_STARTED
         | DISTANCE
         | REPORT_AN_ISSUE
         | TIME_TAKEN
-        | OPEN_GOOGLE_MAPS
+        | MAPS
         | CALL
         | START_RIDE
         | CANCEL_RIDE
@@ -306,8 +306,6 @@ data STR = LETS_GET_STARTED
         | YOU_ARE_AT_PICKUP
         | WAITING_FOR_CUSTOMER
         | CUSTOMER_NOTIFIED
-        | I_ARRIVED
-        | ESTIMATED_RIDE_FARE
         | PICKUP_TOO_FAR
         | CUSTOMER_NOT_PICKING_CALL
         | TRAFFIC_JAM
@@ -349,6 +347,21 @@ data STR = LETS_GET_STARTED
         | FOR_UPDATES_SEE_ALERTS
         | SHARE_OPTIONS
         | ENTER_PASSWORD
+        | START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS
+        | MESSAGE
+        | RIDE_FARE
+        | RIDE_DISTANCE
+        | I_WILL_BE_THERE_IN_2_MINS
+        | ARE_YOU_COMING
+        | I_AM_AT_THE_PICKUP_LOCATION
+        | I_HAVE_ARRIVED
+        | I_AM_STUCK_IN_TRAFFIC
+        | I_AM_ON_THE_WAY
+        | YES_I_AM_ALMOST_THERE
+        | DELAYED_A_BIT_REACHING_IN_SOME_TIME
+        | OKAY
+        | PLEASE_BE_QUICK_I_AM_WAITING
+        | START_YOUR_CHAT_WITH_THE_DRIVER
 
 type LETS_GET_STARTED = String
 type SELECT_LANGUAGE = String
@@ -485,7 +498,7 @@ type HOME = String
 type RIDES = String
 type Profile = String
 type WHERE_IS_MY_LICENSE_NUMBER = String
-type OPEN_GOOGLE_MAPS = String
+type MAPS = String
 type CALL = String
 type START_RIDE = String
 type CANCEL_RIDE = String
@@ -693,8 +706,6 @@ type LESS = String
 type YOU_ARE_AT_PICKUP = String
 type WAITING_FOR_CUSTOMER = String
 type CUSTOMER_NOTIFIED = String
-type I_ARRIVED = String
-type ESTIMATED_RIDE_FARE = String
 type PICKUP_TOO_FAR = String 
 type CUSTOMER_NOT_PICKING_CALL = String 
 type TRAFFIC_JAM = String 
@@ -736,3 +747,18 @@ type DRIVER_DETAILS = String
 type FOR_UPDATES_SEE_ALERTS = String
 type SHARE_OPTIONS = String
 type ENTER_PASSWORD = String
+type START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS = String
+type START_YOUR_CHAT_WITH_THE_DRIVER = String
+type MESSAGE = String
+type RIDE_FARE = String
+type RIDE_DISTANCE = String
+type I_WILL_BE_THERE_IN_2_MINS = String
+type I_AM_AT_THE_PICKUP_LOCATION = String
+type ARE_YOU_COMING = String
+type I_HAVE_ARRIVED = String
+type I_AM_STUCK_IN_TRAFFIC = String
+type I_AM_ON_THE_WAY = String
+type YES_I_AM_ALMOST_THERE = String
+type DELAYED_A_BIT_REACHING_IN_SOME_TIME = String
+type OKAY = String
+type PLEASE_BE_QUICK_I_AM_WAITING = String

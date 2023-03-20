@@ -19,6 +19,7 @@ import Components.CancelRide as CancelRide
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
+import Components.ChatView as ChatView
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
@@ -32,6 +33,7 @@ import PrestoDOM
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.Types as ST
 import Styles.Colors as Color
+import Screens.HomeScreen.Controller (initialSuggestions, pickupSuggestions)
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -54,7 +56,9 @@ rideActionModalConfig state = let
     },
     estimatedRideFare = state.data.activeRide.estimatedFare,
     isDriverArrived = state.data.activeRide.isDriverArrived,
-    notifiedCustomer = state.data.activeRide.notifiedCustomer
+    notifiedCustomer = state.data.activeRide.notifiedCustomer,
+    currentStage = state.props.currentStage,
+    unReadMessages = state.props.unReadMessages
   }
   in rideActionModalConfig'
 
@@ -154,3 +158,34 @@ cancelConfirmationConfig state = let
     }
   }
   in popUpConfig'
+
+------------------------------------ chatViewConfig -----------------------------
+chatViewConfig :: ST.HomeScreenState -> ChatView.Config
+chatViewConfig state = let
+  config = ChatView.config
+  chatViewConfig' = config {
+    userConfig {
+      userName = state.data.activeRide.riderName,
+      appType = "Driver"
+    }
+    ,messages = state.data.messages
+    , sendMessageActive = state.props.sendMessageActive
+    , distance = ""
+    , suggestionsList = if (DA.null state.data.messages) then (if (state.data.activeRide.isDriverArrived || state.data.activeRide.notifiedCustomer) then pickupSuggestions "" else initialSuggestions "") else state.data.suggestionsList
+    , hint = (getString MESSAGE)
+    , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
+    , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
+    , mapsText = (getString MAPS)
+    , grey700 = Color.grey700
+    , blue600 = Color.blue600
+    , blue900 = Color.blue900
+    , transparentGrey = Color.transparentGrey
+    , green200 = Color.green200
+    , grey900 = Color.grey900
+    , grey800 = Color.grey800
+    , blue800 = Color.blue800
+    , white900 = Color.white900
+    , black800 = Color.black800
+    , black700 = Color.black700
+  }
+  in chatViewConfig'

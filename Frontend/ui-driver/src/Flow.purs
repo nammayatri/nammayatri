@@ -34,7 +34,7 @@ import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os
 import Foreign.Class (class Encode, encode, decode)
 import Global (readFloat)
 import Helpers.Utils (hideSplash, getTime, convertUTCtoISC, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getCorrespondingErrorMessage, getcurrentdate)
-import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader)
+import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, stopChatListenerService)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, discard, pure, unit, void, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-))
@@ -596,7 +596,7 @@ currentRideFlow = do
         (GlobalState allState) <- getState
         let state = allState.homeScreen
             activeRide = (activeRideDetail state ride)
-            stage = (if activeRide.status == NEW then RideAccepted else RideStarted) 
+            stage = (if activeRide.status == NEW then (if state.props.currentStage == ChatWithCustomer then ChatWithCustomer else RideAccepted) else RideStarted) 
         setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
         _ <- updateStage $ HomeScreenStage stage
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide }}) 
@@ -616,7 +616,7 @@ homeScreenFlow = do
   _ <- pure $ delay $ Milliseconds 1.0
   _ <- pure $ printLog "Registration token" (getValueToLocalStore REGISTERATION_TOKEN)
   _ <- pure $ firebaseUserID (getValueToLocalStore DRIVER_ID)
-  if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && not (isLocalStageOn RideAccepted) && not (isLocalStageOn RideStarted) then 
+  if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && not (isLocalStageOn RideAccepted) && not (isLocalStageOn RideStarted) && not (isLocalStageOn ChatWithCustomer) then 
     currentRideFlow
   else pure unit 
   getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
@@ -720,13 +720,17 @@ homeScreenFlow = do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_CANCEL_RIDE" "."
       cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
       _ <- pure $ removeAllPolylines ""
+      removeChatService ""
       _ <- updateStage $ HomeScreenStage HomeScreen
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { chatcallbackInitiated = false}})
       homeScreenFlow
     FCM_NOTIFICATION notificationType -> do 
       _ <- pure $ removeAllPolylines ""
       case notificationType of 
         "CANCELLED_PRODUCT" -> do 
+          removeChatService ""
           _ <- updateStage $ HomeScreenStage HomeScreen 
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { chatcallbackInitiated = false}})
           homeScreenFlow
         "DRIVER_ASSIGNMENT" -> currentRideFlow
         "RIDE_REQUESTED"    -> do 
@@ -746,7 +750,7 @@ homeScreenFlow = do
       , "lon" : state.data.currentDriverLon
       })
       _ <- pure $ firebaseLogEvent "i_have_arrived_clicked"
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{activeRide{notifiedCustomer = true}}, props{currentStage = ChatWithCustomer}})
       homeScreenFlow 
     UPDATE_ROUTE state -> do 
       _ <- pure $ printLog "HOME_SCREEN_FLOW UPDATE_ROUTE" state
@@ -900,3 +904,9 @@ notificationFlow = do
     LOAD_NOTIFICATIONS state -> do 
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen -> state{offsetValue = (length state.notificationList)})
       notificationFlow
+
+removeChatService :: String -> FlowBT String Unit
+removeChatService _ = do
+  _ <- lift $ lift $ liftFlow $ stopChatListenerService
+  _ <- pure $ setValueToLocalStore READ_MESSAGES "0.0"
+  pure unit

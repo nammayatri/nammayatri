@@ -18,6 +18,7 @@ module Screens.Types where
 import Common.Types.App (CancellationReasons)
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
+import Components.ChatView.Controller (ChatComponent)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
@@ -413,6 +414,7 @@ data Stage = HomeScreen
            | TryAgain
            | RideRating
            | FavouriteLocationModel
+           | ChatWithDriver
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -466,6 +468,9 @@ type HomeScreenStateData =
   , rideDuration :: String
   , showPreferences :: Boolean
   , previousCurrentLocations:: PreviousCurrentLocations
+  , messages :: Array ChatComponent
+  , suggestionsList :: Array String
+  , messageToBeSent :: String
   }
 
 type HomeScreenStateProps =
@@ -510,6 +515,8 @@ type HomeScreenStateProps =
   , showRateCard :: Boolean
   , showRateCardIcon :: Boolean
   , emergencyHelpModal :: Boolean
+  , sendMessageActive :: Boolean
+  , chatcallbackInitiated :: Boolean
   , estimatedDistance :: Maybe Int
   , waitingTimeTimerId :: String
   , tagType :: Maybe CardType
@@ -519,6 +526,7 @@ type HomeScreenStateProps =
   , hasTakenRide :: Boolean
   , isReferred :: Boolean
   , storeCurrentLocs :: Boolean
+  , unReadMessages :: Boolean
   , emergencyHelpModelState :: EmergencyHelpModelState
   }
 
@@ -668,6 +676,7 @@ type DriverInfoCard =
   , driverArrived :: Boolean
   , estimatedDistance :: String
   , driverArrivalTime :: Int
+  , bppRideId :: String 
   }
 
 type RatingCard = 

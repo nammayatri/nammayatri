@@ -36,6 +36,9 @@
     <string name="location_is_turned_off_permission_is_disabled">Location முடக்கப்பட்டுள்ளது / அனுமதி முடக்கப்பட்டுள்ளது</string>
     <string name="ride_assigned_to_another_driver">சவாரி மற்றொரு ஓட்டுனருக்கு ஒதுக்கப்பட்டது.</string>
     <string name="select_date">தேதியைத் தேர்ந்தெடுக்கவும்</string>
+    <string name="chatting_is_enabled">அரட்டை இயக்கப்பட்டது</string>
+    <string name="you_can_now_chat_with_driver">நீங்கள் இப்போது டிரைவருடன் அரட்டையடிக்கலாம்</string>
+    <string name="you_can_now_chat_with_customer">நீங்கள் இப்போது வாடிக்கையாளருடன் அரட்டையடிக்கலாம்</string>
     <string name="new_ride_req">புதிய சவாரி</string>
     <string name="new_ride_available_for_offering">புதிய சவாரி உள்ளது</string>
 </resources>

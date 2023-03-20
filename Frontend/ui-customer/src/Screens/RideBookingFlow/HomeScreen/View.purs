@@ -17,7 +17,6 @@ module Screens.HomeScreen.View where
 
 import Common.Types.App
 import Screens.RideBookingFlow.HomeScreen.Config
-
 import Accessor (_lat, _lon)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
@@ -45,6 +44,7 @@ import Components.SettingSideBar as SettingSideBar
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except.Trans (lift)
 import Data.Array (any, length, mapWithIndex, null, (!!), head, drop) 
+import Components.ChatView as ChatView 
 import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Data.Lens ((^.))
@@ -59,14 +59,14 @@ import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, lift
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, isPreviousVersion, getCurrentLocationMarker, getPreviousVersion)
-import JBridge (drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute)
+import JBridge (drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, storeCallBackMessageUpdated, startChatListenerService, stopChatListenerService, updateRoute)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit,Ordering,compare, bind, const, discard, map, negate, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (>=), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, imageWithFallback)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, imageWithFallback, editText, onChange, hint, scrollView, pattern, adjustViewWithKeyboard)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
@@ -133,8 +133,14 @@ screen initialState =
                   _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   launchAff_ $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 2000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
-                else
+                else pure unit
+                if(not initialState.props.chatcallbackInitiated) then do
+                  _ <- storeCallBackMessageUpdated push initialState.data.driverInfoCardState.bppRideId "Customer" UpdateMessages
+                  _ <- startChatListenerService
+                  push InitializeChat
                   pure unit
+                else
+                  pure unit        
               RideStarted -> do
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
@@ -142,6 +148,9 @@ screen initialState =
                   launchAff_ $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip"
                 else
                   pure unit
+                _ <- push RemoveChat
+                pure unit
+              ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimer initialState.data.driverInfoCardState.driverArrivalTime push WaitingTimeAction else pure unit
               ConfirmingLocation -> do
                 _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 _ <- storeCallBackLocateOnMap push UpdatePickupLocation
@@ -261,6 +270,7 @@ view push state =
                 []
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
+            , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state 
             , rideTrackingView push state
             , if ((not state.props.ratingModal) && (state.props.showlocUnserviceablePopUp) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
@@ -282,6 +292,16 @@ view push state =
             ]
         ]
     ]
+
+chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+chatView push state = 
+  relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , alignParentBottom "true,-1"
+  , adjustViewWithKeyboard "true"
+  , background Color.transparent
+  ][ ChatView.view (push <<< ChatViewActionController) (chatViewConfig state) ]
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 searchLocationView push state =
@@ -1301,16 +1321,16 @@ emptyLayout state =
 rideTrackingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideTrackingView push state =
   linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , padding (Padding 0 0 0 0)
-    , background Color.transparent
-    , alignParentBottom "true,-1" -- Check it in Android.
-    , onBackPressed push (const $ BackPressed)
-    , visibility $ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then VISIBLE else GONE
-    ]
-    [ -- TODO Add Animations
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , padding (Padding 0 0 0 0)
+  , background Color.transparent
+  , alignParentBottom "true,-1" -- Check it in Android.
+  , onBackPressed push (const $ BackPressed)
+  , gravity BOTTOM
+  , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then VISIBLE  else GONE
+  ][  -- TODO Add Animations
       -- PrestoAnim.animationSet
       --   [ translateInXAnim (-30) ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
       --   , translateOutXAnim (-100) $ not ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
@@ -1327,10 +1347,9 @@ rideTrackingView push state =
           --   , translateYAnim 0 900 $ not ( state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
           --   ] $
           coordinatorLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            ]
-            [ bottomSheetLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          ][  bottomSheetLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , background Color.transparent
@@ -1338,25 +1357,26 @@ rideTrackingView push state =
                 , peakHeight if state.props.currentStage == RideAccepted then getHeightFromPercent 58 else getHeightFromPercent 46
                 , visibility VISIBLE
                 , halfExpandedRatio 0.9
-                ]
-                [ linearLayout
+                ][ linearLayout
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     ]
                     [ if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then
                         DriverInfoCard.view (push <<< DriverInfoCardActionController) $ driverInfoCardViewState state
-                         
                       else
                         emptyTextView state
                     ]
                 ]
             ]
         ]
+
+        
     ]
 
-previousRideRatingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-previousRideRatingView push state =
-  linearLayout
+
+previousRideRatingView ::  forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w 
+previousRideRatingView push state = 
+   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , gravity BOTTOM
@@ -1510,7 +1530,7 @@ getQuotesPolling action retryAction count duration push state = do
 driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String-> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
-  if ((isLocalStageOn RideAccepted) || (isLocalStageOn RideStarted)) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
+  if ((isLocalStageOn RideAccepted) || (isLocalStageOn RideStarted) || (isLocalStageOn ChatWithDriver)) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do 
     respBooking <- rideBooking (state.props.bookingId)
     case respBooking of
       Right (RideBookingRes respBooking) -> do
@@ -1532,9 +1552,9 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
           rideID = state.data.driverInfoCardState.rideId
           srcLat = (resp ^. _lat)
           srcLon = (resp ^. _lon)
-          dstLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
-          dstLon = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-          markers = if (isLocalStageOn RideAccepted) then (driverTracking "" ) else (rideTracking "")
+          dstLat = if state.props.currentStage == RideAccepted || (isLocalStageOn ChatWithDriver) then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
+          dstLon = if state.props.currentStage == RideAccepted || (isLocalStageOn ChatWithDriver)then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
+          markers = if (isLocalStageOn RideAccepted) || (isLocalStageOn ChatWithDriver) then (driverTracking "" ) else (rideTracking "")
         if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
           _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
           _ <- pure $ removeAllPolylines ""
@@ -1632,12 +1652,6 @@ cancelRidePopUpView push state =
     , width MATCH_PARENT
     ][ CancelRidePopUp.view (push <<< CancelRidePopUpAction) (cancelRidePopUpConfig state)]
 
-metersToKm :: Int -> HomeScreenState -> String
-metersToKm distance state =
-  if (distance == 0) then
-    (if (state.props.currentStage == RideAccepted) then (getString AT_PICKUP) else (getString AT_DROP))
-  else if (distance < 1000) then (toString distance <> " m " <> (getString AWAY_C)) else (parseFloat ((toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
-      
 
 checkForLatLongInSavedLocations :: forall action. (action -> Effect Unit) -> (Array LocationListItemState -> action) -> HomeScreenState -> Flow GlobalState Unit 
 checkForLatLongInSavedLocations push action state = do 

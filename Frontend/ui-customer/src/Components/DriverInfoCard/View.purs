@@ -55,7 +55,7 @@ view push state =
   , orientation VERTICAL 
   ][  mapOptionsView push state 
     , driverInfoView push state 
-    ]
+   ]
 
 mapOptionsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
 mapOptionsView push state =
@@ -111,7 +111,7 @@ locationTrackButton push state =
   , gravity CENTER
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
-  , visibility if state.props.currentStage == RideAccepted then GONE else VISIBLE
+  , visibility if state.props.currentStage == RideAccepted then GONE else VISIBLE  
   , cornerRadius 20.0
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
@@ -249,7 +249,7 @@ driverInfoView push state =
           , gravity CENTER
           , cornerRadii $ Corners 24.0 true true false false
           , stroke $ "1," <> Color.grey900
-          ][ linearLayout
+          ][linearLayout
             [ gravity CENTER
             , background Color.transparentGrey
             , height $ V 4
@@ -285,18 +285,19 @@ cancelRideLayout push state =
  , margin $ MarginTop 16
  , padding $ PaddingBottom if os == "IOS" then safeMarginBottom else 0
  , visibility if state.props.currentStage == RideAccepted then VISIBLE else GONE
- ][ linearLayout [
-    height WRAP_CONTENT
-   , width WRAP_CONTENT
-   , padding $ Padding 5 5 5 5
-   , onClick push $ const $ CancelRide state
- ] 
-      [textView
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text $ getString CANCEL_RIDE
-        , color Color.red
-        ]]
+ ][ linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , onClick push $ const $ CancelRide state
+  ][ textView
+     [ width WRAP_CONTENT
+     , height WRAP_CONTENT
+     , text $ getString CANCEL_RIDE
+     , textSize FontSize.a_14
+     , color Color.red
+     , fontStyle $ FontStyle.regular LanguageStyle
+     ]
+   ]
  ]
 
 ---------------------------------- contactView ---------------------------------------
@@ -341,7 +342,25 @@ contactView push state =
       width MATCH_PARENT
     , gravity RIGHT
     , height WRAP_CONTENT
-    ][PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig)]
+    ][linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity RIGHT
+      ] [ linearLayout
+          [ height $ V 40
+          , width $ V 64
+          , gravity CENTER
+          , cornerRadius 20.0
+          , background Color.green200
+          , onClick push (const MessageDriver)
+          ][ imageView
+              [ imageWithFallback if state.props.unReadMessages then "ny_ic_chat_badge_green,https://assets.juspay.in/nammayatri/images/user/ny_ic_chat_badge_green.png" else "ny_ic_call_msg,https://assets.juspay.in/nammayatri/images/user/ny_ic_call_msg.png"
+              , height $ V 24
+              , width $ V 24
+              ]
+          ]
+        ]
+      ]
 
   ]
 

@@ -90,6 +90,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
@@ -208,6 +209,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Inflater;
 
+
+import in.juspay.mobility.utils.ChatService;
 import in.juspay.mobility.utils.LocationUpdateWorker;
 import in.juspay.mobility.utils.CheckPermissionAutoStart;
 import in.juspay.mobility.utils.CheckPermissionOverlay;
@@ -346,10 +349,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void setKeysInSharedPrefs(String key, String value) {
         KeyValueStore.write(juspayServices, key, value);
         setEnvInNativeSharedPrefKeys(key, value);
-        if (MainActivity.getInstance().getResources().getString(R.string.service).equals(context.getResources().getString(R.string.nammayatripartner))){
-            if (key.equals(context.getResources().getString(R.string.LANGUAGE_KEY))){
-                updateLocaleResource(value);
-            }
+        if (key.equals(context.getResources().getString(R.string.LANGUAGE_KEY))){
+            updateLocaleResource(value);
         }
     }
 
@@ -3133,6 +3134,54 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void currentPosition(String str) {
         System.out.println("Fetch Current Position");
         showLocationOnMap();
+    }
+
+    @JavascriptInterface
+    public static void sendMessage(final String message){
+        ChatService.sendMessage(message); 
+    }
+
+    @JavascriptInterface
+    public void scrollToBottom(final String id){
+        ScrollView scrollView = activity.findViewById(Integer.parseInt(id));
+        scrollView.fullScroll(View.FOCUS_DOWN);
+    }
+
+    @JavascriptInterface
+    public void storeCallBackMessageUpdated(final String channelId, final String uuid, final String callback){
+        ChatService.storeCallBackMessage = callback;
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+                                editor.putString("CHAT_CHANNEL_ID", channelId);
+                                editor.apply();
+                                setKeysInSharedPrefs("CHAT_CHANNEL_ID", channelId);
+        ChatService.chatChannelID = channelId;
+        ChatService.chatUserId = uuid;
+    }
+
+    public static void addDynamicView(DuiCallback dynamicUII){
+        ChatService.chatDynamicUI = dynamicUII;
+    }
+
+    @JavascriptInterface
+    public void startChatListenerService() {
+        Intent chatListenerService = new Intent(activity, ChatService.class);
+        chatListenerService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
+            context.getApplicationContext().startForegroundService(chatListenerService);
+        }
+        else
+        {
+            context.startService(chatListenerService);
+        }
+
+    }
+
+    @JavascriptInterface
+    public void stopChatListenerService() {
+        Intent chatListenerService = new Intent(activity, ChatService.class);
+        activity.stopService(chatListenerService);
     }
 
     private void showLocationOnMap() {

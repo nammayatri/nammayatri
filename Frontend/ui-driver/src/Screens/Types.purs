@@ -28,6 +28,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (Visibility)
 import Services.APITypes (Route, Status, MediaType)
 import Styles.Types (FontSize)
+import Components.ChatView.Controller (ChatComponent)
 
 type EditTextInLabelState =
  {
@@ -536,7 +537,10 @@ type HomeScreenData =  {
   totalRidesOfDay :: Int,
   totalEarningsOfDay :: Int,
   route :: Array Route,
-  cancelRideConfirmationPopUp :: CancelRidePopUpData
+  cancelRideConfirmationPopUp :: CancelRidePopUpData,
+  messages :: Array ChatComponent,
+  suggestionsList :: Array String,
+  messageToBeSent :: String
  }
 
 type CancelRidePopUpData = {
@@ -606,7 +610,11 @@ type HomeScreenProps =  {
   showDottedRoute :: Boolean,
   currentStage :: HomeScreenStage,
   mapRendered :: Boolean,
-  cancelConfirmationPopup :: Boolean
+  cancelConfirmationPopup :: Boolean,
+  chatcallbackInitiated :: Boolean,
+  sendMessageActive :: Boolean,
+  unReadMessages :: Boolean,
+  updatedArrivalInChat :: Boolean
  }
 
 type Location = {
@@ -900,6 +908,7 @@ data HomeScreenStage =  HomeScreen
                       | RideAccepted
                       | RideStarted 
                       | RideCompleted  
+                      | ChatWithCustomer
 
 derive instance genericHomeScreenStage :: Generic HomeScreenStage _
 instance showHomeScreenStage :: Show HomeScreenStage where show = genericShow

@@ -36,6 +36,9 @@
     <string name="location_is_turned_off_permission_is_disabled">Location बंद कर दिया गया / Permission बंद</string>
     <string name="ride_assigned_to_another_driver">किसी अन्य ड्राइवर को राइड असाइन की गई</string>
     <string name="select_date">तारीख़ चुनें</string>
+    <string name="chatting_is_enabled">चैटिंग सक्षम है</string>
+    <string name="you_can_now_chat_with_driver">अब आप ड्राइवर पार्टनर से चैट कर सकते हैं</string>
+    <string name="you_can_now_chat_with_customer">अब आप ग्राहक के साथ चैट कर सकते हैं</string>
     <string name="new_ride_req">नई सवारी</string>
     <string name="new_ride_available_for_offering">पेशकश के लिए उपलब्ध नई सवारी</string>
 </resources>

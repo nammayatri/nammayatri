@@ -59,8 +59,11 @@ public class WidgetService extends Service {
     private void addMessageToWidget(Intent intent){
         LinearLayout messageView;
         TextView messageTextView;
+        TextView messageHeaderView = null;
+        String widgetMessageHeader = null;
         if (intent!=null){
             widgetMessage = intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE));
+            widgetMessageHeader = intent.getStringExtra("sentBy");
         }
         if (widgetMessage!=null){
             WindowManager.LayoutParams widgetLayoutParams = new WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT,WindowManager.LayoutParams.WRAP_CONTENT,android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O?WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:WindowManager.LayoutParams.TYPE_PHONE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT);
@@ -70,10 +73,18 @@ public class WidgetService extends Service {
                     messageTextView = widgetView.findViewById(R.id.messageTextView_left);
                 }else {
                     messageView =  widgetView.findViewById(R.id.message_view_right);
+                    messageHeaderView = widgetView.findViewById(R.id.messageTextView_right_header);
                     messageTextView = widgetView.findViewById(R.id.messageTextView_right);
                 }
                 messageView.setVisibility(View.VISIBLE);
                 messageTextView.setText(widgetMessage);
+                if(widgetMessageHeader != null && messageHeaderView != null) {
+                    messageTextView.setVisibility(View.VISIBLE);
+                    messageHeaderView.setText(widgetMessageHeader);
+                    messageHeaderView.setVisibility(View.VISIBLE);
+                } else {
+                    messageHeaderView.setVisibility(View.GONE);
+                }
                 Handler handler = new Handler();
                 handler.postDelayed(new Runnable() {
                     @Override

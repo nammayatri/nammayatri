@@ -61,13 +61,17 @@ initData = {
           timerID : "",
           continueEnabled : false,
           enableTimer : true
-        }
+        },
+        messages : [],
+        suggestionsList : [],
+        messageToBeSent : ""
     },
     props: {
         statusOnline : true,
         goOfflineModal : false,
         screenName : "Home",
         rideActionModal : false,
+        updatedArrivalInChat : false,
         enterOtpModal : false,
         rideOtp : "",
         enterOtpFocusIndex : 0,
@@ -81,7 +85,10 @@ initData = {
         showDottedRoute : true,
         currentStage : HomeScreen,
         mapRendered : false,
-        cancelConfirmationPopup : false
+        cancelConfirmationPopup : false,
+        chatcallbackInitiated : false,
+        sendMessageActive : false,
+        unReadMessages : false
     }
 }
 

@@ -55,6 +55,8 @@ data KeyStore = USER_NAME
                 | MAKE_NULL_API_CALL
                 | ALERT_RECEIVED
                 | REFERRAL_ACTIVATED
+                | READ_MESSAGES
+                | CHAT_CHANNEL_ID
                 | MERCHANT_ID
 
 derive instance genericKeyStore :: Generic KeyStore _

@@ -7,15 +7,16 @@ This library contains the common codebase like utils, ui components, etc. of the
 ### List of components
 
 1.  Cancel Ride 
-2.  Error Modal
-3.  Generic  Header
-4.  Generic Message Modal
-5.  Menu Button
-6.  Pop Up Modal
-7.  Primary Button
-8.  Primary Edit Text
-9.  Source To Destination
-10. Update Error Modal
+2.  Chat View
+3.  Error Modal
+4.  Generic  Header
+5.  Generic Message Modal
+6.  Menu Button
+7.  Pop Up Modal
+8.  Primary Button
+9.  Primary Edit Text
+10.  Source To Destination
+11. Update Error Modal
 
 ### Other contents
 1.  Animations

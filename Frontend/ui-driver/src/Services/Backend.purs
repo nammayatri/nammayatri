@@ -22,7 +22,7 @@ import Presto.Core.Types.API (Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff)
 import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString,getTime)
 import Foreign.Generic (encode)
-import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, toggleLoader, stopLocationPollingAPI, Locations, getVersionName)
+import JBridge (setKeyInSharedPrefKeys,toast,factoryResetApp, toggleLoader, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
 import Types.ModifyScreenState(modifyScreenState)
 import Types.App (GlobalState, FlowBT, ScreenType(..))
@@ -83,6 +83,7 @@ withAPIResult url f flow = do
                 _ <- pure $ deleteValueFromLocalStore IS_RIDE_ACTIVE
                 _ <- pure $ deleteValueFromLocalStore IS_DRIVER_ENABLED
                 -- _ <- pure $ stopLocationPollingAPI
+                _ <- liftFlow $ stopChatListenerService
                 _ <- pure $ factoryResetApp ""
                 pure unit -- default if it fails
                 else pure unit -- default if it fails
@@ -116,6 +117,7 @@ withAPIResultBT url f errorHandler flow = do
                 deleteValueFromLocalStore IS_DRIVER_ENABLED
                 -- _ <- lift $ lift $ liftFlow $ stopLocationPollingAPI
                 _ <- pure $ printLog "before" userMessage
+                lift $ lift $ liftFlow $ stopChatListenerService
                 _ <- pure $ factoryResetApp ""
                 pure unit
                 -- _ <- pure $ printLog "after" userMessage

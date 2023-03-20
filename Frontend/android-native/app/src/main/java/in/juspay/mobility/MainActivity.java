@@ -351,9 +351,9 @@ public class MainActivity extends AppCompatActivity {
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setLoadWithOverviewMode(true);
         webView.getSettings().setUseWideViewPort(true);
+        CommonJsInterface.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"));
         if (key != null && key.equals("nammayatripartner")) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            CommonJsInterface.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"));
         } else {
             LottieAnimationView splashLottieView = findViewById(R.id.splash_lottie);
             try {
@@ -463,6 +463,14 @@ public class MainActivity extends AppCompatActivity {
             window.setStatusBarColor(this.getResources().getColor(R.color.colorPrimaryDark));
        }
         countAppUsageDays();
+    }
+
+    public void loadChat(){
+        try {
+            CommonJsInterface.addDynamicView(juspayServicesGlobal.getDuiCallback());
+        } catch (Exception e){
+            Log.e(TAG, "Error in dynamic UI" + e);
+        }
     }
 
     public void triggerPopUP(String id, String type) {
@@ -646,7 +654,7 @@ public class MainActivity extends AppCompatActivity {
                 final DuiCallback dynamicUI = juspayServices.getDuiCallback();
                 dynamicUI.addJsToWebView("document.title = 'Beckn App';");
                 System.out.println("==-NOTIFICATION_DATA-->" + jsonObject.optString("event"));/**/
-
+                loadChat();
                 if (jsonObject.optString("event").equals("initiate_result")) {
                     System.out.println();
                     System.out.println("Hello" + getIntent().toString());

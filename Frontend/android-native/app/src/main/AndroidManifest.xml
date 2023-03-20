@@ -165,6 +165,12 @@
             android:exported="false"
             android:foregroundServiceType="location"
             android:stopWithTask="false" />
+        <service android:name=".utils.ChatService"
+            android:exported="false"
+            android:foregroundServiceType="location"
+            />
+
+
 
         <activity android:name="com.theartofdev.edmodo.cropper.CropImageActivity"
             android:theme="@style/Base.Theme.AppCompat"/>

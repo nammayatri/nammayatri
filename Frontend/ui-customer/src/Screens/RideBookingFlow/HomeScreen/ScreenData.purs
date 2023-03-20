@@ -62,6 +62,9 @@ initData = {
     , rideDistance : "--"
     , rideDuration : "--"
     , showPreferences : false
+    , messages : []
+    , suggestionsList : []
+    , messageToBeSent : ""
     },
   --   rating :: Int
   -- , isRated :: Boolean
@@ -106,6 +109,8 @@ initData = {
     , isEstimateChanged : false
     , showRateCard : false 
     , showRateCardIcon : false
+    , sendMessageActive : false
+    , chatcallbackInitiated : false
     , emergencyHelpModal : false
     , estimatedDistance : Nothing
     , waitingTimeTimerId : "-1"
@@ -116,6 +121,7 @@ initData = {
     , hasTakenRide : true
     , isReferred : false
     , storeCurrentLocs : false
+    , unReadMessages : false
     , emergencyHelpModelState : emergencyHelpModalData
     }
 }
@@ -230,6 +236,7 @@ dummyDriverInfo =
   , driverArrived : false
   , estimatedDistance : ""
   , driverArrivalTime : 0
+  , bppRideId : ""
   }
 
 dummySettingBar :: SettingSideBarState

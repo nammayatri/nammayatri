@@ -24,6 +24,7 @@ import Components.InAppOtpModal as InAppOtpModal
 import Components.PopUpModal as PopUpModal
 import Components.RideActionModal as RideActionModal
 import Components.StatsModel as StatsModel
+import Components.ChatView as ChatView 
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -43,7 +44,7 @@ import Language.Types (STR(..))
 import Log (printLog)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, alignParentBottom, relativeLayout, adjustViewWithKeyboard)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -63,6 +64,8 @@ import Control.Transformers.Back.Trans (runBackT)
 import Services.APITypes (Status(..))
 import Components.BottomNavBar.Controller (navData)
 import Screens.HomeScreen.ComponentConfig
+import EN (getEN)
+
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -96,6 +99,12 @@ screen initialState =
             "RideAccepted"   -> do 
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "8.0"
+                                if (not initialState.props.chatcallbackInitiated) then do 
+                                  _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages
+                                  _ <- JB.startChatListenerService
+                                  push InitializeChat 
+                                  pure unit 
+                                else pure unit
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do 
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
                                   _ <- JB.removeMarker "ny_ic_auto" -- TODO : remove if we dont require "ic_auto" icon on homescreen
@@ -110,11 +119,17 @@ screen initialState =
             "RideStarted"    -> do 
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
+                                _ <- push RemoveChat
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do 
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
                                   _ <- JB.removeMarker "ny_ic_auto" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit 
                                   else pure unit 
+            "ChatWithCustomer" -> do 
+                                if (initialState.data.activeRide.notifiedCustomer && (not initialState.props.updatedArrivalInChat)) then do
+                                  _ <- pure $ JB.sendMessage (getEN I_HAVE_ARRIVED)
+                                  push UpdateInChat 
+                                  else pure unit
             _                -> do 
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
@@ -178,9 +193,10 @@ view push state =
         , bottomNavBar push state 
         ]
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
-      , rideActionModelView push state
+      , if state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted then  rideActionModelView push state else dummyTextView
       , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
+      , if state.props.currentStage == ChatWithCustomer then chatView push state else dummyTextView
       ] <> if state.props.cancelRideModalShow then [cancelRidePopUpView push state] else [] 
         <>  if state.props.cancelConfirmationPopup then [cancelConfirmation push state] else []
         )
@@ -276,7 +292,7 @@ driverStatus push state =
   , height MATCH_PARENT
   , gravity RIGHT
   , margin (Margin 0 0 16 0)
-  , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then GONE else VISIBLE
+  , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted || state.props.currentStage == ChatWithCustomer ) then GONE else VISIBLE
   ][ linearLayout
      [ width WRAP_CONTENT
      , height MATCH_PARENT
@@ -563,10 +579,11 @@ bottomNavBar push state =
 
 rideActionModelView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideActionModelView push state = 
+  Anim.screenAnimationFadeInOut $
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
-  , visibility if (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted) then VISIBLE else GONE
+  , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted,RideStarted]) then VISIBLE else GONE
   ][  coordinatorLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
@@ -574,11 +591,22 @@ rideActionModelView push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , PP.sheetState COLLAPSED
-          , peakHeight if state.data.activeRide.isDriverArrived then 512 else 480
+          , peakHeight if state.data.activeRide.isDriverArrived then 518 else 470
           , halfExpandedRatio 0.9
           ][ RideActionModal.view (push <<< RideActionModalAction) (rideActionModalConfig state)]
         ]
     ]
+
+chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+chatView push state = 
+  Anim.screenAnimationFadeInOut $
+  relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , alignParentBottom "true,-1"
+  , adjustViewWithKeyboard "true"
+  , background Color.transparent
+  ][ ChatView.view (push <<< ChatViewActionController) (chatViewConfig state) ]
 
 cancelRidePopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelRidePopUpView push state = 
@@ -608,7 +636,7 @@ enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAc
 
 rideStatusPolling :: forall action. String -> Number -> HomeScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 rideStatusPolling pollingId duration state push action = do 
-  if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && isLocalStageOn RideAccepted then do 
+  if (getValueToLocalStore RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RIDE_STATUS_POLLING_ID) == pollingId && (isLocalStageOn RideAccepted) && (isLocalStageOn ChatWithCustomer) then do 
     activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true"
     _ <- pure $ spy "polling inside rideStatusPolling function" activeRideResponse
     case activeRideResponse of 

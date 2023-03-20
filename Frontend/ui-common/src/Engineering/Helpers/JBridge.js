@@ -561,6 +561,51 @@ exports["updateRoute"] = function (data) {
     };
   };
 
+exports["storeCallBackMessageUpdated"] = function (cb) {
+      return function (chatChannelID) {
+        return function(chatUserId) {
+          return function(action) {
+              return function (){
+                  var callback = callbackMapper.map(function (message, sentBy, timeStamp){
+                    cb(action (message) (sentBy) (timeStamp))();
+                  });
+                  JBridge.storeCallBackMessageUpdated(chatChannelID, chatUserId, callback);
+              };
+            };
+          };
+        };
+      };
+  
+exports["startChatListenerService"] = function() {
+  if (JBridge.startChatListenerService) {
+    JBridge.startChatListenerService();
+  }
+}
+
+exports["stopChatListenerService"] = function () {
+  if (JBridge.stopChatListenerService) {
+    JBridge.stopChatListenerService();
+  }
+}
+      
+exports["sendMessage"] = function (message) {
+  console.log("Send Message Called");
+  if (JBridge.sendMessage) {
+    JBridge.sendMessage(message);
+  }
+};
+
+exports["scrollToBottom"] = function(id) {
+  if (JBridge.scrollToBottom){
+    JBridge.scrollToBottom(id)
+  }
+}
+
+exports["deleteChatChannel"] = function (chatChannelId) {
+  if (JBridge.deleteChatChannel) {
+    JBridge.deleteChatChannel(chatChannelId);
+  }
+}
 
 exports["isCoordOnPath"] = function (data) {
   return function (lat) {
