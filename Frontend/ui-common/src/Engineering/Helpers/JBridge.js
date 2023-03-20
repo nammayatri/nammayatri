@@ -871,7 +871,7 @@ exports["showDialer"] = function (str) {
 };
 
 exports["startLocationPollingAPI"] = function () {
-                  return JBridge.startLocationPollingAPI();
+  return JBridge.startLocationPollingAPI();
 }
 
 exports["generatePDF"] = function (state) {
@@ -891,98 +891,96 @@ exports["removeAllPolylines"] = function(str){
 }
 
 exports["currentPosition"] = function (str) {
-    JBridge.currentPosition(str);
-}
+  JBridge.currentPosition(str);
+};
 
 exports["firebaseScreenNameLog"] = function (str) {
-  if(JBridge.firebaseScreenNameLog){
-      JBridge.firebaseScreenNameLog(str);
+  if (JBridge.firebaseScreenNameLog) {
+    JBridge.firebaseScreenNameLog(str);
   }
 };
 exports["firebaseUserID"] = function (str) {
   if(JBridge.firebaseUserID) {
-      JBridge.firebaseUserID(str);
+    JBridge.firebaseUserID(str);
   }
 };
 
 exports["storeCallBackDriverLocationPermission"] = function (cb) {
-  try {
   return function (action) {
-      return function () {
-          var callback = callbackMapper.map(function (isLocationPermissionGranted) {
-              cb(action (isLocationPermissionGranted))();
-          });
-          console.log("In storeCallBackDriverLocationPermission ---------- + " + action);
-          JBridge.storeCallBackDriverLocationPermission(callback);
-      }    
-  }}
-  catch (error){
-      console.log("Error occurred in storeCallBackDriverLocationPermission ------", error);
-  }
-}
+    return function () {
+      try {
+        var callback = callbackMapper.map(function (
+          isLocationPermissionGranted
+        ) {
+          cb(action(isLocationPermissionGranted))();
+        });
+        JBridge.storeCallBackDriverLocationPermission(callback);
+      } catch (error) {
+        console.log("Error in storeCallBackDriverLocationPermission",error);
+      }
+    };
+  };
+};
 
 exports["storeCallBackInternetAction"] = function (cb) {
-  try {
   return function (action) {
-      return function () {
-          var callback = callbackMapper.map(function (isNetworkOn) {
-              cb(action (isNetworkOn))();
-          });
-          console.log("In storeCallBackInternetAction ---------- + " + action);
-          JBridge.storeCallBackInternetAction(callback);
-      }    
-  }}
-  catch (error){
-      console.log("Error occurred in storeCallBackInternetAction ------", error);
-  }
-}
+    return function () {
+      try {
+        var callback = callbackMapper.map(function (isNetworkOn) {
+          cb(action(isNetworkOn))();
+        });
+        JBridge.storeCallBackInternetAction(callback);
+      } catch (error) {
+        console.log("Error in storeCallBackInternetAction ",error);
+      }
+    };
+  };
+};
 
 exports["storeCallBackImageUpload"] = function (cb) {
-  try {
   return function (action) {
-      return function () {
-          var callback = callbackMapper.map(function (imgStr, imageName) {
-              cb(action (imgStr)(imageName))();
-          });
-          JBridge.storeCallBackImageUpload(callback);
-      }    
-  }}
-  catch (error){
-      console.log("Error occurred in storeCallBackImageUpload ------", error);
-  }
-}
+    return function () {
+      try {
+        var callback = callbackMapper.map(function (imgStr, imageName) {
+          cb(action(imgStr)(imageName))();
+        });
+        JBridge.storeCallBackImageUpload(callback);
+      } catch (error) {
+        console.log("Error in storeCallBackImageUpload ", error);
+      }
+    };
+  };
+};
 
 exports["storeCallBackOverlayPermission"] = function (cb) {
-  try {
   return function (action) {
-      return function () {
-          var callback = callbackMapper.map(function (isOverlayPermission) {
-              cb(action (isOverlayPermission))();
-          });
-          console.log("In storeCallBackOverlapPermission ---------- + " + action);
-          JBridge.storeCallBackOverlayPermission(callback);
-      }    
-  }}
-  catch (error){
-      console.log("Error occurred in storeCallBackOverlapPermission ------", error);
-  }
-}
+    return function () {
+      try {
+        var callback = callbackMapper.map(function (isOverlayPermission) {
+          cb(action(isOverlayPermission))();
+        });
+        JBridge.storeCallBackOverlayPermission(callback);
+      } catch (error) {
+        console.log("Error in storeCallBackOverlapPermission ",error);
+      }
+    };
+  };
+};
 
 exports["storeCallBackBatteryUsagePermission"] = function (cb) {
-  try {
   return function (action) {
-      return function () {
-          var callback = callbackMapper.map(function (isPermissionEnabled) {
-              cb(action (isPermissionEnabled))();
-          });
-          console.log("In storeCallBackBatteryUsagePermission ---------- + " + action);
-          JBridge.storeCallBackBatteryUsagePermission(callback);
-      }    
-  }}
-  catch (error){
-      console.log("Error occurred in storeCallBackBatteryUsagePermission ------", error);
-  }
-}
+    return function () {
+      try {
+        var callback = callbackMapper.map(function (isPermissionEnabled) {
+          cb(action(isPermissionEnabled))();
+        });
+        JBridge.storeCallBackBatteryUsagePermission(callback);
+      } catch (error) {
+        console.log("Error in storeCallBackBatteryUsagePermission ",error);
+      }
+    };
+  };
+};
 
 exports["isBatteryPermissionEnabled"] = function (unit) {
   return function () {
@@ -1023,7 +1021,7 @@ exports["previewImage"] = function (base64Image) {
 
 exports["renderBase64Image"] = function (image) {
   return function (id) {
-      return JBridge.renderBase64Image(image, id);
+    return JBridge.renderBase64Image(image, id);
   };
 };
 
@@ -1039,8 +1037,8 @@ exports["requestBatteryPermission"] = function (str) {
   };
 };
 exports["copyToClipboard"] = function(str) {
-     JBridge.copyToClipboard(str);
-}
+  JBridge.copyToClipboard(str);
+};
 
 exports["requestKeyboardShow"] = function(id) {
   JBridge.requestKeyboardShow(id);
@@ -1076,7 +1074,6 @@ exports["shareImageMessage"] = function(message){
 
 exports.openWhatsAppSupport = function (contactNumber) {
   return function () {
-    console.log("contactNumber" + contactNumber)
     return JBridge.openWhatsAppSupport(contactNumber)
   }
 }
@@ -1104,21 +1101,20 @@ exports["mapSnapShot"] = function (id) {
   };
 };
 
-
 exports["setStoreCallBackPopUp"] = function (cb) {
-  try {
   return function (action) {
-      return function () {
-          var callback = callbackMapper.map(function (stringifyPayload) {
-              cb(action (stringifyPayload))();
-          });
-          JBridge.setStoreCallBackPopUp(callback);
-      }    
-  }}
-  catch (error){
-      console.log("Error occurred in setStoreCallBackPopUp", error);
-  }
-}
+    return function () {
+      try {
+        var callback = callbackMapper.map(function (stringifyPayload) {
+          cb(action(stringifyPayload))();
+        });
+        JBridge.setStoreCallBackPopUp(callback);
+      } catch (error) {
+        console.log("Error in setStoreCallBackPopUp", error);
+      }
+    };
+  };
+};
 
 exports["deletePopUpCallBack"] = function (dummy) {
   console.log("jbridge deletepopupcallback before");
@@ -1159,18 +1155,18 @@ exports["enableMyLocation"] = function(isEnableCurrentLocation){
   JBridge.enableMyLocation(isEnableCurrentLocation);
 }
 
-exports["toggleBtnLoader"] = function(id){
+exports["toggleBtnLoader"] = function (id) {
   return function (val) {
-      if (val == true) {
-        btnLoaderState.set(id,true);
-      } else {
-        btnLoaderState.clear();
-      }
+    if (val == true) {
+      btnLoaderState.set(id, true);
+    } else {
+      btnLoaderState.clear();
+    }
   };
 };
 
-exports["getBtnLoader"] = function(val){
-    return (btnLoaderState.get(val) == true)? true : false;
+exports["getBtnLoader"] = function (val) {
+  return btnLoaderState.get(val) == true ? true : false;
 };
 
 exports["launchInAppRatingPopup"] = function (unit) {
