@@ -38,6 +38,7 @@ data MerchantUpdateReq = MerchantUpdateReq
   { name :: Maybe Text,
     description :: Maybe Text,
     enabled :: Maybe Bool,
+    exoPhones :: Maybe (NonEmpty ExophoneReq),
     fcmConfig :: Maybe FCMConfigUpdateReq
   }
   deriving stock (Show, Generic)
@@ -47,6 +48,7 @@ data MerchantUpdateTReq = MerchantUpdateTReq
   { name :: Maybe Text,
     description :: Maybe Text,
     enabled :: Maybe Bool,
+    exoPhones :: Maybe (NonEmpty ExophoneReq),
     fcmConfig :: Maybe FCMConfigUpdateTReq
   }
   deriving stock (Generic)
@@ -57,6 +59,13 @@ validateMerchantUpdateReq MerchantUpdateReq {..} =
   sequenceA_
     [ validateField "name" name $ InMaybe $ MinLength 3 `And` P.name,
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name,
+      whenJust exoPhones $ \phones -> do
+        sequenceA_
+          [ validateField "exoPhones" phones $ UniqueField @"primaryPhone",
+            validateField "exoPhones" phones $ UniqueField @"backupPhone"
+          ],
+      whenJust exoPhones $ \phones -> for_ phones $ \exophoneReq -> do
+        validateObject "exoPhones" exophoneReq validateExophoneReq,
       whenJust fcmConfig $ \cfg -> validateObject "fcmConfig" cfg validateFCMConfigUpdateReq
     ]
 

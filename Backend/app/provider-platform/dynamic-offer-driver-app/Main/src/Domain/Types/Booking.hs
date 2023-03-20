@@ -54,7 +54,7 @@ data Booking = Booking
     bookingType :: BookingType,
     specialZoneOtpCode :: Maybe Text,
     providerId :: Id DM.Merchant, -- FIXME merchantId
-    providerExoPhone :: Text,
+    primaryExophone :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
     startTime :: UTCTime,

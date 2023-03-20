@@ -71,5 +71,6 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
     , encTools
+    , exotelToken = sec.exotelToken
     , dataServers = [ becknTransport, driverOfferBpp, appBackend ]
     }

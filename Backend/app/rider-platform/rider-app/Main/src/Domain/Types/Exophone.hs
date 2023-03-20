@@ -12,34 +12,20 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.Merchant where
+module Domain.Types.Exophone where
 
-import Domain.Types.Common
-import Kernel.External.FCM.Types
+import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
-import Kernel.Types.Geofencing
 import Kernel.Types.Id
-import Kernel.Types.Registry (Subscriber)
 
-data MerchantD (s :: UsageSafety) = Merchant
-  { id :: Id Merchant,
-    subscriberId :: ShortId Subscriber,
-    shortId :: ShortId Merchant,
-    name :: Text,
-    fcmConfig :: FCMConfig,
-    geofencingConfig :: GeofencingConfig,
-    gatewayUrl :: BaseUrl,
-    registryUrl :: BaseUrl,
-    driverOfferBaseUrl :: BaseUrl,
-    driverOfferApiKey :: Text,
-    driverOfferMerchantId :: Text,
+data Exophone = Exophone
+  { id :: Id Exophone,
+    merchantId :: Id DM.Merchant,
+    primaryPhone :: Text,
+    backupPhone :: Text,
+    isPrimaryDown :: Bool,
+    -- isBackupDown Bool -- do we need this?
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show)
-
-type Merchant = MerchantD 'Safe
-
-instance FromJSON (MerchantD 'Unsafe)
-
-instance ToJSON (MerchantD 'Unsafe)
+  deriving (Generic, Show, FromJSON, ToJSON)

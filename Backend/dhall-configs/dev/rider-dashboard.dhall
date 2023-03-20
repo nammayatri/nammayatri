@@ -59,5 +59,6 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
     , encTools
+    , exotelToken = ""
     , dataServers = [ appBackend ]
     }

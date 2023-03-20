@@ -5,4 +5,5 @@
 , becknTransportToken = "some-secret-dashboard-token-for-beckn-transport"
 , driverOfferBppToken = "some-secret-dashboard-token-for-driver-offer-bpp"
 , appBackendToken = "some-secret-dashboard-token-for-rider-app"
+, exotelToken = "some-secret-exotel-token"
 }

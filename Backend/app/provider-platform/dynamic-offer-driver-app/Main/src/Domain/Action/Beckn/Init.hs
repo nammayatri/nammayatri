@@ -17,6 +17,7 @@ module Domain.Action.Beckn.Init where
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Kernel.Prelude
@@ -30,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -102,30 +104,30 @@ cancelBooking booking transporterId = do
 handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m InitRes
 handler merchantId req = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  exophone <- findRandomExophone merchantId
+  now <- getCurrentTime
   case req.initTypeReq of
     InitNormalReq -> do
-      now <- getCurrentTime
       driverQuote <- QDQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
       when (driverQuote.validTill < now) $
         throwError $ QuoteExpired driverQuote.id.getId
       searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
       -- do we need to check searchRequest.validTill?
-      booking <- buildBooking searchRequest driverQuote transporter now
+      booking <- buildBooking searchRequest driverQuote
       Esq.runTransaction $
         QRB.create booking
       pure InitRes {..}
       where
-        buildBooking searchRequest driverQuote merchant now = do
+        buildBooking searchRequest driverQuote = do
           id <- Id <$> generateGUID
           fromLocation <- buildBookingLocation searchRequest.fromLocation
           toLocation <- buildBookingLocation searchRequest.toLocation
-          exoPhone <- getRandomElement merchant.exoPhones
           pure
             DRB.Booking
               { quoteId = req.driverQuoteId,
                 status = DRB.NEW,
                 providerId = merchantId,
-                providerExoPhone = exoPhone,
+                primaryExophone = exophone.primaryPhone,
                 bapId = req.bapId,
                 bapUri = req.bapUri,
                 startTime = searchRequest.startTime,
@@ -145,27 +147,25 @@ handler merchantId req = do
                 ..
               }
     InitSpecialZoneReq -> do
-      now <- getCurrentTime
       specialZoneQuote <- QSZoneQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
       when (specialZoneQuote.validTill < now) $
         throwError $ QuoteExpired specialZoneQuote.id.getId
       searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
-      booking <- buildBooking searchRequest specialZoneQuote transporter now
+      booking <- buildBooking searchRequest specialZoneQuote
       Esq.runTransaction $
         QRB.create booking
       pure InitRes {..}
       where
-        buildBooking searchRequest driverQuote merchant now = do
+        buildBooking searchRequest driverQuote = do
           id <- Id <$> generateGUID
           fromLocation <- buildBookingLocation searchRequest.fromLocation
           toLocation <- buildBookingLocation searchRequest.toLocation
-          exoPhone <- getRandomElement merchant.exoPhones
           pure
             DRB.Booking
               { quoteId = req.driverQuoteId,
                 status = DRB.NEW,
                 providerId = merchantId,
-                providerExoPhone = exoPhone,
+                primaryExophone = exophone.primaryPhone,
                 bapId = req.bapId,
                 bapUri = req.bapUri,
                 startTime = searchRequest.startTime,
@@ -184,3 +184,11 @@ handler merchantId req = do
                 specialZoneOtpCode = Nothing,
                 ..
               }
+
+findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
+findRandomExophone merchantId = do
+  exophones <- CQExophone.findAllByMerchantId merchantId
+  nonEmptyExophones <- case exophones of
+    [] -> throwError $ ExophoneNotFound merchantId.getId
+    e : es -> pure $ e :| es
+  getRandomElement nonEmptyExophones

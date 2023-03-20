@@ -28,6 +28,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
+import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
@@ -55,6 +56,7 @@ import SharedLogic.DriverPool
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
+import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -107,7 +109,7 @@ newtype DriverRideListRes = DriverRideListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 listDriverRides ::
-  (EsqDBReplicaFlow m r, EncFlow m r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id DP.Person ->
   Maybe Integer ->
   Maybe Integer ->
@@ -120,16 +122,18 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus = do
     rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
     rideRating <- runInReplica $ QR.findRatingForRide ride.id
     driverNumber <- RD.getDriverNumber rideDetail
-    pure $ mkDriverRideRes rideDetail driverNumber rideRating (ride, booking)
+    mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking)
   pure . DriverRideListRes $ driverRideLis
 
 mkDriverRideRes ::
   RD.RideDetails ->
   Maybe Text ->
   Maybe DRating.Rating ->
+  Maybe DExophone.Exophone ->
   (DRide.Ride, DRB.Booking) ->
   DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating (ride, booking) = do
+mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) = do
   let fareParams = booking.fareParams
   let initial = "" :: Text
   DriverRideRes
@@ -156,7 +160,7 @@ mkDriverRideRes rideDetails driverNumber rideRating (ride, booking) = do
       tripEndTime = ride.tripEndTime,
       rideRating = rideRating <&> (.ratingValue),
       chargeableDistance = ride.chargeableDistance,
-      exoPhone = booking.providerExoPhone
+      exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
@@ -212,12 +216,13 @@ otpRideCreate driver req = do
     QRideD.create rideDetails
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
   DLoc.updateOnRide (cast driver.id) True
-  uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+  uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
   void $ BP.sendRideAssignedUpdateToBAP uBooking ride
   incrementTotalRidesCount transporter.id driver.id
   driverNumber <- RD.getDriverNumber rideDetails
-  pure $ mkDriverRideRes rideDetails driverNumber Nothing (ride, booking)
+  mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking)
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"

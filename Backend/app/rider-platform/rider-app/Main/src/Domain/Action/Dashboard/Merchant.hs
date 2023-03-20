@@ -22,6 +22,7 @@ module Domain.Action.Dashboard.Merchant
 where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
+import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
@@ -34,6 +35,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
@@ -47,15 +49,51 @@ merchantUpdate merchantShortId req = do
 
   let updMerchant =
         merchant{DM.name = fromMaybe merchant.name req.name,
-                 DM.exoPhones = fromMaybe merchant.exoPhones req.exoPhones,
                  DM.fcmConfig = maybe merchant.fcmConfig (Common.mkFCMConfig merchant.fcmConfig.fcmTokenKeyPrefix) req.fcmConfig,
                  DM.gatewayUrl = fromMaybe merchant.gatewayUrl req.gatewayUrl,
                  DM.registryUrl = fromMaybe merchant.registryUrl req.registryUrl
                 }
-  Esq.runTransaction $ CQM.update updMerchant
+  now <- getCurrentTime
+
+  mbAllExophones <- forM req.exoPhones $ \exophones -> do
+    allExophones <- CQExophone.findAllExophones
+    let alreadyUsedPhones = getAllPhones $ filter (\exophone -> exophone.merchantId /= merchant.id) allExophones
+    let reqPhones = getAllPhones $ toList exophones
+    let busyPhones = filter (`elem` alreadyUsedPhones) reqPhones
+    unless (null busyPhones) $ do
+      throwError $ InvalidRequest $ "Next phones are already in use: " <> show busyPhones
+    pure allExophones
+
+  Esq.runTransaction $ do
+    CQM.update updMerchant
+    whenJust req.exoPhones \exophones -> do
+      CQExophone.deleteByMerchantId merchant.id
+      forM_ exophones $ \exophoneReq -> do
+        exophone <- buildExophone merchant.id now exophoneReq
+        CQExophone.create exophone
+
   CQM.clearCache updMerchant
+  whenJust mbAllExophones $ \allExophones -> do
+    let oldExophones = filter (\exophone -> exophone.merchantId == merchant.id) allExophones
+    CQExophone.clearCache merchant.id oldExophones
   logTagInfo "dashboard -> merchantUpdate : " (show merchant.id)
   pure Success
+  where
+    getAllPhones es = (es <&> (.primaryPhone)) <> (es <&> (.backupPhone))
+
+buildExophone :: MonadGuid m => Id DM.Merchant -> UTCTime -> Common.ExophoneReq -> m DExophone.Exophone
+buildExophone merchantId now req = do
+  uid <- generateGUID
+  pure
+    DExophone.Exophone
+      { id = uid,
+        merchantId,
+        primaryPhone = req.primaryPhone,
+        backupPhone = req.backupPhone,
+        isPrimaryDown = False,
+        updatedAt = now,
+        createdAt = now
+      }
 
 ---------------------------------------------------------------------
 mapsServiceConfigUpdate ::
