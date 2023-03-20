@@ -16,6 +16,8 @@
 module Components.NotificationDetailModel.Controller where
 
 import Components.PopUpModal as PopUpModal
+import Data.String (take, drop, split, Pattern (..))
+import Prelude
 
 data Action
   = BackArrow
@@ -23,3 +25,12 @@ data Action
   | AddCommentClick
   | AfterRender
   | NoAction
+
+
+fetchTitleAndUrl :: Int -> String -> Array String
+fetchTitleAndUrl desLength str = 
+ let
+   titleAndUrl = take (desLength - 2) $ drop 1 str
+   splitTitleAndUrl = split (Pattern "<>") titleAndUrl
+ in
+   splitTitleAndUrl

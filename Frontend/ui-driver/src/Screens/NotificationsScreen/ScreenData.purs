@@ -34,7 +34,7 @@ initData = {
     mediaUrl : "",
     title : "",
     timeLabel : "",
-    description : "",
+    description : [],
     actionText : "",
     actionVisibility : VISIBLE,
     addCommentModelVisibility : GONE,

@@ -17,21 +17,24 @@ module Components.NotificationDetailModel.View where
 
 import Animation (screenAnimationFadeInOut)
 import Common.Types.App (LazyCheck(..))
-import Components.NotificationDetailModel.Controller (Action(..))
+import Components.NotificationDetailModel.Controller (Action(..), fetchTitleAndUrl)
 import Components.PopUpModal as PopUpModal
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
+import Data.Array (mapWithIndex, (!!)) as Array
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.String (Pattern(..), length, trim)
+import Data.String.CodeUnits (charAt)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (addMediaPlayer, getVideoID, setYoutubePlayer)
-import JBridge (renderBase64Image)
+import JBridge (renderBase64Image, openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, show, unit, ($), (<<<), (<>), (==))
+import Prelude (Unit, bind, const, pure, show, unit, ($), (<<<), (<>), (==), (&&), (-))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (NotificationDetailModelState, YoutubeData, YoutubeVideoStatus(..))
@@ -140,6 +143,52 @@ addCommentModel state push =
     ]
     [ PopUpModal.view (push <<< AddCommentModelAction) (addCommentModelConfig state) ]
 
+descriptionText :: (Action -> Effect Unit) -> NotificationDetailModelState -> forall w. PrestoDOM (Effect Unit) w
+descriptionText push state = 
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    ] (Array.mapWithIndex 
+            (\index item ->
+             let 
+              desLength = length item
+              in
+               if desLength == 0
+                then
+                linearLayout[][]
+                else 
+                  if charAt 0 item == Just '*' && charAt (desLength - 1) item == Just '*' 
+                    then
+                      let 
+                      titleAndUrl = fetchTitleAndUrl desLength item
+                      linkTitle = trim $ fromMaybe "" (titleAndUrl Array.!! 0)
+                      linkUrl = trim $ fromMaybe "" (titleAndUrl Array.!! 1)
+                      in
+                      textView
+                        [ width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        , fontStyle $ FontStyle.regular LanguageStyle
+                        , textSize FontSize.a_14
+                        , color Color.blue900
+                        , textFromHtml linkTitle
+                        , textSize FontSize.a_14
+                        , onClick (\action -> do
+                                          _ <- openUrlInApp linkUrl
+                                          pure unit
+                                    ) (const $ NoAction)
+                        ]
+                  else
+                    textView
+                      [ width WRAP_CONTENT
+                      , height WRAP_CONTENT
+                      , textFromHtml item
+                      , fontStyle $ FontStyle.regular LanguageStyle
+                      , textSize FontSize.a_14
+                      ]
+            ) state.description
+      )
+
 descriptionAndComment :: NotificationDetailModelState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 descriptionAndComment state push =
   linearLayout
@@ -148,15 +197,7 @@ descriptionAndComment state push =
     , orientation VERTICAL
     , margin $ Margin 16 0 16 16
     ]
-    [ textView
-        [ width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , fontStyle $ FontStyle.regular LanguageStyle
-        , lineHeight "20"
-        , textSize FontSize.a_14
-        , color Color.black700
-        , textFromHtml state.description   
-        ]
+    [ descriptionText push state
     , textView
         [ width WRAP_CONTENT
         , height WRAP_CONTENT

@@ -19,6 +19,7 @@ import Prelude
 import Components.ErrorModal as ErrorModalController
 import Components.NotificationCard.Controller as NotificationCardAC
 import Components.NotificationDetailModel as NotificationDetailModel
+import Components.NotificationDetailModel.Controller (fetchTitleAndUrl)
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.Except (runExceptT)
@@ -26,7 +27,8 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), union, length, unionBy, any) as Array
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String (Pattern(..), split, length)
+import Data.String (Pattern(..), split, length, take, drop, joinWith, trim)
+import Data.String.CodeUnits (charAt)
 import Effect.Aff (launchAff_)
 import Language.Strings (getString)
 import Language.Types(STR(..))
@@ -192,7 +194,7 @@ notifisDetailStateTransformer selectedItem =
   { mediaUrl: selectedItem.mediaUrl
   , title: selectedItem.title
   , timeLabel: selectedItem.timeLabel
-  , description: selectedItem.description
+  , description: splitUrlsAndText selectedItem.description
   , actionText: selectedItem.action2Text
   , actionVisibility: if selectedItem.action2Text == "" then GONE else VISIBLE
   , addCommentModelVisibility: GONE
@@ -243,7 +245,7 @@ propValueTransformer notificationArray =
             (MediaFileApiResponse media) = (fromMaybe dummyMedia ((notificationItem.mediaFiles) Array.!! 0))
           in
             { mediaUrl: toPropValue $ media.url
-            , description: toPropValue notificationItem.description
+            , description: toPropValue $ notificationCardDesc notificationItem.description
             , title: toPropValue notificationItem.title
             , notificationNotSeen: toPropValue $ if notificationItem.readStatus then "gone" else "visible"
             , action1Text: toPropValue (getString SHOW_MORE)
@@ -293,3 +295,28 @@ youtubeData =
   , showSeekBar: true
   , videoId: ""
   }
+
+splitUrlsAndText :: String -> Array String
+splitUrlsAndText str = split (Pattern "$$") str
+
+notificationCardDesc :: String -> String
+notificationCardDesc text = 
+  let
+    splittedArray = splitUrlsAndText text
+    filteredArray = map (\word ->
+    let
+      wordLength = length word
+      in
+        if charAt 0 word == Just '*' && charAt (wordLength - 1) word == Just '*'
+          then let
+          titleAndUrl = fetchTitleAndUrl wordLength word 
+          linkTitle = trim $ fromMaybe "" (titleAndUrl Array.!! 0)
+          in
+            linkTitle
+          else
+          word 
+          ) splittedArray
+    combinedString = joinWith " " filteredArray
+  in 
+    combinedString
+  
