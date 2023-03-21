@@ -38,7 +38,7 @@ mkPersist
       recordingUrl Text Maybe
       conversationDuration Int
       createdAt UTCTime
-      Unique CallStatusExotelCallSid
+      Unique CallStatusCallId
       Primary id
       deriving Generic
     |]
