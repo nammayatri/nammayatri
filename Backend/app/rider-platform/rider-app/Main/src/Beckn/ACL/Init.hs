@@ -34,7 +34,7 @@ buildInitReq res = do
   let transactionId = res.searchRequestId.getId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl)
+  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl) res.city
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 

@@ -33,13 +33,13 @@ buildOneWaySearchReq ::
   DOneWaySearch.OneWaySearchRes ->
   Maybe Maps.RouteInfo ->
   m (BecknReq Search.SearchMessage)
-buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} = buildSearchReq origin (Just destination) searchId now
+buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} routeInto = buildSearchReq origin (Just destination) searchId now routeInto city
 
 buildRentalSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
-buildRentalSearchReq DRentalSearch.RentalSearchRes {..} = buildSearchReq origin Nothing searchId startTime Nothing
+buildRentalSearchReq DRentalSearch.RentalSearchRes {..} = buildSearchReq origin Nothing searchId startTime Nothing city
 
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
@@ -48,12 +48,13 @@ buildSearchReq ::
   Id DSearchReq.SearchRequest ->
   UTCTime ->
   Maybe Maps.RouteInfo ->
+  Text ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime mbRouteInfo = do
+buildSearchReq origin mbDestination searchId startTime mbRouteInfo city = do
   let messageId = getId searchId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.SEARCH messageId (Just messageId) bapIDs.cabs bapURIs.cabs Nothing Nothing
+  context <- buildTaxiContext Context.SEARCH messageId (Just messageId) bapIDs.cabs bapURIs.cabs Nothing Nothing city
   let intent = mkIntent origin mbDestination startTime
   let searchMessage = Search.SearchMessage intent mbRouteInfo
   pure $ BecknReq context searchMessage

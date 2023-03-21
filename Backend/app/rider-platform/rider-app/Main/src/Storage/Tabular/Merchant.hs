@@ -37,6 +37,7 @@ mkPersist
       subscriberId Text
       name Text
       exoPhones (PostgresNonEmptyList Text)
+      city Text
       fcmUrl Text
       fcmServiceAccount Text
       fcmRedisTokenKeyPrefix Text

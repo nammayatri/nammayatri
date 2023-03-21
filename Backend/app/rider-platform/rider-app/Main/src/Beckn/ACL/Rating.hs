@@ -31,7 +31,7 @@ buildRatingReq DFeedback.FeedbackRes {..} = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   msgId <- generateGUID
-  context <- buildTaxiContext Context.RATING msgId Nothing bapIDs.cabs bapURIs.cabs (Just providerId) (Just providerUrl)
+  context <- buildTaxiContext Context.RATING msgId Nothing bapIDs.cabs bapURIs.cabs (Just providerId) (Just providerUrl) city
   let message =
         Rating.RatingMessage
           { id = bppBookingId.getId,

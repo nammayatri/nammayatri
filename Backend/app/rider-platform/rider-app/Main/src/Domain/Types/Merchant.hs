@@ -27,6 +27,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     shortId :: ShortId Merchant,
     name :: Text,
     exoPhones :: NonEmpty Text,
+    city :: Text,
     fcmConfig :: FCMConfig,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,

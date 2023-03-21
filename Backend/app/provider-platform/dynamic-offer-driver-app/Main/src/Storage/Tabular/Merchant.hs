@@ -46,6 +46,7 @@ mkPersist
       toTime UTCTime Maybe
       headCount Int Maybe
       status Domain.Status
+      city Text
       verified Bool
       enabled Bool
       internalApiKey Text

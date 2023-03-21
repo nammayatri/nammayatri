@@ -66,7 +66,8 @@ data DConfirmRes = DConfirmRes
     startTime :: UTCTime,
     booking :: DRB.Booking,
     searchRequestId :: Id DSReq.SearchRequest,
-    merchantExoPhone :: Text
+    merchantExoPhone :: Text,
+    city :: Text
   }
   deriving (Show, Generic)
 
@@ -118,7 +119,8 @@ confirm personId quoteId = do
         quoteDetails = details,
         startTime = searchRequest.startTime,
         searchRequestId = searchRequest.id,
-        merchantExoPhone = booking.providerExoPhone
+        merchantExoPhone = booking.providerExoPhone,
+        city = merchant.city
       }
   where
     mkConfirmQuoteDetails :: DQuote.QuoteDetails -> ConfirmQuoteDetails

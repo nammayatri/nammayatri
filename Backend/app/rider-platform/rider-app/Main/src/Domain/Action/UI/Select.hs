@@ -39,6 +39,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Estimate (checkIfEstimateCancelled)
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
@@ -51,7 +52,8 @@ data DSelectRes = DSelectRes
     providerId :: Text,
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,
-    customerLanguage :: Maybe Maps.Language
+    customerLanguage :: Maybe Maps.Language,
+    city :: Text
   }
 
 newtype DEstimateSelectReq = DEstimateSelect
@@ -73,6 +75,7 @@ select personId estimateId = do
   checkIfEstimateCancelled estimate.id estimate.status
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
+  merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when ((searchRequest.validTill) < now) $
     throwError SearchRequestExpired
   Esq.runTransaction $ do
@@ -84,6 +87,7 @@ select personId estimateId = do
         providerUrl = estimate.providerUrl,
         variant = estimate.vehicleVariant,
         customerLanguage = searchRequest.language,
+        city = merchant.city,
         ..
       }
 

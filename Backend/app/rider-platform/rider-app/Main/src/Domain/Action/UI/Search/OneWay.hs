@@ -53,7 +53,8 @@ data OneWaySearchRes = OneWaySearchRes
     searchId :: Id DSearchReq.SearchRequest,
     now :: UTCTime,
     gatewayUrl :: BaseUrl,
-    searchRequestExpiry :: UTCTime
+    searchRequestExpiry :: UTCTime,
+    city :: Text
   }
 
 oneWaySearch ::
@@ -92,7 +93,8 @@ oneWaySearch person merchant req bundleVersion clientVersion distance = do
             searchId = searchRequest.id,
             now = now,
             gatewayUrl = merchant.gatewayUrl,
-            searchRequestExpiry = searchRequest.validTill
+            searchRequestExpiry = searchRequest.validTill,
+            city = merchant.city
           }
   return dSearchRes
   where
