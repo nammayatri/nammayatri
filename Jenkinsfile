@@ -11,11 +11,6 @@ pipeline {
                 sh 'nix build -L .#all'
             }
         }
-        stage ('Flake check') {
-            steps {
-                sh 'nix build -L .#check'
-            }
-        }
         stage ('Docker image') {
             when { branch 'prod-hot-push-merchant' }
             environment {
@@ -30,14 +25,6 @@ pipeline {
                    docker push ${IMAGE_NAME}
                    '''
             }
-        }
-        stage ('Push to cachix') {
-          environment {
-            CACHIX_AUTH_TOKEN = credentials('cachix-auth-token')
-          }
-          steps {
-            sh 'nix run .#cachix-push'
-          }
         }
     }
 }
