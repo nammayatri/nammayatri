@@ -9,6 +9,7 @@ import Kernel.Types.Flow
 import Kernel.Utils.App
 import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
+import SharedLogic.Allocator.Jobs.CreateUpcomingRides (createUpcomingRides)
 import SharedLogic.Allocator.Jobs.UpdateRecurringBookingTimetable (updateRecurringBookingTimetable)
 import System.Environment
 
@@ -29,16 +30,9 @@ main args = do
     R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
       runFlowR flowRt appEnv $ do
         case args of
-          ["update-timetables"] -> updateTimetables
+          ["update-timetables"] -> updateRecurringBookingTimetable
           ["create-upcoming-rides"] -> createUpcomingRides
           _ -> unknownCommand
-
-updateTimetables :: FlowR AppEnv ()
-updateTimetables = do
-  updateRecurringBookingTimetable
-
-createUpcomingRides :: FlowR AppEnv ()
-createUpcomingRides = pure ()
 
 unknownCommand :: FlowR AppEnv ()
 unknownCommand = pure ()

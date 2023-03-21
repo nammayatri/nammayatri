@@ -14,12 +14,12 @@ getCurrentLocalTime tz = do
   now <- getCurrentTime
   pure $ utcToLocalTime tz now
 
-handle :: (Redis.HedisFlow m r, EsqDBFlow m r) => m ()
-handle = Redis.whenWithLockRedis "jobs:createUpcomingRides" 60 $ do
+createUpcomingRides :: (Redis.HedisFlow m r, EsqDBFlow m r) => m ()
+createUpcomingRides = Redis.whenWithLockRedis "jobs:createUpcomingRides" 60 $ do
   timeZone <- liftIO getCurrentTimeZone
   now <- getCurrentLocalTime timeZone
-  let oneHour = 60 * 60
-      timeRange = TimeRange.fromTimeAndDuration now oneHour
+  let fifteenMinutes = 60 * 15
+      timeRange = TimeRange.fromTimeAndDuration now fifteenMinutes
   Esq.runTransaction $ do
     timetables <- QTimetable.findAllUnscheduledAndActiveDuring timeRange
     QAllocatorJob.createUpcomingRideJobs timetables

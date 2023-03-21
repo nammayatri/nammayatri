@@ -64,7 +64,8 @@ data HandlerEnv = HandlerEnv
     googleTranslateKey :: Text,
     coreMetrics :: CoreMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
-    maxShards :: Int
+    maxShards :: Int,
+    nwAddress :: BaseUrl
   }
   deriving (Generic)
 
