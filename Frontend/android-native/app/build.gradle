@@ -107,14 +107,12 @@ android {
             dimension "mode"
         }
         user {
-//             applicationId "in.juspay.becknuser"
             applicationId  "in.juspay.nammayatri"
             dimension "app"
             resValue "string", "facebook_app_id", "192510696087613"
             resValue "string", "fb_login_protocol_scheme", "fb192510696087613"
         }
         driver {
-//             applicationId "in.juspay.mobility.transporter"
             applicationId "in.juspay.nammayatripartner"
             dimension "app"
         }
