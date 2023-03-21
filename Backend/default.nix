@@ -28,7 +28,7 @@
     packages =
       let
         exes = builtins.listToAttrs (builtins.map
-          (p: lib.nameValuePair p.pname pkgs.haskell.lib.justStaticExecutables)
+          (p: lib.nameValuePair p.pname (pkgs.haskell.lib.justStaticExecutables p))
           (with config.haskellProjects.default.outputs.localPackages; [
             rider-app
             dynamic-offer-driver-app
