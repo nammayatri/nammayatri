@@ -28,6 +28,8 @@ resolver: lts-16.31
 #   subdirs:
 #   - auto-update
 #   - wai
+# **IMPORTANT**: If you are modifying this list, also make a corresponding
+# change to the cabal.project file.
 packages:
   - app/beckn-cli
   - app/provider-platform/static-offer-driver-app/Main

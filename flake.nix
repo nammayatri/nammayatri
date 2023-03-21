@@ -9,12 +9,12 @@
     beckn-gateway.url = "github:nammayatri/beckn-gateway/nixify";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
   };
-  outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
+  outputs = inputs@{ nixpkgs, flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [
         inputs.common.flakeModules.default
-        ./Backend
+        ./Backend/default.nix
       ];
       perSystem = { self', pkgs, ... }: {
         cachix-push.packages = [ "nammayatri" ];

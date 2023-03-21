@@ -34,6 +34,7 @@
           (config.haskellProjects.default.outputs.localPackages);
       in
       {
+        # The final nammayatri package containing the various executables.
         nammayatri = pkgs.symlinkJoin {
           name = "nammayatri-exes";
           paths = lib.attrValues exes;
@@ -43,10 +44,6 @@
             mkdir $out/opt && mv $out/bin $out/opt/app
           '';
         };
-
-        # This is used in docker image (docker.nix)
-        # TODO: Remove this after disabling auto wiring via https://github.com/srid/haskell-flake/issues/62
-        nammayatri-rider-app = exes.rider-app;
       };
   };
 }
