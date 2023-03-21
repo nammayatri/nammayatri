@@ -122,6 +122,21 @@
         "type": "github"
       }
     },
+    "check-flake": {
+      "locked": {
+        "lastModified": 1662502605,
+        "narHash": "sha256-jAT55UhabAxLAVGanxjnNdzH2/oX2ZjLsL4i2jPIP+g=",
+        "owner": "srid",
+        "repo": "check-flake",
+        "rev": "48a17393ed4fcd523399d6602c283775b5127295",
+        "type": "github"
+      },
+      "original": {
+        "owner": "srid",
+        "repo": "check-flake",
+        "type": "github"
+      }
+    },
     "clickhouse-haskell": {
       "flake": false,
       "locked": {
@@ -189,6 +204,7 @@
     "common_3": {
       "inputs": {
         "cachix-push": "cachix-push_3",
+        "check-flake": "check-flake",
         "flake-parts": "flake-parts_3",
         "flake-root": "flake-root_3",
         "haskell-flake": "haskell-flake_3",
@@ -197,11 +213,11 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1678676375,
-        "narHash": "sha256-ilXLQnjzZEtDsohFI6rPgJxxKSq/ooIFC4oBnWGL9MA=",
+        "lastModified": 1679425085,
+        "narHash": "sha256-xVWU3bnw3Vis7AjSAA3oo4pg7I2fG1WBAODLrmm57sk=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "3b2e4bd0679693a8289d0466069ed7d50e8af17f",
+        "rev": "fef5c3b7aa5073236d3cfac39c3e22150e42bd92",
         "type": "github"
       },
       "original": {
@@ -435,11 +451,11 @@
     },
     "haskell-flake_3": {
       "locked": {
-        "lastModified": 1678676285,
-        "narHash": "sha256-4sL+ybZ0arICu5QZgeXHHqU4iWNNJ4beN1Figg+9TMU=",
+        "lastModified": 1678824047,
+        "narHash": "sha256-JoXHrClrhg9K44cxkjO2GtqxNzlP4anQzeDyRzY60uM=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "a039db3d84aff794e67e639bb4600f4194659acb",
+        "rev": "65068a52920b96adf9cd8b307aa3d1247dd2191c",
         "type": "github"
       },
       "original": {
@@ -867,11 +883,11 @@
         "passetto-hs": "passetto-hs"
       },
       "locked": {
-        "lastModified": 1679128556,
-        "narHash": "sha256-WyhU3Y5vbWI0nprDCCw0AZV2tYPw50uovAMEY8jEN4s=",
+        "lastModified": 1679441110,
+        "narHash": "sha256-oaHQSZdxOpTlVLSKwnatanTs7C8BpgDvqFYsa37IbDk=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "cdaae76e2e33f1d0b8002f145071b316c88892e9",
+        "rev": "d2bca9e79d7232af33138b8bbda81b089bcd2447",
         "type": "github"
       },
       "original": {
@@ -922,15 +938,16 @@
         "nixpkgs": "nixpkgs_5"
       },
       "locked": {
-        "lastModified": 1677433127,
-        "narHash": "sha256-vafj2WbhrlnwkU20yRDqtHFTUJIEygPfxJVswB3dJ9U=",
-        "owner": "numtide",
+        "lastModified": 1679418601,
+        "narHash": "sha256-URkRSunu8HAp2vH2KgLogjAXckiufCDFrBs59g9uiLY=",
+        "owner": "srid",
         "repo": "treefmt-nix",
-        "rev": "f7fcf3770c6cec6fd5f995ba94e6e6376019b9ff",
+        "rev": "34180b128d23d4896a79fa87497bbefd400c6083",
         "type": "github"
       },
       "original": {
-        "owner": "numtide",
+        "owner": "srid",
+        "ref": "patch-1",
         "repo": "treefmt-nix",
         "type": "github"
       }
