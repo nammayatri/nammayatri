@@ -17,7 +17,7 @@
         ./Backend
       ];
       perSystem = { config, self', system, pkgs, lib, ... }: {
-        cachix-push.packages = [ "all" ];
+        cachix-push.packages = [ "nammayatri" ];
 
         packages.default =
           pkgs.haskell.lib.justStaticExecutables

@@ -8,7 +8,7 @@ pipeline {
         }
         stage ('Nix Build') {
             steps {
-                sh 'nix build .#nammayatri'
+                sh 'nix build -L .#nammayatri'
             }
         }
         stage ('Flake check') {
