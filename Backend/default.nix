@@ -27,22 +27,24 @@
 
     packages =
       let
-        exes = builtins.map pkgs.haskell.lib.justStaticExecutables (with config.haskellProjects.default.outputs.localPackages; [
-          rider-app
-          dynamic-offer-driver-app
-          static-offer-driver-app
-          static-offer-driver-app-allocator
-          static-offer-driver-app-scheduler
-          driver-offer-allocator
-          rider-dashboard
-          provider-dashboard
-          driver-tracking-healthcheck
-        ]);
+        exes = builtins.listToAttrs (builtins.map
+          (p: lib.nameValuePair p.pname pkgs.haskell.lib.justStaticExecutables)
+          (with config.haskellProjects.default.outputs.localPackages; [
+            rider-app
+            dynamic-offer-driver-app
+            static-offer-driver-app
+            static-offer-driver-app-allocator
+            static-offer-driver-app-scheduler
+            driver-offer-allocator
+            rider-dashboard
+            provider-dashboard
+            driver-tracking-healthcheck
+          ]));
       in
       exes // {
         nammayatri = pkgs.runCommand "nammayatri-exes" { } ''
           mkdir -p $out/bin
-          ${lib.concatStringsSep ";" (builtins.map (exe: "cp -rv ${exe}/* $out/") exes)}
+          ${lib.concatStringsSep ";" (builtins.map (exe: "cp -rv ${exe}/* $out/") (lib.attrValues exes))}
           # k8s deployment config is hardcoded to look for exes in /opt/app
           mkdir $out/opt && mv $out/bin $out/opt/app
         '';
