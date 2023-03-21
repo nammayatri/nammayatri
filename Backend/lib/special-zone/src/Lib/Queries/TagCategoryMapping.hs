@@ -12,15 +12,22 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.Location.TagCategoryMapping where
+module Lib.Queries.TagCategoryMapping where
 
-import Domain.Types.Location.SpecialLocation
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Lib.Tabular.TagCategoryMapping
+import qualified Lib.Types.TagCategoryMapping as D
 
-data TagCategoryMapping = TagCategoryMapping
-  { id :: Id TagCategoryMapping,
-    category :: Category,
-    tag :: Text,
-    createdAt :: UTCTime
-  }
+create :: D.TagCategoryMapping -> SqlDB ()
+create = Esq.create
+
+findById :: Transactionable m => Id D.TagCategoryMapping -> m (Maybe D.TagCategoryMapping)
+findById = Esq.findById
+
+findByTag :: Transactionable m => Text -> m (Maybe D.TagCategoryMapping)
+findByTag tag = findOne $ do
+  tagCatMapping <- from $ table @TagCategoryMappingT
+  where_ $ tagCatMapping ^. TagCategoryMappingTag ==. val tag
+  pure tagCatMapping

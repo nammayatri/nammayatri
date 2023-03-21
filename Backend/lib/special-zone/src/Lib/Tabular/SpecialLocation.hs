@@ -18,13 +18,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Location.SpecialLocation where
+module Lib.Tabular.SpecialLocation where
 
-import qualified Domain.Types.Location.SpecialLocation as Domain
 import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import qualified Lib.Types.SpecialLocation as Domain
 
 derivePersistField "Domain.Category"
 derivePersistField "LatLong"

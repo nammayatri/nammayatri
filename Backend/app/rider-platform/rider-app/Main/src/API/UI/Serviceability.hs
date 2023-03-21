@@ -22,8 +22,8 @@ where
 
 import qualified Domain.Action.UI.Serviceability as DServiceability
 import Domain.Types.Person as Person
+import Domain.Types.Serviceability as Serviceability
 import Environment
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -36,22 +36,12 @@ type API =
   "serviceability"
     :> TokenAuth
     :> ( "origin"
-           :> ReqBody '[JSON] ServiceabilityReq
-           :> Post '[JSON] ServiceabilityRes
+           :> ReqBody '[JSON] Serviceability.ServiceabilityReq
+           :> Post '[JSON] Serviceability.ServiceabilityRes
            :<|> "destination"
-             :> ReqBody '[JSON] ServiceabilityReq
-             :> Post '[JSON] ServiceabilityRes
+             :> ReqBody '[JSON] Serviceability.ServiceabilityReq
+             :> Post '[JSON] Serviceability.ServiceabilityRes
        )
-
-newtype ServiceabilityReq = ServiceabilityReq
-  { location :: LatLong
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-newtype ServiceabilityRes = ServiceabilityRes
-  { serviceable :: Bool
-  }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 handler :: FlowServer API
 handler regToken =
@@ -62,6 +52,6 @@ checkServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
   Id Person.Person ->
   ServiceabilityReq ->
-  FlowHandler ServiceabilityRes
+  FlowHandler Serviceability.ServiceabilityRes
 checkServiceability settingAccessor personId ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  ServiceabilityRes <$> DServiceability.checkServiceability settingAccessor personId location
+  DServiceability.checkServiceability settingAccessor personId location

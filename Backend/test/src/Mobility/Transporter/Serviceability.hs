@@ -16,8 +16,8 @@
 module Mobility.Transporter.Serviceability where
 
 import qualified "rider-app" API.UI.Search as AppBESearch
-import "rider-app" API.UI.Serviceability
 import Common
+import "rider-app" Domain.Types.Serviceability
 import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))
 import Mobility.AppBackend.APICalls
@@ -46,28 +46,28 @@ verifyServiceability expectedValue = \case
 serviceableOrigin :: ClientEnv -> IO ()
 serviceableOrigin appClientEnv =
   runClient appClientEnv (originServiceability appRegistrationToken req)
-    >>= verifyServiceability (ServiceabilityRes True)
+    >>= verifyServiceability (ServiceabilityRes {serviceable = True, specialLocation = Nothing})
   where
     req = ServiceabilityReq ernakulamLocation
 
 nonServiceableOrigin :: ClientEnv -> IO ()
 nonServiceableOrigin appClientEnv =
   runClient appClientEnv (originServiceability appRegistrationToken req)
-    >>= verifyServiceability (ServiceabilityRes False)
+    >>= verifyServiceability (ServiceabilityRes {serviceable = False, specialLocation = Nothing})
   where
     req = ServiceabilityReq keralaLocation
 
 serviceableDestination :: ClientEnv -> IO ()
 serviceableDestination appClientEnv =
   runClient appClientEnv (destinationServiceability appRegistrationToken req)
-    >>= verifyServiceability (ServiceabilityRes True)
+    >>= verifyServiceability (ServiceabilityRes {serviceable = True, specialLocation = Nothing})
   where
     req = ServiceabilityReq keralaLocation
 
 nonServiceableDestination :: ClientEnv -> IO ()
 nonServiceableDestination appClientEnv =
   runClient appClientEnv (destinationServiceability appRegistrationToken req)
-    >>= verifyServiceability (ServiceabilityRes False)
+    >>= verifyServiceability (ServiceabilityRes {serviceable = False, specialLocation = Nothing})
   where
     req = ServiceabilityReq goaLocation
 

@@ -219,57 +219,6 @@ mkQuoteEntitiesSpecialZone start end it = do
       item
     }
 
-mkQuoteEntitiesSpecialZone :: OS.StartInfo -> OS.StopInfo -> DSearch.SpecialZoneQuoteInfo -> QuoteEntities
-mkQuoteEntitiesSpecialZone start end it = do
-  let variant = castVariant it.vehicleVariant
-      estimatedFare = OS.DecimalValue $ toRational it.estimatedFare
-      fulfillment =
-        OS.FulfillmentInfo
-          { start,
-            end = Just end,
-            id = "fulf_" <> show it.quoteId,
-            vehicle = OS.FulfillmentVehicle {category = castVariant it.vehicleVariant}
-          }
-      item =
-        OS.Item
-          { id = it.quoteId.getId,
-            category_id = oneWaySpecialZoneCategory.id,
-            fulfillment_id = fulfillment.id,
-            offer_id = Nothing,
-            price =
-              OS.ItemPrice
-                { currency = currency',
-                  value = estimatedFare,
-                  offered_value = estimatedFare,
-                  minimum_value = estimatedFare,
-                  maximum_value = estimatedFare,
-                  value_breakup = []
-                },
-            descriptor =
-              OS.ItemDescriptor
-                { name = "",
-                  code = OS.ItemCode OS.ONE_WAY_SPECIAL_ZONE variant Nothing Nothing
-                },
-            quote_terms = [],
-            tags =
-              Just $
-                OS.ItemTags
-                  { distance_to_nearest_driver = Nothing,
-                    night_shift_multiplier = Nothing,
-                    night_shift_start = Nothing,
-                    night_shift_end = Nothing,
-                    waiting_charge_per_min = Nothing,
-                    waiting_time_estimated_threshold = Nothing,
-                    drivers_location = []
-                  },
-            base_distance = Nothing,
-            base_duration = Nothing
-          }
-  QuoteEntities
-    { fulfillment,
-      item
-    }
-
 buildEstimateBreakUpList ::
   DSearch.BreakupItem ->
   BreakupItem

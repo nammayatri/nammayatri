@@ -18,12 +18,15 @@ module Domain.Action.UI.Serviceability
 where
 
 import Domain.Types.Person as Person
+import Domain.Types.Serviceability as Serviceability
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry (someGeometriesContain)
@@ -38,7 +41,7 @@ checkServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
   Id Person.Person ->
   LatLong ->
-  m Bool
+  m Serviceability.ServiceabilityRes
 checkServiceability settingAccessor personId location = do
   person <-
     QP.findById personId
@@ -47,5 +50,32 @@ checkServiceability settingAccessor personId location = do
   geoConfig <- fmap (.geofencingConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
   let geoRestriction = settingAccessor geoConfig
   case geoRestriction of
-    Unrestricted -> pure True
-    Regions regions -> someGeometriesContain location regions
+    Unrestricted -> do
+      let serviceable = True
+      specialLocationBody <- checkIfSpecialLocation location
+      pure Serviceability.ServiceabilityRes {serviceable = serviceable, specialLocation = specialLocationBody}
+    Regions regions -> do
+      serviceable <- someGeometriesContain location regions
+      if serviceable
+        then do
+          specialLocationBody <- checkIfSpecialLocation location
+          pure Serviceability.ServiceabilityRes {serviceable = serviceable, specialLocation = specialLocationBody}
+        else pure Serviceability.ServiceabilityRes {serviceable = serviceable, specialLocation = Nothing}
+
+isSpecialZone :: [DSpecialLocation.SpecialLocation] -> Bool
+isSpecialZone [] = False
+isSpecialZone (_ : _) = True
+
+checkIfSpecialLocation ::
+  ( HasCacheConfig r,
+    HedisFlow m r,
+    EsqDBFlow m r
+  ) =>
+  LatLong ->
+  m (Maybe [DSpecialLocation.SpecialLocation])
+checkIfSpecialLocation location = do
+  specialLocations <- QSpecialLocation.findSpecialLocationByLatLong location
+  if isSpecialZone specialLocations
+    then do
+      return $ Just specialLocations
+    else return Nothing
