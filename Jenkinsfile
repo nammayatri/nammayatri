@@ -16,6 +16,13 @@ pipeline {
                 sh 'nix build -L .#check'
             }
         }
+        stage ('Build docker image') {
+            steps {
+                sh 'nix build .#dockerImage -o dockerImage.tgz'
+                sh 'nix eval --raw .#dockerImageName > ./dockerImageName'
+                stash includes: 'dockerImage*', name: 'dockerImage'
+            }
+        }
         stage ('Docker image') {
             when { changeRequest branch: 'nixify' }
             environment {
@@ -23,9 +30,10 @@ pipeline {
               DOCKER_PASS = credentials('docker-pass')
             }
             steps {
-                sh 'docker load -i $(nix build .#dockerImage --print-out-paths)'
+                unstash 'dockerImage'
+                sh 'docker load -i ./dockerImage.tgz'
                 sh '''
-                   IMAGE_NAME=$(nix eval --raw .#dockerImageName)
+                   IMAGE_NAME=$(cat ./dockerImageName)
                    echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin ghcr.io
                    docker push ${IMAGE_NAME}
                    '''
