@@ -6,3 +6,7 @@ exports.getKeyInSharedPrefKeysConfig = function (key) {
 exports.getKeyInSharedPrefKeysConfigEff = function (key) {
     return JBridge.getKeysInSharedPrefs(key);
   };
+
+exports.getValueToLocalNativeStoreConfig = function (key) {
+  return JBridge.getKeyInNativeSharedPrefKeys(key);
+}

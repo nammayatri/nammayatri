@@ -18,7 +18,7 @@ module Services.Config where
 import Prelude (class Eq, (==), (||))
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep (class Generic)
-import ConfigJBridge (getKeyInSharedPrefKeysConfig)
+import ConfigJBridge (getKeyInSharedPrefKeysConfig, getValueToLocalNativeStoreConfig)
 import Log (printLog)
 import Debug.Trace (spy)
 
@@ -49,15 +49,15 @@ getConfig = do
         , fingerprint : ""
         } 
     DEV  -> Config
-        { baseUrl: getValueToLocalNativeStore BASE_URL
+        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
         , fingerprint : ""
         }
     UAT  -> Config
-        { baseUrl: getValueToLocalNativeStore BASE_URL
+        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
         , fingerprint : ""
         }
     PROD -> Config
-        { baseUrl: getValueToLocalNativeStore BASE_URL
+        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
         , fingerprint : ""
         }
 
