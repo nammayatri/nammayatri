@@ -246,3 +246,20 @@ instance IsBaseError FareParametersError where
   toMessage = \case
     FareParametersNotFound fareParamsId -> Just $ "FareParameters with fareParametersId \"" <> show fareParamsId <> "\" not found."
     FareParametersDoNotExist rideId -> Just $ "FareParameters for ride \"" <> show rideId <> "\" do not exist."
+
+data OnboardingDocumentError
+  = OnboardingDocumentConfigNotFound Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OnboardingDocumentError
+
+instance IsBaseError OnboardingDocumentError where
+  toMessage (OnboardingDocumentConfigNotFound merchantId doctype) = Just $ "OnboardingDocumentConfig with merchantId \"" <> show merchantId <> "and " <> show doctype <> "\" not found."
+
+instance IsHTTPError OnboardingDocumentError where
+  toErrorCode = \case
+    OnboardingDocumentConfigNotFound {} -> "ONBOARDING_DOCUMENT_CONFIG_NOT_FOUND"
+  toHttpCode = \case
+    OnboardingDocumentConfigNotFound {} -> E400
+
+instance IsAPIError OnboardingDocumentError

@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Action.UI.DriverOnboarding.DriverLicense
@@ -33,6 +34,8 @@ import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.OnboardingDocumentConfig (OnboardingDocumentConfig)
+import qualified Domain.Types.OnboardingDocumentConfig as DTO
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.External.Encryption
@@ -49,6 +52,8 @@ import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.DriverInformation as DriverInfo
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
+import qualified Storage.CachedQueries.OnboardingDocumentConfig as QODC
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
@@ -101,11 +106,11 @@ verifyDL isDashboard mbMerchant personId req@DriverDLReq {..} = do
     Nothing -> QCity.findEnabledCityByName $ T.toLower req.operatingCity
   when (null operatingCity') $
     throwError $ InvalidOperatingCity req.operatingCity
-  configs <- asks (.driverOnboardingConfigs)
-
+  transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+  onboardingDocumentConfig <- QODC.findByMerchantIdAndDocumentType person.merchantId DTO.DL >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show DTO.DL))
   when
-    ( isNothing dateOfIssue && configs.checkImageExtraction
-        && (not isDashboard || configs.checkImageExtractionForDashboard)
+    ( isNothing dateOfIssue && onboardingDocumentConfig.checkExtraction
+        && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
     )
     $ do
       image1 <- getImage imageId1
@@ -127,11 +132,11 @@ verifyDL isDashboard mbMerchant personId req@DriverDLReq {..} = do
     Just driverLicense -> do
       unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
       unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-      verifyDLFlow person driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
+      verifyDLFlow person onboardingDocumentConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
     Nothing -> do
       mDriverDL <- Query.findByDriverId personId
       when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
-      verifyDLFlow person driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
+      verifyDLFlow person onboardingDocumentConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -143,12 +148,11 @@ verifyDL isDashboard mbMerchant personId req@DriverDLReq {..} = do
         throwError (ImageInvalidType (show Image.DriverLicense) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-verifyDLFlow :: Person.Person -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Flow ()
-verifyDLFlow person dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue = do
+verifyDLFlow :: Person.Person -> OnboardingDocumentConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Flow ()
+verifyDLFlow person onboardingDocumentConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue = do
   now <- getCurrentTime
-  configs <- asks (.driverOnboardingConfigs)
   let imageExtractionValidation =
-        if isNothing dateOfIssue && configs.checkImageExtraction
+        if isNothing dateOfIssue && onboardingDocumentConfig.checkExtraction
           then Domain.Success
           else Domain.Skipped
   verifyRes <-
@@ -190,11 +194,10 @@ onVerifyDL verificationReq output = do
     else do
       now <- getCurrentTime
       id <- generateGUID
-      configs <- asks (.driverOnboardingConfigs)
-
+      onboardingDocumentConfig <- QODC.findByMerchantIdAndDocumentType person.merchantId DTO.DL >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show DTO.DL))
       mEncryptedDL <- encrypt `mapM` output.id_number
       let mLicenseExpiry = convertTextToUTC (output.t_validity_to <|> output.nt_validity_to)
-      let mDriverLicense = createDL configs person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
+      let mDriverLicense = createDL onboardingDocumentConfig person.id output id verificationReq.documentImageId1 verificationReq.documentImageId2 now <$> mEncryptedDL <*> mLicenseExpiry
 
       case mDriverLicense of
         Just driverLicense -> do
@@ -206,7 +209,7 @@ onVerifyDL verificationReq output = do
         Nothing -> return Ack
 
 createDL ::
-  DriverOnboardingConfigs ->
+  DTO.OnboardingDocumentConfig ->
   Id Person.Person ->
   Idfy.DLVerificationOutput ->
   Id Domain.DriverLicense ->
@@ -237,19 +240,30 @@ createDL configs driverId output id imageId1 imageId2 now edl expiry = do
       consentTimestamp = now
     }
 
-validateDLStatus :: DriverOnboardingConfigs -> UTCTime -> [Text] -> UTCTime -> Domain.VerificationStatus
+validateDLStatus :: DTO.OnboardingDocumentConfig -> UTCTime -> [Text] -> UTCTime -> Domain.VerificationStatus
 validateDLStatus configs expiry cov now = do
-  let validCOVs = configs.validDLVehicleClassInfixes
-  let isCOVValid = (not configs.checkDLVehicleClass) || foldr' (\x acc -> isValidCOVDL validCOVs x || acc) False cov
-  if ((not configs.checkDLExpiry) || now < expiry) && isCOVValid then Domain.VALID else Domain.INVALID
+  let validCOVs = configs.validVehicleClasses
+  let validCOVsCheck = configs.vehicleClassCheckType
+  let isCOVValid = (length configs.validVehicleClasses == 0) || foldr' (\x acc -> isValidCOVDL validCOVs validCOVsCheck x || acc) False cov
+  if ((not configs.checkExpiry) || now < expiry) && isCOVValid then Domain.VALID else Domain.INVALID
 
 convertTextToUTC :: Maybe Text -> Maybe UTCTime
 convertTextToUTC a = do
   a_ <- a
   DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
-isValidCOVDL :: [Text] -> Text -> Bool
-isValidCOVDL validCOVs cov = foldr' (\x acc -> T.isInfixOf (T.toUpper x) (T.toUpper cov) || acc) False validCOVs
+isValidCOVDL :: [Text] -> DTO.VehicleClassCheckType -> Text -> Bool
+isValidCOVDL validCOVs validCOVsCheck cov =
+  checkForClass
+  where
+    checkForClass = foldr' (\x acc -> classCheckFunction validCOVsCheck (T.toUpper x) (T.toUpper cov) || acc) False validCOVs
+
+classCheckFunction :: DTO.VehicleClassCheckType -> Text -> Text -> Bool
+classCheckFunction validCOVsCheck =
+  case validCOVsCheck of
+    DTO.Infix -> T.isInfixOf
+    DTO.Prefix -> T.isPrefixOf
+    DTO.Suffix -> T.isSuffixOf
 
 removeSpaceAndDash :: Text -> Text
 removeSpaceAndDash = T.replace "-" "" . T.replace " " ""

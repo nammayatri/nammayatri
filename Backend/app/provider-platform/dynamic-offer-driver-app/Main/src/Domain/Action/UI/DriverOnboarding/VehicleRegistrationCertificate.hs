@@ -25,7 +25,7 @@ where
 
 import AWS.S3 as S3
 import Control.Applicative ((<|>))
-import Data.Text as T hiding (null)
+import Data.Text as T hiding (length, null)
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverOnboarding.DriverRCAssociation as Domain
 import Domain.Types.DriverOnboarding.Error
@@ -33,6 +33,7 @@ import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.OnboardingDocumentConfig as ODC
 import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.External.Encryption
@@ -48,6 +49,8 @@ import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.DriverInformation as DriverInfo
+import Storage.CachedQueries.Merchant.TransporterConfig as QTC
+import qualified Storage.CachedQueries.OnboardingDocumentConfig as SCO
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as ImageQuery
@@ -93,10 +96,11 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
     Nothing -> QCity.findEnabledCityByName $ T.toLower req.operatingCity
   when (null operatingCity') $
     throwError $ InvalidOperatingCity req.operatingCity
-  configs <- asks (.driverOnboardingConfigs)
+  transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+  onboardingDocumentConfig <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
   when
-    ( isNothing dateOfRegistration && configs.checkImageExtraction
-        && (not isDashboard || configs.checkImageExtractionForDashboard)
+    ( isNothing dateOfRegistration && onboardingDocumentConfig.checkExtraction
+        && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
     )
     $ do
       image <- getImage imageId
@@ -121,16 +125,16 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
       rcNumber <- decrypt driverRC.certificateNumber
       unless (rcNumber == vehicleRegistrationCertNumber) $ throwImageError imageId DriverAlreadyLinked
       unless (driverRC.fitnessExpiry < now) $ throwImageError imageId RCAlreadyUpdated -- RC not expired
-      verifyRCFlow person vehicleRegistrationCertNumber imageId dateOfRegistration
+      verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration
     Nothing -> do
       mVehicleRC <- RCQuery.findLastVehicleRC vehicleRegistrationCertNumber
       case mVehicleRC of
         Just vehicleRC -> do
           mRCAssociation <- DAQuery.getActiveAssociationByRC vehicleRC.id
           when (isJust mRCAssociation) $ throwImageError imageId RCAlreadyLinked
-          verifyRCFlow person vehicleRegistrationCertNumber imageId dateOfRegistration
+          verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration
         Nothing -> do
-          verifyRCFlow person vehicleRegistrationCertNumber imageId dateOfRegistration
+          verifyRCFlow person onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration
 
   return Success
   where
@@ -143,13 +147,12 @@ verifyRC isDashboard mbMerchant personId req@DriverRCReq {..} = do
         throwError (ImageInvalidType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-verifyRCFlow :: Person.Person -> Text -> Id Image.Image -> Maybe UTCTime -> Flow ()
-verifyRCFlow person rcNumber imageId dateOfRegistration = do
+verifyRCFlow :: Person.Person -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Flow ()
+verifyRCFlow person imageExtraction rcNumber imageId dateOfRegistration = do
   now <- getCurrentTime
   encryptedRC <- encrypt rcNumber
-  configs <- asks (.driverOnboardingConfigs)
   let imageExtractionValidation =
-        if isNothing dateOfRegistration && configs.checkImageExtraction
+        if isNothing dateOfRegistration && imageExtraction
           then Domain.Success
           else Domain.Skipped
   verifyRes <-
@@ -190,11 +193,11 @@ onVerifyRC verificationReq output = do
     else do
       now <- getCurrentTime
       id <- generateGUID
-      driverOnboardingConfigs <- asks (.driverOnboardingConfigs)
-
+      rCConfigs <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RC))
+      rCInsuranceConfigs <- SCO.findByMerchantIdAndDocumentType person.merchantId ODC.RCInsurance >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantId.getId (show ODC.RCInsurance))
       mEncryptedRC <- encrypt `mapM` output.registration_number
       let mbFitnessEpiry = convertTextToUTC output.fitness_upto
-      let mVehicleRC = createRC driverOnboardingConfigs output id verificationReq.documentImageId1 now <$> mEncryptedRC <*> mbFitnessEpiry
+      let mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id verificationReq.documentImageId1 now <$> mEncryptedRC <*> mbFitnessEpiry
 
       case mVehicleRC of
         Just vehicleRC -> do
@@ -226,7 +229,8 @@ onVerifyRC verificationReq output = do
           }
 
 createRC ::
-  DriverOnboardingConfigs ->
+  ODC.OnboardingDocumentConfig ->
+  ODC.OnboardingDocumentConfig ->
   Idfy.RCVerificationOutput ->
   Id Domain.VehicleRegistrationCertificate ->
   Id Image.Image ->
@@ -234,11 +238,11 @@ createRC ::
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   Domain.VehicleRegistrationCertificate
-createRC configs output id imageId now edl expiry = do
+createRC rcconfigs rcInsurenceConfigs output id imageId now edl expiry = do
   let insuranceValidity = convertTextToUTC output.insurance_validity
   let vehicleClass = output.vehicle_class
   let vehicleCapacity = maybe (Just 3) (readMaybe . T.unpack) output.seating_capacity
-  let verificationStatus = validateRCStatus configs expiry insuranceValidity vehicleClass now vehicleCapacity
+  let verificationStatus = validateRCStatus rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass now vehicleCapacity
   Domain.VehicleRegistrationCertificate
     { id,
       documentImageId = imageId,
@@ -259,19 +263,35 @@ createRC configs output id imageId now edl expiry = do
       updatedAt = now
     }
 
-validateRCStatus :: DriverOnboardingConfigs -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Maybe Int -> Domain.VerificationStatus
-validateRCStatus configs expiry insuranceValidity cov now capacity = do
-  let validCOV = (not configs.checkRCVehicleClass) || maybe False (isValidCOVRC capacity) cov
-  let validInsurance = (not configs.checkRCInsuranceExpiry) || maybe False (now <) insuranceValidity
-  if ((not configs.checkRCExpiry) || now < expiry) && validCOV && validInsurance then Domain.VALID else Domain.INVALID
+validateRCStatus :: ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Maybe Int -> Domain.VerificationStatus
+validateRCStatus rcconfigs rcInsurenceConfigs expiry insuranceValidity cov now capacity = do
+  let validCOVs = rcconfigs.validVehicleClasses
+  let validCOVsCheck = rcconfigs.vehicleClassCheckType
+  let isCOVValid = (length rcconfigs.validVehicleClasses == 0) || maybe False (isValidCOVRC capacity validCOVs validCOVsCheck) cov
+  let validInsurance = (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
+  if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then Domain.VALID else Domain.INVALID
 
 convertTextToUTC :: Maybe Text -> Maybe UTCTime
 convertTextToUTC a = do
   a_ <- a
   DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
-isValidCOVRC :: Maybe Int -> Text -> Bool
-isValidCOVRC capacity cov = T.isInfixOf "3WT" cov || (T.isInfixOf "Passenger" cov && capacity == Just 4) || T.isInfixOf "3WN" cov
+isValidCOVRC :: Maybe Int -> [Text] -> ODC.VehicleClassCheckType -> Text -> Bool
+isValidCOVRC capacity validCOVs validCOVsCheck cov =
+  checkForClass && classSpecificChecks cov capacity
+  where
+    checkForClass = foldr' (\x acc -> classCheckFunction validCOVsCheck (T.toUpper x) (T.toUpper cov) || acc) False validCOVs
+
+classSpecificChecks :: Text -> Maybe Int -> Bool
+classSpecificChecks "Passenger" capacity = capacity == Just 4
+classSpecificChecks _ _ = True
+
+classCheckFunction :: ODC.VehicleClassCheckType -> Text -> Text -> Bool
+classCheckFunction validCOVsCheck =
+  case validCOVsCheck of
+    ODC.Infix -> T.isInfixOf
+    ODC.Prefix -> T.isPrefixOf
+    ODC.Suffix -> T.isSuffixOf
 
 removeSpaceAndDash :: Text -> Text
 removeSpaceAndDash = T.replace "-" "" . T.replace " " ""

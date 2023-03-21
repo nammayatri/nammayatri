@@ -11,33 +11,24 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
 
-module Domain.Types.Merchant.MerchantMessage where
+module Domain.Types.OnboardingDocumentConfig where
 
-import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
-import Kernel.Prelude
+import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 
-data MessageKey
-  = SEND_OTP
-  | WELCOME_TO_PLATFORM
-  | ALTERNATE_NUMBER_OTP
-  | ONBOARD_SUPPORT_SMS_TEMPLATE
-  deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
+data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, FromJSON, Read, Show)
 
-data MerchantMessageD (s :: UsageSafety) = MerchantMessage
+data DocumentType = RC | DL | RCInsurance deriving (Generic, ToJSON, FromJSON, Read, Eq, Ord, Show)
+
+-- ProviderConfig?
+data OnboardingDocumentConfig = OnboardingDocumentConfig
   { merchantId :: Id Merchant,
-    messageKey :: MessageKey,
-    message :: Text,
-    updatedAt :: UTCTime,
-    createdAt :: UTCTime
+    documentType :: DocumentType,
+    checkExtraction :: Bool,
+    checkExpiry :: Bool,
+    validVehicleClasses :: [Text],
+    vehicleClassCheckType :: VehicleClassCheckType
   }
-  deriving (Generic, Show)
-
-type MerchantMessage = MerchantMessageD 'Safe
-
-instance FromJSON (MerchantMessageD 'Unsafe)
-
-instance ToJSON (MerchantMessageD 'Unsafe)
+  deriving (Generic, ToJSON, FromJSON, Show)

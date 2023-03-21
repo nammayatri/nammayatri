@@ -20,12 +20,15 @@ import Domain.Types.DriverOnboarding.Error
 import Domain.Types.DriverOnboarding.Image
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
-import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
-import Kernel.Types.Field
+import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Error.Throwing
+import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
+import qualified Storage.Queries.Person as QP
 import Storage.Tabular.DriverOnboarding.Image
 
 create :: Image -> SqlDB ()
@@ -55,13 +58,17 @@ findImagesByPersonAndType merchantId personId imgType = do
 findRecentByPersonIdAndImageType ::
   ( Transactionable m,
     MonadFlow m,
-    HasFlowEnv m r '["driverOnboardingConfigs" ::: DriverOnboardingConfigs]
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r
   ) =>
   Id Person ->
   ImageType ->
   m [Image]
 findRecentByPersonIdAndImageType personId imgtype = do
-  DriverOnboardingConfigs {..} <- asks (.driverOnboardingConfigs)
+  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
+  let onboardingRetryTimeinHours = transporterConfig.onboardingRetryTimeinHours
   let onBoardingRetryTimeinHours = intToNominalDiffTime onboardingRetryTimeinHours
   now <- getCurrentTime
   findAll $ do
