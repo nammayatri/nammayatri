@@ -25,7 +25,7 @@
         };
     };
 
-    packages.nammayatri =
+    packages =
       let
         exes = builtins.map pkgs.haskell.lib.justStaticExecutables (with config.haskellProjects.default.outputs.localPackages; [
           rider-app
@@ -39,11 +39,13 @@
           driver-tracking-healthcheck
         ]);
       in
-      pkgs.runCommand "nammayatri-exes" { } ''
-        mkdir -p $out/bin
-        ${lib.concatStringsSep ";" (builtins.map (exe: "cp -rv ${exe}/* $out/") exes)}
-        # k8s deployment config is hardcoded to look for exes in /opt/app
-        mkdir $out/opt && mv $out/bin $out/opt/app
-      '';
+      exes // {
+        nammayatri = pkgs.runCommand "nammayatri-exes" { } ''
+          mkdir -p $out/bin
+          ${lib.concatStringsSep ";" (builtins.map (exe: "cp -rv ${exe}/* $out/") exes)}
+          # k8s deployment config is hardcoded to look for exes in /opt/app
+          mkdir $out/opt && mv $out/bin $out/opt/app
+        '';
+      };
   };
 }

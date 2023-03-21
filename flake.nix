@@ -16,12 +16,8 @@
         inputs.common.flakeModules.default
         ./Backend
       ];
-      perSystem = { config, self', system, pkgs, lib, ... }: {
+      perSystem = { self', pkgs, ... }: {
         cachix-push.packages = [ "nammayatri" ];
-
-        packages.default =
-          pkgs.haskell.lib.justStaticExecutables
-            self'.packages.rider-app;
       };
     };
 }
