@@ -92,13 +92,17 @@ android {
     productFlavors {
         prod {
             buildConfigField "String", "flavor", "\"prod\""
-            // Inject the Maps API key into the manifest
+            buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
+            buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
+            buildConfigField "String", "CONFIG_URL", properties.getProperty("CONFIG_URL", "")
             manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             dimension "mode"
         }
         dev {
             buildConfigField "String", "flavor", "\"dev\""
-            // Inject the Maps API key into the manifest
+            buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
+            buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
+            buildConfigField "String", "CONFIG_URL", properties.getProperty("CONFIG_URL", "")
             manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             dimension "mode"
         }
