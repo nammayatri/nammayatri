@@ -21,14 +21,52 @@ module API.UI.Call
 where
 
 import qualified Domain.Action.UI.Call as DCall
+import Domain.Types.CallStatus
+import qualified Domain.Types.CallStatus as SCS
+import Domain.Types.Person as Person
+import qualified Domain.Types.Ride as SRide
 import Environment
 import Kernel.External.Call.Exotel.Types (ExotelCallStatus)
 import Kernel.Prelude
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Tools.Auth
+
+type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI
+
+handler :: FlowServer API
+handler = backendBasedCallHandler :<|> frontendBasedCallHandler
+
+-------- Initiate a call (Exotel) APIs --------
+type BackendBasedCallAPI =
+  "ride"
+    :> ( Capture "rideId" (Id SRide.Ride)
+           :> "call"
+           :> ( "customer"
+                  :> TokenAuth
+                  :> Post '[JSON] DCall.CallRes
+                  :<|> Capture "callId" (Id SCS.CallStatus)
+                    :> "status"
+                    :> TokenAuth
+                    :> Get '[JSON] DCall.GetCallStatusRes
+              )
+           :<|> "call"
+             :> "statusCallback"
+             :> ReqBody '[JSON] DCall.CallCallbackReq
+             :> Post '[JSON] DCall.CallCallbackRes
+       )
+
+backendBasedCallHandler :: FlowServer BackendBasedCallAPI
+backendBasedCallHandler =
+  ( \rideId ->
+      initiateCallToCustomer rideId
+        :<|> getCallStatus
+  )
+    :<|> callStatusCallback
 
 -------- Direct call (Exotel) APIs
-type API =
+type FrontendBasedCallAPI =
   "exotel"
     :> "call"
     :> ( "customer"
@@ -46,10 +84,20 @@ type API =
            :> Get '[JSON] DCall.CallCallbackRes
        )
 
-handler :: FlowServer API
-handler =
+frontendBasedCallHandler :: FlowServer FrontendBasedCallAPI
+frontendBasedCallHandler =
   getCustomerMobileNumber
     :<|> directCallStatusCallback
+
+-- | Try to initiate a call driver -> customer
+initiateCallToCustomer :: Id SRide.Ride -> Id Person.Person -> FlowHandler DCall.CallRes
+initiateCallToCustomer rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DCall.initiateCallToCustomer rideId
+
+callStatusCallback :: DCall.CallCallbackReq -> FlowHandler DCall.CallCallbackRes
+callStatusCallback = withFlowHandlerAPI . DCall.callStatusCallback
+
+getCallStatus :: Id CallStatus -> Id Person -> FlowHandler DCall.GetCallStatusRes
+getCallStatus callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStatusId
 
 directCallStatusCallback :: Text -> ExotelCallStatus -> Text -> Maybe Int -> FlowHandler DCall.CallCallbackRes
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ = withFlowHandlerAPI . DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_
