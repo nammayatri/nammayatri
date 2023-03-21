@@ -13,7 +13,7 @@ pipeline {
         }
         stage ('Docker image') {
             when {
-                branch 'nixify'
+                when { changeRequest branch: 'nixify' }
             }
             environment {
               DOCKER_USER = credentials('docker-user')
