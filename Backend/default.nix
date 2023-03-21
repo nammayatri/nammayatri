@@ -9,7 +9,6 @@
       imports = [
         inputs.beckn-gateway.haskellFlakeProjectModules.output
       ];
-      basePackages = config.haskellProjects.ghc810.outputs.finalPackages;
       devShell = {
         tools = hp: {
           dhall = pkgs.dhall;
@@ -48,6 +47,8 @@
           # k8s deployment config is hardcoded to look for exes in /opt/app
           mkdir $out/opt && mv $out/bin $out/opt/app
         '';
+
+        # TODO: Remove this after disabling auto wiring via https://github.com/srid/haskell-flake/issues/62
         rider-app-static = exes.rider-app;
       };
   };
