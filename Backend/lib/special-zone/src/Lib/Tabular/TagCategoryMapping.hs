@@ -18,13 +18,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Location.TagCategoryMapping where
+module Lib.Tabular.TagCategoryMapping where
 
-import qualified Domain.Types.Location.SpecialLocation as Domain
-import qualified Domain.Types.Location.TagCategoryMapping as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import qualified Lib.Types.SpecialLocation as Domain
+import qualified Lib.Types.TagCategoryMapping as Domain
 
 derivePersistField "Domain.Category"
 

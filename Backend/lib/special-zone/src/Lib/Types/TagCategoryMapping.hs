@@ -12,29 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.Location.SpecialLocation where
+module Lib.Types.TagCategoryMapping where
 
-import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Types.SpecialLocation
 
-data Category
-  = SureMetro
-  | SureAirport
-  | SureSchool
-  | SureHospital
-  | SureStation
-  | UnSureMetro
-  | UnSureAirport
-  | UnSureSchool
-  | UnSureHospital
-  | UnSureStation
-  deriving (Read, Show)
-
-data SpecialLocation = SpecialLocation
-  { id :: Id SpecialLocation,
-    locationName :: Text,
+data TagCategoryMapping = TagCategoryMapping
+  { id :: Id TagCategoryMapping,
     category :: Category,
-    gates :: [LatLong],
+    tag :: Text,
     createdAt :: UTCTime
   }

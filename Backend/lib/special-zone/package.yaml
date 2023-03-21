@@ -1,4 +1,4 @@
-name: dynamic-offer-driver-app
+name: special-zone
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
@@ -13,7 +13,7 @@ copyright: "2023 Juspay Technologies Private Limited"
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description: Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+description: Please see the README on GitHub
 
 default-extensions:
   - ConstraintKinds
@@ -34,6 +34,7 @@ default-extensions:
   - NamedFieldPuns
   - NoImplicitPrelude
   - OverloadedStrings
+  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
@@ -47,61 +48,40 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
-  - StandaloneDeriving
-  - PackageImports
 
 dependencies:
-  - aeson
   - base >= 4.7 && < 5
-  - generic-lens
-  - bytestring
-  - cryptonite
-  - containers
-  - euler-hs
-  - exceptions
-  - hspec
-  - http-client
-  - lens
-  - servant
-  - servant-client
-  - servant-client-core
-  - servant-server
-  - servant-multipart
-  - text
-  - wai
-  - warp
-  - time
-  - stm
-  - resource-pool
-  - uuid
-  - prometheus-client
-  - record-hasfield
   - record-dot-preprocessor
-  - hashmap
-  - servant-openapi3
-  - openapi3
-  - string-conversions
-  - either
-  - persistent
-  - text-conversions
-  - esqueleto
-  - beckn-services
-  - unordered-containers
-  - dashboard-helper-api
-  - shared-services
-  - extra
-  - scheduler
-  - singletons
-  - cassava
-  - vector
+  - record-hasfield
+  - uri-encode
+  - base16-bytestring
+  - bytestring
+  - cryptohash
+  - text
+  - time
+  - aeson
+  - servant-client
+  - servant
+  - servant-server
+  - euler-hs
+  - http-types
+  - exceptions
+  - http-client
+  - containers
 
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -fhide-source-paths
+  - -Werror
   - -fplugin=RecordDotPreprocessor
 
 library:
-  source-dirs: src
+  source-dirs:
+    - src
   ghc-options:
     - -Wall
     - -Wcompat
@@ -110,21 +90,3 @@ library:
     - -Werror
   dependencies:
     - mobility-core
-    - beckn-spec
-    - location-updates
-    - special-zone
-
-executables:
-  dynamic-offer-driver-app-exe:
-    main: Main.hs
-    source-dirs: server
-    other-modules: []
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - '"-with-rtsopts=-N -T"'
-    dependencies:
-      - dynamic-offer-driver-app
-      - mobility-core
-      - beckn-spec
-      - beckn-services

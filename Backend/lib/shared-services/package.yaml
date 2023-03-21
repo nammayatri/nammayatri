@@ -111,3 +111,4 @@ library:
     - mobility-core
     - beckn-spec
     - location-updates
+    - special-zone

@@ -12,22 +12,24 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.Location.TagCategoryMapping where
+module Lib.Queries.SpecialLocation where
 
-import qualified Domain.Types.Location.TagCategoryMapping as D
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.Location.TagCategoryMapping
+import Lib.Tabular.SpecialLocation
+import qualified Lib.Types.SpecialLocation as D
 
-create :: D.TagCategoryMapping -> SqlDB ()
+create :: D.SpecialLocation -> SqlDB ()
 create = Esq.create
 
-findById :: Transactionable m => Id D.TagCategoryMapping -> m (Maybe D.TagCategoryMapping)
+findById :: Transactionable m => Id D.SpecialLocation -> m (Maybe D.SpecialLocation)
 findById = Esq.findById
 
-findByTag :: Transactionable m => Text -> m (Maybe D.TagCategoryMapping)
-findByTag tag = findOne $ do
-  tagCatMapping <- from $ table @TagCategoryMappingT
-  where_ $ tagCatMapping ^. TagCategoryMappingTag ==. val tag
-  pure tagCatMapping
+findSpecialLocationByLatLong :: Transactionable m => LatLong -> m [D.SpecialLocation]
+findSpecialLocationByLatLong point = do
+  Esq.findAll $ do
+    specialLocation <- from $ table @SpecialLocationT
+    where_ $ containsPoint (point.lon, point.lat)
+    return specialLocation
