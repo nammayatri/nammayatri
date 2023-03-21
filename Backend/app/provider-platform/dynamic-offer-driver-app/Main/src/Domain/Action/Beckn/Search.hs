@@ -184,7 +184,7 @@ handler merchantId sReq = do
               org.id
               result.distance
               farePolicy.vehicleVariant
-              result.duration
+              result.duration 
         Esq.runTransaction $
           for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
