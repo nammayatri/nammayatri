@@ -37,7 +37,7 @@ buildSelectReq dSelectReq autoAssignEnabled = do
   let transactionId = dSelectReq.searchRequest.id.getId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just dSelectReq.providerId) (Just dSelectReq.providerUrl)
+  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) bapIDs.cabs bapURIs.cabs (Just dSelectReq.providerId) (Just dSelectReq.providerUrl) dSelectReq.city
   let order = mkOrder dSelectReq autoAssignEnabled dSelectReq.customerLanguage
   pure $ BecknReq context $ Select.SelectMessage order
 

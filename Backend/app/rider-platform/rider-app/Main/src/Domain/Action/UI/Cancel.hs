@@ -32,11 +32,15 @@ import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.CachedQueries.CacheConfig (HasCacheConfig)
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
@@ -53,20 +57,23 @@ data CancelRes = CancelRes
     bppId :: Text,
     bppUrl :: BaseUrl,
     cancellationSource :: SBCR.CancellationSource,
-    transactionId :: Text
+    transactionId :: Text,
+    city :: Text
   }
 
 data CancelSearchRes = CancelSearchRes
   { estimateId :: Id DEstimate.Estimate,
     providerUrl :: BaseUrl,
     providerId :: Text,
+    city :: Text,
     searchReqId :: Id SearchRequest,
     sendToBpp :: Bool
   }
 
-cancel :: (EncFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id Person.Person -> CancelReq -> m CancelRes
+cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, HasCacheConfig r, HedisFlow m r) => Id SRB.Booking -> Id Person.Person -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   when (booking.status == SRB.CANCELLED) $ throwError (BookingInvalidStatus "This booking is already cancelled")
   canCancelBooking <- isBookingCancellable booking
   unless canCancelBooking $
@@ -81,7 +88,8 @@ cancel bookingId _ req = do
         bppId = booking.providerId,
         bppUrl = booking.providerUrl,
         cancellationSource = SBCR.ByUser,
-        transactionId = booking.transactionId
+        transactionId = booking.transactionId,
+        city = merchant.city
       }
   where
     buildBookingCancelationReason = do
@@ -106,7 +114,7 @@ isBookingCancellable booking
   | otherwise = pure False
 
 cancelSearch ::
-  (EsqDBFlow m r) =>
+  (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, HasCacheConfig r, HedisFlow m r) =>
   Id Person.Person ->
   Id DEstimate.Estimate ->
   m CancelSearchRes
@@ -125,6 +133,8 @@ cancelSearch personId estimateId = do
   where
     buildCancelReq estId sendToBpp = do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+      person <- Esq.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       let searchRequestId = estimate.requestId
       pure
         CancelSearchRes
@@ -132,5 +142,6 @@ cancelSearch personId estimateId = do
             providerUrl = estimate.providerUrl,
             providerId = estimate.providerId,
             searchReqId = searchRequestId,
+            city = merchant.city,
             sendToBpp
           }

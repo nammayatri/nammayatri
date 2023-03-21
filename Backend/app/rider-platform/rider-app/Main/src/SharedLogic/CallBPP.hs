@@ -37,6 +37,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import Storage.CachedQueries.CacheConfig (HasCacheConfig)
+import qualified Storage.CachedQueries.Merchant as CQM
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
@@ -106,18 +108,22 @@ callTrack ::
   ( MonadFlow m,
     CoreMetrics m,
     HasBapInfo r m,
+    EsqDBFlow m r,
+    HasCacheConfig r,
     HedisFlow m r
   ) =>
   DB.Booking ->
   DRide.Ride ->
   m ()
 callTrack booking ride = do
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   let trackBUildReq =
         TrackACL.TrackBuildReq
           { bppRideId = ride.bppRideId,
             bppId = booking.providerId,
             bppUrl = booking.providerUrl,
-            transactionId = booking.transactionId
+            transactionId = booking.transactionId,
+            city = merchant.city
           }
   void . callBecknAPIWithSignature "track" API.trackAPI booking.providerUrl =<< TrackACL.buildTrackReq trackBUildReq
 

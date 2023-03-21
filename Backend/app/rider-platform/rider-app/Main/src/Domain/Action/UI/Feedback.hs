@@ -27,6 +27,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QRide
@@ -45,7 +46,8 @@ data FeedbackRes = FeedbackRes
     feedbackDetails :: Maybe Text,
     providerId :: Text,
     providerUrl :: BaseUrl,
-    transactionId :: Text
+    transactionId :: Text,
+    city :: Text
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
@@ -57,6 +59,7 @@ feedback request = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus "Feedback available only for completed rides.")
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   DB.runTransaction $ do
     QRide.updateRideRating rideId ratingValue
@@ -66,5 +69,6 @@ feedback request = do
       { providerId = booking.providerId,
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
+        city = merchant.city,
         ..
       }
