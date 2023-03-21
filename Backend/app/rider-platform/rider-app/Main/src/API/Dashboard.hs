@@ -18,6 +18,7 @@ import qualified API.Dashboard.Booking as Booking
 import qualified API.Dashboard.Customer as Customer
 import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.Merchant as Merchant
+import qualified API.Dashboard.Ride as Ride
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Id
@@ -36,6 +37,7 @@ type API' =
     :> ( Customer.API
            :<|> Booking.API
            :<|> Merchant.API
+           :<|> Ride.API
        )
 
 handler :: FlowServer API
@@ -44,6 +46,7 @@ handler =
       Customer.handler merchantId
         :<|> Booking.handler merchantId
         :<|> Merchant.handler merchantId
+        :<|> Ride.handler merchantId
   )
     :<|> exotelHandler
 

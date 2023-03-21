@@ -63,7 +63,7 @@ data Booking = Booking
     providerUrl :: BaseUrl,
     providerName :: Text,
     providerMobileNumber :: Text,
-    providerExoPhone :: Text,
+    primaryExophone :: Text,
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
     fromLocation :: DLoc.BookingLocation,

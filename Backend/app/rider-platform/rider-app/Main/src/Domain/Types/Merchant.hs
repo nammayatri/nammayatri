@@ -26,7 +26,6 @@ data MerchantD (s :: UsageSafety) = Merchant
     subscriberId :: ShortId Subscriber,
     shortId :: ShortId Merchant,
     name :: Text,
-    exoPhones :: NonEmpty Text,
     fcmConfig :: FCMConfig,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,

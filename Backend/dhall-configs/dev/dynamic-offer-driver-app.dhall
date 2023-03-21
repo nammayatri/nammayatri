@@ -97,48 +97,6 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
-let cancellationScoreRelatedConfig =
-      { popupDelayToAddAsPenalty = Some +5
-      , thresholdCancellationScore = Some +40
-      , thresholdRidesCount = Some +5
-      }
-
-let driverPoolCfg =
-      { minRadiusOfSearch = +5000
-      , maxRadiusOfSearch = +7000
-      , radiusStepSize = +500
-      , driverPositionInfoExpiry = Some +36000
-      , intelligentPoolPercentage = Some +50
-      , actualDistanceThreshold = Some +7000
-      , maxDriverQuotesRequired = +1
-      , driverQuoteLimit = +2
-      , driverRequestCountLimit = +3
-      }
-
-let intelligentPoolConfig =
-      { minQuotesToQualifyForIntelligentPool = +5
-      , minQuotesToQualifyForIntelligentPoolWindowOption =
-        { period = +24, periodType = common.periodType.Hours }
-      }
-
-let overrideDriverPoolCfg =
-      [ { configRange = { startDistance = +0, endDistance = None Integer }
-        , driverPoolCfg
-        }
-      ]
-
-let PoolSortingType = < Intelligent | Random >
-
-let driverPoolBatchesCfg =
-      { driverBatchSize = +5
-      , minDriverBatchSize = +3
-      , maxNumberOfBatches = +3
-      , poolSortingType = PoolSortingType.Intelligent
-      }
-
-let sendSearchRequestJobCfg =
-      { driverPoolBatchesCfg, singleBatchProcessTime = +10 }
-
 let kafkaProducerCfg = { brokers = [ "localhost:29092" ] }
 
 in  { esqDBCfg
@@ -151,7 +109,6 @@ in  { esqDBCfg
     , nwAddress = "http://localhost:8016/beckn"
     , selfUIUrl = "http://localhost:8016/ui/"
     , signingKey = sec.signingKey
-    , defaultPopupDelay = +0
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
     , migrationPath = Some
@@ -189,15 +146,9 @@ in  { esqDBCfg
     , driverLocationUpdateRateLimitOptions
     , driverReachedDistance = +100
     , cacheTranslationConfig
-    , driverPoolCfg
-    , intelligentPoolConfig
-    , cancellationScoreRelatedConfig
-    , overrideDriverPoolCfg = Some overrideDriverPoolCfg
-    , sendSearchRequestJobCfg
     , driverLocationUpdateTopic = "location-updates"
     , broadcastMessageTopic = "broadcast-messages"
     , kafkaProducerCfg
-    , maxParallelSearchRequests = +3
     , snapToRoadSnippetThreshold = +300
     , mediaFileUrlPattern =
         "http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>"

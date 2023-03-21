@@ -45,7 +45,7 @@ mkPersist
       bookingType Domain.BookingType
       specialZoneOtpCode Text Maybe
       providerId MerchantTId
-      providerExoPhone Text
+      primaryExophone Text
       bapId Text
       bapUri Text
       startTime UTCTime

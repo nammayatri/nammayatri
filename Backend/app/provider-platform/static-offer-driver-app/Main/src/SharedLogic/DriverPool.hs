@@ -29,7 +29,7 @@ import Kernel.Utils.Common
 import SharedLogic.DriverPool.Config as Reexport
 import SharedLogic.DriverPool.Types as Reexport
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.TransporterConfig as QTConf
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Maps as Google

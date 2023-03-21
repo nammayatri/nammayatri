@@ -15,6 +15,7 @@
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -23,11 +24,9 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
-import SharedLogic.DriverPool.Config (DriverPoolConfig, HasDriverPoolConfig, getDriverPoolConfig)
-import qualified SharedLogic.DriverPool.Config as DP
+import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -40,8 +39,6 @@ sendSearchRequestToDrivers ::
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     Metrics.CoreMetrics m,
-    HasSendSearchRequestJobConfig r,
-    HasDriverPoolConfig r,
     HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -54,7 +51,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   let searchReqId = jobData.requestId
   searchReq <- QSR.findById searchReqId >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfig <- getDriverPoolConfig jobData.estimatedRideDistance
+  driverPoolConfig <- getDriverPoolConfig merchant.id jobData.estimatedRideDistance
   sendSearchRequestToDrivers' driverPoolConfig searchReq merchant jobData.baseFare jobData.driverMinExtraFee jobData.driverMaxExtraFee
 
 sendSearchRequestToDrivers' ::
@@ -63,8 +60,6 @@ sendSearchRequestToDrivers' ::
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     Metrics.CoreMetrics m,
-    HasSendSearchRequestJobConfig r,
-    DP.HasDriverPoolConfig r,
     HasCacheConfig r,
     HedisFlow m r,
     EsqDBFlow m r,
@@ -82,15 +77,15 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverM
   where
     handle =
       Handle
-        { isBatchNumExceedLimit = I.isBatchNumExceedLimit searchReq.id,
+        { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchReq.id,
           isRideAlreadyAssigned = I.isRideAlreadyAssigned searchReq.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchReq.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq,
           cleanupDriverPoolBatches = I.cleanupDriverPoolBatches searchReq.id,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare driverMinExtraCharge driverMaxExtraCharge,
-          getRescheduleTime = I.getRescheduleTime,
-          setBatchDurationLock = I.setBatchDurationLock searchReq.id,
-          createRescheduleTime = I.createRescheduleTime,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare driverMinExtraCharge driverMaxExtraCharge driverPoolConfig,
+          getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
+          setBatchDurationLock = I.setBatchDurationLock searchReq.id driverPoolConfig.singleBatchProcessTime,
+          createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,
           metrics =
             MetricsHandle
               { incrementTaskCounter = Metrics.incrementTaskCounter merchant.name,

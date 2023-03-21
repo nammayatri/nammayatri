@@ -51,7 +51,7 @@ mkPersist
       providerUrl Text
       providerName Text
       providerMobileNumber Text
-      providerExoPhone Text
+      primaryExophone Text
       startTime UTCTime
       riderId SPerson.PersonTId
       fromLocationId SLoc.BookingLocationTId

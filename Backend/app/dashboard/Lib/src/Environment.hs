@@ -46,6 +46,7 @@ data AppCfg = AppCfg
     authTokenCacheExpiry :: Seconds,
     registrationTokenExpiry :: Days,
     encTools :: EncTools,
+    exotelToken :: Text,
     dataServers :: [DataServer]
   }
   deriving (Generic, FromDhall)
@@ -68,6 +69,7 @@ data AppEnv = AppEnv
     coreMetrics :: Metrics.CoreMetricsContainer,
     isShuttingDown :: Shutdown,
     authTokenCacheKeyPrefix :: Text,
+    exotelToken :: Text,
     dataServers :: [DataServer]
   }
   deriving (Generic)

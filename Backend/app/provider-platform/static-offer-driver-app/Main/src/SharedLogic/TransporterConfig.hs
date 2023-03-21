@@ -22,7 +22,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
-import Storage.CachedQueries.TransporterConfig
+import Storage.CachedQueries.Merchant.TransporterConfig
 
 makeFCMConfigKey :: Id DM.Merchant -> Text
 makeFCMConfigKey id = "CachedQueries:TransporterConfig:FCMConfig-" <> id.getId

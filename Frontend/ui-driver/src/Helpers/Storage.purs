@@ -55,6 +55,7 @@ data KeyStore = USER_NAME
                 | MAKE_NULL_API_CALL
                 | ALERT_RECEIVED
                 | REFERRAL_ACTIVATED
+                | MERCHANT_ID
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

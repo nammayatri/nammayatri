@@ -112,6 +112,7 @@ library:
     - mobility-core
     - beckn-spec
     - location-updates
+    - special-zone
 
 executables:
   dynamic-offer-driver-app-exe:

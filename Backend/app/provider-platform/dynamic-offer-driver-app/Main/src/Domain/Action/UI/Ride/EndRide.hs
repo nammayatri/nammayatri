@@ -29,10 +29,10 @@ import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy.FarePolicy (FarePolicy)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
-import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Vehicle.Variant (Variant)
 import Environment (Flow)
 import EulerHS.Prelude hiding (pi)
@@ -48,7 +48,7 @@ import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.FareCalculator as Fare
 import qualified Storage.CachedQueries.FarePolicy.FarePolicy as FarePolicyS
-import qualified Storage.CachedQueries.TransporterConfig as QTConf
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error

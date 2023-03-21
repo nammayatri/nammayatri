@@ -26,16 +26,18 @@ import "lib-dashboard" Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess
-import Kernel.Utils.Common (MonadFlow, decodeFromText, fork, withFlowHandlerAPI)
+import Kernel.Types.Error
+import Kernel.Utils.Common (MandatoryQueryParam, MonadFlow, decodeFromText, fork, throwError, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import qualified ProviderPlatformClient.StaticOfferDriver as Client
 import qualified RiderPlatformClient.RiderApp as Client
-import Servant
+import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import qualified Storage.Queries.Transaction as QT
 
 type API =
   "exotel"
+    :> MandatoryQueryParam "exotelToken" Text
     :> Common.ExotelHeartbeatAPI
 
 handler :: FlowServer API
@@ -54,8 +56,11 @@ buildTransaction endpoint serverName =
   T.buildTransaction (DT.ExotelAPI endpoint) (Just serverName) Nothing Nothing Nothing
 
 -- store request and call bap/bpp only when status changed OK to not OK and vice versa, or affected numbers changed.
-exotelHeartbeat :: Common.ExotelHeartbeatReq -> FlowHandler APISuccess
-exotelHeartbeat req = withFlowHandlerAPI $ do
+exotelHeartbeat :: Text -> Common.ExotelHeartbeatReq -> FlowHandler APISuccess
+exotelHeartbeat incomingExotelToken req = withFlowHandlerAPI $ do
+  exotelToken <- asks (.exotelToken)
+  unless (incomingExotelToken == exotelToken) $
+    throwError $ InvalidToken incomingExotelToken
   forM_ [DSN.APP_BACKEND, DSN.BECKN_TRANSPORT, DSN.DRIVER_OFFER_BPP] $ \serverName -> do
     fork ("exotelHeartbeat:" <> show serverName) $ do
       mbLastTransaction <- Esq.runInReplica $ QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint) serverName

@@ -25,7 +25,8 @@ import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.Merchant as DMerc
+import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
@@ -43,7 +44,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Estimate (checkIfEstimateCancelled)
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
@@ -100,8 +101,8 @@ confirm personId quoteId = do
       mbToLocation = searchRequest.toLocation
   bFromLocation <- buildBookingLocation now fromLocation
   mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
-  merchant <- QMerchant.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
-  booking <- buildBooking searchRequest quote bFromLocation mbBToLocation merchant now Nothing
+  exophone <- findRandomExophone searchRequest.merchantId
+  booking <- buildBooking searchRequest quote bFromLocation mbBToLocation exophone now Nothing
   let details = mkConfirmQuoteDetails quote.quoteDetails
   DB.runTransaction $ do
     QRideB.create booking
@@ -118,7 +119,7 @@ confirm personId quoteId = do
         quoteDetails = details,
         startTime = searchRequest.startTime,
         searchRequestId = searchRequest.id,
-        merchantExoPhone = booking.providerExoPhone
+        merchantExoPhone = if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone
       }
   where
     mkConfirmQuoteDetails :: DQuote.QuoteDetails -> ConfirmQuoteDetails
@@ -147,13 +148,12 @@ buildBooking ::
   DQuote.Quote ->
   DBL.BookingLocation ->
   Maybe DBL.BookingLocation ->
-  DMerc.Merchant ->
+  DExophone.Exophone ->
   UTCTime ->
   Maybe Text ->
   m DRB.Booking
-buildBooking searchRequest quote fromLoc mbToLoc merchant now otpCode = do
+buildBooking searchRequest quote fromLoc mbToLoc exophone now otpCode = do
   id <- generateGUID
-  exoPhone <- getRandomElement merchant.exoPhones
   bookingDetails <- buildBookingDetails
   return $
     DRB.Booking
@@ -161,11 +161,11 @@ buildBooking searchRequest quote fromLoc mbToLoc merchant now otpCode = do
         bppBookingId = Nothing,
         status = DRB.NEW,
         providerId = quote.providerId,
+        primaryExophone = exophone.primaryPhone,
         quoteId = Just $ quote.id,
         providerUrl = quote.providerUrl,
         providerName = quote.providerName,
         providerMobileNumber = quote.providerMobileNumber,
-        providerExoPhone = exoPhone,
         startTime = searchRequest.startTime,
         riderId = searchRequest.riderId,
         fromLocation = fromLoc,
@@ -190,12 +190,19 @@ buildBooking searchRequest quote fromLoc mbToLoc merchant now otpCode = do
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWayBookingDetails {..}
-
     buildOneWaySpecialZoneDetails = do
       -- we need to throw errors here because of some redundancy of our domain model
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWaySpecialZoneBookingDetails {..}
+
+findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
+findRandomExophone merchantId = do
+  exophones <- CQExophone.findAllByMerchantId merchantId
+  nonEmptyExophones <- case exophones of
+    [] -> throwError $ ExophoneNotFound merchantId.getId
+    e : es -> pure $ e :| es
+  getRandomElement nonEmptyExophones
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
 cancelBooking :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()

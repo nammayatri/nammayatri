@@ -18,7 +18,6 @@ module Storage.CachedQueries.Merchant
   ( findById,
     findByShortId,
     findBySubscriberId,
-    findByExoPhone,
     update,
     loadAllProviders,
     clearCache,
@@ -65,25 +64,12 @@ findByShortId shortId =
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId
 
-findByExoPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Merchant)
-findByExoPhone exoPhone =
-  Hedis.get (makeExoPhoneKey exoPhone) >>= \case
-    Nothing -> findAndCache
-    Just id ->
-      Hedis.get (makeIdKey id) >>= \case
-        Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
-        Nothing -> findAndCache
-  where
-    findAndCache = flip whenJust cacheMerchant /=<< Queries.findByExoPhone exoPhone
-
 -- Call it after any update
 clearCache :: HedisFlow m r => Merchant -> m ()
 clearCache merchant = do
   Hedis.del (makeIdKey merchant.id)
   Hedis.del (makeShortIdKey merchant.shortId)
   Hedis.del (makeSubscriberIdKey merchant.subscriberId)
-  forM_ merchant.exoPhones $ \exoPhone ->
-    Hedis.del (makeExoPhoneKey exoPhone)
 
 cacheMerchant :: (HasCacheConfig r, HedisFlow m r) => Merchant -> m ()
 cacheMerchant merchant = do
@@ -92,8 +78,6 @@ cacheMerchant merchant = do
   Hedis.setExp idKey (coerce @Merchant @(MerchantD 'Unsafe) merchant) expTime
   Hedis.setExp (makeShortIdKey merchant.shortId) idKey expTime
   Hedis.setExp (makeSubscriberIdKey merchant.subscriberId) idKey expTime
-  forM_ merchant.exoPhones $ \exoPhone ->
-    Hedis.setExp (makeExoPhoneKey exoPhone) idKey expTime
 
 makeIdKey :: Id Merchant -> Text
 makeIdKey id = "CachedQueries:Merchant:Id-" <> id.getId
@@ -103,9 +87,6 @@ makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> sub
 
 makeShortIdKey :: ShortId Merchant -> Text
 makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
-
-makeExoPhoneKey :: Text -> Text
-makeExoPhoneKey phone = "CachedQueries:Merchant:ExoPhone-" <> phone
 
 update :: Merchant -> Esq.SqlDB ()
 update = Queries.update

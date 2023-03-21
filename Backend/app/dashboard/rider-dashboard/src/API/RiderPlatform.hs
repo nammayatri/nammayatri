@@ -21,6 +21,7 @@ where
 import qualified API.RiderPlatform.Booking as Booking
 import qualified API.RiderPlatform.Customer as Customer
 import qualified API.RiderPlatform.Merchant as Merchant
+import qualified API.RiderPlatform.Ride as Ride
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
 import Kernel.Types.Id
@@ -32,6 +33,7 @@ type API =
     :> ( Customer.API
            :<|> Booking.API
            :<|> Merchant.API
+           :<|> Ride.API
        )
 
 handler :: FlowServer API
@@ -39,3 +41,4 @@ handler merchantId =
   Customer.handler merchantId
     :<|> Booking.handler merchantId
     :<|> Merchant.handler merchantId
+    :<|> Ride.handler merchantId

@@ -19,6 +19,7 @@ where
 
 import qualified Data.Map as M
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
+import Domain.Types.Merchant.DriverPoolConfig
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -29,10 +30,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, logInfo)
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import SharedLogic.DriverPool
-import qualified SharedLogic.DriverPool.Config as DP
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -47,24 +46,23 @@ sendSearchRequestToDrivers ::
     EsqDBFlow m r,
     TranslateFlow m r,
     CacheFlow m r,
-    DP.HasDriverPoolConfig r,
     EncFlow m r,
-    Redis.HedisFlow m r,
-    HasSendSearchRequestJobConfig r
+    Redis.HedisFlow m r
   ) =>
   DSR.SearchRequest ->
   Money ->
   Money ->
   Money ->
+  DriverPoolConfig ->
   [DriverPoolWithActualDistResult] ->
   m ()
-sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFee driverPool = do
+sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFee driverPoolConfig driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchReq.id
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   forM_ driverPool $ \dPoolRes -> do
-    incrementTotalQuotesCount searchReq.providerId (cast dPoolRes.driverPoolResult.driverId) searchReq.id validTill
+    incrementTotalQuotesCount searchReq.providerId (cast dPoolRes.driverPoolResult.driverId) searchReq validTill (fromIntegral driverPoolConfig.singleBatchProcessTime)
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   Esq.runTransaction $ do
@@ -81,7 +79,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
   where
     getSearchRequestValidTill = do
       now <- getCurrentTime
-      singleBatchProcessTime <- fromIntegral <$> asks (.sendSearchRequestJobCfg.singleBatchProcessTime)
+      let singleBatchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
       return $ singleBatchProcessTime `addUTCTime` now
     buildSearchRequestForDriver ::
       ( MonadFlow m,

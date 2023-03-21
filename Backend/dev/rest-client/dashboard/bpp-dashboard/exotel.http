@@ -4,9 +4,11 @@ GET {{bpp-dashboard-host}}
 
 ###
 
+@exotelToken=some-secret-exotel-token
+
 # @name exotelHeartbeatOK
 
-POST {{bpp-dashboard-host}}/exotel/heartbeat
+POST {{bpp-dashboard-host}}/exotel/heartbeat?exotelToken={{exotelToken}}
 content-type: application/json
 
 {
@@ -24,19 +26,31 @@ content-type: application/json
 
 # @name exotelHeartbeatWARNING
 
-POST {{bpp-dashboard-host}}/exotel/heartbeat
+POST {{bpp-dashboard-host}}/exotel/heartbeat?exotelToken={{exotelToken}}
 content-type: application/json
 
 {
    "timestamp": "{{$localDatetime iso8601}}",
    "status_type":"WARNING",
    "incoming_affected":[
-      "07930061010"
+      "18069457996",
+      "18035272983",
+      "18069457995",
+      "18035272987"
    ],
    "outgoing_affected": null,
    "data":{
-      "07930061010":{
-         "phone_number": "+917930061010"
+      "18069457996":{
+         "phone_number": "+918069457996"
+      },
+      "18035272983":{
+         "phone_number": "+918035272983"
+      },
+      "18069457995":{
+         "phone_number": "+918069457995"
+      },
+      "18035272987":{
+         "phone_number": "+918035272987"
       }
    }
 }
@@ -46,7 +60,7 @@ content-type: application/json
 
 # @name exotelHeartbeatCRITICAL
 
-POST {{bpp-dashboard-host}}/exotel/heartbeat
+POST {{bpp-dashboard-host}}/exotel/heartbeat?exotelToken={{exotelToken}}
 content-type: application/json
 
 {

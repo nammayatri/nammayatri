@@ -60,6 +60,7 @@ import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy.FarePolicy (ExtraFee)
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person (Person, PersonAPIEntity)
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.SearchRequest as DSReq
@@ -100,6 +101,7 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
 import Storage.CachedQueries.FarePolicy.FarePolicy (findByMerchantIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverQuote as QDrQt
@@ -605,7 +607,6 @@ makeDriverInformationRes DriverEntityRes {..} org referralCode =
 getNearbySearchRequests ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    DP.HasDriverPoolConfig r,
     Redis.HedisFlow m r,
     HasCacheConfig r
   ) =>
@@ -615,15 +616,20 @@ getNearbySearchRequests driverId = do
   person <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   nearbyReqs <- runInReplica $ QSRD.findByDriver driverId
   cancellationRatio <- DP.getLatestCancellationRatio person.merchantId (cast driverId)
-  searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity cancellationRatio) nearbyReqs
+  searchRequestForDriverAPIEntity <- mapM (buildSearchRequestForDriverAPIEntity person.merchantId cancellationRatio) nearbyReqs
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
-    buildSearchRequestForDriverAPIEntity cancellationRatio nearbyReq = do
+    buildSearchRequestForDriverAPIEntity merchantId cancellationRatio nearbyReq = do
       let sId = nearbyReq.searchRequestId
       searchRequest <- runInReplica $ QSReq.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
-      cancellationScoreRelatedConfig <- asks (.cancellationScoreRelatedConfig)
-      popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig
+      transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+      let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
+      let popupDelayToAddAsPenalty = fromMaybe 2 transporterConfig.popupDelayToAddAsPenalty
+      popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig popupDelayToAddAsPenalty
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest popupDelaySeconds
+
+    mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
+    mkCancellationScoreRelatedConfig TransporterConfig {..} = CancellationScoreRelatedConfig popupDelayToAddAsPenalty thresholdCancellationScore minRidesForCancellationScore
 
 isAllowedExtraFee :: ExtraFee -> Money -> Bool
 isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFee
@@ -642,7 +648,6 @@ offerQuote ::
     HasField "coreVersion" r Text,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
-    DP.HasDriverPoolConfig r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -666,7 +671,6 @@ respondQuote ::
     HasField "coreVersion" r Text,
     HasField "nwAddress" r BaseUrl,
     HasField "driverUnlockDelay" r Seconds,
-    DP.HasDriverPoolConfig r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -696,7 +700,7 @@ respondQuote driverId req = do
         logDebug $ "offered fare: " <> show req.offeredFare
         whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
         when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
-        quoteLimit <- getQuoteLimit sReq.estimatedDistance
+        quoteLimit <- getQuoteLimit sReq.providerId sReq.estimatedDistance
         quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
         when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
         farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
@@ -755,8 +759,8 @@ respondQuote driverId req = do
       activeQuotes <- QDrQt.findActiveQuotesByDriverId driverId driverUnlockDelay
       logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
       pure $ not $ null activeQuotes
-    getQuoteLimit dist = do
-      driverPoolCfg <- DP.getDriverPoolConfig dist
+    getQuoteLimit merchantId dist = do
+      driverPoolCfg <- DP.getDriverPoolConfig merchantId dist
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification orgId driverQuote = do
       driverSearchReqs <- QSRD.findAllActiveWithoutRespByRequestId req.searchRequestId

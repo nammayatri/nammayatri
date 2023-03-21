@@ -19,7 +19,8 @@ import Debug.Trace (spy)
 import Prelude (class Eq, (==))
 import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep (class Generic)
-import ConfigJBridge (getKeyInSharedPrefKeysConfig)
+import ConfigJBridge (getKeyInSharedPrefKeysConfig, getValueToLocalNativeStoreConfig)
+
 
 foreign import environment :: String -> String
 
@@ -48,15 +49,15 @@ getConfig = do
         , fingerprint : ""
         }
     DEV  -> Config
-        { baseUrl: ""
+        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
         , fingerprint : ""
         }
     UAT  -> Config
-        { baseUrl: ""
+        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
         , fingerprint : ""
         }
     PROD -> Config
-        { baseUrl: ""
+        { baseUrl: getValueToLocalNativeStoreConfig "BASE_URL"
         , fingerprint : ""
         }
 
