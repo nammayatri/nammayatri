@@ -11,6 +11,11 @@ pipeline {
                 sh 'nix build .#all'
             }
         }
+        stage ('Flake check') {
+            steps {
+                sh 'nix build .#check'
+            }
+        }
         stage ('Docker image') {
             when { changeRequest branch: 'nixify' }
             environment {
