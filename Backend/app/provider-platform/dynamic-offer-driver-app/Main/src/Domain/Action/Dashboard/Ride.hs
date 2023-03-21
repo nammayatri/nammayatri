@@ -130,7 +130,9 @@ rideRoute merchantShortId reqRideId = do
     _ -> throwError $ InvalidRequest "The ride has not ended yet."
   ckhTbl <- CH.findAll (Proxy @Common.DriverEdaKafka) ((("partition_date" =.= rQStart) |.| ("partition_date" =.= rQEnd)) &.& ("driver_id" =.= driverQId) &.& ("rid" =.= rideQId)) Nothing Nothing (Just $ CH.Desc "created_at")
   actualRoute <- case ckhTbl of
-    Left _ -> pure []
+    Left err -> do
+      logError $ "Clickhouse error: " <> show err
+      pure []
     Right y -> mapM getLatLong y
   when (null actualRoute) $ throwError $ InvalidRequest "No route found for this ride."
   pure
