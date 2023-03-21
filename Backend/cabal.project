@@ -29,5 +29,6 @@ packages:
   lib/beckn-services
   lib/shared-services
   lib/location-updates
+  lib/special-zone
   lib/scheduler
   test
