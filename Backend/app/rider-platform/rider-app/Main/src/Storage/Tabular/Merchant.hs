@@ -36,6 +36,7 @@ mkPersist
       shortId Text
       subscriberId Text
       name Text
+      city Text
       fcmUrl Text
       fcmServiceAccount Text
       fcmRedisTokenKeyPrefix Text

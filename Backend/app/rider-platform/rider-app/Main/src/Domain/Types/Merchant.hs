@@ -26,6 +26,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     subscriberId :: ShortId Subscriber,
     shortId :: ShortId Merchant,
     name :: Text,
+    city :: Text,
     fcmConfig :: FCMConfig,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,

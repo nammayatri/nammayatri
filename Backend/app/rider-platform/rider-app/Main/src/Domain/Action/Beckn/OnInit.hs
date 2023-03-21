@@ -20,10 +20,12 @@ import qualified Domain.Types.LocationAddress as DBL
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
+import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -48,16 +50,18 @@ data OnInitRes = OnInitRes
     riderPhoneCountryCode :: Text,
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,
-    transactionId :: Text
+    transactionId :: Text,
+    city :: Text
   }
   deriving (Generic, Show, PrettyShow)
 
-onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => OnInitReq -> m OnInitRes
+onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r) => OnInitReq -> m OnInitRes
 onInit req = do
   DB.runTransaction $ do
     QRideB.updateBPPBookingId req.bookingId req.bppBookingId
     QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare
   booking <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   decRider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId) >>= decrypt
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <- decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
@@ -78,5 +82,6 @@ onInit req = do
         mbToLocationAddress = mbToLocation <&> (.address),
         mbRiderName = decRider.firstName,
         transactionId = booking.transactionId,
+        city = merchant.city,
         ..
       }

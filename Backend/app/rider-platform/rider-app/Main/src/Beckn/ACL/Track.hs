@@ -32,7 +32,8 @@ data TrackBuildReq = TrackBuildReq
   { bppRideId :: Id DRide.BPPRide,
     bppId :: Text,
     bppUrl :: BaseUrl,
-    transactionId :: Text
+    transactionId :: Text,
+    city :: Text
   }
 
 buildTrackReq ::
@@ -47,7 +48,7 @@ buildTrackReq res = do
   bapIDs <- asks (.bapSelfIds)
   messageId <- generateGUID
   Redis.setExp (key messageId) res.bppRideId 1800 --30 mins
-  context <- buildTaxiContext Context.TRACK messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl)
+  context <- buildTaxiContext Context.TRACK messageId (Just res.transactionId) bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl) res.city
   pure $ BecknReq context $ mkTrackMessage res
   where
     key messageId = "Track:bppRideId:" <> messageId

@@ -45,6 +45,7 @@ import Kernel.Utils.Common
 import SharedLogic.Estimate (checkIfEstimateCancelled)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Estimate as QEstimate
@@ -67,7 +68,8 @@ data DConfirmRes = DConfirmRes
     startTime :: UTCTime,
     booking :: DRB.Booking,
     searchRequestId :: Id DSReq.SearchRequest,
-    merchantExoPhone :: Text
+    merchantExoPhone :: Text,
+    city :: Text
   }
   deriving (Show, Generic)
 
@@ -103,6 +105,7 @@ confirm personId quoteId = do
   mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
   exophone <- findRandomExophone searchRequest.merchantId
   booking <- buildBooking searchRequest quote bFromLocation mbBToLocation exophone now Nothing
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   let details = mkConfirmQuoteDetails quote.quoteDetails
   DB.runTransaction $ do
     QRideB.create booking
@@ -119,7 +122,8 @@ confirm personId quoteId = do
         quoteDetails = details,
         startTime = searchRequest.startTime,
         searchRequestId = searchRequest.id,
-        merchantExoPhone = if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone
+        merchantExoPhone = if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone,
+        city = merchant.city
       }
   where
     mkConfirmQuoteDetails :: DQuote.QuoteDetails -> ConfirmQuoteDetails
