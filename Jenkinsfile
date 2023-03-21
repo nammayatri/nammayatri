@@ -8,12 +8,12 @@ pipeline {
         }
         stage ('Nix Build') {
             steps {
-                sh 'nix build .#all'
+                sh 'nix build .#nammayatri'
             }
         }
         stage ('Flake check') {
             steps {
-                sh 'nix build .#check'
+                sh 'nix build -L .#check'
             }
         }
         stage ('Docker image') {

@@ -22,13 +22,6 @@
         packages.default =
           pkgs.haskell.lib.justStaticExecutables
             self'.packages.rider-app;
-
-        # A dummy package to force build of all local Haskell packages. 
-        # Useful in CI.
-        packages.all = pkgs.runCommand "packages-combined"
-          {
-            all = builtins.attrValues config.haskellProjects.default.outputs.localPackages;
-          } '' echo $all > $out '';
       };
     };
 }

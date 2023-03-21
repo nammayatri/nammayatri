@@ -43,8 +43,8 @@ Nix support is still a work-in-progress, but you can test it out as follows:
 # Setup nix cache (do this once)
 nix run nixpkgs#cachix use nammayatri
 
-# Build all packages
-nix build .#all
+# Build the nammayatri executables
+nix build .#nammayatri
 
 # Build the docker image
 docker load -i $(nix build .#dockerImage)
