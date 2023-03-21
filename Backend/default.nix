@@ -38,11 +38,6 @@
         nammayatri = pkgs.symlinkJoin {
           name = "nammayatri-exes";
           paths = lib.attrValues exes;
-          postBuild = ''
-            # Our k8s deployment config is hardcoded to look for exes under
-            # /opt/app
-            mkdir $out/opt && mv $out/bin $out/opt/app
-          '';
         };
       };
   };
