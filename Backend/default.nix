@@ -26,19 +26,10 @@
 
     packages =
       let
-        exes = builtins.listToAttrs (builtins.map
-          (p: lib.nameValuePair p.pname (pkgs.haskell.lib.justStaticExecutables p))
-          (with config.haskellProjects.default.outputs.localPackages; [
-            rider-app
-            dynamic-offer-driver-app
-            static-offer-driver-app
-            static-offer-driver-app-allocator
-            static-offer-driver-app-scheduler
-            driver-offer-allocator
-            rider-dashboard
-            provider-dashboard
-            driver-tracking-healthcheck
-          ]));
+        # Local haskell packages containing only the binaries.
+        exes = lib.mapAttrs
+          (_: p: pkgs.haskell.lib.justStaticExecutables p)
+          (config.haskellProjects.default.outputs.localPackages);
       in
       {
         nammayatri = pkgs.runCommand "nammayatri-exes" { } ''
@@ -48,8 +39,9 @@
           mkdir $out/opt && mv $out/bin $out/opt/app
         '';
 
+        # This is used in docker image (docker.nix)
         # TODO: Remove this after disabling auto wiring via https://github.com/srid/haskell-flake/issues/62
-        rider-app-static = exes.rider-app;
+        nammayatri-rider-app = exes.rider-app;
       };
   };
 }
