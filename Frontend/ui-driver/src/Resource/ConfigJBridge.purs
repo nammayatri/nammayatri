@@ -16,3 +16,4 @@
 module ConfigJBridge where
 
 foreign import getKeyInSharedPrefKeysConfig :: String -> String
+foreign import getValueToLocalNativeStoreConfig :: String -> String

@@ -472,11 +472,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void updateConfigURL(){
-        String merchantId = getResources().getString(R.string.service) == "nammayatri" ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
+    public void updateConfigURL() {
+        String merchantId = getResources().getString(R.string.service).equals("nammayatri") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
         String baseUrl = in.juspay.mobility.BuildConfig.CONFIG_URL;
-        sharedPref.edit().putString("MERCHANT_ID",merchantId).apply();
-        sharedPref.edit().putString("BASE_URL",baseUrl).apply();
+        SharedPreferences sharedPreff = this.getSharedPreferences(
+                activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreff.edit();
+        editor.putString("MERCHANT_ID", merchantId);
+        editor.apply();
     }
 
     public void triggerPopUPMain(String id, String type) {
