@@ -3,7 +3,7 @@
   imports = [
     ./nix/docker.nix
   ];
-  perSystem = { config, self', system, pkgs, lib, ... }: {
+  perSystem = { config, self', pkgs, lib, ... }: {
     haskellProjects.default = {
       projectRoot = ./.;
       imports = [
@@ -41,13 +41,14 @@
             driver-tracking-healthcheck
           ]));
       in
-      exes // {
+      {
         nammayatri = pkgs.runCommand "nammayatri-exes" { } ''
           mkdir -p $out/bin
           ${lib.concatStringsSep ";" (builtins.map (exe: "cp -rv ${exe}/* $out/") (lib.attrValues exes))}
           # k8s deployment config is hardcoded to look for exes in /opt/app
           mkdir $out/opt && mv $out/bin $out/opt/app
         '';
+        rider-app-static = exes.rider-app;
       };
   };
 }
