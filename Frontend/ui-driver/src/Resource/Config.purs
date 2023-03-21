@@ -49,15 +49,15 @@ getConfig = do
         , fingerprint : ""
         } 
     DEV  -> Config
-        { baseUrl: ""
+        { baseUrl: getValueToLocalNativeStore BASE_URL
         , fingerprint : ""
         }
     UAT  -> Config
-        { baseUrl: ""
+        { baseUrl: getValueToLocalNativeStore BASE_URL
         , fingerprint : ""
         }
     PROD -> Config
-        { baseUrl: ""
+        { baseUrl: getValueToLocalNativeStore BASE_URL
         , fingerprint : ""
         }
 

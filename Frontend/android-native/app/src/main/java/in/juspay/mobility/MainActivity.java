@@ -99,6 +99,7 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 // import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks;
 import com.google.firebase.dynamiclinks.PendingDynamicLinkData;
+import com.google.firebase.messaging.BuildConfig;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.theartofdev.edmodo.cropper.CropImage;
 
@@ -412,6 +413,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "No Update available");
             }
         });
+        updateConfigURL();
         initApp();
 
        NotificationUtils.createNotificationChannel(this, NotificationUtils.CHANNEL_ID);
@@ -468,6 +470,13 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void updateConfigURL(){
+        String merchantId = getResources().getString(R.string.service) == "nammayatri" ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
+        String baseUrl = in.juspay.mobility.BuildConfig.CONFIG_URL;
+        sharedPref.edit().putString("MERCHANT_ID",merchantId).apply();
+        sharedPref.edit().putString("BASE_URL",baseUrl).apply();
     }
 
     public void triggerPopUPMain(String id, String type) {

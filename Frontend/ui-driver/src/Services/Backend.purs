@@ -179,7 +179,7 @@ makeTriggerOTPReq    mobileNumber = TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : "+91",
-      "merchantId" : ""
+      "merchantId" : getValueToLocalNativeStore MERCHANT_ID
     }
 
 

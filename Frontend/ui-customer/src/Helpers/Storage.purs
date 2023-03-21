@@ -49,6 +49,8 @@ data KeyStore
   | REFERRAL_STATUS
   | REGISTRATION_APPROVED
   | PREVIOUS_CURRENT_LOCATION
+  | MERCHANT_ID
+  | BASE_URL
 
 derive instance genericKeyStore :: Generic KeyStore _
 
