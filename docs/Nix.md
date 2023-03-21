@@ -1,6 +1,6 @@
 # Nix
 
-The Nammayatri project is in the process of using Nix instead of Stack. At the moment, developers still use Stack, but Nix is used in CI. If you are modifying `stack.yaml` be sure to also update the "inputs" in `flake.lock` (see the section further below).
+The Nammayatri project is in the process of migrating from Stack to Nix. Nix is now used in CI, and very soon we'll ask developers to use Nix while removing all Stack files. In the meanwhile, to ensure that CI passes, if you are modifying `stack.yaml` be sure to also update the "inputs" in `flake.lock` (see the section further below).
 
 ## Installing Nix
 
@@ -33,7 +33,7 @@ you can specify the corresponding input in `flake.nix` as follows:
 
 ### Transitive dependencies
 
-Keep in mind with Nix transitive dependency overrides need not be copied over to all repos. So a dependency like `euler-hs` need only be overriden in one repo (`shared-kernel.git` in this case), and all other repos will use the override indirectly.
+Keep in mind that, with Nix transitive dependency overrides need not be copied over to all repos. So a dependency like `euler-hs` need only be overriden in one repo (`shared-kernel.git` in this case), and all other repos will use the override indirectly.
 
 ## Building using Nix
 
@@ -47,8 +47,8 @@ nix run nixpkgs#cachix use nammayatri
 nix build .#nammayatri
 
 # Build the docker image
-docker load -i $(nix build .#dockerImage)
+docker load -i $(nix build .#dockerImage --print-out-paths)
 
 # Enter the nix shell
-nix develop # or `direnv allow`
+nix develop # or `direnv allow`; see https://haskell.flake.page/direnv
 ```
