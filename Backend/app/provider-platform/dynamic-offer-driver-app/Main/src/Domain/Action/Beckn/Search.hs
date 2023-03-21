@@ -17,7 +17,6 @@ module Domain.Action.Beckn.Search where
 import Data.List (elemIndex, nubBy)
 import Domain.Types.FareParameters
 import Domain.Types.FarePolicy.FarePolicy (FarePolicy)
-import qualified Domain.Types.Location.SpecialLocation as DSpecialLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -34,6 +33,8 @@ import Kernel.Storage.Hedis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool hiding (lat, lon)
 import SharedLogic.FareCalculator
@@ -41,7 +42,6 @@ import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Geometry as QGeometry
-import qualified Storage.Queries.Location.SpecialLocation as QSpecialLocation
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
 import Tools.Error

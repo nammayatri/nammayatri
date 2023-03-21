@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Serviceability
   ( checkServiceability,
+    ServiceabilityRes (..),
   )
 where
 
@@ -24,11 +25,19 @@ import Kernel.Storage.Hedis
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry (someGeometriesContain)
 import qualified Storage.Queries.Person as QP
 import Tools.Error
+
+data ServiceabilityRes = ServiceabilityRes
+  { serviceable :: Bool,
+    specialLocation :: Maybe [DSpecialLocation.SpecialLocation]
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 checkServiceability ::
   ( HasCacheConfig r,
@@ -38,7 +47,7 @@ checkServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
   Id Person.Person ->
   LatLong ->
-  m Bool
+  m ServiceabilityRes
 checkServiceability settingAccessor personId location = do
   person <-
     QP.findById personId
@@ -47,5 +56,28 @@ checkServiceability settingAccessor personId location = do
   geoConfig <- fmap (.geofencingConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
   let geoRestriction = settingAccessor geoConfig
   case geoRestriction of
-    Unrestricted -> pure True
-    Regions regions -> someGeometriesContain location regions
+    Unrestricted -> do
+      let serviceable = True
+      specialLocationBody <- returnIfSpecialLocation location
+      pure ServiceabilityRes {serviceable = serviceable, specialLocation = specialLocationBody}
+    Regions regions -> do
+      serviceable <- someGeometriesContain location regions
+      if serviceable
+        then do
+          specialLocationBody <- returnIfSpecialLocation location
+          pure ServiceabilityRes {serviceable = serviceable, specialLocation = specialLocationBody}
+        else pure ServiceabilityRes {serviceable = serviceable, specialLocation = Nothing}
+
+returnIfSpecialLocation ::
+  ( HasCacheConfig r,
+    HedisFlow m r,
+    EsqDBFlow m r
+  ) =>
+  LatLong ->
+  m (Maybe [DSpecialLocation.SpecialLocation])
+returnIfSpecialLocation location = do
+  specialLocations <- QSpecialLocation.findSpecialLocationByLatLong location
+  if not (null specialLocations)
+    then do
+      return $ Just specialLocations
+    else return Nothing

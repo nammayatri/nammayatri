@@ -59,6 +59,7 @@ packages:
   - lib/beckn-services
   - lib/shared-services
   - lib/location-updates
+  - lib/special-zone
   - lib/scheduler
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.

@@ -12,24 +12,30 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.Location.SpecialLocation where
+module Lib.Types.SpecialLocation where
 
-import qualified Domain.Types.Location.SpecialLocation as D
-import Kernel.External.Maps.Types (LatLong)
+import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Storage.Tabular.Location.SpecialLocation
 
-create :: D.SpecialLocation -> SqlDB ()
-create = Esq.create
+data Category
+  = SureMetro
+  | SureAirport
+  | SureSchool
+  | SureHospital
+  | SureStation
+  | UnSureMetro
+  | UnSureAirport
+  | UnSureSchool
+  | UnSureHospital
+  | UnSureStation
+  deriving (Read, Show, Generic, Eq, FromJSON, ToJSON, ToSchema)
 
-findById :: Transactionable m => Id D.SpecialLocation -> m (Maybe D.SpecialLocation)
-findById = Esq.findById
-
-findSpecialLocationByLatLong :: Transactionable m => LatLong -> m [D.SpecialLocation]
-findSpecialLocationByLatLong point = do
-  Esq.findAll $ do
-    specialLocation <- from $ table @SpecialLocationT
-    where_ $ containsPoint (point.lon, point.lat)
-    return specialLocation
+data SpecialLocation = SpecialLocation
+  { id :: Id SpecialLocation,
+    locationName :: Text,
+    category :: Category,
+    gates :: [LatLong],
+    createdAt :: UTCTime
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
