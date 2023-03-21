@@ -50,7 +50,7 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Search API Flow" "Reached"
     dSearchReq <- ACL.buildSearchReq subscriber req
-    Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId) 60 $ do
+    Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
       dSearchRes <- DSearch.handler transporterId dSearchReq
       let context = req.context
       let callbackUrl = gateway.subscriber_url
@@ -59,5 +59,5 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
           pure $ ACL.mkOnSearchMessage dSearchRes
     pure Ack
 
-searchLockKey :: Text -> Text
-searchLockKey id = "Driver:Search:MessageId-" <> id
+searchLockKey :: Text -> Text -> Text
+searchLockKey id mId = "Driver:Search:MessageId-" <> id <> ":" <> mId
