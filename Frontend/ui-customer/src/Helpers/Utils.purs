@@ -19,7 +19,8 @@ import Data.Date (Date)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Effect (Effect)
-import Prelude (class Show, class Ord, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=),(/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
+import Prelude (class Eq, class Show, Unit, bind, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (==), (>), (>>>))
+
 import Data.Traversable (traverse)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Juspay.OTP.Reader (initiateSMSRetriever)
@@ -32,22 +33,28 @@ import Foreign.Class (class Decode, class Encode)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Presto.Core.Flow (Flow, doAff)
 import Types.App (GlobalState)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..))
+import Screens.Types (AddNewAddressScreenState, CurrentLocationDetails, HomeScreenState, LocationItemType(..), LocationListItemState, PreviousCurrentLocations, RecentlySearchedObject)
+
 import Engineering.Helpers.Commons (liftFlow, os)
 import Control.Monad.Except (runExcept)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Data.Either (Either(..), hush)
 import Effect.Console (logShow)
-import Data.Array(length,filter,cons,deleteAt, sortWith, drop, head, (!!))
-import Debug.Trace(spy)
+import Data.Array (cons, deleteAt, filter, length, (!!))
+
 import Math(pi, sin, cos, sqrt, asin)
-import Data.Number (fromString)
 import Data.Foldable ( or )
 import Data.String as DS
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Data.Int as INT
--- import Effect.Random (random)
-import Effect (Effect)
+import Data.Either (hush)
+import Data.Generic.Rep.Eq (genericEq)
+import Data.Maybe (Maybe(..))
+import Foreign (Foreign)
+import Foreign.Class (class Decode, class Encode, decode)
+import Prelude (class Eq, class Show, (<<<))
+
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do 
@@ -328,3 +335,19 @@ getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (g
 
 getPreviousVersion :: String -> String 
 getPreviousVersion _ = if os == "IOS" then "1.2.5" else "1.2.0"
+
+foreign import getMerchantId :: String -> Foreign
+
+data Merchant = NAMMAYATRI | JATRISAATHI | YATRI
+
+derive instance genericMerchant :: Generic Merchant _
+instance eqMerchant :: Eq Merchant where eq = genericEq
+instance showMerchant :: Show Merchant where show = genericShow
+instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
+instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
+
+getMerchant :: String -> Maybe Merchant
+getMerchant _ = decodeMerchantId (getMerchantId "")
+
+decodeMerchantId :: Foreign -> Maybe Merchant
+decodeMerchantId = hush <<< runExcept <<< decode
