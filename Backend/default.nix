@@ -1,4 +1,4 @@
-{ self, inputs, ... }:
+{ inputs, ... }:
 {
   imports = [
     ./nix/docker.nix
@@ -14,12 +14,14 @@
           dhall = pkgs.dhall;
         };
       };
+
+      # Some tests fail under Nix. We shoud probably run them in CI directly.
       overrides = self: super:
         with pkgs.haskell.lib.compose;
         lib.mapAttrs (k: v: lib.pipe super.${k} v) {
-          # FIXME: location-updates-tests: Network.Socket.connect: <socket: 6>: does not exist (Connection refused)
+          # location-updates-tests: Network.Socket.connect: <socket: 6>: does not exist (Connection refused)
           location-updates = [ dontCheck ];
-          # FIXME: tries to find dhall files from wrong CWD
+          # tries to find dhall files from wrong CWD
           beckn-test = [ dontCheck ];
         };
     };
@@ -32,12 +34,15 @@
           (config.haskellProjects.default.outputs.localPackages);
       in
       {
-        nammayatri = pkgs.runCommand "nammayatri-exes" { } ''
-          mkdir -p $out/bin
-          ${lib.concatStringsSep ";" (builtins.map (exe: "cp -rv ${exe}/* $out/") (lib.attrValues exes))}
-          # k8s deployment config is hardcoded to look for exes in /opt/app
-          mkdir $out/opt && mv $out/bin $out/opt/app
-        '';
+        nammayatri = pkgs.symlinkJoin {
+          name = "nammayatri-exes";
+          paths = lib.attrValues exes;
+          postBuild = ''
+            # Our k8s deployment config is hardcoded to look for exes under
+            # /opt/app
+            mkdir $out/opt && mv $out/bin $out/opt/app
+          '';
+        };
 
         # This is used in docker image (docker.nix)
         # TODO: Remove this after disabling auto wiring via https://github.com/srid/haskell-flake/issues/62
