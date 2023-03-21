@@ -134,6 +134,8 @@ insertManyOnConflict ::
   unique ->
   OnConflict a ->
   ReaderT backend m ()
+insertManyOnConflict [] _ _ =
+  pure ()
 insertManyOnConflict valuesToInsert conflictKey onConflict = do
   sqlBackend <- asks projectBackend
   let info = (sqlBackend, EI.initialIdentState)

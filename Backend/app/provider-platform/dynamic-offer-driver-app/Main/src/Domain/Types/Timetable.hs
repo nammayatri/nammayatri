@@ -1,6 +1,5 @@
 module Domain.Types.Timetable where
 
-import Data.Time.Calendar (Day)
 import Data.Time.LocalTime (LocalTime)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Booking.BookingLocation as DLoc

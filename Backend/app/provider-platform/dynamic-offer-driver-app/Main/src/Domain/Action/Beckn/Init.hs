@@ -43,6 +43,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.GoogleMaps as Maps
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Exophone as CQExophone
+import qualified Storage.CachedQueries.FarePolicy as QFarePolicy
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -202,6 +203,7 @@ initOneWayTrip merchantId req = do
             toLocation,
             estimatedFare = driverQuote.estimatedFare,
             riderName = Nothing,
+            riderId = Nothing,
             estimatedDuration = searchRequest.estimatedDuration,
             fareParams = driverQuote.fareParams,
             specialZoneOtpCode = Nothing,
@@ -223,8 +225,7 @@ initRecurringBooking ::
   m InitRecurringBookingRes
 initRecurringBooking merchantId req = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  now <- getCurrentTime
-  farePolicy <- QFarePolicy.findByMerchantIdAndVariant merchantId req.variant >>= fromMaybeM NoFarePolicy
+  farePolicy <- QFarePolicy.findByMerchantIdAndVariant merchantId req.variant Nothing >>= fromMaybeM NoFarePolicy
   recurringBooking <- buildRecurringBooking farePolicy
   runTransaction $ QRecurringBooking.create recurringBooking
   pure $
@@ -260,7 +261,7 @@ buildRecurringBookingLocation ::
   Text ->
   DLoc.SearchReqLocationAPIEntity ->
   m DLoc.BookingLocation
-buildRecurringBookingLocation merchantId sessionToken DLoc.SearchReqLocationAPIEntity {..} = do
+buildRecurringBookingLocation merchantId sessionToken DLoc.SearchReqLocationAPIEntity {lat, lon} = do
   pickupRes <-
     Maps.getPlaceName merchantId $
       Maps.GetPlaceNameReq

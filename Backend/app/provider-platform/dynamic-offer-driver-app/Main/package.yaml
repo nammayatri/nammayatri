@@ -116,6 +116,16 @@ library:
     - special-zone
 
 executables:
+  dynamic-offer-driver-cli:
+    main: Cli.hs
+    source-dirs: server
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+    dependencies:
+      - dynamic-offer-driver-app
+
   dynamic-offer-driver-app-exe:
     main: Main.hs
     source-dirs: server

@@ -69,7 +69,7 @@ init transporterId (SignatureAuthResult _ subscriber) req =
             pure $ ACL.mkOnInitRecurringBookingMessage dRes
     pure Ack
   where
-    recurringBookingErrHandler booking exc
+    recurringBookingErrHandler _booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc =
         --TODO: Handle this error by deleting the recurring booking
         pure Ack
