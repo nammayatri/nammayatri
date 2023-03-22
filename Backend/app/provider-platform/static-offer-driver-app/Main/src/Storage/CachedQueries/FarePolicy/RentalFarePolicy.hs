@@ -72,7 +72,7 @@ findAllByMerchantId merchantId =
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[RentalFarePolicy] @[RentalFarePolicyD 'Unsafe] rFPs) expTime
 
-cacheRentalFarePolicy :: (CacheFlow m r) => RentalFarePolicy -> m ()
+cacheRentalFarePolicy :: CacheFlow m r => RentalFarePolicy -> m ()
 cacheRentalFarePolicy rFP = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey rFP.id

@@ -55,7 +55,7 @@ findById id =
     Nothing ->
       flip whenJust cacheDriverLocation /=<< Esq.runInReplica (DLQueries.findById id)
 
-cacheDriverLocation :: (CacheFlow m r) => DriverLocation -> m ()
+cacheDriverLocation :: CacheFlow m r => DriverLocation -> m ()
 cacheDriverLocation driverLocation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let driverLocationKey = makeDriverLocationKey driverLocation.driverId
@@ -64,7 +64,7 @@ cacheDriverLocation driverLocation = do
 makeDriverInformationIdKey :: Id Person.Driver -> Text
 makeDriverInformationIdKey id = "CachedQueries:DriverInformation:DriverId-" <> id.getId
 
-cacheDriverInformation :: (CacheFlow m r) => Id Person.Driver -> DriverInformation -> m ()
+cacheDriverInformation :: CacheFlow m r => Id Person.Driver -> DriverInformation -> m ()
 cacheDriverInformation driverId driverInfo = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeDriverInformationIdKey driverId) driverInfo expTime
@@ -75,5 +75,5 @@ findDriverInfoById id =
     Just a -> pure $ Just a
     Nothing -> flip whenJust (cacheDriverInformation id) /=<< Queries.findById id
 
-clearDriverInfoCache :: (CacheFlow m r) => Id Person.Driver -> m ()
+clearDriverInfoCache :: CacheFlow m r => Id Person.Driver -> m ()
 clearDriverInfoCache = Hedis.del . makeDriverInformationIdKey

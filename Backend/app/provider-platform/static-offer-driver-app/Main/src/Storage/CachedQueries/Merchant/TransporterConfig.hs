@@ -39,7 +39,7 @@ findByMerchantId id =
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
     Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantId id
 
-cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
+cacheTransporterConfig :: CacheFlow m r => TransporterConfig -> m ()
 cacheTransporterConfig cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let merchantIdKey = makeMerchantIdKey cfg.merchantId

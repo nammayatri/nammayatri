@@ -39,7 +39,7 @@ findByMerchantId id =
     Just a -> return . Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig a
     Nothing -> flip whenJust cacheMerchantServiceUsageConfig /=<< Queries.findByMerchantId id
 
-cacheMerchantServiceUsageConfig :: (CacheFlow m r) => MerchantServiceUsageConfig -> m ()
+cacheMerchantServiceUsageConfig :: CacheFlow m r => MerchantServiceUsageConfig -> m ()
 cacheMerchantServiceUsageConfig merchantServiceUsageConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeMerchantIdKey merchantServiceUsageConfig.merchantId
@@ -54,6 +54,10 @@ clearCache merchantId = do
   Hedis.del (makeMerchantIdKey merchantId)
 
 updateMerchantServiceUsageConfig ::
+  CacheFlow m r =>
+  Finalize m ->
   MerchantServiceUsageConfig ->
   Esq.SqlDB ()
-updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig
+updateMerchantServiceUsageConfig finalize merchantServiceUsageConfig = do
+  Queries.updateMerchantServiceUsageConfig merchantServiceUsageConfig
+  finalize $ clearCache merchantServiceUsageConfig.merchantId

@@ -68,7 +68,7 @@ findAllByMerchantId merchantId =
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[OneWayFarePolicy] @[OneWayFarePolicyD 'Unsafe] owFPs) expTime
 
-cacheOneWayFarePolicy :: (CacheFlow m r) => OneWayFarePolicy -> m ()
+cacheOneWayFarePolicy :: CacheFlow m r => OneWayFarePolicy -> m ()
 cacheOneWayFarePolicy owFP = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey owFP.id

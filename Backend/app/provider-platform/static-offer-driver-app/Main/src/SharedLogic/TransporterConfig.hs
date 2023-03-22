@@ -33,7 +33,7 @@ findFCMConfigByMerchantId merchantId =
     Just conf -> return conf
     Nothing -> cacheFCMConfig merchantId /=<< findFCMConfigByMerchantId' merchantId
 
-cacheFCMConfig :: (CacheFlow m r) => Id DM.Merchant -> FCMConfig -> m ()
+cacheFCMConfig :: CacheFlow m r => Id DM.Merchant -> FCMConfig -> m ()
 cacheFCMConfig merchantId fcmConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let fcmConfigKey = makeFCMConfigKey merchantId

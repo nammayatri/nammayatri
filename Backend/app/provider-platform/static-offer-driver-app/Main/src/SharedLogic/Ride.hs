@@ -27,12 +27,12 @@ import qualified Storage.Queries.Ride as RQueries
 makeAssignedRideKey :: Id Person -> Text
 makeAssignedRideKey id = "RideAssignToDriver:DriverId-" <> id.getId
 
-cacheAssignedRide :: (CacheFlow m r) => Id Person -> Id Ride -> m ()
+cacheAssignedRide :: CacheFlow m r => Id Person -> Id Ride -> m ()
 cacheAssignedRide driverId rideId = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeAssignedRideKey driverId) rideId expTime
 
-clearCache :: (CacheFlow m r) => Id Person -> m ()
+clearCache :: CacheFlow m r => Id Person -> m ()
 clearCache = Hedis.del . makeAssignedRideKey
 
 getInProgressRideIdByDriverId :: (CacheFlow m r, EsqDBReplicaFlow m r) => Id Person -> m (Maybe (Id Ride))

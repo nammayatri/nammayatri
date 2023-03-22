@@ -69,7 +69,7 @@ clearCache merchant = do
   Hedis.del (makeIdKey merchant.id)
   Hedis.del (makeShortIdKey merchant.shortId)
 
-cacheMerchant :: (CacheFlow m r) => Merchant -> m ()
+cacheMerchant :: CacheFlow m r => Merchant -> m ()
 cacheMerchant merchant = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey merchant.id
@@ -86,5 +86,7 @@ makeShortIdKey shortId = "CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 makeSubscriberIdKey :: ShortId Subscriber -> Text
 makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> subscriberId.getShortId
 
-update :: Merchant -> Esq.SqlDB ()
-update = Queries.update
+update :: CacheFlow m r => Finalize m -> Merchant -> Esq.SqlDB ()
+update finalize merchant = do
+  Queries.update merchant
+  finalize $ clearCache merchant

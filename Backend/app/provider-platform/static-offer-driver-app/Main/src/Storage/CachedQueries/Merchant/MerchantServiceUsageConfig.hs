@@ -39,7 +39,7 @@ findByMerchantId id =
     Just a -> return . Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig a
     Nothing -> flip whenJust cacheMerchantServiceUsageConfig /=<< Queries.findByMerchantId id
 
-cacheMerchantServiceUsageConfig :: (CacheFlow m r) => MerchantServiceUsageConfig -> m ()
+cacheMerchantServiceUsageConfig :: CacheFlow m r => MerchantServiceUsageConfig -> m ()
 cacheMerchantServiceUsageConfig orgServiceUsageConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeMerchantIdKey orgServiceUsageConfig.merchantId

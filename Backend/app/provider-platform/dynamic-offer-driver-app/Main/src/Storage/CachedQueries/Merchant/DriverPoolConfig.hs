@@ -37,7 +37,7 @@ findAllByMerchantId id =
     Just a -> return $ fmap (coerce @(DriverPoolConfigD 'Unsafe) @DriverPoolConfig) a
     Nothing -> cacheDriverPoolConfigs id /=<< Queries.findAllByMerchantId id
 
-cacheDriverPoolConfigs :: (CacheFlow m r) => Id Merchant -> [DriverPoolConfig] -> m ()
+cacheDriverPoolConfigs :: CacheFlow m r => Id Merchant -> [DriverPoolConfig] -> m ()
 cacheDriverPoolConfigs merchantId cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let merchantIdKey = makeMerchantIdKey merchantId

@@ -35,7 +35,7 @@ findByMerchantIdAndDocumentType merchantId documentType =
     Just a -> return $ Just a
     Nothing -> flip whenJust cacheOnboardingDocumentConfig /=<< Queries.findByMerchantIdAndDocumentType merchantId documentType
 
-cacheOnboardingDocumentConfig :: (CacheFlow m r) => DTO.OnboardingDocumentConfig -> m ()
+cacheOnboardingDocumentConfig :: CacheFlow m r => DTO.OnboardingDocumentConfig -> m ()
 cacheOnboardingDocumentConfig config = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let key = makeMerchantDocTypeKey config.merchantId config.documentType

@@ -54,7 +54,7 @@ findAllByMerchantIdAndVariant merchantId vehVar =
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.setExp (makeAllMerchantIdVehVarKey merchantId vehVar) (coerce @[Discount] @[DiscountD 'Unsafe] discounts) expTime
 
-cacheDiscount :: (CacheFlow m r) => Discount -> m ()
+cacheDiscount :: CacheFlow m r => Discount -> m ()
 cacheDiscount discount = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey discount.id

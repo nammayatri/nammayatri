@@ -38,7 +38,7 @@ findBySubscriberId subscriberId =
   where
     findAndCache = flip whenJust cacheOrganization /=<< Queries.findBySubscriberId subscriberId
 
-cacheOrganization :: (CacheFlow m r) => BlackListOrg -> m ()
+cacheOrganization :: CacheFlow m r => BlackListOrg -> m ()
 cacheOrganization org = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeShortIdKey org.subscriberId) (coerce @BlackListOrg @(BlackListOrgD 'Unsafe) org) expTime
