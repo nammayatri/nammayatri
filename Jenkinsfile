@@ -3,12 +3,16 @@ pipeline {
     stages {
         stage ('Cachix setup') {
             steps {
-                sh 'nix run nixpkgs#cachix use nammayatri'
+                sh 'cachix use nammayatri'
             }
         }
         stage ('Nix Build') {
+            environment {
+                CACHIX_AUTH_TOKEN = credentials('cachix-auth-token')
+            }
             steps {
-                sh 'nix build -L .#nammayatri'
+                nixBuildAndCachixPush '.#nammayatri'
+                nixBuildAndCachixPush '.#devShells.x86_64-linux.default'
             }
         }
         stage ('Flake check') {
@@ -40,13 +44,16 @@ pipeline {
                    '''
             }
         }
-        /* stage ('Push to cachix') {
-          environment {
-            CACHIX_AUTH_TOKEN = credentials('cachix-auth-token')
-          }
-          steps {
-            sh 'nix run .#cachix-push'
-          }
-        } */
     }
+}
+
+// Run a nix command such that new paths created in the nix store are
+// automatically pushed to cachix. 
+//
+// We limit this to 'nix build' because other commands, like 'nix develop' may
+// run arbitrary commands by PR authors in the context of CI environment.
+//
+// Ref: https://docs.cachix.org/pushing#push-all-store-paths-produced-during-a-command
+def nixBuildAndCachixPush(String args) {
+    sh "cachix watch-exec nammayatri -- nix build -L ${args}"
 }
