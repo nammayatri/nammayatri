@@ -1,0 +1,295 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           beckn-spec
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  exposed-modules:
+      Beckn.Types.Core.Metro.API.OnSearch
+      Beckn.Types.Core.Metro.API.Search
+      Beckn.Types.Core.Metro.Common
+      Beckn.Types.Core.Metro.Common.DecimalValue
+      Beckn.Types.Core.Metro.OnSearch
+      Beckn.Types.Core.Metro.OnSearch.Catalog
+      Beckn.Types.Core.Metro.OnSearch.Descriptor
+      Beckn.Types.Core.Metro.OnSearch.Fulfillment
+      Beckn.Types.Core.Metro.OnSearch.Gps
+      Beckn.Types.Core.Metro.OnSearch.Item
+      Beckn.Types.Core.Metro.OnSearch.Location
+      Beckn.Types.Core.Metro.OnSearch.Price
+      Beckn.Types.Core.Metro.OnSearch.Provider
+      Beckn.Types.Core.Metro.OnSearch.Time
+      Beckn.Types.Core.Metro.OnSearch.Vehicle
+      Beckn.Types.Core.Metro.Search
+      Beckn.Types.Core.Metro.Search.Address
+      Beckn.Types.Core.Metro.Search.Category
+      Beckn.Types.Core.Metro.Search.Circle
+      Beckn.Types.Core.Metro.Search.City
+      Beckn.Types.Core.Metro.Search.Country
+      Beckn.Types.Core.Metro.Search.Descriptor
+      Beckn.Types.Core.Metro.Search.Duration
+      Beckn.Types.Core.Metro.Search.Gps
+      Beckn.Types.Core.Metro.Search.Image
+      Beckn.Types.Core.Metro.Search.Intent
+      Beckn.Types.Core.Metro.Search.Item
+      Beckn.Types.Core.Metro.Search.Location
+      Beckn.Types.Core.Metro.Search.Offer
+      Beckn.Types.Core.Metro.Search.Payment
+      Beckn.Types.Core.Metro.Search.Price
+      Beckn.Types.Core.Metro.Search.Scalar
+      Beckn.Types.Core.Metro.Search.Tags
+      Beckn.Types.Core.Metro.Search.Time
+      Beckn.Types.Core.Metro.Search.Vehicle
+      Beckn.Types.Core.Taxi.API.Cancel
+      Beckn.Types.Core.Taxi.API.Confirm
+      Beckn.Types.Core.Taxi.API.Init
+      Beckn.Types.Core.Taxi.API.OnConfirm
+      Beckn.Types.Core.Taxi.API.OnInit
+      Beckn.Types.Core.Taxi.API.OnSearch
+      Beckn.Types.Core.Taxi.API.OnSelect
+      Beckn.Types.Core.Taxi.API.OnTrack
+      Beckn.Types.Core.Taxi.API.OnUpdate
+      Beckn.Types.Core.Taxi.API.Rating
+      Beckn.Types.Core.Taxi.API.Search
+      Beckn.Types.Core.Taxi.API.Select
+      Beckn.Types.Core.Taxi.API.Track
+      Beckn.Types.Core.Taxi.Cancel.Req
+      Beckn.Types.Core.Taxi.Common.Address
+      Beckn.Types.Core.Taxi.Common.CancellationSource
+      Beckn.Types.Core.Taxi.Common.DecimalValue
+      Beckn.Types.Core.Taxi.Common.FareProductType
+      Beckn.Types.Core.Taxi.Common.Gps
+      Beckn.Types.Core.Taxi.Common.ItemCode
+      Beckn.Types.Core.Taxi.Common.PaymentType
+      Beckn.Types.Core.Taxi.Common.Price
+      Beckn.Types.Core.Taxi.Common.TimeDuration
+      Beckn.Types.Core.Taxi.Common.TimeTimestamp
+      Beckn.Types.Core.Taxi.Common.VehicleVariant
+      Beckn.Types.Core.Taxi.Confirm
+      Beckn.Types.Core.Taxi.Confirm.Fulfillment
+      Beckn.Types.Core.Taxi.Confirm.Location
+      Beckn.Types.Core.Taxi.Confirm.Order
+      Beckn.Types.Core.Taxi.Confirm.Payment
+      Beckn.Types.Core.Taxi.Confirm.StartInfo
+      Beckn.Types.Core.Taxi.Confirm.StopInfo
+      Beckn.Types.Core.Taxi.Init
+      Beckn.Types.Core.Taxi.Init.Descriptor
+      Beckn.Types.Core.Taxi.Init.Fulfillment
+      Beckn.Types.Core.Taxi.Init.Location
+      Beckn.Types.Core.Taxi.Init.Order
+      Beckn.Types.Core.Taxi.Init.Payment
+      Beckn.Types.Core.Taxi.Init.StartInfo
+      Beckn.Types.Core.Taxi.Init.StopInfo
+      Beckn.Types.Core.Taxi.OnConfirm
+      Beckn.Types.Core.Taxi.OnConfirm.BreakupItem
+      Beckn.Types.Core.Taxi.OnConfirm.Descriptor
+      Beckn.Types.Core.Taxi.OnConfirm.Fulfillment
+      Beckn.Types.Core.Taxi.OnConfirm.Location
+      Beckn.Types.Core.Taxi.OnConfirm.Order
+      Beckn.Types.Core.Taxi.OnConfirm.Payment
+      Beckn.Types.Core.Taxi.OnConfirm.Provider
+      Beckn.Types.Core.Taxi.OnConfirm.Quote
+      Beckn.Types.Core.Taxi.OnConfirm.StartInfo
+      Beckn.Types.Core.Taxi.OnConfirm.StopInfo
+      Beckn.Types.Core.Taxi.OnInit
+      Beckn.Types.Core.Taxi.OnInit.BreakupItem
+      Beckn.Types.Core.Taxi.OnInit.Order
+      Beckn.Types.Core.Taxi.OnInit.OrderState
+      Beckn.Types.Core.Taxi.OnInit.Payment
+      Beckn.Types.Core.Taxi.OnInit.Quote
+      Beckn.Types.Core.Taxi.OnSearch
+      Beckn.Types.Core.Taxi.OnSearch.Addon
+      Beckn.Types.Core.Taxi.OnSearch.Catalog
+      Beckn.Types.Core.Taxi.OnSearch.Category
+      Beckn.Types.Core.Taxi.OnSearch.Descriptor
+      Beckn.Types.Core.Taxi.OnSearch.Fulfillment
+      Beckn.Types.Core.Taxi.OnSearch.Item
+      Beckn.Types.Core.Taxi.OnSearch.Location
+      Beckn.Types.Core.Taxi.OnSearch.Offer
+      Beckn.Types.Core.Taxi.OnSearch.Payment
+      Beckn.Types.Core.Taxi.OnSearch.Price
+      Beckn.Types.Core.Taxi.OnSearch.Provider
+      Beckn.Types.Core.Taxi.OnSearch.ProviderLocation
+      Beckn.Types.Core.Taxi.OnSearch.StartInfo
+      Beckn.Types.Core.Taxi.OnSearch.StopInfo
+      Beckn.Types.Core.Taxi.OnSelect
+      Beckn.Types.Core.Taxi.OnSelect.Addon
+      Beckn.Types.Core.Taxi.OnSelect.Category
+      Beckn.Types.Core.Taxi.OnSelect.Descriptor
+      Beckn.Types.Core.Taxi.OnSelect.Fulfillment
+      Beckn.Types.Core.Taxi.OnSelect.Item
+      Beckn.Types.Core.Taxi.OnSelect.Location
+      Beckn.Types.Core.Taxi.OnSelect.Offer
+      Beckn.Types.Core.Taxi.OnSelect.Order
+      Beckn.Types.Core.Taxi.OnSelect.Payment
+      Beckn.Types.Core.Taxi.OnSelect.Price
+      Beckn.Types.Core.Taxi.OnSelect.Provider
+      Beckn.Types.Core.Taxi.OnSelect.ProviderLocation
+      Beckn.Types.Core.Taxi.OnSelect.StartInfo
+      Beckn.Types.Core.Taxi.OnSelect.StopInfo
+      Beckn.Types.Core.Taxi.OnTrack
+      Beckn.Types.Core.Taxi.OnTrack.Tracking
+      Beckn.Types.Core.Taxi.OnUpdate
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingReallocationEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.DriverArrivedEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent.Item
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
+      Beckn.Types.Core.Taxi.Rating
+      Beckn.Types.Core.Taxi.Rating.FeedbackForm
+      Beckn.Types.Core.Taxi.Search
+      Beckn.Types.Core.Taxi.Search.Address
+      Beckn.Types.Core.Taxi.Search.Fulfillment
+      Beckn.Types.Core.Taxi.Search.Intent
+      Beckn.Types.Core.Taxi.Search.Location
+      Beckn.Types.Core.Taxi.Search.StartInfo
+      Beckn.Types.Core.Taxi.Search.StopInfo
+      Beckn.Types.Core.Taxi.Search.Time
+      Beckn.Types.Core.Taxi.Select
+      Beckn.Types.Core.Taxi.Select.Descriptor
+      Beckn.Types.Core.Taxi.Select.Fulfillment
+      Beckn.Types.Core.Taxi.Select.Location
+      Beckn.Types.Core.Taxi.Select.Order
+      Beckn.Types.Core.Taxi.Select.Payment
+      Beckn.Types.Core.Taxi.Select.StartInfo
+      Beckn.Types.Core.Taxi.Select.StopInfo
+      Beckn.Types.Core.Taxi.Track
+      Beckn.Types.Core.Taxi.Track.Order
+  other-modules:
+      Paths_beckn_spec
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor
+  build-depends:
+      aeson
+    , aeson-casing
+    , base >=4.7 && <5
+    , base64-bytestring
+    , binary
+    , bytestring
+    , case-insensitive
+    , clock
+    , containers
+    , cryptonite
+    , data-default-class
+    , dhall
+    , double-conversion
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , fast-logger
+    , generic-lens
+    , geojson
+    , hedis
+    , hex-text
+    , hspec
+    , http-media
+    , hw-kafka-client
+    , jwt
+    , kleene
+    , lattices
+    , lens
+    , memory
+    , mobility-core
+    , monad-logger
+    , network
+    , openapi3
+    , parsec
+    , passetto-client
+    , persistent
+    , persistent-postgresql
+    , prometheus-client
+    , prometheus-metrics-ghc
+    , prometheus-proc
+    , pureMD5
+    , record-dot-preprocessor
+    , record-hasfield
+    , regex-applicative
+    , relude
+    , resource-pool
+    , resourcet
+    , safe-exceptions
+    , safe-money
+    , scientific
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , stm
+    , string-conversions
+    , tasty
+    , tasty-hunit
+    , template-haskell
+    , text
+    , time
+    , time-units
+    , transformers
+    , universum <1.8
+    , unix
+    , unliftio
+    , unordered-containers
+    , utf8-string
+    , uuid
+    , vector
+    , wai
+    , wai-middleware-prometheus
+    , warp
+  default-language: Haskell2010

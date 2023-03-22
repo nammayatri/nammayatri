@@ -1,0 +1,545 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           static-offer-driver-app
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  exposed-modules:
+      API
+      API.Beckn
+      API.Beckn.Cancel
+      API.Beckn.Confirm
+      API.Beckn.Init
+      API.Beckn.Rating
+      API.Beckn.Search
+      API.Beckn.Track
+      API.Dashboard
+      API.Dashboard.Booking
+      API.Dashboard.Driver
+      API.Dashboard.Exotel
+      API.Dashboard.Merchant
+      API.Dashboard.Ride
+      API.UI
+      API.UI.Booking
+      API.UI.Call
+      API.UI.CancellationReason
+      API.UI.Driver
+      API.UI.FarePolicy
+      API.UI.FarePolicy.Discount
+      API.UI.FarePolicy.FareProduct
+      API.UI.FarePolicy.OneWayFarePolicy
+      API.UI.FarePolicy.RentalFarePolicy
+      API.UI.Location
+      API.UI.Maps
+      API.UI.Registration
+      API.UI.Ride
+      API.UI.Route
+      API.UI.TranspAdmin
+      API.UI.Transporter
+      API.UI.Vehicle
+      API.UI.Webengage.InfoBIPWebhook
+      API.UI.Webengage.Webengage
+      App
+      App.Server
+      Beckn.ACL.Cancel
+      Beckn.ACL.Confirm
+      Beckn.ACL.Init
+      Beckn.ACL.OnConfirm
+      Beckn.ACL.OnInit
+      Beckn.ACL.OnSearch
+      Beckn.ACL.OnTrack
+      Beckn.ACL.OnUpdate
+      Beckn.ACL.Rating
+      Beckn.ACL.Search
+      Beckn.ACL.Track
+      Beckn.Core
+      Domain.Action.Beckn.Cancel
+      Domain.Action.Beckn.Confirm
+      Domain.Action.Beckn.Init
+      Domain.Action.Beckn.OnSearch
+      Domain.Action.Beckn.OnSearch.OneWay
+      Domain.Action.Beckn.OnSearch.Rental
+      Domain.Action.Beckn.Rating
+      Domain.Action.Beckn.Search
+      Domain.Action.Beckn.Track
+      Domain.Action.Dashboard.Booking
+      Domain.Action.Dashboard.Driver
+      Domain.Action.Dashboard.Exotel
+      Domain.Action.Dashboard.Merchant
+      Domain.Action.Dashboard.Ride
+      Domain.Action.UI.Booking
+      Domain.Action.UI.Call
+      Domain.Action.UI.CancellationReason
+      Domain.Action.UI.Driver
+      Domain.Action.UI.FarePolicy.Discount
+      Domain.Action.UI.FarePolicy.FareProduct
+      Domain.Action.UI.FarePolicy.OneWayFarePolicy
+      Domain.Action.UI.FarePolicy.RentalFarePolicy
+      Domain.Action.UI.Location
+      Domain.Action.UI.Location.UpdateLocation
+      Domain.Action.UI.Maps
+      Domain.Action.UI.Registration
+      Domain.Action.UI.Ride
+      Domain.Action.UI.Ride.CancelRide
+      Domain.Action.UI.Ride.CancelRide.Internal
+      Domain.Action.UI.Ride.EndRide
+      Domain.Action.UI.Ride.EndRide.DefaultConfig
+      Domain.Action.UI.Ride.EndRide.Internal
+      Domain.Action.UI.Ride.StartRide
+      Domain.Action.UI.Ride.StartRide.Internal
+      Domain.Action.UI.Route
+      Domain.Action.UI.TranspAdmin
+      Domain.Action.UI.Transporter
+      Domain.Action.UI.Vehicle
+      Domain.Action.UI.Webengage.InfoBIPWebhook
+      Domain.Action.UI.Webengage.Webengage
+      Domain.Types.AllocationEvent
+      Domain.Types.Booking
+      Domain.Types.Booking.API
+      Domain.Types.Booking.BookingLocation
+      Domain.Types.Booking.Type
+      Domain.Types.BookingCancellationReason
+      Domain.Types.BusinessEvent
+      Domain.Types.CallStatus
+      Domain.Types.CancellationReason
+      Domain.Types.Common
+      Domain.Types.DiscountTransaction
+      Domain.Types.DriverInformation
+      Domain.Types.DriverLocation
+      Domain.Types.DriverStats
+      Domain.Types.Exophone
+      Domain.Types.FarePolicy.Discount
+      Domain.Types.FarePolicy.FareBreakup
+      Domain.Types.FarePolicy.FareProduct
+      Domain.Types.FarePolicy.OneWayFarePolicy
+      Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate
+      Domain.Types.FarePolicy.RentalFarePolicy
+      Domain.Types.Geometry
+      Domain.Types.Merchant
+      Domain.Types.Merchant.MerchantMessage
+      Domain.Types.Merchant.MerchantServiceConfig
+      Domain.Types.Merchant.MerchantServiceUsageConfig
+      Domain.Types.Merchant.TransporterConfig
+      Domain.Types.NotificationStatus
+      Domain.Types.Person
+      Domain.Types.Quote
+      Domain.Types.Rating
+      Domain.Types.RegistrationToken
+      Domain.Types.Ride
+      Domain.Types.RideDetails
+      Domain.Types.RiderDetails
+      Domain.Types.RideRequest
+      Domain.Types.SearchRequest
+      Domain.Types.SearchRequest.SearchReqLocation
+      Domain.Types.Vehicle
+      Domain.Types.Webengage
+      Environment
+      Lib.LocationUpdates
+      SharedLogic.CacheDistance
+      SharedLogic.CallBAP
+      SharedLogic.DriverLocation
+      SharedLogic.DriverPool
+      SharedLogic.DriverPool.Config
+      SharedLogic.DriverPool.Types
+      SharedLogic.FareCalculator.OneWayFareCalculator
+      SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
+      SharedLogic.FareCalculator.OneWayFareCalculator.Flow
+      SharedLogic.FareCalculator.RentalFareCalculator
+      SharedLogic.FareCalculator.RentalFareCalculator.Calculator
+      SharedLogic.FareCalculator.RentalFareCalculator.Flow
+      SharedLogic.Merchant
+      SharedLogic.MessageBuilder
+      SharedLogic.Person
+      SharedLogic.Ride
+      SharedLogic.Scheduler
+      SharedLogic.TransporterConfig
+      Storage.CachedQueries.CacheConfig
+      Storage.CachedQueries.Exophone
+      Storage.CachedQueries.FarePolicy.Discount
+      Storage.CachedQueries.FarePolicy.FareProduct
+      Storage.CachedQueries.FarePolicy.OneWayFarePolicy
+      Storage.CachedQueries.FarePolicy.RentalFarePolicy
+      Storage.CachedQueries.Merchant
+      Storage.CachedQueries.Merchant.MerchantMessage
+      Storage.CachedQueries.Merchant.MerchantServiceConfig
+      Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
+      Storage.CachedQueries.Merchant.TransporterConfig
+      Storage.Queries.AllocationEvent
+      Storage.Queries.Booking
+      Storage.Queries.Booking.BookingLocation
+      Storage.Queries.BookingCancellationReason
+      Storage.Queries.BusinessEvent
+      Storage.Queries.CallStatus
+      Storage.Queries.CancellationReason
+      Storage.Queries.DiscountTransaction
+      Storage.Queries.DriverInformation
+      Storage.Queries.DriverLocation
+      Storage.Queries.DriverStats
+      Storage.Queries.Exophone
+      Storage.Queries.FarePolicy.Discount
+      Storage.Queries.FarePolicy.FareBreakup
+      Storage.Queries.FarePolicy.FareProduct
+      Storage.Queries.FarePolicy.OneWayFarePolicy
+      Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate
+      Storage.Queries.FarePolicy.RentalFarePolicy
+      Storage.Queries.FullEntityBuilders
+      Storage.Queries.Geometry
+      Storage.Queries.Merchant
+      Storage.Queries.Merchant.MerchantMessage
+      Storage.Queries.Merchant.MerchantServiceConfig
+      Storage.Queries.Merchant.MerchantServiceUsageConfig
+      Storage.Queries.Merchant.TransporterConfig
+      Storage.Queries.NotificationStatus
+      Storage.Queries.Person
+      Storage.Queries.Quote
+      Storage.Queries.Quote.OneWayQuote
+      Storage.Queries.Quote.RentalQuote
+      Storage.Queries.Rating
+      Storage.Queries.RegistrationToken
+      Storage.Queries.Ride
+      Storage.Queries.RideDetails
+      Storage.Queries.RiderDetails
+      Storage.Queries.RideRequest
+      Storage.Queries.SearchReqLocation
+      Storage.Queries.SearchRequest
+      Storage.Queries.Vehicle
+      Storage.Queries.Webengage
+      Storage.Tabular.AllocationEvent
+      Storage.Tabular.Booking
+      Storage.Tabular.Booking.BookingLocation
+      Storage.Tabular.Booking.Instances
+      Storage.Tabular.Booking.OneWayBooking
+      Storage.Tabular.Booking.RentalBooking
+      Storage.Tabular.Booking.Table
+      Storage.Tabular.BookingCancellationReason
+      Storage.Tabular.BusinessEvent
+      Storage.Tabular.CallStatus
+      Storage.Tabular.CancellationReason
+      Storage.Tabular.DiscountTransaction
+      Storage.Tabular.DriverInformation
+      Storage.Tabular.DriverLocation
+      Storage.Tabular.DriverStats
+      Storage.Tabular.Exophone
+      Storage.Tabular.FarePolicy.Discount
+      Storage.Tabular.FarePolicy.FareBreakup
+      Storage.Tabular.FarePolicy.FareProduct
+      Storage.Tabular.FarePolicy.OneWayFarePolicy
+      Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate
+      Storage.Tabular.FarePolicy.RentalFarePolicy
+      Storage.Tabular.Geometry
+      Storage.Tabular.Merchant
+      Storage.Tabular.Merchant.MerchantMessage
+      Storage.Tabular.Merchant.MerchantServiceConfig
+      Storage.Tabular.Merchant.MerchantServiceUsageConfig
+      Storage.Tabular.Merchant.TransporterConfig
+      Storage.Tabular.NotificationStatus
+      Storage.Tabular.Person
+      Storage.Tabular.Quote
+      Storage.Tabular.Quote.Instances
+      Storage.Tabular.Quote.OneWayQuote
+      Storage.Tabular.Quote.RentalQuote
+      Storage.Tabular.Quote.Table
+      Storage.Tabular.Rating
+      Storage.Tabular.RegistrationToken
+      Storage.Tabular.Ride
+      Storage.Tabular.Ride.Instances
+      Storage.Tabular.Ride.Table
+      Storage.Tabular.RideDetails
+      Storage.Tabular.RiderDetails
+      Storage.Tabular.RideRequest
+      Storage.Tabular.SearchRequest
+      Storage.Tabular.SearchRequest.SearchReqLocation
+      Storage.Tabular.Vehicle
+      Storage.Tabular.Webengage
+      Tools.Auth
+      Tools.Call
+      Tools.Error
+      Tools.JSON
+      Tools.Maps
+      Tools.Metrics
+      Tools.Metrics.TransporterBPPMetrics
+      Tools.Metrics.TransporterBPPMetrics.Types
+      Tools.Notifications
+      Tools.Schema
+      Tools.SMS
+      Tools.Streaming.Kafka
+  other-modules:
+      Paths_static_offer_driver_app
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , containers
+    , cryptonite
+    , dashboard-helper-api
+    , either
+    , euler-hs
+    , exceptions
+    , generic-lens
+    , hspec
+    , lens
+    , location-updates
+    , mobility-core
+    , openapi3
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , singletons
+    , stm
+    , string-conversions
+    , text
+    , text-conversions
+    , time
+    , uuid
+    , wai
+    , warp
+  default-language: Haskell2010
+
+executable static-offer-driver-app-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_static_offer_driver_app
+  hs-source-dirs:
+      server/ProviderPlatform
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , containers
+    , cryptonite
+    , dashboard-helper-api
+    , either
+    , euler-hs
+    , exceptions
+    , generic-lens
+    , hspec
+    , lens
+    , mobility-core
+    , openapi3
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , singletons
+    , static-offer-driver-app
+    , stm
+    , string-conversions
+    , text
+    , text-conversions
+    , time
+    , uuid
+    , wai
+    , warp
+  default-language: Haskell2010
+
+test-suite static-offer-driver-app-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      DistanceCalculation
+      Fixtures
+      Fixtures.BaseUrl
+      Fixtures.Booking
+      Fixtures.DriverLocation
+      Fixtures.EndRideDefaultConfig
+      Fixtures.Person
+      Fixtures.Quote
+      Fixtures.RentalFarePolicy
+      Fixtures.Ride
+      Fixtures.SearchRequest
+      Fixtures.Time
+      Fixtures.TransporterConfig
+      Flow.RideAPI.CancelRide
+      Flow.RideAPI.EndRide
+      Flow.RideAPI.StartRide
+      OneWayFareCalculator
+      RentalFareCalculator
+      Utils.GuidGenerator
+      Utils.Numeric
+      Utils.SilentLogger
+      Utils.SimpleLogger
+      Utils.Time
+      Paths_static_offer_driver_app
+  hs-source-dirs:
+      test/app
+      test/src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Werror
+  build-depends:
+      QuickCheck
+    , aeson
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , containers
+    , cryptonite
+    , dashboard-helper-api
+    , either
+    , euler-hs
+    , exceptions
+    , generic-lens
+    , hspec
+    , lens
+    , mobility-core
+    , openapi3
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , singletons
+    , static-offer-driver-app
+    , stm
+    , string-conversions
+    , tasty
+    , tasty-hspec
+    , tasty-hunit
+    , tasty-quickcheck
+    , text
+    , text-conversions
+    , time
+    , uuid
+    , wai
+    , warp
+  default-language: Haskell2010

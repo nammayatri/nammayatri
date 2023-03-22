@@ -1,0 +1,178 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           provider-dashboard
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  exposed-modules:
+      API
+      API.Exotel
+      API.ProviderPlatform
+      API.ProviderPlatform.DynamicOfferDriver
+      API.ProviderPlatform.DynamicOfferDriver.Booking
+      API.ProviderPlatform.DynamicOfferDriver.Driver
+      API.ProviderPlatform.DynamicOfferDriver.Driver.Registration
+      API.ProviderPlatform.DynamicOfferDriver.DriverReferral
+      API.ProviderPlatform.DynamicOfferDriver.Issue
+      API.ProviderPlatform.DynamicOfferDriver.Merchant
+      API.ProviderPlatform.DynamicOfferDriver.Message
+      API.ProviderPlatform.DynamicOfferDriver.Ride
+      API.ProviderPlatform.StaticOfferDriver
+      API.ProviderPlatform.StaticOfferDriver.Booking
+      API.ProviderPlatform.StaticOfferDriver.Driver
+      API.ProviderPlatform.StaticOfferDriver.Merchant
+      API.ProviderPlatform.StaticOfferDriver.Ride
+      App
+      ProviderPlatformClient.DynamicOfferDriver
+      ProviderPlatformClient.StaticOfferDriver
+      RiderPlatformClient.RiderApp
+  other-modules:
+      Paths_provider_dashboard
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -fhide-source-paths -Wincomplete-uni-patterns
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , containers
+    , dashboard-helper-api
+    , dynamic-offer-driver-app
+    , esqueleto
+    , euler-hs
+    , http-client
+    , http-client-tls
+    , lib-dashboard
+    , mobility-core
+    , openapi3
+    , persistent
+    , persistent-postgresql
+    , record-dot-preprocessor
+    , record-hasfield
+    , rider-app
+    , servant-client
+    , servant-openapi3
+    , servant-server
+    , static-offer-driver-app
+    , template-haskell
+    , text
+    , time
+  default-language: Haskell2010
+
+executable provider-dashboard-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_provider_dashboard
+  hs-source-dirs:
+      server
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , containers
+    , dashboard-helper-api
+    , esqueleto
+    , euler-hs
+    , http-client
+    , http-client-tls
+    , mobility-core
+    , openapi3
+    , persistent
+    , persistent-postgresql
+    , provider-dashboard
+    , record-dot-preprocessor
+    , record-hasfield
+    , servant-client
+    , servant-openapi3
+    , servant-server
+    , template-haskell
+    , text
+    , time
+  default-language: Haskell2010

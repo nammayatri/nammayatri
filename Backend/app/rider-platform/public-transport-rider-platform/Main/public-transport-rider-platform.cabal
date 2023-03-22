@@ -1,0 +1,273 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           public-transport-rider-platform
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  exposed-modules:
+      API.Beckn.Handler
+      API.Beckn.OnCancel.Handler
+      API.Beckn.OnConfirm.Handler
+      API.Beckn.OnSearch.Handler
+      API.Beckn.OnStatus.Handler
+      API.Beckn.Types
+      API.Handler
+      API.Swagger.Handler
+      API.Swagger.Types
+      API.Types
+      API.UI.Booking.BookingId.Handler
+      API.UI.Booking.BookingId.TriggerStatus.Handler
+      API.UI.Booking.BookingId.TriggerStatus.Types
+      API.UI.Booking.BookingId.Types
+      API.UI.Booking.BookingList.Handler
+      API.UI.Booking.BookingList.Types
+      API.UI.Booking.Handler
+      API.UI.Booking.Types
+      API.UI.Handler
+      API.UI.QuoteConfirm.Handler
+      API.UI.QuoteConfirm.Types
+      API.UI.SearchId.Quotes.Handler
+      API.UI.SearchId.Quotes.Types
+      API.UI.Types
+      App
+      Beckn.ACL.Common.MakeStatus
+      Beckn.ACL.Confirm
+      Beckn.ACL.OnConfirm
+      Beckn.ACL.OnSearch
+      Beckn.ACL.OnStatus
+      Beckn.ACL.Status
+      Beckn.Context
+      Beckn.Core
+      Beckn.Spec.API.Confirm
+      Beckn.Spec.API.OnCancel
+      Beckn.Spec.API.OnConfirm
+      Beckn.Spec.API.OnSearch
+      Beckn.Spec.API.OnStatus
+      Beckn.Spec.API.Search
+      Beckn.Spec.API.Status
+      Beckn.Spec.Common
+      Beckn.Spec.Common.Billing
+      Beckn.Spec.Common.Context
+      Beckn.Spec.Common.DecimalValue
+      Beckn.Spec.Common.Domain
+      Beckn.Spec.Common.Duration
+      Beckn.Spec.Common.Gps
+      Beckn.Spec.Common.OrderState
+      Beckn.Spec.Common.Payment
+      Beckn.Spec.Common.Price
+      Beckn.Spec.Common.ProviderId
+      Beckn.Spec.Common.Quotation
+      Beckn.Spec.Confirm
+      Beckn.Spec.Confirm.Item
+      Beckn.Spec.OnCancel
+      Beckn.Spec.OnConfirm
+      Beckn.Spec.OnConfirm.Descriptor
+      Beckn.Spec.OnConfirm.Item
+      Beckn.Spec.OnConfirm.Order
+      Beckn.Spec.OnConfirm.Params
+      Beckn.Spec.OnConfirm.Quantity
+      Beckn.Spec.OnConfirm.Time
+      Beckn.Spec.OnSearch
+      Beckn.Spec.OnSearch.Departure
+      Beckn.Spec.OnSearch.Descriptor
+      Beckn.Spec.OnSearch.Fare
+      Beckn.Spec.OnSearch.Image
+      Beckn.Spec.OnSearch.Item
+      Beckn.Spec.OnSearch.LocationDetails
+      Beckn.Spec.OnSearch.Provider
+      Beckn.Spec.OnSearch.Route
+      Beckn.Spec.OnStatus
+      Beckn.Spec.OnStatus.Descriptor
+      Beckn.Spec.OnStatus.Item
+      Beckn.Spec.OnStatus.Order
+      Beckn.Spec.OnStatus.Params
+      Beckn.Spec.OnStatus.Time
+      Beckn.Spec.Search
+      Beckn.Spec.Search.Fulfillment
+      Beckn.Spec.Search.LocationGps
+      Beckn.Spec.Status
+      Domain.Action.Beckn.OnConfirm
+      Domain.Action.Beckn.OnSearch
+      Domain.Action.Beckn.OnStatus
+      Domain.Action.UI.BookingList
+      Domain.Action.UI.QuoteConfirm
+      Domain.Action.UI.Quotes
+      Domain.Action.UI.Status
+      Domain.Action.UI.TriggerStatus
+      Domain.Types.Booking
+      Domain.Types.Booking.API
+      Domain.Types.Booking.Type
+      Domain.Types.PaymentTransaction
+      Domain.Types.Quote
+      Domain.Types.Search
+      Domain.Types.TransportStation
+      Environment
+      ExternalAPI.Flow
+      Storage.Queries.Booking
+      Storage.Queries.PaymentTransaction
+      Storage.Queries.Quote
+      Storage.Queries.Search
+      Storage.Queries.TransportStation
+      Storage.Tabular.Booking
+      Storage.Tabular.PaymentTransaction
+      Storage.Tabular.Quote
+      Storage.Tabular.Search
+      Storage.Tabular.TransportStation
+      Tools.Auth
+      Tools.Error
+      Tools.Metrics
+      Tools.Metrics.Types
+      Tools.Streaming.Kafka.Environment
+      Tools.Streaming.Kafka.Topic.BusinessEvent
+  other-modules:
+      Paths_public_transport_rider_platform
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      DerivingStrategies
+      DerivingVia
+  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , esqueleto
+    , euler-hs
+    , hedis
+    , mobility-core
+    , openapi3
+    , persistent
+    , persistent-postgresql
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , relude
+    , servant
+    , servant-client
+    , servant-openapi3
+    , servant-server
+    , template-haskell
+    , text
+    , time
+    , wai
+  default-language: Haskell2010
+
+executable public-transport-rider-platform-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_public_transport_rider_platform
+  hs-source-dirs:
+      server
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      DerivingStrategies
+      DerivingVia
+  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , esqueleto
+    , euler-hs
+    , hedis
+    , mobility-core
+    , openapi3
+    , persistent
+    , persistent-postgresql
+    , prometheus-client
+    , public-transport-rider-platform
+    , record-dot-preprocessor
+    , record-hasfield
+    , relude
+    , servant
+    , servant-client
+    , servant-openapi3
+    , servant-server
+    , template-haskell
+    , text
+    , time
+    , wai
+  default-language: Haskell2010
