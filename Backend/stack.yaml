@@ -28,6 +28,8 @@ resolver: lts-16.31
 #   subdirs:
 #   - auto-update
 #   - wai
+# **IMPORTANT**: If you are modifying this list, also make a corresponding
+# change to the cabal.project file.
 packages:
   - app/beckn-cli
   - app/provider-platform/static-offer-driver-app/Main
@@ -73,6 +75,8 @@ packages:
 #
 # extra-deps: []
 
+# **IMPORTANT**: If you are changing the commit hash here, see `./docs/Nix.md`
+# for instructions on how to update the Nix side of things.
 extra-deps:
   # - ../../beckn-gateway/app/gateway
   # - ../../beckn-gateway/app/mock-registry
