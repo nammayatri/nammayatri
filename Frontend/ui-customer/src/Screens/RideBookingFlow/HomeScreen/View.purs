@@ -132,14 +132,14 @@ screen initialState =
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  launchAff_ $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 2000.0 (getValueToLocalStore TRACKING_ID) initialState
+                  launchAff_ $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 2000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup"
                 else
                   pure unit
               RideStarted -> do
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-                  launchAff_ $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState
+                  launchAff_ $ flowRunner $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 20000.0 (getValueToLocalStore TRACKING_ID) initialState "trip"
                 else
                   pure unit
               ConfirmingLocation -> do
@@ -1507,8 +1507,8 @@ getQuotesPolling action retryAction count duration push state = do
           doAff do liftEffect $ push $ action response
     _ -> pure unit
 
-driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> Flow GlobalState Unit
-driverLocationTracking push action driverArrivedAction updateState duration trackingId state = do
+driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String-> Flow GlobalState Unit
+driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
   if ((isLocalStageOn RideAccepted) || (isLocalStageOn RideStarted)) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
     respBooking <- rideBooking (state.props.bookingId)
@@ -1540,11 +1540,11 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
           _ <- pure $ removeAllPolylines ""
           _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" ""
           void $ delay $ Milliseconds duration
-          driverLocationTracking push action driverArrivedAction updateState duration trackingId state
+          driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
           pure unit
         else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
           _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-          routeResponse <- getRoute $ makeGetRouteReq srcLat srcLon dstLat dstLon
+          routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
           case routeResponse of
             Right (GetRouteResp routeResp) -> do
               let route = ((routeResp) !! 0)
@@ -1558,7 +1558,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                     Nothing -> pure unit
                   _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
                   void $ delay $ Milliseconds duration
-                  driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = (routeResp !! 0), speed = routes.distance / routes.duration } }
+                  driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = (routeResp !! 0), speed = routes.distance / routes.duration } } routeState
                 Nothing -> pure unit
             Left err -> pure unit
         else do
@@ -1576,70 +1576,18 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                         (walkCoordinates newRoute.points newRoute.boundingBox)
                     _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                     void $ delay $ Milliseconds duration
-                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state
+                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
                   else do
-                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } }
-                Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } }
+                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
+                Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
             Nothing -> pure unit
       Left err -> do
         void $ delay $ Milliseconds (duration * 2.0)
-        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } }
+        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
   else do
     pure unit
 
-trackDriverLocation :: forall action. (GetDriverLocationResp -> action) -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-trackDriverLocation action duration push state = do
-  _ <- pure $ spy "driver location" state
-  if (spy "driver current Stage " (isLocalStageOn RideAccepted)) || (spy "driver current Stage " (isLocalStageOn RideStarted)) then do
-    if state.props.forFirst == true then do
-      response <- getDriverLocation state.data.driverInfoCardState.rideId
-      case response of
-        Right (GetDriverLocationResp resp) ->
-          doAff do liftEffect $ push $ action (GetDriverLocationResp resp)
-        Left error -> do
-          let resp = (GetDriverLocationResp (LatLong { lat: state.data.driverInfoCardState.driverLat, lon: state.data.driverInfoCardState.driverLng }))
-          doAff do liftEffect $ push $ action resp
-    else do
-      void $ delay $ Milliseconds duration
-      response <- getDriverLocation state.data.driverInfoCardState.rideId
-      case response of
-        Right (GetDriverLocationResp resp) ->
-          doAff do liftEffect $ push $ action (GetDriverLocationResp resp)
-        Left error -> do
-          let resp = (GetDriverLocationResp (LatLong { lat: state.data.driverInfoCardState.driverLat, lon: state.data.driverInfoCardState.driverLng }))
-          doAff do liftEffect $ push $ action resp
-  else
-    pure unit
 
-trackDriverLocationTemp :: forall action. (GetRouteResp -> RideBookingRes -> action) -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-trackDriverLocationTemp actionRoute duration push state = do
-  responseDriverLoc <- getDriverLocation state.data.driverInfoCardState.rideId
-  case responseDriverLoc of
-    Right (GetDriverLocationResp respDriverLoc) -> do
-      let
-        rideID = state.data.driverInfoCardState.rideId
-        reqLat = if spy "LOCAL_STAGE AT DRIVER TRACK" (isLocalStageOn RideAccepted) then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
-        reqLon = if spy "LOCAL_STAGE AT DRIVER TRACK" (isLocalStageOn RideAccepted) then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-      routeResponse <- getRoute $ makeGetRouteReq (respDriverLoc ^. _lat) (respDriverLoc ^. _lon) reqLat reqLon
-      case routeResponse of
-        Right (GetRouteResp routeResp) -> do
-          let route = ((routeResp) !! 0)
-          case route of
-            Just (Route routes) -> do
-              void $ delay $ Milliseconds duration
-              --RIDEBOOKING
-              respBooking <- rideBooking (state.props.bookingId)
-              _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
-              case respBooking of
-                Right responseBooking -> do
-                  _ <- pure $ printLog "api Results " responseBooking
-                  let (RideBookingRes responseStatusBooking) = responseBooking
-                  doAff do liftEffect $ push $ actionRoute (GetRouteResp routeResp) responseBooking
-                Left err -> trackDriverLocationTemp actionRoute duration push state
-            Nothing -> trackDriverLocationTemp actionRoute duration push state
-        Left routeError -> trackDriverLocationTemp actionRoute duration push state
-    Left error ->
-      trackDriverLocationTemp actionRoute duration push state
 
 confirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 confirmRide action count duration push state = do

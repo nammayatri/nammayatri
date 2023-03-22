@@ -67,7 +67,7 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getQuoteList)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails)
+import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..))
 import Services.API (EstimateAPIEntity(..), GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), PlaceName(..), RideBookingRes(..), SelectListRes(..), FareRange, QuoteAPIEntity(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -800,7 +800,8 @@ eval (TagClick savedAddressType arrItem) state = tagClickEvent savedAddressType 
 
 eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
   _ <- pure $ firebaseLogEvent "ny_user_location_list_item"
-  locationSelected item true state
+  let condition = state.props.isSource == Just true && item.locationItemType == Just RECENTS
+  locationSelected item{tag=if condition then "RECENT" else item.tag} true state{ props { sourceSelectedOnMap = if condition then true else state.props.sourceSelectedOnMap }}
 
 eval (ExitLocationSelected item addToRecents)state = exit $ LocationSelected item  addToRecents state
 
@@ -812,7 +813,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
                     _,_,_                                 -> continue state
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DebounceCallBack searchString)) state = do
-  if (STR.length searchString > 2) then
+  if (STR.length searchString > 3) then
     validateSearchInput state searchString
   else
     continue state

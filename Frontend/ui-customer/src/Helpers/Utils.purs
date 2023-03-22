@@ -287,7 +287,7 @@ addToRecentSearches :: LocationListItemState -> Array LocationListItemState -> A
 addToRecentSearches prediction predictionArr = 
     let prediction' = prediction {prefixImageUrl = "ny_ic_recent_search,https://assets.juspay.in/nammayatri/images/user/ny_ic_recent_search.png", locationItemType = Just RECENTS}
       in (if (checkPrediction prediction' predictionArr) 
-           then (if length predictionArr == 5 then (fromMaybe [] (deleteAt 5 (cons prediction' predictionArr)))
+           then (if length predictionArr == 30 then (fromMaybe [] (deleteAt 30 (cons prediction' predictionArr)))
           else (cons  prediction' predictionArr)) else addSearchOnTop prediction' predictionArr) 
 
 differenceOfLocationLists :: Array LocationListItemState -> Array LocationListItemState -> Array LocationListItemState

@@ -47,7 +47,7 @@ android {
         minSdkVersion 23
         targetSdkVersion 31
         versionCode 100
-        versionName "1.1.6"
+        versionName "1.2.1"
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -94,7 +94,8 @@ android {
             buildConfigField "String", "flavor", "\"prod\""
             buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
             buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
-            buildConfigField "String", "CONFIG_URL", properties.getProperty("CONFIG_URL", "")
+            buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
+            buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
             manifestPlaceholders = [isUsesCleartextTraffic: "false", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             dimension "mode"
         }
@@ -102,7 +103,8 @@ android {
             buildConfigField "String", "flavor", "\"dev\""
             buildConfigField "String", "MERCHANT_ID_USER", properties.getProperty("MERCHANT_ID_USER", "")
             buildConfigField "String", "MERCHANT_ID_DRIVER", properties.getProperty("MERCHANT_ID_DRIVER", "")
-            buildConfigField "String", "CONFIG_URL", properties.getProperty("CONFIG_URL", "")
+            buildConfigField "String", "CONFIG_URL_USER", properties.getProperty("CONFIG_URL_USER", "")
+            buildConfigField "String", "CONFIG_URL_DRIVER", properties.getProperty("CONFIG_URL_DRIVER", "")
             manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             dimension "mode"
         }
