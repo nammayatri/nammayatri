@@ -54,6 +54,10 @@ clearCache merchantId = do
   Hedis.del (makeMerchantIdKey merchantId)
 
 updateMerchantServiceUsageConfig ::
+  CacheFlow m r =>
+  Finalize m ->
   MerchantServiceUsageConfig ->
   Esq.SqlDB ()
-updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig
+updateMerchantServiceUsageConfig finalize merchantServiceUsageConfig = do
+  Queries.updateMerchantServiceUsageConfig merchantServiceUsageConfig
+  finalize $ clearCache merchantServiceUsageConfig.merchantId

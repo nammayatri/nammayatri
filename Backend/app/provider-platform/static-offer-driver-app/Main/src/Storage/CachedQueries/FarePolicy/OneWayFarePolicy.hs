@@ -91,5 +91,7 @@ clearCache owFP = do
   Hedis.del (makeMerchantIdVehVarKey owFP.merchantId owFP.vehicleVariant)
   Hedis.del (makeAllMerchantIdKey owFP.merchantId)
 
-update :: OneWayFarePolicy -> Esq.SqlDB ()
-update = Queries.update
+update :: CacheFlow m r => Finalize m -> OneWayFarePolicy -> Esq.SqlDB ()
+update finalize owFP = do
+  Queries.update owFP
+  finalize $ clearCache owFP

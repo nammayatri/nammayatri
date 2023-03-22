@@ -52,5 +52,7 @@ makeMerchantIdKey id = "CachedQueries:TransporterConfig:MerchantId-" <> id.getId
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
 clearCache = Hedis.del . makeMerchantIdKey
 
-updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> Esq.SqlDB ()
-updateFCMConfig = Queries.updateFCMConfig
+updateFCMConfig :: CacheFlow m r => Finalize m -> Id Merchant -> BaseUrl -> Text -> Esq.SqlDB ()
+updateFCMConfig finalize merchantId fcmUrl fcmServiceAccount = do
+  Queries.updateFCMConfig merchantId fcmUrl fcmServiceAccount
+  finalize $ clearCache merchantId

@@ -25,7 +25,6 @@ import Domain.Types.FarePolicy.FareProduct
 import qualified Domain.Types.Person as SP
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Hedis
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
@@ -49,12 +48,11 @@ listFareProducts person = do
   fareProducts <- SFareProduct.findEnabledByMerchantId person.merchantId
   pure $ ListFareProductsRes $ makeFareProductAPIEntity <$> fareProducts
 
-updateFareProduct :: (HedisFlow m r, EsqDBFlow m r) => SP.Person -> UpdateFareProductReq -> m APISuccess
+updateFareProduct :: (CacheFlow m r, EsqDBFlow m r) => SP.Person -> UpdateFareProductReq -> m APISuccess
 updateFareProduct person updReq = do
   let merchantId = person.merchantId
-  Esq.runTransaction $
+  Esq.runTransactionF $ \finalize -> do
     if updReq.enabled
       then SFareProduct.insertIfNotExist merchantId updReq.fareProductType
-      else SFareProduct.delete merchantId updReq.fareProductType
-  SFareProduct.clearCache merchantId updReq.fareProductType
+      else SFareProduct.delete finalize merchantId updReq.fareProductType
   pure Success

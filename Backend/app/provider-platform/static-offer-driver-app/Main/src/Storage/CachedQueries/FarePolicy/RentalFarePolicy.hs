@@ -116,6 +116,10 @@ create ::
 create = Queries.create
 
 markAllAsDeleted ::
+  CacheFlow m r =>
+  Finalize m ->
   Id Merchant ->
   Esq.SqlDB ()
-markAllAsDeleted = Queries.markAllAsDeleted
+markAllAsDeleted finalize merchantId = do
+  Queries.markAllAsDeleted merchantId
+  finalize $ clearAllCacheByMerchantId merchantId

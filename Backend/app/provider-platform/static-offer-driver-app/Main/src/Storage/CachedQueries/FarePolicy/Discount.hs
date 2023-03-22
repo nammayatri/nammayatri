@@ -83,9 +83,15 @@ create ::
 create = Queries.create
 
 update ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Finalize m ->
   Discount ->
   Esq.SqlDB ()
-update = Queries.update
+update finalize discount = do
+  Queries.update discount
+  finalize $ clearCache discount
 
-deleteById :: Id Discount -> Esq.SqlDB ()
-deleteById = Queries.deleteById
+deleteById :: (CacheFlow m r, EsqDBFlow m r) => Finalize m -> Discount -> Esq.SqlDB ()
+deleteById finalize discount = do
+  Queries.deleteById discount.id
+  finalize $ clearCache discount

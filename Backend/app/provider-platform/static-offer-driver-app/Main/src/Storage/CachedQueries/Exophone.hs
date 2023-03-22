@@ -94,8 +94,12 @@ patternKey = "CachedQueries:Exophones:*"
 create :: Exophone -> Esq.SqlDB ()
 create = Queries.create
 
-updateAffectedPhones :: [Text] -> Esq.SqlDB ()
-updateAffectedPhones = Queries.updateAffectedPhones
+updateAffectedPhones :: CacheFlow m r => Finalize m -> [Text] -> Esq.SqlDB ()
+updateAffectedPhones finalize primaryPhones = do
+  Queries.updateAffectedPhones primaryPhones
+  finalize clearAllCache
 
-deleteByMerchantId :: Id DM.Merchant -> Esq.SqlDB ()
-deleteByMerchantId = Queries.deleteByMerchantId
+deleteByMerchantId :: CacheFlow m r => Finalize m -> Id DM.Merchant -> [Exophone] -> Esq.SqlDB ()
+deleteByMerchantId finalize merchantId exophones = do
+  Queries.deleteByMerchantId merchantId
+  finalize $ clearCache merchantId exophones

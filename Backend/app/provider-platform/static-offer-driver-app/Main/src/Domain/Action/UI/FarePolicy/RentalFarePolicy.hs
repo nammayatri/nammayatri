@@ -79,10 +79,9 @@ createRentalFarePolicy admin req = do
   newRentalFarePolicyItems <- forM req.createList $ \createItemReq -> do
     guid <- Id <$> generateGUID
     pure $ toDomainType merchantId guid createItemReq
-  Esq.runTransaction $ do
-    SRentalFarePolicy.markAllAsDeleted merchantId
+  Esq.runTransactionF $ \finalize -> do
+    SRentalFarePolicy.markAllAsDeleted finalize merchantId
     forM_ newRentalFarePolicyItems SRentalFarePolicy.create
-  SRentalFarePolicy.clearAllCacheByMerchantId merchantId
   pure Success
   where
     toDomainType :: Id Merchant -> Id RentalFarePolicy -> CreateRentalFarePolicyItem -> RentalFarePolicy

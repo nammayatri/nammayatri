@@ -15,6 +15,7 @@
 module Storage.CachedQueries.CacheConfig where
 
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Common
 import Kernel.Utils.Dhall
@@ -26,4 +27,6 @@ newtype CacheConfig = CacheConfig
 
 type HasCacheConfig r = HasField "cacheConfig" r CacheConfig
 
-type CacheFlow m r = (HasCacheConfig r, HedisFlow m r)
+type CacheFlow m r = (HasCacheConfig r, HedisFlow m r, Esq.Finalize m)
+
+type Finalize m = m () -> Esq.SqlDB ()

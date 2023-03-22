@@ -102,9 +102,8 @@ updateOneWayFarePolicy admin fpId req = do
                    nightShiftRate = req.nightShiftRate
                   }
   coordinators <- QP.findAdminsByMerchantId admin.merchantId
-  Esq.runTransaction $
-    SFarePolicy.update updatedFarePolicy
-  SFarePolicy.clearCache updatedFarePolicy
+  Esq.runTransactionF $ \finalize -> do
+    SFarePolicy.update finalize updatedFarePolicy
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
   fcmConfig <- findFCMConfigByMerchantId admin.merchantId
   for_ otherCoordinators $ \cooridinator -> do

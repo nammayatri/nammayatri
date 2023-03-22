@@ -88,7 +88,11 @@ insertIfNotExist ::
 insertIfNotExist = Queries.insertIfNotExist
 
 delete ::
+  CacheFlow m r =>
+  Finalize m ->
   Id Merchant ->
   FareProductType ->
   Esq.SqlDB ()
-delete = Queries.delete
+delete finalize merchantId fpType = do
+  Queries.delete merchantId fpType
+  finalize $ clearCache merchantId fpType

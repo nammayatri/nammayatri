@@ -70,8 +70,8 @@ updateTransporter admin merchantId req = do
                  DM.description = (req.description) <|> (merchant.description),
                  DM.enabled = fromMaybe (merchant.enabled) (req.enabled)
                 }
-  Esq.runTransaction $ CQM.update updMerchant
-  CQM.clearCache updMerchant
+  Esq.runTransactionF $ \finalize -> do
+    CQM.update finalize updMerchant
   logTagInfo ("merchantAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updMerchant)
   return $ DM.makeMerchantAPIEntity updMerchant
 

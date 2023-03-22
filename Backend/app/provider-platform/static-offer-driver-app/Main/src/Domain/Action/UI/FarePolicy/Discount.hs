@@ -151,8 +151,8 @@ updateFarePolicyDiscount admin discId req = do
                  enabled = req.enabled
                 }
   cooridinators <- QP.findAdminsByMerchantId merchantId
-  Esq.runTransaction $ QDisc.update updatedFarePolicy
-  QDisc.clearCache updatedFarePolicy
+  Esq.runTransactionF $ \finalize -> do
+    QDisc.update finalize updatedFarePolicy
   let otherCoordinators = filter ((/= admin.id) . (.id)) cooridinators
   fcmConfig <- findFCMConfigByMerchantId merchantId
   for_ otherCoordinators $ \cooridinator ->
@@ -161,7 +161,7 @@ updateFarePolicyDiscount admin discId req = do
   pure Success
 
 deleteFarePolicyDiscount ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     HedisFlow m r,
     CoreMetrics m
@@ -174,8 +174,8 @@ deleteFarePolicyDiscount admin discId = do
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist
   unless (discount.merchantId == merchantId) $ throwError AccessDenied
   cooridinators <- QP.findAdminsByMerchantId merchantId
-  Esq.runTransaction $ QDisc.deleteById discId
-  QDisc.clearCache discount
+  Esq.runTransactionF $ \finalize -> do
+    QDisc.deleteById finalize discount
   let otherCoordinators = filter ((/= admin.id) . (.id)) cooridinators
   fcmConfig <- findFCMConfigByMerchantId merchantId
   for_ otherCoordinators $ \cooridinator ->
