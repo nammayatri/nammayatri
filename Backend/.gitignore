@@ -1,6 +1,5 @@
 .stack-work/
 *~
-*.cabal
 .psc-ide-port
 dist
 dist-*
