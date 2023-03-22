@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage ('Cachix setup') {
             steps {
-                sh 'nix run nixpkgs#cachix use nammayatri'
+                sh 'cachix use nammayatri'
             }
         }
         stage ('Nix Build') {
@@ -16,37 +16,24 @@ pipeline {
                 sh 'nix build -L .#check'
             }
         }
-        stage ('Build docker image') {
-            steps {
-                sh 'nix build .#dockerImage -o dockerImage.tgz'
-                sh 'nix eval --raw .#dockerImageName > ./dockerImageName'
-                stash includes: 'dockerImage*', name: 'dockerImage'
-            }
-        }
         stage ('Docker image') {
             when { branch 'main' }
             environment {
               DOCKER_USER = credentials('docker-user')
               DOCKER_PASS = credentials('docker-pass')
+              DOCKER_SERVER = 'ghcr.io'
             }
             steps {
-                unstash 'dockerImage'
-                sh 'docker load -i ./dockerImage.tgz'
-                sh '''
-                   IMAGE_NAME=$(cat ./dockerImageName)
-                   echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin ghcr.io
-                   docker push ${IMAGE_NAME}
-                   docker logout ghcr.io
-                   '''
+                sh 'nix run github:juspay/jenkins-nix-ci#docker-push dockerImage'
             }
         }
-        /* stage ('Push to cachix') {
+        stage ('Push to cachix') {
           environment {
             CACHIX_AUTH_TOKEN = credentials('cachix-auth-token')
           }
           steps {
-            sh 'nix run .#cachix-push'
+            sh 'nix run github:juspay/jenkins-nix-ci#cachix-push nammayatri'
           }
-        } */
+        }
     }
 }

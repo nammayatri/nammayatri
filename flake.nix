@@ -17,7 +17,7 @@
         ./Backend/default.nix
       ];
       perSystem = { self', pkgs, ... }: {
-        cachix-push.packages = [ "nammayatri" ];
+        packages.default = self'.packages.nammayatri;
       };
     };
 }
