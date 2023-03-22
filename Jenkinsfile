@@ -18,9 +18,9 @@ pipeline {
         }
         stage ('Build docker image') {
             steps {
-                sh 'nix build .#dockerImage -o dockerImage.tgz'
-                sh 'nix eval --raw .#dockerImageName > ./dockerImageName'
-                stash includes: 'dockerImage*', name: 'dockerImage'
+                sh 'docker load -i $(nix build .#dockerImage --print-out-paths)'
+                sh 'echo "$(nix eval --raw .#packages.x86_64-linux.dockerImage.buildArgs.name):$(nix eval --raw .#packages.x86_64-linux.dockerImage.buildArgs.tag)" > ./dockerImageName'
+                stash includes: 'dockerImageName', name: 'dockerImageName'
             }
         }
         stage ('Docker image') {
@@ -30,12 +30,11 @@ pipeline {
               DOCKER_PASS = credentials('docker-pass')
             }
             steps {
-                unstash 'dockerImage'
-                sh 'docker load -i ./dockerImage.tgz'
+                unstash 'dockerImageName'
                 sh '''
-                   IMAGE_NAME=$(cat ./dockerImageName)
+                   IMAGE_NAME=$(cat ./dockerImageName | tr -cd "'[:alnum:]/.:")
                    echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin ghcr.io
-                   docker push ${IMAGE_NAME}
+                   docker push "${IMAGE_NAME}"
                    docker logout ghcr.io
                    '''
             }
