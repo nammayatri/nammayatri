@@ -35,7 +35,8 @@ import Tools.Error
 
 data ServiceabilityRes = ServiceabilityRes
   { serviceable :: Bool,
-    specialLocation :: Maybe [DSpecialLocation.SpecialLocation]
+    specialLocation :: Maybe DSpecialLocation.SpecialLocation,
+    geoJson :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -58,26 +59,12 @@ checkServiceability settingAccessor personId location = do
   case geoRestriction of
     Unrestricted -> do
       let serviceable = True
-      specialLocationBody <- returnIfSpecialLocation location
-      pure ServiceabilityRes {serviceable = serviceable, specialLocation = specialLocationBody}
+      specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
+      pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody}
     Regions regions -> do
       serviceable <- someGeometriesContain location regions
       if serviceable
         then do
-          specialLocationBody <- returnIfSpecialLocation location
-          pure ServiceabilityRes {serviceable = serviceable, specialLocation = specialLocationBody}
-        else pure ServiceabilityRes {serviceable = serviceable, specialLocation = Nothing}
-
-returnIfSpecialLocation ::
-  ( HasCacheConfig r,
-    HedisFlow m r,
-    EsqDBFlow m r
-  ) =>
-  LatLong ->
-  m (Maybe [DSpecialLocation.SpecialLocation])
-returnIfSpecialLocation location = do
-  specialLocations <- QSpecialLocation.findSpecialLocationByLatLong location
-  if not (null specialLocations)
-    then do
-      return $ Just specialLocations
-    else return Nothing
+          specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong location
+          pure ServiceabilityRes {serviceable = serviceable, specialLocation = fst <$> specialLocationBody, geoJson = snd <$> specialLocationBody}
+        else pure ServiceabilityRes {serviceable = serviceable, specialLocation = Nothing, geoJson = Nothing}
