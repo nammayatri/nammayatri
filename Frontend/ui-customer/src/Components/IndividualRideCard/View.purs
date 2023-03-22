@@ -23,7 +23,7 @@ import Engineering.Helpers.Commons (os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Language.Types (STR(..), VIEW_DETAILS)
+import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), (<<<), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, text, textSize, textView, weight, width, stroke, lineHeight, imageWithFallback)
 import PrestoDOM.List as PrestoList

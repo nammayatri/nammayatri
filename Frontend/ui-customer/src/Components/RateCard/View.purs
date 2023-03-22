@@ -15,20 +15,24 @@
 
 module Components.RateCard.View where
 
+import Common.Types.App
 import Screens.Types
 
 import Components.RateCard.Controller (Action(..), Config, config)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Data.Int as DI
+import Data.Maybe as DM
+import Data.String as DS
+import Helpers.Utils (Merchant(..), getMerchant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>))
-import PrestoDOM (PrestoDOM, Orientation(..), Gravity(..), Padding(..), Margin(..), Length(..), margin, padding, orientation, height, width, linearLayout, imageView, imageUrl, text, textView, textSize, fontStyle, gravity, onClick, color, background, lineHeight, cornerRadius, weight, imageWithFallback)
+import Prelude (Unit, ($), const, (<>), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
-import Common.Types.App
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -156,6 +160,7 @@ view push config =
         , orientation HORIZONTAL
         , margin (Margin 0 8 0 8)
         , padding (Padding 20 0 20 0)
+        , visibility $ if DM.fromMaybe 0 (DI.fromString (DS.drop 1 config.additionalFare)) == 0 then GONE else VISIBLE
         ][ textView
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
@@ -205,6 +210,7 @@ view push config =
         , color Color.black700
         , textSize FontSize.a_14
         , text (getString DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)
+        , visibility if (getMerchant "") == NAMMAYATRI then VISIBLE else GONE
         , margin (MarginBottom 12)
         , padding (Padding 20 0 20 0)
         ]

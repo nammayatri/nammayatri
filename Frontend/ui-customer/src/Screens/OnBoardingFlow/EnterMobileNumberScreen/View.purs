@@ -15,6 +15,9 @@
 
 module Screens.EnterMobileNumberScreen.View where
 
+import Common.Types.App
+import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig
+
 import Animation as Anim
 import Animation.Config (translateYAnimConfig)
 import Components.GenericHeader as GenericHeader
@@ -27,7 +30,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons as EHC 
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (startOtpReciever)
@@ -43,8 +46,6 @@ import Screens.EnterMobileNumberScreen.Controller (Action(..), ScreenOutput, eva
 import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
-import Common.Types.App
-import Screens.OnBoardingFlow.EnterMobileNumberScreen.ComponentConfig 
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -124,7 +125,7 @@ enterMobileNumberView  state lang push =
       ] $ textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , text (getString ENTER_MOBILE_NUMBER)
+        , text (getString WELCOME_TEXT)
         , color Color.black800
         , gravity LEFT
         , singleLine true
