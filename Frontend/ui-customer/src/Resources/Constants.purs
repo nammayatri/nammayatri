@@ -28,7 +28,7 @@ type Language
     }
 
 getDelayForAutoComplete :: Int
-getDelayForAutoComplete = 400
+getDelayForAutoComplete = 500
 
 getDelayForLocateOnMap :: Int
 getDelayForLocateOnMap = 1000

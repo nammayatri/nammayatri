@@ -16,6 +16,7 @@
 module Services.Backend where
 
 import Services.API
+import Services.Config as SC
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Data.Either (Either(..), either)
@@ -162,7 +163,7 @@ makeTriggerOTPReq mobileNumber = TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : "+91",
-      "merchantId" : getValueToLocalNativeStore MERCHANT_ID
+      "merchantId" : if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId
     }
 
 ----------------------------------------------------------- ResendOTPBT Function ------------------------------------------------------------------------------------------------------
@@ -508,10 +509,10 @@ makePlaceNameReqByPlaceId placeId language = GetPlaceNameReq
       }
     }
 
-getRouteBT :: GetRouteReq -> FlowBT String GetRouteResp
-getRouteBT body = do
+getRouteBT :: String -> GetRouteReq -> FlowBT String GetRouteResp
+getRouteBT routeState body = do
      headers <- lift $ lift $ getHeaders ""
-     withAPIResultBT (EP.getRoute "") (\x → x) errorHandler (lift $ lift $ callAPI headers body)
+     withAPIResultBT (EP.getRoute routeState) (\x → x) errorHandler (lift $ lift $ callAPI headers (RouteReq routeState body))
     where
     errorHandler errorPayload = BackT $ pure GoBack
 
@@ -592,9 +593,9 @@ getDriverLocation rideId = do
     where
         unwrapResponse (x) = x
 
-getRoute payload = do
+getRoute routeState payload = do
     headers <- getHeaders ""
-    withAPIResult (EP.getRoute "") unwrapResponse $  callAPI headers payload
+    withAPIResult (EP.getRoute routeState) unwrapResponse $  callAPI headers (RouteReq routeState payload)
     where
         unwrapResponse (x) = x
 
@@ -637,19 +638,19 @@ sendIssueBT req = do
             BackT $ pure GoBack
 
 ----------------------------------------------------------------------------------------------
-drawMapRoute :: Number -> Number -> Number -> Number -> Markers -> String -> String -> String -> Maybe Route -> FlowBT String (Maybe Route) 
-drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddress existingRoute = do 
+drawMapRoute :: Number -> Number -> Number -> Number -> Markers -> String -> String -> String -> Maybe Route -> String -> FlowBT String (Maybe Route) 
+drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddress existingRoute routeAPIType= do 
     _ <- pure $ removeAllPolylines ""
     case existingRoute of
         Just (Route route) -> do 
             let (Snapped points) = route.points
             case points of
                 [] -> do
-                    (GetRouteResp routeResponse) <- getRouteBT (makeGetRouteReq srcLat srcLng destLat destLng)
+                    (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng)
                     callDrawRoute ((routeResponse) !! 0)    
                 _  -> callDrawRoute existingRoute
         Nothing -> do
-            (GetRouteResp routeResponse) <- getRouteBT (makeGetRouteReq srcLat srcLng destLat destLng)
+            (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng)
             _ <- pure $ printLog "drawRouteResponse" routeResponse
             let ios = (os == "IOS")
             let route = ((routeResponse) !! 0)

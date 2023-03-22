@@ -15,7 +15,7 @@
 
 module Types.EndPoint where
 
-import Prelude ((<>),show)
+import Prelude ((<>),show, (==))
 
 import Services.Config (getBaseUrl)
 
@@ -48,7 +48,7 @@ sendIssue :: String -> String
 sendIssue dummyString = (getBaseUrl "9") <> "/support/sendIssue"
 
 getRoute :: String -> String
-getRoute dummyString = (getBaseUrl "10") <> "/route"
+getRoute routeType = (getBaseUrl "10") <> if routeType == "trip" then "/trip/route" else "/pickup/route"
 
 driverFeedBack :: String -> String
 driverFeedBack dummyString = (getBaseUrl "12") <> "/feedback/rateRide"

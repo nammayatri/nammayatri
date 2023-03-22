@@ -474,11 +474,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void updateConfigURL() {
         String merchantId = getResources().getString(R.string.service).equals("nammayatri") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
-        String baseUrl = in.juspay.mobility.BuildConfig.CONFIG_URL;
+        String baseUrl = getResources().getString(R.string.service).equals("nammayatri") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
         SharedPreferences sharedPreff = this.getSharedPreferences(
                 activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreff.edit();
         editor.putString("MERCHANT_ID", merchantId);
+        editor.putString("BASE_URL", baseUrl);
         editor.apply();
     }
 

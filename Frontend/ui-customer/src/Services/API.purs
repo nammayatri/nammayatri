@@ -1176,6 +1176,8 @@ instance showUpdateProfileRes :: Show UpdateProfileRes where show = genericShow
 instance decodeUpdateProfileRes :: Decode UpdateProfileRes where decode = defaultDecode
 instance encodeUpdateProfileRes  :: Encode UpdateProfileRes where encode = defaultEncode 
 
+data RouteReq = RouteReq String GetRouteReq
+
 newtype GetRouteReq = GetRouteReq {
   waypoints :: Array LatLong
 , mode :: Maybe String 
@@ -1197,10 +1199,16 @@ newtype BoundingLatLong = BoundingLatLong (Array Number)
 
 newtype Snapped = Snapped (Array LatLong)
 
-instance makeUpdateGetRouteReq :: RestEndpoint GetRouteReq GetRouteResp where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.getRoute "") headers reqBody
+instance makeRouteReq :: RestEndpoint RouteReq GetRouteResp where
+  makeRequest reqBody@(RouteReq rType (GetRouteReq reqB)) headers = defaultMakeRequest POST (EP.getRoute rType) headers reqBody
   decodeResponse = decodeJSON
   encodeRequest req = standardEncode req
+
+derive instance genericRouteReq :: Generic RouteReq _
+instance standardEncodeRouteReq :: StandardEncode RouteReq where standardEncode (RouteReq rType body) = standardEncode body
+instance showRouteReq :: Show RouteReq where show = genericShow
+instance decodeRouteReq :: Decode RouteReq where decode = defaultDecode
+instance encodeRouteReq  :: Encode RouteReq where encode = defaultEncode   
 
 derive instance genericGetRouteReq :: Generic GetRouteReq _
 derive instance newtypeGetRouteReq :: Newtype GetRouteReq _
