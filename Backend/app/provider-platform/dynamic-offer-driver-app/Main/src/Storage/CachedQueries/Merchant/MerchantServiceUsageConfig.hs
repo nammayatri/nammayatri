@@ -39,11 +39,11 @@ findByMerchantId id =
     Just a -> return . Just $ coerce @(MerchantServiceUsageConfigD 'Unsafe) @MerchantServiceUsageConfig a
     Nothing -> flip whenJust cacheMerchantServiceUsageConfig /=<< Queries.findByMerchantId id
 
-cacheMerchantServiceUsageConfig :: (CacheFlow m r) => MerchantServiceUsageConfig -> m ()
-cacheMerchantServiceUsageConfig orgServiceUsageConfig = do
+cacheMerchantServiceUsageConfig :: CacheFlow m r => MerchantServiceUsageConfig -> m ()
+cacheMerchantServiceUsageConfig merchantServiceUsageConfig = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantIdKey orgServiceUsageConfig.merchantId
-  Hedis.withCrossAppRedis $ Hedis.setExp idKey (coerce @MerchantServiceUsageConfig @(MerchantServiceUsageConfigD 'Unsafe) orgServiceUsageConfig) expTime
+  let idKey = makeMerchantIdKey merchantServiceUsageConfig.merchantId
+  Hedis.withCrossAppRedis $ Hedis.setExp idKey (coerce @MerchantServiceUsageConfig @(MerchantServiceUsageConfigD 'Unsafe) merchantServiceUsageConfig) expTime
 
 makeMerchantIdKey :: Id Merchant -> Text
 makeMerchantIdKey id = "driver-offer:CachedQueries:MerchantServiceUsageConfig:MerchantId-" <> id.getId
@@ -54,6 +54,10 @@ clearCache merchantId = do
   Hedis.withCrossAppRedis $ Hedis.del (makeMerchantIdKey merchantId)
 
 updateMerchantServiceUsageConfig ::
+  CacheFlow m r =>
+  Finalize m ->
   MerchantServiceUsageConfig ->
   Esq.SqlDB ()
-updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig
+updateMerchantServiceUsageConfig finalize merchantServiceUsageConfig = do
+  Queries.updateMerchantServiceUsageConfig merchantServiceUsageConfig
+  finalize $ clearCache merchantServiceUsageConfig.merchantId

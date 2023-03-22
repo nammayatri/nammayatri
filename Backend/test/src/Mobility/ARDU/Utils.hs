@@ -49,10 +49,10 @@ import Mobility.ARDU.Queries as Queries
 import Mobility.AppBackend.APICalls as BapAPI
 import Mobility.AppBackend.Fixtures
 import Servant.Client
+import qualified "dynamic-offer-driver-app" Storage.CachedQueries.DriverInformation as CQTDrInfo
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as TQRB
 import qualified "rider-app" Storage.Queries.Booking as BQRB
-import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as QTDrInfo
 import "dynamic-offer-driver-app" Storage.Queries.DriverLocation
 import qualified Storage.Queries.DriverQuote as TDQ
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as TQRide
@@ -123,7 +123,7 @@ getBPPDriverInformation ::
   Id TPerson.Person ->
   ClientsM TDrInfo.DriverInformation
 getBPPDriverInformation driverId =
-  liftIO $ poll $ runARDUFlow "" $ QTDrInfo.findById $ cast driverId
+  liftIO $ poll $ runARDUFlow "" $ CQTDrInfo.findById $ cast driverId
 
 -- driver setup/reset
 setupDriver :: DriverTestData -> LatLong -> ClientsM ()
@@ -138,14 +138,14 @@ resetDriver :: DriverTestData -> IO ()
 resetDriver driver = runARDUFlow "" $ do
   rides <- TQRide.findAllByDriverId (cast driver.driverId) Nothing Nothing (Just True) Nothing
   activeQuotes <- TDQ.findActiveQuotesByDriverId (cast driver.driverId) 99999
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     void . forM rides $ \(ride, booking) -> do
       TQRide.updateStatus ride.id TRide.CANCELLED
       TQRB.updateStatus booking.id TRB.CANCELLED
     void . forM activeQuotes $ \activeQuote ->
       TDQ.setInactiveByRequestId activeQuote.searchRequestId
-    QTDrInfo.updateActivity (cast driver.driverId) False
-    QTDrInfo.updateOnRide (cast driver.driverId) False
+    CQTDrInfo.updateActivity finalize (cast driver.driverId) False
+    CQTDrInfo.updateOnRide (Esq.ignoreFinalize finalize) (cast driver.driverId) False
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)

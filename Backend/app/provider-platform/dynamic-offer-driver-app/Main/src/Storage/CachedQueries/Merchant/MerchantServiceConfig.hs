@@ -72,5 +72,7 @@ clearCache merchantId serviceName = do
   Hedis.withCrossAppRedis $ Hedis.del (makeMerchantIdAndServiceKey merchantId serviceName)
   Hedis.withCrossAppRedis $ Hedis.del (makeServiceNameKey serviceName)
 
-upsertMerchantServiceConfig :: MerchantServiceConfig -> Esq.SqlDB ()
-upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig
+upsertMerchantServiceConfig :: CacheFlow m r => Finalize m -> MerchantServiceConfig -> Esq.SqlDB ()
+upsertMerchantServiceConfig finalize merchantServiceConfig = do
+  Queries.upsertMerchantServiceConfig merchantServiceConfig
+  finalize $ clearCache merchantServiceConfig.merchantId (getServiceName merchantServiceConfig)

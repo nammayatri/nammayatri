@@ -41,7 +41,7 @@ findByMerchantId id =
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
     Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantId id
 
-cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
+cacheTransporterConfig :: CacheFlow m r => TransporterConfig -> m ()
 cacheTransporterConfig cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let merchantIdKey = makeMerchantIdKey cfg.merchantId
@@ -54,8 +54,12 @@ makeMerchantIdKey id = "driver-offer:CachedQueries:TransporterConfig:MerchantId-
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
 clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
 
-updateFCMConfig :: Id Merchant -> BaseUrl -> Text -> Esq.SqlDB ()
-updateFCMConfig = Queries.updateFCMConfig
+updateFCMConfig :: CacheFlow m r => Finalize m -> Id Merchant -> BaseUrl -> Text -> Esq.SqlDB ()
+updateFCMConfig finalize merchantId fcmUrl fcmServiceAccount = do
+  Queries.updateFCMConfig merchantId fcmUrl fcmServiceAccount
+  finalize $ clearCache merchantId
 
-updateReferralLinkPassword :: Id Merchant -> Text -> Esq.SqlDB ()
-updateReferralLinkPassword = Queries.updateReferralLinkPassword
+updateReferralLinkPassword :: CacheFlow m r => Finalize m -> Id Merchant -> Text -> Esq.SqlDB ()
+updateReferralLinkPassword finalize merchantId newPassword = do
+  Queries.updateReferralLinkPassword merchantId newPassword
+  finalize $ clearCache merchantId

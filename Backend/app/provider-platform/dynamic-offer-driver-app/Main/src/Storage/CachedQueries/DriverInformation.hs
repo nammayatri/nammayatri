@@ -30,50 +30,62 @@ import qualified Storage.Queries.DriverInformation as Queries
 create :: DriverInformation -> Esq.SqlDB ()
 create = Queries.create
 
+fetchAllByIds :: Esq.Transactionable m => Id Merchant -> [Id Driver] -> m [DriverInformation]
+fetchAllByIds = Queries.fetchAllByIds
+
+fetchAllAvailableByIds :: Esq.Transactionable m => [Id Person.Driver] -> m [DriverInformation]
+fetchAllAvailableByIds = Queries.fetchAllAvailableByIds
+
+-- direct query used inside of transaction
+findById' :: Esq.Transactionable m => Id Person.Driver -> m (Maybe DriverInformation)
+findById' = Queries.findById
+
 findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findById id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeDriverInformationIdKey id) >>= \case
     Just a -> pure $ Just a
     Nothing -> flip whenJust (cacheDriverInformation id) /=<< Queries.findById id
 
-updateActivity :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
-updateActivity driverId isActive = do
-  clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateActivity driverId isActive
+updateActivity :: CacheFlow m r => Finalize m -> Id Person.Driver -> Bool -> Esq.SqlDB ()
+updateActivity finalize driverId isActive = do
+  Queries.updateActivity driverId isActive
+  finalize $ clearDriverInfoCache driverId
 
-updateEnabledState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
-updateEnabledState driverId isEnabled = do
-  clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateEnabledState driverId isEnabled
+updateEnabledState :: CacheFlow m r => Finalize m -> Id Person.Driver -> Bool -> Esq.SqlDB ()
+updateEnabledState finalize driverId isEnabled = do
+  Queries.updateEnabledState driverId isEnabled
+  finalize $ clearDriverInfoCache driverId
 
-updateEnabledVerifiedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> Bool -> m ()
-updateEnabledVerifiedState driverId isEnabled isVerified = do
-  clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateEnabledVerifiedState driverId isEnabled isVerified
+updateEnabledVerifiedState :: CacheFlow m r => Finalize m -> Id Person.Driver -> Bool -> Bool -> Esq.SqlDB ()
+updateEnabledVerifiedState finalize driverId isEnabled isVerified = do
+  Queries.updateEnabledVerifiedState driverId isEnabled isVerified
+  finalize $ clearDriverInfoCache driverId
 
-updateBlockedState :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
-updateBlockedState driverId isBlocked = do
-  clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateBlockedState driverId isBlocked
+updateBlockedState :: CacheFlow m r => Finalize m -> Id Person.Driver -> Bool -> Esq.SqlDB ()
+updateBlockedState finalize driverId isBlocked = do
+  Queries.updateBlockedState driverId isBlocked
+  finalize $ clearDriverInfoCache driverId
 
-verifyAndEnableDriver :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person -> m ()
-verifyAndEnableDriver driverId = do
-  clearDriverInfoCache (cast driverId)
-  Esq.runTransaction $ Queries.verifyAndEnableDriver driverId
+verifyAndEnableDriver :: CacheFlow m r => Finalize m -> Id Person -> Esq.SqlDB ()
+verifyAndEnableDriver finalize driverId = do
+  Queries.verifyAndEnableDriver driverId
+  finalize $ clearDriverInfoCache (cast driverId)
 
-updateOnRide :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> Bool -> m ()
-updateOnRide driverId onRide = do
-  clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.updateOnRide driverId onRide
+updateOnRide :: CacheFlow m r => Finalize m -> Id Person.Driver -> Bool -> Esq.SqlDB ()
+updateOnRide finalize driverId onRide = do
+  Queries.updateOnRide driverId onRide
+  finalize $ clearDriverInfoCache driverId
 
 -- this function created because all queries wishfully should be in one transaction
-updateNotOnRideMultiple :: [Id Person.Driver] -> Esq.SqlDB ()
-updateNotOnRideMultiple = Queries.updateNotOnRideMultiple
+updateNotOnRideMultiple :: CacheFlow m r => Finalize m -> [Id Person.Driver] -> Esq.SqlDB ()
+updateNotOnRideMultiple finalize driverIds = do
+  Queries.updateNotOnRideMultiple driverIds
+  finalize $ forM_ driverIds clearDriverInfoCache
 
-deleteById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Person.Driver -> m ()
-deleteById driverId = do
-  clearDriverInfoCache driverId
-  Esq.runTransaction $ Queries.deleteById driverId
+deleteById :: CacheFlow m r => Finalize m -> Id Person.Driver -> Esq.SqlDB ()
+deleteById finalize driverId = do
+  Queries.deleteById driverId
+  finalize $ clearDriverInfoCache driverId
 
 findAllWithLimitOffsetByMerchantId ::
   Esq.Transactionable m =>
@@ -98,10 +110,10 @@ countDrivers = Queries.countDrivers
 
 --------- Caching logic -------------------
 
-clearDriverInfoCache :: (CacheFlow m r) => Id Person.Driver -> m ()
+clearDriverInfoCache :: CacheFlow m r => Id Person.Driver -> m ()
 clearDriverInfoCache = Hedis.withCrossAppRedis . Hedis.del . makeDriverInformationIdKey
 
-cacheDriverInformation :: (CacheFlow m r) => Id Person.Driver -> DriverInformation -> m ()
+cacheDriverInformation :: CacheFlow m r => Id Person.Driver -> DriverInformation -> m ()
 cacheDriverInformation driverId driverInfo = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeDriverInformationIdKey driverId) driverInfo expTime

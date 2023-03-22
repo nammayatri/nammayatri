@@ -44,13 +44,13 @@ import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as CQDI
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QuoteSpecialZone as QQSpecialZone
@@ -314,17 +314,16 @@ cancelBooking booking mbDriver transporter = do
   bookingCancellationReason <- case mbDriver of
     Nothing -> buildBookingCancellationReason booking.id Nothing mbRide
     Just driver -> buildBookingCancellationReason booking.id (Just driver.id) mbRide
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QRB.updateStatus booking.id DRB.CANCELLED
     QBCR.upsert bookingCancellationReason
     whenJust mbRide $ \ride -> do
-      QRide.updateStatus ride.id DRide.CANCELLED
-      driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      SRide.updateStatus finalize ride.id ride.driverId DRide.CANCELLED
+      driverInfo <- CQDI.findById' (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId) -- inside of transaction
       if driverInfo.active
         then QDFS.updateStatus ride.driverId DDFS.ACTIVE
         else QDFS.updateStatus ride.driverId DDFS.IDLE
   whenJust mbRide $ \ride -> do
-    SRide.clearCache ride.driverId
     DLoc.updateOnRide (cast ride.driverId) False
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source

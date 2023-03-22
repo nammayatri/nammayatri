@@ -35,10 +35,10 @@ findAllByCategoryAndLanguage issueCategoryId language =
 
 --------- Caching logic -------------------
 
-clearIssueOptionCache :: (CacheFlow m r) => Id IssueCategory -> Language -> m ()
+clearIssueOptionCache :: CacheFlow m r => Id IssueCategory -> Language -> m ()
 clearIssueOptionCache issueCategoryId = Hedis.withCrossAppRedis . Hedis.del . makeIssueOptionByLanguageKey issueCategoryId
 
-cacheIssueOption :: (CacheFlow m r) => Id IssueCategory -> Language -> [(IssueOption, Maybe IssueTranslation)] -> m ()
+cacheIssueOption :: CacheFlow m r => Id IssueCategory -> Language -> [(IssueOption, Maybe IssueTranslation)] -> m ()
 cacheIssueOption issueCategoryId language issueOptionTranslation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByLanguageKey issueCategoryId language) issueOptionTranslation expTime

@@ -61,7 +61,6 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus
-import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
@@ -209,7 +208,8 @@ enableDriver merchantShortId reqDriverId = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   _vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-  CQDriverInfo.updateEnabledState driverId True
+  Esq.runTransactionF $ \finalize -> do
+    CQDriverInfo.updateEnabledState finalize driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
   pure Success
 
@@ -227,7 +227,8 @@ disableDriver merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  CQDriverInfo.updateEnabledState driverId False
+  Esq.runTransactionF $ \finalize -> do
+    CQDriverInfo.updateEnabledState finalize driverId False
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -247,7 +248,8 @@ blockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  CQDriverInfo.updateBlockedState driverId True
+  Esq.runTransactionF $ \finalize -> do
+    CQDriverInfo.updateBlockedState finalize driverId True
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -266,7 +268,8 @@ unblockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  CQDriverInfo.updateBlockedState driverId False
+  Esq.runTransactionF $ \finalize -> do
+    CQDriverInfo.updateBlockedState finalize driverId False
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -427,7 +430,7 @@ deleteDriver merchantShortId reqDriverId = do
 
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QIV.deleteByPersonId personId
     QImage.deleteByPersonId personId
     QDriverLicense.deleteByDriverId personId
@@ -438,11 +441,10 @@ deleteDriver merchantShortId reqDriverId = do
     QDriverLocation.deleteById personId
     QR.deleteByPersonId personId
     QVehicle.deleteById personId
-    QDriverInfo.deleteById driverId
+    CQDriverInfo.deleteById finalize driverId
     QDriverFlowStatus.deleteById personId
     QMessage.deleteByPersonId personId
     QPerson.deleteById personId
-  CQDriverInfo.clearDriverInfoCache driverId
   logTagInfo "dashboard -> deleteDriver : " (show driverId)
   return Success
 
@@ -460,10 +462,10 @@ unlinkVehicle merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QVehicle.deleteById personId
     QRCAssociation.endAssociation personId
-  CQDriverInfo.updateEnabledVerifiedState driverId False False
+    CQDriverInfo.updateEnabledVerifiedState finalize driverId False False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 
@@ -593,9 +595,9 @@ unlinkDL merchantShortId driverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QDriverLicense.deleteByDriverId personId
-  CQDriverInfo.updateEnabledVerifiedState driverId_ False False
+    CQDriverInfo.updateEnabledVerifiedState finalize driverId_ False False
   logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success
 
@@ -611,8 +613,8 @@ endRCAssociation merchantShortId reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QRCAssociation.endAssociation personId
-  CQDriverInfo.updateEnabledVerifiedState driverId False False
+    CQDriverInfo.updateEnabledVerifiedState finalize driverId False False
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success

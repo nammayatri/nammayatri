@@ -13,7 +13,12 @@
 -}
 {-# LANGUAGE TypeApplications #-}
 
-module Storage.Queries.DriverInformation where
+module Storage.Queries.DriverInformation
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Control.Applicative (liftA2)
 import Domain.Types.DriverInformation
@@ -120,25 +125,6 @@ verifyAndEnableDriver driverId = do
         DriverInformationLastEnabledOn =. val (Just now)
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey driverId)
-
-updateEnabledStateReturningIds :: EsqDBFlow m r => Id Merchant -> [Id Driver] -> Bool -> m [Id Driver]
-updateEnabledStateReturningIds merchantId driverIds isEnabled =
-  Esq.runTransaction $ do
-    present <- fmap (cast . (.driverId)) <$> fetchAllByIds merchantId driverIds
-    updateEnabledStateForIds present
-    pure present
-  where
-    updateEnabledStateForIds :: [Id Driver] -> SqlDB ()
-    updateEnabledStateForIds present = do
-      now <- getCurrentTime
-      Esq.update $ \tbl -> do
-        set
-          tbl
-          $ [ DriverInformationEnabled =. val isEnabled,
-              DriverInformationUpdatedAt =. val now
-            ]
-            <> [DriverInformationLastEnabledOn =. val (Just now) | isEnabled]
-        where_ $ tbl ^. DriverInformationDriverId `in_` valList (map (toKey . cast) present)
 
 updateOnRide ::
   Id Person.Driver ->

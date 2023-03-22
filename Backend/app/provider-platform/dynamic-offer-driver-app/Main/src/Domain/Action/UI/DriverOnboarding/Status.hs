@@ -121,11 +121,12 @@ verificationStatus onboardingTryLimit imagesNum verificationReq =
 enableDriver :: Id SP.Person -> Id DM.Merchant -> Maybe RC.VehicleRegistrationCertificate -> Maybe DL.DriverLicense -> Flow ()
 enableDriver _ _ Nothing Nothing = return ()
 enableDriver personId merchantId (Just rc) (Just dl) = do
-  DIQuery.verifyAndEnableDriver personId
   rcNumber <- decrypt rc.certificateNumber
   now <- getCurrentTime
   let vehicle = buildVehicle now personId merchantId rcNumber
-  DB.runTransaction $ VQuery.upsert vehicle
+  DB.runTransactionF $ \finalize -> do
+    DIQuery.verifyAndEnableDriver finalize personId
+    VQuery.upsert vehicle
   case dl.driverName of
     Just name -> DB.runTransaction $ Person.updateName personId name
     Nothing -> return ()

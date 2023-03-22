@@ -21,7 +21,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as Q
+import qualified "dynamic-offer-driver-app" Storage.CachedQueries.DriverInformation as CQ
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverLocation as QL
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as Q
 import Test.Hspec
@@ -98,9 +98,9 @@ hatchbackDriver :: Text
 hatchbackDriver = "ND-hatchback-driver-0000000000000000"
 
 setDriversActive :: Bool -> FlowR ARDUEnv.AppEnv ()
-setDriversActive isActive = Esq.runTransaction $ do
+setDriversActive isActive = Esq.runTransactionF $ \finalize -> do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
-  forM_ drivers (\driver -> Q.updateActivity (Id driver) isActive)
+  forM_ drivers (\driver -> CQ.updateActivity finalize (Id driver) isActive)
 
 -- we can remove this when we flatten migrations
 setDriverWithOldLocation :: FlowR ARDUEnv.AppEnv ()

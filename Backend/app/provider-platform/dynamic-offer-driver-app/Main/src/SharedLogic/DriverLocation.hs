@@ -54,7 +54,7 @@ findById id =
     Nothing ->
       flip whenJust cacheDriverLocation /=<< Esq.runInReplica (DLQueries.findById id)
 
-cacheDriverLocation :: (CacheFlow m r) => DriverLocation -> m ()
+cacheDriverLocation :: CacheFlow m r => DriverLocation -> m ()
 cacheDriverLocation driverLocation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let driverLocationKey = makeDriverLocationKey driverLocation.driverId
@@ -77,4 +77,5 @@ updateOnRide driverId onRide = do
             void $ Esq.runTransaction $ DLQueries.upsertGpsCoord (cast driverId) latLong loc.coordinatesCalculatedAt
         )
         mDriverLocatation
-  CDI.updateOnRide driverId onRide
+  Esq.runTransactionF $ \finalize -> do
+    CDI.updateOnRide finalize driverId onRide

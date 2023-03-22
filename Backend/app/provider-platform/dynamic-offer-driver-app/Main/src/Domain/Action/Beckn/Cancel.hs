@@ -38,11 +38,11 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as CQDI
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -86,17 +86,16 @@ cancel transporterId _ req = do
   unless (transporterId' == transporterId) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId req.bookingId
   bookingCR <- buildBookingCancellationReason
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QBCR.upsert bookingCR
     QRB.updateStatus booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> do
-      QRide.updateStatus ride.id SRide.CANCELLED
-      driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      SRide.updateStatus finalize ride.id ride.driverId SRide.CANCELLED
+      driverInfo <- CQDI.findById' (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       if driverInfo.active
         then QDFS.updateStatus ride.driverId DDFS.ACTIVE
         else QDFS.updateStatus ride.driverId DDFS.IDLE
   whenJust mbRide $ \ride -> do
-    SRide.clearCache $ cast ride.driverId
     DLoc.updateOnRide (cast ride.driverId) False
 
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)

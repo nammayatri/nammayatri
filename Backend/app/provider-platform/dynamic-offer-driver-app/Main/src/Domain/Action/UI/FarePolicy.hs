@@ -104,9 +104,8 @@ updateFarePolicy admin fpId req = do
           } ::
           DFarePolicy.FarePolicy
   coordinators <- QP.findAdminsByMerchantId admin.merchantId
-  Esq.runTransaction $
-    SFarePolicy.update updatedFarePolicy
-  SFarePolicy.clearCache updatedFarePolicy
+  Esq.runTransactionF $ \finalize -> do
+    SFarePolicy.update finalize updatedFarePolicy
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
   for_ otherCoordinators $ \cooridinator -> do
     Notify.notifyFarePolicyChange admin.merchantId cooridinator.id cooridinator.deviceToken

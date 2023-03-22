@@ -98,7 +98,7 @@ import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
+import qualified Storage.CachedQueries.DriverInformation as CQDriverInformation
 import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
@@ -364,7 +364,7 @@ createDriverDetails personId adminId = do
             updatedAt = now
           }
   QDriverStats.createInitialDriverStats driverId
-  QDriverInformation.create driverInfo
+  CQDriverInformation.create driverInfo
   where
     driverId = cast personId
 
@@ -380,7 +380,7 @@ getInformation ::
 getInformation personId = do
   let driverId = cast personId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  driverInfo <- CQDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
@@ -395,22 +395,23 @@ setActivity personId isActive = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   when isActive $ do
-    driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+    driverInfo <- CQDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
     unless driverInfo.enabled $ throwError DriverAccountDisabled
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
-  QDriverInformation.updateActivity driverId isActive
   driverStatus <- QDFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
   logInfo $ "driverStatus " <> show driverStatus
-  unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE]) $ do
-    if isActive
-      then Esq.runTransaction $ QDFS.updateStatus personId DDFS.ACTIVE
-      else Esq.runTransaction $ QDFS.updateStatus personId DDFS.IDLE
+  Esq.runTransactionF $ \finalize -> do
+    CQDriverInformation.updateActivity finalize driverId isActive
+    unless (driverStatus `notElem` [DDFS.IDLE, DDFS.ACTIVE]) $ do
+      if isActive
+        then QDFS.updateStatus personId DDFS.ACTIVE
+        else QDFS.updateStatus personId DDFS.IDLE
   pure APISuccess.Success
 
 listDriver :: (EsqDBReplicaFlow m r, EncFlow m r) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  personList <- Esq.runInReplica $ QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
+  personList <- Esq.runInReplica $ CQDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
   respPersonList <- traverse buildDriverEntityRes personList
   return $ ListDriverRes respPersonList
 
@@ -453,8 +454,9 @@ changeDriverEnableState admin personId isEnabled = do
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (person.merchantId == admin.merchantId) $ throwError Unauthorized
-  QDriverInformation.updateEnabledState driverId isEnabled
-  unless isEnabled $ QDriverInformation.updateActivity driverId False
+  Esq.runTransactionF $ \finalize -> do
+    CQDriverInformation.updateEnabledState finalize driverId isEnabled
+    unless isEnabled $ CQDriverInformation.updateActivity (Esq.ignoreFinalize finalize) driverId False
   unless isEnabled $ do
     Notify.notifyDriver person.merchantId FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> changeDriverEnableState : ") (show (driverId, isEnabled))
@@ -472,8 +474,8 @@ deleteDriver admin driverId = do
   unless (driver.merchantId == admin.merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession driverId
-  QDriverInformation.deleteById (cast driverId)
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
+    CQDriverInformation.deleteById finalize (cast driverId)
     QDriverStats.deleteById (cast driverId)
     QR.deleteByPersonId driverId
     QVehicle.deleteById driverId
@@ -504,7 +506,7 @@ updateDriver personId req = do
                language = req.language <|> person.language
               }
 
-  driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  driverInfo <- CQDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   Esq.runTransaction $
     QPerson.updatePersonRec personId updPerson
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
@@ -688,7 +690,7 @@ respondQuote driverId req = do
     let mbOfferedFare = req.offeredFare
     organization <- CQM.findById sReq.providerId >>= fromMaybeM (MerchantDoesNotExist sReq.providerId.getId)
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+    driverInfo <- CQDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
     when driverInfo.onRide $ throwError DriverOnRide
     DP.removeSearchReqIdFromMap sReq.providerId driverId sReq.id
     sReqFD <-
@@ -797,7 +799,7 @@ makeAlternateNumberAttemptsKey id = "DriverAlternateNumberAttempts:PersonId-" <>
 makeAlternateNumberVerifiedKey :: Id SP.Person -> Text
 makeAlternateNumberVerifiedKey id = "DriverAlternateNumberVerified:PersonId-" <> id.getId
 
-cacheAlternateNumberInfo :: (CacheFlow m r) => Id SP.Person -> Text -> Text -> Int -> Bool -> m ()
+cacheAlternateNumberInfo :: CacheFlow m r => Id SP.Person -> Text -> Text -> Int -> Bool -> m ()
 cacheAlternateNumberInfo personId phoneNumber otp attemptsLeft verified = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let alternatePhoneNumberKey = makeAlternatePhoneNumberKey personId
@@ -810,7 +812,7 @@ cacheAlternateNumberInfo personId phoneNumber otp attemptsLeft verified = do
   Redis.setExp alternateNumberAttemptsKey attemptsLeft expTime
   Redis.setExp alternateNumberVerifiedKey verified expTime
 
-invalidateAlternateNoCache :: (CacheFlow m r) => Id SP.Person -> m ()
+invalidateAlternateNoCache :: CacheFlow m r => Id SP.Person -> m ()
 invalidateAlternateNoCache personId = do
   let alternatePhoneNumberKey = makeAlternatePhoneNumberKey personId
       alternateNumberOtpKey = makeAlternateNumberOtpKey personId

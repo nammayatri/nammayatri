@@ -93,7 +93,7 @@ findAllByMerchantId merchantId mRideDistance =
       expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
       Hedis.withCrossAppRedis $ Hedis.setExp (makeAllMerchantIdKey merchantId) (coerce @[FarePolicy] @[FarePolicyD 'Unsafe] fps) expTime
 
-cacheFarePolicy :: (CacheFlow m r) => FarePolicy -> m ()
+cacheFarePolicy :: CacheFlow m r => FarePolicy -> m ()
 cacheFarePolicy fp = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let idKey = makeIdKey fp.id
@@ -117,5 +117,7 @@ clearCache fp = Hedis.withCrossAppRedis $ do
   Hedis.del (makeMerchantIdVehVarKey fp.merchantId fp.vehicleVariant)
   Hedis.del (makeAllMerchantIdKey fp.merchantId)
 
-update :: FarePolicy -> Esq.SqlDB ()
-update = Queries.update
+update :: CacheFlow m r => Finalize m -> FarePolicy -> Esq.SqlDB ()
+update finalize farePolicy = do
+  Queries.update farePolicy
+  finalize $ clearCache farePolicy

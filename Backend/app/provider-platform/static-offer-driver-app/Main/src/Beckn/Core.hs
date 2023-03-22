@@ -67,7 +67,7 @@ logBecknRequest appEnv f req@Wai.Request {..} respF = do
       bodyMvar <- newMVar body
       let logEnv = appEnv.loggerEnv
           esqDBEnv = appEnv.esqDBEnv
-      Esq.runTransactionIO logEnv esqDBEnv $ do
+      _ <- Esq.runTransactionIO (Proxy @IO) logEnv esqDBEnv $ do
         QBR.logBecknRequest (T.decodeUtf8 body) (T.decodeUtf8 header)
       return req {Wai.requestBody = mkRequestBody bodyMvar}
   f req' respF

@@ -90,8 +90,10 @@ makeSubscriberIdKey subscriberId = "driver-offer:CachedQueries:Merchant:Subscrib
 makeShortIdKey :: ShortId Merchant -> Text
 makeShortIdKey shortId = "driver-offer:CachedQueries:Merchant:ShortId-" <> shortId.getShortId
 
-update :: Merchant -> Esq.SqlDB ()
-update = Queries.update
+update :: CacheFlow m r => Finalize m -> Merchant -> Esq.SqlDB ()
+update finalize merchant = do
+  Queries.update merchant
+  finalize $ clearCache merchant
 
 loadAllProviders :: Esq.Transactionable m => m [Merchant]
 loadAllProviders = Queries.loadAllProviders

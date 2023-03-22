@@ -389,8 +389,8 @@ logout personId = do
   uperson <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QP.updateDeviceToken uperson.id Nothing
     QR.deleteByPersonId personId
-  when (uperson.role == SP.DRIVER) $ QD.updateActivity (cast uperson.id) False
+    when (uperson.role == SP.DRIVER) $ QD.updateActivity finalize (cast uperson.id) False
   pure Success

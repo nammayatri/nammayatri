@@ -13,7 +13,12 @@
 -}
 {-# LANGUAGE TypeApplications #-}
 
-module Storage.Queries.FarePolicy.RestrictedExtraFare where
+module Storage.Queries.FarePolicy.RestrictedExtraFare
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import qualified Domain.Types.FarePolicy.RestrictedExtraFare as Domain
 import Domain.Types.Merchant

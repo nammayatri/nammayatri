@@ -58,12 +58,12 @@ makeMerchantIdVehVarKey merchantId vehVar = "driver-offer:CachedQueries:Restrict
 makeMerchantIdKey :: Id Merchant -> Text
 makeMerchantIdKey merchantId = "driver-offer:CachedQueries:RestrictExtraFee:MerchantId-" <> merchantId.getId
 
-cacheRestrictedFareListByMerchantAndVehicle :: (CacheFlow m r) => Id Merchant -> Vehicle.Variant -> [RestrictedExtraFare] -> m ()
+cacheRestrictedFareListByMerchantAndVehicle :: CacheFlow m r => Id Merchant -> Vehicle.Variant -> [RestrictedExtraFare] -> m ()
 cacheRestrictedFareListByMerchantAndVehicle merchantId vehVar resFare = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdVehVarKey merchantId vehVar) resFare expTime
 
-cacheRestrictedFareListByMerchant :: (CacheFlow m r) => Id Merchant -> [RestrictedExtraFare] -> m ()
+cacheRestrictedFareListByMerchant :: CacheFlow m r => Id Merchant -> [RestrictedExtraFare] -> m ()
 cacheRestrictedFareListByMerchant merchantId resFare = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdKey merchantId) resFare expTime

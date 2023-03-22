@@ -31,7 +31,7 @@ exotelHeartbeat ::
   Flow APISuccess
 exotelHeartbeat req = do
   let affectedPhones = (req.incomingAffected <&> (.phoneNumber)) <> (req.outgoingAffected <&> (.phoneNumber))
-  Esq.runTransaction $ CQExophone.updateAffectedPhones affectedPhones
-  CQExophone.clearAllCache
+  Esq.runTransactionF $ \finalize -> do
+    CQExophone.updateAffectedPhones finalize affectedPhones
   logTagInfo "dashboard -> exotelHeartbeat: " $ show req.statusType
   pure Success
