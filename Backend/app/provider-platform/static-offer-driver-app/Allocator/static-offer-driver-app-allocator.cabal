@@ -1,0 +1,277 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           static-offer-driver-app-allocator
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  exposed-modules:
+      API
+      App
+      Domain.Action.Allocation
+      Domain.Action.Allocation.Internal
+      Domain.Action.Allocation.Internal.DriverPool
+      Domain.Action.Allocation.Internal.DriverPool.Config
+      Environment
+      Service.Runner
+      Tools.Metrics
+      Tools.Metrics.AllocatorMetrics
+      Tools.Metrics.AllocatorMetrics.Types
+  other-modules:
+      Paths_static_offer_driver_app_allocator
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , containers
+    , cryptonite
+    , either
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , hspec
+    , mobility-core
+    , openapi3
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , safe
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , static-offer-driver-app
+    , stm
+    , string-conversions
+    , text
+    , time
+    , uuid
+    , wai
+    , warp
+  default-language: Haskell2010
+
+executable allocation-service-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_static_offer_driver_app_allocator
+  hs-source-dirs:
+      server
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , containers
+    , cryptonite
+    , either
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , hspec
+    , mobility-core
+    , openapi3
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , safe
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , static-offer-driver-app-allocator
+    , stm
+    , string-conversions
+    , text
+    , time
+    , uuid
+    , wai
+    , warp
+  default-language: Haskell2010
+
+test-suite static-offer-driver-app-allocator-tests
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Allocation.AllocationTimeFinished
+      Allocation.Cancellation
+      Allocation.Internal
+      Allocation.NotificationStatus
+      Allocation.OnePoolTwoRide
+      Allocation.RadiusStep
+      Allocation.Reassignment
+      Allocation.TwoAllocations
+      Utils.GuidGenerator
+      Utils.Numeric
+      Utils.SilentLogger
+      Utils.SimpleLogger
+      Utils.Time
+      Paths_static_offer_driver_app_allocator
+  hs-source-dirs:
+      test/app
+      test/src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Werror
+  build-depends:
+      QuickCheck
+    , aeson
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , containers
+    , cryptonite
+    , either
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , hspec
+    , mobility-core
+    , openapi3
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , safe
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , static-offer-driver-app
+    , static-offer-driver-app-allocator
+    , stm
+    , string-conversions
+    , tasty
+    , tasty-hspec
+    , tasty-hunit
+    , tasty-quickcheck
+    , text
+    , time
+    , uuid
+    , wai
+    , warp
+  default-language: Haskell2010

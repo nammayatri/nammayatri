@@ -1,0 +1,407 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           rider-app
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  exposed-modules:
+      API
+      API.Auth
+      API.Beckn
+      API.Beckn.OnConfirm
+      API.Beckn.OnInit
+      API.Beckn.OnSearch
+      API.Beckn.OnSelect
+      API.Beckn.OnTrack
+      API.Beckn.OnUpdate
+      API.Dashboard
+      API.Dashboard.Booking
+      API.Dashboard.Customer
+      API.Dashboard.Exotel
+      API.Dashboard.Merchant
+      API.Dashboard.Ride
+      API.MetroBeckn
+      API.MetroBeckn.OnSearch
+      API.UI
+      API.UI.Booking
+      API.UI.Call
+      API.UI.Cancel
+      API.UI.CancellationReason
+      API.UI.Confirm
+      API.UI.CustomerSupport
+      API.UI.Feedback
+      API.UI.Frontend
+      API.UI.GoogleTranslate
+      API.UI.Maps
+      API.UI.Profile
+      API.UI.Quote
+      API.UI.Registration
+      API.UI.Ride
+      API.UI.Route
+      API.UI.SavedReqLocation
+      API.UI.Search
+      API.UI.Select
+      API.UI.Serviceability
+      API.UI.Sos
+      API.UI.Support
+      API.UI.Webengage.InfoBIPWebhook
+      API.UI.Webengage.Webengage
+      API.UI.Whatsapp
+      App
+      App.Server
+      Beckn.ACL.Cancel
+      Beckn.ACL.Common
+      Beckn.ACL.Confirm
+      Beckn.ACL.Init
+      Beckn.ACL.Metro.OnSearch
+      Beckn.ACL.Metro.Search
+      Beckn.ACL.OnConfirm
+      Beckn.ACL.OnInit
+      Beckn.ACL.OnSearch
+      Beckn.ACL.OnSelect
+      Beckn.ACL.OnTrack
+      Beckn.ACL.OnUpdate
+      Beckn.ACL.Rating
+      Beckn.ACL.Search
+      Beckn.ACL.Select
+      Beckn.ACL.Track
+      Beckn.Core
+      Domain.Action.Auth
+      Domain.Action.Beckn.OnConfirm
+      Domain.Action.Beckn.OnInit
+      Domain.Action.Beckn.OnSearch
+      Domain.Action.Beckn.OnSelect
+      Domain.Action.Beckn.OnTrack
+      Domain.Action.Beckn.OnUpdate
+      Domain.Action.Dashboard.Booking
+      Domain.Action.Dashboard.Customer
+      Domain.Action.Dashboard.Exotel
+      Domain.Action.Dashboard.Merchant
+      Domain.Action.Dashboard.Ride
+      Domain.Action.UI.Booking
+      Domain.Action.UI.Call
+      Domain.Action.UI.Cancel
+      Domain.Action.UI.CancellationReason
+      Domain.Action.UI.Confirm
+      Domain.Action.UI.CustomerSupport
+      Domain.Action.UI.Feedback
+      Domain.Action.UI.Frontend
+      Domain.Action.UI.Maps
+      Domain.Action.UI.Profile
+      Domain.Action.UI.Quote
+      Domain.Action.UI.Registration
+      Domain.Action.UI.Ride
+      Domain.Action.UI.Route
+      Domain.Action.UI.SavedReqLocation
+      Domain.Action.UI.Search.Common
+      Domain.Action.UI.Search.OneWay
+      Domain.Action.UI.Search.Rental
+      Domain.Action.UI.Select
+      Domain.Action.UI.Serviceability
+      Domain.Action.UI.Sos
+      Domain.Action.UI.Support
+      Domain.Action.UI.Webengage.InfoBIPWebhook
+      Domain.Action.UI.Webengage.Webengage
+      Domain.Action.UI.Whatsapp
+      Domain.Types.BlackListOrg
+      Domain.Types.Booking
+      Domain.Types.Booking.API
+      Domain.Types.Booking.BookingLocation
+      Domain.Types.Booking.Type
+      Domain.Types.BookingCancellationReason
+      Domain.Types.CallStatus
+      Domain.Types.CancellationReason
+      Domain.Types.Common
+      Domain.Types.DriverOffer
+      Domain.Types.Estimate
+      Domain.Types.Exophone
+      Domain.Types.FarePolicy.FareBreakup
+      Domain.Types.FarePolicy.FareProductType
+      Domain.Types.Geometry
+      Domain.Types.Issue
+      Domain.Types.LocationAddress
+      Domain.Types.Merchant
+      Domain.Types.Merchant.MerchantMessage
+      Domain.Types.Merchant.MerchantServiceConfig
+      Domain.Types.Merchant.MerchantServiceUsageConfig
+      Domain.Types.OnSearchEvent
+      Domain.Types.Person
+      Domain.Types.Person.PersonDefaultEmergencyNumber
+      Domain.Types.Person.PersonFlowStatus
+      Domain.Types.Quote
+      Domain.Types.RegistrationToken
+      Domain.Types.RentalSlab
+      Domain.Types.Ride
+      Domain.Types.SavedReqLocation
+      Domain.Types.SearchRequest
+      Domain.Types.SearchRequest.SearchReqLocation
+      Domain.Types.Sos
+      Domain.Types.SpecialZoneQuote
+      Domain.Types.TripTerms
+      Domain.Types.VehicleVariant
+      Domain.Types.Webengage
+      Environment
+      SharedLogic.CallBPP
+      SharedLogic.CallBPPInternal
+      SharedLogic.Estimate
+      SharedLogic.GoogleTranslate
+      SharedLogic.Merchant
+      SharedLogic.MessageBuilder
+      SharedLogic.MetroOffer
+      SharedLogic.PublicTransport
+      Storage.CachedQueries.BlackListOrg
+      Storage.CachedQueries.CacheConfig
+      Storage.CachedQueries.Exophone
+      Storage.CachedQueries.Merchant
+      Storage.CachedQueries.Merchant.MerchantMessage
+      Storage.CachedQueries.Merchant.MerchantServiceConfig
+      Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
+      Storage.Queries.BlackListOrg
+      Storage.Queries.Booking
+      Storage.Queries.Booking.BookingLocation
+      Storage.Queries.BookingCancellationReason
+      Storage.Queries.CallStatus
+      Storage.Queries.CancellationReason
+      Storage.Queries.Estimate
+      Storage.Queries.EstimateBreakup
+      Storage.Queries.Exophone
+      Storage.Queries.FareBreakup
+      Storage.Queries.FullEntityBuilders
+      Storage.Queries.Geometry
+      Storage.Queries.Issues
+      Storage.Queries.Merchant
+      Storage.Queries.Merchant.MerchantMessage
+      Storage.Queries.Merchant.MerchantServiceConfig
+      Storage.Queries.Merchant.MerchantServiceUsageConfig
+      Storage.Queries.OnSearchEvent
+      Storage.Queries.Person
+      Storage.Queries.Person.PersonDefaultEmergencyNumber
+      Storage.Queries.Person.PersonFlowStatus
+      Storage.Queries.Quote
+      Storage.Queries.RegistrationToken
+      Storage.Queries.RentalSlab
+      Storage.Queries.Ride
+      Storage.Queries.SavedReqLocation
+      Storage.Queries.SearchRequest
+      Storage.Queries.Sos
+      Storage.Queries.SpecialZoneQuote
+      Storage.Queries.TripTerms
+      Storage.Queries.Webengage
+      Storage.Tabular.BlackListOrg
+      Storage.Tabular.Booking
+      Storage.Tabular.Booking.BookingLocation
+      Storage.Tabular.BookingCancellationReason
+      Storage.Tabular.CallStatus
+      Storage.Tabular.CancellationReason
+      Storage.Tabular.DriverOffer
+      Storage.Tabular.Estimate
+      Storage.Tabular.Estimate.Instances
+      Storage.Tabular.EstimateBreakup
+      Storage.Tabular.Exophone
+      Storage.Tabular.FarePolicy.FareBreakup
+      Storage.Tabular.Geometry
+      Storage.Tabular.Issue
+      Storage.Tabular.Merchant
+      Storage.Tabular.Merchant.MerchantMessage
+      Storage.Tabular.Merchant.MerchantServiceConfig
+      Storage.Tabular.Merchant.MerchantServiceUsageConfig
+      Storage.Tabular.OnSearchEvent
+      Storage.Tabular.Person
+      Storage.Tabular.Person.PersonDefaultEmergencyNumber
+      Storage.Tabular.Person.PersonFlowStatus
+      Storage.Tabular.Quote
+      Storage.Tabular.Quote.Instances
+      Storage.Tabular.RegistrationToken
+      Storage.Tabular.RentalSlab
+      Storage.Tabular.Ride
+      Storage.Tabular.SavedReqLocation
+      Storage.Tabular.SearchRequest
+      Storage.Tabular.SearchRequest.SearchReqLocation
+      Storage.Tabular.Sos
+      Storage.Tabular.SpecialZoneQuote
+      Storage.Tabular.TripTerms
+      Storage.Tabular.Webengage
+      Tools.Auth
+      Tools.Call
+      Tools.Error
+      Tools.JSON
+      Tools.Maps
+      Tools.Metrics
+      Tools.Metrics.BAPMetrics
+      Tools.Metrics.BAPMetrics.Types
+      Tools.Notifications
+      Tools.Schema
+      Tools.SMS
+      Tools.Streaming.Kafka
+      Tools.Whatsapp
+  other-modules:
+      Paths_rider_app
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  build-depends:
+      aeson
+    , amazonka
+    , amazonka-core
+    , amazonka-ses
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beckn-spec
+    , bytestring
+    , containers
+    , cryptonite
+    , dashboard-helper-api
+    , euler-hs
+    , extra
+    , http-media
+    , http-types
+    , lens
+    , mobility-core
+    , openapi3
+    , persistent
+    , prometheus-client
+    , prometheus-metrics-ghc
+    , record-dot-preprocessor
+    , record-hasfield
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , special-zone
+    , text
+    , text-conversions
+    , time
+    , unliftio-core
+    , wai
+    , wai-middleware-prometheus
+    , warp
+  default-language: Haskell2010
+
+executable rider-app-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_rider_app
+  hs-source-dirs:
+      server
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  build-depends:
+      aeson
+    , amazonka
+    , amazonka-core
+    , amazonka-ses
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beckn-spec
+    , bytestring
+    , containers
+    , cryptonite
+    , dashboard-helper-api
+    , euler-hs
+    , extra
+    , http-media
+    , http-types
+    , lens
+    , mobility-core
+    , openapi3
+    , persistent
+    , prometheus-client
+    , prometheus-metrics-ghc
+    , record-dot-preprocessor
+    , record-hasfield
+    , rider-app
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
+    , servant-server
+    , text
+    , text-conversions
+    , time
+    , unliftio-core
+    , wai
+    , wai-middleware-prometheus
+    , warp
+  default-language: Haskell2010

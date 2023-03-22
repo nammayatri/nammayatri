@@ -1,0 +1,129 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           lib-dashboard
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  exposed-modules:
+      API.Dashboard
+      API.Dashboard.AccessMatrix
+      API.Dashboard.Person
+      API.Dashboard.Registration
+      API.Dashboard.Roles
+      Domain.Action.Dashboard.AccessMatrix
+      Domain.Action.Dashboard.Person
+      Domain.Action.Dashboard.Registration
+      Domain.Action.Dashboard.Roles
+      Domain.Types.AccessMatrix
+      Domain.Types.Merchant
+      Domain.Types.MerchantAccess
+      Domain.Types.Person
+      Domain.Types.Person.API
+      Domain.Types.Person.Type
+      Domain.Types.RegistrationToken
+      Domain.Types.Role
+      Domain.Types.ServerName
+      Domain.Types.Transaction
+      Environment
+      SharedLogic.Transaction
+      Storage.Queries.AccessMatrix
+      Storage.Queries.Merchant
+      Storage.Queries.MerchantAccess
+      Storage.Queries.Person
+      Storage.Queries.RegistrationToken
+      Storage.Queries.Role
+      Storage.Queries.Transaction
+      Storage.Tabular.AccessMatrix
+      Storage.Tabular.Merchant
+      Storage.Tabular.MerchantAccess
+      Storage.Tabular.Person
+      Storage.Tabular.RegistrationToken
+      Storage.Tabular.Role
+      Storage.Tabular.Transaction
+      Tools.Auth
+      Tools.Auth.Api
+      Tools.Auth.Common
+      Tools.Auth.Dashboard
+      Tools.Auth.Merchant
+      Tools.Client
+      Tools.Error
+      Tools.Metrics
+      Tools.Servant.HeaderAuth
+  other-modules:
+      Paths_lib_dashboard
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedLabels
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , dashboard-helper-api
+    , esqueleto
+    , euler-hs
+    , http-types
+    , mobility-core
+    , persistent
+    , persistent-postgresql
+    , record-dot-preprocessor
+    , record-hasfield
+    , servant-client
+    , servant-openapi3
+    , servant-server
+    , singletons
+    , template-haskell
+    , text
+    , time
+    , wai
+  default-language: Haskell2010

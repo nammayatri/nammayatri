@@ -1,0 +1,518 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           dynamic-offer-driver-app
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  exposed-modules:
+      API
+      API.Beckn
+      API.Beckn.Cancel
+      API.Beckn.Confirm
+      API.Beckn.Init
+      API.Beckn.Rating
+      API.Beckn.Search
+      API.Beckn.Select
+      API.Beckn.Track
+      API.Dashboard
+      API.Dashboard.Booking
+      API.Dashboard.Driver
+      API.Dashboard.Driver.Registration
+      API.Dashboard.DriverReferral
+      API.Dashboard.Exotel
+      API.Dashboard.Issue
+      API.Dashboard.Merchant
+      API.Dashboard.Message
+      API.Dashboard.Ride
+      API.Internal
+      API.Internal.DriverReferee
+      API.UI
+      API.UI.Call
+      API.UI.CancellationReason
+      API.UI.Driver
+      API.UI.DriverOnboarding
+      API.UI.DriverReferral
+      API.UI.FarePolicy
+      API.UI.Frontend
+      API.UI.Issue
+      API.UI.Location
+      API.UI.Message
+      API.UI.OrgAdmin
+      API.UI.Performance
+      API.UI.Registration
+      API.UI.Ride
+      API.UI.Route
+      API.UI.Transporter
+      API.UI.Vehicle
+      API.UI.Whatsapp
+      App
+      App.Server
+      Beckn.ACL.Cancel
+      Beckn.ACL.Common
+      Beckn.ACL.Confirm
+      Beckn.ACL.Init
+      Beckn.ACL.OnConfirm
+      Beckn.ACL.OnInit
+      Beckn.ACL.OnSearch
+      Beckn.ACL.OnSelect
+      Beckn.ACL.OnTrack
+      Beckn.ACL.OnUpdate
+      Beckn.ACL.Rating
+      Beckn.ACL.Search
+      Beckn.ACL.Select
+      Beckn.ACL.Track
+      Beckn.Core
+      Domain.Action.Beckn.Cancel
+      Domain.Action.Beckn.Confirm
+      Domain.Action.Beckn.Init
+      Domain.Action.Beckn.Rating
+      Domain.Action.Beckn.Search
+      Domain.Action.Beckn.Select
+      Domain.Action.Beckn.Track
+      Domain.Action.Dashboard.Booking
+      Domain.Action.Dashboard.Driver
+      Domain.Action.Dashboard.Driver.Registration
+      Domain.Action.Dashboard.DriverReferral
+      Domain.Action.Dashboard.Exotel
+      Domain.Action.Dashboard.Issue
+      Domain.Action.Dashboard.Merchant
+      Domain.Action.Dashboard.Message
+      Domain.Action.Dashboard.Ride
+      Domain.Action.Internal.DriverReferee
+      Domain.Action.UI.Call
+      Domain.Action.UI.CancellationReason
+      Domain.Action.UI.Driver
+      Domain.Action.UI.DriverOnboarding.DriverLicense
+      Domain.Action.UI.DriverOnboarding.IdfyWebhook
+      Domain.Action.UI.DriverOnboarding.Image
+      Domain.Action.UI.DriverOnboarding.Referral
+      Domain.Action.UI.DriverOnboarding.Status
+      Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
+      Domain.Action.UI.DriverReferral
+      Domain.Action.UI.FarePolicy
+      Domain.Action.UI.Frontend
+      Domain.Action.UI.Issue
+      Domain.Action.UI.Location
+      Domain.Action.UI.Location.UpdateLocation
+      Domain.Action.UI.Message
+      Domain.Action.UI.OrgAdmin
+      Domain.Action.UI.Performance
+      Domain.Action.UI.Registration
+      Domain.Action.UI.Ride
+      Domain.Action.UI.Ride.CancelRide
+      Domain.Action.UI.Ride.CancelRide.Internal
+      Domain.Action.UI.Ride.EndRide
+      Domain.Action.UI.Ride.EndRide.Internal
+      Domain.Action.UI.Ride.StartRide
+      Domain.Action.UI.Ride.StartRide.Internal
+      Domain.Action.UI.Route
+      Domain.Action.UI.Transporter
+      Domain.Action.UI.Vehicle
+      Domain.Action.UI.Whatsapp
+      Domain.Types.Booking
+      Domain.Types.Booking.BookingLocation
+      Domain.Types.BookingCancellationReason
+      Domain.Types.BusinessEvent
+      Domain.Types.CallStatus
+      Domain.Types.CancellationReason
+      Domain.Types.Common
+      Domain.Types.Driver.DriverFlowStatus
+      Domain.Types.DriverInformation
+      Domain.Types.DriverLocation
+      Domain.Types.DriverOnboarding.DriverLicense
+      Domain.Types.DriverOnboarding.DriverRCAssociation
+      Domain.Types.DriverOnboarding.Error
+      Domain.Types.DriverOnboarding.IdfyVerification
+      Domain.Types.DriverOnboarding.Image
+      Domain.Types.DriverOnboarding.OperatingCity
+      Domain.Types.DriverOnboarding.VehicleRegistrationCertificate
+      Domain.Types.DriverQuote
+      Domain.Types.DriverReferral
+      Domain.Types.DriverStats
+      Domain.Types.Exophone
+      Domain.Types.FareParameters
+      Domain.Types.FarePolicy
+      Domain.Types.FarePolicy.RestrictedExtraFare
+      Domain.Types.Geometry
+      Domain.Types.Issue.Comment
+      Domain.Types.Issue.IssueCategory
+      Domain.Types.Issue.IssueOption
+      Domain.Types.Issue.IssueReport
+      Domain.Types.Issue.IssueTranslation
+      Domain.Types.Merchant
+      Domain.Types.Merchant.DriverIntelligentPoolConfig
+      Domain.Types.Merchant.DriverPoolConfig
+      Domain.Types.Merchant.MerchantMessage
+      Domain.Types.Merchant.MerchantServiceConfig
+      Domain.Types.Merchant.MerchantServiceUsageConfig
+      Domain.Types.Merchant.TransporterConfig
+      Domain.Types.Message.MediaFile
+      Domain.Types.Message.Message
+      Domain.Types.Message.MessageReport
+      Domain.Types.Message.MessageTranslation
+      Domain.Types.OnboardingDocumentConfig
+      Domain.Types.Person
+      Domain.Types.QuoteSpecialZone
+      Domain.Types.Rating
+      Domain.Types.RegistrationToken
+      Domain.Types.Ride
+      Domain.Types.RideDetails
+      Domain.Types.RiderDetails
+      Domain.Types.SearchRequest
+      Domain.Types.SearchRequest.SearchReqLocation
+      Domain.Types.SearchRequestForDriver
+      Domain.Types.SearchRequestSentToDriverEvent
+      Domain.Types.SearchRequestSpecialZone
+      Domain.Types.Vehicle
+      Domain.Types.Vehicle.Variant
+      Environment
+      Lib.LocationUpdates
+      SharedLogic.Allocator
+      SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
+      SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
+      SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
+      SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool
+      SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+      SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
+      SharedLogic.CacheDistance
+      SharedLogic.CallBAP
+      SharedLogic.DriverLocation
+      SharedLogic.DriverOnboarding
+      SharedLogic.DriverPool
+      SharedLogic.DriverPool.Config
+      SharedLogic.DriverPool.Types
+      SharedLogic.Estimate
+      SharedLogic.FareCalculator
+      SharedLogic.FareCalculator.Calculator
+      SharedLogic.FareCalculator.Flow
+      SharedLogic.GoogleMaps
+      SharedLogic.GoogleTranslate
+      SharedLogic.Merchant
+      SharedLogic.MessageBuilder
+      SharedLogic.Person
+      SharedLogic.Ride
+      Storage.CachedQueries.CacheConfig
+      Storage.CachedQueries.DriverInformation
+      Storage.CachedQueries.Exophone
+      Storage.CachedQueries.FarePolicy
+      Storage.CachedQueries.FarePolicy.RestrictedExtraFare
+      Storage.CachedQueries.Issue.IssueCategory
+      Storage.CachedQueries.Issue.IssueOption
+      Storage.CachedQueries.Merchant
+      Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
+      Storage.CachedQueries.Merchant.DriverPoolConfig
+      Storage.CachedQueries.Merchant.MerchantMessage
+      Storage.CachedQueries.Merchant.MerchantServiceConfig
+      Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
+      Storage.CachedQueries.Merchant.TransporterConfig
+      Storage.CachedQueries.OnboardingDocumentConfig
+      Storage.Queries.Booking
+      Storage.Queries.Booking.BookingLocation
+      Storage.Queries.BookingCancellationReason
+      Storage.Queries.BusinessEvent
+      Storage.Queries.CallStatus
+      Storage.Queries.CancellationReason
+      Storage.Queries.Driver.DriverFlowStatus
+      Storage.Queries.DriverInformation
+      Storage.Queries.DriverLocation
+      Storage.Queries.DriverOnboarding.DriverLicense
+      Storage.Queries.DriverOnboarding.DriverRCAssociation
+      Storage.Queries.DriverOnboarding.IdfyVerification
+      Storage.Queries.DriverOnboarding.Image
+      Storage.Queries.DriverOnboarding.OperatingCity
+      Storage.Queries.DriverOnboarding.Status
+      Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate
+      Storage.Queries.DriverQuote
+      Storage.Queries.DriverReferral
+      Storage.Queries.DriverStats
+      Storage.Queries.Exophone
+      Storage.Queries.FareParameters
+      Storage.Queries.FarePolicy
+      Storage.Queries.FarePolicy.RestrictedExtraFare
+      Storage.Queries.Geometry
+      Storage.Queries.Issue.Comment
+      Storage.Queries.Issue.IssueCategory
+      Storage.Queries.Issue.IssueOption
+      Storage.Queries.Issue.IssueReport
+      Storage.Queries.Merchant
+      Storage.Queries.Merchant.DriverIntelligentPoolConfig
+      Storage.Queries.Merchant.DriverPoolConfig
+      Storage.Queries.Merchant.MerchantMessage
+      Storage.Queries.Merchant.MerchantServiceConfig
+      Storage.Queries.Merchant.MerchantServiceUsageConfig
+      Storage.Queries.Merchant.TransporterConfig
+      Storage.Queries.Message.MediaFile
+      Storage.Queries.Message.Message
+      Storage.Queries.Message.MessageReport
+      Storage.Queries.Message.MessageTranslation
+      Storage.Queries.OnboardingDocumentConfig
+      Storage.Queries.Person
+      Storage.Queries.QuoteSpecialZone
+      Storage.Queries.Rating
+      Storage.Queries.RegistrationToken
+      Storage.Queries.Ride
+      Storage.Queries.RideDetails
+      Storage.Queries.RiderDetails
+      Storage.Queries.SearchRequest
+      Storage.Queries.SearchRequestForDriver
+      Storage.Queries.SearchRequestSpecialZone
+      Storage.Queries.Vehicle
+      Storage.Tabular.Booking
+      Storage.Tabular.Booking.BookingLocation
+      Storage.Tabular.BookingCancellationReason
+      Storage.Tabular.BusinessEvent
+      Storage.Tabular.CallStatus
+      Storage.Tabular.CancellationReason
+      Storage.Tabular.Driver.DriverFlowStatus
+      Storage.Tabular.DriverInformation
+      Storage.Tabular.DriverLocation
+      Storage.Tabular.DriverOnboarding.DriverLicense
+      Storage.Tabular.DriverOnboarding.DriverRCAssociation
+      Storage.Tabular.DriverOnboarding.IdfyVerification
+      Storage.Tabular.DriverOnboarding.Image
+      Storage.Tabular.DriverOnboarding.OperatingCity
+      Storage.Tabular.DriverOnboarding.VehicleRegistrationCertificate
+      Storage.Tabular.DriverQuote
+      Storage.Tabular.DriverReferral
+      Storage.Tabular.DriverStats
+      Storage.Tabular.Exophone
+      Storage.Tabular.FareParameters
+      Storage.Tabular.FarePolicy
+      Storage.Tabular.FarePolicy.RestrictedExtraFare
+      Storage.Tabular.Geometry
+      Storage.Tabular.Issue.Comment
+      Storage.Tabular.Issue.IssueCategory
+      Storage.Tabular.Issue.IssueOption
+      Storage.Tabular.Issue.IssueReport
+      Storage.Tabular.Issue.IssueTranslation
+      Storage.Tabular.Merchant
+      Storage.Tabular.Merchant.DriverIntelligentPoolConfig
+      Storage.Tabular.Merchant.DriverPoolConfig
+      Storage.Tabular.Merchant.MerchantMessage
+      Storage.Tabular.Merchant.MerchantServiceConfig
+      Storage.Tabular.Merchant.MerchantServiceUsageConfig
+      Storage.Tabular.Merchant.TransporterConfig
+      Storage.Tabular.Message.Instances
+      Storage.Tabular.Message.MediaFile
+      Storage.Tabular.Message.Message
+      Storage.Tabular.Message.MessageReport
+      Storage.Tabular.Message.MessageTranslation
+      Storage.Tabular.OnboardingDocumentConfig
+      Storage.Tabular.Person
+      Storage.Tabular.QuoteSpecialZone
+      Storage.Tabular.Rating
+      Storage.Tabular.RegistrationToken
+      Storage.Tabular.Ride
+      Storage.Tabular.Ride.Instances
+      Storage.Tabular.Ride.Table
+      Storage.Tabular.RideDetails
+      Storage.Tabular.RiderDetails
+      Storage.Tabular.SearchRequest
+      Storage.Tabular.SearchRequest.SearchReqLocation
+      Storage.Tabular.SearchRequestForDriver
+      Storage.Tabular.SearchRequestSpecialZone
+      Storage.Tabular.Vehicle
+      Tools.Auth
+      Tools.Error
+      Tools.Maps
+      Tools.Metrics
+      Tools.Metrics.ARDUBPPMetrics
+      Tools.Metrics.ARDUBPPMetrics.Types
+      Tools.Metrics.SendSearchRequestToDriverMetrics
+      Tools.Metrics.SendSearchRequestToDriverMetrics.Types
+      Tools.Notifications
+      Tools.SMS
+      Tools.Verification
+      Tools.Whatsapp
+  other-modules:
+      Paths_dynamic_offer_driver_app
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-services
+    , beckn-spec
+    , bytestring
+    , cassava
+    , containers
+    , cryptonite
+    , dashboard-helper-api
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , hashmap
+    , hspec
+    , http-client
+    , lens
+    , location-updates
+    , mobility-core
+    , openapi3
+    , persistent
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , shared-services
+    , singletons
+    , special-zone
+    , stm
+    , string-conversions
+    , text
+    , text-conversions
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , warp
+  default-language: Haskell2010
+
+executable dynamic-offer-driver-app-exe
+  main-is: Main.hs
+  hs-source-dirs:
+      server
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beckn-services
+    , beckn-spec
+    , bytestring
+    , cassava
+    , containers
+    , cryptonite
+    , dashboard-helper-api
+    , dynamic-offer-driver-app
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , generic-lens
+    , hashmap
+    , hspec
+    , http-client
+    , lens
+    , mobility-core
+    , openapi3
+    , persistent
+    , prometheus-client
+    , record-dot-preprocessor
+    , record-hasfield
+    , resource-pool
+    , scheduler
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , shared-services
+    , singletons
+    , stm
+    , string-conversions
+    , text
+    , text-conversions
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , warp
+  default-language: Haskell2010
