@@ -46,28 +46,28 @@ verifyServiceability expectedValue = \case
 serviceableOrigin :: ClientEnv -> IO ()
 serviceableOrigin appClientEnv =
   runClient appClientEnv (originServiceability appRegistrationToken req)
-    >>= verifyServiceability (ServiceabilityRes {serviceable = True, specialLocation = Nothing})
+    >>= verifyServiceability (ServiceabilityRes {serviceable = True, specialLocation = Nothing, geoJson = Nothing})
   where
     req = ServiceabilityReq ernakulamLocation
 
 nonServiceableOrigin :: ClientEnv -> IO ()
 nonServiceableOrigin appClientEnv =
   runClient appClientEnv (originServiceability appRegistrationToken req)
-    >>= verifyServiceability (ServiceabilityRes {serviceable = False, specialLocation = Nothing})
+    >>= verifyServiceability (ServiceabilityRes {serviceable = False, specialLocation = Nothing, geoJson = Nothing})
   where
     req = ServiceabilityReq keralaLocation
 
 serviceableDestination :: ClientEnv -> IO ()
 serviceableDestination appClientEnv =
   runClient appClientEnv (destinationServiceability appRegistrationToken req)
-    >>= verifyServiceability (ServiceabilityRes {serviceable = True, specialLocation = Nothing})
+    >>= verifyServiceability (ServiceabilityRes {serviceable = True, specialLocation = Nothing, geoJson = Nothing})
   where
     req = ServiceabilityReq keralaLocation
 
 nonServiceableDestination :: ClientEnv -> IO ()
 nonServiceableDestination appClientEnv =
   runClient appClientEnv (destinationServiceability appRegistrationToken req)
-    >>= verifyServiceability (ServiceabilityRes {serviceable = False, specialLocation = Nothing})
+    >>= verifyServiceability (ServiceabilityRes {serviceable = False, specialLocation = Nothing, geoJson = Nothing})
   where
     req = ServiceabilityReq goaLocation
 

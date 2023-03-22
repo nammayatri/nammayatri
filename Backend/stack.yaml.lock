@@ -5,6 +5,19 @@
 
 packages:
 - completed:
+    commit: ff1acd87fae574c8906837f018a71daaf0e72ad9
+    git: https://github.com/nammayatri/shared-kernel.git
+    name: mobility-core
+    pantry-tree:
+      sha256: 135c2d32c851c70d68a2b24c84bd61822e3da8df211921ffedcaa96d89322a24
+      size: 18496
+    subdir: lib/mobility-core
+    version: 0.1.0.0
+  original:
+    commit: ff1acd87fae574c8906837f018a71daaf0e72ad9
+    git: https://github.com/nammayatri/shared-kernel.git
+    subdir: lib/mobility-core
+- completed:
     commit: 5eafcf35b7f2f5619f21dbafb55d98b1e57b1d39
     git: https://github.com/piyushKumar-1/clickhouse-haskell.git
     name: clickhouse-haskell

@@ -37,7 +37,6 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
-import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool hiding (lat, lon)
 import SharedLogic.Estimate (EstimateItem, buildEstimate)
@@ -81,10 +80,6 @@ data DSearchRes = DSearchRes
     searchMetricsMVar :: Metrics.SearchMetricsMVar
   }
 
-isSpecialZone :: [DSpecialLocation.SpecialLocation] -> Bool
-isSpecialZone [] = False
-isSpecialZone (_ : _) = True
-
 data DistanceAndDuration = DistanceAndDuration
   { distance :: Meters,
     duration :: Seconds
@@ -121,10 +116,10 @@ handler merchantId sReq = do
   logDebug $ "distance: " <> show result.distance
   allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
   let farePolicies = filter (checkTripConstraints result.distance) allFarePolicies
-  specialLocations <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
+  mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
 
   (quotes :: Maybe [SpecialZoneQuoteInfo], estimates' :: Maybe [EstimateItem]) <-
-    if isSpecialZone specialLocations
+    if isJust mbSpecialLocation
       then do
         whenJustM
           (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)

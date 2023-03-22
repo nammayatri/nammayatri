@@ -914,11 +914,11 @@
         "passetto-hs": "passetto-hs"
       },
       "locked": {
-        "lastModified": 1679449610,
-        "narHash": "sha256-UJ3PNc+6tfFFp2gmvQnU4XnyAFTeEUBgxF0xbXRrhSI=",
+        "lastModified": 1679469956,
+        "narHash": "sha256-8Vh9FryFMoyRpf1XL9DtjIWt2+Q+9ApG+j7QK6u8Ijo=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "9ed254f2dda638ef556d491cacbeec2a29fd6cae",
+        "rev": "ff1acd87fae574c8906837f018a71daaf0e72ad9",
         "type": "github"
       },
       "original": {

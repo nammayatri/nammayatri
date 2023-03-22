@@ -17,6 +17,7 @@ module Lib.Queries.SpecialLocation where
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto.Functions as F
 import Kernel.Types.Id
 import Lib.Tabular.SpecialLocation
 import qualified Lib.Types.SpecialLocation as D
@@ -27,9 +28,9 @@ create = Esq.create
 findById :: Transactionable m => Id D.SpecialLocation -> m (Maybe D.SpecialLocation)
 findById = Esq.findById
 
-findSpecialLocationByLatLong :: Transactionable m => LatLong -> m [D.SpecialLocation]
+findSpecialLocationByLatLong :: Transactionable m => LatLong -> m (Maybe (D.SpecialLocation, Text))
 findSpecialLocationByLatLong point = do
-  Esq.findAll $ do
+  Esq.findOne $ do
     specialLocation <- from $ table @SpecialLocationT
     where_ $ containsPoint (point.lon, point.lat)
-    return specialLocation
+    return (specialLocation, F.getGeomGeoJSON)
