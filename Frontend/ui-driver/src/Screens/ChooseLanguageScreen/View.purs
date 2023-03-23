@@ -15,24 +15,25 @@
 
 module Screens.ChooseLanguageScreen.View where
 
-import Prelude (Unit, const, unit, discard, ($), (<<<), (==), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, scrollView, text, textSize, textView, weight, width, afterRender, layoutGravity, padding, imageWithFallback)
-import Components.SelectMenuButton.View as MenuButton
+import Common.Types.App (LazyCheck(..))
+import Screens.ChooseLanguageScreen.ComponentConfig (primaryButtonViewConfig)
+import Animation as Anim
+import Animation.Config as AnimConfig
 import Components.PrimaryButton as PrimaryButton
+import Components.SelectMenuButton.View as MenuButton
+import Data.Array as DA
 import Effect (Effect)
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import MerchantConfigs.Utils (getLanguage)
+import Prelude (Unit, const, unit, discard, ($), (<<<), (==), (<>))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
+import PrestoDOM.Animation as PrestoAnim
 import Screens.ChooseLanguageScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Font.Style as FontStyle
-import Language.Strings (getString)
-import Language.Types(STR(..))
-import Font.Size as FontSize
-import PrestoDOM.Animation as PrestoAnim
-import Animation as Anim
-import Animation.Config as AnimConfig
-import Data.Array as DA
-import Common.Types.App
-import Screens.ChooseLanguageScreen.ComponentConfig
 
 screen :: ST.ChooseLanguageScreenState -> Screen Action ST.ChooseLanguageScreenState ScreenOutput
 screen initialState =
@@ -106,23 +107,12 @@ scrollableView state push =
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , textSize FontSize.a_26
-                , text "Welcome to Namma Yatri"
+                , text $ getString WELCOME_TEXT
                 , color Color.greyTextColor
                 , gravity CENTER_HORIZONTAL
+                , margin $ MarginHorizontal 20 20
                 ] <> FontStyle.h1 TypoGraphy
                 )
-        , PrestoAnim.animationSet 
-          [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig
-          ] $ textView (
-              [ height WRAP_CONTENT
-              , gravity CENTER_HORIZONTAL
-              , width WRAP_CONTENT
-              , textSize FontSize.a_26
-              , text "Driver"
-              , color Color.greyTextColor
-              , margin (MarginTop 5)
-              ] <> FontStyle.h1 TypoGraphy
-            )
           ]
         , PrestoAnim.animationSet 
           [ Anim.translateYAnimFromTopWithAlpha AnimConfig.translateYAnimConfig 
@@ -154,5 +144,5 @@ menuButtonDriver state push =
       [ Anim.translateYAnimFromTopWithAlpha $ AnimConfig.translateYAnimMapConfig index
       ] $ MenuButton.view
           (push <<< (MenuButtonAction))
-          { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index }) state.data.languages
+          { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index }) (getLanguage Language)
   )

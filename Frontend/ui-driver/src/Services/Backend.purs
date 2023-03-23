@@ -488,6 +488,23 @@ dummySnapped :: Snapped
 dummySnapped = Snapped[LatLong{"lat": 0.0, "lon": 0.0}]
 
 --------------------------------- onBoardingFlow  ---------------------------------------------------------------------------------------------------------------------------------
+getCorrespondingErrorMessage :: String -> String
+getCorrespondingErrorMessage errorCode = case errorCode of
+  "IMAGE_VALIDATION_FAILED" -> (getString IMAGE_VALIDATION_FAILED)
+  "IMAGE_NOT_READABLE" -> (getString IMAGE_NOT_READABLE)
+  "IMAGE_LOW_QUALITY" -> (getString IMAGE_LOW_QUALITY)
+  "IMAGE_INVALID_TYPE" -> (getString IMAGE_INVALID_TYPE)
+  "IMAGE_DOCUMENT_NUMBER_MISMATCH" -> (getString IMAGE_DOCUMENT_NUMBER_MISMATCH)
+  "IMAGE_EXTRACTION_FAILED" -> (getString IMAGE_EXTRACTION_FAILED)
+  "IMAGE_NOT_FOUND" -> (getString IMAGE_NOT_FOUND)
+  "IMAGE_NOT_VALID" -> (getString IMAGE_NOT_VALID)
+  "DRIVER_ALREADY_LINKED" -> (getString DRIVER_ALREADY_LINKED)
+  "DL_ALREADY_UPDATED" -> (getString DL_ALREADY_UPDATED)
+  "DL_ALREADY_LINKED"  -> (getString DL_ALREADY_LINKED)
+  "RC_ALREADY_LINKED" -> (getString RC_ALREADY_LINKED)
+  "RC_ALREADY_UPDATED" -> (getString RC_ALREADY_UPDATED)
+  "UNPROCESSABLE_ENTITY" -> (getString PLEASE_CHECK_FOR_IMAGE_IF_VALID_DOCUMENT_IMAGE_OR_NOT)
+  _                      -> (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
 
 registerDriverRCBT :: DriverRCReq -> FlowBT String  DriverRCResp 
 registerDriverRCBT payload = do 

@@ -98,7 +98,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "8.0"
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do 
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
-                                  _ <- JB.removeMarker "ny_ic_auto" -- TODO : remove if we dont require "ic_auto" icon on homescreen
+                                  _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit 
                                   else pure unit 
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
@@ -112,7 +112,7 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do 
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
-                                  _ <- JB.removeMarker "ny_ic_auto" -- TODO : remove if we dont require "ic_auto" icon on homescreen
+                                  _ <- JB.removeMarker "ic_vehicle_side" -- TODO : remove if we dont require "ic_auto" icon on homescreen
                                   pure unit 
                                   else pure unit 
             _                -> do 
@@ -418,7 +418,7 @@ goOfflineModal push state =
           ][ imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback "ny_ic_auto_side_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_active.png"
+             , imageWithFallback "ic_vehicle_side_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_active.png"
              ]
            , imageView
              [ width (V 35)
@@ -429,7 +429,7 @@ goOfflineModal push state =
            , imageView
              [ width (V 55)
              , height (V 55)
-             , imageWithFallback "ny_ic_auto_side_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_inactive.png"
+             , imageWithFallback "ic_vehicle_side_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_side_inactive.png"
              ]
           ]
         , linearLayout
