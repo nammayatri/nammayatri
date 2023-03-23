@@ -26,7 +26,6 @@ app/src/dev/google-services.json
 app/src/release/
 app/src/debug/
 app/src/transporter/
-# app/src/user/
 app/transporterProd/debug/
 app/transporterProd/release/
 app/userProd/release/

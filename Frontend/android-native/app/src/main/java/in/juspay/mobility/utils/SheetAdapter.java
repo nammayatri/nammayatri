@@ -65,7 +65,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
     }
 
     public class SheetViewHolder extends RecyclerView.ViewHolder{
-        TextView pickUpDistance, acceptRejTimer, baseFare, sourceArea, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice;
+        TextView pickUpDistance, acceptRejTimer, baseFare, sourceArea, sourceAddress, destinationArea, destinationAddress, distanceToBeCovered, textIncPrice, textDecPrice, extraFareIndication;
         Button reqButton, rejectButton;
         View buttonDecreasePrice, buttonIncreasePrice, progressBar;
         public SheetViewHolder(@NonNull View itemView) {
@@ -85,6 +85,7 @@ public class SheetAdapter extends RecyclerView.Adapter<SheetAdapter.SheetViewHol
             progressBar = itemView.findViewById(R.id.progressBar);
             textDecPrice = itemView.findViewById(R.id.textDecPrice);
             textIncPrice = itemView.findViewById(R.id.textIncPrice);
+            extraFareIndication = itemView.findViewById(R.id.extraFareIndication);
         }
     }
 

@@ -74,6 +74,10 @@ android {
             minifyEnabled false
 //            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
+            manifestPlaceholders = [
+                    appIcon: "@mipmap/ic_launcher_debug",
+                    appIconRound: "@mipmap/ic_launcher_debug"
+            ]
         }
         release {
             resValue "bool", "debuggable", "false"
@@ -81,6 +85,10 @@ android {
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
+            manifestPlaceholders = [
+                    appIcon: "@mipmap/ic_launcher",
+                    appIconRound: "@mipmap/ic_launcher_round"
+            ]
         }
     }
     Properties properties = new Properties()
@@ -108,19 +116,31 @@ android {
             manifestPlaceholders = [isUsesCleartextTraffic: "true", mapsApiKey : properties.getProperty("MAPS_API_KEY", "")]
             dimension "mode"
         }
-        user {
+        ny_ {
             applicationId  "in.juspay.nammayatri"
             dimension "app"
-            resValue "string", "facebook_app_id", "192510696087613"
-            resValue "string", "fb_login_protocol_scheme", "fb192510696087613"
         }
-        driver {
+        ny_p_ {
             applicationId "in.juspay.nammayatripartner"
+            dimension "app"
+        }
+        js_kl_ {
+            applicationId  "in.juspay.jatrisaathi"
+            dimension "app"
+        }
+        js_d_kl_ {
+            applicationId "in.juspay.jatrisaathidriver"
             dimension "app"
         }
     }
     lintOptions {
         abortOnError false
+    }
+    sourceSets {
+        ny_.setRoot('src/user/nammaYatri')
+        ny_p_.setRoot('src/driver/nammaYatriPartner')
+        js_kl_.setRoot('src/user/jatriSaathi')
+        js_d_kl_.setRoot('src/driver/jatriSaathiDriver')
     }
     sourceSets {
         dev.res.srcDir 'src/dev/res'
@@ -136,20 +156,21 @@ android {
         targetCompatibility = 1.8
         sourceCompatibility = 1.8
     }
+    variantFilter { variant ->
+        // To check for a certain build type, use variant.buildType.name == "<buildType>"
+        def names = variant.flavors*.name
+        def build = variant.buildType.name
+        if (names.contains("dev") && build.contains("release")) {
+            // Gradle ignores any variants that satisfy the conditions above.
+            setIgnore(true)
+        }
+    }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'in.juspay:hypersdk:2.1.12-nammayatri-02'
-    // implementation ('in.juspay:hypersdk:2.0.4-rc.78') {
-    //     exclude group:'in.juspay', module: 'mystique'
-    // }
-//    implementation 'com.google.android.flexbox:flexbox:3.0.0'
-//    implementation 'in.juspay:mystique:0.2.45'
-//    implementation project (path:':mystique')
-    // api (project(':mystique')) -- to link mystique
-//    implementation ( project(path: ':hyper-sdk'))
-    // implementation 'in.juspay:mystique:0.2.49'
+    implementation 'com.google.android.flexbox:flexbox:3.0.0'
     // Import the BoM for the Firebase platform
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
 
@@ -183,7 +204,6 @@ dependencies {
     implementation 'com.google.android.libraries.places:places:2.6.0'
     implementation 'com.google.android.gms:play-services-auth:20.3.0'
     implementation 'com.google.android.gms:play-services-auth-api-phone:18.0.1'
-    userImplementation 'com.appeaser.sublimepickerlibrary:sublimepickerlibrary:2.1.2'
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
     // implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0" -- new feature
     implementation 'com.facebook.shimmer:shimmer:0.5.0'

@@ -28,7 +28,7 @@ public class BootUpReceiver extends BroadcastReceiver {
         widgetReloadService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         SharedPreferences sharedPrefs = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String driverStatus = sharedPrefs.getString("DRIVER_STATUS", "__failed");
-        if ((context.getResources().getString(R.string.service)).equals("nammayatripartner")) {
+        if ((context.getResources().getString(R.string.service)).equals("nammayatripartner") || (context.getResources().getString(R.string.service)).equals("jatrisaathidriver")) {
             if (driverStatus.equals("true")) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     context.startForegroundService(locationUpdateService);
