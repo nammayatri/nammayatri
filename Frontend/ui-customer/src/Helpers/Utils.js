@@ -540,3 +540,7 @@ exports["goBackPrevWebPage"] = function (id) {
     console.log("goBackPrevWebPage error " + err);
   }
 }
+
+exports["getMerchantId"] = function(id) {
+  return window.merchantID;
+}

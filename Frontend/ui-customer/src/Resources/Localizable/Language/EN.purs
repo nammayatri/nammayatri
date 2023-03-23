@@ -46,7 +46,7 @@ getEN script = case script of
   ENTER_YOUR_NAME -> "Enter Your Name"
   FULL_NAME-> "Full Name"
   EMAIL -> "Email"
-  WELCOME_TO_NAMMA_YATRI -> "Welcome to Namma Yatri"
+  WELCOME_TEXT -> "Welcome to Namma Yatri"
   PLEASE_CHOOSE_YOUR_PREFERRED_LANGUAGE_TO_CONTINUE -> "Please choose your preferred language to continue."
   WRITE_TO_US -> "Write to Us"
   NOTE -> "Note: "

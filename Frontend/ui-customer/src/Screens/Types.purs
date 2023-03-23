@@ -572,7 +572,6 @@ type SelectLanguageScreenState = {
 }
 
 type SelectLanguageScreenData =  {
-  languages :: Array Language,
   isSelected :: Boolean
  }
 
@@ -863,7 +862,7 @@ type Fares = {
 , waitingCharges :: String
 }
 
-data FareTypes = BASE_FARE | EXTRA_DISTANCE_FARE | DRIVER_SELECTED_FARE | TOTAL_FARE | PICKUP_CHARGES | WAITING_CHARGES
+data FareTypes = BASE_FARE | EXTRA_DISTANCE_FARE | DRIVER_SELECTED_FARE | TOTAL_FARE | WAITING_CHARGES | DEAD_KILOMETER_FARE
 
 derive instance genericFareTypes :: Generic FareTypes _
 instance eqFareTypes :: Eq FareTypes where eq = genericEq
