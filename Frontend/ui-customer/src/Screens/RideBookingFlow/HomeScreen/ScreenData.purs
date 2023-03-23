@@ -82,6 +82,7 @@ initData = {
     , locationRequestCount : 0
     , searchId : ""
     , bookingId : ""
+    , merchantExoPhone : ""
     , expiredQuotes : []
     , isCancelRide : false
     , cancellationReasons : []

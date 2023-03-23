@@ -555,7 +555,8 @@ homeScreenFlow = do
             case response of 
               Right (ConfirmRes resp) -> do 
                 let bookingId = resp.bookingId
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}})
+                let merchantExoPhone = resp.merchantExoPhone
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, merchantExoPhone = merchantExoPhone, isPopUp = NoPopUp}})
                 homeScreenFlow
               Left err  -> do 
                 if not (err.code == 400 && (decodeErrorCode err.response.errorMessage) == "QUOTE_EXPIRED") then pure $ toast (getString ERROR_OCCURED_TRY_AGAIN) else pure unit

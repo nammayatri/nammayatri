@@ -774,7 +774,7 @@ eval (PricingTutorialModelActionController (PricingTutorialModelController.Close
 eval (DriverInfoCardActionController (DriverInfoCardController.PrimaryButtonAC PrimaryButtonController.OnClick)) state =
   continueWithCmd state
     [ do
-        _ <- pure $ showDialer (getDriverNumber "")
+        _ <- pure $ showDialer (state.props.merchantExoPhone)
         _ <- (firebaseLogEventWithTwoParams "ny_user_call_click" "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID))
         pure NoAction
     ]

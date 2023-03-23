@@ -486,6 +486,7 @@ type HomeScreenStateProps =
   , locationRequestCount :: Int
   , searchId :: String
   , bookingId :: String
+  , merchantExoPhone :: String
   , expiredQuotes :: Array String
   , isCancelRide :: Boolean
   , cancellationReasons :: Array CancellationReasons
