@@ -62,7 +62,7 @@ mkPersist
       nightShiftMultiplier Centesimal Maybe
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
-      status Domain.EstimateStatus Maybe
+      status Domain.EstimateStatus
       waitingChargePerMin Money Maybe
       waitingTimeEstimatedThreshold Seconds Maybe
       createdAt UTCTime

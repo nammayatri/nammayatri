@@ -161,7 +161,6 @@ library
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
-      SharedLogic.Estimate
       SharedLogic.GoogleTranslate
       SharedLogic.Merchant
       SharedLogic.MessageBuilder

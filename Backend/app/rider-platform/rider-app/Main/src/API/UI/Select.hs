@@ -105,7 +105,7 @@ cancelSearch personId estimateId = withFlowHandlerAPI . withPersonIdLogTag perso
       pure DSelect.BookingAlreadyCreated
     else do
       dCancelSearch <- DCancel.mkDomainCancelSearch personId estimateId
-      let sendToBpp = dCancelSearch.estimateStatus /= Just DEstimate.NEW
+      let sendToBpp = dCancelSearch.estimateStatus /= DEstimate.NEW
       result <-
         try @_ @SomeException $
           when sendToBpp . void . withShortRetry $
