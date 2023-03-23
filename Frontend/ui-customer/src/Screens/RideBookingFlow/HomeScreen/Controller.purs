@@ -126,7 +126,10 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen HOME_SCREEN)
       SettingSideBarController.GoToMyProfile -> do
         trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_my_profile"
-        trackAppEndScreen appId (getScreen HOME_SCREEN)      
+        trackAppEndScreen appId (getScreen HOME_SCREEN)     
+      SettingSideBarController.GoToEmergencyContacts -> do
+        trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_emergency_contacts_onclick"
+        trackAppEndScreen appId (getScreen HOME_SCREEN) 
       SettingSideBarController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "no_action"
     PricingTutorialModelActionController (PricingTutorialModelController.Close) -> trackAppActionClick appId (getScreen HOME_SCREEN) "pricing_tutorial" "close_icon"
     SearchLocationModelActionController act -> case act of
@@ -370,6 +373,7 @@ data ScreenOutput = LogoutUser
                   | PastRides HomeScreenState
                   | GoToMyProfile HomeScreenState
                   | ChangeLanguage HomeScreenState
+                  | GoToEmergencyContacts HomeScreenState
                   | Retry HomeScreenState
                   | GetQuotes HomeScreenState
                   | UpdatedState HomeScreenState Boolean
@@ -600,6 +604,10 @@ eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state = 
 eval (SettingSideBarActionController (SettingSideBarController.ChangeLanguage)) state = exit $ ChangeLanguage state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
+
+eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+
+eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state = exit $ GoToAbout state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state = 
   do

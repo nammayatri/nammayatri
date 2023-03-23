@@ -24,6 +24,7 @@ import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
@@ -32,6 +33,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -64,6 +66,7 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.print.PrintAttributes;
 import android.print.pdf.PrintedPdfDocument;
+import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Base64;
@@ -265,6 +268,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
     public static final int REQUEST_CALL = 8;
+    public static final int REQUEST_CONTACTS = 7;
     public static String phoneNumber;
     public static String invoice =null;
     public static String invoiceType =null;
@@ -3596,4 +3600,36 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             return "";
         }
     }
+
+    @JavascriptInterface
+    public void contactPermission() {
+        try {
+            if (ContextCompat.checkSelfPermission(MainActivity.getInstance(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(MainActivity.getInstance(), new String[]{Manifest.permission.READ_CONTACTS}, REQUEST_CONTACTS);
+            } else {
+                String contacts = MainActivity.getInstance().getPhoneContacts();
+                if (MainActivity.getInstance().getJuspayServices().getDynamicUI() != null) {
+                    contactsStoreCall(MainActivity.getInstance().getJuspayServices().getDuiCallback(), contacts);
+                }
+            }
+        } catch (Exception e) {
+            Log.e("error inside contactPermission", String.valueOf(e));
+        }
+    }
+
+
+    static String storeCallBContact = null;
+    @JavascriptInterface
+    public void storeCallBackContacts(String callback) {
+        storeCallBContact = callback;
+    }
+
+    public static void contactsStoreCall(DuiCallback dynamicUII, String contacts){
+        if (dynamicUII != null && storeCallBContact != null) {
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+            storeCallBContact,contacts);
+            dynamicUII.addJsToWebView(javascript);
+        }
+    }
+
 }

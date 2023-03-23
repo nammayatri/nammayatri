@@ -28,6 +28,17 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
 
+type Contacts = {
+  name :: String,
+  number :: String
+}
+
+type NewContacts = {
+  name :: String,
+  number :: String,
+  isSelected :: Boolean
+}
+
 type EditTextInLabelState =
  {
     topLabel :: String
@@ -558,6 +569,33 @@ type SelectLanguageScreenProps =  {
   selectedLanguage :: String,
   btnActive :: Boolean
  }
+
+-- ############################################## EmergencyContactsScreenState #############################
+
+
+type EmergencyContactsScreenState = {
+  data :: EmergencyContactsScreenData,
+  props :: EmergencyContactsScreenProps
+}
+
+type EmergencyContactsScreenData = {
+  contactInfoState :: Array Contacts,
+  contactsCount :: Int,
+  contactsList :: Array NewContacts,
+  contactsNewList :: Array NewContacts,
+  removedContactDetail :: NewContacts,
+  editedText :: String
+}
+
+type EmergencyContactsScreenProps = {
+  showContactList :: Boolean,
+  showInfoPopUp :: Boolean
+}
+
+type ContactDetail = {
+  name :: String,
+  phoneNumber :: String
+}
 
 -- ############################################## AboutUsScreenState #############################
 

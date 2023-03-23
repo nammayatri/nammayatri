@@ -30,6 +30,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Debug.Trace (spy)
 import Common.Types.App
+import Helpers.Utils (isPreviousVersion, getPreviousVersion)
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -78,6 +79,8 @@ settingsView state push =
   ][
      settingsMenuView {imageUrl : "ny_ic_past_rides,https://assets.juspay.in/nammayatri/images/user/ny_ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES} push
     , settingsMenuView {imageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES} push
+    , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then textView []
+      else settingsMenuView {imageUrl : "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS} push
     , settingsMenuView {imageUrl : "ny_ic_change_language,https://assets.juspay.in/nammayatri/images/user/ny_ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE} push
     , settingsMenuView {imageUrl : "ny_ic_help,https://assets.juspay.in/nammayatri/images/user/ny_ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP} push
     , settingsMenuView {imageUrl : "ny_ic_share,https://assets.juspay.in/nammayatri/images/user/ny_ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP} push
@@ -163,6 +166,7 @@ settingsMenuView item push  =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
+  , gravity CENTER_VERTICAL
   , disableClickFeedback false
   , padding if item.tag == SETTINGS_LOGOUT  then (Padding 16 16 16 16 ) else (Padding 0 16 16 16 )
   , onClick push $ ( const case item.tag of 
@@ -172,14 +176,15 @@ settingsMenuView item push  =
                               SETTINGS_LANGUAGE       -> ChangeLanguage 
                               SETTINGS_ABOUT          -> GoToAbout 
                               SETTINGS_LOGOUT         -> OnLogout
-                              SETTINGS_SHARE_APP      -> ShareAppLink)
+                              SETTINGS_SHARE_APP      -> ShareAppLink
+                              SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts)
   ][  imageView
       [ width ( V 25 )
       , height ( V 25 )
       , imageWithFallback item.imageUrl
       ]
     , textView
-      [ width MATCH_PARENT
+      [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , text item.text
       , textSize FontSize.a_18

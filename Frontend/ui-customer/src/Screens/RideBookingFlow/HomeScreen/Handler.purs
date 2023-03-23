@@ -47,6 +47,9 @@ homeScreen = do
     ChangeLanguage updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure CHANGE_LANGUAGE)
+    GoToEmergencyContacts updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure GO_TO_EMERGENCY_CONTACTS)
     GoToAbout updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_ABOUT)

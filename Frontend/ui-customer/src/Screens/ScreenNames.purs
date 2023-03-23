@@ -25,6 +25,7 @@ data ScreenName = SPLASH_SCREEN
                 | SELECT_LANGUAGE_SCREEN
                 | HELP_AND_SUPPORT_SCREEN
                 | ABOUT_US_SCREEN
+                | EMERGENCY_CONTACS_SCREEN
                 | ACCOUNT_SET_UP_SCREEN
                 | CONTACT_US_SCREEN
                 | TRIP_DETAILS_SCREEN
@@ -50,6 +51,7 @@ getScreen str = case str of
         SELECT_LANGUAGE_SCREEN        -> "select_language_screen"
         HELP_AND_SUPPORT_SCREEN       -> "help_and_support_screen"
         ABOUT_US_SCREEN               -> "about_us_screen"
+        EMERGENCY_CONTACS_SCREEN      -> "emergency_contacts_screen"
         ACCOUNT_SET_UP_SCREEN         -> "account_set_up_screen"
         CONTACT_US_SCREEN             -> "contact_us_screen"
         TRIP_DETAILS_SCREEN           -> "trip_details_screen"

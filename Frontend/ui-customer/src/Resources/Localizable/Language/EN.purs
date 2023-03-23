@@ -145,6 +145,10 @@ getEN script = case script of
   ADDRESSES -> "Addresses"
   NO_FAVOURITES_SAVED_YET -> "No favourites saved yet"
   SAVED_ADDRESS_HELPS_YOU_KEEP_YOUR_FAVOURITE_PLACES_HANDY -> "Favourite location helps in keeping your frequently visited places handy"
+  EMERGENCY_CONTACTS -> "Emergency Contacts"
+  ADD_EMERGENCY_CONTACTS -> "Add Emergency Contacts"
+  NO_EMERGENCY_CONTACTS_SET -> "No Emergency Contacts Set"
+  EMERGENCY_CONTACTS_SCREEN_DESCRIPTION -> "You can share your ride status in case of an emergency with upto 3 emergency contacts."
   COPIED -> "Copied"
   TRIP_ID -> "Trip Id"
   SAVE_PLACE -> "Save Place"
@@ -366,5 +370,10 @@ getEN script = case script of
   HEY -> "Hey"
   INVALID_CODE_PLEASE_RE_ENTER -> "Invalid Code. Please Re-enter"
   LET_TRY_THAT_AGAIN -> "Let's try that again..."
-
-
+  CONTACTS_SELECTED -> "Contacts Selected"
+  SELECT_CONTACTS -> "Select Contacts"
+  CONFIRM_EMERGENCY_CONTACTS -> "Confirm Emergency Contacts"
+  MAXIMUM_CONTACTS_LIMIT_REACHED -> "Maximum contacts limit reached"
+  ARE_YOU_SURE_YOU_WANT_TO_REMOVE_CONTACT -> "Are you sure you want to remove them from your emergency contacts?"
+  SEARCH_CONTACTS -> "Search Contacts"
+  SELECTED_CONTACT_IS_INVALID -> "The selected contact is invalid. Please recheck the number and try again"

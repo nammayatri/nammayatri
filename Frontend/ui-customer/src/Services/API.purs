@@ -1245,6 +1245,71 @@ instance showBoundingLatLong :: Show BoundingLatLong where show = genericShow
 instance decodeBoundingLatLong :: Decode BoundingLatLong where decode = defaultDecode
 instance encodeBoundingLatLong  :: Encode BoundingLatLong where encode = defaultEncode 
 
+newtype EmergContactsReq = EmergContactsReq {
+  defaultEmergencyNumbers :: Array ContactDetails
+}
+
+newtype ContactDetails = ContactDetails {
+  mobileNumber :: String,
+  name :: String,
+  mobileCountryCode :: String
+}
+
+newtype EmergContactsResp = EmergContactsResp {
+  result :: String 
+}
+
+instance makeEmergContactsReq :: RestEndpoint EmergContactsReq EmergContactsResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.emergencyContacts "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericEmergContactsReq :: Generic EmergContactsReq _
+derive instance newtypeEmergContactsReq :: Newtype EmergContactsReq _
+instance standardEncodeEmergContactsReq :: StandardEncode EmergContactsReq where standardEncode (EmergContactsReq body) = standardEncode body
+instance showEmergContactsReq :: Show EmergContactsReq where show = genericShow
+instance decodeEmergContactsReq :: Decode EmergContactsReq where decode = defaultDecode
+instance encodeEmergContactsReq  :: Encode EmergContactsReq where encode = defaultEncode 
+
+derive instance genericContactDetails :: Generic ContactDetails _
+derive instance newtypeContactDetails :: Newtype ContactDetails _
+instance standardEncodeContactDetails :: StandardEncode ContactDetails where standardEncode (ContactDetails body) = standardEncode body
+instance showContactDetails :: Show ContactDetails where show = genericShow
+instance decodeContactDetails :: Decode ContactDetails where decode = defaultDecode
+instance encodeContactDetails  :: Encode ContactDetails where encode = defaultEncode 
+
+derive instance genericEmergContactsResp :: Generic EmergContactsResp _
+derive instance newtypeEmergContactsResp :: Newtype EmergContactsResp _
+instance standardEncodeEmergContactsResp :: StandardEncode EmergContactsResp where standardEncode (EmergContactsResp body) = standardEncode body
+instance showEmergContactsResp :: Show EmergContactsResp where show = genericShow
+instance decodeEmergContactsResp :: Decode EmergContactsResp where decode = defaultDecode
+instance encodeEmergContactsResp  :: Encode EmergContactsResp where encode = defaultEncode
+
+
+data GetEmergContactsReq = GetEmergContactsReq
+
+newtype GetEmergContactsResp = GetEmergContactsResp {
+  defaultEmergencyNumbers :: Array ContactDetails
+}
+
+instance makeGetEmergContactsReq :: RestEndpoint GetEmergContactsReq GetEmergContactsResp where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.emergencyContacts "") headers reqBody
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericGetEmergContactsReq :: Generic GetEmergContactsReq _
+instance standardEncodeGetEmergContactsReq :: StandardEncode GetEmergContactsReq where standardEncode (GetEmergContactsReq) = standardEncode {}
+instance showGetEmergContactsReq :: Show GetEmergContactsReq where show = genericShow
+instance decodeGetEmergContactsReq :: Decode GetEmergContactsReq where decode = defaultDecode
+instance encodeGetEmergContactsReq  :: Encode GetEmergContactsReq where encode = defaultEncode 
+
+derive instance genericGetEmergContactsResp :: Generic GetEmergContactsResp _
+derive instance newtypeGetEmergContactsResp :: Newtype GetEmergContactsResp _
+instance standardEncodeGetEmergContactsResp :: StandardEncode GetEmergContactsResp where standardEncode (GetEmergContactsResp body) = standardEncode body
+instance showGetEmergContactsResp :: Show GetEmergContactsResp where show = genericShow
+instance decodeGetEmergContactsResp :: Decode GetEmergContactsResp where decode = defaultDecode
+instance encodeGetEmergContactsResp  :: Encode GetEmergContactsResp where encode = defaultEncode 
+
 data GetDriverLocationReq = GetDriverLocationReq String
 
 newtype GetDriverLocationResp = GetDriverLocationResp LatLong

@@ -51,6 +51,7 @@ data KeyStore
   | PREVIOUS_CURRENT_LOCATION
   | MERCHANT_ID
   | BASE_URL
+  | CONTACTS
 
 derive instance genericKeyStore :: Generic KeyStore _
 

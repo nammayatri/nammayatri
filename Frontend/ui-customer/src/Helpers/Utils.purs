@@ -32,7 +32,7 @@ import Foreign.Class (class Decode, class Encode)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Presto.Core.Flow (Flow, doAff)
 import Types.App (GlobalState)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..))
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts)
 import Engineering.Helpers.Commons (liftFlow, os)
 import Control.Monad.Except (runExcept)
 import Foreign.Generic (decodeJSON, encodeJSON)
@@ -84,6 +84,8 @@ foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -
 foreign import getLocationName :: forall action. (action -> Effect Unit) -> String -> String -> String -> (String -> String -> String -> action) -> Effect Unit
 
 foreign import getCurrentDate :: String -> String
+foreign import storeCallBackContacts :: forall action. (action -> Effect Unit) -> ((Array Contacts) -> action) -> Effect Unit
+foreign import parseNewContacts :: String -> (Array NewContacts)
 
 foreign import dateCompare :: Date -> Date -> Boolean
 
@@ -147,6 +149,7 @@ foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit)
 foreign import parseFloat :: forall a. a -> Int -> String
 
 foreign import clearWaitingTimer :: String -> Unit
+foreign import contactPermission :: Unit -> Effect Unit
 
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
