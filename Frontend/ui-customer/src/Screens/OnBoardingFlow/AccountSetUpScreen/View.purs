@@ -32,7 +32,8 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App (LazyCheck(..))
 import Screens.AccountSetUpScreen.ComponentConfig
- 
+import Constant.Test as Id
+
 
 screen :: ST.AccountSetUpScreenState -> Screen Action ST.AccountSetUpScreenState ScreenOutput
 screen initialState =
@@ -54,6 +55,7 @@ view push state =
         , background Color.white900
         , onBackPressed push (const BackPressed)
         , afterRender push (const AfterRender)
+        , Id.testId $ Id.Screen Id.accountSetUpScreen
         ]
         [ linearLayout
             [ height MATCH_PARENT

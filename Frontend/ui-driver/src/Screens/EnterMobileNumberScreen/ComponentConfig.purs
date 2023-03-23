@@ -20,6 +20,7 @@ import Language.Strings
 import Language.Types (STR(..))
 import PrestoDOM
 import Screens.Types as ST
+import EN
 
 primaryButtonViewConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 primaryButtonViewConfig state = let
@@ -32,5 +33,6 @@ primaryButtonViewConfig state = let
       , height = (V 60)
       , cornerRadius = 0.0
       , margin = (Margin 0 0 0 0)
+      , testIdText = (getEN NEXT)
       }
   in primaryButtonConfig'

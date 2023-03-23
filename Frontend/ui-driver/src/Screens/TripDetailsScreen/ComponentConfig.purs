@@ -26,6 +26,7 @@ import Language.Types (STR(..))
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
+import EN
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
@@ -102,5 +103,6 @@ primaryButtonConfig state = let
       , cornerRadius = 0.0
       , background = Color.black900
       , height = (V 64)
+      , testIdText = if state.props.issueReported then (getEN GO_HOME) else (getEN SUBMIT)
       }
   in primaryButtonConfig'

@@ -49,6 +49,7 @@ import Data.Maybe(fromMaybe, Maybe(..))
 import Types.App (GlobalState)
 import Data.Either (Either(..))
 import Screens.CustomerUtils.SavedLocationScreen.ComponentConfig
+import Constant.Test as Id
 
 screen :: ST.SavedLocationScreenState -> Screen Action ST.SavedLocationScreenState ScreenOutput
 screen initialState = 
@@ -77,6 +78,7 @@ view push state =
   , orientation VERTICAL
   , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
   , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
+  , Id.testId $ Id.Screen Id.savedLocationScreen
   ][  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT

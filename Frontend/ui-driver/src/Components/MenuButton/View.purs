@@ -15,7 +15,7 @@
 
 module Components.SelectMenuButton.View where
 
-import Prelude (Unit, const, ($), (==))
+import Prelude (Unit, const, ($), (==), (<>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, imageWithFallback)
 import Components.SelectMenuButton.Controller (Action(..), State)
 import Effect (Effect)
@@ -23,6 +23,7 @@ import Font.Style as FontStyle
 import Font.Size as FontSize
 import Styles.Colors as Color
 import Common.Types.App
+import Constant.Test as Id
 
 view 
   :: forall w.(Action -> Effect Unit)
@@ -33,6 +34,7 @@ view push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
+    , Id.testId $ Id.Component Id.menuButton
     ][linearLayout
       [ height $ V 1
       , width MATCH_PARENT
@@ -47,6 +49,7 @@ view push state =
           , padding (Padding 20 15 0 15)
           , onClick push (const (OnSelection state))
           , gravity CENTER_VERTICAL
+          , Id.testId $ Id.Button $ Id.BtnConfig if(state.text.name == "English") then state.text.name else (state.text.subtitle)
           ][ linearLayout
               [ height WRAP_CONTENT
               , width WRAP_CONTENT

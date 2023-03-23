@@ -22,6 +22,7 @@ import Styles.Colors as Color
 import Components.MenuButton.Controller (Action(..), Config)
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), clickable, color, cornerRadius, fontStyle, gravity, height, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import Common.Types.App
+import Constant.Test as Id
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -34,6 +35,7 @@ view push config =
         , cornerRadius config.cornerRadius
         , stroke config.stroke
         , onClick push  (const (OnClick config))
+        , Id.testId $ Id.Component (Id.menuButton <> Id.underScore <> config.testIdText)
         , clickable true
         ][linearLayout
             [ height WRAP_CONTENT

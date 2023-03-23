@@ -33,6 +33,8 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Common.Types.App
 import Screens.TripDetailsScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.TripDetailsScreenState -> Screen Action ST.TripDetailsScreenState ScreenOutput 
 screen initialState = 
@@ -55,6 +57,7 @@ view push state =
   , background Color.white900
   , onBackPressed push (const BackPressed)
   , afterRender push (const AfterRender)
+  , Id.testId $ Id.Screen Id.tripDetailsScreen
   ][linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -114,6 +117,7 @@ view push state =
                          , width MATCH_PARENT
                          , orientation HORIZONTAL
                          , onClick push (const CallSupport)
+                         , Id.testId $ Id.Object Id.call
                           ][ imageView
                             [ imageWithFallback "ny_ic_support,https://assets.juspay.in/nammayatri/images/driver/ny_ic_support.png"
                             , height $ V 17
@@ -254,6 +258,7 @@ tripDataView push state =
                 , width WRAP_CONTENT
                 , orientation HORIZONTAL
                 , onClick push (const Copy)
+                , Id.testId $ Id.Object Id.copy
                 ][ textView
                     [ text state.data.tripId
                     , width WRAP_CONTENT
@@ -351,6 +356,7 @@ reportIssueView state push =
         , orientation HORIZONTAL
         , margin (MarginBottom 16)
         , onClick push $ const ReportIssue 
+        , Id.testId $ Id.Container (getEN REPORT_AN_ISSUE)
         ][  textView
             ([ text (getString REPORT_AN_ISSUE)
             , color Color.darkDescriptionText
@@ -399,6 +405,7 @@ reportIssueView state push =
                        , hint "You can describe the issue you faced here"
                        , pattern "[A-Za-z0-9 ]*,255"
                        , onChange push $ MessageTextChanged
+                       , Id.testId $ Id.TextField Id.click
                        ]
                      ]  
                 ]

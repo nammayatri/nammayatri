@@ -35,6 +35,10 @@ import Components.GenericHeader.View as GenericHeader
 import Common.Types.App
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os)
+import Constant.Test as Id
+import Helpers.Utils (toString)
+import EN
+
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -93,6 +97,7 @@ supportButtonViewContent state push item index =  linearLayout
          ,  margin $ Margin 16 12 16 0
          , clickable true
          , onClick push $ const item.action
+         , Id.testId $ Id.Container (toString(index))
         ][ linearLayout 
            [ height WRAP_CONTENT
            , width WRAP_CONTENT
@@ -174,11 +179,13 @@ callPoliceConfig state  =
     , option1 {
       text = getString CANCEL_
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 16 16) }
+    , margin = (MarginHorizontal 16 16) 
+    , testIdText = (getEN CANCEL_)}
     , option2 {
       text = getString CALL_POLICE
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 12 0)  }
+    , margin = (MarginHorizontal 12 0)  
+    , testIdText = (getEN CALL_POLICE)}
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_POLICE
@@ -201,11 +208,13 @@ contactSupportConfig state  =
     , option1 {
       text = getString CANCEL_
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 16 16) }
+    , margin = (MarginHorizontal 16 16) 
+    , testIdText = (getEN CONTACT_SUPPORT)}
     , option2 {
       text = getString CALL_SUPPORT
     , fontSize = FontSize.a_16
-    , margin = (MarginHorizontal 12 0) }
+    , margin = (MarginHorizontal 12 0) 
+    , testIdText = (getEN CALL_SUPPORT)}
     , backgroundClickable = true
     , secondaryText {
       text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT

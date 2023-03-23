@@ -30,6 +30,7 @@ import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Padding(..))
 import Styles.Colors as Color
 import Common.Types.App
+import EN
 
 genericHeaderConfig :: ST.MyProfileScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
@@ -86,6 +87,7 @@ updateButtonConfig state = let
         , margin = (Margin 0 0 0 0)
         , id = "PrimaryButtonUpdate"
         , enableLoader = (JB.getBtnLoader "PrimaryButtonUpdate")
+        , testIdText = (getEN UPDATE)
         }
     in updateButtonConfig'
 
@@ -100,13 +102,14 @@ requestDeletePopUp state = let
       option1 {
         text = (getString CANCEL_STR)
       , fontSize = FontSize.a_16
+      , testIdText = (getEN CANCEL_STR)
       },
       option2 {text = (getString YES_DELETE_IT)
       , background = Color.red
       , color = Color.white900
       , strokeColor = Color.red
-      , fontSize = FontSize.a_16 }
-     
+      , fontSize = FontSize.a_16 
+      , testIdText = (getEN YES_DELETE_IT)}
     }
   in popUpConfig'
 

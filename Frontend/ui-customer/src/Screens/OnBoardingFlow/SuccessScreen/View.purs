@@ -35,6 +35,7 @@ import Screens.SuccessScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SuccessScreenState)
 import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
+import Constant.Test as Id
 
 screen :: SuccessScreenState -> ScopedScreen Action SuccessScreenState ScreenOutput
 screen initialState =
@@ -65,6 +66,7 @@ view push state =
     , background Color.black9000
     , padding (PaddingHorizontal 24 24)
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.successScreen
     ]
     [ linearLayout
         [ height WRAP_CONTENT

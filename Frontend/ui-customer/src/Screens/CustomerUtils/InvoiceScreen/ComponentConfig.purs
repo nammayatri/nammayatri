@@ -25,6 +25,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.GenericHeader as GenericHeader
 import Styles.Colors as Color
 import Common.Types.App
+import EN
 
 genericHeaderConfig :: ST.InvoiceScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
@@ -58,5 +59,6 @@ primaryButtonConfig state = let
      { textConfig
       { text = (getString DOWNLOAD_PDF)
       }
+     , testIdText = (getEN DOWNLOAD_PDF)
      }
    in primaryButtonConfig'

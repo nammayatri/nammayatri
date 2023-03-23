@@ -24,6 +24,7 @@ import Screens.SplashScreen.Controller (Action(..), eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Log
+import Constant.Test as Id
 
 screen :: ST.SplashScreenState -> Screen Action ST.SplashScreenState Unit
 screen initialState =
@@ -49,6 +50,7 @@ view push state =
     , clickable true
     , onClick push (const (OnClick))
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.splashScreen
     ][ linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT

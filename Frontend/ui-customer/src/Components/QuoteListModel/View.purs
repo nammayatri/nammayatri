@@ -37,6 +37,8 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Helpers.Utils (isPreviousVersion, getPreviousVersion)
 import Styles.Colors as Color
 import Common.Types.App
+import Constant.Test as Id
+import EN
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -44,6 +46,7 @@ view push state =
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
+  , Id.testId $ Id.Component Id.quoteListModel
   ][  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -247,6 +250,7 @@ selectRideAndConfirmView state push =
     , gravity CENTER
     , padding (Padding 16 12 16 12)
     , onClick push $ const CancelAutoAssigning
+    , Id.testId $ Id.Click Id.close
     ][ imageView
       [ height $ V 24
       , width $ V 24
@@ -331,6 +335,7 @@ quoteListTopSheetView state push =
                   [ height $ V 40
                   , width $ V 40
                   , onClick push $ const GoBack
+                  , Id.testId $ Id.ToolBar Id.backIcon
                   ][  imageView 
                       [ height $ V 24
                       , width $ V 24
@@ -461,6 +466,7 @@ homeButtonConfig state = let
       , stroke = ("1," <> Color.black)
       , id = "HomeButtonQuoteList"
       , enableLoader = (getBtnLoader "HomeButtonQuoteList")
+      , testIdText = (getEN HOME)
       }
   in homeButtonConfig'
 
@@ -478,6 +484,7 @@ tryAgainButtonConfig state = let
       , width = MATCH_PARENT
       , id = "TryAgainButtonQuoteList"
       , enableLoader = (getBtnLoader "TryAgainButtonQuoteList")
+      , testIdText = (getEN TRY_AGAIN)
       }
   in tryAgainButtonConfig'
 

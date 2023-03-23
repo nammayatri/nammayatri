@@ -36,6 +36,7 @@ type Config =
   , errorConfig :: TextConfig
   , errorDescriptionConfig :: TextConfig
   , buttonConfig :: ButtonConfig 
+  , testIdText :: String
   }
 
 type ImageConfig = 
@@ -115,5 +116,5 @@ config =
     , background : Color.black
     , visibility : VISIBLE
     }
-
+  , testIdText : ""
   }

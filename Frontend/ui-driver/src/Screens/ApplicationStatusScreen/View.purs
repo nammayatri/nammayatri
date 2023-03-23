@@ -36,6 +36,8 @@ import Services.APITypes (DriverRegistrationStatusResp(..), DriverRegistrationSt
 import Services.Backend (driverRegistrationStatusBT)
 import Styles.Colors as Color
 import Common.Types.App
+import Constant.Test as Id
+import EN
 
 screen :: ST.ApplicationStatusScreenState -> String -> Screen Action ST.ApplicationStatusScreenState ScreenOutput
 screen initialState screenType =
@@ -65,6 +67,7 @@ view screenType push state =
     , background Color.white900
     , afterRender push (const AfterRender)
     , onBackPressed push (const BackPressed)
+    , Id.testId $ Id.Screen Id.applicationStatusScreen
     ][ textView (
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -72,6 +75,7 @@ view screenType push state =
       , margin (Margin 0 30 20 0)
       , text (getString LOGOUT)
       , onClick push (const Logout)
+      , Id.testId $ Id.Click Id.logout
       , alignParentRight "true,-1"
       , color Color.blueBtn
       ] <> FontStyle.body1 TypoGraphy
@@ -92,6 +96,7 @@ primaryButtonView state push =
   , visibility if state.data.dlVerificationStatus == "FAILED" || state.data.rcVerificationStatus == "FAILED" then VISIBLE else GONE
   , cornerRadius 8.0
   , onClick push (const PrimaryButtonActionController)
+  , Id.testId $ Id.PrimaryButton (getEN TRY_AGAIN)
   ][ textView
       [ text (getString TRY_AGAIN)
       , textSize FontSize.a_16
@@ -206,6 +211,7 @@ detailsView state config push =
       , margin (MarginTop 8)
       , fontStyle $ FontStyle.medium LanguageStyle
       , onClick push (const $ ReTry config.docType)
+      , Id.testId $ Id.Text (getEN TRY_AGAIN)
       , visibility if (config.status == "PENDING" || config.status == "VALID" || config.status == "INVALID") then GONE else VISIBLE -- $ if (config.verificationStatus == "PENDING") then GONE  else VISIBLE
       , lineHeight "18"
       ]
@@ -234,6 +240,7 @@ supportTextView state push =
     , fontStyle $ FontStyle.regular LanguageStyle
     , textSize FontSize.a_12
     , onClick push (const SupportCall)
+    , Id.testId $ Id.Object Id.call
     ]
   ] 
 

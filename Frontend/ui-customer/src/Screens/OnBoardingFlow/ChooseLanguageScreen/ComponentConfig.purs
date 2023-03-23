@@ -21,6 +21,8 @@ import JBridge as JB
 import Prelude ((==))
 import PrestoDOM (Margin(..))
 import Screens.Types as ST
+import Constant.Test as Id
+import EN
 
 primaryButtonConfig :: ST.ChooseLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -33,6 +35,7 @@ primaryButtonConfig state = let
       , margin = (Margin 0 0 0 0)   
       , enableLoader = (JB.getBtnLoader "ChooseLanguageScreen")
       , id = "ChooseLanguageScreen"
+      , testIdText = Id.continue
       }
   in primaryButtonConfig'
 

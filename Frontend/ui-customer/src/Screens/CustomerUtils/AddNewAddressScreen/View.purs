@@ -42,6 +42,8 @@ import Styles.Colors as Color
 import Common.Types.App
 import Screens.CustomerUtils.AddNewAddressScreen.ComponentConfig 
 import Storage (KeyStore(..), getValueToLocalStore)
+import Constant.Test as Id
+import EN
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState = 
@@ -74,6 +76,7 @@ view push state =
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
           pure unit 
           ) (const AfterRender)
+  , Id.testId $ Id.Screen Id.addNewAddressScreen
   ][
    frameLayout[
      width MATCH_PARENT
@@ -148,6 +151,7 @@ recenterButtonView state push =
         _ <- JB.getCurrentPosition push UpdateCurrentLocation
         pure unit 
        ) (const $ RecenterCurrentLocation)
+      , Id.testId $ Id.Object Id.recenter
       ]
 
   ]
@@ -205,6 +209,7 @@ bottomBtnsView state push =
                                 else do 
                                   _ <- push action
                                   pure unit) (const item.action)
+              , Id.testId $ Id.Container if item.tag == "LOCATE_ON_MAP" then (getEN SELECT_ON_MAP) else (getEN CURRENT_LOCATION)
               ] <> FontStyle.body1 TypoGraphy
             ] 
           , linearLayout
@@ -265,6 +270,7 @@ addNewScreenView state push =
               , textSize FontSize.a_16
               , lineHeight "24"
               , onChange push AddressChanged
+              , Id.testId $ Id.TextField Id.changeAddress
               , hintColor "#A7A7A7"
               ]
         ,linearLayout
@@ -279,6 +285,7 @@ addNewScreenView state push =
                   pure unit 
                   ) (const $ ClearEditText)
           , visibility if state.data.address /= ""  then VISIBLE else GONE
+          , Id.testId $ Id.TextField (Id.image <> Id.underScore <> Id.clear)
           ][imageView 
             [ height $ V 16
             , width $ V 16
@@ -482,6 +489,7 @@ savePlaceView state push =
                           _ <- HU.setText' (EHC.getNewIDWithTag "SavedLocationEditText") state.data.address
                           pure unit)
               $ const ChangeAddress
+          , Id.testId $ Id.Container (getEN EDIT)
           ][  textView
               [ text (state.data.selectedItem).description 
               , textSize FontSize.a_14
@@ -506,6 +514,7 @@ savePlaceView state push =
                 , textSize FontSize.a_14
                 , fontStyle $ FontStyle.medium LanguageStyle
                 , lineHeight "18"
+                , Id.testId $ Id.TextField ( Id.focusIndex <> Id.underScore <> getEN EDIT)
                 ]]
           ]
          , textView
@@ -567,6 +576,7 @@ tagView state push =
           , background if (Just index) == state.data.activeIndex then Color.catskillWhite else Color.grey800
           , onClick push $ const (TagSelected index)
           , margin (MarginRight 12)
+          , Id.testId $ Id.Object (Id.tag <> Id.underScore <> item.tag)
           , cornerRadius 6.0
           , alpha case item.tag of 
                       "FAVOURITE"     -> 1.0

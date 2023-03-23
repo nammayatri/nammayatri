@@ -32,6 +32,8 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import PrestoDOM (Length(..) , Margin(..), Orientation(..), Padding(..) , Visibility(..), Gravity(..), PrestoDOM, cornerRadius, height, width, margin, padding, linearLayout, gravity, orientation, fontStyle, textSize, textView, text, background, clickable, color, imageView, imageUrl, ellipsize, maxLines, onClick, lineHeight, visibility, textFromHtml, layoutGravity, imageWithFallback)
 import Common.Types.App
 import Data.Maybe
+import Constant.Test as Id
+import EN
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -41,6 +43,7 @@ view push config =
   , gravity LEFT 
   , orientation VERTICAL
   , background Color.white900
+  , Id.testId $ Id.Component Id.fareBreakup
   ][  linearLayout 
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -61,6 +64,7 @@ view push config =
       , padding $ Padding 0 20 4 8
       , margin (MarginVertical 0 8)
       , onClick push $ const ShowInvoice
+      , Id.testId $ Id.Container (getEN VIEW_BREAKDOWN)
       ][ textView
         [ text config.headingText
         , textSize FontSize.a_12

@@ -24,6 +24,7 @@ import Prelude
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
+import EN
 
 primaryButtonConfig :: ST.PermissionsScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -39,5 +40,6 @@ primaryButtonConfig state = let
       , height = (V 60)
       , alpha = if(state.props.isLocationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked) then 1.0 else 0.7
       , isClickable = (state.props.isLocationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked)
+      , testIdText = (getEN ALLOW_ACCESS)
       }
   in primaryButtonConfig'

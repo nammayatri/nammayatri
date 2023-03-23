@@ -32,7 +32,7 @@ type Config = {
     cancelRideReasons :: Array CancellationReasons
     , primaryButtonTextConfig :: PrimaryButtonTextConfig
     , activeIndex :: Maybe Int
-    , activeReasonCode :: Maybe String
+    , activeReasonCode :: String
     , isCancelButtonActive :: Boolean
     , isMandatoryTextHidden :: Boolean
     , isLimitExceeded :: Boolean
@@ -65,7 +65,7 @@ config =
           , secondText : "Cancel Ride"
         }
     , activeIndex : Nothing  
-    , activeReasonCode : Nothing
+    , activeReasonCode : ""
     , isCancelButtonActive : false
     , isMandatoryTextHidden : true
     , isLimitExceeded : false

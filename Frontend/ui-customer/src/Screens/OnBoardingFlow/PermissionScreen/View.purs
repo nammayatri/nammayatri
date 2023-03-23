@@ -32,6 +32,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig 
+import Constant.Test as Id
 
 screen :: ST.PermissionScreenState -> String -> ScopedScreen Action ST.PermissionScreenState ScreenOutput
 screen initialState triggertype = 
@@ -53,6 +54,7 @@ view triggertype push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , clickable true
+  , Id.testId $ Id.Screen Id.permissionScreen
   ][ linearLayout
      [ height MATCH_PARENT
      , width MATCH_PARENT

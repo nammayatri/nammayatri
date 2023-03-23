@@ -23,6 +23,7 @@ import Styles.Colors as Color
 import PrestoDOM.Properties(cornerRadii)
 import Engineering.Helpers.Commons (screenWidth)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Constant.Test as Id
 
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
@@ -31,6 +32,7 @@ view push config =
   [ height WRAP_CONTENT
   , width $ V ((screenWidth unit) - 20)
   , gravity CENTER
+  , Id.testId $ Id.Component Id.updateErrorModel
   ][errorView config push]
 
   
@@ -69,6 +71,7 @@ errorView config push =
           , margin config.imageConfig.margin
           , alpha config.imageConfig.alpha
           , onClick push $ const OnCloseClick
+          , Id.testId $ Id.Click Id.close
           ]
       ]
   ]

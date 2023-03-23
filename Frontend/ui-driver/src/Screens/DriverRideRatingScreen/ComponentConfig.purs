@@ -21,6 +21,7 @@ import Language.Types (STR(..))
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
+import EN
 
 primaryButtonConfig :: ST.DriverRideRatingScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -32,5 +33,6 @@ primaryButtonConfig state = let
       , cornerRadius = 0.0
       , background = Color.black900
       , height = (V 64)
+      , testIdText = (getEN SUBMIT)
       }
   in primaryButtonConfig'

@@ -16,11 +16,12 @@
 module Components.PrimaryButton.View where
 
 import Effect (Effect)
-import Prelude (Unit, bind, const, discard, pure, unit, ($), (&&), (==))
+import Prelude (Unit, bind, const, discard, pure, unit, ($), (&&), (==), (<>))
 import Components.PrimaryButton.Controller (Action(..), Config)
 import PrestoDOM (Length(..), Orientation(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback)
 import JBridge (startLottieProcess, toggleBtnLoader, getKeyInSharedPrefKeys)
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
+import Constant.Test as Id
 
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -38,6 +39,7 @@ view push config =
               _ <- pure $ startLottieProcess "primary_button_loader" (getNewIDWithTag config.id) true 0.6 "CENTER_CROP"
               push action
               ) (const OnClick)
+  , Id.testId $ Id.Component (Id.primaryButton <> Id.underScore <> config.testIdText)
   , orientation HORIZONTAL
   , afterRender (\action -> do 
               _ <- pure $ toggleBtnLoader "" false

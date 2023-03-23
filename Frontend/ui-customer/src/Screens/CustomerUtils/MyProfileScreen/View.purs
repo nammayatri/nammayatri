@@ -41,6 +41,8 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.CustomerUtils.MyProfileScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.MyProfileScreenState -> Screen Action ST.MyProfileScreenState ScreenOutput
 screen initialState =
@@ -73,6 +75,7 @@ view push state =
         , onBackPressed push (const BackPressed state)
         , afterRender push (const AfterRender)
         , padding (PaddingBottom EHC.safeMarginBottom)
+        , Id.testId $ Id.Screen Id.myProfileScreen
     ][ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -99,6 +102,7 @@ view push state =
                   , color Color.blueTextColor
                   , fontStyle $ FontStyle.semiBold LanguageStyle
                   , onClick push (const EditProfile)
+                  , Id.testId $ Id.Element (getEN EDIT)
                   ]
                 ]
              ]
@@ -182,6 +186,7 @@ deleteAccountView state push =
             , gravity CENTER_VERTICAL
             , padding (Padding 15 21 15 21)
             , onClick push (const $ ReqDelAccount)
+            , Id.testId $ Id.Container (getEN REQUEST_TO_DELETE_ACCOUNT)
             ][  imageView
                 [ width $ V 20
                 , height $ V 20

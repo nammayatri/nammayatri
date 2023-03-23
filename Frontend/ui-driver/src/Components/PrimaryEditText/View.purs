@@ -30,6 +30,7 @@ import Language.Types(STR(..))
 import PrestoDOM.Properties(cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Common.Types.App
+import Constant.Test as Id
 
 view :: forall w .  (Action  -> Effect Unit) -> PrimaryEditTextState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -37,6 +38,7 @@ view push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , Id.testId $ Id.Component Id.primaryedittext
     ][ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -98,6 +100,7 @@ view push state =
               , pattern (fromMaybe "[a-z, 0-9, A-Z]" state.pattern )
               , letterSpacing state.letterSpacing
               , onChange push (TextChanged state.valueId)
+              , Id.testId $ Id.TextField Id.primaryedittext
               , stroke if state.isinValid then ("1," <> Color.white900) else ("1," <> Color.white900)
               , onFocus push (const TextClicked)
               , id state.id

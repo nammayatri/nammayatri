@@ -33,6 +33,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.OnBoardingFlow.ChooseLanguageScreen.ComponentConfig 
+import Constant.Test as Id
 
 screen :: ST.ChooseLanguageScreenState -> Screen Action ST.ChooseLanguageScreenState ScreenOutput
 screen initialState =
@@ -49,6 +50,7 @@ view push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , background Color.white900
+  , Id.testId $ Id.Screen Id.chooseLanguageScreen
   ][  linearLayout 
   [ height MATCH_PARENT
   , width MATCH_PARENT

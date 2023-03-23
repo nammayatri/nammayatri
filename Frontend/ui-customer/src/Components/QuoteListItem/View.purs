@@ -38,6 +38,8 @@ import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Common.Types.App
+import Constant.Test as Id
+import EN
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -59,6 +61,7 @@ view push state =
                           pure unit 
                         ) (const NoAction)
           , onClick push (const $ Click state)
+          , Id.testId $ Id.Component Id.quoteListItem
           , disableClickFeedback true
           , padding (Padding 16 10 16 24)
           ][ linearLayout[
@@ -230,6 +233,7 @@ primaryButtonView state push =
   , visibility if state.selectedQuote == Just state.id then VISIBLE else GONE
   , cornerRadius 8.0
   , onClick push $ const ConfirmRide
+  , Id.testId $ Id.Button (Id.BtnConfig (getEN CONFIRM_RIDE_))
   , gravity CENTER
   ][ textView
      [ width WRAP_CONTENT
@@ -290,6 +294,7 @@ autoAcceptingView state push =
             , width $ V 18
             , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
             , onClick push $ const CancelAutoAssigning
+            , Id.testId $ Id.Click (Id.close <> Id.underScore <> Id.image)
             ]
         ]
 

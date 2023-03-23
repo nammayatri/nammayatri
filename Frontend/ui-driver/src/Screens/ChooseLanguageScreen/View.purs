@@ -33,6 +33,7 @@ import Animation.Config as AnimConfig
 import Data.Array as DA
 import Common.Types.App
 import Screens.ChooseLanguageScreen.ComponentConfig
+import Constant.Test as Id
 
 screen :: ST.ChooseLanguageScreenState -> Screen Action ST.ChooseLanguageScreenState ScreenOutput
 screen initialState =
@@ -58,6 +59,7 @@ view push state =
     , gravity BOTTOM
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.chooseLanguageScreen
     ][ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT

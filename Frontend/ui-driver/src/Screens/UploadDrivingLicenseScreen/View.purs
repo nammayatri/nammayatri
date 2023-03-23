@@ -37,8 +37,10 @@ import Effect.Class (liftEffect)
 import Data.Maybe
 import Log (printLog)
 import Data.String as DS
+import Constant.Test as Id
 import Common.Types.App
 import Screens.UploadDrivingLicenseScreen.ComponentConfig
+import EN
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
@@ -74,6 +76,7 @@ linearLayout
                       _<- push action
                       pure unit
                       ) $ const (AfterRender)
+    , Id.testId $ Id.Screen Id.uploadDrivingLicenseScreen
     ][ headerLayout state push
       , linearLayout
         [ width MATCH_PARENT
@@ -133,7 +136,7 @@ linearLayout
       linearLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
-      ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_DL_IMAGE), openGenericMessageModal : state.props.openGenericMessageModal, buttonText : (getString NEXT) }] else linearLayout [][]
+      ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_DL_IMAGE), openGenericMessageModal : state.props.openGenericMessageModal, buttonText : (getString NEXT) , testIdText : (getEN NEXT)}] else linearLayout [][]
   ] 
   
 registrationModalView :: ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -184,6 +187,7 @@ enterLicenceNumber state push =
             , fontStyle $ FontStyle.semiBold LanguageStyle
             , clickable true 
             , onClick push (const $ TutorialModal "LICENSE")
+            , Id.testId $ Id.Text (getEN WHERE_IS_MY_LICENSE_NUMBER)
             , visibility GONE
             ]
         ]
@@ -216,6 +220,7 @@ frontUploadSection state push =
     , onClick push (const( UploadFileAction "front"))
     , clickable $ state.data.imageFront == ""
     , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
+    , Id.testId $ Id.Container (Id.upload <> Id.underScore <> Id.front)
   ][
     textView
     ([ text (getString FRONT_SIDE)
@@ -268,6 +273,7 @@ backUploadSection state push =
   , orientation VERTICAL
   , onClick push (const (UploadFileAction "back"))
   , clickable $ state.data.imageBack == ""
+  , Id.testId $ Id.Container (Id.upload <> Id.underScore <> Id.back)
   ][
     textView
     ([ text (getString BACK_SIDE)
@@ -312,6 +318,7 @@ previewIcon state push previewType =
         , onClick (\action-> do
                       _ <- liftEffect $ JB.previewImage $ if(previewType == "front") then state.data.imageFrontUrl else state.data.imageBack
                       pure unit)(const NoAction)
+        , Id.testId $ Id.Container Id.preview
         ] 
       , imageView
           [ height (V 10)
@@ -319,6 +326,7 @@ previewIcon state push previewType =
           , margin (MarginLeft 10)
           , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
           , onClick push (const( RemoveUploadedFile previewType))
+          , Id.testId $ Id.Container (Id.preview <> Id.underScore <> Id.clear)
           ]
     ]
 
@@ -343,6 +351,7 @@ headerLayout state push =
         , padding (PaddingHorizontal 2 2)
         , margin (MarginLeft 5)
         , onClick push (const $ BackPressed state.props.openLicenseManual)
+        , Id.testId $ Id.ToolBar Id.backIcon
         ]
       , textView
         [ width WRAP_CONTENT
@@ -367,6 +376,7 @@ headerLayout state push =
             , fontStyle $ FontStyle.semiBold LanguageStyle
             , clickable true
             , onClick push (const $ TutorialModal "LICENSE")
+            , Id.testId $ Id.Text (getEN HELP)
             ]
         ]
     ]
@@ -399,6 +409,7 @@ dateOfBirth push state =
                         _ <- JB.datePicker "MINIMUM_EIGHTEEN_YEARS" push $ DatePicker "DATE_OF_BIRTH"
                         pure unit
                       ) (const SelectDateOfBirthAction)
+        , Id.testId $ Id.Object Id.date
       ][ textView
         ([ text if state.data.dob == "" then (getString SELECT_DATE_OF_BIRTH) else state.data.dobView
         , color if (state.data.dob == "") then Color.darkGrey else Color.greyTextColor
@@ -441,6 +452,7 @@ dateOfIssue push state =
                         _ <- JB.datePicker "MAXIMUM_PRESENT_DATE" push $ DatePicker "DATE_OF_ISSUE"
                         pure unit
                       ) $ const SelectDateOfIssueAction
+      , Id.testId $ Id.Object (getEN SELECT_DATE_OF_ISSUE)
       ][ textView $
         [ text if state.data.dateOfIssue == Just "" then (getString SELECT_DATE_OF_ISSUE) else state.data.dateOfIssueView
         , color if state.data.dateOfIssue == Just "" then Color.darkGrey else Color.greyTextColor
@@ -459,6 +471,7 @@ dateOfIssue push state =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , onClick push (const $ TutorialModal "DATE_OF_ISSUE")
+      , Id.testId $ Id.Text (getEN WHERE_IS_MY_ISSUE_DATE)
       ][ textView $
         [ text (getString WHERE_IS_MY_ISSUE_DATE)
         , weight 1.0

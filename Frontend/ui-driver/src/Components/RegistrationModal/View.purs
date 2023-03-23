@@ -29,6 +29,7 @@ import Font.Style as FontStyle
 import Animation (translateYAnim)
 import Animation.Config (translateYAnimConfig)
 import Common.Types.App
+import Constant.Test as Id
 
 view :: forall w .  (Action  -> Effect Unit) -> State -> PrestoDOM (Effect Unit) w
 view push state =
@@ -40,6 +41,7 @@ view push state =
     , background Color.black9000
     , gravity BOTTOM
     , onClick push (const OnCloseClick)
+    , Id.testId $ Id.Component (Id.registrationModal <> Id.underScore <> Id.closeIcon)
   ][
    PrestoAnim.animationSet [
       translateYAnim translateYAnimConfig
@@ -84,6 +86,7 @@ view push state =
             , margin (MarginTop 23)
             , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
             , onClick push (const OnCloseClick)
+            , Id.testId $ Id.Object Id.closeIcon
             ]
           ]
         ,   linearLayout

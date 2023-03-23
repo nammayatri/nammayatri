@@ -30,6 +30,7 @@ import PrestoDOM (Length(..), Margin(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
+import EN
 
 mobileNumberButtonConfig :: ST.EnterMobileNumberScreenState -> PrimaryButton.Config
 mobileNumberButtonConfig state = let 
@@ -41,6 +42,7 @@ mobileNumberButtonConfig state = let
       , alpha = if state.props.btnActiveMobileNuber then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
+      , testIdText = (getEN CONTINUE)
       }
   in primaryButtonConfig'
 
@@ -54,6 +56,7 @@ verifyOTPButtonConfig state = let
       , alpha = if state.props.btnActiveOTP then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
       , enableLoader = (JB.getBtnLoader "PrimaryButtonOTP")
+      , testIdText = (getEN CONTINUE)
       }
   in primaryButtonConfig'
 

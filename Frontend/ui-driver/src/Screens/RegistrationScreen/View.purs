@@ -30,6 +30,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
 import Screens.RegistrationScreen.ComponentConfig
+import Constant.Test as Id
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
@@ -58,6 +59,7 @@ view push state =
                       _<- push action
                       pure unit
                       ) $ const (AfterRender)
+    , Id.testId $ Id.Screen Id.registrationScreen
   ][ 
     linearLayout
     [ height WRAP_CONTENT
@@ -67,6 +69,7 @@ view push state =
     , margin (MarginTop 20)
     , visibility VISIBLE
     , onClick push (const BackPressed)
+    , Id.testId $ Id.ToolBar Id.backIcon
     , weight 1.0
     ][ imageView
         [ width ( V 20 )

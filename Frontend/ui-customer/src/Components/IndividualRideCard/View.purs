@@ -32,12 +32,14 @@ import Screens.Types (IndividualRideCardState, Stage(..))
 import Storage
 import Styles.Colors as Color
 import Storage
+import Constant.Test as Id
 
 view :: forall w .  (Screen.Action  -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
 view push state =
   relativeLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
+  , Id.testId $ Id.Component Id.individualRideCard
   ][  shimmerView push state
     , cardView push state
   ]

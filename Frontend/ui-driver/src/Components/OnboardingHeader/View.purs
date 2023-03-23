@@ -27,6 +27,8 @@ import Engineering.Helpers.Commons (screenWidth)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Common.Types.App
+import Constant.Test as Id
+import EN
 
 view :: forall w .  (Action  -> Effect Unit) -> OnboardingHeaderState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -34,6 +36,7 @@ view push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
+  , Id.testId $ Id.Component Id.onboardingHeader
   ][ statusBarView state
   ,  navigationView state push
   ]
@@ -75,6 +78,7 @@ navigationView state push =
     , gravity CENTER_VERTICAL
     , padding (Padding 16 16 16 0)
     , onClick push (const BackPressed)
+    , Id.testId $ Id.Element Id.back
     ][ linearLayout
         [
           weight 1.0
@@ -90,6 +94,7 @@ navigationView state push =
         , cornerRadius 5.0
         , stroke ("1," <> Color.blueBtn)
         , onClick push (const TriggerRegModal)
+        , Id.testId $ Id.Button $ Id.BtnConfig (getEN STEP)
         ][ textView
             [ text ((getString STEP) <>state.stepNumber <> "/4" )
             , textSize FontSize.a_14

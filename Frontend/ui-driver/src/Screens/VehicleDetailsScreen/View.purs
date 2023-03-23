@@ -35,6 +35,7 @@ import Components.SelectVehicleTypeModal as SelectVehicleTypeModal
 import JBridge as JB
 import Common.Types.App
 import Screens.VehicleDetailsScreen.ComponentConfig
+import Constant.Test as Id
 
 screen :: ST.VehicleDetailsScreenState -> Screen Action ST.VehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -61,6 +62,7 @@ view push state =
     , onBackPressed push (const BackPressed)
     , background Color.white900
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.vehicleDetailsScreen
     ][  linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
@@ -116,6 +118,7 @@ headerLayout state push heading =
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         , onClick push (const BackPressed)
+        , Id.testId $ Id.ToolBar Id.backIcon
         ]
       , textView
         [ width WRAP_CONTENT
@@ -137,6 +140,7 @@ headerLayout state push heading =
         , fontStyle $ FontStyle.semiBold LanguageStyle
         , visibility GONE -- if state.props.isInEditVehicleDetailsView then GONE else VISIBLE  TILL 15AUG
         , onClick push (const ToggleScreenMode)
+        , Id.testId $ Id.ToolBar Id.toggle
         ]
     ]
   , linearLayout
@@ -234,6 +238,7 @@ rcImageField optionItem push state =
          , margin (MarginLeft 10)
          , textSize FontSize.a_16
          , onClick push (const PreviewImage)
+         , Id.testId $ Id.Object Id.preview
          ]
       ]
   ]
@@ -321,6 +326,7 @@ vehicleTypeView push state =
         , stroke ("1," <> Color.borderColorLight)
         , background Color.white900
         , onClick push (const SelectVehicleType)
+        , Id.testId $ Id.DropDown Id.view
         ][ textView
             [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -383,6 +389,7 @@ uploadRCView state push =
                , color Color.blueBtn
                , textSize FontSize.a_16
                , onClick push (const PreviewImage)
+               , Id.testId $ Id.Object Id.preview
                , visibility if state.props.deleteButtonVisibility then VISIBLE else GONE
                ]
              , imageView
@@ -392,6 +399,7 @@ uploadRCView state push =
                , padding (Padding 2 2 2 0)
                , margin (MarginLeft 5)
                , onClick push $ if (state.props.deleteButtonVisibility) then ((const RemoveImageClick)) else ((const UploadImage))
+               , Id.testId $ Id.Object if (state.props.deleteButtonVisibility) then Id.clear else Id.upload
                ]
 
             ]

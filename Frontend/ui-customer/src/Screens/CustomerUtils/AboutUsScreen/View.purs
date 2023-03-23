@@ -32,6 +32,8 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Types.App
 import Screens.CustomerUtils.AboutUsScreen.ComponentConfig 
+import Constant.Test as Id
+import EN
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -54,6 +56,7 @@ view push state =
     , padding if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom) else (Padding 0 0 0 10)
     , gravity CENTER
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen $ Id.aboutUsScreen
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
       , linearLayout
         [ height $ V 1
@@ -183,6 +186,7 @@ termsAndConditionsView state =
             _ <- JB.openUrlInApp "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true"
             pure unit
           ) (const TermsAndConditions)
+        , Id.testId $ Id.Click (Id.link <> getEN TERMS_AND_CONDITIONS)
         , margin (Margin 0 20 0 0)
         ]
       , linearLayout

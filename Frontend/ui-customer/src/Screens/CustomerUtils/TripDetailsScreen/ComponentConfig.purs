@@ -28,6 +28,7 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Styles.Colors as Color
 import Common.Types.App
+import EN
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -63,8 +64,8 @@ confirmLostAndFoundConfig state = let
       secondaryText {
         text = (getString TRY_CONNECTING_WITH_THE_DRIVER)
       , margin = (Margin 0 4 0 20)},
-      option1 {text = (getString CANCEL_)},
-      option2 {text = (getString CALL_DRIVER),margin = (Margin 12 0 0 0)}
+      option1 {text = (getString CANCEL_), testIdText = (getEN CANCEL_)},
+      option2 {text = (getString CALL_DRIVER),margin = (Margin 12 0 0 0), testIdText = (getEN CALL_DRIVER)}
     }
     in popUpConfig'
 
@@ -122,5 +123,6 @@ primaryButtonConfig state = let
       , alpha = if (state.props.activateSubmit || state.props.issueReported)  then 1.0 else 0.5 
       , isClickable = (state.props.activateSubmit || state.props.issueReported) 
       , margin = (Margin 16 0 16 16 ) 
+      , testIdText = if state.props.issueReported then (getEN GO_HOME_) else (getEN SUBMIT)
       }
   in primaryButtonConfig'

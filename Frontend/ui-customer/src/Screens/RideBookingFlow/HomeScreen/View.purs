@@ -85,6 +85,8 @@ import Foreign.Class (class Encode)
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
+import Constant.Test as Id
+import EN(getEN)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -201,6 +203,7 @@ view push state =
     , onBackPressed push (const BackPressed)
     , clickable true
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.homeScreen
     ]
     [ linearLayout
         [ height MATCH_PARENT
@@ -342,6 +345,7 @@ recenterButtonView push state =
                     pure unit
                 )
                 (const $ RecenterCurrentLocation)
+            , Id.testId $ Id.Object Id.recenter
             , height $ V 40
             , width $ V 40
             ]
@@ -361,6 +365,7 @@ referralView push state =
     , gravity RIGHT
     , padding (Padding 16 12 16 12)
     , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
+    , Id.testId $ Id.Object if not state.props.isReferred then (getEN HAVE_REFERRAL_CODE) else (getEN REFERRAL_CODE_APPLIED)
     ][
       imageView [
          imageWithFallback "ny_ic_tick,https://assets.juspay.in/nammayatri/images/user/ny_ic_tick.png"
@@ -560,6 +565,7 @@ homeScreenTopIconView push state =
             , disableClickFeedback true
             , clickable if state.props.currentStage == SearchLocationModel then false else true
             , onClick push $ const OpenSettings
+            , Id.testId $ Id.Object Id.hamburger
             ]
             [ imageView
                 [ imageWithFallback "ny_ic_hamburger,https://assets.juspay.in/nammayatri/images/user/ny_ic_hamburger.png"
@@ -580,6 +586,7 @@ homeScreenTopIconView push state =
             , width $ V 20
             , margin (Margin 5 5 5 5)
             , onClick push (const $ OpenSearchLocation)
+            , Id.testId $ Id.Object Id.source
             , gravity BOTTOM
             ]
         , linearLayout
@@ -588,6 +595,7 @@ homeScreenTopIconView push state =
             , height WRAP_CONTENT
             , disableClickFeedback true
             , onClick push (const $ OpenSearchLocation)
+            , Id.testId $ Id.Container (getEN PICK_UP_LOCATION)
             ]
             [ textView
                 [ height WRAP_CONTENT
@@ -788,6 +796,7 @@ topLeftIconView state push =
           , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain ]) then GONE else VISIBLE
           , clickable true
           , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
+          , Id.testId $ if (any (_ == state.props.currentStage) [SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits]) then Id.Object Id.backIcon else Id.Object Id.hamburger
           ]
           [ imageView
               [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png" else "ny_ic_hamburger,https://assets.juspay.in/nammayatri/images/user/ny_ic_hamburger.png"
@@ -857,6 +866,7 @@ suggestedPriceView push state =
             , height WRAP_CONTENT
             , fontStyle $ FontStyle.bold LanguageStyle
             , onClick push $ const ShowRateCard
+            , Id.testId $ Id.Object Id.infoIcon
             ]
             , estimatedTimeAndDistanceView push state
           ]
@@ -867,6 +877,7 @@ suggestedPriceView push state =
             , gravity BOTTOM
             , margin (MarginTop 13)
             , onClick push $ const ShowRateCard
+            , Id.testId $ Id.Object (Id.infoIcon <> Id.underScore <> Id.rateCard)
             ]
         ]
         , linearLayout
@@ -890,6 +901,7 @@ suggestedPriceView push state =
                   , height WRAP_CONTENT
                   , gravity CENTER_HORIZONTAL
                   , onClick push $ const PreferencesDropDown
+                  , Id.testId $ Id.Object Id.dropDown
                   , margin (Margin 0 0 0 8)
                   ][ 
                       textView
@@ -943,6 +955,7 @@ showMenuButtonView push menuText menuImage autoAssign =
       , cornerRadius 10.0
       , gravity CENTER
       , onClick push (const $ CheckBoxClick autoAssign)
+      , Id.testId $ Id.Container Id.menuButton
       ][  imageView
           [ width $ V 10
           , height $ V 10
@@ -960,6 +973,7 @@ showMenuButtonView push menuText menuImage autoAssign =
       , margin (MarginHorizontal 10 10)
       , fontStyle $ FontStyle.regular LanguageStyle
       , onClick push (const $ CheckBoxClick autoAssign)
+      , Id.testId $ Id.Text if(menuText == (getString AUTO_ASSIGN_DRIVER)) then (getEN AUTO_ASSIGN_DRIVER) else (getEN CHOOSE_BETWEEN_MULTIPLE_DRIVERS)
       ]
     , imageView
       [ height $ if autoAssign then V 30 else V 18
@@ -967,6 +981,7 @@ showMenuButtonView push menuText menuImage autoAssign =
       , imageWithFallback menuImage
       , margin $ (MarginHorizontal 5 5)
       , onClick push (const $ OnIconClick autoAssign)
+      , Id.testId $ Id.Object Id.menuButton
       ]
   ]
 
@@ -1021,6 +1036,7 @@ locationTrackingPopUp push state =
     , background Color.black9000
     , alignParentBottom "true,-1"
     , onClick push (const $ CloseLocationTracking)
+    , Id.testId $ Id.Container (Id.trackLocation <> Id.underScore <> Id.close)
     , disableClickFeedback true
     ]
     [ linearLayout
@@ -1031,6 +1047,7 @@ locationTrackingPopUp push state =
         , cornerRadii $ Corners 24.0 true true false false
         , padding (Padding 20 32 20 25)
         , onClick push (const $ TrackLiveLocationAction)
+        , Id.testId $ Id.Container (getEN TRACK_LIVE_LOCATION_USING)
         , alignParentBottom "true,-1"
         , disableClickFeedback true
         ]
@@ -1086,6 +1103,7 @@ trackingCardView push state item =
     , orientation HORIZONTAL
     , padding (Padding 0 20 0 20)
     , onClick push (const (StartLocationTracking item.type))
+    , Id.testId $ Id.Container (Id.trackLocation <> Id.underScore <> item.type)
     , visibility if (state.props.currentStage == RideAccepted && item.type == "GOOGLE_MAP") then GONE else VISIBLE
     ]
     [ imageView
@@ -1167,6 +1185,7 @@ confirmPickUpLocationView push state =
             , orientation HORIZONTAL
             , margin $ MarginVertical 20 10
             , onClick push $ const GoBackToSearchLocationModal
+            , Id.testId $ Id.Container (Id.source <> Id.underScore <> Id.click)
             , padding $ PaddingHorizontal 15 15
             , stroke $ "1," <> Color.grey900
             , gravity CENTER_VERTICAL
@@ -1234,6 +1253,7 @@ loaderView push state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , onClick push $ const CancelSearch
+        , Id.testId $ Id.Container (getEN CANCEL_SEARCH)
         , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, TryAgain ]) then VISIBLE else GONE
         , orientation VERTICAL
         , gravity CENTER

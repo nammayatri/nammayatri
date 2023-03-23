@@ -19,6 +19,7 @@ import Components.GenericHeader.Controller (Action(..), Config)
 import Effect (Effect)
 import Prelude (Unit, const, ($), (==))
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), Visibility(..), PrestoDOM, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageView, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, width, imageWithFallback)
+import Constant.Test as Id
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -31,11 +32,13 @@ view push config =
   , orientation HORIZONTAL 
   , background config.background
   , clickable config.isClickable
+  , Id.testId $ Id.Component Id.genericHeader
   ][  linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , gravity CENTER
       , onClick push $ const PrefixImgOnClick
+      , Id.testId $ Id.ToolBar Id.backIcon
       ][ imageView
         [ imageWithFallback config.prefixImageConfig.imageUrl
         , height config.prefixImageConfig.height
@@ -73,6 +76,7 @@ suffixImageLayout config push =
       , margin config.suffixImageConfig.margin
       , padding config.suffixImageConfig.padding
       , onClick push $ const SuffixImgOnClick
+      , Id.testId $ Id.ToolBar Id.forwardIcon
       , visibility config.suffixImageConfig.visibility
       ]
   ]

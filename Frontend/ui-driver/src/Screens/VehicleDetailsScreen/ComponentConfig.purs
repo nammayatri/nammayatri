@@ -26,6 +26,7 @@ import Language.Types (STR(..))
 import PrestoDOM
 import Styles.Colors as Color
 import Screens.Types as ST
+import EN
 
 ------------------------------ primaryButtonConfig ---------------------------------
 primaryButtonConfig :: ST.VehicleDetailsScreenState -> PrimaryButton.Config
@@ -42,6 +43,7 @@ primaryButtonConfig state = let
       , height = (V 60)
       , isClickable = state.props.deleteButtonVisibility
       , alpha = if state.props.deleteButtonVisibility then 1.0 else 0.7
+      , testIdText = (getEN UPDATE)
       }
   in primaryButtonConfig'
 

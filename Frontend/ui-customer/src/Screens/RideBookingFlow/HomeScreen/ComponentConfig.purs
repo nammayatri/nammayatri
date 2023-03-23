@@ -44,6 +44,7 @@ import Font.Style as FontStyle
 import Styles.Colors as Color
 import Common.Types.App
 import PrestoDOM
+import EN
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -68,6 +69,7 @@ shareAppConfig state = let
       , strokeColor = Color.black500
       , color = Color.black700
       , fontStyle = FontStyle.semiBold LanguageStyle
+      , testIdText = (getEN MAYBE_LATER)
       },
       option2 {
         text = getString(SHARE_APP) 
@@ -78,6 +80,7 @@ shareAppConfig state = let
       , background = Color.black900
       , margin = MarginLeft 12
       ,fontStyle = FontStyle.semiBold LanguageStyle
+      , testIdText = (getEN SHARE_APP)
       },
       cornerRadius = (Corners 15.0 true true true true),
       coverImageConfig {
@@ -109,6 +112,7 @@ skipButtonConfig state =
         , margin = (Margin 0 0 0 0)
         , id = "SkipRatingButton"
         , enableLoader = (JB.getBtnLoader "SkipRatingButton")
+        , testIdText = (getEN SKIP)
         }
   in
     skipButtonConfig'
@@ -233,6 +237,7 @@ whereToButtonConfig state =
         , margin = (Margin 17 0 17 0)  
         }
       , id = "WheretoButton"
+      , testIdText = (getEN WHERE_TO)
       }
   in primaryButtonConfig'
 
@@ -251,6 +256,7 @@ primaryButtonRequestRideConfig state =
         , margin = (Margin 0 32 0 15)
         , id = "RequestRideButton"
         , enableLoader = (JB.getBtnLoader "RequestRideButton")
+        , testIdText = (getEN REQUEST_RIDE)
         }
   in
     primaryButtonConfig'
@@ -269,6 +275,7 @@ primaryButtonConfirmPickupConfig state =
         , background = Color.black900
         , margin = (Margin 0 22 0 0)
         , id = "ConfirmLocationButton"
+        , testIdText = (getEN CONFIRM_LOCATION)
         }
   in
     primaryButtonConfig'
@@ -289,6 +296,7 @@ rateRideButtonConfig state =
         , margin = (MarginLeft 12)
         , id = "RateYourDriverButton"
         , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
+        , testIdText = (getEN RATE_YOUR_DRIVER)
         }
   in
     primaryButtonConfig'
@@ -306,7 +314,7 @@ cancelRidePopUpConfig state =
           , secondText = (getString CANCEL_RIDE)
           }
         , activeIndex = state.props.cancelRideActiveIndex
-        , activeReasonCode = Just state.props.cancelReasonCode
+        , activeReasonCode = state.props.cancelReasonCode
         , isLimitExceeded = ((DS.length (state.props.cancelDescription)) >= 100)
         , isCancelButtonActive =
           ( case state.props.cancelRideActiveIndex of
@@ -333,8 +341,8 @@ logOutPopUpModelConfig state =
         config'
           { primaryText { text = (getString LOGOUT_) }
           , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
-          , option1 { text = (getString GO_BACK_) }
-          , option2 { text = (getString LOGOUT_) }
+          , option1 { text = (getString GO_BACK_), testIdText = (getEN GO_BACK_) }
+          , option2 { text = (getString LOGOUT_), testIdText = (getEN LOGOUT_) }
           }
     in
       popUpConfig'
@@ -345,8 +353,8 @@ logOutPopUpModelConfig state =
         config'
           { primaryText { text = (getString CANCEL_) }
           , secondaryText { text = if state.props.isPopUp == ST.ActiveQuotePopUp then (getString YOU_HAVE_RIDE_OFFERS_ARE_YOU_SURE_YOU_WANT_TO_CANCEL) else (getString ARE_YOU_SURE_YOU_WANT_TO_CANCEL)}
-          , option1 { text = (getString NO) }
-          , option2 { text = (getString YES) }
+          , option1 { text = (getString NO), testIdText = (getEN NO) }
+          , option2 { text = (getString YES), testIdText = (getEN YES) }
           }
     in
       popUpConfig'
@@ -371,6 +379,7 @@ distanceOusideLimitsConfig state =
         , option2
           { text = (getString CHANGE_DROP_LOCATION)
           , margin = (Margin 16 0 16 EHC.safeMarginBottom)
+          , testIdText = (getEN CHANGE_DROP_LOCATION)
           }
         }
   in
@@ -392,8 +401,8 @@ shortDistanceConfig state =
           { text = (getString YOU_CAN_TAKE_A_WALK_OR_CONTINUE_WITH_RIDE_BOOKING)
           , margin = (Margin 0 16 0 20)
           }
-        , option1 { text = (getString GO_BACK_) }
-        , option2 { text = (getString BOOK_RIDE_) }
+        , option1 { text = (getString GO_BACK_), testIdText = (getEN GO_BACK_) }
+        , option2 { text = (getString BOOK_RIDE_), testIdText = (getEN BOOK_RIDE_) }
         }
   in
     popUpConfig'
@@ -437,6 +446,7 @@ sourceUnserviceableConfig state =
           , background = Color.black900
           , color = Color.yellow900
           }
+        , testIdText = (getEN CHANGE_LOCATION)
         }
   in
     errorModalConfig'
@@ -465,8 +475,8 @@ estimateChangedPopupConfig state =
       config'
         { primaryText { text = (getString ESTIMATES_CHANGED) }
         , secondaryText { text = (getString ESTIMATES_REVISED_TO) <> "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare)) }
-        , option1 { text = (getString GO_HOME_) }
-        , option2 { text = (getString CONTINUE) }
+        , option1 { text = (getString GO_HOME_), testIdText = (getEN GO_HOME_) }
+        , option2 { text = (getString CONTINUE), testIdText = (getEN CONTINUE) }
         }
   in
     popUpConfig'

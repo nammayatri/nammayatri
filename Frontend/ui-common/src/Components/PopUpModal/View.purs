@@ -34,6 +34,8 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (os, clearTimer, countDown)
 import Control.Monad.Trans.Class (lift)
 import JBridge(startTimerWithTime)
+import Constant.Test as Id
+
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -58,6 +60,7 @@ view push state =
                             pure unit
                               )
           if state.backgroundClickable then (const OnButton1Click) else (const NoAction)
+    , Id.testId $ Id.Component Id.popUpModal
     , gravity state.gravity 
   ][  linearLayout
      [  width MATCH_PARENT
@@ -109,6 +112,7 @@ view push state =
                   , width WRAP_CONTENT
                   , margin state.dismissPopupConfig.margin
                   , onClick push $ const OnImageClick
+                  , Id.testId $ Id.Object Id.image
                   , padding state.dismissPopupConfig.padding
                   ]
                   [ imageView
@@ -162,6 +166,7 @@ view push state =
                             clearTheTimer state
                             pure unit
                               ) (const OnButton1Click)
+                  , Id.testId $ Id.Button $ Id.BtnConfig state.option1.testIdText
                   ][  textView
                       [ width WRAP_CONTENT
                       , height WRAP_CONTENT
@@ -187,6 +192,7 @@ view push state =
                             pure unit
                               ) (const OnButton2Click)
                   , padding state.option2.padding
+                  , Id.testId $ Id.Button $ Id.BtnConfig state.option2.testIdText
                   , orientation VERTICAL
                   , clickable state.option2.isClickable
                   , alpha (if state.option2.isClickable then 1.0 else 0.5)

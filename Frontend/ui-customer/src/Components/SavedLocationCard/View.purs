@@ -29,6 +29,8 @@ import Language.Types (STR(..))
 import Common.Types.App
 import Engineering.Helpers.Commons(screenWidth)
 import Data.Maybe(Maybe(..), fromMaybe)
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w 
 view push state = 
@@ -41,6 +43,7 @@ view push state =
   , stroke ("1,"<>Color.grey900)
   , cornerRadius 8.0
   , onClick push $ if (not state.isEditEnabled) then const (CardClicked state) else (const (EditLocation state))
+  , Id.testId $ if (not state.isEditEnabled) then Id.Component Id.savedLocationCard  else Id.Object Id.editLocation
   ][ linearLayout 
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -76,6 +79,13 @@ savedLocationView state push =
           , height WRAP_CONTENT
           , width $ V ((screenWidth unit / 2) - 28)
           , onClick push $ if (not state.isEditEnabled) then const (CardClicked state) else const (EditLocation state)
+          , Id.testId $ if (not state.isEditEnabled) then Id.Empty  
+                            else Id.Object case (getCardType (fromMaybe "" state.cardType)) of 
+                                            Just tag -> case tag of 
+                                              HOME_TAG -> (getEN HOME)
+                                              WORK_TAG -> (getEN WORK)
+                                              OTHER_TAG -> state.tagName
+                                            Nothing -> state.tagName
           ][  textView
               [ text case (getCardType (fromMaybe "" state.cardType)) of 
                     Just tag -> case tag of 
@@ -102,6 +112,7 @@ savedLocationView state push =
             , width WRAP_CONTENT
             , padding (Padding 4 4 4 4)
             , onClick push $ const (EditLocation state)
+            , Id.testId $ Id.Text Id.editLocation
             , clickable true
             , margin (MarginRight 12) 
             ][  textView
@@ -117,6 +128,7 @@ savedLocationView state push =
             , padding (Padding 4 4 4 4)
             , clickable true
             , onClick push $ const (DeleteLocation state.tagName)
+            , Id.testId $ Id.Text (getEN REMOVE)
             ][  textView
                 [ text (getString REMOVE)
                 , textSize FontSize.a_14
@@ -131,6 +143,7 @@ savedLocationView state push =
       , maxLines 2 
       , ellipsize true
       , onClick push $ if (not state.isEditEnabled) then const (CardClicked state) else const (EditLocation state)
+      , Id.testId $ if (not state.isEditEnabled) then Id.Empty else Id.Text Id.changeAddress
       , textSize FontSize.a_12
       , margin (MarginTop 8)
       , lineHeight "16"

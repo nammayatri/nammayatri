@@ -31,6 +31,7 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
 import Common.Types.App
 import Screens.SelectLanguageScreen.ComponentConfig
+import Constant.Test as Id
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
@@ -55,6 +56,7 @@ view push state =
       , onBackPressed push (const BackPressed)
       , background Color.white900
       , afterRender push (const AfterRender)
+      , Id.testId $ Id.Screen Id.selectLanguageScreen
       ][  headerLayout push state
         , menuButtonsView state push
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
@@ -79,6 +81,7 @@ headerLayout push state =
         , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
+        , Id.testId $ Id.ToolBar Id.backIcon
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         ]

@@ -27,6 +27,7 @@ import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import EN
 
 continueButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config
 continueButtonConfig state =
@@ -36,6 +37,7 @@ continueButtonConfig state =
     , alpha = if state.btnActive then 1.0 else 0.4
     , id = "ReferralCodeModelContinue"
     , margin = (MarginTop 16)
+    , testIdText = (getEN CONTINUE)
     }
 
 goToHomeButtonConfig :: ST.ReferralScreenState -> PrimaryButton.Config
@@ -44,6 +46,7 @@ goToHomeButtonConfig state =
     { textConfig { text = (getString GO_TO_HOME__) }
     , id = "GoToHomePrimaryButton"
     , margin = (Margin 0 0 0 0)
+    , testIdText = (getEN GO_TO_HOME__)
     }
 
 primaryEditTextConfig :: ST.ReferralScreenState -> PrimaryEditText.Config

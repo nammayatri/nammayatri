@@ -44,6 +44,8 @@ import Data.Maybe (fromMaybe)
 import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.DriverProfileScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -78,6 +80,7 @@ view push state =
       , background Color.white900
       , onBackPressed push (const BackPressed state)
       , afterRender push (const AfterRender)
+      , Id.testId $ Id.Screen Id.driverProfileScreen
       ][ Anim.screenAnimationFadeInOut $
           linearLayout
           [ width MATCH_PARENT
@@ -169,6 +172,16 @@ profileOptionsLayout state push =
             , gravity CENTER_VERTICAL
             , onClick push (const $ OptionClick optionItem.menuOptions)
             , visibility if (optionItem.menuOptions == DRIVER_BANK_DETAILS || optionItem.menuOptions == REFER) then GONE else VISIBLE
+            , Id.testId $ Id.List case (optionItem.menuOptions) of
+                                    DRIVER_PRESONAL_DETAILS -> (getEN PERSONAL_DETAILS)
+                                    DRIVER_VEHICLE_DETAILS -> (getEN VEHICLE_DETAILS)
+                                    DRIVER_BANK_DETAILS -> (getEN BANK_DETAILS)
+                                    MULTI_LANGUAGE -> (getEN LANGUAGES)
+                                    HELP_AND_FAQS -> (getEN HELP_AND_FAQ)
+                                    ABOUT_APP -> (getEN ABOUT)
+                                    REFER -> (getEN ADD_YOUR_FRIEND)
+                                    DRIVER_LOGOUT -> (getEN LOGOUT)
+                                    APP_INFO_SETTINGS -> (getEN APP_INFO)
             ][ linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT

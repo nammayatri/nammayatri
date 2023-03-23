@@ -36,6 +36,7 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterOTPScreen.ComponentConfig
+import Constant.Test as Id
 
 screen :: ST.EnterOTPScreenState -> Screen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
@@ -66,6 +67,7 @@ view push state =
         pure unit
         ) (const AfterRender)
   , onBackPressed push (const BackPressed)
+  , Id.testId $ Id.Screen Id.enterOTPScreen
   ][  linearLayout
       [ width MATCH_PARENT
       , weight 1.0
@@ -103,6 +105,7 @@ backArrow state push =
       , margin (MarginTop 20)
       , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
       , onClick push (const BackPressed)
+      , Id.testId $ Id.ToolBar Id.backIcon
       ]
   ]
 
@@ -159,6 +162,7 @@ underlinedTextView state push =
   , margin (MarginTop 18)
   , orientation VERTICAL
   , onClick push (const ResendOTP)
+  , Id.testId $ Id.Text Id.resend
   ][  textView
       [ height WRAP_CONTENT
       , width WRAP_CONTENT

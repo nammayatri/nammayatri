@@ -45,6 +45,8 @@ import Styles.Colors as Color
 import Types.App (GlobalState)
 import Common.Types.App
 import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState = 
@@ -80,6 +82,7 @@ view push state =
     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
     , onBackPressed push $ const BackPressed state.props.isCallConfirmation
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.helpAndSupportScreen
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
       , linearLayout
         [ height WRAP_CONTENT
@@ -105,6 +108,7 @@ view push state =
             , fontStyle $ FontStyle.medium LanguageStyle
             , color Color.blue900
             , onClick push $ const ViewRides
+            , Id.testId $ Id.Text (getEN VIEW_ALL_RIDES)
             ]
           ]
       , recentRideView state push
@@ -165,6 +169,7 @@ recentRideView state push=
     , padding (Padding 10 10 10 10)
     , orientation HORIZONTAL
     , onClick push $ const ReportIssue
+    , Id.testId $ Id.Container (getEN REPORT_AN_ISSUE_WITH_THIS_TRIP)
     ][  
     textView
         [ text (getString REPORT_AN_ISSUE_WITH_THIS_TRIP)
@@ -270,6 +275,7 @@ allTopicsView state push =
         , width MATCH_PARENT
         , padding (Padding 20 0 20 0)
         , onClick push (const item.action)
+        , Id.testId $ Id.List if (item.title == (getString FOR_OTHER_ISSUES_WRITE_TO_US)) then (getEN FOR_OTHER_ISSUES_WRITE_TO_US) else (getString CONTACT_SUPPORT)
         , orientation VERTICAL
         ][  linearLayout
             [ height WRAP_CONTENT

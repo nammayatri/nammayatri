@@ -39,6 +39,8 @@ import Services.APITypes (MediaType(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Styles.Types (FontStyle)
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> NotificationDetailModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -59,6 +61,7 @@ view push state =
                         false -> pure unit
             )
             (const AfterRender)
+        , Id.testId $ Id.Component Id.notificationDetailModel
         ]
         ( [ linearLayout
               [ height MATCH_PARENT
@@ -177,6 +180,7 @@ descriptionAndComment state push =
         , stroke $ "1," <> Color.grey900
         , padding $ Padding 16 16 16 16
         , onClick push $ const AddCommentClick
+        , Id.testId $ Id.Container (getEN ADD_A_COMMENT)
         , clickable if isJust state.comment then false else true
         ]
         [ customTextView (if state.comment == Nothing then (getString ADD_A_COMMENT) else fromMaybe "" state.comment) FontSize.a_14 (if state.comment == Nothing then Color.black600 else Color.black800) (Margin 0 0 0 0) $ FontStyle.medium LanguageStyle ]
@@ -201,6 +205,7 @@ headerLayout state push =
             , imageUrl "ny_ic_chevron_left"
             , gravity CENTER_VERTICAL
             , onClick push $ const BackArrow
+            , Id.testId $ Id.Object Id.backIcon
             , padding $ Padding 2 2 2 2
             , margin $ MarginLeft 5
             ]
@@ -278,6 +283,7 @@ addCommentModelConfig state =
           , fontSize = FontSize.a_16
           , fontStyle = FontStyle.medium LanguageStyle
           , isClickable = state.commentBtnActive
+          , testIdText = (getEN POST_COMMENT)
           }
         , cornerRadius = (Corners 15.0 true true true true)
         }

@@ -31,6 +31,7 @@ import JBridge as JB
 import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.AboutUsScreen.ComponentConfig
+import Constant.Test as Id
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -59,6 +60,7 @@ view push state =
         height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
+        , Id.testId $ Id.Screen Id.aboutUsScreen
       ][
          headerLayout  state push
         , linearLayout
@@ -108,6 +110,7 @@ headerLayout state push =
         , onClick push (const $ BackPressed state.props.demoModePopup)
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
+        , Id.testId $ Id.ToolBar Id.backIcon
         ]
       , textView
         [ width WRAP_CONTENT
@@ -187,6 +190,7 @@ underlinedTextView value push  =
               pure unit
               ) (const TermsAndConditionAction)
   , margin (Margin 20 30 0 0)
+  , Id.testId $ Id.Object if (value == (getString T_C)) then (Id.link <> Id.underScore <> (getString T_C)) else (Id.link <> Id.underScore <> (getString PRIVACY_POLICY))
   ][ textView
     [ width WRAP_CONTENT
     , height WRAP_CONTENT

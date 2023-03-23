@@ -23,12 +23,15 @@ import Components.PrimaryButton.Controller as PrimaryButtonConfig
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
+import Constant.Test as Id
+
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , Id.testId $ Id.Component Id.errorModel
   ][  linearLayout[
         height config.height
       , width MATCH_PARENT
@@ -100,5 +103,6 @@ primaryButtonConfig config = let
       , background = config.buttonConfig.background
       , visibility = config.buttonConfig.visibility
       , margin = config.buttonConfig.margin
+      , testIdText = config.testIdText
       }
   in primaryButtonConfig'

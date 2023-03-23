@@ -30,6 +30,8 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Debug.Trace (spy)
 import Common.Types.App
+import Constant.Test as Id
+import EN
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -42,6 +44,7 @@ view push state =
     , background Color.black9000
     , disableClickFeedback true
     , onClick push $ const OnClose
+    , Id.testId $ Id.Click (Id.settingSideBar <> Id.underScore <> Id.close)
     , onBackPressed push $ const OnClose
     ][ PrestoAnim.animationSet 
       [ translateInXSidebarAnim $ state.opened == OPEN
@@ -125,6 +128,7 @@ profileView state push =
       , orientation VERTICAL
       , padding (PaddingLeft 16)
       , onClick push $ (const GoToMyProfile)
+      , Id.testId $ Id.Option Id.profile
       ][ linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -173,6 +177,14 @@ settingsMenuView item push  =
                               SETTINGS_ABOUT          -> GoToAbout 
                               SETTINGS_LOGOUT         -> OnLogout
                               SETTINGS_SHARE_APP      -> ShareAppLink)
+  , Id.testId $ Id.Option case item.tag of 
+                              SETTINGS_RIDES          -> (getEN MY_RIDES) 
+                              SETTINGS_FAVOURITES     -> (getEN FAVOURITES) 
+                              SETTINGS_HELP           -> (getEN HELP_AND_SUPPORT) 
+                              SETTINGS_LANGUAGE       -> (getEN LANGUAGE) 
+                              SETTINGS_ABOUT          -> (getEN ABOUT) 
+                              SETTINGS_LOGOUT         -> (getEN LOGOUT_) 
+                              SETTINGS_SHARE_APP      -> (getEN SHARE_APP)
   ][  imageView
       [ width ( V 25 )
       , height ( V 25 )

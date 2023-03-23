@@ -30,6 +30,8 @@ import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import Constant.Test as Id
+import EN
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -38,6 +40,7 @@ view push config =
     , height MATCH_PARENT
     , orientation VERTICAL
     , clickable true
+    , Id.testId $ Id.Component Id.rideActionModal
     ][linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -86,6 +89,7 @@ locationTrackButton push config =
       , stroke $ "1,"<> Color.black500
       , cornerRadius 25.0
       , onClick push (const $ LocationTracking)
+      , Id.testId $ Id.Object Id.trackLocation
       ][  imageView
           [ imageWithFallback "ny_ic_location_track,https://assets.juspay.in/nammayatri/images/common/ny_ic_location_track.png"
           , height $ V 25
@@ -112,6 +116,7 @@ openGoogleMap push config =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const OnNavigate)
+      , Id.testId $ Id.Container Id.navigate
       ][ textView (
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -168,6 +173,7 @@ callCustomer push config =
       , height $ V if config.isDriverArrived then 56 else 40
       , gravity CENTER
       , onClick push (const CallCustomer)
+      , Id.testId $ Id.Object Id.call
       ][  imageView
           [ width $ V 15
           , height $ V 15
@@ -220,6 +226,7 @@ startRide push config =
   , margin $ Margin 16 16 16 0
   , gravity CENTER
   , onClick push (const $ StartRide)
+  , Id.testId $ Id.Container Id.startRide
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -239,6 +246,7 @@ endRide push config =
   , margin $ Margin 16 16 16 16
   , gravity CENTER
   , onClick push (const $ EndRide)
+  , Id.testId $ Id.Container Id.endRide
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -258,6 +266,7 @@ cancelRide push config =
   , padding $ Padding 16 8 16 8
   , margin $ MarginVertical 16 16
   , onClick push (const CancelRide)
+  , Id.testId $ Id.Container Id.cancelRide
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -408,6 +417,7 @@ arrivedButtonView push config =
         else do
           _ <- countDown config.buttonTimeOut config.id push ButtonTimer
           push action) (const NotifyCustomer)
+  , Id.testId $ Id.Container if config.notifiedCustomer then (getEN CUSTOMER_NOTIFIED) else (getEN I_ARRIVED)
   , visibility if config.isDriverArrived then VISIBLE else GONE
   ][  imageView
       [ width $ V 20

@@ -32,6 +32,7 @@ import Screens.ContactUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
+import EN
 
 primaryButtonConfigSubmit :: ST.ContactUsScreenState -> PrimaryButton.Config
 primaryButtonConfigSubmit state = let 
@@ -47,6 +48,7 @@ primaryButtonConfigSubmit state = let
       , margin = (Margin 0 0 0 0)
       , id = "SubmitButtonContactUsScreen"
       , enableLoader = (JB.getBtnLoader "SubmitButtonContactUsScreen")
+      , testIdText = (getEN SUBMIT)
       }
   in primaryButtonConfig'
 
@@ -151,6 +153,7 @@ primaryButtonConfig state = let
       , margin = (Margin 0 0 0 0)
       , id = "GotoHomeThankyouScreen"
       , enableLoader = (JB.getBtnLoader "GotoHomeThankyouScreen")
+      , testIdText = (getEN GO_TO_HOME__)
       }
   in primaryButtonConfig'
 

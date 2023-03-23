@@ -29,6 +29,8 @@ import Data.Maybe (Maybe(..))
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons(os)
 import Common.Types.App
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> LocationTagBarState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -36,6 +38,7 @@ view push state =
  [ width MATCH_PARENT
  , height WRAP_CONTENT
  , orientation VERTICAL
+ , Id.testId $ Id.Component Id.locationTagBar
  ][ linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT 
@@ -49,6 +52,10 @@ view push state =
         , padding $ Padding 8 8 8 8
         , margin $ MarginRight if index == 2 then 0 else 8
         , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
+        , Id.testId $ Id.Object case item of
+                                WORK_TAG -> getEN WORK
+                                HOME_TAG -> getEN HOME
+                                _        -> getEN ALL_FAVOURITES
         , cornerRadius 16.0
         ][ imageView
             [ width $ V 15

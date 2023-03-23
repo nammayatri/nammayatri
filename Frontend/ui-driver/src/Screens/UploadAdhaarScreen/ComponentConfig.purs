@@ -22,6 +22,7 @@ import Language.Types (STR(..))
 import PrestoDOM
 import Styles.Colors as Color
 import Screens.Types as ST
+import EN
 
 
 primaryButtonConfig :: ST.UploadAdhaarScreenState -> PrimaryButton.Config
@@ -34,5 +35,6 @@ primaryButtonConfig state = let
       , height = (V 64)
       , background = Color.black900
       , margin = (Margin 0 0 0 0)
+      , testIdText = (getEN NEXT)
       }
   in primaryButtonConfig'

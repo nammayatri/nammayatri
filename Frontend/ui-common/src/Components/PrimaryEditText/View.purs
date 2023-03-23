@@ -21,6 +21,7 @@ import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (os)
 import Components.PrimaryEditText.Controller (Action(..), Config)
 import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI)
+import Constant.Test as Id
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -29,6 +30,7 @@ view push config =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin config.margin
+    , Id.testId $ Id.Component Id.primaryedittext
     ][  topLabelView config
       , editTextLayout push config
       , errorLabelLayout config
@@ -82,6 +84,7 @@ editTextView push config =
   , background config.background
   , padding config.editText.padding
   , onChange push $ TextChanged config.id
+  , Id.testId $ Id.TextField Id.click
   , gravity config.editText.gravity
   , letterSpacing config.editText.letterSpacing
   , alpha config.editText.alpha

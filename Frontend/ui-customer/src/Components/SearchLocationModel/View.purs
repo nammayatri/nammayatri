@@ -42,6 +42,8 @@ import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStoreEff, getValueToLocalStore)
 import Styles.Colors as Color
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -55,6 +57,7 @@ view push state =
                     _           -> Color.white900 --"#FFFFFF"
       , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
+      , Id.testId $ Id.Component Id.searchLocModel
       ]([PrestoAnim.animationSet [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 400 ] $ 
           linearLayout
           [ height $ V ((screenHeight unit)/ 7)
@@ -92,6 +95,7 @@ view push state =
                   [ height $ V 35
                   , width $ V 35
                   , onClick push (const GoBack)
+                  , Id.testId $ Id.ToolBar Id.backIcon
                   , disableClickFeedback true
                   , margin (Margin 16 10 16 0)
                   , gravity CENTER
@@ -266,6 +270,7 @@ sourceDestinationEditTextView state push =
                     pure unit
                 )
                 SourceChanged
+            , Id.testId $ Id.TextField (Id.source <> Id.underScore <> Id.click)
             , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
             , onFocus push $ const $ EditTextFocusChanged "S"
             , autoCorrectionType 1
@@ -276,6 +281,7 @@ sourceDestinationEditTextView state push =
             , gravity CENTER
             , padding (Padding 0 10 0 5)
             , onClick push (const $ SourceClear)
+            , Id.testId $ Id.Click (Id.source <> Id.underScore <> Id.clear)
             , visibility if state.source /= "" then VISIBLE else GONE
             ]
             [ imageView
@@ -326,6 +332,7 @@ sourceDestinationEditTextView state push =
                       pure unit
                   )
                   DestinationChanged
+              , Id.testId $ Id.TextField (Id.destination <> Id.underScore <> Id.click)
               , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
               , onFocus push $ const $ EditTextFocusChanged "D"
               , autoCorrectionType 1
@@ -338,6 +345,7 @@ sourceDestinationEditTextView state push =
             , gravity CENTER
             , visibility if state.destination /= "" then VISIBLE else GONE
             , onClick push (const $ DestinationClear)
+            , Id.testId $ if state.destination /= "" then Id.Click (Id.destination <> Id.underScore <> Id.clear) else Id.Empty 
             ]
             [ imageView
                 [ height $ V 16
@@ -411,6 +419,7 @@ primaryButtonConfig state =
       , margin = (MarginHorizontal 16 16)
       , isClickable = true 
       , id = "SelectLocationFromMap"
+      , testIdText = if ((state.isSearchLocation == LocateOnMap) && (state.isSource == Just true)) then (getEN CONFIRM_PICKUP_LOCATION) else (getEN CONFIRM_DROP_LOCATION)
       }
   in primaryButtonConfig'
 
@@ -465,6 +474,7 @@ recenterButtonView push state =
             _ <- pure $ firebaseLogEvent "ny_user_recenter_btn_click"
             pure unit 
         ) (const $ RecenterCurrentLocation)
+        , Id.testId $ Id.Object Id.recenter
         , height $ V 40
         , width $ V 40
         ]
@@ -518,6 +528,7 @@ bottomBtnsView state push =
                                   pure unit
                             )
                             (const item.action)
+                        , Id.testId $ if item.buttonType == "CurrentLocation" then Id.Select (getEN CURRENT_LOCATION) else Id.Select (getEN SET_LOCATION_ON_MAP)
                         ]
                       <> FontStyle.body1 TypoGraphy
                   ]

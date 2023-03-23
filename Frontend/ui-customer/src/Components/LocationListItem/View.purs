@@ -26,7 +26,7 @@ import Prelude (Unit, const, bind, pure, unit, ($), (<>), (==), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, alpha, imageWithFallback)
 import Screens.Types (LocationListItemState)
 import Styles.Colors as Color
-
+import Constant.Test as Id
 view :: forall w . (Action  -> Effect Unit) -> LocationListItemState -> PrestoDOM (Effect Unit) w
 view push config = 
   linearLayout
@@ -35,6 +35,7 @@ view push config =
   , orientation VERTICAL
   , gravity CENTER
   , cornerRadius 20.0
+  , Id.testId $ Id.Component Id.locationListItem
   ][  linearLayout
         [ height $ V 70
         , width MATCH_PARENT
@@ -48,6 +49,7 @@ view push config =
                             else do 
                               _ <- push action 
                               pure unit) (const $ OnClick config)
+        , Id.testId $ Id.Click config.tag
         ]([  prefixImageView config
           , linearLayout
             [ height WRAP_CONTENT
@@ -86,6 +88,7 @@ postfixImageView push config =
     , gravity CENTER
     , padding (Padding 12 22 16 22)
     , onClick push $ const $ FavClick config
+    , Id.testId $ Id.Object Id.favIcon
     , clickable (if config.postfixImageUrl == "ny_ic_fav_red,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav_red.png" then false else true)
     ][  imageView
         [ height $ V 20

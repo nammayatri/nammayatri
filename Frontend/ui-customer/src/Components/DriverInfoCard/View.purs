@@ -45,6 +45,8 @@ import Control.Monad.Except.Trans (runExceptT)
 import Presto.Core.Types.Language.Flow (doAff)
 import Animation (fadeIn)
 import PrestoDOM.Animation as PrestoAnim
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -53,6 +55,7 @@ view push state =
   , width MATCH_PARENT
   , background Color.transparent
   , orientation VERTICAL 
+  , Id.testId $ Id.Component Id.driverInfoCard
   ][  mapOptionsView push state 
     , driverInfoView push state 
     ]
@@ -98,6 +101,7 @@ supportButton push state =
       , width $ V 18
       , margin $ Margin 10 10 10 10
       , onClick push $ const Support
+      , Id.testId $ Id.Object Id.supportview
       ]
   ]
 
@@ -115,6 +119,7 @@ locationTrackButton push state =
   , cornerRadius 20.0
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
+  , Id.testId $ Id.Object Id.trackLocation
   ][  imageView
       [ imageWithFallback "ny_ic_location_track,https://assets.juspay.in/nammayatri/images/common/ny_ic_location_track.png"
       , height $ V 18
@@ -132,6 +137,7 @@ sosView push state =
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
     , onClick push $ const OpenEmergencyHelp
+    , Id.testId $ Id.Object (Id.sos <> Id.underScore <> Id.image)
     ][ imageView
         [ imageWithFallback "ny_ic_sos,https://assets.juspay.in/nammayatri/images/user/ny_ic_sos.png"
         , height $ V 50
@@ -171,6 +177,7 @@ otpAndWaitView push state =
             , linearLayout
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
+              , Id.testId $ Id.Text (getEN OTP <> Id.underScore <> state.data.otp)
               ] (map(\item -> 
                   linearLayout
                     [ height $ V 32
@@ -290,6 +297,7 @@ cancelRideLayout push state =
    , width WRAP_CONTENT
    , padding $ Padding 5 5 5 5
    , onClick push $ const $ CancelRide state
+   , Id.testId $ Id.Object (getEN CANCEL_RIDE)
  ] 
       [textView
         [ width WRAP_CONTENT
@@ -581,6 +589,7 @@ primaryButtonConfig = let
         , imageUrl = "ny_ic_call,https://assets.juspay.in/nammayatri/images/common/ny_ic_call.png"
         , margin = Margin 20 10 20 10
         }
+      , testIdText = Id.call
       }
   in primaryButtonConfig'
 

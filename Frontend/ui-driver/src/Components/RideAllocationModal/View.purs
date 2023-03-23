@@ -34,6 +34,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Monad.Except.Trans (runExceptT)
 import Common.Types.App
+import Constant.Test as Id
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -45,6 +46,7 @@ view push config =
                           countDown config.seconds config.id push CountDown
                           pure unit 
                         ) (const NoAction)
+     , Id.testId $ Id.Component Id.rideAllocationModal
     ][ linearLayout
        [ width config.width
        , height config.height
@@ -271,6 +273,7 @@ reducePrice push config =
   , onClick push (const (DecreasePrice config.id))
   , background Color.white900
   , alpha if (config.totalPrice > config.basePrice) then 1.0 else 0.5
+  , Id.testId $ Id.Container Id.decrease
   ][  textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -305,6 +308,7 @@ increasePrice push config =
   , onClick push (const (IncreasePrice config.id))
   , background Color.white900
   , alpha if (config.totalPrice >= config.basePrice + config.increasePrice * 3.0) then 0.5 else 1.0
+  , Id.testId $ Id.Container Id.increase
   ][  textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -325,6 +329,7 @@ declineButton push config =
   , margin (MarginRight 10)
   , gravity CENTER
   , onClick push (const (Decline config.id))
+  , Id.testId $ Id.Container Id.decline
   ][  textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -344,6 +349,7 @@ requestButton push config =
   , background config.request.background
   , gravity CENTER
   , onClick push (const (Request config.id (config.totalPrice - config.basePrice)))
+  , Id.testId $ Id.Container Id.request
   ][  textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT

@@ -43,6 +43,7 @@ import Data.Array (length,(!!))
 import Data.Maybe
 import Common.Types.App
 import JBridge(requestKeyboardShow, hideKeyboardOnNavigation)
+import Constant.Test as Id
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -55,6 +56,7 @@ view push config =
       , gravity BOTTOM
       , onClick push (const OnGoBack)
       , adjustViewWithKeyboard "true"
+      , Id.testId $ Id.Component (Id.cancelRide <> Id.cancel)
       ][ linearLayout 
           [ width MATCH_PARENT
           , alignParentBottom "true,-1"
@@ -120,8 +122,9 @@ headingText config push =
         _ <- setText' (getNewIDWithTag "TechGlitchEditText") ""
         pure unit 
     )) ( const ClearOptions)
+    , Id.testId $ Id.List Id.showAllOptions
     , visibility case config.activeReasonCode of 
-                    Just reasonCode -> if ( reasonCode == "OTHER" || reasonCode == "TECHNICAL_GLITCH") then VISIBLE else GONE
+                    reasonCode -> if ( reasonCode == "OTHER" || reasonCode == "TECHNICAL_GLITCH") then VISIBLE else GONE
                     _               -> GONE
     ][  textView
         [ width WRAP_CONTENT
@@ -170,7 +173,7 @@ cancelationReasonOptions config push =
           , orientation VERTICAL 
           , padding (PaddingTop if index == 0 then 12 else 0)
           , visibility case config.activeReasonCode of 
-                Just reasonCode -> if (( reasonCode == "TECHNICAL_GLITCH" && item.reasonCode /= "TECHNICAL_GLITCH") || ( reasonCode == "OTHER" && item.reasonCode /= "OTHER")) then GONE else VISIBLE
+                reasonCode -> if (( reasonCode == "TECHNICAL_GLITCH" && item.reasonCode /= "TECHNICAL_GLITCH") || ( reasonCode == "OTHER" && item.reasonCode /= "OTHER")) then GONE else VISIBLE
                 _               -> VISIBLE
           , onClick (\action -> do
             _ <- push action 
@@ -180,14 +183,13 @@ cancelationReasonOptions config push =
               _ -> pure unit 
             pure unit 
           ) (const (UpdateIndex index))
+          , Id.testId $ Id.Option config.activeReasonCode
           ][radioButton config push index item,
             horizontalLine index (fromMaybe (-1) config.activeIndex) config,
             (case config.activeReasonCode of 
-              Just reasonCode -> if (( reasonCode == "OTHER" && item.reasonCode == "OTHER")) then someOtherReason config push index else dummyTextView
-              Nothing         -> dummyTextView),
+              reasonCode -> if (( reasonCode == "OTHER" && item.reasonCode == "OTHER")) then someOtherReason config push index else dummyTextView),
             (case config.activeReasonCode of 
-              Just reasonCode -> if (( reasonCode == "TECHNICAL_GLITCH" && item.reasonCode == "TECHNICAL_GLITCH")) then technicalGlitchDescription config push index else dummyTextView
-              Nothing         -> dummyTextView)
+              reasonCode -> if (( reasonCode == "TECHNICAL_GLITCH" && item.reasonCode == "TECHNICAL_GLITCH")) then technicalGlitchDescription config push index else dummyTextView)
             -- , technicalGlitchDescription config push index
            ]
           ]
@@ -202,7 +204,7 @@ someOtherReason config push index =
   , orientation VERTICAL
   -- , margin (MarginLeft 40)
   , visibility case config.activeReasonCode of
-                  Just reasonCode -> if (reasonCode == "OTHER") then VISIBLE else GONE 
+                  reasonCode -> if (reasonCode == "OTHER") then VISIBLE else GONE 
                   _               -> GONE
   ][ linearLayout
       [ height MATCH_PARENT
@@ -229,6 +231,7 @@ someOtherReason config push index =
               , background Color.grey800
               , singleLine false
               , onChange push (TextChanged ( getNewIDWithTag "OtherReasonEditText") )
+              , Id.testId $ Id.TextField config.activeReasonCode
               , pattern "[A-Za-z0-9 ]*,100"
               ] <> (if os == "ANDROID" then [id (getNewIDWithTag "OtherReasonEditText")] else [] ))
             ]
@@ -252,7 +255,7 @@ technicalGlitchDescription config push index =
   , orientation VERTICAL
   -- , margin (MarginLeft 40)
   , visibility case config.activeReasonCode of
-                  Just reasonCode -> if (reasonCode == "TECHNICAL_GLITCH" )  then VISIBLE else GONE 
+                  reasonCode -> if (reasonCode == "TECHNICAL_GLITCH" )  then VISIBLE else GONE 
                   _               -> GONE
   ][ linearLayout
       [ height MATCH_PARENT
@@ -279,6 +282,7 @@ technicalGlitchDescription config push index =
               , cornerRadius 4.0
               , singleLine false
               , onChange push (TextChanged ( getNewIDWithTag "TechGlitchEditText") )
+              , Id.testId $ Id.TextField (Id.cancel <> Id.underScore <> Id.reason)
               , pattern "[A-Za-z0-9 ]*,100"
               ] <> (if os == "ANDROID" then [id (getNewIDWithTag "TechGlitchEditText")] else []))
             ]

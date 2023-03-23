@@ -47,6 +47,8 @@ import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
 import Helpers.Utils (countDown)
 import Screens.ReferralScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -73,6 +75,7 @@ view push state =
     , background Color.white900
     , gravity CENTER
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.referralScreen
     ][  linearLayout
         [ width MATCH_PARENT
         , orientation VERTICAL
@@ -139,6 +142,7 @@ commonView push img title description state=
               , imageUrl img
               , margin $ if img == "ny_ic_comming_soon_poster" then (Margin 0 0 0 0) else (MarginBottom 72)
               , onClick push (const if img == "ny_ic_comming_soon_poster" then EnableReferralFlow else EnableReferralFlowNoAction)
+              , Id.testId $ Id.Object Id.image
               ]
           , textView
               [ height WRAP_CONTENT
@@ -521,6 +525,7 @@ contactUsTextView push state =
   , margin $ MarginTop 4
   , visibility if state.data.driverPerformance.referrals.totalActivatedCustomers > 0 then VISIBLE else GONE
   , onClick push $ const GoToAlertScreen
+  , Id.testId $ Id.Object (getEN FOR_UPDATES_SEE_ALERTS)
   ][ textView
     [ height WRAP_CONTENT
     , width MATCH_PARENT

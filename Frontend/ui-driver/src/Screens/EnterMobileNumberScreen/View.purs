@@ -35,6 +35,8 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App
 import Screens.EnterMobileNumberScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -63,6 +65,7 @@ view push state =
         pure unit
         ) (const AfterRender)
     , onBackPressed push (const BackPressed)
+    , Id.testId $ Id.Screen Id.enterMobileNumberScreen
     ][    PrestoAnim.animationSet 
           [ Anim.fadeIn true
           ] $ backArrow state push
@@ -98,6 +101,7 @@ backArrow state push =
       , margin (MarginTop 20)
       , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
       , onClick push (const BackPressed)
+      , Id.testId $ Id.ToolBar Id.backIcon
       ]
   ]
 
@@ -165,6 +169,7 @@ underlinedTextView state push =
                   _ <- JB.openUrlInApp "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc/view?usp=sharing"
                   pure unit
                   ) (const NonDisclosureAgreementAction)
+      , Id.testId $ Id.Object (Id.link <> Id.underScore <> (getEN NON_DISCLOUSER_AGREEMENT))
       ][ textView (
         [ width WRAP_CONTENT
         , height WRAP_CONTENT

@@ -32,6 +32,8 @@ import JBridge (requestKeyboardShow)
 import Screens.Types (SaveFavouriteCardState)
 import Styles.Colors as Color
 import Common.Types.App
+import Constant.Test as Id
+import EN
 
 view :: forall w. (Action -> Effect Unit) -> SaveFavouriteCardState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -45,6 +47,7 @@ view push state =
   , clickable true
   , adjustViewWithKeyboard "true"
   , onClick push (const $ NoAction) 
+  , Id.testId $ Id.Component Id.saveFavouriteCard
   , afterRender (\action -> void $ pure $ requestKeyboardShow (getNewIDWithTag "SaveFavouriteEditText")
       ) (const NoAction)
   ][  linearLayout
@@ -83,6 +86,7 @@ view push state =
           , color Color.blue800
           , gravity CENTER
           , onClick push (const SaveFavourite)
+          , Id.testId $ Id.Text (getEN CONFIRM_AND_SAVE)
           , padding (Padding 20 14 20 14)
           , clickable ((not state.tagExists) && state.tag /= "" && (state.isBtnActive))
           , alpha if ((not state.tagExists) && state.tag /= "" && state.isBtnActive)  then 1.0 else 0.5
@@ -119,6 +123,7 @@ titleView push state =
       , width $ V 24
       , imageWithFallback "ny_ic_close,https://assets.juspay.in/nammayatri/images/common/ny_ic_close.png"
       , onClick push (const $ OnClose)
+      , Id.testId $ Id.Object Id.closeIcon
       ]]
     ]
 

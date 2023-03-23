@@ -31,6 +31,7 @@ import PrestoDOM (Length(..), Margin(..), Visibility(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
+import EN
 
 primaryButtonConfigConfirmLoc :: ST.AddNewAddressScreenState -> PrimaryButton.Config 
 primaryButtonConfigConfirmLoc state = let 
@@ -44,6 +45,7 @@ primaryButtonConfigConfirmLoc state = let
     , background = Color.black900
     , margin = (Margin 0 22 0 16)
     , id = "AddNewaddressConfirmLocationButton"
+    , testIdText = (getEN CONFIRM_LOCATION)
     }
   in primaryButtonConfig'
 
@@ -116,5 +118,6 @@ primaryButtonConfig state = let
       , alpha = if (state.props.isBtnActive && state.props.isLocationServiceable && (not state.props.tagExists)) then 1.0 else 0.4
       , id = "AddNewAddressButton"
       , enableLoader = (JB.getBtnLoader "AddNewAddressButton")
+      , testIdText = if (state.props.editSavedLocation) then (getEN CONFIRM_CHANGES) else (getEN CONFIRM_AND_SAVE)
       }
   in primaryButtonConfig'

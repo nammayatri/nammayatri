@@ -27,6 +27,7 @@ import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Screens.CustomerUtils.SelectLanguageScreen.ComponentConfig
+import Constant.Test as Id
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
@@ -48,6 +49,7 @@ view push state =
     , background Color.white900
     , padding (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 then 24 else EHC.safeMarginBottom))
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.selectLanguageScreen
     ][  GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state) 
       , linearLayout
         [ height $ V 1

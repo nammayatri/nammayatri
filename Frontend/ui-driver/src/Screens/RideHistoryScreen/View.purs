@@ -49,7 +49,8 @@ import Services.APITypes (GetRidesHistoryResp(..), Status(..))
 import Common.Types.App
 import Components.BottomNavBar.Controller (navData)
 import Screens.RideHistoryScreen.ComponentConfig
-
+import Constant.Test as Id
+import EN
 
 screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> Screen Action ST.RideHistoryScreenState ScreenOutput
 screen initialState rideListItem = 
@@ -80,6 +81,7 @@ view rideListItem push state =
     , orientation VERTICAL
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.rideHistoryScreen
     ][ Anim.screenAnimationFadeInOut $
         linearLayout
         [ height WRAP_CONTENT
@@ -96,6 +98,7 @@ view rideListItem push state =
       , orientation VERTICAL
       , background Color.white900
       , onClick push (const Loader)
+      , Id.testId $ Id.Container (getEN LOAD_MORE)
       , gravity CENTER
       , alignParentBottom "true,-1"
       , padding (PaddingBottom 5)
@@ -145,6 +148,7 @@ headerView push state =
               , height WRAP_CONTENT
               , weight 0.5
               , onClick push (const $ SelectTab "COMPLETED")
+              , Id.testId $ Id.Element (Id.tab <> Id.underScore <> (getEN COMPLETED_))
               ][
                 linearLayout
                   [ width $ (V (screenWidth unit / 2) )
@@ -170,6 +174,7 @@ headerView push state =
               , height WRAP_CONTENT
               , weight 0.5
               , onClick push (const $ SelectTab "CANCELLED")
+              , Id.testId $ Id.Element (Id.tab <> Id.underScore <> (getEN CANCELLED_))
               ][
                 linearLayout
                   [ width $ V (screenWidth unit / 2)

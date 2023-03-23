@@ -40,6 +40,7 @@ type Config =
     , background :: String
     , isSelected :: Boolean
     , radioButtonConfig :: RadioButtonConfig
+    , testIdText :: String
   }
 
 type TextConfig = 
@@ -114,5 +115,6 @@ config =
           }
     , index : 0
     , id : ""
+    , testIdText : ""
   }
 

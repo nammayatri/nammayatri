@@ -13,24 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Components.GenericMessageModal.Controller where
+module Constant.Test (module TestId) where
 
-import Prelude
-import Components.PrimaryButton.Controller as PrimaryButtonController
-
-data Action = PrimaryButtonActionController PrimaryButtonController.Action
-
-type Config = {
-        text :: String
-        , buttonText :: String
-        , openGenericMessageModal :: Boolean
-        , testIdText :: String
-}
-
-config :: Config
-config = {
-    text : ""
-    , buttonText : ""
-    , openGenericMessageModal : false
-    , testIdText : ""
-}
+import Constant.Keys as TestId 
+import Constant.TestIdType(TestID(..), Check(..), testId) as TestId

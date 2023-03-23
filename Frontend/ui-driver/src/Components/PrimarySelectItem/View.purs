@@ -25,6 +25,7 @@ import Font.Style as FontStyle
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Common.Types.App
+import Constant.Test as Id
 
 view :: forall w .  (Action  -> Effect Unit) -> PrimarySelectItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -37,6 +38,7 @@ view push state =
                 _<- push action
                 pure unit 
                 ) (const (OnClick state))
+    , Id.testId $ Id.Component Id.primarySelectItem
     ][ textView
         [ height WRAP_CONTENT
         , width MATCH_PARENT

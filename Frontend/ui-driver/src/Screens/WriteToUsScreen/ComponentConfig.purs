@@ -29,6 +29,7 @@ import Prelude
 import PrestoDOM
 import Styles.Colors as Color
 import Screens.Types as ST
+import EN
 
 primaryEditTextConfig :: Listtype -> PrimaryEditText.Config
 primaryEditTextConfig optionItem = let 
@@ -62,5 +63,6 @@ primaryButtonConfig state = let
       , cornerRadius = 0.0
       , background = Color.black900
       , height = (V 60)
+      , testIdText = if(state.props.isThankYouScreen) then (getEN GO_TO_HOME) else (getEN SUBMIT)
       }
   in primaryButtonConfig'

@@ -40,6 +40,8 @@ import Engineering.Helpers.Commons (flowRunner)
 import Services.Backend as Remote
 import Common.Types.App
 import Screens.HelpAndSupportScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -67,6 +69,7 @@ view push state =
     , orientation VERTICAL
     , onBackPressed push (const BackPressed)
     , afterRender push (const AfterRender)
+    , Id.testId $ Id.Screen Id.helpAndSupportScreen
     ][ headerLayout state push
      , recentRideHeader state push (getString YOUR_RECENT_RIDE) (getString VIEW_ALL_RIDES)
      , recentRideDetails state push
@@ -93,6 +96,7 @@ headerLayout state push =
         , imageWithFallback "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
+        , Id.testId $ Id.ToolBar Id.backIcon
         , padding (Padding 2 2 2 2)
         , margin (MarginLeft 5)
         ]
@@ -121,6 +125,7 @@ recentRideHeader state push leftText rightText =
  , padding (Padding 15 10 10 10)
  , background Color.lightGreyBlue
  , onClick push $ const $ if (rightText == (getString VIEW_ALL_RIDES)) then ViewAllRides else NoRidesAction
+ , Id.testId $ if (rightText == (getString VIEW_ALL_RIDES)) then Id.PrimaryButton ((getEN VIEW_ALL_RIDES)) else Id.Empty
  , visibility if ((rightText == (getString VIEW_ALL_RIDES)) && state.props.isNoRides) then GONE else VISIBLE
  ][ textView
     [ width WRAP_CONTENT
@@ -234,6 +239,10 @@ allOtherTopics state push =
             , gravity CENTER_VERTICAL
             , onClick push (const $ OptionClick optionItem.menuOptions)
             , visibility if (optionItem.menuOptions == CallSupportCenter) then VISIBLE else GONE
+            , Id.testId $ Id.List case optionItem.menuOptions of
+                                    GettingStartedFaq -> (getEN GETTING_STARTED_AND_FAQ)
+                                    OtherIssues -> (getEN FOR_OTHER_ISSUES_WRITE_TO_US)
+                                    CallSupportCenter -> (getEN CALL_SUPPORT_CENTER)
             ][ linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT

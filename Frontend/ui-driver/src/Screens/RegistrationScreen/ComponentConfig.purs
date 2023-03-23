@@ -21,6 +21,7 @@ import Language.Types (STR(..))
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
+import EN
 
 primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -32,5 +33,6 @@ primaryButtonConfig state = let
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , height = (V 60)
+      , testIdText = (getEN NEXT)
       }
   in primaryButtonConfig'

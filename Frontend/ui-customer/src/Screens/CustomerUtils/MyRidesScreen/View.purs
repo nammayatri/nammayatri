@@ -46,6 +46,8 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState)
 import Screens.CustomerUtils.MyRidesScreen.ComponentConfig
+import Constant.Test as Id
+import EN
 
 screen :: ST.MyRidesScreenState -> PrestoList.ListItem -> Screen Action ST.MyRidesScreenState ScreenOutput
 screen initialState listItemm = 
@@ -75,6 +77,7 @@ view listItemm push state =
   , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
   , onBackPressed push $ const BackPressed
   , afterRender push (const AfterRender)
+  , Id.testId $ Id.Screen Id.myRidesScreen
   ][  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -108,6 +111,7 @@ loadButtonView state push =
   , orientation VERTICAL
   , background Color.white900
   , onClick push (const Loader)
+  , Id.testId $ if state.data.loadMoreText == "LoadMore" then Id.Container (getEN LOAD_MORE) else Id.Empty
   , clickable if state.data.loadMoreText == "LoadMore" then true else false
   , gravity CENTER
   , alignParentBottom "true,-1"
