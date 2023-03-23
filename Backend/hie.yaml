@@ -234,6 +234,9 @@ cradle:
       - path: "lib/scheduler/test/src"
         component: "scheduler:test:scheduler-tests"
 
+      - path: "lib/special-zone/src"
+        component: "special-zone:lib"
+
       - path: "app/utils/route-extractor/src"
         component: "route-extractor:lib"
 
