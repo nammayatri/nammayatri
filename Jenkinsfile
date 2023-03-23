@@ -1,9 +1,13 @@
+// This library is defined in https://github.com/juspay/jenkins-nix-ci
+// and provides: cachixUse, cachixPush, dockerPush
+@Library('jenkins-nix-ci') _
+
 pipeline {
     agent any
     stages {
         stage ('Cachix setup') {
             steps {
-                sh 'cachix use nammayatri'
+                cachixUse 'nammayatri'
             }
         }
         stage ('Nix Build') {
@@ -18,22 +22,14 @@ pipeline {
         }
         stage ('Docker image') {
             when { branch 'main' }
-            environment {
-              DOCKER_USER = credentials('docker-user')
-              DOCKER_PASS = credentials('docker-pass')
-              DOCKER_SERVER = 'ghcr.io'
-            }
             steps {
-                sh 'nix run github:juspay/jenkins-nix-ci#docker-push dockerImage'
+                dockerPush "dockerImage", "ghcr.io"
             }
         }
-        stage ('Push to cachix') {
-          environment {
-            CACHIX_AUTH_TOKEN = credentials('cachix-auth-token')
-          }
-          steps {
-            sh 'nix run github:juspay/jenkins-nix-ci#cachix-push nammayatri'
-          }
+        stage ('Cachix push') {
+            steps {
+              cachixPush "nammayatri"
+            }
         }
     }
 }
