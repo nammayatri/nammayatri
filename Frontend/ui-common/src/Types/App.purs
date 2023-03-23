@@ -24,7 +24,7 @@ import Data.Newtype (class Newtype)
 import Data.Generic.Rep.Eq (genericEq)
 import Foreign.Generic (class Decode, class Encode)
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
-data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers
+data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall
 
 newtype Place = Place {
   id :: String

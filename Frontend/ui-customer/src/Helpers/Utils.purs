@@ -15,39 +15,39 @@
 
 module Helpers.Utils where
 
-import Data.Date (Date)
-import Data.Generic.Rep (class Generic)
-import Data.Generic.Rep.Show (genericShow)
-import Effect (Effect)
-import Prelude (class Show, class Ord, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=),(/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
-import Data.Traversable (traverse)
-import Effect.Aff (error, killFiber, launchAff, launchAff_)
-import Juspay.OTP.Reader (initiateSMSRetriever)
-import Juspay.OTP.Reader.Flow as Reader
-import Juspay.OTP.Reader as Readers
-import Data.Array.NonEmpty (fromArray)
-import Effect.Class (liftEffect)
-import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
-import Foreign.Class (class Decode, class Encode)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Presto.Core.Flow (Flow, doAff)
-import Types.App (GlobalState)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts)
-import Engineering.Helpers.Commons (liftFlow, os)
-import Control.Monad.Except (runExcept)
-import Foreign.Generic (decodeJSON, encodeJSON)
-import Data.Either (Either(..), hush)
-import Effect.Console (logShow)
-import Data.Array(length,filter,cons,deleteAt, sortWith, drop, head, (!!))
-import Debug.Trace(spy)
-import Math(pi, sin, cos, sqrt, asin)
-import Data.Number (fromString)
-import Data.Foldable ( or )
-import Data.String as DS
+import Common.Types.App (LazyCheck)
 import Components.LocationListItem.Controller (dummyLocationListState)
+import Control.Monad.Except (runExcept)
+import Data.Array (cons, deleteAt, filter, length, (!!))
+import Data.Array.NonEmpty (fromArray)
+import Data.Date (Date)
+import Data.Either (Either(..), hush)
+import Data.Foldable (or)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Eq (genericEq)
+import Data.Generic.Rep.Show (genericShow)
 import Data.Int as INT
--- import Effect.Random (random)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String as DS
+import Data.Traversable (traverse)
 import Effect (Effect)
+import Effect.Aff (error, killFiber, launchAff, launchAff_)
+import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
+import Effect.Class (liftEffect)
+import Effect.Console (logShow)
+import Engineering.Helpers.Commons (liftFlow, os)
+import Foreign (Foreign)
+import Foreign.Class (class Decode, class Encode, decode)
+import Foreign.Generic (decodeJSON, encodeJSON)
+import Juspay.OTP.Reader (initiateSMSRetriever)
+import Juspay.OTP.Reader as Readers
+import Juspay.OTP.Reader.Flow as Reader
+import Math (pi, sin, cos, sqrt, asin)
+import Prelude (class Eq, class Show, Unit, bind, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (==), (>), (>>>))
+import Presto.Core.Flow (Flow, doAff)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject)
+import Types.App (GlobalState)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do 
@@ -333,3 +333,20 @@ getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (g
 
 getPreviousVersion :: String -> String 
 getPreviousVersion _ = if os == "IOS" then "1.2.5" else "1.2.0"
+
+foreign import getMerchantId :: String -> Foreign
+
+data Merchant = NAMMAYATRI | JATRISAATHI | YATRI
+
+derive instance genericMerchant :: Generic Merchant _
+instance eqMerchant :: Eq Merchant where eq = genericEq
+instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
+instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
+
+getMerchant :: LazyCheck -> Merchant
+getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of 
+  Just merchant -> merchant
+  Nothing -> NAMMAYATRI
+
+decodeMerchantId :: Foreign -> Maybe Merchant
+decodeMerchantId = hush <<< runExcept <<< decode

@@ -47,7 +47,7 @@ getHI script = case script of
   ENTER_YOUR_NAME -> "अपना नाम दर्ज करें"
   FULL_NAME-> "पूरा नाम"
   EMAIL -> "ईमेल"
-  WELCOME_TO_NAMMA_YATRI -> "नम्मा यात्री में आपका स्वागत है"
+  WELCOME_TEXT -> "नम्मा यात्री में आपका स्वागत है"
   PLEASE_CHOOSE_YOUR_PREFERRED_LANGUAGE_TO_CONTINUE -> "जारी रखने के लिए कृपया अपनी पसंदीदा भाषा चुनें।"
   WRITE_TO_US -> "हमे संपर्क करे"
   NOTE -> "टिप्पणी: "

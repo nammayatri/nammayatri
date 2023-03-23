@@ -77,7 +77,7 @@ topTextView state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding (Padding 20 0 20 10)
-    ][  logoView 
+    ][  logoView state
       , textView
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -101,8 +101,8 @@ topTextView state =
       ]
 
 --------------------------------------------------- logoView -----------------------------------------------------
-logoView :: forall w . PrestoDOM (Effect Unit) w
-logoView = 
+logoView :: forall w . ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+logoView state = 
   linearLayout
         [ height $ V 48
         , width MATCH_PARENT
@@ -112,7 +112,7 @@ logoView =
         ][  imageView
               [ height $ V 48
               , width $ V 48
-              , imageWithFallback "ny_ic_launcher,https://assets.juspay.in/nammayatri/images/common/ny_ic_launcher.png"
+              , imageWithFallback "ic_launcher,https://assets.juspay.in/nammayatri/images/common/ny_ic_launcher.png"
               ]
           ]
 
