@@ -21,6 +21,7 @@ import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -43,6 +44,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.PowerManager;
+import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.provider.Settings;
@@ -103,6 +105,7 @@ import com.google.firebase.messaging.BuildConfig;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.theartofdev.edmodo.cropper.CropImage;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -996,9 +999,48 @@ public class MainActivity extends AppCompatActivity {
                   Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
               }
               break;
+          case CommonJsInterface.REQUEST_CONTACTS:
+              if(ContextCompat.checkSelfPermission(MainActivity.getInstance(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED){
+                  String contacts = null;
+                    try {
+                        contacts = getPhoneContacts();
+                        if (juspayServicesGlobal.getDynamicUI() != null){
+                            CommonJsInterface.contactsStoreCall(juspayServicesGlobal.getDuiCallback(), contacts);
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+              }else{
+                  Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
+              }
+              break;
           default: return;
       }
   }
+
+    public String getPhoneContacts() throws JSONException {
+        ContentResolver contentResolver = getContentResolver();
+        Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
+        Cursor cursor = contentResolver.query(uri,null,null,null,null);
+
+        JSONArray contacts = new JSONArray();
+
+        if(cursor.getCount()>0){
+            while(cursor.moveToNext()){
+                String contactNameStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
+                String contactStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
+                String contactNumber = contactStr.replaceAll("[^0-9]", "");
+                String contactName = contactNameStr.replaceAll("'","");
+                JSONObject tempPoints = new JSONObject();
+                tempPoints.put("name",contactName);
+                tempPoints.put("number",contactNumber);
+                contacts.put(tempPoints);
+            }
+        }
+        System.out.print("Contacts " + contacts);
+        return contacts.toString();
+    }
+
     public void firstTimeAskingPermission(Context context, String permission){
         SharedPreferences sharedPreference = context.getSharedPreferences(activity.getString(R.string.preference_file_key), MODE_PRIVATE);
         sharedPreference.edit().putString(permission, "false").apply();

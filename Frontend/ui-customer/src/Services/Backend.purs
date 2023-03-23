@@ -27,7 +27,7 @@ import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, toggl
 import Juspay.OTP.Reader as Readers
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..))
+import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts)
 import Types.App (GlobalState(..), FlowBT, ScreenType(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Presto.Core.Types.API (Header(..), Headers(..))
@@ -578,6 +578,29 @@ walkCoordinates (Snapped points) (Just boundingBox) = do
 
 dummySnapped :: Snapped
 dummySnapped = Snapped[LatLong{"lat": 0.0, "lon": 0.0}]
+
+postContactsReq :: (Array NewContacts) -> EmergContactsReq
+postContactsReq contacts = EmergContactsReq {
+  "defaultEmergencyNumbers" : map (\item -> ContactDetails {
+      "mobileNumber": item.number,
+      "name": item.name,
+      "mobileCountryCode": "+91"
+  }) contacts
+}
+
+emergencyContactsBT :: EmergContactsReq -> FlowBT String EmergContactsResp
+emergencyContactsBT req = do
+    headers <- lift $ lift $ getHeaders ""
+    withAPIResultBT (EP.emergencyContacts "") (\x → x) errorHandler (lift $ lift $ callAPI headers req)
+    where
+    errorHandler errorPayload = BackT $ pure GoBack
+
+getEmergencyContactsBT ::  GetEmergContactsReq -> FlowBT String GetEmergContactsResp
+getEmergencyContactsBT req = do
+    headers <- lift $ lift $ getHeaders ""
+    withAPIResultBT (EP.emergencyContacts "") (\x → x) errorHandler (lift $ lift $ callAPI headers req)
+    where
+    errorHandler errorPayload = BackT $ pure GoBack
 
 getDriverLocationBT :: String -> FlowBT String GetDriverLocationResp
 getDriverLocationBT rideId = do

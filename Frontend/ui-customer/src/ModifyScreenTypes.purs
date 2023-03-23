@@ -42,6 +42,7 @@ modifyScreenState st =
     ContactUsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {contactUsScreen = a state.contactUsScreen})
     SavedLocationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {savedLocationScreen = a state.savedLocationScreen})
     ReferralScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {referralScreen = a state.referralScreen})
+    EmergencyContactsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {emergencyContactsScreen = a state.emergencyContactsScreen})
 
 
 updateRideDetails :: MyRidesScreenState -> FlowBT String Unit

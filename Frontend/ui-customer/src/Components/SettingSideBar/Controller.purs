@@ -22,6 +22,7 @@ import Data.Generic.Rep.Eq (genericEq)
 data Action = ChangeLanguage
             | EditProfile
             | PastRides
+            | GoToEmergencyContacts
             | GoToAbout
             | ShareAppLink
             | OnLogout
@@ -34,7 +35,7 @@ data Action = ChangeLanguage
 
 data Status = OPEN | CLOSING | CLOSED
 
-data Tag = SETTINGS_LOGOUT | SETTINGS_ABOUT | SETTINGS_FAVOURITES | SETTINGS_HELP | SETTINGS_LANGUAGE | SETTINGS_RIDES | SETTINGS_SHARE_APP
+data Tag = SETTINGS_LOGOUT | SETTINGS_ABOUT | SETTINGS_FAVOURITES | SETTINGS_HELP | SETTINGS_LANGUAGE | SETTINGS_RIDES | SETTINGS_SHARE_APP | SETTINGS_EMERGENCY_CONTACTS
 
 derive instance genericStatus :: Generic Status _
 instance eqStatus :: Eq Status where eq = genericEq

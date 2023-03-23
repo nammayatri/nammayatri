@@ -124,3 +124,6 @@ notifyFlowEvent dummy = (getBaseUrl "34") <> "/frontend/notifyEvent"
 
 cancelEstimate :: String -> String 
 cancelEstimate estimateId = (getBaseUrl "35") <> "/estimate/" <> estimateId <> "/cancel"
+
+emergencyContacts :: String -> String
+emergencyContacts dummy = (getBaseUrl "36") <> "/profile/defaultEmergencyNumbers"

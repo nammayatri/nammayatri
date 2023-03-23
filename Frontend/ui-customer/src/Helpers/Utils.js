@@ -155,6 +155,29 @@ exports["storeCallBackCustomer"] = function (cb) {
     }
 }
 
+exports["storeCallBackContacts"] = function (cb) {
+  return function (action) {
+    return function () {
+      try {
+        var callback = callbackMapper.map(function (contact) {
+          json = JSON.parse(contact);
+          console.log("storeCallBackContacts js " + json);
+          cb(action(json))();
+        });
+
+        console.log("In storeCallBackContacts ---------- + " + action);
+        JBridge.storeCallBackContacts(callback);
+      } catch (err) {
+        console.log("storeCallBackContacts error " + err);
+      }
+    }
+  }
+}
+
+exports["parseNewContacts"] = function (String) {
+    return JSON.parse(String);
+}
+
 function setText(id, text, pos) {
         if (__OS === "ANDROID") {
             var cmd = "set_view=ctx->findViewById:i_" + id + ";";
@@ -484,3 +507,8 @@ exports["fetchAndUpdateCurrentLocation"] = function (cb) {
     };
   };
 };
+exports ["contactPermission"] = function () {
+  if(JBridge.contactPermission){
+    return JBridge.contactPermission();
+  }
+}
