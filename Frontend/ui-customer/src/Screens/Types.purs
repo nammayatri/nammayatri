@@ -503,6 +503,7 @@ type HomeScreenStateProps =
   , searchId :: String
   , bookingId :: String
   , customerTip :: CustomerTipProps
+  , merchantExoPhone :: String
   , expiredQuotes :: Array String
   , isCancelRide :: Boolean
   , cancellationReasons :: Array CancellationReasons

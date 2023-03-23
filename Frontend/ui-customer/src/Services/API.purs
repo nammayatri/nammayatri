@@ -767,7 +767,8 @@ data ConfirmRequest = ConfirmRequest String
 
 
 newtype ConfirmRes = ConfirmRes {
-  bookingId :: String 
+  bookingId :: String,
+  merchantExoPhone :: String 
 }
 
 instance makeConfirmRequest :: RestEndpoint ConfirmRequest ConfirmRes where

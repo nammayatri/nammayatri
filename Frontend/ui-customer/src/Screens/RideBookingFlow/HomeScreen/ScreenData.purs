@@ -91,6 +91,7 @@ initData = {
       }
     , searchId : ""
     , bookingId : ""
+    , merchantExoPhone : ""
     , expiredQuotes : []
     , isCancelRide : false
     , cancellationReasons : []
