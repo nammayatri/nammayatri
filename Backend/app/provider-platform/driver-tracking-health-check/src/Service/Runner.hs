@@ -35,7 +35,7 @@ import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
 import Kernel.Utils.Service
 import SharedLogic.TransporterConfig
-import qualified Storage.Queries.DriverInformation as DrInfo
+import qualified Storage.CachedQueries.DriverInformation as CDrInfo
 import qualified Storage.Queries.Person as SQP
 import Tools.Notifications
 
@@ -52,7 +52,7 @@ driverLastLocationUpdateCheckService = startService "driverLastLocationUpdateChe
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
     HC.iAmAlive
-    drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral locationDelay) `addUTCTime` now)
+    drivers <- CDrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral locationDelay) `addUTCTime` now)
     let driverDetails = map fetchPersonIdAndMobileNumber drivers
     flip map driverDetails \case
       (driverId, Nothing) -> Left driverId
@@ -91,7 +91,7 @@ driverMakingInactiveService = startService "driverMakingInactiveService" $ withR
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverMakingInactiveService" do
     now <- getCurrentTime
     HC.iAmAlive
-    drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now)
+    drivers <- CDrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now)
     logPretty INFO ("Drivers to make inactive: " <> show (length drivers)) ((.id) <$> drivers)
     mapM_ fetchPersonIdAndMobileNumber drivers
   threadDelay (secondsToMcs delay).getMicroseconds
@@ -101,8 +101,8 @@ driverMakingInactiveService = startService "driverMakingInactiveService" $ withR
       mobileNumber' <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
       countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
       log INFO "Make driver inactive"
-      Esq.runTransaction $
-        DrInfo.updateActivity (cast driver.id) False
+      Esq.runTransactionF $ \finalize -> do
+        CDrInfo.updateActivity finalize (cast driver.id) False
 
       smsCfg <- asks (.smsCfg)
       driverInactiveSmsTemplate <- asks (.driverInactiveSmsTemplate)

@@ -44,11 +44,11 @@ import qualified Mobility.AppBackend.APICalls as API
 import Mobility.AppBackend.Fixtures
 import qualified Mobility.Transporter.APICalls as API
 import Mobility.Transporter.Fixtures as Fixtures
+import qualified "static-offer-driver-app" Storage.CachedQueries.DriverInformation as CDriverInfo
 import qualified "static-offer-driver-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
 import qualified "rider-app" Storage.Queries.Booking as BQRB
 import qualified "static-offer-driver-app" Storage.Queries.Booking as TQBooking
 import qualified "static-offer-driver-app" Storage.Queries.Booking as TQRB
-import qualified "static-offer-driver-app" Storage.Queries.DriverInformation as DriverInfo
 import "static-offer-driver-app" Storage.Queries.DriverLocation
 import qualified "static-offer-driver-app" Storage.Queries.NotificationStatus as QNS
 import qualified "static-offer-driver-app" Storage.Queries.Ride as TQRide
@@ -122,13 +122,13 @@ setupDriver driver initialPoint = do
 resetDriver :: DriverTestData -> IO ()
 resetDriver driver = runTransporterFlow "" $ do
   mbActiveRide <- TQRide.getActiveByDriverId $ cast driver.driverId
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QNS.deleteByPersonId $ cast driver.driverId
     whenJust mbActiveRide $ \activeRide -> do
       TQRide.updateStatus activeRide.id TRide.CANCELLED
       TQBooking.updateStatus activeRide.bookingId TBooking.CANCELLED
-    DriverInfo.updateActivity (cast driver.driverId) False
-    DriverInfo.updateOnRide (cast driver.driverId) False
+    CDriverInfo.updateActivity finalize (cast driver.driverId) False
+    CDriverInfo.updateOnRide finalize (cast driver.driverId) False
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)

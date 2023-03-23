@@ -72,18 +72,16 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.DriverLocation as SDrLoc
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.Ride as SRide
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as CQDI
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.AllocationEvent (logAllocationEvent)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
-import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
@@ -125,8 +123,8 @@ assignDriver bookingId driverId = do
       >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   ride <- buildRide booking
   rideDetails <- buildRideDetails ride driver
-  Esq.runTransaction $ do
-    QDI.updateOnRide (cast driver.id) True
+  Esq.runTransactionF $ \finalize -> do
+    CQDI.updateOnRide finalize (cast driver.id) True
     QRB.updateStatus bookingId SRB.TRIP_ASSIGNED
     QRide.create ride
     QRD.create rideDetails
@@ -283,7 +281,7 @@ getTopDriversByIdleTime = QDS.getTopDriversByIdleTime
 checkAvailability :: EsqDBFlow m r => [DriverPoolResult] -> m [DriverPoolResult]
 checkAvailability driverPool = do
   let driverIds = (.driverId) <$> driverPool
-  driversInfo <- QDriverInfo.fetchAllAvailableByIds driverIds
+  driversInfo <- CQDI.fetchAllAvailableByIds driverIds
   let availableDriverIds = map (cast . SDriverInfo.driverId) driversInfo
   -- availableDriverIds is part of driverPool, but isn't sorted by distance
   -- So we can use order that we have in sorted pool driverPool
@@ -311,15 +309,12 @@ cancelBooking bookingId reason = do
   transporter <-
     CQM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QRB.updateStatus booking.id SRB.CANCELLED
     QBCR.upsert reason
     whenJust mbRide $ \ride -> do
-      QRide.updateStatus ride.id SRide.CANCELLED
-      QDriverInfo.updateOnRide (cast ride.driverId) False
-  whenJust mbRide $ \ride -> do
-    SRide.clearCache $ cast ride.driverId
-    SDrLoc.clearDriverInfoCache $ cast ride.driverId
+      SRide.updateStatus finalize ride.id ride.driverId SRide.CANCELLED
+      CQDI.updateOnRide finalize (cast ride.driverId) False
   logTagInfo ("bookingId-" <> getId bookingId) ("Cancellation reason " <> show reason.source)
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter reason.source

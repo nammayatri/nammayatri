@@ -80,7 +80,7 @@ endRideTransaction driverId bookingId ride mbFareParams mbRiderDetailsId = do
       when shouldUpdateRideComplete (QRD.updateHasTakenValidRide riderDetails.id)
     whenJust mbFareParams QFare.create
     QRide.updateAll ride.id ride
-    QRide.updateStatus ride.id Ride.COMPLETED
+    QRide.updateStatus ride.id Ride.COMPLETED --SRide.
     QRB.updateStatus bookingId SRB.COMPLETED
     DriverStats.updateIdleTime driverId
     if driverInfo.active

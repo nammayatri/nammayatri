@@ -27,15 +27,14 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.DriverLocation as SDrLoc
 import SharedLogic.DriverPool
 import qualified SharedLogic.Ride as SRide
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as CDriverInformation
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
@@ -90,17 +89,15 @@ cancelRideTransaction ::
   SBCR.BookingCancellationReason ->
   m ()
 cancelRideTransaction bookingId ride bookingCReason = do
-  Esq.runTransaction $ do
-    updateDriverInfo ride.driverId
-    QRide.updateStatus ride.id SRide.CANCELLED
+  Esq.runTransactionF $ \finalize -> do
+    updateDriverInfo finalize ride.driverId
+    SRide.updateStatus finalize ride.id ride.driverId SRide.CANCELLED
     QRB.updateStatus bookingId SRB.CANCELLED
     QBCR.upsert bookingCReason
-  SRide.clearCache $ cast ride.driverId
-  SDrLoc.clearDriverInfoCache $ cast ride.driverId
   where
-    updateDriverInfo personId = do
+    updateDriverInfo finalize personId = do
       let driverId = cast personId
-      DriverInformation.updateOnRide driverId False
+      CDriverInformation.updateOnRide finalize driverId False
       when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId -- FIXME unreachable code
 
 reallocateRideTransaction ::
@@ -114,19 +111,17 @@ reallocateRideTransaction ::
   m ()
 reallocateRideTransaction subscriberId bookingId ride bookingCReason = do
   rideRequest <- buildRideReq
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QRB.updateStatus bookingId SRB.AWAITING_REASSIGNMENT
     QRB.increaseReallocationsCounter bookingId
-    QRide.updateStatus ride.id SRide.CANCELLED
-    updateDriverInfo
+    SRide.updateStatus finalize ride.id ride.driverId SRide.CANCELLED
+    updateDriverInfo finalize
     QBCR.upsert bookingCReason
     RideRequest.create rideRequest
-  SRide.clearCache $ cast ride.driverId
-  SDrLoc.clearDriverInfoCache $ cast ride.driverId
   where
-    updateDriverInfo = do
+    updateDriverInfo finalize = do
       let driverId = cast ride.driverId
-      DriverInformation.updateOnRide driverId False
+      CDriverInformation.updateOnRide finalize driverId False
       QDriverStats.updateIdleTime driverId
     buildRideReq = do
       guid <- generateGUID

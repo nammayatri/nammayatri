@@ -22,14 +22,18 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified SharedLogic.DriverLocation as SDrLoc
+import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Ride as QRide
 
-startRideTransaction :: EsqDBFlow m r => Id SP.Person -> Id SRide.Ride -> Id SRB.Booking -> LatLong -> m ()
-startRideTransaction driverId rId bookingId firstPoint = Esq.runTransaction $ do
-  QRide.updateStatus rId SRide.INPROGRESS
-  QRide.updateStartTimeAndLoc rId firstPoint
-  QBE.logRideCommencedEvent (cast driverId) bookingId rId
-  now <- getCurrentTime
-  void $ DrLoc.upsertGpsCoord driverId firstPoint now
+startRideTransaction :: (EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id SRide.Ride -> Id SRB.Booking -> LatLong -> m ()
+startRideTransaction driverId rId bookingId firstPoint = do
+  driverLocation <- Esq.runTransaction $ do
+    QRide.updateStatus rId SRide.INPROGRESS
+    QRide.updateStartTimeAndLoc rId firstPoint
+    QBE.logRideCommencedEvent (cast driverId) bookingId rId
+    now <- getCurrentTime
+    DrLoc.upsertGpsCoord driverId firstPoint now
+  SDrLoc.cacheDriverLocation driverLocation

@@ -61,8 +61,8 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig
+import qualified Storage.CachedQueries.DriverInformation as СQDriverInformation
 import qualified Storage.CachedQueries.Merchant as QMerchant
-import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
@@ -260,15 +260,14 @@ createDriverDetails personId adminId = do
             canDowngradeToHatchback = False
           }
   QDriverStats.createInitialDriverStats driverId
-  QDriverInformation.create driverInfo
+  СQDriverInformation.create driverInfo
   where
     driverId = cast personId
 
 getInformation ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
     EncFlow m r
   ) =>
   Id SP.Person ->
@@ -277,7 +276,7 @@ getInformation personId = do
   _ <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  driverInfo <- runInReplica $ QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  driverInfo <- СQDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   let merchantId = person.merchantId
   organization <-
@@ -286,7 +285,8 @@ getInformation personId = do
   pure $ makeDriverInformationRes driverEntity organization
 
 setActivity ::
-  ( EsqDBFlow m r
+  ( EsqDBFlow m r,
+    CacheFlow m r
   ) =>
   Id SP.Person ->
   Bool ->
@@ -295,15 +295,16 @@ setActivity personId isActive = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   when isActive $ do
-    driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+    driverInfo <- СQDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
     unless driverInfo.enabled $ throwError DriverAccountDisabled
     unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
-  Esq.runTransaction $
-    QDriverInformation.updateActivity driverId isActive
+  Esq.runTransactionF $ \finalize -> do
+    СQDriverInformation.updateActivity finalize driverId isActive
   pure APISuccess.Success
 
 setRental ::
-  ( EsqDBFlow m r
+  ( EsqDBFlow m r,
+    CacheFlow m r
   ) =>
   Id SP.Person ->
   Bool ->
@@ -311,8 +312,8 @@ setRental ::
 setRental personId isRental = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
-  Esq.runTransaction $
-    QDriverInformation.updateRental driverId isRental
+  Esq.runTransactionF $ \finalize -> do
+    СQDriverInformation.updateRental finalize driverId isRental
   pure APISuccess.Success
 
 listDriver ::
@@ -326,7 +327,7 @@ listDriver ::
   m ListDriverRes
 listDriver admin mbSearchString mbLimit mbOffset = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  personList <- runInReplica $ QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
+  personList <- runInReplica $ СQDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
   respPersonList <- traverse buildDriverEntityRes personList
   return $ ListDriverRes respPersonList
 
@@ -369,9 +370,9 @@ changeDriverEnableState admin personId isEnabled = do
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (person.merchantId == admin.merchantId) $ throwError Unauthorized
-  Esq.runTransaction $ do
-    QDriverInformation.updateEnabledState driverId isEnabled
-    unless isEnabled $ QDriverInformation.updateActivity driverId False
+  Esq.runTransactionF $ \finalize -> do
+    СQDriverInformation.updateEnabledState finalize driverId isEnabled
+    unless isEnabled $ СQDriverInformation.updateActivity (Esq.ignoreFinalize finalize) driverId False
   unless isEnabled $ do
     fcmConfig <- findFCMConfigByMerchantId person.merchantId
     Notify.notifyDriver fcmConfig FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
@@ -384,7 +385,7 @@ changeDriverEnableState admin personId isEnabled = do
 
 deleteDriver ::
   ( EsqDBFlow m r,
-    Redis.HedisFlow m r
+    CacheFlow m r
   ) =>
   SP.Person ->
   Id SP.Person ->
@@ -396,8 +397,8 @@ deleteDriver admin driverId = do
   unless (driver.merchantId == admin.merchantId || driver.role == SP.DRIVER) $ throwError Unauthorized
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession driverId
-  Esq.runTransaction $ do
-    QDriverInformation.deleteById (cast driverId)
+  Esq.runTransactionF $ \finalize -> do
+    СQDriverInformation.deleteById finalize (cast driverId)
     QDriverStats.deleteById (cast driverId)
     QR.deleteByPersonId driverId
     QVehicle.deleteById driverId
@@ -407,10 +408,9 @@ deleteDriver admin driverId = do
   return Success
 
 updateDriver ::
-  ( HasCacheConfig r,
+  ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
     EncFlow m r
   ) =>
   Id SP.Person ->
@@ -426,7 +426,7 @@ updateDriver personId req = do
                deviceToken = req.deviceToken <|> person.deviceToken
               }
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
-  driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  driverInfo <- СQDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   let wantToDowngrade = req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True
   when (vehicle.variant == SV.SEDAN && req.canDowngradeToSedan == Just True) $
     throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
@@ -436,9 +436,9 @@ updateDriver personId req = do
         driverInfo{canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan,
                    canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback
                   }
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QPerson.updatePersonRec personId updPerson
-    QDriverInformation.updateDowngradingOptions (cast person.id) updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback
+    СQDriverInformation.updateDowngradingOptions finalize (cast person.id) updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback
   driverEntity <- buildDriverEntityRes (updPerson, updDriverInfo)
   let merchantId = person.merchantId
   org <-

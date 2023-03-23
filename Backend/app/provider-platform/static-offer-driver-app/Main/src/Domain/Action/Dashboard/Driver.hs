@@ -49,9 +49,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.Queries.AllocationEvent as QAllocationEvent
 import qualified Storage.Queries.BusinessEvent as QBusinessEvent
-import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
@@ -120,7 +120,7 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
 driverActivity :: ShortId DM.Merchant -> Flow Common.DriverActivityRes
 driverActivity merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
-  Common.mkDriverActivityRes <$> Esq.runInReplica (QDriverInfo.countDrivers merchant.id)
+  Common.mkDriverActivityRes <$> Esq.runInReplica (CQDriverInfo.countDrivers merchant.id)
 
 ---------------------------------------------------------------------
 enableDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
@@ -138,8 +138,8 @@ enableDriver merchantShortId reqDriverId = do
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
   _vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-  Esq.runTransaction $ do
-    QDriverInfo.updateEnabledState driverId True
+  Esq.runTransactionF $ \finalize -> do
+    CQDriverInfo.updateEnabledState finalize driverId True
   logTagInfo "dashboard -> enableDriver : " (show personId)
   pure Success
 
@@ -158,9 +158,9 @@ disableDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QVehicle.deleteById personId
-    QDriverInfo.updateEnabledState driverId False
+    CQDriverInfo.updateEnabledState finalize driverId False
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -179,7 +179,8 @@ blockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ QDriverInfo.updateBlockedState driverId True
+  Esq.runTransactionF $ \finalize -> do
+    CQDriverInfo.updateBlockedState finalize driverId True
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -198,7 +199,8 @@ unblockDriver merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ QDriverInfo.updateBlockedState driverId False
+  Esq.runTransactionF $ \finalize -> do
+    CQDriverInfo.updateBlockedState finalize driverId False
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -305,17 +307,17 @@ deleteDriver merchantShortId reqDriverId = do
   unless (isNothing rides) $
     throwError $ InvalidRequest "Unable to delete driver, which have at least one ride"
 
-  driverInformation <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  driverInformation <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when driverInformation.enabled $
     throwError $ InvalidRequest "Driver should be disabled before deletion"
 
   -- this function uses tokens from db, so should be called before transaction
   Auth.clearDriverSession personId
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QNotificationStatus.deleteByPersonId driverId
     QAllocationEvent.deleteByPersonId driverId
     QBusinessEvent.deleteByPersonId driverId
-    QDriverInfo.deleteById driverId
+    CQDriverInfo.deleteById finalize driverId
     QDriverStats.deleteById driverId
     QDriverLocation.deleteById personId
     QR.deleteByPersonId personId
@@ -339,9 +341,9 @@ unlinkVehicle merchantShortId reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
 
-  Esq.runTransaction $ do
+  Esq.runTransactionF $ \finalize -> do
     QVehicle.deleteById personId
-    QDriverInfo.updateEnabledState driverId False
+    CQDriverInfo.updateEnabledState finalize driverId False
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   return Success
 

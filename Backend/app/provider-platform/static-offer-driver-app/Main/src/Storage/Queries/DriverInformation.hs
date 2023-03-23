@@ -12,7 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.DriverInformation where
+module Storage.Queries.DriverInformation
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
+where
 
 import Control.Applicative (liftA2)
 import Domain.Types.DriverInformation
@@ -93,24 +98,6 @@ updateBlockedState driverId isBlocked = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-updateEnabledStateReturningIds :: EsqDBFlow m r => Id Merchant -> [Id Driver] -> Bool -> m [Id Driver]
-updateEnabledStateReturningIds merchantId driverIds isEnabled = do
-  Esq.runTransaction $ do
-    present <- fmap (cast . (.driverId)) <$> fetchAllByIds merchantId driverIds
-    updateEnabledStateForIds present
-    pure present
-  where
-    updateEnabledStateForIds :: [Id Driver] -> SqlDB ()
-    updateEnabledStateForIds present = do
-      now <- getCurrentTime
-      Esq.update $ \tbl -> do
-        set
-          tbl
-          [ DriverInformationEnabled =. val isEnabled,
-            DriverInformationUpdatedAt =. val now
-          ]
-        where_ $ tbl ^. DriverInformationDriverId `in_` valList (map (toKey . cast) present)
-
 updateRental :: Id Driver -> Bool -> SqlDB ()
 updateRental driverId isRental = do
   now <- getCurrentTime
@@ -158,9 +145,6 @@ updateDowngradingOptions driverId canDowngradeToSedan canDowngradeToHatchback = 
         DriverInformationUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
-
-resetDowngradingOptions :: Id Driver -> SqlDB ()
-resetDowngradingOptions driverId = updateDowngradingOptions driverId False False
 
 deleteById :: Id Driver -> SqlDB ()
 deleteById = Esq.deleteByKey @DriverInformationT . cast

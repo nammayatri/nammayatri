@@ -23,7 +23,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified "static-offer-driver-app" Storage.Queries.DriverInformation as Q
+import qualified "static-offer-driver-app" Storage.CachedQueries.DriverInformation as CQ
 import qualified "static-offer-driver-app" Storage.Queries.DriverLocation as QL
 import qualified "static-offer-driver-app" Storage.Queries.Person as Q
 import Test.Hspec
@@ -141,13 +141,13 @@ hatchbackDriver :: Text
 hatchbackDriver = "003093df-4f7c-440f--hatchback_driver"
 
 setDriversActive :: Bool -> FlowR BecknTransport.AppEnv ()
-setDriversActive isActive = Esq.runTransaction $ do
+setDriversActive isActive = Esq.runTransactionF $ \finalize -> do
   let drivers = [furthestDriver, closestDriver, otherDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
-  forM_ drivers (\driver -> Q.updateActivity (Id driver) isActive)
+  forM_ drivers (\driver -> CQ.updateActivity finalize (Id driver) isActive)
 
 setSuvDriverRental :: Bool -> FlowR BecknTransport.AppEnv ()
-setSuvDriverRental isRental = Esq.runTransaction $ do
-  Q.updateRental (Id suvDriver) isRental
+setSuvDriverRental isRental = Esq.runTransactionF $ \finalize -> do
+  CQ.updateRental finalize (Id suvDriver) isRental
 
 -- we can remove this when we flatten migrations
 setDriverWithOldLocation :: FlowR BecknTransport.AppEnv ()

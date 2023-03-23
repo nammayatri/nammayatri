@@ -17,8 +17,8 @@ module SharedLogic.Ride where
 import Domain.Types.Person (Person)
 import Domain.Types.Ride
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Storage.CachedQueries.CacheConfig
@@ -41,3 +41,13 @@ getInProgressRideIdByDriverId driverId =
     Just a ->
       return $ Just a
     Nothing -> flip whenJust (cacheAssignedRide driverId) /=<< Esq.runInReplica (RQueries.getInProgressRideIdByDriverId driverId)
+
+updateStatus :: CacheFlow m r => Finalize m -> Id Ride -> Id Person -> RideStatus -> Esq.SqlDB ()
+updateStatus finalize rideId personId status = do
+  RQueries.updateStatus rideId status
+  finalize $ clearCache personId
+
+updateStatusByIds :: CacheFlow m r => Finalize m -> [Id Ride] -> [Id Person] -> RideStatus -> Esq.SqlDB ()
+updateStatusByIds finalize rideIds personIds rideStatus = do
+  RQueries.updateStatusByIds rideIds rideStatus
+  finalize $ forM_ personIds clearCache
