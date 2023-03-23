@@ -8,8 +8,6 @@ let
 in
 {
   config = {
-    flake.dockerImageName = imageName + ":" + imageTag;
-    flake.dockerImageTag = imageTag;
     perSystem = { self', pkgs, lib, ... }: {
       packages = lib.optionalAttrs pkgs.stdenv.isLinux {
         dockerImage =
