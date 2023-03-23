@@ -72,7 +72,7 @@ import javax.net.ssl.HttpsURLConnection;
 public class NotificationUtils extends AppCompatActivity {
 
     private static final String TAG = "NotificationUtils";
-    
+
     public static String CHANNEL_ID = "General";
     public static String FLOATING_NOTIFICATION = "FLOATING_NOTIFICATION";
     public static String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
@@ -94,7 +94,7 @@ public class NotificationUtils extends AppCompatActivity {
     private static FirebaseAnalytics mFirebaseAnalytics;
     static Random rand = new Random();
     public static int notificationId = rand.nextInt(1000000);
-    private static int smallIcon = R.drawable.ny_ic_launcher;
+    private static int smallIcon = R.drawable.ic_launcher;
     public static MediaPlayer mediaPlayer;
     private static AudioManager audio;
     public static Bundle lastRideReq = new Bundle();
@@ -133,7 +133,7 @@ public class NotificationUtils extends AppCompatActivity {
         intent.putExtra("NOTIFICATION_DATA", data.toString());
 //        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-       PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId , intent,PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId , intent,PendingIntent.FLAG_IMMUTABLE);
         String channelId = FLOATING_NOTIFICATION;
         Uri notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
         if (data.has("notification_type")){
@@ -346,7 +346,7 @@ public class NotificationUtils extends AppCompatActivity {
             Bitmap bitmap = null;
             if (imageUrl != null)
             {
-                 bitmap = getBitmapfromUrl(imageUrl);
+                bitmap = getBitmapfromUrl(imageUrl);
             }
             Intent intent= new Intent(context, MainActivity.class);
             System.out.println("Notificationn Utils Data"+ data.toString());
@@ -354,7 +354,7 @@ public class NotificationUtils extends AppCompatActivity {
             System.out.println("Notificationn222"+(data.getString("entity_ids")));
             System.out.println("imageUrl"+imageUrl);
             intent.putExtra("NOTIFICATION_DATA", data.toString());
-//            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+    //            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
             PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId , intent, PendingIntent.FLAG_IMMUTABLE);
             String notificationType = new String(data.getString("notification_type"));
@@ -433,7 +433,7 @@ public class NotificationUtils extends AppCompatActivity {
             if (TRIP_CHANNEL_ID.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri"))
+                if (key.equals("nammayatri") || key.equals("jatrisaathi"))
                     mFirebaseAnalytics.logEvent("ny_user_ride_started",params);
                 else
                     mFirebaseAnalytics.logEvent("ride_started",params);
@@ -441,7 +441,7 @@ public class NotificationUtils extends AppCompatActivity {
             if (TRIP_FINISHED.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri"))
+                if (key.equals("nammayatri") || key.equals("jatrisaathi"))
                     mFirebaseAnalytics.logEvent("ny_user_ride_completed",params);
                 else
                     mFirebaseAnalytics.logEvent("ride_completed",params);
@@ -449,11 +449,11 @@ public class NotificationUtils extends AppCompatActivity {
             if (CANCELLED_PRODUCT.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri"))
+                if (key.equals("nammayatri") || key.equals("jatrisaathi"))
                     mFirebaseAnalytics.logEvent("ny_user_ride_cancelled",params);
                 else
                     mFirebaseAnalytics.logEvent("ride_cancelled",params);
-                if (key.equals("nammayatripartner") && msg.contains("Customer had to cancel your ride")){
+                if (key.equals("nammayatripartner") || key.equals("jatrisaathipartner") && msg.contains("Customer had to cancel your ride")){
                     startMediaPlayer(context, R.raw.ride_cancelled_media);
                 }else{
                     startMediaPlayer(context, R.raw.cancel_notification_sound);
@@ -462,11 +462,11 @@ public class NotificationUtils extends AppCompatActivity {
             if (DRIVER_ASSIGNMENT.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri"))
+                if (key.equals("nammayatri") || key.equals("jatrisaathi"))
                     mFirebaseAnalytics.logEvent("ny_user_ride_assigned",params);
                 else
                     mFirebaseAnalytics.logEvent("driver_assigned",params);
-                if (key.equals("nammayatripartner")) {
+                if (key.equals("nammayatripartner") || key.equals("jatrisaathipartner")) {
                     startMediaPlayer(context, R.raw.ride_assigned);
                 }
             }
@@ -476,7 +476,7 @@ public class NotificationUtils extends AppCompatActivity {
                     notificationCallback.get(i).triggerPop((data.getString("entity_ids")),(data.getString("notification_type")));
                 }
             }
-            if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_CHANNEL_ID.equals(notificationType)) && (key.equals("nammayatri"))) {
+            if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_CHANNEL_ID.equals(notificationType)) && (key.equals("nammayatri") || key.equals("jatrisaathi"))) {
                 for(int i =0;i<notificationCallback.size();i++) {
                     notificationCallback.get(i).callFlowCustomer(notificationType);
                 }

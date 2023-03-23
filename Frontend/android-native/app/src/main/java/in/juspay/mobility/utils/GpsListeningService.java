@@ -126,7 +126,7 @@ public class GpsListeningService extends Service {
                 new NotificationCompat.Builder(this, channelId)
                         .setContentTitle("GPS")
                         .setContentText(getString(R.string.waiting_for_gps_signal))
-                        .setSmallIcon(R.drawable.ny_ic_launcher)
+                        .setSmallIcon(R.drawable.ic_launcher)
                         .setProgress(100, 0 , true)
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
@@ -138,9 +138,9 @@ public class GpsListeningService extends Service {
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, alertNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this,"General") ;
-        mBuilder.setLargeIcon(BitmapFactory.decodeResource(this.getResources(), R.drawable.ny_ic_launcher));
+        mBuilder.setLargeIcon(BitmapFactory.decodeResource(this.getResources(), R.drawable.ic_launcher));
         mBuilder.setContentTitle(getString(R.string.we_made_you_online))
-                .setSmallIcon((R.drawable.ny_ic_launcher))
+                .setSmallIcon((R.drawable.ic_launcher))
                 .setContentText(getString(R.string.location_is_turned_on))
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_MAX);

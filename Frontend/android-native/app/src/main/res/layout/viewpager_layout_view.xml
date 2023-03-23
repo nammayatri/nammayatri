@@ -167,9 +167,10 @@
                 android:layout_width="35dp"
                 android:layout_height="35dp"
                 android:layout_marginRight="12dp"
-                android:src="@drawable/ny_ic_icon" />
+                android:src="@drawable/ic_launcher" />
 
             <TextView
+                android:id="@+id/merchantLogo"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:fontFamily="@font/plus_jakartasans_medium"

@@ -421,6 +421,7 @@
                                 android:fontFamily="@font/plus_jakartasans_regular"
                                 android:text="@string/includes_pickup_charges_10"
                                 android:textColor="#6D7280"
+                                android:id="@+id/extraFareIndication"
                                 android:textFontWeight="400"
                                 android:textSize="12dp" />
 
