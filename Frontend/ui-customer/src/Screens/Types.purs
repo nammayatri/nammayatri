@@ -573,7 +573,6 @@ type SelectLanguageScreenState = {
 }
 
 type SelectLanguageScreenData =  {
-  languages :: Array Language,
   isSelected :: Boolean
  }
 

@@ -15,36 +15,36 @@
 
 module Components.DriverInfoCard.View where
 
+import Common.Types.App
+
+import Animation (fadeIn)
 import Components.DriverInfoCard.Controller (Action(..), DriverInfoCardState)
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination as SourceToDestination
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Monad.Trans.Class (lift)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!))
 import Data.Maybe (fromMaybe)
 import Data.String (Pattern(..), split, length)
 import Debug.Trace (spy)
 import Effect (Effect)
+import Effect.Aff (launchAff_)
+import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, os, flowRunner)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (secondsToHms)
+import Helpers.Utils (Merchant(..), getMerchant, secondsToHms)
+import Helpers.Utils (waitingCountdownTimer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>),(-),(*), bind, pure, discard, (&&), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alignParentBottom, alignParentLeft, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, singleLine, afterRender, clickable, scrollBarY, scrollView, imageWithFallback)
+import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, (&&), (||), (/=))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, alignParentLeft, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (Stage(..))
 import Styles.Colors as Color
-import Common.Types.App
-import Control.Monad.Trans.Class (lift)
-import Control.Transformers.Back.Trans (runBackT)
-import Effect.Aff (launchAff_)
-import Effect.Class (liftEffect)
-import Helpers.Utils (waitingCountdownTimer)
-import Control.Monad.Except.Trans (runExceptT)
-import Presto.Core.Types.Language.Flow (doAff)
-import Animation (fadeIn)
-import PrestoDOM.Animation as PrestoAnim
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -61,7 +61,7 @@ mapOptionsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> Pr
 mapOptionsView push state =
   linearLayout
   [ width MATCH_PARENT
-  , height WRAP_CONTENT
+  , height $ V 50
   , background Color.transparent
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
@@ -111,7 +111,7 @@ locationTrackButton push state =
   , gravity CENTER
   , background Color.white900
   , stroke $ "1,"<> Color.grey900
-  , visibility if state.props.currentStage == RideAccepted then GONE else VISIBLE
+  , visibility if state.props.currentStage == RideAccepted || (getMerchant FunctionCall /= NAMMAYATRI) then GONE else VISIBLE
   , cornerRadius 20.0
   , onClick push (const $ LocationTracking)
   , margin $ MarginTop 8
@@ -406,7 +406,7 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback "ny_ic_driver_auto,https://assets.juspay.in/nammayatri/images/user/ny_ic_driver_auto.png"
+              [ imageWithFallback "ic_driver_vehicle,https://assets.juspay.in/nammayatri/images/user/ny_ic_driver_auto.png"
               , height $ V 120
               , gravity RIGHT
               , width MATCH_PARENT

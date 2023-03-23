@@ -15,18 +15,21 @@
 
 module Screens.SelectLanguageScreen.View where
 
+import Screens.CustomerUtils.SelectLanguageScreen.ComponentConfig
+
 import Animation as Anim
+import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.MenuButton as MenuButton
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
-import Engineering.Helpers.Commons as EHC 
-import Prelude (Unit, const, map, ($), (<<<),(==))
+import Engineering.Helpers.Commons as EHC
+import Merchant.Utils (getLanguagesList)
+import Prelude (Unit, const, map, ($), (<<<), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, background, gravity, height, linearLayout, margin, onBackPressed, orientation, padding, weight, width)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Screens.CustomerUtils.SelectLanguageScreen.ComponentConfig
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
@@ -75,4 +78,4 @@ listLanguageView state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    ](map (\lang_data -> MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state lang_data)) state.data.languages)
+    ](map (\lang_data -> MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state lang_data)) (getLanguagesList FunctionCall))

@@ -27,8 +27,8 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width)
-import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
+import Merchant.Utils (getInvoiceBreakUp, getReferenceList)
+import Merchant.Utils (getInvoiceBreakUp, getReferenceList)
 import Screens.Types as ST
 import Styles.Colors as Color
 
@@ -89,7 +89,7 @@ view push state =
                       ]
                       [ localTextView item Color.black650 ]
                 )
-                (referenceList state)
+                (getReferenceList FunctionCall)
             )
         , linearLayout
             [ width MATCH_PARENT

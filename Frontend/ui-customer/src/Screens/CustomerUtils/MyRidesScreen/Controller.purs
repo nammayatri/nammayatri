@@ -238,8 +238,8 @@ matchRidebyId rideOne rideTwo = rideOne.bookingId == rideTwo.bookingId
 
 getFares ∷ Array FareBreakupAPIEntity → Fares
 getFares fares = {
-  baseFare : "₹ " <> show (((getFareFromArray fares BASE_FARE) + (getFareFromArray fares EXTRA_DISTANCE_FARE)) - 10.0)
-, pickupCharges : "₹ 10.0"
+  baseFare : "₹ " <> show (((getFareFromArray fares BASE_FARE) + (getFareFromArray fares EXTRA_DISTANCE_FARE)) - (getFareFromArray fares DEAD_KILOMETER_FARE))
+, pickupCharges : "₹ " <> show (getFareFromArray fares DEAD_KILOMETER_FARE)
 , waitingCharges : "₹ " <> show (getFareFromArray fares WAITING_CHARGES)
 , nominalFare : "₹ " <> show (getFareFromArray fares DRIVER_SELECTED_FARE)
 }

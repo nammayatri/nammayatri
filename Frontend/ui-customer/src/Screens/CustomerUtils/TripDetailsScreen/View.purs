@@ -225,7 +225,7 @@ tripDetailsView state =
               , imageWithFallback "ny_ic_user,https://assets.juspay.in/nammayatri/images/user/ny_ic_user.png"
               ]
             , imageView
-              [ imageWithFallback "ny_ic_auto,https://assets.juspay.in/nammayatri/images/common/ny_ic_auto.png"
+              [ imageWithFallback "ic_vehicle_side,https://assets.juspay.in/nammayatri/images/common/ny_ic_auto.png"
               , width (V 36)
               , height (V 36)
               ]

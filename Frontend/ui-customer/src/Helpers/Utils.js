@@ -556,3 +556,7 @@ exports["storeOnResumeCallback"] = function (cb) {
     }
   }
 }
+
+exports["getMerchantId"] = function(id) {
+  return window.merchantID;
+}
