@@ -45,7 +45,7 @@ getKN script = case script of
   ENTER_YOUR_NAME -> "ನಿಮ್ಮ ಹೆಸರನ್ನು ನಮೂದಿಸಿ"
   FULL_NAME-> "ಪೂರ್ಣ ಹೆಸರು"
   EMAIL -> "ಇಮೇಲ್ ಮಾಡುವುದು"
-  WELCOME_TO_NAMMA_YATRI -> "ನಮ್ಮ ಯಾತ್ರೆಗೆ ಸುಸ್ವಾಗತ"
+  WELCOME_TEXT -> "ನಮ್ಮ ಯಾತ್ರೆಗೆ ಸುಸ್ವಾಗತ"
   PLEASE_CHOOSE_YOUR_PREFERRED_LANGUAGE_TO_CONTINUE -> "ಮುಂದುವರಿಯಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ ಆದ್ಯತೆಯ ಭಾಷೆಯನ್ನು ಆರಿಸಿ."
   WRITE_TO_US -> "ನಮಗೆ ಬರೆಯಿರಿ"
   NOTE -> "ಸೂಚನೆ: "

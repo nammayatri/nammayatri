@@ -23,9 +23,13 @@ import Data.Maybe as DM
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Data.Int as DI
+import Data.Maybe as DM
+import Data.String as DS
+import Helpers.Utils (Merchant(..), getMerchant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>), (>))
+import Prelude (Unit, ($), const, (<>), (>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -207,7 +211,7 @@ view push config =
         , color Color.black700
         , textSize FontSize.a_14
         , text (getString DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)
-        , visibility if (getAdditionalFare config.additionalFare) > 0 then VISIBLE else GONE
+        , visibility if (getMerchant FunctionCall) == NAMMAYATRI && ((getAdditionalFare config.additionalFare) > 0) then VISIBLE else GONE
         , margin (MarginBottom 12)
         , padding (Padding 20 0 20 0)
         ]

@@ -350,3 +350,19 @@ rotateArray arr times =
     Nothing -> arr
   else
     arr
+foreign import getMerchantId :: String -> Foreign
+
+data Merchant = NAMMAYATRI | JATRISAATHI | YATRI
+
+derive instance genericMerchant :: Generic Merchant _
+instance eqMerchant :: Eq Merchant where eq = genericEq
+instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
+instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
+
+getMerchant :: LazyCheck -> Merchant
+getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of 
+  Just merchant -> merchant
+  Nothing -> NAMMAYATRI
+
+decodeMerchantId :: Foreign -> Maybe Merchant
+decodeMerchantId = hush <<< runExcept <<< decode
