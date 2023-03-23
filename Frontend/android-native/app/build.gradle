@@ -136,6 +136,14 @@ android {
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
             dimension "app"
         }
+        js_kl_ {
+            applicationId  "in.juspay.jatrisaathi"
+            dimension "app"
+        }
+        js_d_kl_ {
+            applicationId "in.juspay.jatrisaathidriver"
+            dimension "app"
+        }
     }
     lintOptions {
         abortOnError false
