@@ -159,7 +159,7 @@ tripDetailsView state =
       , orientation HORIZONTAL
       , gravity CENTER_VERTICAL
       ][ imageView
-          [ imageWithFallback "ny_ic_auto_front,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_front.png"
+          [ imageWithFallback "ic_vehicle_front,https://assets.juspay.in/nammayatri/images/driver/ny_ic_auto_front.png"
           , width (V 36)
           , height (V 36)
           ]

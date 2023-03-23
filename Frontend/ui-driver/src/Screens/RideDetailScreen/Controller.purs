@@ -65,7 +65,7 @@ checkPermissionAndUpdateDriverMarker = do
   conditionA <- isLocationPermissionEnabled unit 
   conditionB <- isLocationEnabled unit 
   if conditionA && conditionB then do 
-    _ <- getCurrentPosition (showDriverMarker "ny_ic_auto") constructLatLong
+    _ <- getCurrentPosition (showDriverMarker "ic_vehicle_side") constructLatLong
     pure unit
     else do 
       _ <- requestLocation unit

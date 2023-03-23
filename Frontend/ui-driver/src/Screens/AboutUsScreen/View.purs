@@ -160,7 +160,7 @@ applicationInformationLayout state push =
     , textView
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , text (getString ABOUT_APP_DESCRIPTION)
+    , text $ getString ABOUT_TEXT
     , textSize FontSize.a_16
     , fontStyle $ FontStyle.regular LanguageStyle
     , color Color.black800
