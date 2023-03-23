@@ -34,7 +34,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer, Merchant(..), getMerchant)
+import Helpers.Utils (secondsToHms, zoneOtpExpiryTimer, Merchant(..), getMerchant, waitingCountdownTimer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, (&&), (||), (/=))
@@ -243,7 +243,7 @@ mapOptionsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> Pr
 mapOptionsView push state =
   linearLayout
   [ width MATCH_PARENT
-  , height WRAP_CONTENT
+  , height $ V 50
   , background Color.transparent
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL

@@ -16,7 +16,8 @@
 module Components.RateCard.View where
 
 import Common.Types.App (LazyCheck(..))
-import Components.RateCard.Controller (Action(..), Config)
+import Screens.Types
+import Components.RateCard.Controller (Action(..), Config, config)
 import Data.String as DS
 import Data.Int as DI
 import Data.Maybe as DM
