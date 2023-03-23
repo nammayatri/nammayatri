@@ -329,6 +329,7 @@ library
       Storage.Tabular.SearchRequestSpecialZone
       Storage.Tabular.Vehicle
       Tools.Auth
+      Tools.Call
       Tools.Error
       Tools.Maps
       Tools.Metrics
