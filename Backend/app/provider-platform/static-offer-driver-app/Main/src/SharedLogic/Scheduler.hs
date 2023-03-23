@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -14,16 +15,29 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module SharedLogic.Scheduler where
+module SharedLogic.Scheduler
+  ( SchedulerJobType (..),
+    SSchedulerJobType (..),
+    AllocateRentalJobData (..),
+    scheduleJobByTime,
+    receiveJobIds,
+  )
+where
 
 import Data.Singletons.TH
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto (EsqDBFlow)
+import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Storage.Hedis (HedisFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Lib.Scheduler
+import Lib.Scheduler.JobStorageType.DB.Queries
 
 data SchedulerJobType
   = AllocateRental
@@ -46,3 +60,27 @@ data AllocateRentalJobData = AllocateRentalJobData
 type instance JobContent 'AllocateRental = AllocateRentalJobData
 
 instance {-# OVERLAPS #-} JobInfoProcessor 'AllocateRental
+
+jobsGroupContainerKey :: Text
+jobsGroupContainerKey = "DynamicDriverOfferApp:SchedulerStream"
+
+scheduleJobByTime ::
+  forall (e :: SchedulerJobType) m r.
+  (EsqDBFlow m r, HedisFlow m r, JobInfoProcessor e, SingI e) =>
+  UTCTime ->
+  JobContent e ->
+  m ()
+scheduleJobByTime scheduledTime content = do
+  jobId <-
+    Esq.runTransaction $
+      createJobByTime @SchedulerJobType @e scheduledTime content
+  Redis.withCrossAppRedis $ Redis.xAdd jobsGroupContainerKey jobId
+
+receiveJobIds ::
+  (HedisFlow m r, FromJSON a) =>
+  Redis.XGroupConsumerName ->
+  Int ->
+  m (Maybe [Redis.XReadGroupRes a])
+receiveJobIds consumerName count = do
+  Redis.withCrossAppRedis . Redis.xReadGroupOpts consumerName jobsGroupContainerKey $
+    Redis.XReadOpts {block = Nothing, recordCount = Just $ fromIntegral count}

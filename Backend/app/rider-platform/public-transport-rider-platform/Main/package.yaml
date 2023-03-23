@@ -56,7 +56,6 @@ default-extensions:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - mobility-core
   - bytestring
   - record-dot-preprocessor
   - record-hasfield
@@ -91,6 +90,9 @@ library:
   source-dirs: src
   ghc-options:
     - -Wincomplete-uni-patterns
+  dependencies:
+    - mobility-core
+    - beckn-spec
 
 executables:
   public-transport-rider-platform-exe:

@@ -27,50 +27,44 @@ import Lib.Scheduler.JobStorageType.DB.Table
 import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
 import Lib.Scheduler.Types
 
-createJob :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => JobContent e -> Esq.SqlDB ()
+createJob :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => JobContent e -> Esq.SqlDB (Id AnyJob)
 createJob jobData = do
-  void $
-    ScheduleJob.createJob @t @e @Esq.SqlDB Esq.create $
-      JobEntry
-        { jobData = jobData,
-          maxErrors = 5
-        }
+  ScheduleJob.createJob @t @e @Esq.SqlDB Esq.create $
+    JobEntry
+      { jobData = jobData,
+        maxErrors = 5
+      }
 
-createJobIn :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => NominalDiffTime -> JobContent e -> Esq.SqlDB ()
+createJobIn :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => NominalDiffTime -> JobContent e -> Esq.SqlDB (Id AnyJob)
 createJobIn inTime jobData = do
-  void $
-    ScheduleJob.createJobIn @t @e @Esq.SqlDB Esq.create inTime $
-      JobEntry
-        { jobData = jobData,
-          maxErrors = 5
-        }
+  ScheduleJob.createJobIn @t @e @Esq.SqlDB Esq.create inTime $
+    JobEntry
+      { jobData = jobData,
+        maxErrors = 5
+      }
 
-createJobByTime :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => UTCTime -> JobContent e -> Esq.SqlDB ()
+createJobByTime :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => UTCTime -> JobContent e -> Esq.SqlDB (Id AnyJob)
 createJobByTime byTime jobData = do
-  void $
-    ScheduleJob.createJobByTime @t @e @Esq.SqlDB Esq.create byTime $
-      JobEntry
-        { jobData = jobData,
-          maxErrors = 5
-        }
+  ScheduleJob.createJobByTime @t @e @Esq.SqlDB Esq.create byTime $
+    JobEntry
+      { jobData = jobData,
+        maxErrors = 5
+      }
 
 findAll :: FromTType SchedulerJobT (AnyJob t) => SchedulerM [AnyJob t]
 findAll = Esq.findAll $ from $ table @SchedulerJobT
 
+findAllByIds :: FromTType SchedulerJobT (AnyJob t) => [Id AnyJob] -> SchedulerM [AnyJob t]
+findAllByIds ids = do
+  Esq.findAll $ do
+    job <- from $ table @SchedulerJobT
+    where_ $
+      job ^. SchedulerJobTId `in_` valList (toKey <$> ids)
+    orderBy [asc $ job ^. SchedulerJobScheduledAt]
+    pure job
+
 findById :: FromTType SchedulerJobT (AnyJob t) => Id AnyJob -> SchedulerM (Maybe (AnyJob t))
 findById = Esq.findById
-
--- WITH ExtraFeeList AS (
--- 	SELECT id, unnest(driver_extra_fee_list) AS extraFee
--- 	FROM   atlas_driver_offer_bpp.fare_policy
--- ), MinMaxExtraFee AS (
--- 	SELECT id, min (extraFee), max (extraFee)
--- 	FROM ExtraFeeList
--- 	GROUP BY id
--- )
--- UPDATE atlas_driver_offer_bpp.fare_policy AS T1 SET driver_min_extra_fee = T2.min, driver_max_extra_fee = T2.max
---   FROM MinMaxExtraFee AS T2
---   WHERE T1.id = T2.id;
 
 takeReadyTasks :: forall t. FromTType SchedulerJobT (AnyJob t) => Int -> SchedulerM [AnyJob t]
 takeReadyTasks lim = do
@@ -98,14 +92,6 @@ takeReadyTasks lim = do
           :<+> fieldName SchedulerJobId
           :<+> mempty
       )
-
--- Esq.findAll $ do
---   job <- from $ table @SchedulerJobT
---   where_ $
---     job ^. SchedulerJobStatus ==. val Pending
---       &&. job ^. SchedulerJobScheduledAt <=. val now
---   orderBy [asc $ job ^. SchedulerJobScheduledAt]
---   pure $ job ^. SchedulerJobTId
 
 updateStatus :: JobStatus -> Id AnyJob -> SchedulerM ()
 updateStatus newStatus jobId = do

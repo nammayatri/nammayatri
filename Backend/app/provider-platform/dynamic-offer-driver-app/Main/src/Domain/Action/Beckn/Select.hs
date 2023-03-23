@@ -103,14 +103,15 @@ handler merchantId sReq = do
   case res of
     ReSchedule ut ->
       Esq.runTransaction $ do
-        createJobIn @_ @'SendSearchRequestToDriver inTime $
-          SendSearchRequestToDriverJobData
-            { requestId = searchReq.id,
-              baseFare = estimateFare,
-              estimatedRideDistance = distance,
-              driverMinExtraFee = driverExtraFare.minFee,
-              driverMaxExtraFee = driverExtraFare.maxFee
-            }
+        void $
+          createJobIn @_ @'SendSearchRequestToDriver inTime $
+            SendSearchRequestToDriverJobData
+              { requestId = searchReq.id,
+                baseFare = estimateFare,
+                estimatedRideDistance = distance,
+                driverMinExtraFee = driverExtraFare.minFee,
+                driverMaxExtraFee = driverExtraFare.maxFee
+              }
     _ -> return ()
 
 buildSearchRequest ::

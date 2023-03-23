@@ -77,18 +77,18 @@ packages:
 # extra-deps: []
 
 extra-deps:
-  # - ../../beckn-gateway/app/gateway
-  # - ../../beckn-gateway/app/mock-registry
-  - git: https://github.com/nammayatri/beckn-gateway.git
-    commit: 17c14267f36a597bfcf3562357d4b7c64c57b80c
-    subdirs:
-      - app/gateway
-      - app/mock-registry
-  # -  ../../shared-kernel/lib/mobility-core
-  - git: https://github.com/nammayatri/shared-kernel.git
-    commit: c6ad8a6ed7274ff0086059d441ccb983a94a6cab
-    subdirs:
-      - lib/mobility-core
+  - ../../beckn-gateway/app/gateway
+  - ../../beckn-gateway/app/mock-registry
+  # - git: https://github.com/nammayatri/beckn-gateway.git
+  #   commit: 17c14267f36a597bfcf3562357d4b7c64c57b80c
+  #   subdirs:
+  #     - app/gateway
+  #     - app/mock-registry
+  -  ../../shared-kernel/lib/mobility-core
+  # - git: https://github.com/nammayatri/shared-kernel.git
+  #   commit: c6ad8a6ed7274ff0086059d441ccb983a94a6cab
+  #   subdirs:
+  #     - lib/mobility-core
   - git: https://github.com/piyushKumar-1/clickhouse-haskell.git
     commit: 5eafcf35b7f2f5619f21dbafb55d98b1e57b1d39
   - git: https://github.com/juspay/passetto

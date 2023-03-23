@@ -21,6 +21,7 @@ module Beckn.Core
   )
 where
 
+import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Control.Lens.Operators ((?~))
 import Data.List (lookup)
 import qualified Data.Text.Encoding as T
@@ -28,7 +29,6 @@ import Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import qualified Kernel.Storage.Queries.BecknRequest as QBR
 import Kernel.Types.Id
 import Kernel.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import Kernel.Utils.Common

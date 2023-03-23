@@ -17,16 +17,17 @@
 module Lib.Scheduler.Environment where
 
 import qualified Control.Monad.Catch as C
-import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Kernel.Mock.App
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis (HedisCfg, HedisEnv, disconnectHedis)
+import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, disconnectHedis)
 import Kernel.Types.Common
-import Kernel.Utils.App (Shutdown)
+import Kernel.Utils.App
 import Kernel.Utils.Dhall (FromDhall)
-import Kernel.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
-import Lib.Scheduler.Metrics (SchedulerMetrics)
+import Kernel.Utils.IOLogging (LoggerEnv, prepareLoggerEnv, releaseLoggerEnv)
+import Kernel.Utils.Shutdown
+import Lib.Scheduler.Metrics
+import UnliftIO
 
 data SchedulerConfig = SchedulerConfig
   { loggerConfig :: LoggerConfig,
@@ -39,7 +40,8 @@ data SchedulerConfig = SchedulerConfig
     expirationTime :: Integer,
     waitBeforeRetry :: Int,
     tasksPerIteration :: Int,
-    graceTerminationPeriod :: Seconds
+    graceTerminationPeriod :: Seconds,
+    schedulerInstanceName :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -55,9 +57,21 @@ data SchedulerEnv = SchedulerEnv
     tasksPerIteration :: Int,
     graceTerminationPeriod :: Seconds,
     port :: Int,
-    isShuttingDown :: Shutdown
+    isShuttingDown :: Shutdown,
+    schedulerInstanceName :: Text
   }
   deriving (Generic)
+
+buildSchedulerEnv :: SchedulerConfig -> IO SchedulerEnv
+buildSchedulerEnv SchedulerConfig {..} = do
+  hostname <- getPodName
+  loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> schedulerInstanceName <> ":" <> k)
+  metrics <- setupSchedulerMetrics
+  isShuttingDown <- mkShutdown
+
+  return $ SchedulerEnv {..}
 
 releaseSchedulerEnv :: SchedulerEnv -> IO ()
 releaseSchedulerEnv SchedulerEnv {..} = do

@@ -30,4 +30,5 @@ in  { loggerConfig =
     , waitBeforeRetry = +1
     , tasksPerIteration = +20
     , graceTerminationPeriod = +10
+    , schedulerInstanceName = "transporter-scheduler-1"
     }

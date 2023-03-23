@@ -19,6 +19,7 @@ import qualified Domain.Types.RideRequest as RideRequest
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id (Id))
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
@@ -27,11 +28,12 @@ import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QSJ
 import SharedLogic.Scheduler
 import qualified Storage.Queries.RideRequest as RideRequest
+import Tools.Error
 
 schedulerHandle :: SchedulerHandle SchedulerJobType
 schedulerHandle =
   SchedulerHandle
-    { takeReadyTasks = QSJ.takeReadyTasks,
+    { takeReadyTasks = takeReadyTasksRedisStreamsImpl,
       markAsComplete = QSJ.markAsComplete,
       markAsFailed = QSJ.markAsFailed,
       updateErrorCountAndFail = QSJ.updateErrorCountAndFail,
@@ -42,6 +44,19 @@ schedulerHandle =
         emptyJobHandlerList
           & putJobHandlerInList allocateRentalRide
     }
+
+mkJobIdToRecordIdKey :: Id AnyJob -> Text
+mkJobIdToRecordIdKey (Id jobId) = "JobIdToRecordId:JobId-" <> jobId
+
+takeReadyTasksRedisStreamsImpl :: Int -> SchedulerM [AnyJob SchedulerJobType]
+takeReadyTasksRedisStreamsImpl tasksCount = do
+  schedulerInstanceName <- asks (.schedulerInstanceName)
+  jobIds <- receiveJobIds (Redis.XGroupConsumerName schedulerInstanceName) tasksCount >>= fromMaybeM (InternalError "Redis stream doesn't exist.")
+  res <- QSJ.findAllByIds (jobIds <&> (.value))
+  for_ jobIds $ \jobId ->
+    Redis.setExp (mkJobIdToRecordIdKey jobId.value) jobId.recordId 600
+  заюзать это дело в в комплите
+  return res
 
 runTransporterScheduler ::
   (SchedulerConfig -> SchedulerConfig) ->

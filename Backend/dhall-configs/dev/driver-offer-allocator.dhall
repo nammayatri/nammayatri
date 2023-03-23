@@ -23,6 +23,7 @@ let schedulerConfig =
       , waitBeforeRetry = +1
       , tasksPerIteration = +20
       , graceTerminationPeriod = +10
+      , schedulerInstanceName = "driver-offer-scheduler-1"
       }
 
 in  { appCfg =

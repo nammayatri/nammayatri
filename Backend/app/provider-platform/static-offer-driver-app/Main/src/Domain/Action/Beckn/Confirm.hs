@@ -36,7 +36,6 @@ import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber (..))
 import Kernel.Utils.Common
-import Lib.Scheduler.JobStorageType.DB.Queries (createJobByTime)
 import SharedLogic.Scheduler
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP
@@ -134,13 +133,13 @@ confirm transporterId subscriber req = do
       case compareTimeWithInterval presentIntervalWidth scheduledTime now of
         LT -> throwError $ InvalidRequest "impossible to book a ride for the past"
         EQ -> finalTransaction $ RideRequest.create rideRequest
-        GT ->
-          finalTransaction $
-            createJobByTime @_ @'AllocateRental scheduledTime $
-              AllocateRentalJobData
-                { bookingId = booking.id,
-                  shortOrgId = transporter.subscriberId
-                }
+        GT -> do
+          finalTransaction $ return ()
+          scheduleJobByTime @'AllocateRental scheduledTime $
+            AllocateRentalJobData
+              { bookingId = booking.id,
+                shortOrgId = transporter.subscriberId
+              }
       rentalFP <- QRFP.findById details.rentalFarePolicyId >>= fromMaybeM NoFarePolicy
       return $
         DConfirmRes
