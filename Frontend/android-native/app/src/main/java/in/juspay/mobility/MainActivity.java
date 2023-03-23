@@ -115,22 +115,25 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import in.juspay.mobility.utils.ConnectionStateMonitor;
-import in.juspay.mobility.utils.LocationUpdateService;
-import in.juspay.mobility.utils.MediaPlayerView;
-import in.juspay.mobility.utils.MyFirebaseMessagingService;
-import in.juspay.mobility.utils.NetworkBroadcastReceiver;
-import in.juspay.mobility.utils.NotificationUtils;
-import in.juspay.mobility.utils.RideRequestActivity;
-import in.juspay.mobility.utils.RideRequestUtils;
-import in.juspay.mobility.utils.WidgetService;
-import in.juspay.mobility.utils.mediaPlayer.DefaultMediaPlayerControl;
+import in.juspay.beckn.utils.ConnectionStateMonitor;
+import in.juspay.beckn.utils.InAppNotification;
+import in.juspay.beckn.utils.LocationUpdateService;
+import in.juspay.beckn.utils.MediaPlayerView;
+import in.juspay.beckn.utils.MyFirebaseMessagingService;
+import in.juspay.beckn.utils.NetworkBroadcastReceiver;
+import in.juspay.beckn.utils.NotificationUtils;
+import in.juspay.beckn.utils.RideRequestActivity;
+import in.juspay.beckn.utils.RideRequestUtils;
+import in.juspay.beckn.utils.WidgetService;
+import in.juspay.beckn.utils.mediaPlayer.DefaultMediaPlayerControl;
 import in.juspay.hypersdk.core.JuspayServices;
 import in.juspay.hypersdk.core.Labels;
 import in.juspay.hypersdk.core.PaymentConstants;
@@ -175,6 +178,7 @@ public class MainActivity extends AppCompatActivity {
     private NetworkBroadcastReceiver networkBroadcastReceiver;
     private boolean isHideSplashEventCalled = false;
     private boolean isSystemAnimEnabled = true;
+    private InAppNotification inAppNotification ;
     public static MainActivity getInstance() {
         return instance;
     }
@@ -422,6 +426,9 @@ public class MainActivity extends AppCompatActivity {
         });
         updateConfigURL();
         initApp();
+
+        // getting the main Layout as a Container to add the notification .
+        inAppNotification = new InAppNotification(this);
 
        NotificationUtils.createNotificationChannel(this, NotificationUtils.CHANNEL_ID);
        NotificationUtils.createNotificationChannel(this, NotificationUtils.FLOATING_NOTIFICATION);
@@ -701,7 +708,19 @@ public class MainActivity extends AppCompatActivity {
                     hyperServices = null;
                     initApp();
                 } else if(jsonObject.optString("event").equals("in_app_notification")){
-                    showInAppNotifiation(jsonObject.optString("title") , jsonObject.optString("message"));
+                    try {
+                        String title = jsonObject.optString("title");
+                        String message = jsonObject.optString("message");
+                        String channelId = jsonObject.optString("channelId");
+                        String action1Text = jsonObject.optString("action1Text") ;
+                        String action2Text = jsonObject.optString("action2Text");
+                        String action1Image = jsonObject.optString("action1Image") ;
+                        String action2Image = jsonObject.optString("action2Image");
+                        int durationInMilliSeconds = Integer.parseInt(jsonObject.optString("durationInMilliSeconds"));
+                        showInAppNotification(title , message ,action1Text,action2Text , action1Image,action2Image , channelId , durationInMilliSeconds);
+                    } catch (JSONException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             }
         });
@@ -1227,68 +1246,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public  void showInAppNotifiation(String title , String desc){
-        // getting the main Layout as a Container to add the notification .
-        ConstraintLayout mainLayout = (ConstraintLayout) findViewById(R.id.main_layout);
 
-        // inflating the app_notification as view to append in main layout .
-        View notification= getLayoutInflater().inflate(R.layout.app_notification,null);
-        notification.setLayoutParams(new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT,ConstraintLayout.LayoutParams.WRAP_CONTENT));
-        notification.bringToFront();
-
-
-        // adding animation to the notification
-        notification.startAnimation(AnimationUtils.loadAnimation(this , R.anim.top_to_bottom));
-
-        // setting the title and description to the notification
-        TextView Title = notification.findViewById(R.id.title);
-        TextView Desc = notification.findViewById(R.id.desc);
-        Title.setText(title);
-        Desc.setText(desc);
-
-        // adding the evenListener to the cross button
-        notification.findViewById(R.id.cross).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                notification.startAnimation(AnimationUtils.loadAnimation(getApplicationContext() , R.anim.bottom_to_top));
-                mainLayout.removeView(notification);
-            }
-        });
-
-        // ring the notification bell
-        try {
-            Uri notify = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-            Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notify);
-            r.play();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // adding the notification to the main layout
-        mainLayout.addView(notification);
-
-
-        // adding a timer task to automatically remove the notification after 5 second
-        Timer timer;
-        TimerTask timerTask;
-        Handler timerHandler = new Handler();
-        timer = new Timer();
-        timerTask = new TimerTask() {
-            public void run() {
-                timerHandler.post(new Runnable() {
-                    public void run(){
-                        notification.startAnimation(AnimationUtils.loadAnimation(getApplicationContext() , R.anim.bottom_to_top));
-                        mainLayout.removeView(notification);
-                        if(timer != null){
-                            timer.cancel();
-                            timer.purge();
-                        }
-                    }
-                });
-            }
-        };
-
-        timer.schedule(timerTask, 5000);
+    public  void showInAppNotification(String title , String message , String action1Text , String action2Text , String action1Image , String action2Image , String channelId , int durationInMilliSeconds) throws JSONException {
+        inAppNotification.generateNotification(title , message ,action1Text,action2Text , action1Image,action2Image , channelId , durationInMilliSeconds);
     }
 
     private void checkRideRequest(){

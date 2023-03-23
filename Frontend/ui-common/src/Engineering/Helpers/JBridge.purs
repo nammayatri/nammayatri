@@ -63,7 +63,7 @@ foreign import locateOnMap :: Boolean -> Number -> Number -> Unit
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
 foreign import shareImageMessage :: String -> String -> Unit
-
+foreign import showInAppNotification :: String -> String -> String -> String -> String -> String -> String -> Int -> Effect Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
 -- foreign import getPackageName   :: Effect String
