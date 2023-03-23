@@ -352,7 +352,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void setKeysInSharedPrefs(String key, String value) {
         KeyValueStore.write(juspayServices, key, value);
         setEnvInNativeSharedPrefKeys(key, value);
-        if (MainActivity.getInstance().getResources().getString(R.string.service).equals(context.getResources().getString(R.string.nammayatripartner))){
+        if (MainActivity.getInstance().getResources().getString(R.string.service).equals("nammayatripartner") || MainActivity.getInstance().getResources().getString(R.string.service).equals("jatrisaathidriver")){
             if (key.equals(context.getResources().getString(R.string.LANGUAGE_KEY))){
                 updateLocaleResource(value);
             }
@@ -374,6 +374,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 break;
             case "TA_IN" :
                 locale = new Locale("ta");
+                break;
+            case "BN_IN" :
+                locale = new Locale("bn");
                 break;
             default:
                 return;
@@ -2607,7 +2610,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             LatLng tempPoint = new LatLng(lat, lng);
                             path.add(tempPoint);
                         }
-                        Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
+                        Marker currMarker = (Marker) markers.get("ic_vehicle_nav_on_map");
                         Marker destMarker = (Marker) markers.get(dest);
                         destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest))));
                         if (polylines != null) {
@@ -2641,82 +2644,6 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 }
             }
         });
-    }
-
-    /*
-     * This function is deprecated on 12 Jan - 2023
-     * Remove this function once it is not begin used.
-     */
-
-    @JavascriptInterface
-    public void updateRoute (String json,  double currLat, double currLng) {
-        activity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if(googleMap!=null) {
-                    try {
-                        ArrayList<LatLng> points = getUpdatedPolyPoints(json,currLat,currLng);
-                        Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
-                        if (polylines != null) {
-                            polylines.setEndCap(new ButtCap());
-                            if (points.size() == 0) {
-                                LatLng destination = new LatLng(currLat,currLng);
-                                animateMarkerNew(destination,currMarker);
-                                polylines.remove();
-                                polylines = null;
-                            }
-                            else
-                            {
-                                PatternItem DASH = new Dash(1);
-                                List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(DASH);
-                                polylines.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
-                                polylines.setPoints(points);
-                                LatLng destination = points.get(points.size()-1);
-                                animateMarkerNew(destination,currMarker);
-                            }
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-    }
-
-    /*
-     * This function is deprecated on 12 Jan - 2023
-     * Remove this function once it is not begin used.
-     */
-
-    private ArrayList<LatLng> getUpdatedPolyPoints (String json , double currLat, double currLng) throws JSONException {
-        LatLng currPoint = new LatLng(currLat,currLng);
-        ArrayList<LatLng> path = new ArrayList<>();
-        ArrayList<LatLng> temp = new ArrayList<>();
-        JSONObject jsonObject = null;
-        jsonObject = new JSONObject(json);
-        JSONArray coordinates = jsonObject.getJSONArray("points");
-        JSONArray journeyCoordinates = jsonObject.getJSONArray("journeyCoordinates");
-        JSONObject sourceCoordinates = (JSONObject) journeyCoordinates.get(0);
-        JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
-        double sourceLat = sourceCoordinates.getDouble("lat");
-        double sourceLong = sourceCoordinates.getDouble("lng");
-        moveCamera(sourceLat, sourceLong, currLat, currLng, coordinates);
-        for (int i = coordinates.length() -1 ; i >= 0   ; i--) {
-            JSONObject coordinate = (JSONObject) coordinates.get(i);
-            double lng = coordinate.getDouble("lng");
-            double lat = coordinate.getDouble("lat");
-            LatLng tempPoints = new LatLng(lat, lng);
-            path.add(tempPoints);
-        }
-        int index = PolyUtil.locationIndexOnEdgeOrPath(currPoint,path,PolyUtil.isClosedPolygon(path),true,50.0);
-        if (index == 0)
-        {
-            path.clear();
-        }
-        else {
-            path.subList(index + 1, path.size()).clear();
-        }
-        return path;
     }
 
     @JavascriptInterface
@@ -2892,7 +2819,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         if (rotation > 1.0)
                             marker.setRotation(rotation);
                         marker.setPosition(newPosition);
-                        markers.put("ny_ic_auto_map",marker);
+                        markers.put("ic_vehicle_nav_on_map",marker);
                     } catch (Exception ex) {
                         //I don't care atm..
                     }
@@ -2974,7 +2901,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             JSONObject coordinate = (JSONObject) coordinates.get(0);
                             double lng = coordinate.getDouble("lng");
                             double lat = coordinate.getDouble("lat");
-                            upsertMarker("ny_ic_auto_map",String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
+                            upsertMarker("ic_vehicle_nav_on_map",String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
                             return;
                         }
                         if(isActual){
@@ -3007,18 +2934,18 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             markers.put(destMarker, tempmarker);
 
                         }
-                        if (type.equals("DRIVER_LOCATION_UPDATE"))
+                        if (type.equals("DRIVER_LOCATION_UPDATE") && (sourceMarker != null && !sourceMarker.equals("")))
                         {
                             System.out.println("inside insert marker");
                             List<LatLng> points = polylineOptions.getPoints();
                             LatLng source = points.get(points.size() - 1);
-                            upsertMarker("ny_ic_auto_map",String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
-                            Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
+                            upsertMarker(sourceMarker,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
+                            Marker currMarker = (Marker) markers.get(sourceMarker);
                             int index = polylines.getPoints().size()-1;
                             float rotation = bearingBetweenLocations(polylines.getPoints().get(index), polylines.getPoints().get(index -1));
                             if (rotation > 1.0) currMarker.setRotation(rotation);
                             currMarker.setAnchor(0.5f,0.5f);
-                            markers.put("ny_ic_auto_map",currMarker);
+                            markers.put(sourceMarker,currMarker);
                         } else if(sourceMarker != null && !sourceMarker.equals("")) {
                             System.out.println("sourcelatlong: " + sourceLatLng);
                             System.out.println("destlatlong: " + destLatLng);
@@ -3040,7 +2967,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
     @JavascriptInterface
     public void removeAllPolylines(String str) {
-        removeMarker("ny_ic_auto_map");
+        removeMarker("ic_vehicle_nav_on_map");
         removeMarker("ny_ic_src_marker");
         removeMarker("ny_ic_dest_marker");
         activity.runOnUiThread(
@@ -3235,7 +3162,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
                     SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                     sharedPref.edit().putString(context.getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
-                    Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getResources().getString(R.string.fileProviderPath), new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
+                    Uri photoFile = FileProvider.getUriForFile(context.getApplicationContext(),context.getApplicationInfo().packageName + ".fileProvider", new File(context.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
                     takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                     Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                     chooseFromFile.setType("image/*");
@@ -3303,7 +3230,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         if (invoiceType.equals("OLD")){
             int pageHeight = 1555;
             int pagewidth = 960;
-            Bitmap logo = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_launcher);
+            Bitmap logo = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher);
             Bitmap src_icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_green_circle);
             Bitmap dest_icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_red_circle);
             Bitmap ic_line = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_vertical_line);
@@ -3427,7 +3354,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
             try {
                 pdfDocument.writeTo(new FileOutputStream(file));
-                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getResources().getString(R.string.fileProviderPath), file);
+                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getApplicationInfo().packageName + ".fileProvider", file);
                 Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
                 pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 pdfOpenintent.setDataAndType(path, "application/pdf");
@@ -3435,7 +3362,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, "General");
                 mBuilder.setLargeIcon(logo);
                 mBuilder.setContentTitle("Invoice Downloaded")
-                        .setSmallIcon((R.drawable.ny_ic_launcher))
+                        .setSmallIcon((R.drawable.ic_launcher))
                         .setContentText("Invoice for your ride is downloaded!!!")
                         .setAutoCancel(true)
                         .setPriority(NotificationCompat.PRIORITY_DEFAULT);
@@ -3449,13 +3376,6 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         }
         else
         {
-            int pageHeight = 1388;
-            int pagewidth = 960;
-            Bitmap logo = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_invoice_logo);
-            Bitmap src_icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_green_circle);
-            Bitmap dest_icon = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_red_circle);
-            Bitmap ic_line = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_vertical_line);
-            Bitmap scaledBmp = null;
             PdfDocument pdfDocument = new PdfDocument();
             PdfDocument.PageInfo invoicePDF = new PdfDocument.PageInfo.Builder(960, 1338, 1).create();
             PdfDocument.Page page = pdfDocument.startPage(invoicePDF);
@@ -3464,20 +3384,21 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             content.layout(0,0,page.getCanvas().getWidth(),page.getCanvas().getHeight());
             content.draw(page.getCanvas());
             pdfDocument.finishPage(page);
-            String fileNameformat = "NY_Ride_" + selectedItem.getString("date") + selectedItem.getString("rideStartTime") + ".pdf";
+
+            String fileNameformat = context.getResources().getString(R.string.service).equals("jatrisaathi") ? "JS_Ride_" : "NY_Ride_";
+            fileNameformat = fileNameformat + selectedItem.getString("date") + selectedItem.getString("rideStartTime") + ".pdf";
             String fileName = fileNameformat.replaceAll(":",".");
             File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
             try {
                 pdfDocument.writeTo(new FileOutputStream(file));
-                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getResources().getString(R.string.fileProviderPath), file);
+                Uri path = FileProvider.getUriForFile(context.getApplicationContext(), context.getApplicationInfo().packageName + ".fileProvider", file);
                 Intent pdfOpenintent = new Intent(Intent.ACTION_VIEW);
                 pdfOpenintent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 pdfOpenintent.setDataAndType(path, "application/pdf");
-                Bitmap notification_logo = BitmapFactory.decodeResource(context.getResources(), R.drawable.ny_ic_launcher);
                 PendingIntent pendingIntent = PendingIntent.getActivity(context, 234567, pdfOpenintent, PendingIntent.FLAG_IMMUTABLE);
                 NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, "General");
                 mBuilder.setContentTitle("Invoice Downloaded")
-                        .setSmallIcon((R.drawable.ny_ic_launcher))
+                        .setSmallIcon((R.drawable.ic_launcher))
                         .setContentText("Invoice for your ride is downloaded!!!")
                         .setAutoCancel(true)
                         .setPriority(NotificationCompat.PRIORITY_DEFAULT);

@@ -139,7 +139,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                     case NotificationTypes.TRIP_FINISHED :
                         NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                        if (getResources().getString(R.string.service).equals("nammayatri")) {
+                        if (getResources().getString(R.string.service).equals("nammayatri") || getResources().getString(R.string.service).equals("jatrisaathi")){
                             sharedPref.edit().putInt("RIDE_COUNT", sharedPref.getInt("RIDE_COUNT", 0) + 1).apply();
                             sharedPref.edit().putString("COMPLETED_RIDE_COUNT", String.valueOf(sharedPref.getInt("RIDE_COUNT", 0))).apply();
                         }
@@ -211,7 +211,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 StringBuilder result = new StringBuilder();
                 try {
                     String orderUrl ;
-                    if (getString(R.string.service).equals("nammayatripartner")) {
+                    if (getString(R.string.service).equals("nammayatripartner") || getString(R.string.service).equals("jatrisaathidriver")) {
                         orderUrl = baseUrl + "/driver/profile";
                     } 
                     else {
@@ -278,7 +278,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private void startWidgetService(String widgetMessage){
         SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
-        if (getResources().getString(R.string.service).equals(getString(R.string.nammayatripartner)) && Settings.canDrawOverlays(getApplicationContext())  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+        if (getResources().getString(R.string.service).equals("nammayatripartner") || getResources().getString(R.string.service).equals("jatrisaathidriver") && Settings.canDrawOverlays(getApplicationContext())  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE),widgetMessage);
             try{
                 startService(widgetService);

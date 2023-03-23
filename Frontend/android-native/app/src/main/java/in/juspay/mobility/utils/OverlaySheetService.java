@@ -30,6 +30,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -91,6 +92,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private ArrayList<LinearProgressIndicator> progressIndicatorsList ;
     private ArrayList<LinearLayout> indicatorList ;
     private Handler mainLooper = new Handler(Looper.getMainLooper());
+    private String key = "";
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        key = getApplicationContext().getResources().getString(R.string.service);
+    }
 
     public class OverlayBinder extends Binder {
         public OverlaySheetService getService () {
@@ -127,6 +135,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             if (model.getDriverMaxExtraFee() == 0) {
                 holder.buttonIncreasePrice.setVisibility(View.GONE);
                 holder.buttonDecreasePrice.setVisibility(View.GONE);
+            }
+            if (key.equals("jatrisaathidriver")){
+                holder.extraFareIndication.setVisibility(View.GONE);
             }
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(),model.getStartTime(), getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
@@ -538,6 +549,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         LayoutInflater inflater = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
         floatyView = inflater.inflate(R.layout.viewpager_layout_view,null);
+        if (getApplicationContext().getResources().getString(R.string.service).equals("jatrisaathidriver")){
+            TextView merchantLogo = (TextView) floatyView.findViewById(R.id.merchantLogo);
+            merchantLogo.setText("Jatri Saathi");
+        }
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);
         View dismissLoader = progressDialog.findViewById(R.id.loaderOverlay);
@@ -773,12 +788,18 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             public void run() {
                 if (progressDialog!=null){
                     TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
+                    if(key.equals("jatrisaathidriver")) {
+                        ImageView loader = progressDialog.findViewById(R.id.image_view_waiting);
+                        loader.setImageResource(R.drawable.ic_ride_assigned);
+                    }
                     LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
                     loaderText.setText(ackText);
-                    lottieAnimationView.setAnimation(rawResource);
-                    lottieAnimationView.setProgress(0);
-                    lottieAnimationView.setSpeed(1.2f);
-                    lottieAnimationView.playAnimation();
+                    if (lottieAnimationView.getVisibility() != View.GONE){
+                        lottieAnimationView.setAnimation(rawResource);
+                        lottieAnimationView.setProgress(0);
+                        lottieAnimationView.setSpeed(1.2f);
+                        lottieAnimationView.playAnimation();
+                    }
                     rideStatusListener.cancel();
                 }
             }
