@@ -96,7 +96,7 @@ onSelect DOnSelectReq {..} = do
   DB.runTransaction $ do
     QQuote.createMany quotes
     QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
-    QEstimate.updateStatus estimateId $ Just DEstimate.GOT_DRIVER_QUOTE
+    QEstimate.updateStatus estimateId DEstimate.GOT_DRIVER_QUOTE
 
   if estimate.autoAssignEnabledV2
     then do

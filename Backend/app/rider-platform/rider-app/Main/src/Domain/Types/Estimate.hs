@@ -52,7 +52,7 @@ data Estimate = Estimate
     createdAt :: UTCTime,
     estimateBreakupList :: [EstimateBreakup],
     nightShiftRate :: Maybe NightShiftRate,
-    status :: Maybe EstimateStatus,
+    status :: EstimateStatus,
     updatedAt :: UTCTime,
     waitingCharges :: WaitingCharges,
     driversLocation :: [LatLong]
@@ -150,3 +150,8 @@ instance ToHttpApiData EstimateStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
+
+isCancelled ::
+  EstimateStatus ->
+  Bool
+isCancelled status = status == CANCELLED || status == DRIVER_QUOTE_CANCELLED

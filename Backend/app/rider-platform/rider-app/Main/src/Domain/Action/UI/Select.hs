@@ -45,7 +45,6 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.Estimate (checkIfEstimateCancelled)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
@@ -107,7 +106,7 @@ select :: Id DPerson.Person -> Id DEstimate.Estimate -> Bool -> Bool -> Flow DSe
 select personId estimateId autoAssignEnabled autoAssignEnabledV2 = do
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-  checkIfEstimateCancelled estimate.id estimate.status
+  when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
@@ -115,7 +114,7 @@ select personId estimateId autoAssignEnabled autoAssignEnabledV2 = do
     throwError SearchRequestExpired
   Esq.runTransaction $ do
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
-    QEstimate.updateStatus estimateId $ Just DEstimate.DRIVER_QUOTE_REQUESTED
+    QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
     QEstimate.updateAutoAssign estimateId autoAssignEnabled autoAssignEnabledV2
   pure
     DSelectRes
@@ -130,7 +129,7 @@ select personId estimateId autoAssignEnabled autoAssignEnabledV2 = do
 selectList :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
   estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-  checkIfEstimateCancelled estimate.id estimate.status
+  when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
   selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
   pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes
 
@@ -139,7 +138,7 @@ selectResult estimateId = do
   res <- runMaybeT $ do
     estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
     quoteId <- MaybeT $ pure estimate.autoAssignQuoteId
-    _ <- MaybeT (Just <$> checkIfEstimateCancelled estimate.id estimate.status)
+    when (DEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
     booking <- MaybeT . runInReplica $ QBooking.findAssignedByQuoteId (Id quoteId)
     return $ QuotesResultResponse {bookingId = Just booking.id, selectedQuotes = Nothing}
   case res of
