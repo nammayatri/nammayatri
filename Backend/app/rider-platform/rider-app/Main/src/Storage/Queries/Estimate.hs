@@ -89,7 +89,7 @@ updateQuote estimateId quoteId = do
 
 updateStatus ::
   Id Estimate ->
-  Maybe EstimateStatus ->
+  EstimateStatus ->
   SqlDB ()
 updateStatus estimateId status_ = do
   now <- getCurrentTime
@@ -118,7 +118,7 @@ updateAutoAssign estimateId autoAssignedEnabled autoAssignedEnabledV2 = do
 getStatus ::
   (Transactionable m) =>
   Id Estimate ->
-  m (Maybe (Maybe EstimateStatus))
+  m (Maybe EstimateStatus)
 getStatus estimateId = do
   findOne $ do
     estimateT <- from $ table @EstimateT
@@ -128,7 +128,7 @@ getStatus estimateId = do
 
 updateStatusbyRequestId ::
   Id SearchRequest ->
-  Maybe EstimateStatus ->
+  EstimateStatus ->
   SqlDB ()
 updateStatusbyRequestId searchId status_ = do
   now <- getCurrentTime
@@ -139,12 +139,3 @@ updateStatusbyRequestId searchId status_ = do
         EstimateStatus =. val status_
       ]
     where_ $ tbl ^. EstimateRequestId ==. val (toKey searchId)
-
-findOneEstimateByRequestId :: Transactionable m => Id SearchRequest -> m (Maybe Estimate)
-findOneEstimateByRequestId searchId = Esq.buildDType $ do
-  mbFullEstimateT <- Esq.findOne' $ do
-    (estimate :& mbTripTerms) <- from fullEstimateTable
-    where_ $ estimate ^. EstimateRequestId ==. val (toKey searchId)
-    limit 1
-    pure (estimate, mbTripTerms)
-  mapM buildFullEstimate mbFullEstimateT

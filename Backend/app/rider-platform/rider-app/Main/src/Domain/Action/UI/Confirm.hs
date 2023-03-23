@@ -13,23 +13,15 @@
 -}
 
 module Domain.Action.UI.Confirm
-  ( buildBookingLocation,
-    confirm,
-    findRandomExophone,
+  ( confirm,
     cancelBooking,
-    buildBooking,
   )
 where
 
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.Exophone as DExophone
-import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.SearchRequest as DSReq
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config
@@ -47,12 +39,6 @@ import qualified Tools.Notifications as Notify
 
 confirm :: (EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Id DQuote.Quote -> m SConfirm.DConfirmRes
 confirm = SConfirm.confirm
-
-buildBookingLocation :: MonadGuid m => UTCTime -> DSRLoc.SearchReqLocation -> m DBL.BookingLocation
-buildBookingLocation = SConfirm.buildBookingLocation
-
-findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
-findRandomExophone = SConfirm.findRandomExophone
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
 cancelBooking :: (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) => DRB.Booking -> m ()
@@ -74,15 +60,3 @@ cancelBooking booking = do
             reasonStage = Nothing,
             additionalInfo = Nothing
           }
-
-buildBooking ::
-  MonadFlow m =>
-  DSReq.SearchRequest ->
-  DQuote.Quote ->
-  DBL.BookingLocation ->
-  Maybe DBL.BookingLocation ->
-  DExophone.Exophone ->
-  UTCTime ->
-  Maybe Text ->
-  m DRB.Booking
-buildBooking = SConfirm.buildBooking

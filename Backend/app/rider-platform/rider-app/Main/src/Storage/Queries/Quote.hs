@@ -113,10 +113,29 @@ findAllByRequestId searchRequestId = Esq.buildDType $ do
     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   catMaybes <$> mapM buildFullQuote fullQuoteTs
 
-findAllByEstimateId' :: Transactionable m => Id Estimate -> m [Quote]
-findAllByEstimateId' estimateId = buildDType $ do
+findAllByEstimateId :: Transactionable m => Id Estimate -> m [Quote]
+findAllByEstimateId estimateId = buildDType $ do
   driverOfferTs <- findDOfferByEstimateId' estimateId
   (catMaybes <$>) $ mapM buildFullQuote' driverOfferTs
+  where
+    buildFullQuote' :: Transactionable m => DriverOfferT -> DTypeBuilder m (Maybe (SolidType FullQuoteT))
+    buildFullQuote' driverOfferT = runMaybeT $ do
+      quoteT <- MaybeT $ findQuotesByDriverOfferId' (Id $ DriverOffer.id driverOfferT)
+      quoteDetailsT <- case fareProductType quoteT of
+        ONE_WAY -> pure OneWayDetailsT
+        RENTAL -> do
+          rentalSlabId <- MaybeT $ pure (fromKey <$> rentalSlabId quoteT)
+          rentalSlab <- MaybeT $ Esq.findById' @RentalSlabT rentalSlabId
+          pure $ RentalDetailsT rentalSlab
+        DRIVER_OFFER -> do
+          pure (DriverOfferDetailsT driverOfferT)
+        ONE_WAY_SPECIAL_ZONE -> do
+          specialZoneQuoteId <- MaybeT $ pure (fromKey <$> specialZoneQuoteId quoteT)
+          specialZoneQuoteT <- MaybeT $ Esq.findById' @SpecialZoneQuoteT specialZoneQuoteId
+          pure (OneWaySpecialZoneDetailsT specialZoneQuoteT)
+      mbTripTermsT <- forM (fromKey <$> tripTermsId quoteT) $ \tripTermsId -> do
+        MaybeT $ Esq.findById' @TripTermsT tripTermsId
+      return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
 findDOfferByEstimateId' :: Transactionable m => Id Estimate -> DTypeBuilder m [DriverOfferT]
 findDOfferByEstimateId' estimateId =
@@ -131,22 +150,3 @@ findQuotesByDriverOfferId' driverOfferId = Esq.findOne' $ do
   where_ $
     quote ^. QuoteDriverOfferId ==. just (val (toKey driverOfferId))
   return quote
-
-buildFullQuote' :: Transactionable m => DriverOfferT -> DTypeBuilder m (Maybe (SolidType FullQuoteT))
-buildFullQuote' driverOfferT = runMaybeT $ do
-  quoteT <- MaybeT $ findQuotesByDriverOfferId' (Id $ DriverOffer.id driverOfferT)
-  quoteDetailsT <- case fareProductType quoteT of
-    ONE_WAY -> pure OneWayDetailsT
-    RENTAL -> do
-      rentalSlabId <- MaybeT $ pure (fromKey <$> rentalSlabId quoteT)
-      rentalSlab <- MaybeT $ Esq.findById' @RentalSlabT rentalSlabId
-      pure $ RentalDetailsT rentalSlab
-    DRIVER_OFFER -> do
-      pure (DriverOfferDetailsT driverOfferT)
-    ONE_WAY_SPECIAL_ZONE -> do
-      specialZoneQuoteId <- MaybeT $ pure (fromKey <$> specialZoneQuoteId quoteT)
-      specialZoneQuoteT <- MaybeT $ Esq.findById' @SpecialZoneQuoteT specialZoneQuoteId
-      pure (OneWaySpecialZoneDetailsT specialZoneQuoteT)
-  mbTripTermsT <- forM (fromKey <$> tripTermsId quoteT) $ \tripTermsId -> do
-    MaybeT $ Esq.findById' @TripTermsT tripTermsId
-  return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)

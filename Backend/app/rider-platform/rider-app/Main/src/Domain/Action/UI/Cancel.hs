@@ -67,7 +67,7 @@ data CancelSearch = CancelSearch
     providerUrl :: BaseUrl,
     providerId :: Text,
     city :: Text,
-    estimateStatus :: Maybe DEstimate.EstimateStatus,
+    estimateStatus :: DEstimate.EstimateStatus,
     searchReqId :: Id SearchRequest,
     sendToBpp :: Bool
   }
@@ -122,7 +122,7 @@ mkDomainCancelSearch ::
   m CancelSearch
 mkDomainCancelSearch personId estimateId = do
   estStatus <- QEstimate.getStatus estimateId >>= fromMaybeM (EstimateStatusDoesNotExist estimateId.getId)
-  let sendToBpp = estStatus /= Just DEstimate.NEW
+  let sendToBpp = estStatus /= DEstimate.NEW
   buildCancelReq estimateId sendToBpp estStatus
   where
     buildCancelReq estId sendToBpp estStatus = do
@@ -147,11 +147,11 @@ cancelSearch ::
   CancelSearch ->
   m ()
 cancelSearch personId dcr =
-  if dcr.estimateStatus == Just DEstimate.GOT_DRIVER_QUOTE
+  if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
     then Esq.runTransaction $ do
       Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
-      QEstimate.updateStatus dcr.estimateId $ Just DEstimate.DRIVER_QUOTE_CANCELLED
+      QEstimate.updateStatus dcr.estimateId DEstimate.DRIVER_QUOTE_CANCELLED
     else do
       Esq.runTransaction $ do
         Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
-        QEstimate.updateStatus dcr.estimateId $ Just DEstimate.CANCELLED
+        QEstimate.updateStatus dcr.estimateId DEstimate.CANCELLED
