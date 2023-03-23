@@ -37,7 +37,7 @@ instance TEntityKey TimetableT where
   fromKey (TimetableTKey _id) = Id _id
   toKey (Id id) = TimetableTKey id
 
-instance TType TimetableT Domain.Timetable where
+instance ToTType TimetableT Domain.Timetable where
   toTType timetable =
     TimetableT
       { id = getId timetable.id,
@@ -47,6 +47,7 @@ instance TType TimetableT Domain.Timetable where
         status = timetable.status
       }
 
+instance FromTType TimetableT Domain.Timetable where
   fromTType timetableT =
     pure $
       Domain.Timetable

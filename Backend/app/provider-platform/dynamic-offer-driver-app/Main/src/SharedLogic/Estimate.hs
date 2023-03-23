@@ -17,13 +17,15 @@ module SharedLogic.Estimate
     WaitingCharges (..),
     NightShiftRate (..),
     BreakupItem (..),
-    Pickup(..),
+    Pickup (..),
     pickupTime,
     buildEstimate,
   )
 where
 
 import qualified Data.List.NonEmpty as NE
+import Data.Set (Set)
+import Data.Time.Calendar (DayOfWeek)
 import Domain.Types.FarePolicy
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -35,8 +37,6 @@ import SharedLogic.DriverPool.Types (DriverPoolResult)
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig
 import Tools.Maps (LatLong (..))
-import Data.Time.Calendar (DayOfWeek)
-import Data.Set (Set)
 
 data EstimateItem = EstimateItem
   { vehicleVariant :: Variant.Variant,

@@ -17,18 +17,11 @@ import Domain.Types.Timetable (Timetable)
 import qualified Domain.Types.Timetable as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
-import Storage.Tabular.FarePolicy
 import Kernel.Types.Id
 import Storage.Queries.RecurringBooking (fullRecurringBookingT)
+import Storage.Tabular.FarePolicy
 import Storage.Tabular.RecurringBooking
 import Storage.Tabular.Timetable as STimetable
-
-instance FromTType (TimetableT, RecurringBookingT, FarePolicyT) Domain.UpcomingBooking where
-  fromTType (timetableT, bookingT, farePolicyT) = do
-    tt <- fromTType @_ @Domain.Timetable timetableT
-    DRecurringBooking.SimpleRecurringBooking {..} <- fromTType bookingT
-    farePolicy <- fromTType farePolicyT
-    pure $ Domain.UpcomingBooking {id = tt.id, pickupTime = tt.pickupTime, bookingId = Nothing, ..}
 
 findAllUnscheduledAndActiveDuring :: Transactionable m => TimeRange -> m [Id Timetable]
 findAllUnscheduledAndActiveDuring timeRange =

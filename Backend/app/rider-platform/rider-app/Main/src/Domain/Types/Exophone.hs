@@ -32,8 +32,6 @@ data Exophone = Exophone
 
 getPhone :: Exophone -> Text
 getPhone e =
-    if not e.isPrimaryDown then
-        e.primaryPhone
-    else
-        e.backupPhone
-
+  if not e.isPrimaryDown
+    then e.primaryPhone
+    else e.backupPhone

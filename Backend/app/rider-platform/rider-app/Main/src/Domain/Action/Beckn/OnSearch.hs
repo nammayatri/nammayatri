@@ -156,7 +156,7 @@ onSearchService transactionId DOnSearchReq {..} = do
   now <- getCurrentTime
   estimates <- traverse (buildEstimate requestId providerInfo now) estimatesInfo
   (quotes, recurringQuotes) <-
-      E.partitionEithers <$> traverse (buildQuote requestId providerInfo now searchRequest.merchantId) quotesInfo
+    E.partitionEithers <$> traverse (buildQuote requestId providerInfo now searchRequest.merchantId) quotesInfo
   DB.runTransaction do
     QEstimate.createMany estimates
     QQuote.createMany quotes

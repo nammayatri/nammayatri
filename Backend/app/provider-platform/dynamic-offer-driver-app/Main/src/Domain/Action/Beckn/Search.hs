@@ -20,9 +20,9 @@ module Domain.Action.Beckn.Search
   )
 where
 
+import Data.List
 import qualified Data.Map as M
 import Domain.Types.FareParameters
-import Data.List
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.QuoteSpecialZone as DQuoteSpecialZone
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -40,7 +40,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool hiding (lat, lon)
-import SharedLogic.Estimate (EstimateItem, Pickup, pickupTime, buildEstimate)
+import SharedLogic.Estimate (EstimateItem, Pickup, buildEstimate, pickupTime)
 import SharedLogic.FareCalculator
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -50,7 +50,6 @@ import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpeci
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as Metrics
-
 
 data DSearchReq = DSearchReq
   { messageId :: Text,

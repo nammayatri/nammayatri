@@ -36,6 +36,10 @@ createJob maxShards jobData = do
           maxErrors = 5
         }
 
+createManyJobs :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => Int -> [JobEntry e] -> Esq.SqlDB ()
+createManyJobs maxShards jobs = do
+  void $ ScheduleJob.createManyJobs @t @e @Esq.SqlDB Esq.createMany maxShards jobs
+
 createJobIn :: forall t (e :: t). (SingI e, JobInfoProcessor e, JobProcessor t) => NominalDiffTime -> Int -> JobContent e -> Esq.SqlDB ()
 createJobIn inTime maxShards jobData = do
   void $

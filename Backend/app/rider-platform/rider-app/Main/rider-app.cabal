@@ -200,6 +200,7 @@ library
       Storage.Queries.Person.PersonFlowStatus
       Storage.Queries.Quote
       Storage.Queries.RecurringBooking
+      Storage.Queries.RecurringQuote
       Storage.Queries.RegistrationToken
       Storage.Queries.RentalSlab
       Storage.Queries.Ride

@@ -58,6 +58,7 @@ instance FromTType BookingLocationT Domain.BookingLocation where
         { id = Id id,
           ..
         }
+
 instance ToTType BookingLocationT Domain.BookingLocation where
   toTType Domain.BookingLocation {..} = do
     let Domain.LocationAddress {..} = address

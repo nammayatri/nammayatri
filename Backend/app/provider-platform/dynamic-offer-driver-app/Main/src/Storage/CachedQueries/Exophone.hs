@@ -18,6 +18,7 @@ module Storage.CachedQueries.Exophone
     findByPhone,
     findByPrimaryPhone,
     findAllByMerchantId,
+    findRandomExophone,
     findAllExophones,
     updateAffectedPhones,
     deleteByMerchantId,
@@ -26,9 +27,11 @@ module Storage.CachedQueries.Exophone
   )
 where
 
+import Data.List.NonEmpty (nonEmpty)
 import Domain.Types.Exophone
 import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
+import Kernel.Randomizer (getRandomElement)
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -41,6 +44,11 @@ findAllByMerchantId merchantId =
   Hedis.safeGet (makeMerchantIdKey merchantId) >>= \case
     Just a -> return a
     Nothing -> cacheExophones merchantId /=<< Queries.findAllByMerchantId merchantId
+
+findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m (Maybe Exophone)
+findRandomExophone merchantId = do
+  exophones <- findAllByMerchantId merchantId
+  traverse getRandomElement $ nonEmpty exophones
 
 findByPhone :: (CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe Exophone)
 findByPhone phone = find (\exophone -> exophone.primaryPhone == phone || exophone.backupPhone == phone) <$> findAllByPhone phone

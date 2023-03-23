@@ -32,7 +32,8 @@ mkOnInitMessage res =
                 { price = mkPrice booking.estimatedFare booking.estimatedTotalFare,
                   breakup = mkBreakup booking.estimatedFare booking.discount
                 },
-            payment = mkPayment booking.estimatedTotalFare
+            payment = mkPayment booking.estimatedTotalFare,
+            fulfillment = Nothing
           }
     }
   where

@@ -92,13 +92,12 @@ mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
             drivers_location = []
           }
   OnSearch.Item
-    { id = Nothing,
+    { id = Just $ show OnSearch.ONE_WAY_TRIP,
       category_id = OnSearch.ONE_WAY_TRIP,
       base_distance = Nothing,
       base_duration = Nothing,
       quote_terms = [],
       tags = Just tags,
-      id = show OnSearch.ONE_WAY_TRIP,
       ..
     }
 
@@ -185,7 +184,7 @@ mkRentalItem DRentalSearch.QuoteInfo {..} offer_id fulfillment_id = do
       base_duration = Just baseDuration,
       quote_terms = descriptions,
       tags = Nothing,
-      id = show OnSearch.ONE_WAY_TRIP,
+      id = Just $ show OnSearch.ONE_WAY_TRIP,
       ..
     }
 

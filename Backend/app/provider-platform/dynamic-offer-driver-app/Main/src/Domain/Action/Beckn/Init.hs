@@ -23,15 +23,13 @@ import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
-import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RecurringBooking as DRecurringBooking
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
-import qualified Domain.Types.Vehicle.Variant as Veh
 import Domain.Types.Vehicle.Variant (Variant)
+import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
-import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import Kernel.Tools.Metrics.CoreMetrics
@@ -49,11 +47,10 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.QuoteSpecialZone as QSZoneQuote
+import qualified Storage.Queries.RecurringBooking as QRecurringBooking
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
-import qualified Storage.Queries.FarePolicy as QFarePolicy
-import qualified Storage.Queries.RecurringBooking as QRecurringBooking
-import Tools.Error ( FarePolicyError (NoFarePolicy), MerchantError (MerchantNotFound),)
+import Tools.Error (FarePolicyError (NoFarePolicy))
 import qualified Tools.Maps as Maps
 
 data InitReq
@@ -212,11 +209,8 @@ initOneWayTrip merchantId req = do
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
 findRandomExophone merchantId = do
-  exophones <- CQExophone.findAllByMerchantId merchantId
-  nonEmptyExophones <- case exophones of
-    [] -> throwError $ ExophoneNotFound merchantId.getId
-    e : es -> pure $ e :| es
-  getRandomElement nonEmptyExophones
+  CQExophone.findRandomExophone merchantId
+    >>= fromMaybeM (ExophoneNotFound merchantId.getId)
 
 initRecurringBooking ::
   (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) =>

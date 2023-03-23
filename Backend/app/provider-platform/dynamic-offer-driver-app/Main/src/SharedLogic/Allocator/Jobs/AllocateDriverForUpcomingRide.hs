@@ -10,7 +10,8 @@ import qualified Database.Redis as Hedis
 import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.Booking.BookingLocation as Booking
 import qualified Domain.Types.DriverQuote as DDriverQuote
-import qualified Domain.Types.FarePolicy.FarePolicy as FarePolicy
+import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSearchReq
@@ -30,6 +31,7 @@ import SharedLogic.Allocator (AllocatorJobType (..), SendSearchRequestToDriverJo
 import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.FareCalculator (calculateFare)
 import Storage.CachedQueries.CacheConfig (CacheFlow)
+import Storage.CachedQueries.Exophone (findRandomExophone)
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.AllocatorJob as QAllocatorJob
 import qualified Storage.Queries.DriverQuote as QDriverQuote
@@ -52,6 +54,9 @@ withoutDuplicateExecution key timeout action =
 data MerchantNotFound = MerchantNotFound
   deriving (Show, Exception, IsBaseError)
 
+data ExophoneNotFound = ExophoneNotFound Text
+  deriving (Show, Exception, IsBaseError)
+
 data BookingNotFound = BookingNotFound
   deriving (Show, Exception, IsBaseError)
 
@@ -61,7 +66,7 @@ data QuoteError = QuoteError
 handle ::
   ( EncFlow m r,
     EsqDBFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "maxShards" ::: Int],
     HasShortDurationRetryCfg r c,
     HasHttpClientOptions r c,
     CacheFlow m r,
@@ -71,16 +76,19 @@ handle ::
   ) =>
   Job 'AllocateDriverForUpcomingRide ->
   m ExecutionResult
-handle (Job {jobData}) =
+handle job =
   Exception.handle (\(SomeException e) -> pure $ Terminate (show e)) $
     withoutDuplicateExecution lockKey timeout $ do
       upcomingBooking <- fromMaybeM BookingNotFound =<< QTimetable.findUpcomingBooking jobData.timetableId
       transporter <- fromMaybeM MerchantNotFound =<< QMerchant.findById (Id upcomingBooking.providerId)
       searchRequest <- createSearchForUpcomingBooking upcomingBooking
       quote <- findQuoteForSearchRequest transporter.id upcomingBooking.farePolicy searchRequest
-      booking <- createBooking upcomingBooking searchRequest quote
+      booking <- createBooking upcomingBooking transporter searchRequest quote
       Complete <$ notifyScheduledRide upcomingBooking transporter quote booking
   where
+    jobData =
+      job.jobInfo.jobData
+
     timeout =
       60
 
@@ -133,7 +141,8 @@ createSearchForUpcomingBooking upcomingBooking = do
             status = DSearchReq.ACTIVE,
             updatedAt = now,
             autoAssignEnabled = True,
-            automatedSearch = True
+            automatedSearch = True,
+            searchRepeatCounter = 0
           }
   Esq.runTransaction $ QSearchReq.create sReq
   pure sReq
@@ -163,7 +172,7 @@ searchRequestLocationFromBookingLocation now location = do
       }
 
 findQuoteForSearchRequest ::
-  (Redis.HedisFlow m r, EsqDBFlow m r, MonadThrow m) =>
+  (Redis.HedisFlow m r, EsqDBFlow m r, MonadThrow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl, "maxShards" ::: Int]) =>
   Id DMerchant.Merchant ->
   FarePolicy.FarePolicy ->
   DSearchReq.SearchRequest ->
@@ -172,8 +181,9 @@ findQuoteForSearchRequest merchantId farePolicy searchRequest = do
   let distance = searchRequest.estimatedDistance
   fareParams <- calculateFare merchantId farePolicy distance searchRequest.startTime Nothing
   let driverExtraFare = farePolicy.driverExtraFee
+  maxShards <- asks (.maxShards)
   Esq.runTransaction $
-    QAllocatorJob.createAllocatorSendSearchRequestToDriverJob 0 $
+    QAllocatorJob.createAllocatorSendSearchRequestToDriverJob 0 maxShards $
       SendSearchRequestToDriverJobData
         { requestId = searchRequest.id,
           baseFare = fareParams.baseFare,
@@ -217,18 +227,26 @@ listenForSearchRequestQuote searchRequestId timeoutInSeconds = do
   pure $ fmap (Id . decodeUtf8 . snd) record
 
 createBooking ::
-  (MonadTime m, MonadGuid m, EsqDBFlow m r, MonadThrow m) =>
+  (MonadTime m, MonadGuid m, EsqDBFlow m r, MonadThrow m, CacheFlow m r) =>
   Timetable.UpcomingBooking ->
+  DMerchant.Merchant ->
   DSearchReq.SearchRequest ->
   DDriverQuote.DriverQuote ->
   m Booking.SimpleBooking
-createBooking upcomingBooking searchRequest quote = do
+createBooking upcomingBooking transporter searchRequest quote = do
   now <- getCurrentTime
   bookingId <- generateGUID
+  exophone <-
+    findRandomExophone transporter.id
+      >>= fromMaybeM (ExophoneNotFound transporter.id.getId)
   let booking =
         Booking.SimpleBooking
           { id = bookingId,
-            quoteId = quote.id,
+            transactionId = searchRequest.transactionId,
+            bookingType = Booking.NormalBooking,
+            specialZoneOtpCode = Nothing,
+            primaryExophone = DExophone.getPhone exophone,
+            quoteId = quote.id.getId,
             status = Booking.NEW,
             providerId = searchRequest.providerId,
             bapId = upcomingBooking.bapId,
@@ -271,7 +289,7 @@ notifyScheduledRide upcomingBooking transporter quote booking = do
       Context.ON_INIT
       (getId booking.id)
       Nothing
-      booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri)
+      booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) transporter.city
   let scheduledRideFulfillment =
         OnInit.Fulfillment
           { id = upcomingBooking.recurringBookingId.getId,

@@ -23,10 +23,10 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 
 data FareProductType
-    = ONE_WAY
-    | RENTAL
-    | DRIVER_OFFER
-    | ONE_WAY_SPECIAL_ZONE
-    deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
+  = ONE_WAY
+  | RENTAL
+  | DRIVER_OFFER
+  | ONE_WAY_SPECIAL_ZONE
+  deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
 derivePersistField "FareProductType"

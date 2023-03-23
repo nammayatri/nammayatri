@@ -150,7 +150,7 @@ buildSearchRequest from to merchantId sReq distance duration = do
         status = DSearchReq.ACTIVE,
         autoAssignEnabled = sReq.autoAssignEnabled,
         searchRepeatCounter = 0,
-        updatedAt = now
+        updatedAt = now,
         automatedSearch = False
       }
 

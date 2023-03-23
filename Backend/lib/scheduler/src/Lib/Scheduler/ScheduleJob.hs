@@ -16,6 +16,7 @@ module Lib.Scheduler.ScheduleJob
   ( createJob,
     createJobByTime,
     createJobIn,
+    createManyJobs,
   )
 where
 
@@ -38,6 +39,17 @@ createJob ::
 createJob createJobFunc maxShards jobEntry = do
   now <- getCurrentTime
   createJobImpl createJobFunc now maxShards jobEntry
+
+createManyJobs ::
+  forall t (e :: t) m.
+  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  ([AnyJob t] -> m ()) ->
+  Int ->
+  [JobEntry e] ->
+  m [Id AnyJob]
+createManyJobs createJobFunc maxShards jobs = do
+  now <- getCurrentTime
+  createManyJobsImpl createJobFunc now maxShards jobs
 
 createJobIn ::
   forall t (e :: t) m.
@@ -71,6 +83,22 @@ createJobByTime createJobFunc scheduledAt maxShards jobEntry = do
         \ now use createJobIn function instead"
   createJobImpl createJobFunc scheduledAt maxShards jobEntry
 
+createManyJobsImpl ::
+  forall t (e :: t) m.
+  (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  ([AnyJob t] -> m ()) ->
+  UTCTime ->
+  Int ->
+  [JobEntry e] ->
+  m [Id AnyJob]
+createManyJobsImpl createManyJobsFunc scheduledAt maxShards entries = do
+  now <- getCurrentTime
+  jobs <- for entries $ \entry -> do
+    id <- generateGUID
+    pure $ makeJob maxShards id now scheduledAt entry
+  createManyJobsFunc $ fmap AnyJob jobs
+  pure $ fmap (.id) jobs
+
 createJobImpl ::
   forall t (e :: t) m.
   (MonadTime m, MonadGuid m, MonadThrow m, Log m, SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
@@ -79,26 +107,35 @@ createJobImpl ::
   Int ->
   JobEntry e ->
   m (Id AnyJob)
-createJobImpl createJobFunc scheduledAt maxShards JobEntry {..} = do
-  when (maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
+createJobImpl createJobFunc scheduledAt maxShards entry = do
   now <- getCurrentTime
   uuid <- generateGUIDText
   let id = Id uuid
-  let shardId :: Int = idToShardNumber . fromJust $ UU.fromText uuid -- using fromJust because its never going to fail
-  let job = makeJob shardId id now
+  let job = makeJob maxShards id now scheduledAt entry
+  when (job.maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
   createJobFunc $ AnyJob job
   pure id
+
+makeJob ::
+  forall t (e :: t).
+  (SingI e, JobProcessor t, JobInfoProcessor (e :: t)) =>
+  Int ->
+  Id AnyJob ->
+  UTCTime ->
+  UTCTime ->
+  JobEntry e ->
+  Job e
+makeJob maxShards id currentTime scheduledAt JobEntry {..} =
+  Job
+    { id = id,
+      jobInfo = JobInfo (sing :: Sing e) jobData,
+      shardId = idToShardNumber . fromJust $ UU.fromText id.getId, -- using fromJust because its never going to fail
+      scheduledAt = scheduledAt,
+      maxErrors = maxErrors,
+      createdAt = currentTime,
+      updatedAt = currentTime,
+      currErrors = 0,
+      status = Pending
+    }
   where
     idToShardNumber uuid = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) `mod` maxShards
-    makeJob shardId id currentTime =
-      Job
-        { id = id,
-          jobInfo = JobInfo (sing :: Sing e) jobData,
-          shardId = shardId,
-          scheduledAt = scheduledAt,
-          maxErrors = maxErrors,
-          createdAt = currentTime,
-          updatedAt = currentTime,
-          currErrors = 0,
-          status = Pending
-        }

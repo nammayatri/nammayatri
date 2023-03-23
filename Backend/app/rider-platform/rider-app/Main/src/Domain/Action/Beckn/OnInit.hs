@@ -24,13 +24,12 @@ import GHC.Records.Extra (HasField (..))
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
-import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Storage.CachedQueries.CacheConfig
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Exophone as CQE
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RecurringBooking as QRideRB
@@ -158,6 +157,7 @@ onInit (OnInitReqRecurringBooking req) = do
   return $
     OnInitRes
       { bookingId = Id bookingId,
+        transactionId = req.recurringBookingId.getId,
         bppBookingId = req.bppBookingId,
         bppId = recurringBooking.providerId,
         bppUrl = recurringBooking.providerUrl,
@@ -165,6 +165,6 @@ onInit (OnInitReqRecurringBooking req) = do
         fromLocationAddress = recurringBooking.fromLocation.address,
         mbToLocationAddress = Just recurringBooking.toLocation.address,
         mbRiderName = decRider.firstName,
+        city = merchant.city,
         ..
       }
-

@@ -29,7 +29,6 @@ import Lib.Scheduler
 
 data AllocatorJobType
   = SendSearchRequestToDriver
-  | UpdateRecurringBookingTimetable
   | AllocateDriverForUpcomingRide
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
@@ -39,6 +38,7 @@ showSingInstance ''AllocatorJobType
 instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
+  restoreAnyJobInfo SAllocateDriverForUpcomingRide jobData = AnyJobInfo <$> restoreJobInfo SAllocateDriverForUpcomingRide jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { requestId :: Id DSR.SearchRequest,
@@ -51,13 +51,13 @@ data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
 
 instance JobInfoProcessor 'SendSearchRequestToDriver
 
+type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
+
 data AllocateDriverForUpcomingRideJobData = AllocateDriverForUpcomingRideJobData
   { timetableId :: Id Timetable
   }
   deriving (Generic, ToJSON, FromJSON)
 
-type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
-
-type instance JobContent 'UpdateRecurringBookingTimetable = ()
+instance JobInfoProcessor 'AllocateDriverForUpcomingRide
 
 type instance JobContent 'AllocateDriverForUpcomingRide = AllocateDriverForUpcomingRideJobData

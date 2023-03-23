@@ -75,7 +75,6 @@ buildInitReq subscriber req = do
               bapUri = subscriber.subscriber_url,
               initTypeReq = initTypeReq
             }
-
   where
     buildInitTypeReq item = do
       let itemCode = item.descriptor.code

@@ -16,7 +16,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import qualified Storage.Tabular.Booking as SBooking
-import qualified Storage.Tabular.FarePolicy.FarePolicy as SFarePolicy
+import qualified Storage.Tabular.FarePolicy as SFarePolicy
 import qualified Storage.Tabular.RecurringBooking as SRBooking
 
 derivePersistField "Domain.Status"
@@ -65,7 +65,7 @@ instance FromTType TimetableT Domain.Timetable where
         }
 
 instance
-  TType
+  FromTType
     ( TimetableT,
       SRBooking.FullRecurringBookingT,
       SFarePolicy.FarePolicyT
@@ -77,5 +77,3 @@ instance
     DRecurringBooking.RecurringBooking {id = recurringBookingId, ..} <- fromTType bookingT
     farePolicy <- fromTType farePolicyT
     pure $ Domain.UpcomingBooking {id = tt.id, pickupTime = tt.pickupTime, bookingId = Nothing, ..}
-  toTType _ =
-    error "this is a read model"

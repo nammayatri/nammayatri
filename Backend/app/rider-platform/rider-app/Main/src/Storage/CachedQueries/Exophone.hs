@@ -26,14 +26,14 @@ module Storage.CachedQueries.Exophone
   )
 where
 
-import Domain.Types.Exophone
 import Data.List.NonEmpty (nonEmpty)
+import Domain.Types.Exophone
 import qualified Domain.Types.Merchant as DM
 import Kernel.Prelude
+import Kernel.Randomizer
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Randomizer
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Exophone as Queries
