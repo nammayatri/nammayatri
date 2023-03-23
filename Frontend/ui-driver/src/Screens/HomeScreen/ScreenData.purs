@@ -84,27 +84,3 @@ initData = {
         cancelConfirmationPopup : false
     }
 }
-
-navData :: BottomNavBarState
-navData = {
-   activeIndex: 0,
-   screenName : "driver homeScreen screen",
-   navButton: [
-    {
-      activeIcon: "ny_ic_home_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_home_active.png",
-      defaultIcon: "ny_ic_home_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_home_inactive.png",
-      text: "Home"
-    },
-    {
-      activeIcon: "ny_ic_cab_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cab_active.png",
-      defaultIcon: "ny_ic_cab_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cab_inactive.png",
-      text: "Rides"
-    },
-    {
-      activeIcon: "ny_ic_account_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_account_active.png",
-      defaultIcon: "ny_ic_account_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_account_inactive.png",
-      text: "Profile"
-    }
-  ]
-}
-

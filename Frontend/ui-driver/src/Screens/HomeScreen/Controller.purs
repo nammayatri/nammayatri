@@ -189,7 +189,7 @@ eval (ChangeStatus status) state =
           _ <- pure $ toast (getString DEMO_MODE_DISABLED)
           _ <- pure $  deleteValueFromLocalStore IS_DEMOMODE_ENABLED
           _ <- pure $  deleteValueFromLocalStore DEMO_MODE_PASSWORD
-          _ <- getCurrentPosition (showDriverMarker state "ny_ic_auto") constructLatLong
+          _ <- getCurrentPosition (showDriverMarker state "ic_vehicle_side") constructLatLong
           pure NoAction
           ]
     else if  status then exit (DriverAvailabilityStatus state status)
@@ -353,7 +353,7 @@ checkPermissionAndUpdateDriverMarker state = do
   conditionB <- isLocationEnabled unit 
   if conditionA && conditionB then do 
     _ <- pure $ printLog "update driver location" "."
-    _ <- getCurrentPosition (showDriverMarker state "ny_ic_auto") constructLatLong
+    _ <- getCurrentPosition (showDriverMarker state "ic_vehicle_side") constructLatLong
     pure unit
     else do 
       _ <- requestLocation unit
@@ -372,7 +372,7 @@ showDriverMarker state marker location = do
 
 updateAutoIcon :: Number -> Number -> Effect Unit 
 updateAutoIcon lat lng = do
-  _ <- showMarker "ny_ic_auto" lat lng 100 0.5 0.5
+  _ <- showMarker "ic_vehicle_side" lat lng 100 0.5 0.5
   _ <- pure $ enableMyLocation true
   animateCamera lat lng 17
 

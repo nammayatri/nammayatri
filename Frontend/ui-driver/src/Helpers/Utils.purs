@@ -16,23 +16,34 @@
 module Helpers.Utils where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Effect (Effect)
-import Prelude (Unit, bind, pure, discard, unit, void, ($), identity, (<*>), (<#>), (+), (<>))
-import Data.Traversable (traverse)
-import Effect.Aff (error, killFiber, launchAff, launchAff_)
-import Juspay.OTP.Reader (initiateSMSRetriever)
-import Juspay.OTP.Reader.Flow as Reader
-import Data.Maybe (Maybe(..), fromMaybe)
-import Juspay.OTP.Reader as Readers
-import Data.Array.NonEmpty (fromArray)
-import Effect.Class (liftEffect)
-import Screens.Types (AllocationData, YoutubeData)
-import Language.Strings (getString)
-import Language.Types(STR(..))
-import Prelude ((/),(*),(-))
-import Data.Array ((!!)) as DA
-import Data.String (Pattern(..), split) as DS
+
 import Math
+
+import Control.Monad.Except (runExcept)
+import Data.Array ((!!)) as DA
+import Data.Array.NonEmpty (fromArray)
+import Data.Either (hush)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Eq (genericEq)
+import Data.Generic.Rep.Show (genericShow)
+import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String (Pattern(..), split) as DS
+import Data.Traversable (traverse)
+import Effect (Effect)
+import Effect.Aff (error, killFiber, launchAff, launchAff_)
+import Effect.Class (liftEffect)
+import Foreign (Foreign)
+import Foreign.Class (class Decode, class Encode, decode)
+import Juspay.OTP.Reader (initiateSMSRetriever)
+import Juspay.OTP.Reader as Readers
+import Juspay.OTP.Reader.Flow as Reader
+import Prelude ((/), (*), (-))
+import Prelude (Unit, bind, pure, discard, unit, void, ($), identity, (<*>), (<#>), (+), (<>))
+import Prelude (class Eq, class Show, (<<<))
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Screens.Types (AllocationData, YoutubeData)
+
 -- import Control.Monad.Except (runExcept)
 -- import Data.Array.NonEmpty (fromArray)
 -- import Data.DateTime (Date, DateTime)
@@ -367,25 +378,6 @@ startOtpReciever action push = do
     liftEffect $ startOtpReciever action push
   pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
 
-
-getCorrespondingErrorMessage :: String -> String
-getCorrespondingErrorMessage errorCode = case errorCode of
-  "IMAGE_VALIDATION_FAILED" -> (getString IMAGE_VALIDATION_FAILED)
-  "IMAGE_NOT_READABLE" -> (getString IMAGE_NOT_READABLE)
-  "IMAGE_LOW_QUALITY" -> (getString IMAGE_LOW_QUALITY)
-  "IMAGE_INVALID_TYPE" -> (getString IMAGE_INVALID_TYPE)
-  "IMAGE_DOCUMENT_NUMBER_MISMATCH" -> (getString IMAGE_DOCUMENT_NUMBER_MISMATCH)
-  "IMAGE_EXTRACTION_FAILED" -> (getString IMAGE_EXTRACTION_FAILED)
-  "IMAGE_NOT_FOUND" -> (getString IMAGE_NOT_FOUND)
-  "IMAGE_NOT_VALID" -> (getString IMAGE_NOT_VALID)
-  "DRIVER_ALREADY_LINKED" -> (getString DRIVER_ALREADY_LINKED)
-  "DL_ALREADY_UPDATED" -> (getString DL_ALREADY_UPDATED)
-  "DL_ALREADY_LINKED"  -> (getString DL_ALREADY_LINKED)
-  "RC_ALREADY_LINKED" -> (getString RC_ALREADY_LINKED)
-  "RC_ALREADY_UPDATED" -> (getString RC_ALREADY_UPDATED)
-  "UNPROCESSABLE_ENTITY" -> (getString PLEASE_CHECK_FOR_IMAGE_IF_VALID_DOCUMENT_IMAGE_OR_NOT)
-  _                      -> (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
-
 -- -- type Locations = {
 -- --     paths :: Array Paths
 -- -- }
@@ -437,3 +429,20 @@ getDistanceBwCordinates lat1 long1 lat2 long2 = do
 
 toRad :: Number -> Number
 toRad n = (n * pi) / 180.0
+
+foreign import getMerchantId :: String -> Foreign
+
+data Merchant = NAMMAYATRIPARTNER | JATRISAATHIDRIVER | YATRIPARTNER
+
+derive instance genericMerchant :: Generic Merchant _
+instance eqMerchant :: Eq Merchant where eq = genericEq
+instance showMerchant :: Show Merchant where show = genericShow
+instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
+instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
+
+getMerchant :: Unit -> Maybe Merchant
+getMerchant unit = decodeMerchantId (getMerchantId "")
+
+
+decodeMerchantId :: Foreign -> Maybe Merchant
+decodeMerchantId = hush <<< runExcept <<< decode
