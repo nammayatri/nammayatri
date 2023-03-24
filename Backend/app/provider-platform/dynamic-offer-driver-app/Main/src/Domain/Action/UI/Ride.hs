@@ -65,6 +65,7 @@ import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.RideDetails as QRideD
 import Storage.Queries.Vehicle as QVeh
 import Tools.Error
+import qualified Lib.DriverScore as DS  
 import qualified Tools.Notifications as Notify
 
 data DriverRideRes = DriverRideRes
@@ -216,7 +217,7 @@ otpRideCreate driver req = do
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
   Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
   void $ BP.sendRideAssignedUpdateToBAP uBooking ride
-  incrementTotalRidesCount transporter.id driver.id
+  DS.driverScoreEventHandler (DS.OnNewRideAssigned transporter.id driver.id)
   driverNumber <- RD.getDriverNumber rideDetails
   pure $ mkDriverRideRes rideDetails driverNumber Nothing (ride, booking)
   where

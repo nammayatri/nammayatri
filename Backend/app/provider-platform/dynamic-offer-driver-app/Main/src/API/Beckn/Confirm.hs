@@ -32,8 +32,8 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
+import qualified Lib.DriverScore as DS  
 import qualified SharedLogic.CallBAP as BP
-import SharedLogic.DriverPool (incrementTotalRidesCount)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPerson
@@ -72,7 +72,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
                 BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
               void $
                 BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
-          incrementTotalRidesCount transporterId driverQuote.driverId
+          DS.driverScoreEventHandler (DS.OnNewRideAssigned transporterId driverQuote.driverId)
         DBooking.SpecialZoneBooking -> do
           now <- getCurrentTime
           fork "on_confirm/on_update" $ do
