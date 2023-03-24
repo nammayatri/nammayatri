@@ -78,7 +78,7 @@ view push config =
         , imageView
             [ height $ V 17
             , width $ V 17
-            , imageUrl "ic_cancel"
+            , imageWithFallback "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/user/ny_ic_cancel.png"
             , gravity RIGHT
             , margin (Margin 0 10 18 10)
             , onClick push $ const ClearText
