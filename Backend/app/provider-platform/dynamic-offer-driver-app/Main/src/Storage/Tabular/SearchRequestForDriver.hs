@@ -30,7 +30,7 @@ import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Storage.Tabular.Person (PersonTId)
-import Storage.Tabular.SearchRequest (SearchRequestTId)
+import Storage.Tabular.SearchTry (SearchTryTId)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.DriverSearchRequestStatus"
@@ -42,7 +42,7 @@ mkPersist
     SearchRequestForDriverT sql=search_request_for_driver
       id Text
       transactionId Text
-      searchRequestId SearchRequestTId
+      searchRequestId SearchTryTId
       startTime UTCTime
       actualDistanceToPickup Meters
       straightLineDistanceToPickup Meters

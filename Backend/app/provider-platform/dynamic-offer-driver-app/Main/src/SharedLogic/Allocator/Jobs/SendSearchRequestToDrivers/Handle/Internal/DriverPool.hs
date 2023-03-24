@@ -30,7 +30,7 @@ import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person (Driver)
-import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude hiding (id)
 import Kernel.Randomizer (randomizeList)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -75,7 +75,7 @@ prepareDriverPoolBatch ::
     Redis.HedisFlow m r
   ) =>
   DriverPoolConfig ->
-  DSR.SearchRequest ->
+  DST.SearchTry ->
   PoolBatchNum ->
   m [DriverPoolWithActualDistResult]
 prepareDriverPoolBatch driverPoolCfg searchReq batchNum = withLogTag ("BatchNum-" <> show batchNum) $ do
@@ -380,7 +380,7 @@ getNextDriverPoolBatch ::
     Redis.HedisFlow m r
   ) =>
   DriverPoolConfig ->
-  DSR.SearchRequest ->
+  DST.SearchTry ->
   m [DriverPoolWithActualDistResult]
 getNextDriverPoolBatch driverPoolConfig searchReq = withLogTag "getNextDriverPoolBatch" do
   batchNum <- getPoolBatchNum searchReq.transactionId
@@ -427,13 +427,13 @@ incrementPoolRadiusStep transactionId = do
   logInfo $ "Increment radius step to " <> show res <> "."
   return ()
 
-driverRequestCountKey :: Id DSR.SearchRequest -> Id Driver -> Text
+driverRequestCountKey :: Id DST.SearchTry -> Id Driver -> Text
 driverRequestCountKey searchReqId driverId = "Driver-Request-Count-Key:SearchReqId-DriverId" <> searchReqId.getId <> driverId.getId
 
-checkRequestCount :: Redis.HedisFlow m r => Id DSR.SearchRequest -> Id Driver -> DriverPoolConfig -> m Bool
+checkRequestCount :: Redis.HedisFlow m r => Id DST.SearchTry -> Id Driver -> DriverPoolConfig -> m Bool
 checkRequestCount searchReqId driverId driverPoolConfig = maybe True (\count -> (count :: Int) < driverPoolConfig.driverRequestCountLimit) <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchReqId driverId))
 
-incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DSR.SearchRequest -> m ()
+incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DST.SearchTry -> m ()
 incrementDriverRequestCount finalPoolBatch searchReqId = do
   CM.mapM_
     ( \dpr ->

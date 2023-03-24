@@ -44,7 +44,7 @@ import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -68,7 +68,7 @@ callOnSelect ::
     HasShortDurationRetryCfg r c
   ) =>
   DM.Merchant ->
-  DSR.SearchRequest ->
+  DST.SearchTry ->
   OnSelect.OnSelectMessage ->
   m ()
 callOnSelect transporter searchRequest content = do
@@ -234,7 +234,7 @@ sendDriverOffer ::
     HasPrettyLogger m r
   ) =>
   DM.Merchant ->
-  DSR.SearchRequest ->
+  DST.SearchTry ->
   DDQ.DriverQuote ->
   m ()
 sendDriverOffer transporter searchReq driverQuote = do
@@ -243,7 +243,7 @@ sendDriverOffer transporter searchReq driverQuote = do
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>
       DM.Merchant ->
-      DSR.SearchRequest ->
+      DST.SearchTry ->
       [DDQ.DriverQuote] ->
       m ACL.DOnSelectReq
     buildOnSelectReq org searchRequest quotes = do

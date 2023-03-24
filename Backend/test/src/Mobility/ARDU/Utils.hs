@@ -33,9 +33,9 @@ import "dynamic-offer-driver-app" Domain.Types.Person as TPerson
 import qualified "rider-app" Domain.Types.Quote as AppQuote
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
 import qualified "rider-app" Domain.Types.Ride as BRide
-import qualified "dynamic-offer-driver-app" Domain.Types.SearchRequest as ArduSReq
 import qualified "rider-app" Domain.Types.SearchRequest as AppSearchReq
 import Domain.Types.SearchRequestForDriver as SearchReqInfo
+import qualified "dynamic-offer-driver-app" Domain.Types.SearchTry as ArduSStep
 import HSpec
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types
@@ -58,7 +58,7 @@ import "dynamic-offer-driver-app" Storage.Queries.DriverLocation
 import qualified Storage.Queries.DriverQuote as TDQ
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as TQRide
 import qualified "rider-app" Storage.Queries.Ride as BQRide
-import qualified "dynamic-offer-driver-app" Storage.Queries.SearchRequest as QSReq
+import qualified "dynamic-offer-driver-app" Storage.Queries.SearchTry as QSTtep
 import Utils
 
 -- database calls
@@ -172,24 +172,24 @@ getNearbySearchRequestForDriver driver estimateId =
   pollFilteredMList
     "get at least one nearby search request for driver"
     ( \p -> do
-        mbSReq <- liftIO $ runARDUFlow "" $ QSReq.findById p.searchRequestId
+        mbSReq <- liftIO $ runARDUFlow "" $ QSTtep.findById p.searchRequestId
         pure $ fmap (.messageId) mbSReq == Just estimateId.getId
     )
     ((.searchRequestsForDriver) <$> callBPP (API.ui.driver.getNearbySearchRequests driver.token))
 
-respondQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM ()
+respondQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM ()
 respondQuote driver fare bppSearchRequestId response =
   void $ callBPP $ API.ui.driver.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
 
-offerQuote :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM ()
+offerQuote :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> ClientsM ()
 offerQuote driver fare bppSearchRequestId =
   void $ callBPP $ API.ui.driver.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
-respondQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM (Either ClientError APISuccess)
+respondQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> SearchReqInfo.SearchRequestForDriverResponse -> ClientsM (Either ClientError APISuccess)
 respondQuoteEither driver fare bppSearchRequestId response =
   callBppEither $ API.ui.driver.respondQuote driver.token $ TDriver.DriverRespondReq (Just fare) bppSearchRequestId response
 
-offerQuoteEither :: DriverTestData -> Money -> Id ArduSReq.SearchRequest -> ClientsM (Either ClientError APISuccess)
+offerQuoteEither :: DriverTestData -> Money -> Id ArduSStep.SearchTry -> ClientsM (Either ClientError APISuccess)
 offerQuoteEither driver fare bppSearchRequestId =
   callBppEither $ API.ui.driver.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
