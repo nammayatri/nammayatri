@@ -12,79 +12,79 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.SearchRequest where
+module Storage.Queries.SearchStep where
 
-import Domain.Types.SearchRequest as Domain
+import Domain.Types.SearchStep as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
+import Storage.Tabular.SearchStep
 
-create :: SearchRequest -> SqlDB ()
+create :: SearchStep -> SqlDB ()
 create dsReq = Esq.runTransaction $
   withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
     Esq.create' fromLoc
     Esq.create' toLoc
     Esq.create' sReq
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
+findById :: Transactionable m => Id SearchStep -> m (Maybe SearchStep)
 findById searchRequestId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchRequest) $
+  fmap (fmap $ extractSolidType @Domain.SearchStep) $
     Esq.findOne' $ do
       (sReq :& sFromLoc :& sToLoc) <-
         from
-          ( table @SearchRequestT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestToLocationId ==. loc2 ^. SearchReqLocationTId)
+          ( table @SearchStepT
+              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchStepFromLocationId ==. loc1 ^. SearchReqLocationTId)
+              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchStepToLocationId ==. loc2 ^. SearchReqLocationTId)
           )
-      where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
+      where_ $ sReq ^. SearchStepTId ==. val (toKey searchRequestId)
       pure (sReq, sFromLoc, sToLoc)
 
 updateStatus ::
-  Id SearchRequest ->
-  SearchRequestStatus ->
+  Id SearchStep ->
+  SearchStepStatus ->
   SqlDB ()
 updateStatus searchId status_ = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ SearchRequestUpdatedAt =. val now,
-        SearchRequestStatus =. val status_
+      [ SearchStepUpdatedAt =. val now,
+        SearchStepStatus =. val status_
       ]
-    where_ $ tbl ^. SearchRequestTId ==. val (toKey searchId)
+    where_ $ tbl ^. SearchStepTId ==. val (toKey searchId)
 
 getRequestIdfromTransactionId ::
   (Transactionable m) =>
-  Id SearchRequest ->
-  m (Maybe (Id SearchRequest))
+  Id SearchStep ->
+  m (Maybe (Id SearchStep))
 getRequestIdfromTransactionId tId = do
   findOne $ do
-    searchT <- from $ table @SearchRequestT
+    searchT <- from $ table @SearchStepT
     where_ $
-      searchT ^. SearchRequestTransactionId ==. val (getId tId)
-    return $ searchT ^. SearchRequestTId
+      searchT ^. SearchStepTransactionId ==. val (getId tId)
+    return $ searchT ^. SearchStepTId
 
 getStatus ::
   (Transactionable m) =>
-  Id SearchRequest ->
-  m (Maybe SearchRequestStatus)
+  Id SearchStep ->
+  m (Maybe SearchStepStatus)
 getStatus searchRequestId = do
   findOne $ do
-    searchT <- from $ table @SearchRequestT
+    searchT <- from $ table @SearchStepT
     where_ $
-      searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
-    return $ searchT ^. SearchRequestStatus
+      searchT ^. SearchStepTId ==. val (toKey searchRequestId)
+    return $ searchT ^. SearchStepStatus
 
 getValidTill ::
   (Transactionable m) =>
-  Id SearchRequest ->
+  Id SearchStep ->
   m (Maybe UTCTime)
 getValidTill searchRequestId = do
   findOne $ do
-    searchT <- from $ table @SearchRequestT
+    searchT <- from $ table @SearchStepT
     where_ $
-      searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
-    return $ searchT ^. SearchRequestValidTill
+      searchT ^. SearchStepTId ==. val (toKey searchRequestId)
+    return $ searchT ^. SearchStepValidTill

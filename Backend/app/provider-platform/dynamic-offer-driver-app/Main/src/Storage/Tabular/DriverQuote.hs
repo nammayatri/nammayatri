@@ -30,8 +30,8 @@ import Kernel.Types.Id
 import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
-import qualified Storage.Tabular.SearchRequest as SReq
 import qualified Storage.Tabular.SearchRequestForDriver as SRFD
+import qualified Storage.Tabular.SearchStep as DSS
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.DriverQuoteStatus"
@@ -42,7 +42,7 @@ mkPersist
     DriverQuoteT sql=driver_quote
       id Text
       status Domain.DriverQuoteStatus
-      searchRequestId SReq.SearchRequestTId
+      searchRequestId DSS.SearchStepTId
       searchRequestForDriverId SRFD.SearchRequestForDriverTId Maybe
       driverId PersonTId
       driverName Text
@@ -54,7 +54,7 @@ mkPersist
       validTill UTCTime
       estimatedFare Common.Money
       fareParametersId Fare.FareParametersTId
-      providerId MerchantTId 
+      providerId MerchantTId
       createdAt UTCTime
       updatedAt UTCTime
 

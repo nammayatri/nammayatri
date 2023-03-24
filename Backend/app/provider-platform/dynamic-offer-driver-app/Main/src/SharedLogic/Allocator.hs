@@ -19,7 +19,7 @@
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
-import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchStep as DSS
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Id
@@ -37,7 +37,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
-  { requestId :: Id DSR.SearchRequest,
+  { requestId :: Id DSS.SearchStep,
     baseFare :: Money,
     estimatedRideDistance :: Meters,
     driverMinExtraFee :: Money,

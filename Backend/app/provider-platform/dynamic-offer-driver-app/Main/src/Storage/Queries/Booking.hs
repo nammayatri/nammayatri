@@ -18,12 +18,11 @@ module Storage.Queries.Booking where
 import Domain.Types.Booking
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
-import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchStep as DSS
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
 import Kernel.Types.Time
-import qualified Storage.Queries.DriverQuote as QDQuote
 import Storage.Tabular.Booking
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverQuote as DriverQuote
@@ -62,29 +61,20 @@ findById bookingId = buildDType $
       where_ $ rb ^. BookingTId ==. val (toKey bookingId)
       pure (rb, bFromLoc, bToLoc, farePars)
 
-findBySearchReq :: (Transactionable m) => Id DSR.SearchRequest -> m (Maybe Booking)
-findBySearchReq searchReqId = buildDType $ do
-  mbDriverQuoteT <- QDQuote.findDriverQuoteBySearchId searchReqId
-  let mbDriverQuoteId = Id . DriverQuote.id <$> mbDriverQuoteT
-  mbBookingT <- (join <$>) $ mapM (findBookingByDriverQuoteId . getId) mbDriverQuoteId
-
-  join <$> mapM buildFullBooking mbBookingT
-
-findBookingByDriverQuoteId :: Transactionable m => Text -> DTypeBuilder m (Maybe BookingT)
-findBookingByDriverQuoteId driverQuoteId = Esq.findOne' $ do
-  booking <- from $ table @BookingT
-  where_ $ booking ^. BookingQuoteId ==. val driverQuoteId
-  pure booking
-
-buildFullBooking ::
-  Transactionable m =>
-  BookingT ->
-  DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking bookingT@BookingT {..} = runMaybeT $ do
-  fromLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey fromLocationId)
-  toLocationT <- MaybeT $ Esq.findById' @BookingLocationT (fromKey toLocationId)
-  fareParamsT <- MaybeT $ Esq.findById' @Fare.FareParametersT (fromKey fareParametersId)
-  return $ extractSolidType @Booking (bookingT, fromLocationT, toLocationT, fareParamsT)
+findBySearchReq :: Transactionable m => Id DSS.SearchStep -> m (Maybe Booking)
+findBySearchReq searchReqId = buildDType $
+  fmap (fmap $ extractSolidType @Booking) $
+    Esq.findOne' $ do
+      (rb :& bFromLoc :& bToLoc :& farePars :& dq) <-
+        from
+          ( baseBookingTable
+              `innerJoin` table @DriverQuote.DriverQuoteT
+              `Esq.on` ( \(rb :& _ :& _ :& _ :& dq) ->
+                           rb ^. BookingQuoteId ==. dq ^. DriverQuoteId
+                       )
+          )
+      where_ $ dq ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+      pure (rb, bFromLoc, bToLoc, farePars)
 
 updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
 updateStatus rbId rbStatus = do

@@ -18,8 +18,8 @@ module Domain.Types.DriverQuote where
 import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person
-import Domain.Types.SearchRequest
 import Domain.Types.SearchRequestForDriver
+import Domain.Types.SearchStep
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -33,7 +33,7 @@ data DriverQuoteStatus = Active | Inactive
 data DriverQuote = DriverQuote
   { id :: Id DriverQuote,
     status :: DriverQuoteStatus,
-    searchRequestId :: Id SearchRequest,
+    searchRequestId :: Id SearchStep,
     searchRequestForDriverId :: Maybe (Id SearchRequestForDriver),
     driverId :: Id Person,
     driverName :: Text,

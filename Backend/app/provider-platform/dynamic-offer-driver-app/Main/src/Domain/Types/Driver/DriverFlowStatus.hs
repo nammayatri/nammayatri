@@ -23,7 +23,7 @@ import Data.OpenApi
 import qualified Domain.Types.DriverQuote as DQ
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchStep as DSS
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -32,7 +32,7 @@ data FlowStatus
   = IDLE
   | ACTIVE
   | GOT_SEARCH_REQUEST
-      { requestId :: Id DSR.SearchRequest,
+      { requestId :: Id DSS.SearchStep,
         validTill :: UTCTime
       }
   | OFFERED_QUOTE

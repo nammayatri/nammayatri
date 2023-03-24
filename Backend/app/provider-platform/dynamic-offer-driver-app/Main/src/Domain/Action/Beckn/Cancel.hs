@@ -25,7 +25,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.SearchRequest as SR
+import qualified Domain.Types.SearchStep as DSS
 import EulerHS.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -47,8 +47,8 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import Storage.Queries.SearchRequest as SR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import Storage.Queries.SearchStep as QSS
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
@@ -58,7 +58,7 @@ newtype CancelReq = CancelReq
   }
 
 newtype CancelSearchReq = CancelSearchReq
-  { searchId :: Id SR.SearchRequest
+  { searchId :: Id DSS.SearchStep
   }
 
 cancel ::
@@ -133,13 +133,13 @@ cancelSearch ::
   m ()
 cancelSearch transporterId _ req = do
   let transactionId = req.searchId
-  searchID <- Esq.runInReplica $ SR.getRequestIdfromTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound transactionId.getId)
-  CS.lockSearchRequest searchID
+  searchID <- Esq.runInReplica $ QSS.getRequestIdfromTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound transactionId.getId)
+  CS.lockSearchStep searchID
   driverSearchReqs <- Esq.runInReplica $ QSRD.findAllActiveByRequestId searchID
   for_ driverSearchReqs $ \driverReq -> do
     logTagInfo ("searchId-" <> getId req.searchId) "Search Request Cancellation"
     DB.runTransaction $ do
-      SR.updateStatus searchID SR.CANCELLED
+      QSS.updateStatus searchID DSS.CANCELLED
       QSRD.setInactiveByRequestId driverReq.searchRequestId
     driver_ <- Esq.runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
     Notify.notifyOnCancelSearchRequest transporterId driverReq.driverId driver_.deviceToken driverReq.searchRequestId

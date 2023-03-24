@@ -17,7 +17,7 @@ module Storage.Queries.DriverQuote where
 import Data.Int (Int32)
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
-import qualified Domain.Types.SearchRequest as DSReq
+import qualified Domain.Types.SearchStep as DSS
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
@@ -53,7 +53,7 @@ findById dQuoteId = buildDType $
       where_ $ dQuote ^. DriverQuoteTId ==. val (toKey dQuoteId)
       pure (dQuote, farePars)
 
-setInactiveByRequestId :: Id DSReq.SearchRequest -> SqlDB ()
+setInactiveByRequestId :: Id DSS.SearchStep -> SqlDB ()
 setInactiveByRequestId searchReqId = Esq.update $ \p -> do
   set p [DriverQuoteStatus =. val Domain.Inactive]
   where_ $ p ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
@@ -73,7 +73,7 @@ findActiveQuotesByDriverId driverId driverUnlockDelay = do
             &&. dQuote ^. DriverQuoteValidTill >. val (addUTCTime delayToAvoidRaces now)
         pure (dQuote, farePars)
 
-findAllByRequestId :: Transactionable m => Id DSReq.SearchRequest -> m [Domain.DriverQuote]
+findAllByRequestId :: Transactionable m => Id DSS.SearchStep -> m [Domain.DriverQuote]
 findAllByRequestId searchReqId = do
   buildDType $ do
     fmap (fmap $ extractSolidType @Domain.DriverQuote) $
@@ -85,7 +85,7 @@ findAllByRequestId searchReqId = do
             &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
         pure (dQuote, farePars)
 
-countAllByRequestId :: Transactionable m => Id DSReq.SearchRequest -> m Int32
+countAllByRequestId :: Transactionable m => Id DSS.SearchStep -> m Int32
 countAllByRequestId searchReqId = do
   fmap (fromMaybe 0) $
     Esq.findOne $ do
@@ -100,9 +100,3 @@ deleteByDriverId personId =
   Esq.delete $ do
     driverQuotes <- from $ table @DriverQuoteT
     where_ $ driverQuotes ^. DriverQuoteDriverId ==. val (toKey personId)
-
-findDriverQuoteBySearchId :: Transactionable m => Id DSReq.SearchRequest -> DTypeBuilder m (Maybe DriverQuoteT)
-findDriverQuoteBySearchId searchReqId = Esq.findOne' $ do
-  driverQuote <- from $ table @DriverQuoteT
-  where_ $ driverQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
-  pure driverQuote

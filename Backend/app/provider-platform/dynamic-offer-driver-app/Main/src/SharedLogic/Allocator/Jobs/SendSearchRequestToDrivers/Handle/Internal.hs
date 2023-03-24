@@ -25,7 +25,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
 where
 
 import Domain.Types.Merchant.DriverPoolConfig
-import Domain.Types.SearchRequest as SR
+import Domain.Types.SearchStep as DSS
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -37,7 +37,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Sen
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverQuote as QDQ
-import qualified Storage.Queries.SearchRequest as SR
+import qualified Storage.Queries.SearchStep as QSS
 
 ifSearchRequestIsCancelled ::
   ( HasCacheConfig r,
@@ -45,11 +45,11 @@ ifSearchRequestIsCancelled ::
     EsqDBFlow m r,
     Log m
   ) =>
-  Id SearchRequest ->
+  Id SearchStep ->
   m Bool
 ifSearchRequestIsCancelled searchReqId = do
-  searchReqStatus <- SR.getStatus searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
-  pure $ searchReqStatus == SR.CANCELLED
+  searchReqStatus <- QSS.getStatus searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
+  pure $ searchReqStatus == DSS.CANCELLED
 
 ifSearchRequestIsExpired ::
   ( HasCacheConfig r,
@@ -57,10 +57,10 @@ ifSearchRequestIsExpired ::
     EsqDBFlow m r,
     Log m
   ) =>
-  Id SearchRequest ->
+  Id SearchStep ->
   m Bool
 ifSearchRequestIsExpired searchReqId = do
-  searchReqValidTill <- SR.getValidTill searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
+  searchReqValidTill <- QSS.getValidTill searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
   now <- getCurrentTime
   pure $ searchReqValidTill <= now
 
@@ -70,7 +70,7 @@ isRideAlreadyAssigned ::
     EsqDBFlow m r,
     Log m
   ) =>
-  Id SearchRequest ->
+  Id SearchStep ->
   m Bool
 isRideAlreadyAssigned searchReqId = isJust <$> QB.findBySearchReq searchReqId
 
@@ -81,7 +81,7 @@ isReceivedMaxDriverQuotes ::
     Log m
   ) =>
   DriverPoolConfig ->
-  Id SearchRequest ->
+  Id SearchStep ->
   m Bool
 isReceivedMaxDriverQuotes driverPoolCfg searchReqId = do
   totalQuotesRecieved <- length <$> QDQ.findAllByRequestId searchReqId
@@ -103,7 +103,7 @@ setBatchDurationLock ::
   ( MonadFlow m,
     HedisFlow m r
   ) =>
-  Id SearchRequest ->
+  Id SearchStep ->
   Seconds ->
   m (Maybe UTCTime)
 setBatchDurationLock searchRequestId singleBatchProcessTime = do

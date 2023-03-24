@@ -39,8 +39,8 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.QuoteSpecialZone as QSZoneQuote
-import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
+import qualified Storage.Queries.SearchStep as QSS
 
 data InitReq = InitReq
   { driverQuoteId :: Text,
@@ -112,7 +112,7 @@ handler merchantId req = do
       driverQuote <- QDQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
       when (driverQuote.validTill < now) $
         throwError $ QuoteExpired driverQuote.id.getId
-      searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
+      searchRequest <- QSS.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
       -- do we need to check searchRequest.validTill?
       booking <- buildBooking searchRequest driverQuote DRB.NormalBooking now
       Esq.runTransaction $

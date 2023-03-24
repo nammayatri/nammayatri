@@ -18,9 +18,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.SearchRequest where
+module Storage.Tabular.SearchStep where
 
-import qualified Domain.Types.SearchRequest as Domain
+import qualified Domain.Types.SearchStep as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -30,12 +30,12 @@ import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 import Storage.Tabular.Vehicle ()
 
-derivePersistField "Domain.SearchRequestStatus"
+derivePersistField "Domain.SearchStepStatus"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    SearchRequestT sql=search_request
+    SearchStepT sql=search_step
       id Text
       transactionId Text
       messageId Text
@@ -48,7 +48,7 @@ mkPersist
       bapUri Text
       estimatedDistance Meters
       estimatedDuration Seconds
-      status Domain.SearchRequestStatus
+      status Domain.SearchStepStatus
       searchRepeatCounter Int
       vehicleVariant Variant.Variant
       createdAt UTCTime
@@ -58,21 +58,21 @@ mkPersist
       deriving Generic
     |]
 
-instance TEntityKey SearchRequestT where
-  type DomainKey SearchRequestT = Id Domain.SearchRequest
-  fromKey (SearchRequestTKey _id) = Id _id
-  toKey (Id id) = SearchRequestTKey id
+instance TEntityKey SearchStepT where
+  type DomainKey SearchStepT = Id Domain.SearchStep
+  fromKey (SearchStepTKey _id) = Id _id
+  toKey (Id id) = SearchStepTKey id
 
-type FullSearchRequestT = (SearchRequestT, SearchReqLocationT, SearchReqLocationT)
+type FullSearchStepT = (SearchStepT, SearchReqLocationT, SearchReqLocationT)
 
-instance FromTType FullSearchRequestT Domain.SearchRequest where
-  fromTType (SearchRequestT {..}, fromLoc, toLoc) = do
+instance FromTType FullSearchStepT Domain.SearchStep where
+  fromTType (SearchStepT {..}, fromLoc, toLoc) = do
     pUrl <- parseBaseUrl bapUri
     let fromLoc_ = mkDomainSearchReqLocation fromLoc
         toLoc_ = mkDomainSearchReqLocation toLoc
 
     return $
-      Domain.SearchRequest
+      Domain.SearchStep
         { id = Id id,
           providerId = fromKey providerId,
           fromLocation = fromLoc_,
@@ -81,9 +81,9 @@ instance FromTType FullSearchRequestT Domain.SearchRequest where
           ..
         }
 
-instance ToTType FullSearchRequestT Domain.SearchRequest where
-  toTType Domain.SearchRequest {..} =
-    ( SearchRequestT
+instance ToTType FullSearchStepT Domain.SearchStep where
+  toTType Domain.SearchStep {..} =
+    ( SearchStepT
         { id = getId id,
           providerId = toKey providerId,
           fromLocationId = toKey fromLocation.id,

@@ -23,10 +23,9 @@ import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DMerc
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SlabFarePolicy as DSFP
+import qualified Domain.Types.SearchStep as DSS
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -56,7 +55,7 @@ import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.SearchStep as QSS
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
@@ -94,7 +93,7 @@ cancelRideImpl rideId bookingCReason = do
 
   fork "cancelRide - Notify BAP" $ do
     driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
-    searchReq <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
+    searchReq <- QSS.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
     transpConf <- QTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
     let searchRepeatLimit = transpConf.searchRepeatLimit
     driverPoolCfg <- getDriverPoolConfig merchant.id searchReq.estimatedDistance
@@ -156,7 +155,7 @@ repeatSearch ::
   ) =>
   DMerc.Merchant ->
   Either DFP.FarePolicy DSFP.SlabFarePolicy ->
-  DSR.SearchRequest ->
+  DSS.SearchStep ->
   SRB.Booking ->
   DRide.Ride ->
   SBCR.CancellationSource ->
@@ -178,7 +177,7 @@ repeatSearch merchant eitherFarePolicy searchReq booking ride cancellationSource
 
   let baseFare = fareSum fareParams
   Esq.runTransaction $ do
-    QSR.create newSearchReq
+    QSS.create newSearchReq
 
   res <-
     sendSearchRequestToDrivers'
@@ -211,21 +210,21 @@ repeatSearch merchant eitherFarePolicy searchReq booking ride cancellationSource
         MonadGuid m,
         MonadReader r m
       ) =>
-      DSearchReq.SearchRequest ->
-      m DSearchReq.SearchRequest
-    buildSearchRequest DSearchReq.SearchRequest {..} = do
+      DSS.SearchStep ->
+      m DSS.SearchStep
+    buildSearchRequest DSS.SearchStep {..} = do
       id_ <- Id <$> generateGUID
       let validTill_ = 120 `addUTCTime` validTill
       from <- buildSearchReqLocation fromLocation
       to <- buildSearchReqLocation toLocation
       pure
-        DSearchReq.SearchRequest
+        DSS.SearchStep
           { id = id_,
             startTime = now,
             validTill = validTill_,
             fromLocation = from,
             toLocation = to,
-            status = DSearchReq.ACTIVE,
+            status = DSS.ACTIVE,
             searchRepeatCounter = searchRepeatCounter + 1,
             updatedAt = now,
             createdAt = now,

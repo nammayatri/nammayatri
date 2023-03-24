@@ -20,10 +20,9 @@ where
 import qualified Data.Map as M
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Merchant.DriverPoolConfig
-import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
+import qualified Domain.Types.SearchStep as DSS
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -39,7 +38,7 @@ import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
 
-type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
+type LanguageDictionary = M.Map Maps.Language DSS.SearchStep
 
 sendSearchRequestToDrivers ::
   ( Log m,
@@ -49,7 +48,7 @@ sendSearchRequestToDrivers ::
     EncFlow m r,
     Redis.HedisFlow m r
   ) =>
-  DSR.SearchRequest ->
+  DSS.SearchStep ->
   Money ->
   Money ->
   Money ->
@@ -87,7 +86,7 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
         MonadReader r m
       ) =>
       Int ->
-      DSearchReq.SearchRequest ->
+      DSS.SearchStep ->
       Money ->
       UTCTime ->
       Money ->
@@ -146,14 +145,14 @@ translateSearchReq ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  DSearchReq.SearchRequest ->
+  DSS.SearchStep ->
   Maps.Language ->
-  m DSearchReq.SearchRequest
-translateSearchReq DSearchReq.SearchRequest {..} language = do
+  m DSS.SearchStep
+translateSearchReq DSS.SearchStep {..} language = do
   from <- buildTranslatedSearchReqLocation fromLocation (Just language)
   to <- buildTranslatedSearchReqLocation toLocation (Just language)
   pure
-    DSearchReq.SearchRequest
+    DSS.SearchStep
       { fromLocation = from,
         toLocation = to,
         ..
@@ -164,7 +163,7 @@ addLanguageToDictionary ::
     CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  DSearchReq.SearchRequest ->
+  DSS.SearchStep ->
   LanguageDictionary ->
   DriverPoolWithActualDistResult ->
   m LanguageDictionary

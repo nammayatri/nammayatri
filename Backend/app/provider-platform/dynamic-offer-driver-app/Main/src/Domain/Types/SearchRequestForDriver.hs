@@ -16,9 +16,9 @@
 module Domain.Types.SearchRequestForDriver where
 
 import Domain.Types.Person
-import Domain.Types.SearchRequest
-import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import Domain.Types.SearchStep
+import qualified Domain.Types.SearchStep as DSS
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
@@ -39,7 +39,7 @@ data SearchRequestForDriverResponse
 
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
-    searchRequestId :: Id SearchRequest,
+    searchRequestId :: Id SearchStep,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     driverId :: Id Person,
@@ -66,7 +66,7 @@ data SearchRequestForDriver = SearchRequestForDriver
   deriving (Generic, Show, PrettyShow)
 
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
-  { searchRequestId :: Id SearchRequest,
+  { searchRequestId :: Id SearchStep,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     distanceToPickup :: Meters,
@@ -82,7 +82,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSReq.SearchRequest -> Seconds -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSS.SearchStep -> Seconds -> SearchRequestForDriverAPIEntity
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest delayDuration =
   SearchRequestForDriverAPIEntity
     { searchRequestId = searchRequest.id,
