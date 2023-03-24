@@ -46,11 +46,12 @@ import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except.Trans (lift)
 import Data.Array (any, length, mapWithIndex, null, (!!), head, drop) 
 import Data.Either (Either(..))
-import Data.Int (toNumber)
+import Data.Int (toNumber, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (length, split, trim, Pattern(..)) as Str
 import Data.Time.Duration (Milliseconds(..))
+import Data.Number as NUM
 import Debug.Trace (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -122,7 +123,7 @@ screen initialState =
               FindingQuotes -> do
                 _ <- countDown initialState.props.searchExpire "" push SearchExpireCountDown
                 _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
-                launchAff_ $ flowRunner $ getQuotesPolling GetQuotesList Restart 30 3000.0 push initialState
+                launchAff_ $ flowRunner $ getQuotesPolling GetQuotesList Restart (fromMaybe 0 (fromString (getValueToLocalStore TEST_POLLING_COUNT))) (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
               ConfirmingRide -> launchAff_ $ flowRunner $ confirmRide GetRideConfirmation 5 1000.0 push initialState
               HomeScreen -> do
                 _ <- pure $ removeAllPolylines ""
@@ -1476,7 +1477,8 @@ getQuotesPolling action retryAction count duration push state = do
       else do
         -- let tempA = (getValueToLocalStore GOT_ONE_QUOTE)
         let gotQuote = (getValueToLocalStore GOT_ONE_QUOTE)
-        let usableCount = if gotQuote == "TRUE" && count > 9 then 9 else count
+        let minimumPollingCount = fromMaybe 0 (fromString (getValueToLocalStore TEST_MINIMUM_POLLING_COUNT))
+        let usableCount = if gotQuote == "TRUE" && count > minimumPollingCount then minimumPollingCount else count
         if (spy "USABLECOUNT :- " usableCount > 0) then do
           resp <- selectList (state.props.estimateId)
           _ <- pure $ printLog "caseId" (state.props.estimateId)
