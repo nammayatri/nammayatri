@@ -28,8 +28,11 @@ import qualified Lib.Types.SpecialLocation as Domain
 
 derivePersistField "Domain.Category"
 derivePersistField "LatLong"
+derivePersistField "Domain.GatesInfo"
 
 deriving instance Read LatLong
+
+deriving instance Read Domain.GatesInfo
 
 mkPersist
   defaultSqlSettings
@@ -38,7 +41,7 @@ mkPersist
       id Text
       locationName Text
       category Domain.Category
-      gates (PostgresList LatLong)
+      gates (PostgresList Domain.GatesInfo)
       createdAt UTCTime
       Primary id
       deriving Generic
