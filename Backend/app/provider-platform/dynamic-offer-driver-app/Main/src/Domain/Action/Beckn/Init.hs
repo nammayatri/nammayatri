@@ -22,7 +22,7 @@ import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
-import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequestSpecialZone as DSRSZ
 import qualified Domain.Types.Vehicle.Variant as Veh
@@ -43,8 +43,8 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.QuoteSpecialZone as QSZoneQuote
-import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
+import qualified Storage.Queries.SearchTry as QST
 
 data InitReq = InitReq
   { driverQuoteId :: Text,
@@ -108,7 +108,7 @@ cancelBooking booking transporterId = do
             additionalInfo = Nothing
           }
 
-handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> Either (DDQ.DriverQuote, DSR.SearchRequest) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone) -> m InitRes
+handler :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> Either (DDQ.DriverQuote, DST.SearchTry) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone) -> m InitRes
 handler merchantId req eitherReq = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
@@ -187,7 +187,7 @@ findRandomExophone merchantId = do
     e : es -> pure $ e :| es
   getRandomElement nonEmptyExophones
 
-validateRequest :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m (Either (DDQ.DriverQuote, DSR.SearchRequest) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone))
+validateRequest :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> InitReq -> m (Either (DDQ.DriverQuote, DST.SearchTry) (DQSZ.QuoteSpecialZone, DSRSZ.SearchRequestSpecialZone))
 validateRequest merchantId req = do
   _ <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
@@ -196,8 +196,8 @@ validateRequest merchantId req = do
       driverQuote <- QDQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
       when (driverQuote.validTill < now) $
         throwError $ QuoteExpired driverQuote.id.getId
-      searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
-      return $ Left (driverQuote, searchRequest)
+      searchTry <- QST.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
+      return $ Left (driverQuote, searchTry)
     InitSpecialZoneReq -> do
       specialZoneQuote <- QSZoneQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
       when (specialZoneQuote.validTill < now) $

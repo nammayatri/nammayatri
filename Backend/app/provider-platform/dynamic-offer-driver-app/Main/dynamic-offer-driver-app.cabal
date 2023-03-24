@@ -188,10 +188,10 @@ library
       Domain.Types.Ride
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
-      Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchRequestSpecialZone
+      Domain.Types.SearchTry
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Environment
@@ -290,9 +290,9 @@ library
       Storage.Queries.Ride
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails
-      Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
+      Storage.Queries.SearchTry
       Storage.Queries.Vehicle
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
@@ -353,10 +353,10 @@ library
       Storage.Tabular.Ride.Table
       Storage.Tabular.RideDetails
       Storage.Tabular.RiderDetails
-      Storage.Tabular.SearchRequest
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone
+      Storage.Tabular.SearchTry
       Storage.Tabular.Vehicle
       Tools.Auth
       Tools.Call

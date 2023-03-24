@@ -50,7 +50,7 @@ import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores (Int
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DIPC
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified Domain.Types.Person as DP
-import Domain.Types.SearchRequest
+import Domain.Types.SearchTry
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -144,7 +144,7 @@ decrementTotalQuotesCount ::
   ) =>
   Id DM.Merchant ->
   Id DP.Driver ->
-  Id SearchRequest ->
+  Id SearchTry ->
   m ()
 decrementTotalQuotesCount merchantId driverId sreqId = do
   mbSreqCounted <- find (\(srId, (_, isCounted)) -> srId == sreqId.getId && isCounted) <$> getSearchRequestInfoMap merchantId driverId
@@ -158,7 +158,7 @@ incrementTotalQuotesCount ::
   ) =>
   Id DM.Merchant ->
   Id DP.Person ->
-  SearchRequest ->
+  SearchTry ->
   UTCTime ->
   ExpirationTime ->
   m ()
@@ -179,7 +179,7 @@ addSearchRequestInfoToCache ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id SearchRequest ->
+  Id SearchTry ->
   Id DM.Merchant ->
   Id DP.Driver ->
   (UTCTime, Bool) ->
@@ -217,7 +217,7 @@ removeSearchReqIdFromMap ::
   ) =>
   Id DM.Merchant ->
   Id DP.Person ->
-  Id SearchRequest ->
+  Id SearchTry ->
   m ()
 removeSearchReqIdFromMap merchantId driverId = Redis.withCrossAppRedis . Redis.hDel (mkParallelSearchRequestKey merchantId $ cast driverId) . (: []) .(.getId)
 

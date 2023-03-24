@@ -31,8 +31,8 @@ import qualified Storage.Tabular.FareParameters as Fare
 import qualified Storage.Tabular.FareParameters.Instances as Fare
 import Storage.Tabular.Merchant (MerchantTId)
 import Storage.Tabular.Person (PersonTId)
-import qualified Storage.Tabular.SearchRequest as SReq
 import qualified Storage.Tabular.SearchRequestForDriver as SRFD
+import qualified Storage.Tabular.SearchTry as DST
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.DriverQuoteStatus"
@@ -43,7 +43,7 @@ mkPersist
     DriverQuoteT sql=driver_quote
       id Text
       transactionId Text
-      searchRequestId SReq.SearchRequestTId
+      searchRequestId DST.SearchTryTId
       searchRequestForDriverId SRFD.SearchRequestForDriverTId Maybe
       driverId PersonTId
       driverName Text

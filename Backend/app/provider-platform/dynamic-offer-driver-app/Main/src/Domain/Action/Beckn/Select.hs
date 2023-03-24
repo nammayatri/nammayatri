@@ -23,8 +23,8 @@ import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Domain.Types.SearchTry as DST
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -45,7 +45,7 @@ import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.Estimate as QEst
-import qualified Storage.Queries.SearchRequest as QSReq
+import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Maps as Maps
 
@@ -65,7 +65,7 @@ data DSelectReq = DSelectReq
     customerExtraFee :: Maybe Money
   }
 
-type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
+type LanguageDictionary = M.Map Maps.Language DST.SearchTry
 
 handler :: DM.Merchant -> DSelectReq -> DEst.Estimate -> Flow ()
 handler merchant sReq estimate = do
@@ -110,7 +110,7 @@ handler merchant sReq estimate = do
   driverPoolConfig <- getDriverPoolConfig merchantId distance
   let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
   Esq.runTransaction $ do
-    QSReq.create searchReq
+    QST.create searchReq
 
   let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
   res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare driverExtraFeeBounds
@@ -143,14 +143,14 @@ buildSearchRequest ::
   Seconds ->
   Maybe Money ->
   Maybe Text ->
-  m DSearchReq.SearchRequest
+  m DST.SearchTry
 buildSearchRequest from to merchantId estimate sReq distance duration customerExtraFee device = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
   let validTill_ = searchRequestExpirationSeconds `addUTCTime` now
   pure
-    DSearchReq.SearchRequest
+    DST.SearchTry
       { id = id_,
         estimateId = estimate.id,
         transactionId = sReq.transactionId,
@@ -168,7 +168,7 @@ buildSearchRequest from to merchantId estimate sReq distance duration customerEx
         device = device,
         createdAt = now,
         vehicleVariant = estimate.vehicleVariant,
-        status = DSearchReq.ACTIVE,
+        status = DST.ACTIVE,
         autoAssignEnabled = sReq.autoAssignEnabled,
         searchRepeatCounter = 0,
         updatedAt = now
