@@ -618,7 +618,8 @@ type ActiveRide = {
   riderName :: String,
   estimatedFare :: Int,
   isDriverArrived :: Boolean,
-  notifiedCustomer :: Boolean
+  notifiedCustomer :: Boolean,
+  exoPhone :: String
 }
 
 type HomeScreenProps =  {
