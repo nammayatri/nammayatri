@@ -41,7 +41,7 @@ If you have any suggestions or feedback on our roadmap, please don't hesitate to
 
 ## Community
 
-Ask and explore our [GitHub Discussions](https://github.com/nammayatri/nammayatri/discussions).
+Ask and explore our [GitHub Discussions](https://github.com/orgs/nammayatri/discussions).
 
 ## Bugs and feature requests
 
