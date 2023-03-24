@@ -18,10 +18,13 @@ module Domain.Action.UI.Select
     SelectListRes (..),
     select,
     selectList,
+    selectResult,
+    QuotesResultResponse (..),
     DEstimateSelectReq (..),
   )
 where
 
+import Domain.Types.Booking.Type
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -40,6 +43,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Estimate (checkIfEstimateCancelled)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Quote as QQuote
@@ -56,8 +60,16 @@ data DSelectRes = DSelectRes
     city :: Text
   }
 
-newtype DEstimateSelectReq = DEstimateSelect
-  { autoAssignEnabled :: Bool
+data DEstimateSelectReq = DEstimateSelectReq
+  { autoAssignEnabled :: Bool,
+    autoAssignEnabledV2 :: Maybe Bool
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data QuotesResultResponse = QuotesResultResponse
+  { selectedQuotes :: Maybe SelectListRes,
+    bookingId :: Maybe (Id Booking)
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -68,8 +80,8 @@ newtype SelectListRes = SelectListRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-select :: Id DPerson.Person -> Id DEstimate.Estimate -> Flow DSelectRes
-select personId estimateId = do
+select :: Id DPerson.Person -> Id DEstimate.Estimate -> Bool -> Bool -> Flow DSelectRes
+select personId estimateId autoAssignEnabled autoAssignEnabledV2 = do
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   checkIfEstimateCancelled estimate.id estimate.status
@@ -81,6 +93,7 @@ select personId estimateId = do
   Esq.runTransaction $ do
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId $ Just DEstimate.DRIVER_QUOTE_REQUESTED
+    QEstimate.updateAutoAssign estimateId autoAssignEnabled autoAssignEnabledV2
   pure
     DSelectRes
       { providerId = estimate.providerId,
@@ -97,3 +110,17 @@ selectList estimateId = do
   checkIfEstimateCancelled estimate.id estimate.status
   selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
   pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes
+
+selectResult :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
+selectResult estimateId = do
+  res <- runMaybeT $ do
+    estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
+    quoteId <- MaybeT $ pure estimate.autoAssignQuoteId
+    _ <- MaybeT $ (Just <$> checkIfEstimateCancelled estimate.id estimate.status)
+    booking <- MaybeT . runInReplica $ QBooking.findAssignedByQuoteId (Id quoteId)
+    return $ QuotesResultResponse {bookingId = Just booking.id, selectedQuotes = Nothing}
+  case res of
+    Just r -> pure r
+    Nothing -> do
+      selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId
+      return $ QuotesResultResponse {bookingId = Nothing, selectedQuotes = Just $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes}

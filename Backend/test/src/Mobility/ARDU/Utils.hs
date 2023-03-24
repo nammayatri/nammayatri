@@ -317,7 +317,7 @@ search'Select appToken searchReq' = do
   appSearchId <- search appToken searchReq'
   (bapQuoteAPIEntity :| _) <- getOnSearchTaxiEstimatesByTransporterName appToken appSearchId bapTransporterName
   let quoteId = bapQuoteAPIEntity.id
-  select appToken quoteId DSelect.DEstimateSelect {autoAssignEnabled = False}
+  select appToken quoteId DSelect.DEstimateSelectReq {autoAssignEnabled = False, autoAssignEnabledV2 = Nothing}
   pure quoteId
 
 data SearchConfirmResult = SearchConfirmResult

@@ -39,6 +39,9 @@ mkPersist
   [defaultQQ|
     EstimateT sql=estimate
       id Text
+      autoAssignEnabled Bool
+      autoAssignEnabledV2 Bool
+      autoAssignQuoteId Text Maybe
       requestId SSearchRequest.SearchRequestTId
       estimatedFare HighPrecMoney
       discount HighPrecMoney Maybe

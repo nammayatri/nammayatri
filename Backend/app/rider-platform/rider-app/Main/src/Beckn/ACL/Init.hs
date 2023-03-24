@@ -15,7 +15,6 @@
 module Beckn.ACL.Init (buildInitReq) where
 
 import qualified Beckn.Types.Core.Taxi.Init as Init
-import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
 import Kernel.External.Maps.Types (LatLong)
@@ -25,10 +24,11 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Logging
 import Kernel.Utils.Context (buildTaxiContext)
+import qualified SharedLogic.Confirm as SConfirm
 
 buildInitReq ::
   (HasBapInfo r m, MonadFlow m) =>
-  DConfirm.DConfirmRes ->
+  SConfirm.DConfirmRes ->
   m (BecknReq Init.InitMessage)
 buildInitReq res = do
   let transactionId = res.searchRequestId.getId
@@ -38,13 +38,13 @@ buildInitReq res = do
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 
-buildInitMessage :: (MonadThrow m, Log m) => DConfirm.DConfirmRes -> m Init.InitMessage
+buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.InitMessage
 buildInitMessage res = do
   let (fareProductType, mbDistance, mbDuration, mbBppItemId) = case res.quoteDetails of
-        DConfirm.ConfirmOneWayDetails -> (Init.ONE_WAY_TRIP, Nothing, Nothing, Nothing)
-        DConfirm.ConfirmRentalDetails r -> (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration, Nothing)
-        DConfirm.ConfirmAutoDetails bppQuoteId -> (Init.DRIVER_OFFER, Nothing, Nothing, Just bppQuoteId.getId)
-        DConfirm.ConfirmOneWaySpecialZoneDetails specialZoneQuoteId -> (Init.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Just specialZoneQuoteId) --need to be  checked
+        SConfirm.ConfirmOneWayDetails -> (Init.ONE_WAY_TRIP, Nothing, Nothing, Nothing)
+        SConfirm.ConfirmRentalDetails r -> (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration, Nothing)
+        SConfirm.ConfirmAutoDetails bppQuoteId -> (Init.DRIVER_OFFER, Nothing, Nothing, Just bppQuoteId.getId)
+        SConfirm.ConfirmOneWaySpecialZoneDetails specialZoneQuoteId -> (Init.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Just specialZoneQuoteId) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
   let itemCode =
         Init.ItemCode
