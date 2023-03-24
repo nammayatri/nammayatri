@@ -29,7 +29,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (secondsToHms)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>),(-),(*), bind, pure, discard, (&&))
+import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>),(-),(*), bind, pure, discard, (&&), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), alignParentBottom, alignParentLeft, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width, singleLine, afterRender, clickable, scrollBarY, scrollView, imageWithFallback)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -126,9 +126,9 @@ locationTrackButton push state =
 sosView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w 
 sosView push state = 
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , visibility if state.props.currentStage == RideStarted then VISIBLE else GONE
+    , visibility if (state.props.currentStage == RideAccepted) || (state.props.currentStage == RideStarted) then VISIBLE else GONE
     , orientation VERTICAL
     , gravity if os == "IOS" then CENTER_VERTICAL else BOTTOM
     , onClick push $ const OpenEmergencyHelp

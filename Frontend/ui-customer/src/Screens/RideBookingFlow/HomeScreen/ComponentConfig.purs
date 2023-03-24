@@ -480,9 +480,12 @@ driverInfoCardViewState state = { props:
                             }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
-emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.showContactSupportPopUp
-                                , showCallPolicePopUp: state.props.showCallPolicePopUp
-                                , emergencyContactData: state.props.emergencyContactData
+emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emergencyHelpModelState.showContactSupportPopUp
+                                , showCallPolicePopUp: state.props.emergencyHelpModelState.showCallPolicePopUp
+                                , showCallContactPopUp: state.props.emergencyHelpModelState.showCallContactPopUp
+                                , emergencyContactData: state.props.emergencyHelpModelState.emergencyContactData
+                                , currentlySelectedContact: state.props.emergencyHelpModelState.currentlySelectedContact
+                                , showCallSuccessfulPopUp : state.props.emergencyHelpModelState.showCallSuccessfulPopUp
                                 }
 
 ratingCardViewState :: ST.HomeScreenState -> RatingCard.RatingCardState

@@ -127,3 +127,8 @@ cancelEstimate estimateId = (getBaseUrl "35") <> "/estimate/" <> estimateId <> "
 
 emergencyContacts :: String -> String
 emergencyContacts dummy = (getBaseUrl "36") <> "/profile/defaultEmergencyNumbers"
+userSos :: String -> String
+userSos _ = (getBaseUrl "36") <> "/sos/create"
+
+userSosStatus :: String -> String
+userSosStatus sosId = (getBaseUrl "37") <> "/sos/" <> sosId <>"/status"

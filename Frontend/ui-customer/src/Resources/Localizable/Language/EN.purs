@@ -377,3 +377,4 @@ getEN script = case script of
   ARE_YOU_SURE_YOU_WANT_TO_REMOVE_CONTACT -> "Are you sure you want to remove them from your emergency contacts?"
   SEARCH_CONTACTS -> "Search Contacts"
   SELECTED_CONTACT_IS_INVALID -> "The selected contact is invalid. Please recheck the number and try again"
+  CALL_EMERGENCY_CONTACTS -> "Call Emergency Contacts"

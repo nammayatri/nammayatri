@@ -24,7 +24,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
@@ -79,7 +79,7 @@ settingsView state push =
   ][
      settingsMenuView {imageUrl : "ny_ic_past_rides,https://assets.juspay.in/nammayatri/images/user/ny_ic_past_rides.png", text : (getString MY_RIDES), tag : SETTINGS_RIDES} push
     , settingsMenuView {imageUrl : "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png", text : (getString FAVOURITES)  , tag : SETTINGS_FAVOURITES} push
-    , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then textView []
+    , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout
       else settingsMenuView {imageUrl : "ny_ic_emergency_contacts,https://assets.juspay.in/nammayatri/images/user/ny_ic_emergency_contacts.png" , text : (getString EMERGENCY_CONTACTS)  , tag : SETTINGS_EMERGENCY_CONTACTS} push
     , settingsMenuView {imageUrl : "ny_ic_change_language,https://assets.juspay.in/nammayatri/images/user/ny_ic_change_language.png", text : (getString LANGUAGE), tag : SETTINGS_LANGUAGE} push
     , settingsMenuView {imageUrl : "ny_ic_help,https://assets.juspay.in/nammayatri/images/user/ny_ic_help.png", text : (getString HELP_AND_SUPPORT), tag : SETTINGS_HELP} push
@@ -87,7 +87,12 @@ settingsView state push =
     , settingsMenuView {imageUrl : "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png", text : (getString ABOUT), tag : SETTINGS_ABOUT} push
   ]
   
-
+------------------------------ emptylayout --------------------------------
+emptyLayout = linearLayout
+              [ height $ V 0
+              , width $ V 0
+              , visibility GONE
+              ][]
 ------------------------------ logoutView --------------------------------
 logoutView ::  forall w. SettingSideBarState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 logoutView state push =

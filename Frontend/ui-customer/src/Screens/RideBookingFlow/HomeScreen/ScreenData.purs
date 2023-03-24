@@ -19,7 +19,7 @@ import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address)
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..))
 
 initData :: HomeScreenState
@@ -108,9 +108,6 @@ initData = {
     , showRateCardIcon : false
     , emergencyHelpModal : false
     , estimatedDistance : Nothing
-    , showCallPolicePopUp : false
-    , showContactSupportPopUp : false
-    , emergencyContactData : dummyContactData
     , waitingTimeTimerId : "-1"
     , tagType : Nothing
     , isSaveFavourite : false
@@ -119,16 +116,30 @@ initData = {
     , hasTakenRide : true
     , isReferred : false
     , storeCurrentLocs : false
+    , emergencyHelpModelState : emergencyHelpModalData
     }
 }
 
 
 dummyContactData :: Array Contact
-dummyContactData = [ 
-  { name : "", phoneNo : "" }, 
-  { name : "", phoneNo : "" },
-  { name : "", phoneNo : "" }
-]
+dummyContactData = []
+
+selectedContactData ::  Contact
+selectedContactData = 
+  { name : "", phoneNo : "" } 
+
+emergencyHelpModalData :: EmergencyHelpModelState 
+emergencyHelpModalData = {
+  showCallPolicePopUp : false,
+  showCallContactPopUp : false,
+  showCallSuccessfulPopUp : false,
+  showContactSupportPopUp : false,
+  emergencyContactData : dummyContactData,
+  currentlySelectedContact : selectedContactData,
+  sosId : "",
+  sosStatus : "",
+  isSelectEmergencyContact : false
+}
 
 dummyQuoteList :: Array QuoteListItemState
 dummyQuoteList = [
