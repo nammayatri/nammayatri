@@ -35,7 +35,13 @@ data SpecialLocation = SpecialLocation
   { id :: Id SpecialLocation,
     locationName :: Text,
     category :: Category,
-    gates :: [LatLong],
+    gates :: [GatesInfo],
     createdAt :: UTCTime
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+data GatesInfo = GatesInfo
+  { point :: LatLong,
+    name :: Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
