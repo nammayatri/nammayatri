@@ -16,6 +16,7 @@ module Domain.Action.Dashboard.Message where
 
 import qualified AWS.S3 as S3
 import Control.Monad.Extra (mapMaybeM)
+import Dashboard.Common.Message (InputType (..))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -40,12 +41,13 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Message.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery
 import qualified Storage.Queries.Message.MessageTranslation as MTQuery
+import qualified Storage.Queries.Person as QP
 
 createFilePath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
@@ -183,17 +185,16 @@ instance FromNamedRecord CSVRow where
 
 sendMessage :: ShortId DM.Merchant -> Common.SendMessageRequest -> Flow APISuccess
 sendMessage merchantShortId Common.SendMessageRequest {..} = do
-  _ <- findMerchantByShortId merchantShortId
+  merchant <- findMerchantByShortId merchantShortId
   message <- Esq.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
-  -- reading of csv file
-  csvData <- L.runIO $ BS.readFile csvFile
-  driverIds <-
-    case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CSVRow)) of
-      Left err -> throwError . InvalidRequest $ show err
-      Right (_, v) -> pure $ V.toList $ V.map (Id . T.pack . (.driverId)) v
-
-  fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) driverIds
-
+  allDriverIds <- case _type of
+    AllActive -> Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
+    Include -> readCsv
+    Exclude -> do
+      driverIds <- readCsv
+      Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
+  logDebug $ "DriverId to which the message is sent" <> show allDriverIds
+  fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) allDriverIds
   return Success
   where
     addToKafka message driverId = do
@@ -204,6 +205,14 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
       produceMessage
         (topicName, Just (encodeUtf8 $ getId driverId))
         msg
+
+    readCsv = case csvFile of
+      Just csvFile_ -> do
+        csvData <- L.runIO $ BS.readFile csvFile_
+        case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector CSVRow)) of
+          Left err -> throwError (InvalidRequest $ show err)
+          Right (_, v) -> pure $ V.toList $ V.map (Id . T.pack . (.driverId)) v
+      Nothing -> throwError (InvalidRequest "CSV FilePath Not Found")
 
     createMessageLanguageDict :: Domain.RawMessage -> Flow Domain.MessageDict
     createMessageLanguageDict message = do

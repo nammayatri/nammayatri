@@ -312,6 +312,37 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ merchantI
         &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
+personDriverTable ::
+  From
+    ( Table PersonT
+        :& Table DriverInformationT
+    )
+personDriverTable =
+  table @PersonT
+    `innerJoin` table @DriverInformationT
+    `Esq.on` ( \(person :& driver) ->
+                 person ^. PersonTId ==. driver ^. DriverInformationDriverId
+                   &&. Esq.not_ (driver ^. DriverInformationBlocked)
+             )
+
+findAllDriverIdExceptProvided :: Transactionable m => Id Merchant -> [Id Driver] -> m [Id Driver]
+findAllDriverIdExceptProvided merchantId driverIdsToBeExcluded = do
+  res <- Esq.findAll $ do
+    (person :& driver) <- from personDriverTable
+    where_ $
+      person ^. PersonMerchantId ==. val (toKey merchantId)
+        &&. not_ ((driver ^. DriverInformationDriverId) `Esq.in_` valList (map (toKey . driverIdToPersonId) driverIdsToBeExcluded))
+        &&. driver ^. DriverInformationVerified
+        &&. driver ^. DriverInformationEnabled
+    return $ driver ^. DriverInformationDriverId
+  pure $ personIdToDrivrId <$> res
+  where
+    personIdToDrivrId :: Id Person -> Id Driver
+    personIdToDrivrId = cast
+
+    driverIdToPersonId :: Id Driver -> Id Person
+    driverIdToPersonId = cast
+
 updateMerchantIdAndMakeAdmin :: Id Person -> Id Merchant -> SqlDB ()
 updateMerchantIdAndMakeAdmin personId merchantId = do
   now <- getCurrentTime
