@@ -23,6 +23,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -186,6 +189,14 @@ public class ChatService extends Service {
     private void createChatNotification(String sentBy, String message) {
         createChatNotificationChannel();
         Intent notificationIntent = new Intent(this, MainActivity.class);
+        JSONObject payload = new JSONObject();
+        try{
+            payload.put("notification_type", "CHAT_MESSAGE");
+        } catch (JSONException e) {
+            Log.e(LOG_TAG,"Error in adding data to jsonObject");
+        }
+        notificationIntent.putExtra("NOTIFICATION_DATA", payload.toString());
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 18012023, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         Notification notification =
                 new NotificationCompat.Builder(this, "MessageUpdates")
@@ -254,6 +265,8 @@ public class ChatService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.cancel(18012023);
         isChatServiceRunning = false;
         stopForeground(true);
         if(chatListener != null) chatListener.remove();

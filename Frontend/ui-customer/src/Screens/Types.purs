@@ -527,6 +527,7 @@ type HomeScreenStateProps =
   , isReferred :: Boolean
   , storeCurrentLocs :: Boolean
   , unReadMessages :: Boolean
+  , openChatScreen :: Boolean
   , emergencyHelpModelState :: EmergencyHelpModelState
   }
 

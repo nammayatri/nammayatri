@@ -285,7 +285,7 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = continueWith
 
 eval (RideActionModalAction (RideActionModal.MessageCustomer)) state = do 
   _ <- pure $ setValueToLocalStore LOCAL_STAGE (show ST.ChatWithCustomer)
-  _ <- pure $ setValueToLocalStore READ_MESSAGES (show (Array.length state.data.messages))
+  _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (Array.length state.data.messages))
   continue state{props{currentStage = ST.ChatWithCustomer, sendMessageActive = false, unReadMessages = false}}
 
 eval (RideActionModalAction (RideActionModal.LocationTracking)) state = do 
@@ -379,7 +379,7 @@ eval (InitializeChat ) state = continue state {props{chatcallbackInitiated = tru
 eval RemoveChat state = do 
   continueWithCmd state {props{chatcallbackInitiated = false}} [ do
     _ <- stopChatListenerService
-    _ <- pure $ setValueToLocalStore READ_MESSAGES "0.0"
+    _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0.0"
     pure $ NoAction
   ]
 
@@ -391,7 +391,7 @@ eval (UpdateMessages message sender timeStamp) state = do
                   if (value.sentBy == "Driver") then 
                     updateMessagesWithCmd state { data { messages = messages, suggestionsList = []}}
                   else do 
-                    let readMessages = fromMaybe 0.0 (fromString (getValueToLocalStore READ_MESSAGES))
+                    let readMessages = fromMaybe 0.0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                     let unReadMessages = (if (readMessages == 0.0 && state.props.currentStage /= ST.ChatWithCustomer) then true else (if (readMessages < (toNumber (Array.length messages)) && state.props.currentStage /= ST.ChatWithCustomer) then true else false))
                     let suggestionsList = case value.message of
                                             "I'll be there in 2 min" -> primaryReplySuggestions ""

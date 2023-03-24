@@ -122,6 +122,7 @@ initData = {
     , isReferred : false
     , storeCurrentLocs : false
     , unReadMessages : false
+    , openChatScreen : false
     , emergencyHelpModelState : emergencyHelpModalData
     }
 }

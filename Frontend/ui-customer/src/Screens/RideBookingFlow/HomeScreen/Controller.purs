@@ -73,7 +73,7 @@ import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupTyp
 import Services.API (EstimateAPIEntity(..), GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), PlaceName(..), RideBookingRes(..), SelectListRes(..), FareRange, QuoteAPIEntity(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
-import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore)
+import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Int (toNumber, round)
@@ -387,6 +387,7 @@ instance loggableAction :: Loggable Action where
     NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
     UpdateMessages msg sender timeStamp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_messages"
     InitializeChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "initialize_chat"
+    OpenChatScreen ->  trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "open_chat_screen"
     RemoveChat -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_chat"
     ChatViewActionController act -> case act of 
       ChatView.SendMessage -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_messaging" "send_message"
@@ -514,6 +515,7 @@ data Action = NoAction
             | UpdateMessages String String String
             | InitializeChat
             | RemoveChat
+            | OpenChatScreen
             | ChatViewActionController ChatView.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -537,7 +539,7 @@ eval (UpdateMessages message sender timeStamp) state = do
     Just value -> if value.sentBy == "Customer" 
                     then updateMessagesWithCmd state {data {suggestionsList = [] , messages = messages}} 
                   else do 
-                    let readMessages = fromMaybe 0.0 (fromString (getValueToLocalStore READ_MESSAGES))
+                    let readMessages = fromMaybe 0.0 (fromString (getValueToLocalNativeStore READ_MESSAGES))
                     let unReadMessages = (if readMessages == 0.0 then true else (if (readMessages < (toNumber (length messages)) && state.props.currentStage /= ChatWithDriver) then true else false))
                     let suggestionsList = case value.message of
                                             "I've Arrived" -> replySuggestions ""
@@ -588,16 +590,20 @@ eval (ChatViewActionController (ChatView.BackPressed)) state = do
 eval InitializeChat state = do
   continue state {props { chatcallbackInitiated = true } }
 
+eval OpenChatScreen state = do
+  _ <- pure $ updateLocalStage ChatWithDriver
+  continue state {props { currentStage = ChatWithDriver , openChatScreen = false, sendMessageActive = false, unReadMessages = false } }
+
 eval RemoveChat state = do 
   continueWithCmd state {props{chatcallbackInitiated = false}} [ do
     _ <- stopChatListenerService
-    _ <- pure $ setValueToLocalStore READ_MESSAGES "0.0"
+    _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0.0"
     pure $ NoAction
   ]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
   _ <- pure $ updateLocalStage ChatWithDriver
-  _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
+  _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
   continue state {props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false }}
 
 eval BackPressed state = do
@@ -828,7 +834,7 @@ eval (DriverArrivedAction driverArrivalTime) state = do
 
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED"
-  continue state { data { driverInfoCardState { waitingTime = timeInMinutes, driverArrived = false } }, props { waitingTimeTimerId = timerID } }
+  continue state { data { driverInfoCardState { waitingTime = timeInMinutes } }, props { waitingTimeTimerId = timerID } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state = do
   _ <- pure $ showDialer (getSupportNumber "")
@@ -1617,7 +1623,7 @@ updateMessagesWithCmd :: HomeScreenState -> Eval Action ScreenOutput HomeScreenS
 updateMessagesWithCmd state =
   continueWithCmd state [ do
     if(state.props.currentStage == ChatWithDriver) then do
-      _ <- pure $ scrollToBottom (getNewIDWithTag "ChatScrollView")
+      _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       pure unit
     else
       pure unit

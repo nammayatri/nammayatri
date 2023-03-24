@@ -8,6 +8,11 @@ window.version = __VERSION__;
 // JBridge.setSessionId(window.session_id);
 console.warn("Hello World MASTER ONE");
 
+let eventObject = {
+  type : ""
+, data : ""
+}
+
 var jpConsumingBackpress = {
   event: "jp_consuming_backpress",
   payload: { jp_consuming_backpress: true }
@@ -120,7 +125,12 @@ window.onMerchantEvent = function (event, payload) {
         payload: { jp_consuming_backpress: true }
       }
       JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
-      purescript.main();
+      eventObject["type"] = "";
+      eventObject["data"] = "";
+      if(parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "CHAT_MESSAGE"){
+        eventObject["type"] = "CHAT_MESSAGE";
+       }
+       purescript.main(eventObject)();
     }
   } else {
     console.error("unknown event: ", event);

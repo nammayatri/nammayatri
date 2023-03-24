@@ -141,6 +141,7 @@ screen initialState =
                   pure unit
                 else
                   pure unit        
+                if(initialState.props.openChatScreen == true) then push OpenChatScreen else pure unit
               RideStarted -> do
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))

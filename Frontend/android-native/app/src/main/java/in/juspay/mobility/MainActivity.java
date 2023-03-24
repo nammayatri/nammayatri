@@ -806,6 +806,9 @@ public class MainActivity extends AppCompatActivity {
             String data = pendingIntent.getExtras().getString("NOTIFICATION_DATA");
             try {
                 JSONObject jsonData = new JSONObject(data);
+                if(jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")){
+                    hyperServices.process(new JSONObject().put("service", "in.juspay." + getResources().getString(R.string.service)).put("requestId", UUID.randomUUID()).put("payload", new JSONObject().put("notification_type", "CHAT_MESSAGE")));
+                }
                 if (jsonData.has("notification_type") && jsonData.has("entity_ids")) {
                     String id = jsonData.getString("entity_ids");
                     String type = jsonData.getString("notification_type");

@@ -591,7 +591,7 @@ rideActionModelView push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , PP.sheetState COLLAPSED
-          , peakHeight if state.data.activeRide.isDriverArrived then 518 else 470
+          , peakHeight if state.data.activeRide.isDriverArrived then 502 else 454
           , halfExpandedRatio 0.9
           ][ RideActionModal.view (push <<< RideActionModalAction) (rideActionModalConfig state)]
         ]

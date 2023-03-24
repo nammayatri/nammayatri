@@ -908,5 +908,5 @@ notificationFlow = do
 removeChatService :: String -> FlowBT String Unit
 removeChatService _ = do
   _ <- lift $ lift $ liftFlow $ stopChatListenerService
-  _ <- pure $ setValueToLocalStore READ_MESSAGES "0.0"
+  _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0.0"
   pure unit

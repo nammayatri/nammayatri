@@ -1,9 +1,23 @@
+{-
+ 
+  Copyright 2022-23, Juspay India Pvt Ltd
+ 
+  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+ 
+  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ 
+  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ 
+  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ 
+  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
 module Components.ChatView.View where
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), scrollBarY, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, editText, onChange, hint, scrollView, onAnimationEnd, pattern, ellipsize, clickable, singleLine, maxLines, adjustViewWithKeyboard, hintColor, alpha,imageWithFallback)
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth, os)
 import PrestoDOM.Events (onFocus)
-import Animation (translateInXSidebarAnim, fadeIn)
+import Animation (translateInXForwardAnim, translateInXBackwardAnim)
 import PrestoDOM.Animation as PrestoAnim
 import Prelude (Unit, bind, const, pure, unit, ($), (&&), (-), (/), (<>), (==), (>), (*))
 import PrestoDOM.Properties (cornerRadii, lineHeight)
@@ -65,7 +79,6 @@ chatHeaderView config push =
              [ text config.userConfig.userName
              , textSize FontSize.a_16
              , color config.black800
-             , padding $ (Padding 0 0 0 4)
              , fontStyle $ FontStyle.semiBold LanguageStyle
              , ellipsize true
              , singleLine true
@@ -164,6 +177,7 @@ chatView config push =
       , width MATCH_PARENT
       , id (getNewIDWithTag "ChatScrollView")
       , scrollBarY false
+      , padding $ PaddingBottom 12
       ] 
       [ linearLayout
         [ height MATCH_PARENT
@@ -296,7 +310,7 @@ quickMessageView config message isLastItem push =
   ]
 chatComponent :: forall w. Config -> ChatComponent -> Boolean -> String -> PrestoDOM (Effect Unit) w
 chatComponent state config isLastItem userType = 
-  PrestoAnim.animationSet [ fadeIn true ] $
+  PrestoAnim.animationSet [ if state.userConfig.appType == config.sentBy then (translateInXForwardAnim $ if isLastItem then true else false) else (translateInXBackwardAnim $ if isLastItem then true else false) ] $
   linearLayout
   [height WRAP_CONTENT
   , width MATCH_PARENT
@@ -349,14 +363,14 @@ getConfig appType =
 getChatConfig state sentBy isLastItem = 
   if state.userConfig.appType == sentBy then 
     { 
-      margin : (Margin ((screenWidth unit)/4) 24 0 (if isLastItem then 12 else 0)),
+      margin : (Margin ((screenWidth unit)/4) 24 0 (if os == "IOS" && isLastItem then 12 else 0)),
       gravity : RIGHT ,
       background : state.blue800,
       cornerRadii : (Corners 16.0 true true false true),
       textColor :  state.white900
     }
   else 
-    { margin : (Margin 0 24 ((screenWidth unit)/4) (if isLastItem then 12 else 0)),
+    { margin : (Margin 0 24 ((screenWidth unit)/4) (if os == "IOS" && isLastItem then 12 else 0)),
       gravity :  LEFT,
       background : state.grey900,
       cornerRadii : (Corners 16.0 true true true false ),

@@ -10,6 +10,7 @@
 package in.juspay.mobility.utils;
 
 import android.annotation.SuppressLint;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -130,6 +131,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         sharedPref.edit().putString(getResources().getString(R.string.IS_RIDE_ACTIVE), "false").apply();
                         Intent chatListenerService = new Intent(this, ChatService.class);
                         this.stopService(chatListenerService);
+                        SharedPreferences.Editor editor = sharedPref.edit();
+                        editor.putString("READ_MESSAGES", "0.0");
+                        editor.apply();
+                        NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+                        notificationManager.cancel(18012023);
                         startWidgetService(getString(R.string.ride_cancelled));
                         break;
 

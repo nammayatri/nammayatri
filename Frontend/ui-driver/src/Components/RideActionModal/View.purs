@@ -165,7 +165,7 @@ rideActionDataView push config =
       , customerNameView push config
       , linearLayout 
         [ width MATCH_PARENT
-        , height $ V if config.startRideActive then 245 else 185
+        , height $ V if config.startRideActive then 230 else 185
         , orientation VERTICAL
         ][  linearLayout
             [ height WRAP_CONTENT
@@ -352,7 +352,6 @@ sourceDestinationImageView  config =
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation VERTICAL
-    , margin $ MarginTop 3
     ][ imageView
         [ height $ V 21
         , width $ V 17
@@ -362,7 +361,6 @@ sourceDestinationImageView  config =
       , imageView
         [ height $ V 14
         , width $ V 14
-        , margin $ MarginTop 4
         , imageWithFallback "ny_ic_destination,https://assets.juspay.in/nammayatri/images/driver/ny_ic_destination.png"         
         ]
       ]
