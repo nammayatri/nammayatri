@@ -17,7 +17,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
-import Domain.Types.SearchRequest (SearchRequest)
+import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisFlow)
@@ -31,7 +31,7 @@ import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.SearchTry as QST
 import qualified Tools.Metrics as Metrics
 
 sendSearchRequestToDrivers ::
@@ -50,7 +50,7 @@ sendSearchRequestToDrivers ::
 sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
   let searchReqId = jobData.requestId
-  searchReq <- QSR.findById searchReqId >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
+  searchReq <- QST.findById searchReqId >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig merchant.id jobData.estimatedRideDistance
   sendSearchRequestToDrivers' driverPoolConfig searchReq merchant jobData.baseFare jobData.driverExtraFeeBounds
@@ -66,7 +66,7 @@ sendSearchRequestToDrivers' ::
     Log m
   ) =>
   DriverPoolConfig ->
-  SearchRequest ->
+  SearchTry ->
   Merchant ->
   Money ->
   Maybe DFP.DriverExtraFeeBounds ->

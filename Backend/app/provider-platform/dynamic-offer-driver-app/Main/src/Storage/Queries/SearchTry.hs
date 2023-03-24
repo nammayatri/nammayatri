@@ -12,80 +12,80 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Storage.Queries.SearchRequest where
+module Storage.Queries.SearchTry where
 
-import Domain.Types.SearchRequest as Domain
+import Domain.Types.SearchTry as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
+import Storage.Tabular.SearchTry
 
-create :: SearchRequest -> SqlDB ()
+create :: SearchTry -> SqlDB ()
 create dsReq = Esq.runTransaction $
   withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
     Esq.create' fromLoc
     Esq.create' toLoc
     Esq.create' sReq
 
-findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
+findById :: Transactionable m => Id SearchTry -> m (Maybe SearchTry)
 findById searchRequestId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchRequest) $
+  fmap (fmap $ extractSolidType @Domain.SearchTry) $
     Esq.findOne' $ do
       (sReq :& sFromLoc :& sToLoc) <-
         from
-          ( table @SearchRequestT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestToLocationId ==. loc2 ^. SearchReqLocationTId)
+          ( table @SearchTryT
+              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchTryFromLocationId ==. loc1 ^. SearchReqLocationTId)
+              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchTryToLocationId ==. loc2 ^. SearchReqLocationTId)
           )
-      where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
+      where_ $ sReq ^. SearchTryTId ==. val (toKey searchRequestId)
       pure (sReq, sFromLoc, sToLoc)
 
 updateStatus ::
-  Id SearchRequest ->
-  SearchRequestStatus ->
+  Id SearchTry ->
+  SearchTryStatus ->
   SqlDB ()
 updateStatus searchId status_ = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ SearchRequestUpdatedAt =. val now,
-        SearchRequestStatus =. val status_
+      [ SearchTryUpdatedAt =. val now,
+        SearchTryStatus =. val status_
       ]
-    where_ $ tbl ^. SearchRequestTId ==. val (toKey searchId)
+    where_ $ tbl ^. SearchTryTId ==. val (toKey searchId)
 
 getRequestIdfromTransactionId ::
   (Transactionable m) =>
-  Id SearchRequest ->
-  m (Maybe (Id SearchRequest))
+  Id SearchTry ->
+  m (Maybe (Id SearchTry))
 getRequestIdfromTransactionId tId = do
   findOne $ do
-    searchT <- from $ table @SearchRequestT
+    searchT <- from $ table @SearchTryT
     where_ $
-      searchT ^. SearchRequestTransactionId ==. val (getId tId)
-    return $ searchT ^. SearchRequestTId
+      searchT ^. SearchTryTransactionId ==. val (getId tId)
+    return $ searchT ^. SearchTryTId
 
 getSearchRequestStatusOrValidTill ::
   (Transactionable m) =>
-  Id SearchRequest ->
-  m (Maybe (UTCTime, SearchRequestStatus))
+  Id SearchTry ->
+  m (Maybe (UTCTime, SearchTryStatus))
 getSearchRequestStatusOrValidTill searchRequestId = do
   findOne $ do
-    searchT <- from $ table @SearchRequestT
+    searchT <- from $ table @SearchTryT
     where_ $
-      searchT ^. SearchRequestTId ==. val (toKey searchRequestId)
-    return (searchT ^. SearchRequestValidTill, searchT ^. SearchRequestStatus)
+      searchT ^. SearchTryTId ==. val (toKey searchRequestId)
+    return (searchT ^. SearchTryValidTill, searchT ^. SearchTryStatus)
 
 findActiveByTransactionId ::
   (Transactionable m) =>
   Text ->
-  m (Maybe (Id SearchRequest))
+  m (Maybe (Id SearchTry))
 findActiveByTransactionId transactionId = do
   findOne $ do
-    searchT <- from $ table @SearchRequestT
+    searchT <- from $ table @SearchTryT
     where_ $
-      searchT ^. SearchRequestTransactionId ==. val transactionId
-        &&. searchT ^. SearchRequestStatus ==. val Domain.ACTIVE
-    return $ searchT ^. SearchRequestTId
+      searchT ^. SearchTryTransactionId ==. val transactionId
+        &&. searchT ^. SearchTryStatus ==. val Domain.ACTIVE
+    return $ searchT ^. SearchTryTId

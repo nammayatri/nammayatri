@@ -15,8 +15,8 @@
 module Storage.Queries.SearchRequestForDriver where
 
 import Domain.Types.Person
-import Domain.Types.SearchRequest
 import Domain.Types.SearchRequestForDriver as Domain
+import Domain.Types.SearchTry
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
@@ -26,7 +26,7 @@ import Storage.Tabular.SearchRequestForDriver
 createMany :: [SearchRequestForDriver] -> SqlDB ()
 createMany = Esq.createMany
 
-findAllActiveBySRId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveBySRId :: (Transactionable m, MonadTime m) => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveBySRId searchReqId = do
   Esq.findAll $ do
     sReq <- from $ table @SearchRequestForDriverT
@@ -35,7 +35,7 @@ findAllActiveBySRId searchReqId = do
         &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
     pure sReq
 
-findAllActiveWithoutRespByRequestId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveWithoutRespByRequestId :: (Transactionable m, MonadTime m) => Id SearchTry -> m [SearchRequestForDriver]
 findAllActiveWithoutRespByRequestId searchReqId = do
   Esq.findAll $ do
     sReq <- from $ table @SearchRequestForDriverT
@@ -45,7 +45,7 @@ findAllActiveWithoutRespByRequestId searchReqId = do
         &&. Esq.isNothing (sReq ^. SearchRequestForDriverResponse)
     pure sReq
 
-findByDriverAndSearchReq :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequestForDriver)
+findByDriverAndSearchReq :: Transactionable m => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchReq driverId searchReqId = Esq.findOne $ do
   sReq <- from $ table @SearchRequestForDriverT
   where_ $
@@ -66,7 +66,7 @@ findByDriver driverId = do
     orderBy [desc $ sReq ^. SearchRequestForDriverSearchRequestValidTill]
     pure sReq
 
-removeAllBySearchId :: Id SearchRequest -> SqlDB ()
+removeAllBySearchId :: Id SearchTry -> SqlDB ()
 removeAllBySearchId searchReqId = Esq.delete $ do
   sReqForDriver <- from $ table @SearchRequestForDriverT
   where_ $ sReqForDriver ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
@@ -76,7 +76,7 @@ deleteByDriverId personId = Esq.delete $ do
   sReqForDriver <- from $ table @SearchRequestForDriverT
   where_ $ sReqForDriver ^. SearchRequestForDriverDriverId ==. val (toKey personId)
 
-setInactiveBySRId :: Id SearchRequest -> SqlDB ()
+setInactiveBySRId :: Id SearchTry -> SqlDB ()
 setInactiveBySRId searchReqId = Esq.update $ \p -> do
   set p [SearchRequestForDriverStatus =. val Domain.Inactive]
   where_ $ p ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)

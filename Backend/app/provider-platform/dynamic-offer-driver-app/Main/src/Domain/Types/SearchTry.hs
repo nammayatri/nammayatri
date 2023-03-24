@@ -13,7 +13,7 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 
-module Domain.Types.SearchRequest where
+module Domain.Types.SearchTry where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -29,8 +29,8 @@ import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant hiding (throwError)
 
-data SearchRequest = SearchRequest
-  { id :: Id SearchRequest,
+data SearchTry = SearchTry
+  { id :: Id SearchTry,
     estimateId :: Id DEst.Estimate,
     transactionId :: Text,
     messageId :: Text,
@@ -48,22 +48,22 @@ data SearchRequest = SearchRequest
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     vehicleVariant :: Variant.Variant,
-    status :: SearchRequestStatus,
+    status :: SearchTryStatus,
     autoAssignEnabled :: Bool,
     searchRepeatCounter :: Int
   }
   deriving (Generic, PrettyShow, Show)
 
-data SearchRequestStatus = ACTIVE | CANCELLED | REPEATITION
+data SearchTryStatus = ACTIVE | CANCELLED | REPEATITION
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
-  deriving (PrettyShow) via Showable SearchRequestStatus
+  deriving (PrettyShow) via Showable SearchTryStatus
 
-instance FromHttpApiData SearchRequestStatus where
+instance FromHttpApiData SearchTryStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = left T.pack . eitherDecode . BSL.fromStrict
 
-instance ToHttpApiData SearchRequestStatus where
+instance ToHttpApiData SearchTryStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode

@@ -65,8 +65,8 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person (Person, PersonAPIEntity)
 import qualified Domain.Types.Person as SP
-import qualified Domain.Types.SearchRequest as DSReq
 import Domain.Types.SearchRequestForDriver
+import qualified Domain.Types.SearchTry as DST
 import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Veh
@@ -120,8 +120,8 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.RegistrationToken as QRegister
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
@@ -267,14 +267,14 @@ newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
 
 data DriverOfferReq = DriverOfferReq
   { offeredFare :: Maybe Money,
-    searchRequestId :: Id DSReq.SearchRequest
+    searchRequestId :: Id DST.SearchTry
   }
   deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data DriverRespondReq = DriverRespondReq
   { offeredFare :: Maybe Money,
-    searchRequestId :: Id DSReq.SearchRequest,
+    searchRequestId :: Id DST.SearchTry,
     response :: SearchRequestForDriverResponse
   }
   deriving stock (Generic)
@@ -679,7 +679,7 @@ getNearbySearchRequests (driverId, merchantId) = do
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
     buildSearchRequestForDriverAPIEntity cancellationRatio cancellationScoreRelatedConfig transporterConfig nearbyReq = do
-      searchRequest <- runInReplica $ QSReq.findById nearbyReq.searchRequestId >>= fromMaybeM (SearchRequestNotFound nearbyReq.searchRequestId.getId)
+      searchRequest <- runInReplica $ QST.findById nearbyReq.searchRequestId >>= fromMaybeM (SearchRequestNotFound nearbyReq.searchRequestId.getId)
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       return $ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest popupDelaySeconds
 
@@ -737,7 +737,7 @@ respondQuote ::
   m APISuccess
 respondQuote (driverId, _) req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
-    sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
+    sReq <- QST.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
     now <- getCurrentTime
     when (sReq.validTill < now) $ throwError SearchRequestExpired
     let mbOfferedFare = req.offeredFare
@@ -752,7 +752,7 @@ respondQuote (driverId, _) req = do
       case req.response of
         Pulled -> throwError UnexpectedResponseValue
         Accept -> do
-          when sReq.autoAssignEnabled $ CS.incrementSearchReqLockCounter req.searchRequestId
+          when sReq.autoAssignEnabled $ CS.incrementSearchTryLockCounter req.searchRequestId
           logDebug $ "offered fare: " <> show req.offeredFare
           whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
           when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
@@ -802,7 +802,7 @@ respondQuote (driverId, _) req = do
     buildDriverQuote ::
       (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime) =>
       SP.Person ->
-      DSReq.SearchRequest ->
+      DST.SearchTry ->
       SearchRequestForDriver ->
       Fare.FareParameters ->
       m DDrQuote.DriverQuote

@@ -21,10 +21,9 @@ import qualified Data.Map as M
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.Merchant.DriverPoolConfig
-import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
+import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -42,7 +41,7 @@ import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
 
-type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
+type LanguageDictionary = M.Map Maps.Language DST.SearchTry
 
 sendSearchRequestToDrivers ::
   ( Log m,
@@ -53,7 +52,7 @@ sendSearchRequestToDrivers ::
     EncFlow m r,
     Redis.HedisFlow m r
   ) =>
-  DSR.SearchRequest ->
+  DST.SearchTry ->
   Money ->
   Maybe DFP.DriverExtraFeeBounds ->
   DriverPoolConfig ->
@@ -96,7 +95,7 @@ sendSearchRequestToDrivers searchReq baseFare driverExtraFeeBounds driverPoolCon
         MonadReader r m
       ) =>
       Int ->
-      DSearchReq.SearchRequest ->
+      DST.SearchTry ->
       Money ->
       UTCTime ->
       DriverPoolWithActualDistResult ->
@@ -156,14 +155,14 @@ translateSearchReq ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  DSearchReq.SearchRequest ->
+  DST.SearchTry ->
   Maps.Language ->
-  m DSearchReq.SearchRequest
-translateSearchReq DSearchReq.SearchRequest {..} language = do
+  m DST.SearchTry
+translateSearchReq DST.SearchTry {..} language = do
   from <- buildTranslatedSearchReqLocation fromLocation (Just language)
   to <- buildTranslatedSearchReqLocation toLocation (Just language)
   pure
-    DSearchReq.SearchRequest
+    DST.SearchTry
       { fromLocation = from,
         toLocation = to,
         ..
@@ -174,7 +173,7 @@ addLanguageToDictionary ::
     CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  DSearchReq.SearchRequest ->
+  DST.SearchTry ->
   LanguageDictionary ->
   DriverPoolWithActualDistResult ->
   m LanguageDictionary

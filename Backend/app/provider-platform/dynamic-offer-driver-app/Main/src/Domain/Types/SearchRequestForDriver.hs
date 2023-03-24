@@ -17,9 +17,9 @@ module Domain.Types.SearchRequestForDriver where
 
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Person
-import Domain.Types.SearchRequest
-import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import Domain.Types.SearchTry
+import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
@@ -41,7 +41,7 @@ data SearchRequestForDriverResponse
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
     transactionId :: Text,
-    searchRequestId :: Id SearchRequest,
+    searchRequestId :: Id SearchTry,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     driverId :: Id Person,
@@ -70,7 +70,7 @@ data SearchRequestForDriver = SearchRequestForDriver
   deriving (Generic, Show, PrettyShow)
 
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
-  { searchRequestId :: Id SearchRequest,
+  { searchRequestId :: Id SearchTry,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     distanceToPickup :: Meters,
@@ -87,7 +87,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSReq.SearchRequest -> Seconds -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DST.SearchTry -> Seconds -> SearchRequestForDriverAPIEntity
 makeSearchRequestForDriverAPIEntity nearbyReq searchRequest delayDuration =
   SearchRequestForDriverAPIEntity
     { searchRequestId = searchRequest.id,
