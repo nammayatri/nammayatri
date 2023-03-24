@@ -15,6 +15,7 @@
 module API.UI.Select
   ( DSelect.DSelectRes (..),
     DSelect.SelectListRes (..),
+    DSelect.QuotesResultResponse (..),
     API,
     handler,
   )
@@ -53,6 +54,10 @@ type API =
              :> Get '[JSON] DSelect.SelectListRes
            :<|> TokenAuth
              :> Capture "estimateId" (Id DEstimate.Estimate)
+             :> "results"
+             :> Get '[JSON] DSelect.QuotesResultResponse
+           :<|> TokenAuth
+             :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "cancel"
              :> Post '[JSON] APISuccess
        )
@@ -62,25 +67,31 @@ handler =
   select
     :<|> select2
     :<|> selectList
+    :<|> selectResult
     :<|> cancelSearch
 
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  let req = DSelect.DEstimateSelect {autoAssignEnabled = False}
-  dSelectReq <- DSelect.select personId estimateId
+  let autoAssignFlag = False
+  let req = DSelect.DEstimateSelectReq {autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
+  dSelectReq <- DSelect.select personId estimateId autoAssignFlag autoAssignFlag
   becknReq <- ACL.buildSelectReq dSelectReq req.autoAssignEnabled
   void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
 select2 :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelect.DEstimateSelectReq -> FlowHandler APISuccess
 select2 personId estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  dSelectReq <- DSelect.select personId estimateId
+  let autoAssignV2Flag = fromMaybe False req.autoAssignEnabledV2
+  dSelectReq <- DSelect.select personId estimateId req.autoAssignEnabled autoAssignV2Flag
   becknReq <- ACL.buildSelectReq dSelectReq req.autoAssignEnabled
   void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
 selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 selectList personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectList
+
+selectResult :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
+selectResult personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectResult
 
 cancelSearch :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 cancelSearch personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do

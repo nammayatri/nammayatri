@@ -311,6 +311,9 @@ onUpdate EstimateRepetitionReq {..} = do
       pure
         DEstimate.Estimate
           { id = uid,
+            autoAssignEnabled = False,
+            autoAssignEnabledV2 = False,
+            autoAssignQuoteId = Nothing,
             providerMobileNumber = booking.providerMobileNumber,
             providerName = booking.providerName,
             providerCompletedRidesCount = 0, -- FIXME

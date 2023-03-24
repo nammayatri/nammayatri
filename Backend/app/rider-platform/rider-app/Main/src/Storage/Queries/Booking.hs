@@ -18,6 +18,7 @@ module Storage.Queries.Booking where
 import Domain.Types.Booking as DRB
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
+import Domain.Types.Quote
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
@@ -158,6 +159,16 @@ findAssignedByRiderId personId = Esq.buildDType $ do
     (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
+        &&. booking ^. RB.BookingStatus ==. val TRIP_ASSIGNED
+    pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
+  join <$> mapM buildFullBooking fullBookingsT
+
+findAssignedByQuoteId :: Transactionable m => Id Quote -> m (Maybe Booking)
+findAssignedByQuoteId quoteId = Esq.buildDType $ do
+  fullBookingsT <- Esq.findOne' $ do
+    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+    where_ $
+      booking ^. RB.BookingQuoteId ==. val (Just $ toKey quoteId)
         &&. booking ^. RB.BookingStatus ==. val TRIP_ASSIGNED
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   join <$> mapM buildFullBooking fullBookingsT

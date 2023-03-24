@@ -166,6 +166,9 @@ buildEstimate requestId providerInfo now EstimateInfo {..} = do
   pure
     DEstimate.Estimate
       { id = uid,
+        autoAssignEnabled = False,
+        autoAssignQuoteId = Nothing,
+        autoAssignEnabledV2 = False,
         providerMobileNumber = providerInfo.mobileNumber,
         providerName = providerInfo.name,
         providerCompletedRidesCount = providerInfo.ridesCompleted,

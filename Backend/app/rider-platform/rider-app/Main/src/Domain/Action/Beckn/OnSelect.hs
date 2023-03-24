@@ -11,12 +11,15 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.Beckn.OnSelect
   ( module Domain.Action.Beckn.OnSelect,
   )
 where
 
+import qualified Beckn.ACL.Init as ACL
+import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DMerchant
@@ -31,6 +34,9 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
+import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Confirm as SConfirm
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
@@ -91,12 +97,43 @@ onSelect DOnSelectReq {..} = do
     QQuote.createMany quotes
     QPFS.updateStatus searchRequest.riderId DPFS.DRIVER_OFFERED_QUOTE {estimateId = estimate.id, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId $ Just DEstimate.GOT_DRIVER_QUOTE
-  Notify.notifyOnDriverOfferIncoming estimateId quotes person
+
+  if estimate.autoAssignEnabledV2
+    then do
+      let lowestFareQuote = selectLowestFareQuote quotes
+      case lowestFareQuote of
+        Just autoAssignQuote -> do
+          DB.runTransaction $ QEstimate.updateQuote estimateId autoAssignQuote.id
+          dConfirmRes <- SConfirm.confirm personId autoAssignQuote.id
+          becknInitReq <- ACL.buildInitReq dConfirmRes
+          handle (errHandler dConfirmRes.booking) $ void $ withShortRetry $ CallBPP.init dConfirmRes.providerUrl becknInitReq
+        Nothing -> Notify.notifyOnDriverOfferIncoming estimateId quotes person
+    else do
+      Notify.notifyOnDriverOfferIncoming estimateId quotes person
   where
     duplicateCheckCond :: EsqDBFlow m r => [Id DDriverOffer.BPPQuote] -> Text -> m Bool
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
       isJust <$> QQuote.findByBppIdAndBPPQuoteId bppId_ bppQuoteId_
+    errHandler booking exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking booking
+      | otherwise = throwM exc
+
+selectLowestFareQuote :: [DQuote.Quote] -> Maybe DQuote.Quote
+selectLowestFareQuote (quoteInfo : quoteInfoArray) =
+  if null quoteInfoArray
+    then Just quoteInfo
+    else do
+      restQuoteResult <- selectLowestFareQuote quoteInfoArray
+      Just $ comparator quoteInfo restQuoteResult
+selectLowestFareQuote [] = Nothing
+
+comparator :: DQuote.Quote -> DQuote.Quote -> DQuote.Quote
+comparator quote1 quote2 =
+  if quote1.estimatedFare < quote2.estimatedFare
+    then quote1
+    else quote2
 
 buildSelectedQuote ::
   MonadFlow m =>
