@@ -160,8 +160,8 @@ type SendMessageAPI =
     :> Post '[JSON] APISuccess
 
 data SendMessageRequest = SendMessageRequest
-  { csvFile :: FilePath,
-    _type :: CSVType,
+  { csvFile :: Maybe FilePath,
+    _type :: InputType,
     messageId :: Text
   }
   deriving stock (Eq, Show, Generic)
@@ -169,20 +169,24 @@ data SendMessageRequest = SendMessageRequest
 
 instance FromMultipart Tmp SendMessageRequest where
   fromMultipart form = do
+    let inputType = fmap (read . T.unpack) (lookupInput "type" form)
     SendMessageRequest
-      <$> fmap fdPayload (lookupFile "csvFile" form)
-      <*> fmap (read . T.unpack) (lookupInput "type" form)
+      <$> either (helper inputType) (Right . Just . fdPayload) (lookupFile "csvFile" form)
+      <*> inputType
       <*> lookupInput "messageId" form
+    where
+      helper (Right AllActive) _ = Right Nothing
+      helper _ x = Left x
 
 instance ToMultipart Tmp SendMessageRequest where
   toMultipart form =
     MultipartData
-      [ Input "type" (show form._type),
+      [ Input "type" $ show form._type,
         Input "messageId" form.messageId
       ]
-      [FileData "csvFile" (T.pack form.csvFile) "text/csv" form.csvFile]
+      (maybe [] (\file -> [FileData "csvFile" (T.pack file) "text/csv" file]) form.csvFile)
 
-data CSVType = Include | Exclude
+data InputType = Include | Exclude | AllActive
   deriving stock (Eq, Read, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
