@@ -74,6 +74,7 @@ type FrontendBasedCallAPI =
            :> MandatoryQueryParam "CallSid" Text
            :> MandatoryQueryParam "CallFrom" Text
            :> MandatoryQueryParam "CallTo" Text
+           :> QueryParam "digits" Text
            :> MandatoryQueryParam "CallStatus" ExotelCallStatus
            :> Get '[JSON] DCall.GetCustomerMobileNumberResp
            :<|> "statusCallback"
@@ -102,5 +103,5 @@ getCallStatus callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStat
 directCallStatusCallback :: Text -> ExotelCallStatus -> Text -> Maybe Int -> FlowHandler DCall.CallCallbackRes
 directCallStatusCallback callSid dialCallStatus_ recordingUrl_ = withFlowHandlerAPI . DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_
 
-getCustomerMobileNumber :: Text -> Text -> Text -> ExotelCallStatus -> FlowHandler DCall.GetCustomerMobileNumberResp
-getCustomerMobileNumber callSid callFrom_ callTo_ = withFlowHandlerAPI . DCall.getCustomerMobileNumber callSid callFrom_ callTo_
+getCustomerMobileNumber :: Text -> Text -> Text -> Maybe Text -> ExotelCallStatus -> FlowHandler DCall.GetCustomerMobileNumberResp
+getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber = withFlowHandlerAPI . DCall.getCustomerMobileNumber callSid callFrom_ callTo_ dtmfNumber
