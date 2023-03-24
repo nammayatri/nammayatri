@@ -958,7 +958,7 @@ public class MainActivity extends AppCompatActivity {
                   Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                   String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
                   sharedPref.edit().putString(getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
-                  Uri photoFile = FileProvider.getUriForFile(this.getApplicationContext(),this.getResources().getString(R.string.fileProviderPath), new File(this.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
+                  Uri photoFile = FileProvider.getUriForFile(this.getApplicationContext(),this.getApplicationInfo().packageName + ".fileProvider", new File(this.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
                   takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                   Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                   chooseFromFile.setType("image/*");
@@ -1092,7 +1092,7 @@ public class MainActivity extends AppCompatActivity {
             Uri imageUri;
             if (data == null || data.getData() == null) { //Camera
                 File image = new File(this.getApplicationContext().getFilesDir(), "IMG_" + sharedPref.getString(getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), "null") + ".jpg");
-                imageUri = FileProvider.getUriForFile(this.getApplicationContext(), this.getResources().getString(R.string.fileProviderPath), image);
+                imageUri = FileProvider.getUriForFile(this.getApplicationContext(), this.getApplicationInfo().packageName + ".fileProvider", image);
             }
             else { // storage
                 imageUri = data.getData();
