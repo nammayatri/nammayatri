@@ -21,11 +21,11 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-))
+import Prelude (Unit, const, map, ($), (/=), (<>), (==), pure, (<<<), (-), discard, unit, bind)
 import Data.Array (take, (!!), drop, head, mapWithIndex, null)
 import Data.String as DS
 import Data.Array as DA
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, relativeLayout, frameLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, textFromHtml, onBackPressed, scrollView, imageWithFallback, stroke, afterRender)
 import Styles.Colors as Color
 import Data.String (split, Pattern(..), indexOf, length)
 import Components.PopUpModal.Controller as PopUpModalConfig
@@ -35,6 +35,8 @@ import Components.GenericHeader.View as GenericHeader
 import Common.Types.App
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os)
+import Helpers.Utils (isPreviousVersion, getPreviousVersion)
+import Storage (getValueToLocalStore, KeyStore(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -42,6 +44,11 @@ view push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , afterRender (\action -> do
+                          _ <- push action
+                          push StoreContacts 
+                          pure unit
+                        ) (const NoAction)
   ][  linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -57,7 +64,13 @@ view push state =
              , height WRAP_CONTENT
              , orientation VERTICAL
              ][ emergencyHelpLogoContainer state
-                -- , showEmergencyContact state push   -- Will be needed in future currenlty no contacts
+               , showEmergencyContact state push
+               ,  linearLayout 
+                   [ height $ V 1
+                   , width MATCH_PARENT
+                   , background Color.grey800
+                   , margin $ Margin 16 8 16 0
+                   ][]
                , supportButtonView state push 
                , linearLayout
                   [ height WRAP_CONTENT
@@ -69,6 +82,8 @@ view push state =
           ]
           , popUpViewCustomerSupport state push
           , popUpViewCallPolice state push
+          , popUpViewCallEmergencyContact state push
+          , popUpViewCallSuccessful state push
        ]
     
 supportButtonView :: forall w . EmergencyHelpModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -216,6 +231,64 @@ contactSupportConfig state  =
   }
   in popUpConfig'
 
+callEmergencyContactConfig :: EmergencyHelpModelState -> PopUpModalConfig.Config
+callEmergencyContactConfig state  = 
+  let 
+  config' = PopUpModalConfig.config 
+  popUpConfig' = config' {
+    primaryText { 
+      text = (<>) (getString CALL_EMERGENCY_CONTACTS) "?"
+    , margin = (Margin 40 23 40 12)
+    , fontStyle = FontStyle.semiBold LanguageStyle }
+    , option1 {
+      text = getString CANCEL_
+    , fontSize = FontSize.a_16
+    , margin = (MarginHorizontal 16 16) }
+    , option2 {
+      text = "Place Call"
+    , fontSize = FontSize.a_16
+    , margin = (MarginHorizontal 12 0) }
+    , backgroundClickable = true
+    , secondaryText {
+      visibility = GONE
+    }
+    , contactViewConfig {
+       visibility = VISIBLE,
+       fullName = state.currentlySelectedContact.name,
+       nameInitials = (DS.toUpper((<>) (getFirstChar  state.currentlySelectedContact.name) (getLastChar  state.currentlySelectedContact.name) ))
+    }
+    , gravity = CENTER
+    , margin = (MarginHorizontal 16 16)
+    , cornerRadius = (Corners 20.0 true true true true)
+  }
+  in popUpConfig'
+
+callSuccessfulConfig :: EmergencyHelpModelState -> PopUpModalConfig.Config
+callSuccessfulConfig state  = 
+  let 
+  config' = PopUpModalConfig.config 
+  popUpConfig' = config' {
+    primaryText { 
+      text = (<>) "Was Your Call Successful" "?"
+    , margin = (Margin 40 23 40 46)
+    , fontStyle = FontStyle.semiBold LanguageStyle }
+    , option1 {
+      text = "No"
+    , fontSize = FontSize.a_16
+    , margin = (MarginHorizontal 16 16) }
+    , option2 {
+      text = "Yes"
+    , fontSize = FontSize.a_16
+    , margin = (MarginHorizontal 12 0) }
+    , backgroundClickable = true
+    , secondaryText {
+      visibility = GONE }
+    , gravity = CENTER
+    , margin = (MarginHorizontal 16 16)
+    , cornerRadius = (Corners 20.0 true true true true)
+  }
+  in popUpConfig'
+
 popUpViewCustomerSupport :: forall w. EmergencyHelpModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 popUpViewCustomerSupport state push = 
   linearLayout
@@ -234,6 +307,25 @@ popUpViewCallPolice state push =
   , visibility if state.showCallPolicePopUp then VISIBLE else GONE
   ][PopUpModal.view (push <<< CallPolice) (callPoliceConfig state)]
 
+popUpViewCallEmergencyContact :: forall w. EmergencyHelpModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+popUpViewCallEmergencyContact state push = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , visibility if state.showCallContactPopUp then VISIBLE else GONE
+  ][PopUpModal.view (push <<< CallEmergencyContact) (callEmergencyContactConfig state)]
+
+
+popUpViewCallSuccessful :: forall w. EmergencyHelpModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+popUpViewCallSuccessful state push = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , visibility if state.showCallSuccessfulPopUp then VISIBLE else GONE
+  ][PopUpModal.view (push <<< CallSuccessful) (callSuccessfulConfig state)]
+
 showEmergencyContact :: forall w . EmergencyHelpModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 showEmergencyContact state push = 
   linearLayout 
@@ -241,11 +333,12 @@ showEmergencyContact state push =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 16 20 16 12
+    , visibility if(isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then GONE else VISIBLE
     ][  linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         ][  textView
-            [ text $ getString SHARE_RIDE_WITH_EMERGENCY_CONTACTS
+            [ text $ getString CALL_EMERGENCY_CONTACTS
             , fontStyle $ FontStyle.medium LanguageStyle
             , color Color.black800
             , textSize FontSize.a_14
@@ -268,12 +361,12 @@ showEmergencyContact state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        ]( if (DA.null state.emergencyContactData) then [noContactsAvailableView ""]
-              else allContactsView state)
+        ]( if (DA.null state.emergencyContactData) then [noContactsAvailableView push]
+              else allContactsView state push)
     ]
 
-noContactsAvailableView :: forall w . String -> PrestoDOM (Effect Unit) w
-noContactsAvailableView _ = 
+noContactsAvailableView :: forall w .(Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
+noContactsAvailableView push = 
   textView
   [ text $ getString YOU_WILL_BE_ASKED_TO_SELECT_CONTACTS
   , margin $ MarginTop 4 
@@ -281,25 +374,29 @@ noContactsAvailableView _ =
   , textSize FontSize.a_12
   , lineHeight "16"
   , fontStyle $ FontStyle.regular LanguageStyle
+  , onClick push $ const AddedEmergencyContacts
   ]
  
 
-allContactsView :: forall w . EmergencyHelpModelState -> Array(PrestoDOM (Effect Unit) w)
-allContactsView state = 
+allContactsView :: forall w . EmergencyHelpModelState -> (Action  -> Effect Unit)  -> Array(PrestoDOM (Effect Unit) w)
+allContactsView state push = 
   (mapWithIndex (\ index item -> 
     linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , margin $ Margin 0 12 8 0
+    , stroke ("1," <> Color.borderColorLight)
+    , padding $ Padding 23 16 23 16
+    , cornerRadius 8.0
     ][  linearLayout
-        [height WRAP_CONTENT
-        , width  WRAP_CONTENT
+        [ height WRAP_CONTENT
+        , width  MATCH_PARENT
         , gravity CENTER
         ][  linearLayout
             [ height $ V 24
             , width $ V 24
             , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
-            , cornerRadius 20.0
+            , cornerRadius 12.0
             , gravity CENTER
             ][  textView
                 [text (DS.toUpper((<>) (getFirstChar item.name) (getLastChar item.name) ))
@@ -313,12 +410,26 @@ allContactsView state =
                  , padding (PaddingLeft 8)
                  ][  textView
                    [text (item.name)
-                   , color Color.black700
-                   , textSize FontSize.a_12
-                   , lineHeight "16"
-                   , fontStyle $ FontStyle.regular LanguageStyle
+                   , color Color.black800
+                   , textSize FontSize.a_16
+                   , lineHeight "20"
+                   , fontStyle $ FontStyle.semiBold LanguageStyle
                    ]
                   ]
+              , linearLayout
+                [ height  WRAP_CONTENT
+                 , width  MATCH_PARENT
+                 , gravity RIGHT
+                 , onClick push $ const $ CallContactPopUp item
+                ][ textView
+                   [ text $ "Call"
+                   , color Color.green900
+                   , textSize FontSize.a_14
+                   , lineHeight "18"
+                   , fontStyle $ FontStyle.regular LanguageStyle
+                   , margin $ MarginLeft 5
+                   ]
+                 ]
           ]
        ]) state.emergencyContactData)
 

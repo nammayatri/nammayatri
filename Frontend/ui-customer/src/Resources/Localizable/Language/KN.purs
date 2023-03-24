@@ -376,3 +376,4 @@ getKN script = case script of
   ARE_YOU_SURE_YOU_WANT_TO_REMOVE_CONTACT -> "ನಿಮ್ಮ ತುರ್ತು ಸಂಪರ್ಕಗಳಿಂದ ಅವರನ್ನು ತೆಗೆದುಹಾಕಲು ನೀವು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?"
   SEARCH_CONTACTS -> "ಸಂಪರ್ಕಗಳನ್ನು ಹುಡುಕಿ"
   SELECTED_CONTACT_IS_INVALID -> "ಆಯ್ಕೆಮಾಡಿದ ಸಂಪರ್ಕವು ಅಮಾನ್ಯವಾಗಿದೆ. ದಯವಿಟ್ಟು ಸಂಖ್ಯೆಯನ್ನು ಮರುಪರಿಶೀಲಿಸಿ ಮತ್ತು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
+  CALL_EMERGENCY_CONTACTS -> "ತುರ್ತು ಸಂಪರ್ಕಗಳಿಗೆ ಕರೆ ಮಾಡಿ"

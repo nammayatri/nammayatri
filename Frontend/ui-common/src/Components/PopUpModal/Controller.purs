@@ -43,7 +43,17 @@ type Config = {
     eTextConfig :: PrimaryEditTextController.Config,
     editTextVisibility :: Visibility,
     dismissPopupConfig :: DismissPopupConfig,
-    coverImageConfig :: CoverImageConfig
+    coverImageConfig :: CoverImageConfig,
+    contactViewConfig :: ContactViewConfig,
+    contactViewPadding :: Padding,
+    contactViewMargin :: Margin
+}
+
+type ContactViewConfig = {
+  visibility :: Visibility,
+  fullName :: String,
+  nameInitials :: String,
+  padding :: Padding
 }
 
 type TextConfig = {
@@ -171,5 +181,14 @@ config = {
     , width : WRAP_CONTENT
     , margin : (Margin 0 0 0 0)
     , padding : (Padding 0 0 0 0)
+    },
+    contactViewConfig : 
+    {
+       nameInitials: "",
+       fullName: "",
+       visibility : GONE,
+       padding : PaddingLeft 8
     }
+    , contactViewPadding : (Padding 23 16 23 16)
+    , contactViewMargin : (Margin 16 12 16 32)
 }

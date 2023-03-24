@@ -511,9 +511,6 @@ type HomeScreenStateProps =
   , showRateCardIcon :: Boolean
   , emergencyHelpModal :: Boolean
   , estimatedDistance :: Maybe Int
-  , showContactSupportPopUp :: Boolean
-  , showCallPolicePopUp :: Boolean
-  , emergencyContactData :: Array Contact
   , waitingTimeTimerId :: String
   , tagType :: Maybe CardType
   , isSaveFavourite :: Boolean
@@ -522,6 +519,7 @@ type HomeScreenStateProps =
   , hasTakenRide :: Boolean
   , isReferred :: Boolean
   , storeCurrentLocs :: Boolean
+  , emergencyHelpModelState :: EmergencyHelpModelState
   }
 
 type Contact = {
@@ -538,6 +536,18 @@ type RateCard =
     nightShiftMultiplier :: Number, 
     nightCharges :: Boolean
   }
+
+type EmergencyHelpModelState = {
+   currentlySelectedContact :: Contact,
+   showCallSuccessfulPopUp :: Boolean,
+   showCallContactPopUp :: Boolean,
+   sosId :: String,
+   sosStatus :: String,
+   isSelectEmergencyContact :: Boolean,
+   showContactSupportPopUp :: Boolean,
+   showCallPolicePopUp :: Boolean,
+   emergencyContactData :: Array Contact
+}
 
 type RecentlySearchedObject = 
   {

@@ -134,7 +134,12 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | CHECK_FOR_DUPLICATE_SAVED_LOCATION HomeScreenState
                         | SAVE_FAVOURITE HomeScreenState
                         | GO_TO_REFERRAL
-                        
+                        | GO_TO_CALL_EMERGENCY_CONTACT HomeScreenState
+                        | GO_TO_CALL_POLICE HomeScreenState
+                        | GO_TO_CALL_SUPPORT HomeScreenState
+                        | GO_TO_SOS_STATUS HomeScreenState
+                        | GO_TO_FETCH_CONTACTS HomeScreenState
+
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
 data PERMISSION_SCREEN_OUTPUT = REFRESH_INTERNET | TURN_ON_GPS | TURN_ON_INTERNET

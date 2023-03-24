@@ -126,4 +126,21 @@ homeScreen = do
     GoToReferral updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ GO_TO_REFERRAL)
+    CallContact updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_CALL_EMERGENCY_CONTACT updatedState)
+    CallSupport updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_CALL_SUPPORT updatedState)
+    CallPolice updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_CALL_POLICE updatedState)
+    UpdateSosStatus updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_SOS_STATUS updatedState)
+    FetchContacts updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_FETCH_CONTACTS updatedState)
+      
+       
       

@@ -782,3 +782,34 @@ cancelEstimateBT estimateId = do
     where
       errorHandler errorPayload = do
             BackT $ pure GoBack
+
+userSosBT :: UserSosReq -> FlowBT String UserSosRes
+userSosBT requestBody = do
+     headers <- lift $ lift $ getHeaders ""
+     withAPIResultBT (EP.userSos "") (\x → x) errorHandler (lift $ lift $ callAPI headers requestBody)
+    where
+    errorHandler errorPayload = BackT $ pure GoBack
+
+userSosStatusBT :: String ->  SosStatus -> FlowBT String UserSosStatusRes
+userSosStatusBT sosId requestBody = do
+     headers <- lift $ lift $ getHeaders ""
+     withAPIResultBT (EP.userSosStatus sosId) (\x → x) errorHandler (lift $ lift $ callAPI headers (UserSosStatusReq sosId requestBody))
+    where
+    errorHandler errorPayload = BackT $ pure GoBack
+
+makeUserSosReq :: UserSosFlow -> String -> UserSosReq
+makeUserSosReq flow rideId = UserSosReq {
+     "flow" : flow,
+     "rideId" : rideId
+}
+
+createUserSosFlow :: String -> String -> UserSosFlow
+createUserSosFlow tag content = UserSosFlow {
+    "tag" : tag,
+    "contents" : content
+}
+
+makeSosStatus :: String -> SosStatus
+makeSosStatus sosStatus = SosStatus {
+     "status" : sosStatus
+} 

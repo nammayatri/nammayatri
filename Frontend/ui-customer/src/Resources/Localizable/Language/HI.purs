@@ -376,3 +376,4 @@ getHI script = case script of
   ARE_YOU_SURE_YOU_WANT_TO_REMOVE_CONTACT -> "क्या आप वाकई उन्हें अपने आपातकालीन संपर्कों से हटाना चाहते हैं?"
   SEARCH_CONTACTS -> "संपर्क खोजें"
   SELECTED_CONTACT_IS_INVALID -> "चयनित संपर्क अमान्य है। कृपया एक वैध संपर्क चुनें।"
+  CALL_EMERGENCY_CONTACTS -> "आपातकालीन संपर्कों को कॉल करें"

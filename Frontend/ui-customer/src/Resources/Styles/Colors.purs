@@ -472,3 +472,5 @@ linearGradient = [
   , ["#D075FE", "#D17EF5", "#D286EB", "#D38FE2", "#D498D8", "#D5A0CF", "#D6A9C5", "#D7B1BC", "#D8BAB2", "#D9C3A9", "#DACB9F", "#DBD496", "#DCDD8C", "#DDE583" , "#DEEE79", "#DFF670", "#E0FF66"]
   , ["#ADB2FE", "#9CBAFF", "#87C3FF", "#6DCCFF", "#4DD4FF", "#18DCFF", "#00E3FF" , "#00EAFF", "#00EFF4", "#00F5E4", "#00F9D2", "#33FDBF", "#5FFFAB", "#82FF97", "#A2FF85", "#C1FF74", "#E0FF66"]
 ]
+green900 :: Color
+green900 = "#53BB6F"

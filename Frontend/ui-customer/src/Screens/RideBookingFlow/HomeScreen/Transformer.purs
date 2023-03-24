@@ -29,7 +29,7 @@ import Helpers.Utils (convertUTCtoISC, getExpiryTime, parseFloat)
 import Math (ceil)
 import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName)
 import Services.Backend as Remote
 import Services.API (DriverOfferAPIEntity(..), Prediction, QuoteAPIEntity(..), RideAPIEntity(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), AddressComponents(..), GetPlaceNameResp(..), PlaceName(..), LatLong(..), DeleteSavedLocationReq(..))
@@ -282,3 +282,12 @@ updateSavedLocation item lat lon = do
   _ <- Remote.addSavedLocationBT (encodeAddressDescription address tag (item.placeId) (Just placeLatLong.lat) (Just placeLatLong.lon) placeName.addressComponents) 
   _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
   pure unit
+  
+transformContactList :: Array NewContacts -> Array Contact
+transformContactList contacts = map (\x -> getContact x) contacts
+
+getContact :: NewContacts -> Contact
+getContact contact = {
+    name : contact.name
+  , phoneNo : contact.number
+}
