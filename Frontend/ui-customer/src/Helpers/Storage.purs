@@ -52,6 +52,9 @@ data KeyStore
   | MERCHANT_ID
   | BASE_URL
   | CONTACTS
+  | TEST_MINIMUM_POLLING_COUNT
+  | TEST_POLLING_INTERVAL
+  | TEST_POLLING_COUNT
 
 derive instance genericKeyStore :: Generic KeyStore _
 
