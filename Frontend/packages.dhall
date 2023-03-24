@@ -123,7 +123,7 @@ in  upstream
         , "tuples"
         , "typelevel-prelude"
         ]
-    , repo = "ssh://git@ssh.bitbucket.juspay.net/picaf/purescript-presto.git"
+    , repo = "https://github.com/juspay/purescript-presto.git"
     , version = "master"
     }
   with backtrack = 
@@ -147,8 +147,8 @@ in  upstream
         , "halogen-vdom"
         , "tracker"
         ]
-    , repo = "ssh://git@ssh.bitbucket.juspay.net/picaf/purescript-presto-dom.git"
-    , version = "nammaYatri"
+    , repo = "https://github.com/juspay/purescript-presto-dom.git"
+    , version = "main"
     }
   with halogen-vdom =
     { dependencies = 
@@ -164,8 +164,8 @@ in  upstream
         , "unsafe-coerce"
         , "web-html"
         ]
-    , repo = "ssh://git@bitbucket.org/juspay/purescript-halogen-vdom.git"
-    , version = "BKN-1862-subscreen"
+    , repo = "https://github.com/juspay/purescript-halogen-vdom.git"
+    , version = "master"
     }
   with tracker = 
     { dependencies = 
@@ -173,7 +173,7 @@ in  upstream
         , "effect"
         , "foreign-generic"
         ]
-    , repo = "ssh://git@ssh.bitbucket.juspay.net/picaf/purescript-tracker.git"
+    , repo = "https://github.com/juspay/purescript-tracker.git"
     , version = "master"
     }
   with otp-reader =
@@ -182,16 +182,8 @@ in  upstream
         , "tracker"
         , "presto"
         ]
-    , repo = "ssh://git@ssh.bitbucket.juspay.net/picaf/purescript-otp-reader.git"
+    , repo = "https://github.com/juspay/purescript-otp-reader.git"
     , version = "master"
     }
-  with beckn-common = 
-    { dependencies = 
-        ["console"
-        , "effect"
-        , "prelude"
-        , "psci-support" 
-        ]
-    , repo = "ssh://git@ssh.bitbucket.juspay.net/bec/atlas-ui-common.git"
-    , version = "main"
-    }
+  with beckn-common = ./ui-common/spago.dhall as Location
+ 

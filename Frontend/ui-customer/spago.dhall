@@ -31,6 +31,6 @@ to generate this file without the comments in this block.
   , "tracker"
   , "otp-reader"
   ]
-, packages = ./packages.dhall
+, packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]
 }
