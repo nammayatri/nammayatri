@@ -281,8 +281,7 @@ sortWithDriverScore merchantId (Just transporterConfig) intelligentPoolConfig dp
         (addIntelligentPoolInfo cancellationScoreRelatedConfig dObj)
         (pure $ (,,) <$> HM.lookup (getDriverId dObj) cancellationRatioMap <*> HM.lookup (getDriverId dObj) acceptanceRatioMap <*> HM.lookup (getDriverId dObj) driversAvailableTimeMap)
     addIntelligentPoolInfo cancellationScoreRelatedConfig dObj (cancellationRatio, acceptanceRatio, driverAvailableTime) = do
-      let popupDelayToAddAsPenalty = fromMaybe 2 transporterConfig.popupDelayToAddAsPenalty
-      popupDelay <- getPopupDelay merchantId dObj.driverPoolResult.driverId cancellationRatio cancellationScoreRelatedConfig popupDelayToAddAsPenalty
+      popupDelay <- getPopupDelay merchantId dObj.driverPoolResult.driverId cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       pure $
         dObj
           { rideRequestPopupDelayDuration = popupDelay,

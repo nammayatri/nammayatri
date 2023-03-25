@@ -436,7 +436,6 @@ computeActualDistance ::
 computeActualDistance orgId pickup driverPoolResults = do
   let pickupLatLong = getCoordinates pickup
   transporter <- CTC.findByMerchantId orgId >>= fromMaybeM (TransporterConfigNotFound orgId.getId)
-  let defaultPopupDelay = fromMaybe 2 transporter.popupDelayToAddAsPenalty
   getDistanceResults <-
     Maps.getEstimatedPickupDistances orgId $
       Maps.GetDistancesReq
@@ -445,7 +444,7 @@ computeActualDistance orgId pickup driverPoolResults = do
           travelMode = Just Maps.CAR
         }
   logDebug $ "get distance results" <> show getDistanceResults
-  return $ mkDriverPoolWithActualDistResult defaultPopupDelay <$> getDistanceResults
+  return $ mkDriverPoolWithActualDistResult transporter.defaultPopupDelay <$> getDistanceResults
   where
     mkDriverPoolWithActualDistResult defaultPopupDelay distDur = do
       DriverPoolWithActualDistResult
