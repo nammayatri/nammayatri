@@ -28,6 +28,7 @@ data TransporterConfigD u = TransporterConfig
     pickupLocThreshold :: Meters,
     dropLocThreshold :: Meters,
     rideTimeEstimatedThreshold :: Seconds,
+    defaultPopupDelay :: Seconds,
     popupDelayToAddAsPenalty :: Maybe Seconds,
     thresholdCancellationScore :: Maybe Int,
     minRidesForCancellationScore :: Maybe Int,

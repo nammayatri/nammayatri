@@ -38,6 +38,7 @@ mkPersist
       pickupLocThreshold Meters
       dropLocThreshold Meters
       rideTimeEstimatedThreshold Seconds
+      defaultPopupDelay Seconds
       popupDelayToAddAsPenalty Seconds Maybe
       thresholdCancellationScore Int Maybe
       minRidesForCancellationScore Int Maybe
@@ -47,12 +48,12 @@ mkPersist
       fcmServiceAccount Text
       fcmTokenKeyPrefix Text
       onboardingTryLimit Int
-      onboardingRetryTimeinHours Int 
+      onboardingRetryTimeinHours Int
       checkImageExtractionForDashboard Bool
       searchRepeatLimit Int
       createdAt UTCTime
       updatedAt UTCTime
-      
+
       Primary merchantId
       deriving Generic
     |]
