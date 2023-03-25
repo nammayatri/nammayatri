@@ -184,9 +184,9 @@ view push config =
         , height WRAP_CONTENT
             , color Color.black700
             , text if config.nightCharges then
-                      (getString NIGHT_TIMES_OF) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
+                      (getString NIGHT_TIMES_OF) <> config.nightShiftMultiplier <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
                    else
-                      (getString DAY_TIME_CHARGES) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
+                      (getString DAY_TIME_CHARGES) <> config.nightShiftMultiplier <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
             , textSize FontSize.a_14
         , padding (Padding 20 0 20 0)
         ]
