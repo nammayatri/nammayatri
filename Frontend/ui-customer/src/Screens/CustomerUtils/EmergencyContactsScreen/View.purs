@@ -225,7 +225,7 @@ contactCardView push state contact index =
     , textView
         [ height $ WRAP_CONTENT
         , width $ WRAP_CONTENT
-        , text "Remove"
+        , text (getString REMOVE)
         , color Color.blue900
         , textSize 14
         , onClick push (const (RemoveButtonClicked contact))

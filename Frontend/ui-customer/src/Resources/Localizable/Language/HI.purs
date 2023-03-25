@@ -379,3 +379,4 @@ getHI script = case script of
   CALL_EMERGENCY_CONTACTS -> "आपातकालीन संपर्कों को कॉल करें"
   LIVE_STATS_DASHBOARD -> "लाइव आँकड़े डैशबोर्ड"
   CHECK_OUT_LIVE_STATS -> "लाइव आंकड़े देखें"
+  ADD_ANOTHER_CONTACT -> "अन्य संपर्क जोड़ें"

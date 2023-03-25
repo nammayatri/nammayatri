@@ -1,19 +1,22 @@
 module Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig where
-import Screens.Types (EmergencyContactsScreenState)
-import Prelude ((<>), (==))
-import Components.PopUpModal as PopUpModal
-import Language.Strings (getString)
-import Language.Types (STR(..))
+
+import Common.Types.App
+
 import Components.GenericHeader as GenericHeader
+import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
-import Styles.Colors as Color
+import Data.Array (length, null)
 import Effect (Effect)
 import Engineering.Helpers.Commons (os)
-import PrestoDOM (Length(..), Margin(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, height, margin, padding, text, textSize, width, imageUrl, visibility, stroke)
-import Data.Array (length)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Common.Types.App
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Prelude ((<>), (==))
+import PrestoDOM (Length(..), Margin(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, height, margin, padding, text, textSize, width, imageUrl, visibility, stroke)
+import Screens.Types (EmergencyContactsScreenState)
+import Styles.Colors as Color
+
 --------------------------------------------------- genericHeaderConfig -----------------------------------------------------
 genericHeaderConfig :: EmergencyContactsScreenState -> GenericHeader.Config
 genericHeaderConfig state =
@@ -52,7 +55,7 @@ primaryButtonConfig state =
     primaryButtonConfig' =
       config
         { textConfig
-          { text = (getString ADD_EMERGENCY_CONTACTS)
+          { text = if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)
           }
         , isClickable = true
         , width = if os == "IOS" then (V 360) else (MATCH_PARENT)

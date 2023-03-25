@@ -149,7 +149,7 @@ enterMobileNumberView  state lang push =
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , orientation HORIZONTAL
-            ][ (commonTextView state ((getString TO_THE) <> " " <> (getString TERMS_AND_CONDITIONS)) true (Just "https://docs.google.com/document/d/1YeDkCLIAeyqnjuS4cBHwSUxB9r0QURzm/edit?usp=sharing&ouid=115428839751313950285&rtpof=true&sd=true") push) ]
+            ][ (commonTextView state ((getString TO_THE) <> " " <> (getString TERMS_AND_CONDITIONS)) true (Just "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA/edit?usp=share_link&ouid=115428839751313950285&rtpof=true&sd=true") push) ]
           ]
     , PrestoAnim.animationSet 
       [ Anim.fadeIn $ not state.props.enterOTP
