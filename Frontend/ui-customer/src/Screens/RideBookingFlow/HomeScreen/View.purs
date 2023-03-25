@@ -18,7 +18,7 @@ module Screens.HomeScreen.View where
 import Common.Types.App
 import Screens.RideBookingFlow.HomeScreen.Config
 
-import Accessor (_lat, _lon)
+import Accessor (_lat, _lon, _selectedQuotes)
 import Animation (fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha, fadeIn)
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
 import Animation.Config as AnimConfig
@@ -72,7 +72,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.HomeScreen.Controller (Action(..), ScreenOutput, eval, getCurrentCustomerLocation, flowWithoutOffers, checkCurrentLocation, getNearestCurrentLocation, checkSavedLocations, getNearestSavedLocation)
+import Screens.HomeScreen.Controller (Action(..), ScreenOutput, eval, getCurrentCustomerLocation, flowWithoutOffers, checkCurrentLocation, getNearestCurrentLocation, checkSavedLocations, getNearestSavedLocation, dummySelectedQuotes)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
 import Screens.Types (HomeScreenState, PopupType(..), SearchLocationModelType(..), Stage(..), PreviousCurrentLocations(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), LocationListItemState)
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), SavedLocationsListRes(..) )
@@ -1539,7 +1539,9 @@ getQuotesPolling action retryAction count duration push state = do
             Right response -> do
               _ <- pure $ printLog "Quote api Results " response
               let (SelectListRes resp) = response
-              if not (null resp.selectedQuotes) then do
+              if (resp.bookingId /= Nothing) then do 
+                 doAff do liftEffect $ push $ action response
+              else if not (null ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)) then do
                 if (getValueToLocalStore GOT_ONE_QUOTE == "FALSE") then do
                   _ <- pure $ firebaseLogEvent "ny_user_received_quotes"
                   pure unit
@@ -1557,7 +1559,7 @@ getQuotesPolling action retryAction count duration push state = do
               pure unit
               getQuotesPolling action retryAction (usableCount - 1) duration push state
         else do
-          let response = SelectListRes { selectedQuotes: [] }
+          let response = SelectListRes { selectedQuotes: Nothing, bookingId : Nothing }
           _ <- pure $ updateLocalStage QuoteList
           doAff do liftEffect $ push $ action response
     _ -> pure unit

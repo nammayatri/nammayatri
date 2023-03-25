@@ -127,3 +127,6 @@ _estimatedDistance = lens (unwrap >>> _.estimatedDistance) (\oldRec newVal -> wr
 
 _chargeableRideDistance :: forall a b c. Newtype a { chargeableRideDistance :: b | c } => Lens' a b
 _chargeableRideDistance = lens (unwrap >>> _.chargeableRideDistance) (\oldRec newVal -> wrap ((unwrap oldRec) { chargeableRideDistance = newVal }))
+
+_selectedQuotes :: forall a b c. Newtype a { selectedQuotes :: b | c } => Lens' a b
+_selectedQuotes = lens (unwrap >>> _.selectedQuotes) (\oldRec newVal -> wrap ((unwrap oldRec) { selectedQuotes = newVal }))

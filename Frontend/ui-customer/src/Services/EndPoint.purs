@@ -63,7 +63,7 @@ selectEstimate :: String -> String
 selectEstimate estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/select2"
 
 selectList :: String -> String
-selectList estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/quotes"
+selectList estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/results"
 
 rideBookingList :: String -> String -> String -> String
 rideBookingList limit offset isActive = (getBaseUrl "16") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive

@@ -34,7 +34,7 @@ enterMobileNumberScreen = do
   case act of
     GoToAccountSetUp state -> do 
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state) 
-                    App.BackT $ App.BackPoint <$> pure act
+                    App.BackT $ App.NoBack <$> pure act
     GoToOTP state -> do 
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber ->  state)
                     App.BackT  $ App.BackPoint <$> pure act 
