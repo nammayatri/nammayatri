@@ -333,7 +333,8 @@ selectEstimateBT payload estimateId = do
 
 makeEstimateSelectReq :: Boolean -> DEstimateSelect
 makeEstimateSelectReq isAutoAssigned = DEstimateSelect {
-      "autoAssignEnabled": isAutoAssigned
+      "autoAssignEnabled": isAutoAssigned, 
+      "autoAssignEnabledV2": isAutoAssigned
     }
 
 ------------------------------------------------------------------------ SelectList Function ------------------------------------------------------------------------------------------

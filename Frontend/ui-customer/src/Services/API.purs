@@ -922,7 +922,8 @@ data SelectEstimateReq = SelectEstimateReq String DEstimateSelect
 
 newtype DEstimateSelect = DEstimateSelect
   { 
-    autoAssignEnabled :: Boolean
+    autoAssignEnabled :: Boolean,
+    autoAssignEnabledV2 :: Boolean
   }
 
 newtype SelectEstimateRes = SelectEstimateRes
@@ -959,8 +960,20 @@ instance encodeSelectEstimateReq  :: Encode SelectEstimateReq where encode = def
 data SelectListReq = SelectListReq String 
 
 newtype SelectListRes = SelectListRes {
+  selectedQuotes :: Maybe SelectedQuotes,
+  bookingId :: Maybe String
+}
+
+newtype SelectedQuotes = SelectedQuotes {
   selectedQuotes :: Array QuoteAPIEntity
 }
+
+derive instance genericSelectedQuotes:: Generic SelectedQuotes _
+derive instance newtypeSelectedQuotes :: Newtype SelectedQuotes _
+instance standardSelectedQuotes :: StandardEncode SelectedQuotes where standardEncode (SelectedQuotes body) = standardEncode body
+instance showSelectedQuotes :: Show SelectedQuotes where show = genericShow
+instance decodeSelectedQuotes :: Decode SelectedQuotes where decode = defaultDecode
+instance encodeSelectedQuotes :: Encode SelectedQuotes where encode = defaultEncode 
 
 instance makeSelectListReq :: RestEndpoint SelectListReq SelectListRes where
  makeRequest reqBody@(SelectListReq estimateId) headers = defaultMakeRequest GET (EP.selectList estimateId) headers reqBody

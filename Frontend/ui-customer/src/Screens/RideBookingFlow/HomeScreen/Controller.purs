@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.Controller where
 
-import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart)
+import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes)
 import Common.Types.App (CancellationReasons, LazyCheck(..))
 import Components.CancelRide.Controller as CancelRidePopUp
 import Components.DriverInfoCard.Controller as DriverInfoCardController
@@ -68,7 +68,7 @@ import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getQuoteList, transformContactList)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..))
-import Services.API (EstimateAPIEntity(..), GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), PlaceName(..), RideBookingRes(..), SelectListRes(..), FareRange, QuoteAPIEntity(..))
+import Services.API (EstimateAPIEntity(..), GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), PlaceName(..), RideBookingRes(..), SelectListRes(..), FareRange, QuoteAPIEntity(..), SelectedQuotes(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore)
@@ -1168,9 +1168,10 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
 
 eval (GetQuotesList (SelectListRes resp)) state = do 
   case flowWithoutOffers WithoutOffers of
-    true  -> continueWithCmd state [pure $ ContinueWithoutOffers (SelectListRes resp)]
-    false -> do
-              let selectedQuotes = getQuoteList resp.selectedQuotes
+    true  -> do 
+      continueWithCmd state [pure $ ContinueWithoutOffers (SelectListRes resp)]
+    false -> do 
+              let selectedQuotes = getQuoteList ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)
               _ <- pure $ printLog "vehicle Varient " selectedQuotes
               let filteredQuoteList = filter (\a -> length (filter (\b -> a.id == b.id )state.data.quoteListModelState) == 0 ) selectedQuotes
               let removeExpired = filter (\a -> length (filter (\b -> a.id == b ) state.props.expiredQuotes) == 0) filteredQuoteList
@@ -1192,10 +1193,11 @@ eval (GetQuotesList (SelectListRes resp)) state = do
                 continue newState{props{selectedQuote = if value then Nothing else newState.props.selectedQuote}}
 
 eval (ContinueWithoutOffers (SelectListRes resp)) state = do
-  let (QuoteAPIEntity firstOffer) = fromMaybe dummyQuoteAPIEntity (resp.selectedQuotes!!0)
-  let quoteId = firstOffer.id
-  if quoteId /= "" then exit $ ConfirmRide state{props{selectedQuote = Just quoteId, isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList}} 
-    else continue state
+  let bookingId = (fromMaybe "" resp.bookingId)
+  if bookingId /= "" then do
+    _ <- pure $ updateLocalStage ConfirmingRide
+    exit $ ConfirmRide state{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}} 
+  else continue state
 
 
 eval (GetRideConfirmation resp) state = do
@@ -1520,3 +1522,8 @@ getNearestSavedLocation lat lon savedLocations = (sortBy compareByDistance (map(
 
 compareByDistance :: CurrentLocationDetailsWithDistance -> CurrentLocationDetailsWithDistance -> Ordering 
 compareByDistance ( a) ( b) = compare (a.distance ) (b.distance)
+
+dummySelectedQuotes :: SelectedQuotes
+dummySelectedQuotes = SelectedQuotes {
+  selectedQuotes : []
+}
