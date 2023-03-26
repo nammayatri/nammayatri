@@ -37,7 +37,17 @@ To start the frontend app for Android, follow these steps:
 
 ## IOS
 
+**Prerequisite**
+
+    1.  Install:-
+        -   xcode (through app store)
+        -   cocoapods (brew install cocoapods)
+
 To start the frontend app for IOS, follow these steps:
+
+    1. Run ```pod install```
+    2. Change IP address in becknbase file
+    3. Add GoogleService file
     
 
 **Starting the Server**

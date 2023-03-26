@@ -1,0 +1,77 @@
+<html>
+    <head>
+    </head>
+    <body>
+    </body>
+    <script type="text/javascript">
+        var microAppId = 'in.juspay.nammayatri';
+        window.logs = []
+        window.donotoverride = {}
+        window.donotoverride.log = console.log
+        window.donotoverride.error = console.error
+        window.donotoverride.warn = console.warn
+        console.log = function () {
+            window.logs.push(arguments)
+            window.donotoverride.log.apply(arguments)
+        }
+        window.logse = []
+        console.error = function () {
+            window.logse.push(arguments)
+            window.donotoverride.error.apply(arguments)
+        }
+        window.logsd = []
+        console.warn = function () {
+            window.logsd.push(arguments)
+            window.donotoverride.warn.apply(arguments)
+        }
+        document.title = microAppId;
+        window.JBridge = top.JBridge;
+        window.Android = top.Android;
+        window.DUIGatekeeper = window.JBridge;
+        window.__OS = "IOS";
+        window.__DEVICE_DETAILS = JSON.parse(JBridge.deviceDetails());
+        window.onFileUpdated = function (){
+          console.log("arguments -=>", arguments)
+          //JBridge.toast("GOT UPDATE");
+          if (arguments[0].includes("v1-index_bundle.jsa") && arguments[0].includes("in.juspay.nammayatri")){
+            //JBridge.toast("BUNDLE UPDATE AVAILABLE");
+            JBridge.runInJuspayBrowser("onEvent", JSON.stringify({
+                event: "reboot",
+                service: "in.juspay.nammayatri",
+                payload: {},
+                error: false,
+                errorMessage: "",
+                errorCode: ""
+              }), "");
+            console.log("arguments after -=>", arguments)
+          }
+          
+        }
+        window.JOS.addEventListener("onFileUpdated")();
+        
+        var headID = document.getElementsByTagName("head")[0];
+        var newScript = document.createElement('script');
+        newScript.type = 'text/javascript';
+        newScript.id = microAppId;
+
+        useDevServer = false;
+
+        if (useDevServer) {
+            var ip = "10.10.27.164";
+            var url = "http://" + ip + ":8082/dist";
+            console.warn("loading from: ", url);
+            newScript.src = url + "/v1-index_bundle.js";
+        } else {
+            var innerHTML = "";
+            if (parseInt(JBridge.getValueFromPlistForKey("dev_build"))) {
+                innerHTML = JBridge.loadFileInDUI('v1-index_bundle.js');
+            }
+            if (innerHTML.length == 0) {
+                innerHTML = JBridge.loadFileInDUI('v1-index_bundle.jsa');
+            }
+            newScript.innerHTML = innerHTML;
+
+        }
+        headID.appendChild(newScript);
+    </script>
+</html>
