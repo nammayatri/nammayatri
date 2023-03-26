@@ -8,5 +8,9 @@ exports.getKeyInSharedPrefKeysConfigEff = function (key) {
   };
 
 exports.getValueToLocalNativeStoreConfig = function (key) {
-  return JBridge.getKeyInNativeSharedPrefKeys(key);
+  if (window.__OS == "IOS") {
+    return JBridge.getKeysInSharedPrefs(key);
+  } else { 
+    return JBridge.getKeyInNativeSharedPrefKeys(key);
+  }
 }

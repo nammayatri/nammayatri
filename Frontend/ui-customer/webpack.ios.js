@@ -5,7 +5,6 @@ const webpack = require('webpack');
 var path = require('path');
 const FileManagerPlugin = require('filemanager-webpack-plugin');
 const packageJSON = require("./package.json");
-const JusPayJSAZipPlugin = require("jsa-tools").JusPayJSAZipPlugin;
 
 
 const devtoolsPath = "../devtools-ios"
