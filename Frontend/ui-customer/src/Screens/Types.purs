@@ -466,6 +466,9 @@ type HomeScreenStateData =
   , rideDuration :: String
   , showPreferences :: Boolean
   , previousCurrentLocations:: PreviousCurrentLocations
+  , nearByPickUpPoints :: Array Location
+  , pickUpZone :: Boolean
+  , polygonCoordinates :: String
   }
 
 type HomeScreenStateProps =
@@ -521,6 +524,8 @@ type HomeScreenStateProps =
   , storeCurrentLocs :: Boolean
   , emergencyHelpModelState :: EmergencyHelpModelState
   , showLiveDashboard :: Boolean
+  , defaultPickUpPoint :: String
+  , selectedCar1 :: Boolean
   }
 
 type Contact = {

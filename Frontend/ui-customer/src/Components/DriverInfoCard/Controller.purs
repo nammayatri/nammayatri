@@ -35,7 +35,9 @@ type DriverInfoCardState =
 type DriverInfoCardProps = 
   {
     currentStage :: Stage,
-    trackingEnabled :: Boolean
+    trackingEnabled :: Boolean,
+    pickUpZone :: Boolean,
+    estimatedTime :: String
   }
 
 type DriverInfoCardData = 

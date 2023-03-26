@@ -43,6 +43,7 @@ import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SettingSideBar as SettingSideBar
 import Components.SourceToDestination as SourceToDestination
+import Components.MenuButton as MenuButton
 import Control.Monad.Except.Trans (lift)
 import Data.Array (any, length, mapWithIndex, null, (!!), head, drop) 
 import Data.Either (Either(..))
@@ -86,6 +87,7 @@ import Foreign.Class (class Encode)
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
+import Components.ChooseYourRide as ChooseYourRide
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -691,12 +693,15 @@ rideRequestFlowView push state =
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
             $ if (state.props.currentStage == SettingPrice) then
+                if not state.data.pickUpZone then 
                 suggestedPriceView push state
+                else 
+                ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
               else if (state.props.currentStage == ConfirmingLocation) then
                 confirmPickUpLocationView push state
               else
                 emptyTextView state
-        , if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain ]) then
+        , if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes]) then
             (loaderView push state)
           else
             emptyTextView state
@@ -1214,35 +1219,8 @@ confirmPickUpLocationView push state =
             , height WRAP_CONTENT
             , width MATCH_PARENT
             , fontStyle $ FontStyle.bold LanguageStyle
-            ]
-        , linearLayout
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , orientation HORIZONTAL
-            , margin $ MarginVertical 20 10
-            , onClick push $ const GoBackToSearchLocationModal
-            , padding $ PaddingHorizontal 15 15
-            , stroke $ "1," <> Color.grey900
-            , gravity CENTER_VERTICAL
-            , cornerRadius 5.0
-            ]
-            [ imageView
-                [ imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
-                , height $ V 20
-                , width $ V 20
-                , gravity CENTER_VERTICAL
-                ]
-            , textView
-                $
-                  [ text state.data.source
-                  , ellipsize true
-                  , singleLine true
-                  , gravity CENTER
-                  , padding (Padding 10 16 10 16)
-                  , color Color.black800
-                  ]
-                <> FontStyle.subHeading1 TypoGraphy
-            ]
+            ] 
+        , if  state.data.pickUpZone then  nearByPickUpPointsView state push else currentLocationView push state
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfirmPickupConfig state)
         ]
     ]
@@ -1389,7 +1367,7 @@ rideTrackingView push state =
                 , width MATCH_PARENT
                 , background Color.transparent
                 , sheetState COLLAPSED
-                , peakHeight if state.props.currentStage == RideAccepted then getHeightFromPercent 58 else getHeightFromPercent 46
+                , peakHeight if state.props.currentStage == RideAccepted then getHeightFromPercent (if state.data.pickUpZone then 50 else  58) else (if state.data.pickUpZone then  55 else 46)
                 , visibility VISIBLE
                 , halfExpandedRatio 0.9
                 ]
@@ -1712,3 +1690,159 @@ checkForLatLongInSavedLocations push action state = do
   _ <- runExceptT $ runBackT $ setValueToLocalStore RELOAD_SAVED_LOCATION "false"
   pure unit
 
+notinPickUpZoneView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+notinPickUpZoneView push state = 
+  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , stroke $ "1," <> Color.grey900
+      , gravity CENTER
+      , cornerRadius 8.0
+      , margin $ MarginTop 16
+      , padding $ PaddingVertical 2 10
+      ][linearLayout 
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , orientation HORIZONTAL
+        , margin (MarginLeft 15)]
+        [ linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , orientation VERTICAL
+        , gravity CENTER 
+        , margin $ MarginTop if os == "IOS" then 10 else 0
+        ][  textView
+            [ text $ if state.data.rateCard.additionalFare == 0 then "₹" <> (show state.data.suggestedAmount) else  "₹" <> (show state.data.suggestedAmount) <> "-" <> "₹" <> (show $ (state.data.suggestedAmount + state.data.rateCard.additionalFare))
+            , textSize FontSize.a_32
+            , color Color.black800
+            , margin $ MarginTop 8
+            , gravity CENTER_HORIZONTAL
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , fontStyle $ FontStyle.bold LanguageStyle
+            , onClick push $ const ShowRateCard
+            ]
+            , estimatedTimeAndDistanceView push state
+          ]
+          , imageView
+            [ imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+            , width $ V 40
+            , height $ V 40
+            , gravity BOTTOM
+            , margin (MarginTop 13)
+            , onClick push $ const ShowRateCard
+            ]
+        ]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation VERTICAL
+          ]
+          [ linearLayout
+              [ width MATCH_PARENT
+              , height $ V 1
+              , margin $ Margin 16 12 16 14
+              , background Color.grey900
+              ][]
+          , linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              ]
+              [ linearLayout
+                  [ width MATCH_PARENT
+                  , height WRAP_CONTENT
+                  , gravity CENTER_HORIZONTAL
+                  , onClick push $ const PreferencesDropDown
+                  , margin $ MarginBottom 8
+                  ][ 
+                      textView
+                      [ height $ V 24
+                      , width WRAP_CONTENT
+                      , color Color.darkDescriptionText
+                      , text $ getString BOOKING_PREFERENCE
+                      , textSize FontSize.a_16
+                      , fontStyle $ FontStyle.regular LanguageStyle
+                      
+                      ],
+                      imageView
+                      [ width $ V 10
+                      , height $ V 10
+                      , margin (Margin 9 8 0 0)
+                      , imageWithFallback if state.data.showPreferences then "ny_ic_chevron_up,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/nammayatri/images/user/ny_ic_down_arrow.png"
+                      ]
+                  ],
+                  linearLayout
+                    [ width MATCH_PARENT
+                    , height WRAP_CONTENT
+                    , margin $ MarginLeft 20
+                    , orientation VERTICAL 
+                    ][ linearLayout
+                       [ width MATCH_PARENT
+                       , height WRAP_CONTENT
+                       , orientation VERTICAL
+                       , visibility if state.data.showPreferences then VISIBLE else GONE
+                       ][showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) "ny_ic_faster,https://assets.juspay.in/nammayatri/images/user/ny_ic_faster.png" true,
+                         showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" false]
+                  ]
+                  
+              ]
+          ]
+      ]
+currentLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+currentLocationView push state =
+  linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation HORIZONTAL
+            , margin $ MarginVertical 20 10
+            , onClick push $ const GoBackToSearchLocationModal
+            , padding $ PaddingHorizontal 15 15
+            , stroke $ "1," <> Color.grey900
+            , gravity CENTER_VERTICAL
+            , cornerRadius 5.0
+            ]
+            [ imageView
+                [ imageWithFallback "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
+                , height $ V 20
+                , width $ V 20
+                , gravity CENTER_VERTICAL
+                ]
+            , textView
+                $
+                  [ text state.data.source
+                  , ellipsize true
+                  , singleLine true
+                  , gravity CENTER
+                  , padding (Padding 10 16 10 16)
+                  , color Color.black800
+                  ]
+                <> FontStyle.subHeading1 TypoGraphy
+            ]
+
+nearByPickUpPointsView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+nearByPickUpPointsView state push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ PaddingVertical 20 10
+    ](map (\pickUpPoint -> MenuButton.view (push <<< MenuButtonActionController) (menuButtonConfig state pickUpPoint)) state.data.nearByPickUpPoints)
+
+confirmingLottieView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+confirmingLottieView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , cornerRadii $ Corners 24.0 true true false false
+    , alignParentBottom "true,-1"
+    ][ relativeLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , cornerRadii $ Corners 24.0 true true false false
+        , background Color.transparent
+        ][ PrestoAnim.animationSet [ fadeIn true ] $
+          loaderView push state
+          ]
+    ]

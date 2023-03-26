@@ -27,6 +27,8 @@ import Components.RateCard as RateCard
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
 import Components.SearchLocationModel as SearchLocationModel
+import Components.ChooseYourRide as ChooseYourRide
+import Components.MenuButton as MenuButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RatingCard as RatingCard
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -54,10 +56,10 @@ shareAppConfig state = let
       buttonLayoutMargin = (Margin 16 0 16 20),
       primaryText {
         text = getString(YOUR_RIDE_HAS_STARTED) 
-      , margin = (Margin 16 0 16 0)},
+      , margin = (MarginHorizontal 16 16)},
       secondaryText { 
         text = getString(ENJOY_RIDING_WITH_US)
-      , margin = Margin 0 12 0 24 
+      , margin = MarginVertical 12 24  
       , fontSize = FontSize.a_14
       , color = Color.black700},
       option1 {
@@ -475,6 +477,8 @@ driverInfoCardViewState :: ST.HomeScreenState -> DriverInfoCard.DriverInfoCardSt
 driverInfoCardViewState state = { props:
                                   { currentStage: state.props.currentStage
                                   , trackingEnabled: state.props.isInApp
+                                  , pickUpZone: state.data.pickUpZone
+                                  , estimatedTime : state.data.rideDuration
                                   }
                               , data: state.data.driverInfoCardState
                             }
@@ -568,3 +572,44 @@ autoAnimConfig =
         }
   in
     autoAnimConfig'
+
+menuButtonConfig :: ST.HomeScreenState -> ST.Location -> MenuButton.Config
+menuButtonConfig state pickUpPoint = let  
+    config = MenuButton.config
+    menuButtonConfig' = config {
+      titleConfig{
+          text = pickUpPoint.place
+          ,selectedFontStyle = FontStyle.bold LanguageStyle
+          ,unselectedFontStyle = FontStyle.regular LanguageStyle
+      }
+      , radioButtonConfig {
+        height = V 16
+        , width = V 16
+        , imageHeight = V 10
+        , imageWidth = V 10
+        , imageUrl = "ny_ic_pickup"
+        , cornerRadius = 10.0
+        , buttonMargin = (MarginRight 15)
+        , activeStroke = ("2," <> Color.positive)
+      }
+      , height = V 40
+      , id = pickUpPoint.place
+      , leftsidebutton = true
+      , padding = PaddingBottom 10 
+      , isSelected = (pickUpPoint.place == state.props.defaultPickUpPoint)
+    }
+    in menuButtonConfig'
+
+chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
+chooseYourRideConfig state =
+  let
+    config = ChooseYourRide.config
+    chooseYourRideConfig' =
+      config
+        { 
+          selectedCar1 = state.props.selectedCar1,
+          rideDistance = state.data.rideDistance,
+          rideDuration = state.data.rideDuration
+        }
+  in
+    chooseYourRideConfig'

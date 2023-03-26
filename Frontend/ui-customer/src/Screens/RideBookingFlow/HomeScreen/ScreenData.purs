@@ -19,8 +19,9 @@ import Components.LocationListItem.Controller (dummyLocationListState)
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState)
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..))
+import Data.Array (head)
 
 initData :: HomeScreenState
 initData = {
@@ -62,6 +63,9 @@ initData = {
     , rideDistance : "--"
     , rideDuration : "--"
     , showPreferences : false
+    , nearByPickUpPoints : dummyPickUpPoints
+    , pickUpZone : true
+    , polygonCoordinates : ""
     },
   --   rating :: Int
   -- , isRated :: Boolean
@@ -118,8 +122,16 @@ initData = {
     , storeCurrentLocs : false
     , emergencyHelpModelState : emergencyHelpModalData
     , showLiveDashboard : false
-    }
+    
+    , defaultPickUpPoint : case head dummyPickUpPoints of
+                              Just item -> item.place
+                              Nothing -> ""
+    , selectedCar1 : true
+    
 }
+}
+    
+
 
 
 dummyContactData :: Array Contact
@@ -288,3 +300,10 @@ dummyLocationName = PlaceName {
   "plusCode" : Nothing,
   "addressComponents" : []
 }
+dummyPickUpPoints :: Array Location
+dummyPickUpPoints = [ 
+  {place : "Kolkata airport arrival gate 1 ", lat : 12.941156, lng : 77.623510 }, 
+  {place : "Kolkata airport arrival gate 2 ", lat : 12.940696, lng : 77.622877 }
+]
+
+

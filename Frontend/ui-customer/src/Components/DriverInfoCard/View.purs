@@ -206,11 +206,11 @@ waitTimeView push state =
   , gravity CENTER_VERTICAL
   , margin $ MarginLeft 12
   , padding $ Padding 14 2 14 2
-  , visibility if state.data.driverArrived then VISIBLE else GONE
+  , visibility if (state.data.driverArrived || state.props.pickUpZone) then VISIBLE else GONE
   ][ textView
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text $ getString WAIT_TIME <> ":"
+      , text $ if state.props.pickUpZone then (getString EXPIRES_IN) <> ":" else getString WAIT_TIME <> ":"
       , textSize FontSize.a_14
       , fontStyle $ FontStyle.medium LanguageStyle
       , lineHeight "18"
@@ -257,10 +257,10 @@ driverInfoView push state =
             , margin (MarginTop 8)
             , cornerRadius 4.0
             ][]
-            , contactView push state
+            , if state.props.pickUpZone  then headerTextView push state else contactView push state
             , otpAndWaitView push state
             , separator (Margin 16 0 16 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
-            , driverDetailsView push state
+            , if state.props.pickUpZone then (if state.props.currentStage == RideStarted then driverDetailsView push state else  linearLayout[][]) else  driverDetailsView push state
             , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
             , paymentMethodView push state
             , separator (Margin 16 0 16 0) (V 1) Color.grey900 true
@@ -268,8 +268,8 @@ driverInfoView push state =
               [ width MATCH_PARENT
               , height if os == "IOS" then (V 210) else WRAP_CONTENT
               , orientation VERTICAL
-              ][ sourceDistanceView push state
-                , separator (Margin 0 0 0 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted)
+              ][ if state.props.pickUpZone then destinationView push state else  sourceDistanceView push state
+                , separator (Margin 0 0 0 0) (V 1) Color.grey900 (state.props.currentStage == RideAccepted || state.props.currentStage == RideStarted)
                 , cancelRideLayout push state
               ]
             ]
@@ -504,7 +504,7 @@ paymentMethodView push state =
       , width WRAP_CONTENT
       , gravity LEFT
       ][  textView $
-          [ text $ getString RIDE_FARE
+          [ text if state.props.pickUpZone then getString PAY_VIA_CASH_OR_UPI <>" :-" else  getString RIDE_FARE
           , color Color.black700
           ] <> FontStyle.body3 TypoGraphy
         , textView $
@@ -521,6 +521,7 @@ paymentMethodView push state =
           , width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER
+          , visibility if state.props.pickUpZone then GONE else VISIBLE
           ][  imageView
               [ imageWithFallback "ny_ic_wallet,https://assets.juspay.in/nammayatri/images/user/ny_ic_wallet.png"
               , height $ V 20
@@ -620,7 +621,7 @@ sourceToDestinationConfig state = let
         text = state.data.destination
       , textSize = FontSize.a_14
       , padding = Padding 2 0 2 2
-      , margin = Margin 12 0 15 0
+      , margin = MarginVertical 12 15 
       , maxLines = 1
       , fontStyle = FontStyle.medium LanguageStyle
       , ellipsize = true
@@ -633,6 +634,76 @@ sourceToDestinationConfig state = let
   }
     }
   in sourceToDestinationConfig'
+
+headerTextView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w 
+headerTextView push state = 
+  linearLayout
+  [ orientation VERTICAL
+  , height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity CENTER_VERTICAL
+  , padding $ Padding 16 20 16 16
+  ][ textView
+      [ text if state.props.currentStage == RideStarted then "ETA :" <> state.props.estimatedTime else  getString BOARD_THE_FIRST_TAXI
+      , textSize FontSize.a_20
+      , fontStyle $ FontStyle.bold LanguageStyle
+      , color Color.black800
+      , padding $ PaddingBottom 16
+      , ellipsize true
+      ]
+    ,  separator (MarginHorizontal 16 16) (V 1) Color.grey900 (state.props.currentStage == RideStarted)
+    , if state.props.currentStage == RideStarted then  contactView push state else linearLayout[][]
+  ]
+
+destinationView ::  forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w 
+destinationView push state=
+  linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , padding $ Padding 16 16 16 16
+      , width WRAP_CONTENT
+      , gravity LEFT
+      ][  textView $
+          [ text if true then "Drop :-" else  getString RIDE_FARE
+          , color Color.black700
+          ] <> FontStyle.body3 TypoGraphy
+        , textView $
+          [ text state.data.destination
+          , color Color.black800
+          ] <> FontStyle.h2 TypoGraphy
+        , linearLayout
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , gravity CENTER
+            , margin $ MarginTop 4
+            ][ textView
+                [ text $ state.data.estimatedDistance <> " km"
+                , textSize FontSize.a_14
+                , width MATCH_PARENT
+                , gravity CENTER
+                , color Color.black650
+                , height WRAP_CONTENT
+                , fontStyle $ FontStyle.regular LanguageStyle
+                ]
+              , linearLayout
+                [height $ V 4
+                , width $ V 4
+                , cornerRadius 2.5
+                , background Color.black600
+                , margin (Margin 6 2 6 0)
+                ][]
+              , textView
+                [ text state.props.estimatedTime
+                , textSize FontSize.a_14
+                , width MATCH_PARENT
+                , gravity CENTER
+                , color Color.black650
+                , height WRAP_CONTENT
+                , fontStyle $ FontStyle.regular LanguageStyle
+                ]
+            ]
+      ]
+
 
 configurations = 
   case os of 

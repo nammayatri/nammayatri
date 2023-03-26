@@ -419,7 +419,7 @@ homeScreenFlow = do
         let srcServiceable = sourceServiceabilityResp.serviceable
         (ServiceabilityRes destServiceabilityResp) <- Remote.destServiceabilityBT (Remote.makeServiceabilityReq bothLocationChangedState.props.destinationLat bothLocationChangedState.props.destinationLong)
         let destServiceable = destServiceabilityResp.serviceable
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState)
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> bothLocationChangedState{data{pickUpZone =  (sourceServiceabilityResp.geoJson)/=Nothing,polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson}})
         if (addToRecents) then 
           addLocationToRecents item bothLocationChangedState sourceServiceabilityResp.serviceable destServiceabilityResp.serviceable
           else pure unit 
@@ -887,7 +887,12 @@ rideSearchFlow flowType = do
     then do 
       case finalState.props.sourceSelectedOnMap of
         false -> do
-          _ <- pure $ locateOnMap false finalState.props.sourceLat finalState.props.sourceLong
+          if finalState.data.pickUpZone then do 
+            _ <- pure $ locateOnMap false finalState.props.sourceLat finalState.props.sourceLong finalState.data.polygonCoordinates  []
+            pure unit
+          else do
+            _ <- pure $ locateOnMap false finalState.props.sourceLat finalState.props.sourceLong
+            pure unit
           _ <- pure $ removeAllPolylines ""
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true}})
           _ <- pure $ updateLocalStage ConfirmingLocation

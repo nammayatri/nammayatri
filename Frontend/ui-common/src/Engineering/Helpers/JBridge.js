@@ -1047,12 +1047,22 @@ exports["requestKeyboardShow"] = function(id) {
 }
 
 exports["locateOnMap"] = function(str){
-  return function (lat){
-    return function (lon){
-      JBridge.locateOnMap(str, lat, lon);
-    }
-  }
-}
+  try {
+   return function (lat){
+     return function (lon){
+      return function (geoJson){
+        return function (coodinates){
+           console.log("hey my error")
+           JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
+           }
+          }
+        }
+       }
+   }
+   catch(err) {
+     JBridge.locateOnMap(str, lat, lon);
+   }
+ }
 
 exports["exitLocateOnMap"] = function(str){
   JBridge.exitLocateOnMap(str);
