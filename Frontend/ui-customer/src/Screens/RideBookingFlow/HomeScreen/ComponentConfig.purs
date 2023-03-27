@@ -15,35 +15,38 @@
 
 module Screens.RideBookingFlow.HomeScreen.Config where
 
+import Common.Types.App
+import Language.Strings
 import Prelude
-import Screens.Types as ST
-import Components.PopUpModal as PopUpModal
-import Components.PrimaryButton as PrimaryButton
-import Components.SourceToDestination as SourceToDestination
+import PrestoDOM
+
+import Animation.Config as AnimConfig
 import Components.CancelRide as CancelRidePopUpConfig
-import Components.FareBreakUp as FareBreakUp
-import Components.ErrorModal as ErrorModal
-import Components.RateCard as RateCard
+import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
-import Components.SearchLocationModel as SearchLocationModel
+import Components.ErrorModal as ErrorModal
+import Components.FareBreakUp as FareBreakUp
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel as QuoteListModel
+import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Data.String as DS
-import Animation.Config as AnimConfig
+import Components.SearchLocationModel as SearchLocationModel
+import Components.SourceToDestination as SourceToDestination
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
-import Language.Strings
-import Language.Types (STR(..))
-import Helpers.Utils as HU
+import Data.String as DS
 import Engineering.Helpers.Commons as EHC
-import JBridge as JB
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils as HU
+import JBridge as JB
+import Language.Types (STR(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.Types (DriverInfoCard)
+import Screens.Types as ST
 import Styles.Colors as Color
-import Common.Types.App
-import PrestoDOM
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -476,8 +479,41 @@ driverInfoCardViewState state = { props:
                                   { currentStage: state.props.currentStage
                                   , trackingEnabled: state.props.isInApp
                                   }
-                              , data: state.data.driverInfoCardState
+                              , data: driverInfoTransformer state
                             }
+
+driverInfoTransformer :: ST.HomeScreenState -> DriverInfoCardData
+driverInfoTransformer state =
+  let cardState = state.data.driverInfoCardState
+  in
+    { otp : cardState.otp
+    , driverName : cardState.driverName
+    , eta : cardState.eta
+    , vehicleDetails : cardState.vehicleDetails
+    , registrationNumber : cardState.registrationNumber
+    , rating : cardState.rating
+    , startedAt : cardState.startedAt
+    , endedAt : cardState.endedAt
+    , source : cardState.source
+    , destination : cardState.destination
+    , rideId : cardState.rideId
+    , price : cardState.price
+    , sourceLat : cardState.sourceLat
+    , sourceLng : cardState.sourceLng
+    , destinationLat : cardState.destinationLat
+    , destinationLng : cardState.destinationLng
+    , driverLat : cardState.driverLat
+    , driverLng : cardState.driverLng
+    , distance : cardState.distance
+    , waitingTime : cardState.waitingTime
+    , driverArrived : cardState.driverArrived
+    , estimatedDistance : cardState.estimatedDistance
+    , driverArrivalTime : cardState.driverArrivalTime
+    , estimatedDropTime : ""
+    , isSpecialZone : true
+    , isLocationTracking : state.props.isLocationTracking
+    , bookingCreatedAt : cardState.createdAt
+    }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
 emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emergencyHelpModelState.showContactSupportPopUp

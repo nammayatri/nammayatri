@@ -366,6 +366,7 @@ const hindiStrings = {
   "CALL_EMERGENCY_CONTACTS" : "आपातकालीन संपर्कों को कॉल करें",
   "LIVE_STATS_DASHBOARD" : "लाइव आँकड़े डैशबोर्ड",
   "CHECK_OUT_LIVE_STATS" : "लाइव आंकड़े देखें",
-  "ADD_ANOTHER_CONTACT" : "अन्य संपर्क जोड़ें"
-
+  "ADD_ANOTHER_CONTACT" : "अन्य संपर्क जोड़ें",
+  "PAY_VIA_CASH_OR_UPI" : "नकद / यूपीआई के माध्यम से भुगतान करें",
+  "BOARD_THE_FIRST_TAXI" : "जात्री साथी अंचल से पहली टैक्सी में सवार हों"
 }

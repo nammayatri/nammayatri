@@ -384,3 +384,5 @@ getKN script = case script of
   NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD -> "ಸೇರಿಸಲು ಯಾವುದೇ ಸಂಪರ್ಕಗಳು ಯಾವ ಸಾಧನದಲ್ಲಿ ಕಂಡುಬಂದಿಲ್ಲ"
   PERMISSION_DENIED -> "ಅನುಮತಿ ನಿರಾಕರಿಸಲಾಗಿದೆ"
   PERCENTAGE_OF_NOMINAL_FARE -> "~ ಮೂಲ ದರದ 10%"
+  PAY_VIA_CASH_OR_UPI -> ""
+  BOARD_THE_FIRST_TAXI -> ""
