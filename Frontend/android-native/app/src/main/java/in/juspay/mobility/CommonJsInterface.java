@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -148,6 +148,8 @@ import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PatternItem;
+import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.CancellationTokenSource;
@@ -165,6 +167,8 @@ import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.maps.android.PolyUtil;
 import com.google.maps.android.SphericalUtil;
+import com.google.maps.android.data.geojson.GeoJsonLayer;
+import com.google.maps.android.data.geojson.GeoJsonPolygonStyle;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener;
@@ -184,6 +188,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
@@ -288,6 +293,11 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
     public static ArrayList<MediaPlayerView> audioPlayers = new ArrayList<>();
     public static String webViewCallBack = null;
+    public static ArrayList<Marker> pickupPointsZoneMarkers = new ArrayList<Marker>();
+    public static GeoJsonLayer layer;
+    public static List<LatLng> zoneLatLngPoints = new ArrayList<LatLng>();
+    private String regToken, baseUrl;
+    private SharedPreferences sharedPref;
 
     public CommonJsInterface(){
         super();
@@ -2275,6 +2285,14 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    for (Marker m : pickupPointsZoneMarkers) {
+                        m.setVisible(false);
+                    }
+
+                    if(layer != null){
+                        layer.removeLayerFromMap();
+                    }
+
                     googleMap.setOnCameraMoveListener(null);
                     googleMap.setOnCameraIdleListener(null);
                 }
@@ -2297,6 +2315,216 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             }));
         } catch (Exception e){
             Log.i(LOG_TAG, "Enable My Location on GoogleMap error",e);
+        }
+    }
+
+    public Location getNearestPoint(double lat, double lng, JSONArray path) throws JSONException {
+
+        Location locationA = new Location("point A");
+        locationA.setLatitude(lat);
+        locationA.setLongitude(lng);
+
+        double minDist = 10000000000.0;
+
+        Location location = new Location("final point");
+
+        for(int i=0;i<path.length();i++) {
+            JSONObject a = path.getJSONObject(i);
+            double px = (Double) a.get("lat");
+            double py = (Double) a.get("lng");
+
+            Location locationB = new Location("point B");
+            locationB.setLatitude(px);
+            locationB.setLongitude(py);
+
+            float distance = locationA.distanceTo(locationB);
+
+            if(distance<minDist){
+                minDist = distance;
+                location = locationB;
+            }
+        }
+        return location;
+    }
+
+    public void drawMarkers(double lat , double lng, String name) {
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    MarkerOptions markerOptionsObj = new MarkerOptions()
+                                                .title("ny_ic_zone_pickup_marker")
+                                                .position(new LatLng(lat,lng))
+                                                .anchor(0.49f, 0.78f)
+                                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(name,"ny_ic_zone_pickup_marker")));
+                    Marker m = googleMap.addMarker(markerOptionsObj);
+                    pickupPointsZoneMarkers.add(m);
+                } catch (Exception e) {
+                    Log.d("error on pickup markers", e.toString());
+                }
+            }
+        });
+    }
+
+
+    public void drawPolygon(String geoJson) throws JSONException {
+        try {
+            JSONObject geo = new JSONObject(geoJson);
+            layer = new GeoJsonLayer(googleMap, geo);
+            GeoJsonPolygonStyle polyStyle = layer.getDefaultPolygonStyle();
+            polyStyle.setFillColor(Color.argb(10,0, 102, 255));
+            polyStyle.setStrokeWidth(0);
+            layer.addLayerToMap();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    @JavascriptInterface
+    public void locateOnMap (boolean goToCurrentLocation, final String lat, final String lon, String geoJson, String points){
+        try {
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        drawPolygon(geoJson);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    removeMarker("ny_ic_customer_current_location");
+                    if(goToCurrentLocation){
+                        LatLng latLng = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                    }else{
+                        LatLng latLng = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17.0f));
+                        googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
+                    }
+                    googleMap.setOnCameraIdleListener(new GoogleMap.OnCameraIdleListener() {
+                        @Override
+                        public void onCameraIdle() {
+                            double lat = (CommonJsInterface.this.googleMap.getCameraPosition().target.latitude);
+                            double lng = (CommonJsInterface.this.googleMap.getCameraPosition().target.longitude);
+
+                            ExecutorService executor = Executors.newSingleThreadExecutor();
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            executor.execute(() -> {
+                                try {
+                                    new Thread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Boolean res =  isPointInside(lat, lng);
+                                            handler.post(() -> {
+                                                try {
+                                                    if(res){
+                                                        JSONArray zonePoints = new JSONArray(points);
+                                                        Location nearestPickupPoint = getNearestPoint(lat, lng, zonePoints);
+
+                                                        for (Marker m : pickupPointsZoneMarkers) {
+                                                            m.setVisible(false);
+                                                        }
+
+                                                        for(int i=0;i<zonePoints.length();i++){
+                                                            if(SphericalUtil.computeDistanceBetween(CommonJsInterface.this.googleMap.getCameraPosition().target, new LatLng((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng")))<=1){
+                                                                drawMarkers((Double) zonePoints.getJSONObject(i).get("lat"),(Double) zonePoints.getJSONObject(i).get("lng"),  (String)zonePoints.getJSONObject(i).get("name"));
+                                                            }
+                                                            else{
+                                                                drawMarkers((Double) zonePoints.getJSONObject(i).get("lat"),(Double) zonePoints.getJSONObject(i).get("lng"), "");
+                                                            }
+                                                        }
+
+                                                        if(SphericalUtil.computeDistanceBetween(CommonJsInterface.this.googleMap.getCameraPosition().target, new LatLng(nearestPickupPoint.getLatitude(), nearestPickupPoint.getLongitude()))>1){
+                                                            animateCamera(nearestPickupPoint.getLatitude(), nearestPickupPoint.getLongitude(),18.0f);
+                                                        }
+                                                    }
+                                                    else {
+                                                        for (Marker m : pickupPointsZoneMarkers) {
+                                                            m.setVisible(false);
+                                                        }
+                                                    }
+                                                } catch (JSONException e) {
+                                                    e.printStackTrace();
+                                                }
+                                                executor.shutdown();
+                                            });
+                                        }
+                                    }).start();
+                                } catch (Exception e) {
+                                    Log.e ("api response error",e.toString());
+                                }
+                            });
+                            if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null){
+                                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, "LatLon", lat, lng);
+                                Log.e(LOG_TAG, javascript);
+                                dynamicUI.addJsToWebView(javascript);
+                            }
+                        }
+                    });
+                    if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && goToCurrentLocation) {
+                        LatLng latLngObjMain = new LatLng(lastLatitudeValue, lastLongitudeValue);
+                        CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                    }else{
+                        LatLng latLngObjMain = new LatLng(Double.parseDouble(lat), Double.parseDouble(lon));
+                        CommonJsInterface.this.googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLngObjMain, 17.0f));
+                        googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom + 2.0f));
+                    }
+                }
+            });
+        } catch (Exception e) {
+            Log.i(LOG_TAG, "LocateOnMap error for ", e);
+        }
+    }
+
+    private Boolean isPointInside(Double lat, Double lng) {
+        StringBuilder result = new StringBuilder();
+        sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        regToken = sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null");
+        baseUrl = sharedPref.getString("BASE_URL", "null");
+        String version = sharedPref.getString("VERSION_NAME", "null");
+        try {
+            String url = baseUrl + "/serviceability/origin";
+            HttpURLConnection connection = (HttpURLConnection) (new URL(url).openConnection());
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("token", regToken);
+            connection.setRequestProperty("x-client-version", version);
+
+            JSONObject payload = new JSONObject();
+
+            JSONObject latLng = new JSONObject();
+            latLng.put("lat", lat);
+            latLng.put("lon", lng);
+            payload.put("location", latLng);
+
+            OutputStream stream = connection.getOutputStream();
+            stream.write(payload.toString().getBytes());
+            connection.connect();
+            int respCode = connection.getResponseCode();
+            InputStreamReader respReader;
+            if ((respCode < 200 || respCode >= 300) && respCode != 302) {
+                respReader = new InputStreamReader(connection.getErrorStream());
+                BufferedReader in = new BufferedReader(respReader);
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    result.append(inputLine);
+                }
+                JSONObject errorPayload = new JSONObject(result.toString());
+            } else {
+                respReader = new InputStreamReader(connection.getInputStream());
+                BufferedReader in = new BufferedReader(respReader);
+                String inputLine;
+                while ((inputLine = in.readLine()) != null) {
+                    result.append(inputLine);
+                }
+                JSONObject res = new JSONObject(String.valueOf(result));
+                System.out.println( res.getString("serviceable") + "my point result");
+                return  true;
+            }
+
+            return false;
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -2405,7 +2633,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
     private Bitmap getMarkerBitmapFromView(String locationName, String imageName) {
 
-        View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate(R.layout.marker_label_layout, null);
+        View customMarkerView = ((LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE)).inflate( imageName.equals("ny_ic_zone_pickup_marker") ? R.layout.zone_label_layout :  R.layout.marker_label_layout, null);
         TextView label = customMarkerView.findViewById(R.id.marker_text);
         if(locationName.equals("")){
             label.setVisibility(customMarkerView.GONE);
@@ -2420,7 +2648,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         try {
             if(imageName.equals("ny_ic_dest_marker") ){
                 pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_dest_marker));
-            }else{
+            } else if(imageName.equals("ny_ic_zone_pickup_marker")){
+                pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_zone_pickup_marker));
+            }
+            else{
                 pointer.setImageDrawable(context.getResources().getDrawable(R.drawable.ny_ic_src_marker));
             }
         }catch (Exception e){
