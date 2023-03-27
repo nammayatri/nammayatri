@@ -23,10 +23,13 @@ import Data.Newtype (class Newtype)
 import Foreign (ForeignError(..), fail)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
-import Prelude (class Show, show, ($), (<$>))
+import Prelude (class Show, show, ($), (<$>), (>>=))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Types.EndPoint as EP
+import Foreign.Index (readProp)
+import Control.Monad.Except (runExcept)
+import Data.Either (Either(..))
 
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorPayload
@@ -1504,14 +1507,14 @@ newtype FlowStatusRes = FlowStatusRes
   , oldStatus :: Maybe FlowStatus
   }
 
-newtype FlowStatus = FlowStatus 
-  { status :: String 
-  , requestId :: Maybe String 
-  , validTill :: Maybe String 
-  , estimateId :: Maybe String 
-  , bookingId :: Maybe String
-  , rideId :: Maybe String 
-  }
+data FlowStatus = IDLE {}
+                | SEARCHING { requestId :: String , validTill :: String } 
+                | GOT_ESTIMATE { requestId :: String , validTill :: String }
+                | WAITING_FOR_DRIVER_OFFERS { validTill :: String , estimateId :: String }
+                | DRIVER_OFFERED_QUOTE { validTill :: String , estimateId :: String } 
+                | WAITING_FOR_DRIVER_ASSIGNMENT { bookingId :: String , validTill :: String }
+                | RIDE_ASSIGNED { rideId :: String } 
+                | PENDING_RATING { rideId :: String }
 
 instance makeFlowStatusReq :: RestEndpoint FlowStatusReq FlowStatusRes where
     makeRequest reqBody headers = defaultMakeRequest GET (EP.flowStatus "") headers reqBody
@@ -1531,11 +1534,41 @@ instance decodeFlowStatusRes :: Decode FlowStatusRes where decode = defaultDecod
 instance encodeFlowStatusRes :: Encode FlowStatusRes where encode = defaultEncode
 
 derive instance genericFlowStatus :: Generic FlowStatus _
-derive instance newtypeFlowStatus:: Newtype FlowStatus _
-instance standardEncodeFlowStatus :: StandardEncode FlowStatus where standardEncode (FlowStatus req) = standardEncode req
 instance showFlowStatus :: Show FlowStatus where show = genericShow
-instance decodeFlowStatus :: Decode FlowStatus where decode = defaultDecode
-instance encodeFlowStatus :: Encode FlowStatus where encode = defaultEncode
+instance decodeFlowStatus :: Decode FlowStatus 
+  where 
+    decode body = case (runExcept $ (readProp "status" body) >>= decode) of 
+                    Right status -> case status of 
+                                      "IDLE"                          -> (IDLE <$> decode body)
+                                      "SEARCHING"                     -> (SEARCHING <$> decode body)
+                                      "GOT_ESTIMATE"                  -> (GOT_ESTIMATE <$> decode body)
+                                      "WAITING_FOR_DRIVER_OFFERS"     -> (WAITING_FOR_DRIVER_OFFERS <$> decode body)
+                                      "DRIVER_OFFERED_QUOTE"          -> (DRIVER_OFFERED_QUOTE <$> decode body)
+                                      "WAITING_FOR_DRIVER_ASSIGNMENT" -> (WAITING_FOR_DRIVER_ASSIGNMENT <$> decode body)
+                                      "RIDE_ASSIGNED"                 -> (RIDE_ASSIGNED <$> decode body)
+                                      "PENDING_RATING"                -> (PENDING_RATING <$> decode body) 
+                                      _                               -> (fail $ ForeignError "Unknown response")
+                    Left err     -> (fail $ ForeignError "Unknown response")
+instance encodeFlowStatus :: Encode FlowStatus 
+  where 
+    encode (IDLE body) = encode body
+    encode (SEARCHING body) = encode body
+    encode (GOT_ESTIMATE body) = encode body
+    encode (WAITING_FOR_DRIVER_OFFERS body) = encode body
+    encode (DRIVER_OFFERED_QUOTE body) = encode body
+    encode (WAITING_FOR_DRIVER_ASSIGNMENT body) = encode body
+    encode (RIDE_ASSIGNED body) = encode body
+    encode (PENDING_RATING body) = encode body
+instance standardEncodeFlowStatus :: StandardEncode FlowStatus
+  where
+    standardEncode (IDLE body) = standardEncode body
+    standardEncode (SEARCHING body) = standardEncode body
+    standardEncode (GOT_ESTIMATE body) = standardEncode body
+    standardEncode (WAITING_FOR_DRIVER_OFFERS body) = standardEncode body
+    standardEncode (DRIVER_OFFERED_QUOTE body) = standardEncode body
+    standardEncode (WAITING_FOR_DRIVER_ASSIGNMENT body) = standardEncode body
+    standardEncode (RIDE_ASSIGNED body) = standardEncode body
+    standardEncode (PENDING_RATING body) = standardEncode body
 
 ----------------------------------------------------------------------- notifyFlowEvent api -------------------------------------------------------------------
 
