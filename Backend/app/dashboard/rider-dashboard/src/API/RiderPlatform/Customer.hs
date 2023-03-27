@@ -36,11 +36,11 @@ import Tools.Auth.Merchant
 
 type API =
   "customer"
-    :> ( ApiAuth 'APP_BACKEND 'READ_ACCESS 'CUSTOMERS
+    :> ( ApiAuth 'APP_BACKEND 'CUSTOMERS 'CUSTOMER_LIST
            :> BAP.CustomerListAPI
-           :<|> ApiAuth 'APP_BACKEND 'WRITE_ACCESS 'CUSTOMERS
+           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CUSTOMER_UPDATE
              :> BAP.CustomerUpdateAPI
-           :<|> ApiAuth 'APP_BACKEND 'WRITE_ACCESS 'CUSTOMERS
+           :<|> ApiAuth 'APP_BACKEND 'CUSTOMERS 'CUSTOMER_DELETE
              :> BAP.CustomerDeleteAPI
        )
 

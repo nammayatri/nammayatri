@@ -44,27 +44,27 @@ type API =
        )
 
 type MerchantUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MERCHANT_UPDATE
     :> Common.MerchantUpdateAPI
 
 type MapsServiceConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE
     :> Common.MapsServiceConfigUpdateAPI
 
 type MapsServiceUsageConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE
     :> Common.MapsServiceUsageConfigUpdateAPI
 
 type SmsServiceConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'SMS_SERVICE_CONFIG_UPDATE
     :> Common.SmsServiceConfigUpdateAPI
 
 type SmsServiceUsageConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE
     :> Common.SmsServiceUsageConfigUpdateAPI
 
 type VerificationServiceConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'VERIFICATION_SERVICE_CONFIG_UPDATE
     :> Common.VerificationServiceConfigUpdateAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

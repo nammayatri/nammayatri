@@ -16,7 +16,7 @@
 module Tools.Auth.Api (module Tools.Auth.Api, module Reexport) where
 
 import Data.Singletons.TH
-import Domain.Types.AccessMatrix as Reexport (ApiAccessType (..), ApiEntity (..))
+import Domain.Types.AccessMatrix as Reexport (ApiEntity (..), UserActionType (..))
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -38,16 +38,16 @@ import Tools.Servant.HeaderAuth
 
 instance
   SanitizedUrl (sub :: Type) =>
-  SanitizedUrl (ApiAuth sn at ae :> sub)
+  SanitizedUrl (ApiAuth sn ae uat :> sub)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 -- | Performs token verification with checking api access level.
-type ApiAuth sn at ae = HeaderAuthWithPayload "token" VerifyApi (ApiPayload sn at ae)
+type ApiAuth sn ae uat = HeaderAuthWithPayload "token" VerifyApi (ApiPayload sn ae uat)
 
 data VerifyApi
 
-data ApiPayload (sn :: DSN.ServerName) (at :: DMatrix.ApiAccessType) (ae :: DMatrix.ApiEntity)
+data ApiPayload (sn :: DSN.ServerName) (ae :: DMatrix.ApiEntity) (uat :: DMatrix.UserActionType)
 
 data ApiTokenInfo = ApiTokenInfo
   { personId :: Id DP.Person,
@@ -80,31 +80,29 @@ verifyApi requiredAccessLevel token = do
   pure ApiTokenInfo {personId = verifiedPersonId, merchant = verifiedMerchant}
 
 instance
-  forall (sn :: DSN.ServerName) (at :: DMatrix.ApiAccessType) (ae :: DMatrix.ApiEntity).
-  (SingI sn, SingI at, SingI ae) =>
-  (VerificationPayload DMatrix.ApiAccessLevel) (ApiPayload sn at ae)
+  forall (sn :: DSN.ServerName) (ae :: DMatrix.ApiEntity) (uat :: DMatrix.UserActionType).
+  (SingI sn, SingI ae, SingI uat) =>
+  (VerificationPayload DMatrix.ApiAccessLevel) (ApiPayload sn ae uat)
   where
   toPayloadType _ =
     DMatrix.ApiAccessLevel
       { serverName = fromSing (sing @sn),
-        apiAccessType = fromSing (sing @at),
-        apiEntity = fromSing (sing @ae)
+        apiEntity = fromSing (sing @ae),
+        userActionType = fromSing (sing @uat)
       }
 
 verifyAccessLevel :: EsqDBFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
 verifyAccessLevel requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntity person.roleId requiredApiAccessLevel.apiEntity
+  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId requiredApiAccessLevel.apiEntity requiredApiAccessLevel.userActionType
   let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
-  unless (checkUserAccess userAccessType requiredApiAccessLevel.apiAccessType) $
+  unless (checkUserAccess userAccessType) $
     throwError AccessDenied
   pure person.id
 
-checkUserAccess :: DMatrix.UserAccessType -> ApiAccessType -> Bool
-checkUserAccess DMatrix.USER_FULL_ACCESS _ = True
-checkUserAccess DMatrix.USER_READ_ACCESS READ_ACCESS = True
-checkUserAccess DMatrix.USER_WRITE_ACCESS WRITE_ACCESS = True
-checkUserAccess _ _ = False
+checkUserAccess :: DMatrix.UserAccessType -> Bool
+checkUserAccess DMatrix.USER_FULL_ACCESS = True
+checkUserAccess DMatrix.USER_NO_ACCESS = False
 
 verifyServer ::
   EsqDBFlow m r =>

@@ -36,7 +36,7 @@ type API =
     :> StuckBookingsCancelAPI
 
 type StuckBookingsCancelAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'RIDES -- 'WRITE_ACCESS 'BOOKINGS ?
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'STUCK_BOOKING_CANCEL -- 'WRITE_ACCESS 'BOOKINGS ?
     :> Common.StuckBookingsCancelAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

@@ -43,23 +43,23 @@ type API =
        )
 
 type MerchantUpdateAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'BECKN_TRANSPORT 'MERCHANT 'MERCHANT_UPDATE
     :> Common.MerchantUpdateAPI
 
 type MapsServiceConfigUpdateAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'BECKN_TRANSPORT 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE
     :> Common.MapsServiceConfigUpdateAPI
 
 type MapsServiceUsageConfigUpdateAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'BECKN_TRANSPORT 'MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE
     :> Common.MapsServiceUsageConfigUpdateAPI
 
 type SmsServiceConfigUpdateAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'BECKN_TRANSPORT 'MERCHANT 'SMS_SERVICE_CONFIG_UPDATE
     :> Common.SmsServiceConfigUpdateAPI
 
 type SmsServiceUsageConfigUpdateAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'BECKN_TRANSPORT 'MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE
     :> Common.SmsServiceUsageConfigUpdateAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

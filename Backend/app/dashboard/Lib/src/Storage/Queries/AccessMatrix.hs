@@ -26,16 +26,18 @@ import Storage.Tabular.AccessMatrix
 create :: DMatrix.AccessMatrixItem -> SqlDB ()
 create = Esq.create
 
-findByRoleIdAndEntity ::
+findByRoleIdAndEntityAndActionType ::
   (Transactionable m) =>
   Id DRole.Role ->
   DMatrix.ApiEntity ->
+  DMatrix.UserActionType ->
   m (Maybe DMatrix.AccessMatrixItem)
-findByRoleIdAndEntity roleId apiEntity = findOne $ do
+findByRoleIdAndEntityAndActionType roleId apiEntity userActionType = findOne $ do
   accessMatrix <- from $ table @AccessMatrixT
   where_ $
     accessMatrix ^. AccessMatrixRoleId ==. val (toKey roleId)
       &&. accessMatrix ^. AccessMatrixApiEntity ==. val apiEntity
+      &&. accessMatrix ^. AccessMatrixUserActionType ==. val userActionType
   return accessMatrix
 
 findAllByRoles ::
@@ -61,13 +63,14 @@ findAllByRoleId roleId = do
       accessMatrix ^. AccessMatrixRoleId ==. val (toKey roleId)
     return accessMatrix
 
-updateUserAccessType :: Id DMatrix.AccessMatrixItem -> DMatrix.UserAccessType -> SqlDB ()
-updateUserAccessType accessMatrixItemId userAccessType = do
+updateUserAccessType :: Id DMatrix.AccessMatrixItem -> DMatrix.UserActionType -> DMatrix.UserAccessType -> SqlDB ()
+updateUserAccessType accessMatrixItemId userActionType userAccessType = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
-      [ AccessMatrixUserAccessType =. val userAccessType,
+      [ AccessMatrixUserActionType =. val userActionType,
+        AccessMatrixUserAccessType =. val userAccessType,
         AccessMatrixUpdatedAt =. val now
       ]
     where_ $ tbl ^. AccessMatrixTId ==. val (toKey accessMatrixItemId)

@@ -21,20 +21,70 @@ import Domain.Types.ServerName as DSN
 import Kernel.Prelude
 import Kernel.Types.Id
 
--------- Possible user access levels for helper API --------
+-------- Possible user action for helper API --------
 
 data UserAccessType
-  = USER_READ_ACCESS
-  | USER_WRITE_ACCESS
-  | USER_FULL_ACCESS
+  = USER_FULL_ACCESS
   | USER_NO_ACCESS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data UserActionType
+  = DOCUMENTS_INFO
+  | LIST
+  | ACTIVITY
+  | ENABLE
+  | DISABLE
+  | BLOCK
+  | UNBLOCK
+  | LOCATION
+  | INFO
+  | DELETE_DRIVER
+  | UNLINK_VEHICLE
+  | END_RC_ASSOCIATION
+  | UNLINK_DL
+  | UPDATE_PHONE_NUMBER
+  | ADD_VEHICLE
+  | UPDATE_DRIVER_NAME
+  | STUCK_BOOKING_CANCEL
+  | REFERRAL_PROGRAM_PASSWORD_UPDATE
+  | REFERRAL_PROGRAM_LINK_CODE
+  | ISSUE_LIST
+  | ISSUE_UPDATE
+  | ISSUE_ADD_COMMENT
+  | MERCHANT_UPDATE
+  | MAPS_SERVICE_CONFIG_UPDATE
+  | MAPS_SERVICE_USAGE_CONFIG_UPDATE
+  | SMS_SERVICE_CONFIG_UPDATE
+  | SMS_SERVICE_USAGE_CONFIG_UPDATE
+  | VERIFICATION_SERVICE_CONFIG_UPDATE
+  | UPLOAD_FILE
+  | ADD_LINK
+  | ADD_MESSAGE
+  | SEND_MESSAGE
+  | MESSAGE_LIST
+  | MESSAGE_INFO
+  | MESSAGE_DELIVERY_INFO
+  | MESSAGE_RECEIVER_LIST
+  | RIDE_LIST
+  | RIDE_ROUTE
+  | RIDE_START
+  | RIDE_END
+  | RIDE_CANCEL
+  | RIDE_INFO
+  | RIDE_SYNC
+  | CUSTOMER_LIST
+  | CUSTOMER_UPDATE
+  | CUSTOMER_DELETE
+  | DOCUMENT_LIST
+  | GET_DOCUMENT
+  | UPLOAD_DOCUMENT
+  | REGISTER_DL
+  | REGISTER_RC
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+genSingletons [''UserActionType]
+
 -------- Required access levels for helper api --------
-
-data ApiAccessType = READ_ACCESS | WRITE_ACCESS
-
-genSingletons [''ApiAccessType]
 
 data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -43,8 +93,8 @@ genSingletons [''ApiEntity]
 
 data ApiAccessLevel = ApiAccessLevel
   { serverName :: DSN.ServerName,
-    apiAccessType :: ApiAccessType,
-    apiEntity :: ApiEntity
+    apiEntity :: ApiEntity,
+    userActionType :: UserActionType
   }
 
 -------- Access Matrix item --------
@@ -56,6 +106,7 @@ data AccessMatrixItem = AccessMatrixItem
     roleId :: Id DRole.Role,
     apiEntity :: ApiEntity,
     userAccessType :: UserAccessType,
+    userActionType :: UserActionType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -72,7 +123,8 @@ data AccessMatrixRowAPIEntity = AccessMatrixRowAPIEntity
 
 data AccessMatrixItemAPIEntity = AccessMatrixItemAPIEntity
   { apiEntity :: ApiEntity,
-    userAccessType :: UserAccessType
+    userAccessType :: UserAccessType,
+    userActionType :: UserActionType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

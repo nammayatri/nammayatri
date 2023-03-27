@@ -50,7 +50,7 @@ type IssueCategoryListAPI =
     :> Common.IssueCategoryListAPI
 
 type IssueListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'ISSUE
+  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_LIST
     :> Common.IssueListAPI
 
 type IssueInfoAPI =
@@ -58,11 +58,11 @@ type IssueInfoAPI =
     :> Common.IssueInfoAPI
 
 type IssueUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'ISSUE
+  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_UPDATE
     :> Common.IssueUpdateAPI
 
 type IssueAddCommentAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'ISSUE
+  ApiAuth 'DRIVER_OFFER_BPP 'ISSUE 'ISSUE_ADD_COMMENT
     :> Common.IssueAddCommentAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

@@ -57,67 +57,67 @@ type API =
        )
 
 type DriverDocumentsInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DOCUMENTS_INFO
     :> Common.DriverDocumentsInfoAPI
 
 type DriverListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'LIST
     :> Common.DriverListAPI
 
 type DriverActivityAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'ACTIVITY
     :> Common.DriverActivityAPI
 
 type EnableDriverAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'ENABLE
     :> Common.EnableDriverAPI
 
 type DisableDriverAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DISABLE
     :> Common.DisableDriverAPI
 
 type BlockDriverAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'BLOCK
     :> Common.BlockDriverAPI
 
 type UnblockDriverAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNBLOCK
     :> Common.UnblockDriverAPI
 
 type DriverLocationAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'LOCATION
     :> Common.DriverLocationAPI
 
 type DriverInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'INFO
     :> Common.DriverInfoAPI
 
 type DeleteDriverAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'DELETE_DRIVER
     :> Common.DeleteDriverAPI
 
 type UnlinkVehicleAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNLINK_VEHICLE
     :> Common.UnlinkVehicleAPI
 
 type EndRCAssociationAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'END_RC_ASSOCIATION
     :> Common.EndRCAssociationAPI
 
 type UnlinkDLAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNLINK_DL
     :> Common.UnlinkDLAPI
 
 type UpdatePhoneNumberAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_PHONE_NUMBER
     :> Common.UpdatePhoneNumberAPI
 
 type AddVehicleAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'ADD_VEHICLE
     :> Common.AddVehicleAPI
 
 type UpdateDriverNameAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UPDATE_DRIVER_NAME
     :> Common.UpdateDriverNameAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
