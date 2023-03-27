@@ -24,7 +24,7 @@ public class YoutubeVideoView extends AppCompatActivity {
         Bundle newBundle = getIntent().getExtras();
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        if (newBundle.getString("videoType").equals("VIDEO")) {
+        if (newBundle != null && newBundle.getString("videoType").equals("VIDEO")) {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         }else{
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
@@ -39,7 +39,9 @@ public class YoutubeVideoView extends AppCompatActivity {
         youTubePlayerView.addYouTubePlayerListener(new AbstractYouTubePlayerListener() {
             @Override
             public void onReady(@NonNull YouTubePlayer youTubePlayer) {
-                youTubePlayer.loadVideo(newBundle.getString("videoId"), newBundle.getFloat("videoDuration"));
+                if(newBundle != null){
+                    youTubePlayer.loadVideo(newBundle.getString("videoId"), newBundle.getFloat("videoDuration"));
+                }
             }
 
             @Override

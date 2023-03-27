@@ -1722,6 +1722,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             @Override
             public void run() {
                 WebView webView= (WebView) activity.findViewById(Integer.parseInt(id));
+                if(webView == null) return;
                 webView.setWebViewClient(new WebViewClient(){
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -1755,6 +1756,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if(webView == null) return;
                 if (webView.canGoBack()) {
                     webView.post(new Runnable() {
                         @Override
