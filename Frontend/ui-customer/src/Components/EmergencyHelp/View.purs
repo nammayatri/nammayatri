@@ -347,6 +347,7 @@ showEmergencyContact state push =
           , linearLayout
             [ width MATCH_PARENT
             , gravity RIGHT
+            , visibility if (DA.null state.emergencyContactData) then VISIBLE else GONE
             ][  imageView
                 [ height $ V 12
                 , width $ V 12
