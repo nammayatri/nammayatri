@@ -120,6 +120,8 @@ foreign import toString :: forall a. a -> String
 
 foreign import waitingCountdownTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
 
+foreign import zoneOtpExpiryTimer :: forall action. Int -> Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
+
 foreign import convertUTCtoISC :: String -> String -> String
 
 foreign import setRefreshing :: String -> Boolean -> Unit

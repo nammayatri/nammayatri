@@ -384,3 +384,5 @@ getHI script = case script of
   NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD -> "जोड़ने के लिए कोई संपर्क नहीं बचा है।"
   PERMISSION_DENIED -> "अनुमति नहीं दी गई"
   PERCENTAGE_OF_NOMINAL_FARE -> "~ बेस फेयर का 10%"
+  PAY_VIA_CASH_OR_UPI -> ""
+  BOARD_THE_FIRST_TAXI -> ""

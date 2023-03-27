@@ -366,5 +366,7 @@ const bengaliStrings = {
   "SELECTED_CONTACT_IS_INVALID": "নির্বাচিত পরিচিতিটি অবৈধ৷ অনুগ্রহ করে নম্বরটি পুনরায় পরীক্ষা করুন এবং আবার চেষ্টা করুন",
   "CALL_EMERGENCY_CONTACTS": "জরুরী পরিচিতি কল করুন",
   "LIVE_STATS_DASHBOARD": "লাইভ পরিসংখ্যান ড্যাশবোর্ড",
-  "CHECK_OUT_LIVE_STATS": "লাইভ পরিসংখ্যান দেখুন"
+  "CHECK_OUT_LIVE_STATS": "লাইভ পরিসংখ্যান দেখুন",
+  "PAY_VIA_CASH_OR_UPI" : "CASH / UPI এর মাধ্যমে অর্থ প্রদান করুন",
+  "BOARD_THE_FIRST_TAXI" : "যাত্রী সাথী জোন থেকে প্রথম ট্যাক্সিতে চড়ুন"
 }

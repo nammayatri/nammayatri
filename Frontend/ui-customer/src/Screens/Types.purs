@@ -669,6 +669,7 @@ type DriverInfoCard =
   , driverArrived :: Boolean
   , estimatedDistance :: String
   , driverArrivalTime :: Int
+  , createdAt :: String
   }
 
 type RatingCard = 
