@@ -39,11 +39,11 @@ type API =
        )
 
 type ReferralProgramPasswordUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'REFERRAL
+  ApiAuth 'DRIVER_OFFER_BPP 'REFERRAL 'REFERRAL_PROGRAM_PASSWORD_UPDATE
     :> Common.ReferralProgramPasswordUpdateAPI
 
 type ReferralProgramLinkCodeAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'REFERRAL
+  ApiAuth 'DRIVER_OFFER_BPP 'REFERRAL 'REFERRAL_PROGRAM_LINK_CODE
     :> Common.ReferralProgramLinkCodeAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

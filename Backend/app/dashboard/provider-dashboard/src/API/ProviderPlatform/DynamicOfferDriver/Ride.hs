@@ -44,31 +44,31 @@ type API =
        )
 
 type RideListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'RIDES
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_LIST
     :> Common.RideListAPI
 
 type RideRouteAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'RIDES
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_ROUTE
     :> Common.RideRouteAPI
 
 type RideStartAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'RIDES
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_START
     :> Common.RideStartAPI
 
 type RideEndAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'RIDES
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_END
     :> Common.RideEndAPI
 
 type RideCancelAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'RIDES
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_CANCEL
     :> Common.RideCancelAPI
 
 type RideInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'RIDES
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_INFO
     :> Common.RideInfoAPI
 
 type RideSyncAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'RIDES
+  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'RIDE_SYNC
     :> Common.RideSyncAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

@@ -44,31 +44,31 @@ type API =
        )
 
 type RideListAPI =
-  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'RIDES
+  ApiAuth 'BECKN_TRANSPORT 'RIDES 'RIDE_LIST
     :> Common.RideListAPI
 
 type RideRouteAPI =
-  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'RIDES
+  ApiAuth 'BECKN_TRANSPORT 'RIDES 'RIDE_ROUTE
     :> Common.RideRouteAPI
 
 type RideStartAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'RIDES
+  ApiAuth 'BECKN_TRANSPORT 'RIDES 'RIDE_START
     :> Common.RideStartAPI
 
 type RideEndAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'RIDES
+  ApiAuth 'BECKN_TRANSPORT 'RIDES 'RIDE_END
     :> Common.RideEndAPI
 
 type RideCancelAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'RIDES
+  ApiAuth 'BECKN_TRANSPORT 'RIDES 'RIDE_CANCEL
     :> Common.RideCancelAPI
 
 type RideInfoAPI =
-  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'RIDES
+  ApiAuth 'BECKN_TRANSPORT 'RIDES 'RIDE_INFO
     :> Common.RideInfoAPI
 
 type RideSyncAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'RIDES
+  ApiAuth 'BECKN_TRANSPORT 'RIDES 'RIDE_SYNC
     :> Common.RideSyncAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

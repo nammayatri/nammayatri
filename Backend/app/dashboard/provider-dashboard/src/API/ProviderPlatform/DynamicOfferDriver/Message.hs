@@ -47,35 +47,35 @@ type API =
        )
 
 type UploadFileAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
+  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'UPLOAD_FILE
     :> Common.UploadFileAPI
 
 type AddLinkAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
+  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'ADD_LINK
     :> Common.AddLinkAPI
 
 type AddMessageAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
+  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'ADD_MESSAGE
     :> Common.AddMessageAPI
 
 type SendMessageAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MESSAGE
+  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'SEND_MESSAGE
     :> Common.SendMessageAPI
 
 type MessageListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
+  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'MESSAGE_LIST
     :> Common.MessageListAPI
 
 type MessageInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
+  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'MESSAGE_INFO
     :> Common.MessageInfoAPI
 
 type MessageDeliveryInfoAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
+  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'MESSAGE_DELIVERY_INFO
     :> Common.MessageDeliveryInfoAPI
 
 type MessageReceiverListAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'READ_ACCESS 'MESSAGE
+  ApiAuth 'DRIVER_OFFER_BPP 'MESSAGE 'MESSAGE_RECEIVER_LIST
     :> Common.MessageReceiverListAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

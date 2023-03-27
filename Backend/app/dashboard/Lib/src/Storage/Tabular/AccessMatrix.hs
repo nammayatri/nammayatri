@@ -28,6 +28,7 @@ import Storage.Tabular.Role (RoleTId)
 
 derivePersistField "Domain.UserAccessType"
 derivePersistField "Domain.ApiEntity"
+derivePersistField "Domain.UserActionType"
 
 mkPersist
   defaultSqlSettings
@@ -36,6 +37,7 @@ mkPersist
       id Text
       roleId RoleTId
       apiEntity Domain.ApiEntity
+      userActionType Domain.UserActionType
       userAccessType Domain.UserAccessType
       createdAt UTCTime
       updatedAt UTCTime
