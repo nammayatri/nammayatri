@@ -30,7 +30,7 @@ view push config =
   , gravity LEFT
   , margin config.margin
   ][  imageView
-        [ imageUrl "ic_line"
+        [ imageWithFallback "ny_ic_line_img,https://assets.juspay.in/nammayatri/images/user/ny_ic_line_img.png"
         , height MATCH_PARENT
         , margin config.lineMargin
         , width (V 1)

@@ -380,3 +380,6 @@ getKN script = case script of
   LIVE_STATS_DASHBOARD -> "ಲೈವ್ ಸ್ಥಿತಿ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್"
   CHECK_OUT_LIVE_STATS -> "ಲೈವ್ ಅಂಕಿಅಂಶಗಳನ್ನು ಪರಿಶೀಲಿಸಿ"
   ADD_ANOTHER_CONTACT -> "ಮತ್ತೊಂದು ಸಂಪರ್ಕವನ್ನು ಸೇರಿಸಿ"
+  EMERGENCY_CONTACS_ADDED_SUCCESSFULLY -> "ತುರ್ತು ಸಂಪರ್ಕಗಳನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸೇರಿಸಲಾಗಿದೆ"
+  NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD -> "ಸೇರಿಸಲು ಯಾವುದೇ ಸಂಪರ್ಕಗಳು ಯಾವ ಸಾಧನದಲ್ಲಿ ಕಂಡುಬಂದಿಲ್ಲ"
+  NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD -> "ಸೇರಿಸಲು ಯಾವುದೇ ಸಂಪರ್ಕಗಳು ಯಾವ ಸಾಧನದಲ್ಲಿ ಕಂಡುಬಂದಿಲ್ಲ"

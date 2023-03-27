@@ -334,6 +334,7 @@ showEmergencyContact state push =
     , orientation VERTICAL
     , margin $ Margin 16 20 16 12
     , visibility if(isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then GONE else VISIBLE
+    , onClick push $ const (if (DA.null state.emergencyContactData) then  AddedEmergencyContacts else NoAction)
     ][  linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -387,7 +388,7 @@ allContactsView state push =
     , width MATCH_PARENT
     , margin $ Margin 0 12 8 0
     , stroke ("1," <> Color.borderColorLight)
-    , padding $ Padding 23 16 23 16
+    , padding $ Padding 13 11 13 11
     , cornerRadius 8.0
     ][  linearLayout
         [ height WRAP_CONTENT
@@ -417,20 +418,27 @@ allContactsView state push =
                    , fontStyle $ FontStyle.semiBold LanguageStyle
                    ]
                   ]
-              , linearLayout
-                [ height  WRAP_CONTENT
-                 , width  MATCH_PARENT
-                 , gravity RIGHT
-                 , onClick push $ const $ CallContactPopUp item
-                ][ textView
-                   [ text $ "Call"
-                   , color Color.green900
-                   , textSize FontSize.a_14
-                   , lineHeight "18"
-                   , fontStyle $ FontStyle.regular LanguageStyle
-                   , margin $ MarginLeft 5
-                   ]
-                 ]
+              , 
+              linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , gravity RIGHT
+              ][
+                linearLayout
+                  [ height  WRAP_CONTENT
+                  , width  WRAP_CONTENT
+                  , onClick push $ const $ CallContactPopUp item
+                  ][ textView
+                    [ text $ (getString CALL)
+                    , color Color.green900
+                    , textSize FontSize.a_14
+                    , lineHeight "18"
+                    , fontStyle $ FontStyle.regular LanguageStyle
+                    , margin $ MarginLeft 5
+                    , padding $ Padding 20 10 20 10
+                    ]
+                  ]
+              ]
           ]
        ]) state.emergencyContactData)
 

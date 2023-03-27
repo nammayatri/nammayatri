@@ -19,7 +19,7 @@ exports.getKeyInSharedPrefKeysConfigEff = function (key) {
 
 exports["validateInputPattern"] = function (input, pattern){
     const reg = new RegExp(pattern,'g');
-    var result = reg.test(input); 
+    var result = reg.test(input);
     console.log("validateInputPattern " + result + " Values :- " + input + " Pattern :- " + pattern);
     return (result);
 }
@@ -91,7 +91,7 @@ exports["secondsToHms"] =  function (d) {
     var hDisplay = h > 0 ? h + (h == 1 ? " hr, " : " hrs, ") : "";
     var mDisplay = m > 0 ? m + (m == 1 ? " min " : " mins ") : "";
     // var sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
-    return hDisplay + mDisplay; //+ sDisplay; 
+    return hDisplay + mDisplay; //+ sDisplay;
 }
 
 exports["getUTCDay"] = function (date){
@@ -110,15 +110,15 @@ exports.requestKeyboardShow = function(id) {
         }, delayInMilliseconds);
     }
   }
-  
-  
+
+
 exports ["setText'"] = function (id) {
     return function (text) {
         return function (){
             setText(id, text, text.length);
         }
     }
-} 
+}
 
 exports["storeCallBackLocateOnMap"] = function (cb) {
   try {
@@ -132,7 +132,7 @@ exports["storeCallBackLocateOnMap"] = function (cb) {
         });
           console.log("In storeCallBackLocateOnMap ---------- + " + action);
           JBridge.storeCallBackLocateOnMap(callback);
-      }    
+      }
   }}
   catch (error){
       console.log("Error occurred in storeCallBackLocateOnMap ------", error);
@@ -148,7 +148,7 @@ exports["storeCallBackCustomer"] = function (cb) {
             });
             console.log("In storeCallBackCustomer ---------- + " + action);
             JBridge.storeCallBackCustomer(callback);
-        }    
+        }
     }}
     catch (error){
         console.log("Error occurred in storeCallBackCustomer ------", error);
@@ -211,14 +211,14 @@ exports["decodeErrorCode"] = function (a) {
       return " ";
     }
   };
-  
+
 exports["decodeErrorMessage"] = function (a) {
 try {
     var errorMessagee = JSON.parse(a).errorMessage;
     if(errorMessagee == null)
     {
     return "";
-    }  
+    }
     return  errorMessagee;
 } catch (e) {
     console.log(e);
@@ -289,7 +289,7 @@ exports ["setRefreshing"] = function (id){
       }
     }
   }
-  
+
 exports ["setEnabled"] = function (id){
   return function (bool){
     if (window.__OS == "ANDROID") {
@@ -309,7 +309,7 @@ exports["convertUTCtoISC"] = function (str) {
 
 
 exports["getExpiryTime"] = function (str1) {
-  return function (str2){ 
+  return function (str2){
     return function (forLostAndFound) {
       var expiry = new Date(str1);
       var d = new Date();
@@ -402,10 +402,10 @@ exports["fetchFromLocalStoreTemp'"] = function(key) {
           var state = JBridge.getKeysInSharedPrefs(key);
           var newState = JSON.parse(state);
           var predictionArray = newState.predictionArray;
-          try {  
+          try {
                 for(var i = 0; i < predictionArray.length; i++) {
                   if (!predictionArray[i].hasOwnProperty("fullAddress"))
-                    { 
+                    {
                       predictionArray[i].fullAddress = {};
                     }
                 }
@@ -413,7 +413,7 @@ exports["fetchFromLocalStoreTemp'"] = function(key) {
           catch(e) {
             console.log(e);
           }
-  
+
           newState["predictionArray"] = predictionArray;
           if (state != "__failed" && state != "(null)") {
             return just(JSON.stringify(newState));
@@ -463,7 +463,7 @@ exports ["withinTimeRange"] = function (startTime) {
   return function (endTime) {
     try {
       var currentTimeString = moment(new Date()).format("HH:mm:ss");
-      return startTime < endTime ? between(currentTimeString, startTime, endTime) : between(currentTimeString, startTime, "23:59:59") || between(currentTimeString, "00:00:01", endTime); 
+      return startTime < endTime ? between(currentTimeString, startTime, endTime) : between(currentTimeString, startTime, "23:59:59") || between(currentTimeString, "00:00:01", endTime);
     }catch (err){
       return false;
     }
@@ -501,7 +501,7 @@ exports["fetchAndUpdateCurrentLocation"] = function (cb) {
           var fallBackCallback = callbackMapper.map(function(){
             cb(fallbackAction)();
           });
-          window.callUICallback(fallBackCallback); 
+          window.callUICallback(fallBackCallback);
         }
       };
     };
@@ -521,7 +521,7 @@ exports["initialWebViewSetUp"] = function (cb) {
             var callback = callbackMapper.map(function (val) {
               cb(action(val))();
             });
-  
+
             return JBridge.initialWebViewSetUp(callback,id);
           } catch (err) {
             console.log("initialWebViewSetUp error " + err);

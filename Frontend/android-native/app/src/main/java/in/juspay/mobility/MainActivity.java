@@ -1,4 +1,4 @@
-/* 
+/*
  *  Copyright 2022-23, Juspay India Pvt Ltd
  *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
@@ -216,9 +216,9 @@ public class MainActivity extends AppCompatActivity {
             if (key != null && key.equals("DRIVER_STATUS"))
             {String status = sharedPref.getString("DRIVER_STATUS", "null");
                 WorkManager mWorkManager = WorkManager.getInstance(getApplicationContext());
-                if (status.equals("null")) 
+                if (status.equals("null"))
                 {
-                    if  (context != null) 
+                    if  (context != null)
                     {
                         Intent locationUpdateIntent = new Intent(context, LocationUpdateService.class);
                         context.stopService(locationUpdateIntent);
@@ -896,7 +896,7 @@ public class MainActivity extends AppCompatActivity {
             JuspayServices juspayServices = this.hyperServices.getJuspayServices();
             if (juspayServices!= null){
                 final SdkTracker sdkTracker = juspayServices.getSdkTracker();
-            
+
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -1000,17 +1000,22 @@ public class MainActivity extends AppCompatActivity {
               }
               break;
           case CommonJsInterface.REQUEST_CONTACTS:
-              if(ContextCompat.checkSelfPermission(MainActivity.getInstance(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED){
-                  String contacts = null;
-                    try {
-                        contacts = getPhoneContacts();
-                        if (juspayServicesGlobal.getDynamicUI() != null){
-                            CommonJsInterface.contactsStoreCall(juspayServicesGlobal.getDuiCallback(), contacts);
-                        }
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-              }else{
+              boolean flag = ContextCompat.checkSelfPermission(MainActivity.getInstance(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
+              String contacts = null;
+              try {
+                  if (flag){
+                      contacts = getPhoneContacts();
+                  } else {
+                      JSONArray flagArray = new JSONArray();
+                      contacts = flagArray.toString();
+                  }
+                  if (juspayServicesGlobal.getDynamicUI() != null) {
+                      CommonJsInterface.contactsStoreCall(juspayServicesGlobal.getDuiCallback(), contacts);
+                  }
+              } catch (JSONException e) {
+                  e.printStackTrace();
+              }
+              if (!flag){
                   Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
               }
               break;
@@ -1037,6 +1042,11 @@ public class MainActivity extends AppCompatActivity {
                 contacts.put(tempPoints);
             }
         }
+
+        JSONObject flagObject = new JSONObject();
+        flagObject.put("name","beckn_contacts_flag");
+        flagObject.put("number","true");
+        contacts.put(flagObject);
         System.out.print("Contacts " + contacts);
         return contacts.toString();
     }

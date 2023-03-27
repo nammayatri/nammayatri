@@ -237,7 +237,7 @@ showEmergencyContactData push config =
                                         , fontStyle $ FontStyle.medium LanguageStyle
                                         ]
                                     , textView
-                                        [ text ("+91 " <> (item.number))
+                                        [ text ((item.number))
                                         , color Color.black700
                                         , textSize FontSize.a_14
                                         , margin (Margin 0 0 0 0)
@@ -254,7 +254,7 @@ showEmergencyContactData push config =
                                     [ imageView
                                         [ height if item.isSelected then V 24 else V 17
                                         , width if item.isSelected then V 24 else V 17
-                                        , imageWithFallback if item.isSelected then "ny_ic_selected_icon,https://assets.juspay.in/nammayatri/images/user/ny_ic_selected_icon" else "ny_ic_outer_circle,https://assets.juspay.in/nammayatri/images/user/ny_ic_outer_circle"
+                                        , imageWithFallback if item.isSelected then "ny_ic_selected_icon,https://assets.juspay.in/nammayatri/images/user/ny_ic_selected_icon.png" else "ny_ic_outer_circle,https://assets.juspay.in/nammayatri/images/user/ny_ic_outer_circle.png"
                                         ]
                                     ]
                                 ]

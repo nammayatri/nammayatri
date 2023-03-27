@@ -381,5 +381,6 @@ getEN script = case script of
   CALL_EMERGENCY_CONTACTS -> "Call Emergency Contacts"
   LIVE_STATS_DASHBOARD -> "Live Stats Dashboard"
   CHECK_OUT_LIVE_STATS -> "Check out live stats"
-
-
+  EMERGENCY_CONTACS_ADDED_SUCCESSFULLY -> "Emergency Contacts Added Successfully"
+  NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD -> "No contacts found on device to add"
+  NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD -> "No contacts left on device to add"
