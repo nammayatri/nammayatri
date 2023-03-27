@@ -52,55 +52,55 @@ type API =
        )
 
 type DriverListAPI =
-  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'LIST
     :> Common.DriverListAPI
 
 type DriverActivityAPI =
-  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'ACTIVITY
     :> Common.DriverActivityAPI
 
 type EnableDriverAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'ENABLE
     :> Common.EnableDriverAPI
 
 type DisableDriverAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'DISABLE
     :> Common.DisableDriverAPI
 
 type BlockDriverAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'BLOCK
     :> Common.EnableDriverAPI
 
 type UnblockDriverAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'UNBLOCK
     :> Common.DisableDriverAPI
 
 type DriverLocationAPI =
-  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'LOCATION
     :> Common.DriverLocationAPI
 
 type DriverInfoAPI =
-  ApiAuth 'BECKN_TRANSPORT 'READ_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'INFO
     :> Common.DriverInfoAPI
 
 type DeleteDriverAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'DELETE_DRIVER
     :> Common.DeleteDriverAPI
 
 type UnlinkVehicleAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'UNLINK_VEHICLE
     :> Common.UnlinkVehicleAPI
 
 type UpdatePhoneNumberAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'UPDATE_PHONE_NUMBER
     :> Common.UpdatePhoneNumberAPI
 
 type AddVehicleAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'ADD_VEHICLE
     :> Common.AddVehicleAPI
 
 type UpdateDriverNameAPI =
-  ApiAuth 'BECKN_TRANSPORT 'WRITE_ACCESS 'DRIVERS
+  ApiAuth 'BECKN_TRANSPORT 'DRIVERS 'UPDATE_DRIVER_NAME
     :> Common.UpdateDriverNameAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API

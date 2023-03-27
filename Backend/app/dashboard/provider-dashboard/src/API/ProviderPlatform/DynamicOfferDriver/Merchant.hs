@@ -50,51 +50,51 @@ type API =
        )
 
 type MerchantUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MERCHANT_UPDATE
     :> Common.MerchantUpdateAPI
 
 type MerchantCommonConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MERCHANT_COMMON_CONFIG_UPDATE
     :> Common.MerchantCommonConfigUpdateAPI
 
 type DriverPoolConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'DRIVER_POOL_CONFIG_UPDATE
     :> Common.DriverPoolConfigUpdateAPI
 
 type DriverPoolConfigCreateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'DRIVER_POOL_CONFIG_CREATE
     :> Common.DriverPoolConfigCreateAPI
 
 type DriverIntelligentPoolConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'DRIVER_INTELLIGENT_POOL_CONFIG_UPDATE
     :> Common.DriverIntelligentPoolConfigUpdateAPI
 
 type OnboardingDocumentConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'ONBOARDING_DOCUMENT_CONFIG_UPDATE
     :> Common.OnboardingDocumentConfigUpdateAPI
 
 type OnboardingDocumentConfigCreateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'ONBOARDING_DOCUMENT_CONFIG_CREATE
     :> Common.OnboardingDocumentConfigCreateAPI
 
 type MapsServiceConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MAPS_SERVICE_CONFIG_UPDATE
     :> Common.MapsServiceConfigUpdateAPI
 
 type MapsServiceUsageConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'MAPS_SERVICE_USAGE_CONFIG_UPDATE
     :> Common.MapsServiceUsageConfigUpdateAPI
 
 type SmsServiceConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'SMS_SERVICE_CONFIG_UPDATE
     :> Common.SmsServiceConfigUpdateAPI
 
 type SmsServiceUsageConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'SMS_SERVICE_USAGE_CONFIG_UPDATE
     :> Common.SmsServiceUsageConfigUpdateAPI
 
 type VerificationServiceConfigUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+  ApiAuth 'DRIVER_OFFER_BPP 'MERCHANT 'VERIFICATION_SERVICE_CONFIG_UPDATE
     :> Common.VerificationServiceConfigUpdateAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
