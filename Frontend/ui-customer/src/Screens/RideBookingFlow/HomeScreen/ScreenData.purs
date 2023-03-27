@@ -231,6 +231,7 @@ dummyDriverInfo =
   , driverArrived : false
   , estimatedDistance : ""
   , driverArrivalTime : 0
+  , createdAt : ""
   }
 
 dummySettingBar :: SettingSideBarState

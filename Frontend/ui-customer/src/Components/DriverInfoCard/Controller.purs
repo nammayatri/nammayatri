@@ -26,6 +26,7 @@ data Action = NoAction
             | CancelRide DriverInfoCardState
             | LocationTracking
             | OpenEmergencyHelp
+            | ZoneOTPExpiryAction String String Int
 
 type DriverInfoCardState = 
   { props :: DriverInfoCardProps
@@ -62,4 +63,8 @@ type DriverInfoCardData =
   , driverArrived :: Boolean
   , estimatedDistance :: String
   , driverArrivalTime :: Int
+  , estimatedDropTime :: String
+  , isSpecialZone :: Boolean
+  , isLocationTracking :: Boolean
+  , bookingCreatedAt :: String
   }

@@ -381,5 +381,7 @@ getEN script = case script of
   CALL_EMERGENCY_CONTACTS -> "Call Emergency Contacts"
   LIVE_STATS_DASHBOARD -> "Live Stats Dashboard"
   CHECK_OUT_LIVE_STATS -> "Check out live stats"
+  PAY_VIA_CASH_OR_UPI -> ""
+  BOARD_THE_FIRST_TAXI -> ""
 
 

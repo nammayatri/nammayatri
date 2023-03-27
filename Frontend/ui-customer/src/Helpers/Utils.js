@@ -4,6 +4,7 @@ const moment = require("moment");
 
 var timerIdDebounce = null;
 var driverWaitingTimerId = null;
+var zoneOtpExpiryTimerId = null;
 var inputForDebounce;
 var timerIdForTimeout;
 var tracking_id = 0;
@@ -265,6 +266,37 @@ exports["waitingCountdownTimer"] = function (startingTime) {
       };
     };
   };
+};
+
+exports["zoneOtpExpiryTimer"] = function (startingTime) {
+  return function(endingTime) {
+    return function (cb) {
+      return function (action) {
+        return function () {
+          if (startingTime >= endingTime){
+            cb(action(zoneOtpExpiryTimerId)("")(0))();
+          } else {
+            var callback = callbackMapper.map(function () {
+              var sec = endingTime - startingTime;
+              if (zoneOtpExpiryTimerId) clearInterval(zoneOtpExpiryTimerId);
+              zoneOtpExpiryTimerId = setInterval(
+                convertInMinutesFromat,
+                1000
+              );
+              function convertInMinutesFromat() {
+                sec--;
+                var minutes = getTwoDigitsNumber(Math.floor(sec / 60));
+                var seconds = getTwoDigitsNumber(sec - minutes * 60);
+                var timeInMinutesFormat = minutes + " : " + seconds;
+                cb(action(zoneOtpExpiryTimerId)(timeInMinutesFormat)(sec))();
+              }
+            });
+          }
+          window.callUICallback(callback);
+        };
+      };
+    };
+  }
 };
 
 exports["clearWaitingTimer"] = function (id){

@@ -366,5 +366,7 @@ const englishStrings = {
   "SELECTED_CONTACT_IS_INVALID": "The selected contact is invalid. Please recheck the number and try again",
   "CALL_EMERGENCY_CONTACTS": "Call Emergency Contacts",
   "LIVE_STATS_DASHBOARD": "Live Stats Dashboard",
-  "CHECK_OUT_LIVE_STATS": "Check out live stats"
+  "CHECK_OUT_LIVE_STATS": "Check out live stats",
+  "PAY_VIA_CASH_OR_UPI" : "Pay via Cash / UPI",
+  "BOARD_THE_FIRST_TAXI" : "Board the first taxi from Jatri Sathi zone"
 }

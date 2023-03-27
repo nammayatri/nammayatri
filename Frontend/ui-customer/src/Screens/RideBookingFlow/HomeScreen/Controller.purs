@@ -42,7 +42,10 @@ import Components.SavedLocationCard.Controller as SavedLocationCardController
 import Components.SearchLocationModel.Controller as SearchLocationModelController
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
+import Control.Monad.Except.Trans (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), filter, null, snoc, length, head, sortBy)
+import Data.Int (toNumber, round)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.Number (fromString)
@@ -53,11 +56,11 @@ import Effect.Aff (launchAff_)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
 import Global (readFloat)
 import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts, goBackPrevWebPage)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, removeAllPolylines, requestKeyboardShow, requestLocation, showDialer, toast, toggleBtnLoader, shareTextMessage, firebaseLogEventWithTwoParams, removeMarker, openUrlInApp)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -72,9 +75,6 @@ import Services.API (EstimateAPIEntity(..), GetDriverLocationResp, GetQuotesRes(
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore)
-import Control.Monad.Except.Trans (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
-import Data.Int (toNumber, round)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -191,6 +191,7 @@ instance loggableAction :: Loggable Action where
       DriverInfoCardController.OpenEmergencyHelp -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "open_emergency_help"
       DriverInfoCardController.SourceToDestinationAC  act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "driver_info_card" "source_to_destination"
       DriverInfoCardController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "driver_info_card" "no_action"
+      _ -> pure unit
     UpdateLocation key lat lon ->  trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_location"
     RateRideButtonActionController act -> case act of
       PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "rate_your_ride" "primary_button"
@@ -772,6 +773,14 @@ eval (DriverArrivedAction driverArrivalTime) state = do
 eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED"
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes, driverArrived = false } }, props { waitingTimeTimerId = timerID } }
+
+eval (DriverInfoCardActionController (DriverInfoCardController.ZoneOTPExpiryAction timerID timeInMinutes seconds)) state = do
+  if seconds <= 0 then do 
+    _ <- pure $ toast "expired"
+    _ <- pure $ clearTimer timerID
+    exit $ NotificationHandler "CANCELLED_PRODUCT" state
+    else
+    continue state { data { driverInfoCardState { waitingTime = timeInMinutes } }, props { waitingTimeTimerId = timerID } }
 
 eval (DriverInfoCardActionController (DriverInfoCardController.Support)) state = do
   _ <- pure $ showDialer (getSupportNumber "")

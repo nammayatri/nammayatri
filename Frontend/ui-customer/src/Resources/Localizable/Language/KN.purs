@@ -380,3 +380,5 @@ getKN script = case script of
   LIVE_STATS_DASHBOARD -> "ಲೈವ್ ಸ್ಥಿತಿ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್"
   CHECK_OUT_LIVE_STATS -> "ಲೈವ್ ಅಂಕಿಅಂಶಗಳನ್ನು ಪರಿಶೀಲಿಸಿ"
   ADD_ANOTHER_CONTACT -> "ಮತ್ತೊಂದು ಸಂಪರ್ಕವನ್ನು ಸೇರಿಸಿ"
+  PAY_VIA_CASH_OR_UPI -> ""
+  BOARD_THE_FIRST_TAXI -> ""
