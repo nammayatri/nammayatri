@@ -20,7 +20,7 @@ import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location)
-import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..))
+import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..),SpecialLocation(..))
 import Data.Array (head)
 
 initData :: HomeScreenState
@@ -64,7 +64,7 @@ initData = {
     , rideDuration : "--"
     , showPreferences : false
     , nearByPickUpPoints : dummyPickUpPoints
-    , pickUpZone : true
+    , pickUpZone : false
     , polygonCoordinates : ""
     },
   --   rating :: Int
@@ -123,9 +123,7 @@ initData = {
     , emergencyHelpModelState : emergencyHelpModalData
     , showLiveDashboard : false
     
-    , defaultPickUpPoint : case head dummyPickUpPoints of
-                              Just item -> item.place
-                              Nothing -> ""
+    , defaultPickUpPoint : ""
     , selectedCar1 : true
     
 }
@@ -305,5 +303,18 @@ dummyPickUpPoints = [
   {place : "Kolkata airport arrival gate 1 ", lat : 12.941156, lng : 77.623510 }, 
   {place : "Kolkata airport arrival gate 2 ", lat : 12.940696, lng : 77.622877 }
 ]
+
+specialLocation :: SpecialLocation
+specialLocation = SpecialLocation{
+    "category" :"",
+    "gates": [],
+    "locationName" : ""
+}
+dummyLocation :: Location
+dummyLocation = {
+  place : "",
+  lat : 0.0,
+  lng : 0.0
+}
 
 

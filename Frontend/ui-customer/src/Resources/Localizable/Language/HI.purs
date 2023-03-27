@@ -381,6 +381,5 @@ getHI script = case script of
   CHECK_OUT_LIVE_STATS -> "लाइव आंकड़े देखें"
   ADD_ANOTHER_CONTACT -> "अन्य संपर्क जोड़ें"
   CHOOSE_YOUR_RIDE -> "अपनी सवारी चुनें"
-  END_RIDE -> "सवारी समाप्त करें"
   BOARD_THE_FIRST_TAXI -> "जात्री साथी \nज़ोन से पहली टैक्सी लें"
   PAY_VIA_CASH_OR_UPI -> "नकद / यूपीआई के माध्यम से भुगतान करें"

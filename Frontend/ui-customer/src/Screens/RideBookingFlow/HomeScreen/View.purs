@@ -87,7 +87,7 @@ import Foreign.Class (class Encode)
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Components.ChooseYourRide as ChooseYourRide
+
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -692,16 +692,13 @@ rideRequestFlowView push state =
         , background Color.transparent
         ]
         [ PrestoAnim.animationSet [ fadeIn true ]
-            $ if (state.props.currentStage == SettingPrice) then
-                if not state.data.pickUpZone then 
-                suggestedPriceView push state
-                else 
-                ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
+            $ if (state.props.currentStage == SettingPrice) then 
+              suggestedPriceView push state 
               else if (state.props.currentStage == ConfirmingLocation) then
                 confirmPickUpLocationView push state
               else
                 emptyTextView state
-        , if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes]) then
+        , if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain ]) then
             (loaderView push state)
           else
             emptyTextView state

@@ -594,6 +594,8 @@ menuButtonConfig state pickUpPoint = let
       }
       , height = V 40
       , id = pickUpPoint.place
+      , lat = pickUpPoint.lat
+      , lng = pickUpPoint.lng
       , leftsidebutton = true
       , padding = PaddingBottom 10 
       , isSelected = (pickUpPoint.place == state.props.defaultPickUpPoint)

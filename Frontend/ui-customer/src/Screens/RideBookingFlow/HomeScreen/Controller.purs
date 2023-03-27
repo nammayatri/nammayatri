@@ -30,8 +30,6 @@ import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Components.ChooseYourRide.Controller as ChooseYourRideController
-import Components.ChooseYourRide as ChooseYourRide
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.QuoteListItem.Controller as QuoteListItemController
 import Components.QuoteListModel.Controller as QuoteListModelController
@@ -45,7 +43,6 @@ import Components.SearchLocationModel.Controller as SearchLocationModelControlle
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
 import Components.MenuButton as MenuButton
-import Components.ChooseVehicle as ChooseVehicleController
 import Data.Array ((!!), filter, null, snoc, length, head, sortBy)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -392,16 +389,7 @@ instance loggableAction :: Loggable Action where
     UpdateLocAndLatLong lat lon-> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_current_loc_lat_and_lon"
     UpdateSavedLoc state -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_saved_loc"
     NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
-    MenuButtonActionController (MenuButtonController.OnClick config) -> trackAppActionClick appId (getScreen HOME_SCREEN) "menu_button" ""
-    (ChooseYourRideAction (ChooseYourRideController.ChooseNonAcVehicleController(ChooseVehicleController.OnClick))) -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "choose_non_ac_vehicle"
-    (ChooseYourRideAction (ChooseYourRideController.ChooseAcVehicleController(ChooseVehicleController.OnClick))) -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "choose_ac_vehicle"
-    (ChooseYourRideAction(ChooseYourRideController.PrimaryButtonActionController(PrimaryButtonController.OnClick))) -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "confirm_location"
-    (ChooseYourRideAction(ChooseYourRideController.NoAction)) -> trackAppActionClick appId (getScreen HOME_SCREEN) "" ""
-    (ChooseYourRideAction (ChooseYourRideController.ChooseNonAcVehicleController(ChooseVehicleController.OnImageClick))) -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "onimageclick"
-    (ChooseYourRideAction (ChooseYourRideController.ChooseNonAcVehicleController(ChooseVehicleController.NoAction))) -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "noaction"
-    (ChooseYourRideAction (ChooseYourRideController.ChooseAcVehicleController(ChooseVehicleController.OnImageClick))) -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "onimageclick"
-    (ChooseYourRideAction (ChooseYourRideController.ChooseAcVehicleController(ChooseVehicleController.NoAction))) -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "noaction"
-    (ChooseYourRideAction(ChooseYourRideController.PrimaryButtonActionController(PrimaryButtonController.NoAction))) -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "noaction"
+    MenuButtonActionController (MenuButtonController.OnClick config) -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "menu_button"
     
 
 data ScreenOutput = LogoutUser
@@ -521,7 +509,6 @@ data Action = NoAction
             | HideLiveDashboard String
             | LiveDashboardAction
             | MenuButtonActionController MenuButtonController.Action
-            | ChooseYourRideAction ChooseYourRideController.Action
             
           
 
@@ -1349,17 +1336,11 @@ eval (UpdateLocAndLatLong lat lng) state = do
     pure NoAction
   ]
 
-eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = continue state{props{defaultPickUpPoint = config.id}}
-
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseNonAcVehicleController(ChooseVehicleController.OnClick)))state = continue state{props{selectedCar1 = true}}
-
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseAcVehicleController(ChooseVehicleController.OnClick)))state = continue state{props{selectedCar1 = false}}
-
-eval (ChooseYourRideAction(ChooseYourRideController.PrimaryButtonActionController(PrimaryButtonController.OnClick)))state = do
-  _ <- pure $ updateLocalStage FindingQuotes
-  let updatedState = state{props{currentStage = FindingQuotes, searchExpire = 90}}
-  updateAndExit (updatedState) (GetQuotes updatedState)
-
+eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = do
+  continueWithCmd state{props{defaultPickUpPoint = config.id,sourceLat = config.lat, sourceLong = config.lng}} [do
+    animateCamera config.lat config.lng 17
+    pure NoAction
+  ]
 eval _ state = continue state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState

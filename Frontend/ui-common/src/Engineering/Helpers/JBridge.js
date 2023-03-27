@@ -1052,7 +1052,6 @@ exports["locateOnMap"] = function(str){
      return function (lon){
       return function (geoJson){
         return function (coodinates){
-           console.log("hey my error")
            JBridge.locateOnMap(str, lat, lon, geoJson, JSON.stringify(coodinates));
            }
           }
