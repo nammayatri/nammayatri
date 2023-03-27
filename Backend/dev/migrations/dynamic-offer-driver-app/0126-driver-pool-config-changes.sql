@@ -61,7 +61,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config OWNER TO atlas_driver_offe
 
 INSERT INTO atlas_driver_offer_bpp.driver_pool_config(
 	merchant_id, min_radius_of_search, max_radius_of_search, radius_step_size, driver_position_info_expiry, intelligent_pool_percentage, actual_distance_threshold, max_driver_quotes_required, driver_quote_limit, driver_request_count_limit, driver_batch_size, min_driver_batch_size, max_number_of_batches, max_parallel_search_requests, pool_sorting_type, single_batch_process_time, trip_distance, created_at, updated_at)
-	VALUES ('favorit0-0000-0000-0000-00000favorit', 5000, 7000, 500, 36000, 50, 7000, 1, 2, 3, 5, 3, 3, 3, 'Intelligent', 0, 0, now(), now());
+	VALUES ('favorit0-0000-0000-0000-00000favorit', 5000, 7000, 500, 36000, 50, 7000, 1, 2, 3, 5, 3, 3, 3, 'Intelligent', 10, 0, now(), now());
 
 INSERT INTO atlas_driver_offer_bpp.driver_pool_config(
 	merchant_id, min_radius_of_search, max_radius_of_search, radius_step_size, driver_position_info_expiry, intelligent_pool_percentage, actual_distance_threshold, max_driver_quotes_required, driver_quote_limit, driver_request_count_limit, driver_batch_size, min_driver_batch_size, max_number_of_batches, max_parallel_search_requests, pool_sorting_type, single_batch_process_time, trip_distance, created_at, updated_at)
