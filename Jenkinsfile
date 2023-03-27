@@ -1,7 +1,3 @@
-// This library is defined in https://github.com/juspay/jenkins-nix-ci
-// and provides: cachixUse, cachixPush, dockerPush
-@Library('jenkins-nix-ci') _
-
 pipeline {
     agent any
     stages {
