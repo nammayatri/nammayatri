@@ -56,6 +56,9 @@ data KeyStore
   | TEST_POLLING_INTERVAL
   | TEST_POLLING_COUNT
   | LIVE_DASHBOARD
+  | FINDING_QUOTES_START_TIME
+  | FINDING_QUOTES_POLLING
+  | FLOW_STATUS_DATA
 
 derive instance genericKeyStore :: Generic KeyStore _
 

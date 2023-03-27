@@ -25,7 +25,7 @@ import Data.Maybe (Maybe)
 import Foreign.Class (class Decode, class Encode)
 import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
-import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Services.API (AddressComponents, BookingLocationAPIEntity, QuoteAPIEntity, Route)
 
 type Contacts = {
@@ -887,3 +887,12 @@ type CurrentLocationDetailsWithDistance =  {
   , distance :: Number
 }
 
+newtype FlowStatusData = FlowStatusData {
+    source :: Location
+  , destination :: Location
+}
+
+derive instance genericFlowStatusData :: Generic FlowStatusData _
+instance showFlowStatusData :: Show FlowStatusData where show = genericShow
+instance encodeFlowStatusData :: Encode FlowStatusData where encode = defaultEncode
+instance decodeFlowStatusData :: Decode FlowStatusData where decode = defaultDecode

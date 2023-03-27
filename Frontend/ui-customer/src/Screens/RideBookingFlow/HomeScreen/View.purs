@@ -46,7 +46,7 @@ import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except.Trans (lift)
 import Data.Array (any, length, mapWithIndex, null, (!!), head, drop) 
 import Data.Either (Either(..))
-import Data.Int (toNumber, fromString)
+import Data.Int (toNumber, fromString, ceil)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (length, split, trim, Pattern(..)) as Str
@@ -64,7 +64,7 @@ import JBridge (drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPe
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (Unit,Ordering,compare, bind, const, discard, map, negate, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (>=), (||))
+import Prelude (Unit,Ordering,compare, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (>=), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, imageWithFallback, webView, url)
@@ -121,9 +121,13 @@ screen initialState =
                 _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 launchAff_ $ flowRunner $ getEstimate GetEstimates 10 1000.0 push initialState
               FindingQuotes -> do
-                _ <- countDown initialState.props.searchExpire "" push SearchExpireCountDown
-                _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
-                launchAff_ $ flowRunner $ getQuotesPolling GetQuotesList Restart (fromMaybe 0 (fromString (getValueToLocalStore TEST_POLLING_COUNT))) (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
+                when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do 
+                  _ <- pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
+                  _ <- countDown initialState.props.searchExpire "" push SearchExpireCountDown
+                  _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
+                  _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+                  let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
+                  launchAff_ $ flowRunner $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
               ConfirmingRide -> launchAff_ $ flowRunner $ confirmRide GetRideConfirmation 5 1000.0 push initialState
               HomeScreen -> do
                 _ <- pure $ removeAllPolylines ""
@@ -1520,49 +1524,44 @@ getEstimate action count duration push state = do
   else
     pure unit
 
-getQuotesPolling :: forall action. (SelectListRes -> action) -> (ErrorResponse -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-getQuotesPolling action retryAction count duration push state = do
-  internetCondition <- liftFlow $ isInternetAvailable unit
-  case (getValueToLocalStore LOCAL_STAGE) of
-    "FindingQuotes" ->
-      if not internetCondition then
-        pure unit
-      else do
-        -- let tempA = (getValueToLocalStore GOT_ONE_QUOTE)
-        let gotQuote = (getValueToLocalStore GOT_ONE_QUOTE)
-        let minimumPollingCount = fromMaybe 0 (fromString (getValueToLocalStore TEST_MINIMUM_POLLING_COUNT))
-        let usableCount = if gotQuote == "TRUE" && count > minimumPollingCount then minimumPollingCount else count
-        if (spy "USABLECOUNT :- " usableCount > 0) then do
-          resp <- selectList (state.props.estimateId)
-          _ <- pure $ printLog "caseId" (state.props.estimateId)
-          case resp of
-            Right response -> do
-              _ <- pure $ printLog "Quote api Results " response
-              let (SelectListRes resp) = response
-              if (resp.bookingId /= Nothing) then do 
-                 doAff do liftEffect $ push $ action response
-              else if not (null ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)) then do
-                if (getValueToLocalStore GOT_ONE_QUOTE == "FALSE") then do
-                  _ <- pure $ firebaseLogEvent "ny_user_received_quotes"
-                  pure unit
-                else pure unit 
-                _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "TRUE"
-                doAff do liftEffect $ push $ action response
-              else
+getQuotesPolling :: forall action. String -> (SelectListRes -> action) -> (ErrorResponse -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+getQuotesPolling pollingId action retryAction count duration push state = do
+  when (pollingId == (getValueToLocalStore TRACKING_ID) && (isLocalStageOn FindingQuotes)) $ do
+    internetCondition <- liftFlow $ isInternetAvailable unit
+    when internetCondition $ do
+      let gotQuote = (getValueToLocalStore GOT_ONE_QUOTE)
+      let minimumPollingCount = fromMaybe 0 (fromString (getValueToLocalStore TEST_MINIMUM_POLLING_COUNT))
+      let usableCount = if gotQuote == "TRUE" && count > minimumPollingCount then minimumPollingCount else count
+      if (spy "USABLECOUNT :- " usableCount > 0) then do
+        resp <- selectList (state.props.estimateId)
+        _ <- pure $ printLog "caseId" (state.props.estimateId)
+        case resp of
+          Right response -> do
+            _ <- pure $ printLog "Quote api Results " response
+            let (SelectListRes resp) = response
+            if (resp.bookingId /= Nothing) then do 
+               doAff do liftEffect $ push $ action response
+            else if not (null ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)) then do
+              if (getValueToLocalStore GOT_ONE_QUOTE == "FALSE") then do
+                _ <- pure $ firebaseLogEvent "ny_user_received_quotes"
                 pure unit
-              void $ delay $ Milliseconds duration
-              getQuotesPolling action retryAction (usableCount - 1) duration push state
-            Left err -> do
-              _ <- pure $ printLog "api error " err
-              doAff do liftEffect $ push $ retryAction err
-              void $ delay $ Milliseconds duration
+              else pure unit 
+              _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "TRUE"
+              doAff do liftEffect $ push $ action response
+            else
               pure unit
-              getQuotesPolling action retryAction (usableCount - 1) duration push state
-        else do
-          let response = SelectListRes { selectedQuotes: Nothing, bookingId : Nothing }
-          _ <- pure $ updateLocalStage QuoteList
-          doAff do liftEffect $ push $ action response
-    _ -> pure unit
+            void $ delay $ Milliseconds duration
+            getQuotesPolling pollingId action retryAction (usableCount - 1) duration push state
+          Left err -> do
+            _ <- pure $ printLog "api error " err
+            doAff do liftEffect $ push $ retryAction err
+            void $ delay $ Milliseconds duration
+            pure unit
+            getQuotesPolling pollingId action retryAction (usableCount - 1) duration push state
+      else do
+        let response = SelectListRes { selectedQuotes: Nothing, bookingId : Nothing }
+        _ <- pure $ updateLocalStage QuoteList
+        doAff do liftEffect $ push $ action response
 
 driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String-> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do

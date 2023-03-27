@@ -45,19 +45,19 @@ import Components.SourceToDestination.Controller as SourceToDestinationControlle
 import Data.Array ((!!), filter, null, snoc, length, head, sortBy)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Data.Number (fromString)
+import Data.Number (fromString) as NUM
 import Data.String as STR
 import Debug.Trace (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
 import Global (readFloat)
-import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts, goBackPrevWebPage)
+import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts, goBackPrevWebPage, getCurrentUTC)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, removeAllPolylines, requestKeyboardShow, requestLocation, showDialer, toast, toggleBtnLoader, shareTextMessage, firebaseLogEventWithTwoParams, removeMarker, openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (/))
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, Visibility(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
@@ -74,7 +74,7 @@ import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, getValueToLocalStoreEff, setValueToLocalStore, getValueToLocalNativeStore)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Int (toNumber, round)
+import Data.Int (toNumber, round, fromString)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -355,7 +355,6 @@ instance loggableAction :: Loggable Action where
     CurrentLocation lat lng -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "current_location"
     SourceToDestinationActionController act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "source_to_destination"
     TrackDriver resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "track_driver"
-    TrackDriverTemp resp str -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "track_driver_temp"
     HandleCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "handle_call_back"
     UpdatePickupLocation  key lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_pickup_location"
     ContinueCmd -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "continue_cmd"
@@ -459,7 +458,6 @@ data Action = NoAction
             | CancelRidePopUpAction CancelRidePopUp.Action
             | PopUpModalAction PopUpModal.Action
             | TrackDriver GetDriverLocationResp
-            | TrackDriverTemp GetRouteResp RideBookingRes
             | HandleCallback
             | UpdatePickupLocation String String String
             | CloseLocationTracking
@@ -582,7 +580,7 @@ eval HandleCallback state = do
 
 eval (UpdateSource lat lng name) state = do
   _ <- pure $ printLog "Name::" name
-  exit $ UpdatedState state { data { source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId}, props { sourceLat = fromMaybe 0.0 (fromString lat), sourceLong = fromMaybe 0.0 (fromString lng) } } true
+  exit $ UpdatedState state { data { source = name, sourceAddress = encodeAddress name [] state.props.sourcePlaceId}, props { sourceLat = fromMaybe 0.0 (NUM.fromString lat), sourceLong = fromMaybe 0.0 (NUM.fromString lng) } } true
 
 eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard =false}}
   
@@ -610,13 +608,13 @@ eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonAct
 
 eval (UpdateLocation key lat lon) state = case key of
   "LatLon" -> do
-    exit $ UpdateLocationName state (fromMaybe 0.0 (fromString lat)) (fromMaybe 0.0 (fromString lon))
+    exit $ UpdateLocationName state (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
   _ -> continue state
 
 eval (UpdatePickupLocation  key lat lon) state = 
   case key of
     "LatLon" -> do 
-      exit $ UpdatePickupName state (fromMaybe 0.0 (fromString lat)) (fromMaybe 0.0 (fromString lon))
+      exit $ UpdatePickupName state (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon))
     _ -> continue state
 
 eval (CheckBoxClick autoAssign) state = do
@@ -713,7 +711,8 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
         updateAndExit updatedState $  (UpdatedSource updatedState)
       SettingPrice -> do 
                         _ <- pure $ updateLocalStage FindingQuotes
-                        let updatedState = state{props{currentStage = FindingQuotes, searchExpire = 90}}
+                        _ <- pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "")
+                        let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
                         updateAndExit (updatedState) (GetQuotes updatedState) 
       _            -> continue state
 
@@ -1004,10 +1003,10 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetLoca
 eval (SearchLocationModelActionController (SearchLocationModelController.UpdateSource lat lng name)) state = do 
   _ <- pure $ hideKeyboardOnNavigation true
   if state.props.isSource == Just true then do 
-    let newState = state{data{source = name,sourceAddress = encodeAddress name [] Nothing},props{ sourceLat= fromMaybe 0.0 (fromString lat),  sourceLong = fromMaybe 0.0 (fromString lng), sourcePlaceId = Nothing}}
+    let newState = state{data{source = name,sourceAddress = encodeAddress name [] Nothing},props{ sourceLat= fromMaybe 0.0 (NUM.fromString lat),  sourceLong = fromMaybe 0.0 (NUM.fromString lng), sourcePlaceId = Nothing}}
     updateAndExit newState $ LocationSelected (fromMaybe dummyListItem newState.data.selectedLocationListItem) false newState
     else do
-      let newState = state{data{destination = name,destinationAddress = encodeAddress name [] Nothing},props{ destinationLat = fromMaybe 0.0 (fromString lat),  destinationLong = fromMaybe 0.0 (fromString lng), destinationPlaceId = Nothing}}
+      let newState = state{data{destination = name,destinationAddress = encodeAddress name [] Nothing},props{ destinationLat = fromMaybe 0.0 (NUM.fromString lat),  destinationLong = fromMaybe 0.0 (NUM.fromString lng), destinationPlaceId = Nothing}}
       updateAndExit newState $ LocationSelected (fromMaybe dummyListItem newState.data.selectedLocationListItem) false newState
    
 eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActionController (QuoteListItemController.Click quote))) state = do
@@ -1092,7 +1091,7 @@ eval (EstimateChangedPopUpController (PopUpModal.OnButton1Click)) state = exit G
 eval (EstimateChangedPopUpController (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ updateLocalStage FindingQuotes
   let
-    updatedState = state { props { currentStage = FindingQuotes, isEstimateChanged = false, searchExpire = 90 } }
+    updatedState = state { props { currentStage = FindingQuotes, isEstimateChanged = false, searchExpire = (getSearchExpiryTime "LazyCheck") } }
   updateAndExit updatedState $ GetQuotes updatedState
 
 eval CloseLocationTracking state = continue state { props { isLocationTracking = false } }
@@ -1198,7 +1197,7 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
       else do
         _ <- pure $ updateLocalStage FindingQuotes
         let
-          updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, currentStage = FindingQuotes, searchExpire = 90 } }
+          updatedState = state { data { suggestedAmount = estimatedPrice }, props { estimateId = estimateId, currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck") } }
         updateAndExit updatedState $ GetQuotes updatedState
 
 eval (GetQuotesList (SelectListRes resp)) state = do 
@@ -1209,7 +1208,7 @@ eval (GetQuotesList (SelectListRes resp)) state = do
               let selectedQuotes = getQuoteList ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)
               _ <- pure $ printLog "vehicle Varient " selectedQuotes
               let filteredQuoteList = filter (\a -> length (filter (\b -> a.id == b.id )state.data.quoteListModelState) == 0 ) selectedQuotes
-              let removeExpired = filter (\a -> length (filter (\b -> a.id == b ) state.props.expiredQuotes) == 0) filteredQuoteList
+              let removeExpired = filter (\a -> a.seconds > 0) filteredQuoteList
               _ <- pure $ spy "quotes" filteredQuoteList
               let newState = state{data{quoteListModelState = state.data.quoteListModelState <> removeExpired },props{isSearchLocation = NoView, isSource = Nothing,currentStage = QuoteList,
                   isPopUp = if state.props.isPopUp == NoPopUp then NoPopUp
@@ -1271,7 +1270,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.UpdateC
 
 eval (UpdateCurrentLocation lat lng) state = updateCurrentLocation state lat lng
 
-eval (CurrentLocation lat lng) state = exit $ UpdatedState state { props { sourceLat = fromMaybe 0.0 (fromString lat), sourceLong = fromMaybe 0.0 (fromString lng) } } false
+eval (CurrentLocation lat lng) state = exit $ UpdatedState state { props { sourceLat = fromMaybe 0.0 (NUM.fromString lat), sourceLong = fromMaybe 0.0 (NUM.fromString lng) } } false
 
 eval (RateCardAction RateCard.Close) state = continue state { props { showRateCard = false } }
 
@@ -1322,7 +1321,7 @@ eval UpdateSourceFromPastLocations state = do
   continue state{data{source = nearestLocation.locationDetails.placeName, sourceAddress = encodeAddress nearestLocation.locationDetails.placeName [] Nothing}}
 
 eval (UpdateLocAndLatLong lat lng) state = do
-  continueWithCmd state{props{sourceLat = (fromMaybe 0.0 (fromString lat)), sourceLong = (fromMaybe 0.0 (fromString lng))}} [do 
+  continueWithCmd state{props{sourceLat = (fromMaybe 0.0 (NUM.fromString lat)), sourceLong = (fromMaybe 0.0 (NUM.fromString lng))}} [do 
     if os == "IOS" then do
       _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 (0.5) (0.9) 
       pure unit 
@@ -1513,7 +1512,7 @@ recenterCurrentLocation state = continueWithCmd state [ do
   ]
 
 updateCurrentLocation :: HomeScreenState -> String -> String -> Eval Action  ScreenOutput HomeScreenState
-updateCurrentLocation state lat lng = exit $ (CheckLocServiceability state (fromMaybe 0.0 (fromString lat )) (fromMaybe 0.0 (fromString lng)))
+updateCurrentLocation state lat lng = exit $ (CheckLocServiceability state (fromMaybe 0.0 (NUM.fromString lat )) (fromMaybe 0.0 (NUM.fromString lng)))
 
 locationSelected :: LocationListItemState -> Boolean -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 locationSelected item addToRecents state = do 
@@ -1562,3 +1561,10 @@ dummySelectedQuotes :: SelectedQuotes
 dummySelectedQuotes = SelectedQuotes {
   selectedQuotes : []
 }
+
+getSearchExpiryTime :: String -> Int
+getSearchExpiryTime dummy = 
+  let count = fromMaybe 0 (fromString (getValueToLocalStore TEST_POLLING_COUNT))
+      interval = (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL)) / 1000.0)
+      searchExpiryTime = round $ (toNumber count) * interval
+  in searchExpiryTime
