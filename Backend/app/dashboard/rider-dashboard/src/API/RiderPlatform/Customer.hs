@@ -42,6 +42,8 @@ type API =
              :> BAP.CustomerUpdateAPI
            :<|> ApiAuth 'APP_BACKEND 'WRITE_ACCESS 'CUSTOMERS
              :> BAP.CustomerDeleteAPI
+           :<|> ApiAuth 'APP_BACKEND 'WRITE_ACCESS 'CUSTOMERS
+             :> BAP.CustomerBlockAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
@@ -49,6 +51,7 @@ handler merchantId =
   listCustomer merchantId
     :<|> updateCustomer merchantId
     :<|> deleteCustomer merchantId
+    :<|> blockCustomer merchantId
 
 buildTransaction ::
   ( MonadFlow m,
@@ -64,12 +67,15 @@ buildTransaction endpoint apiTokenInfo =
 listCustomer ::
   ShortId DM.Merchant ->
   ApiTokenInfo ->
-  Maybe Integer ->
-  Maybe Integer ->
-  FlowHandler Text
-listCustomer merchantShortId apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Text ->
+  FlowHandler Common.CustomerListRes
+listCustomer merchantShortId apiTokenInfo mbLimit mbOffset enabled blocked phone = withFlowHandlerAPI $ do
   checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callRiderApp checkedMerchantId (.customers.customerList) mbLimit mbOffset
+  Client.callRiderApp checkedMerchantId (.customers.customerList) mbLimit mbOffset enabled blocked phone
 
 updateCustomer ::
   ShortId DM.Merchant ->
@@ -93,3 +99,14 @@ deleteCustomer merchantShortId apiTokenInfo customerId = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.DeleteCustomerEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId (.customers.customerDelete) customerId
+
+blockCustomer ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Id Common.Customer ->
+  FlowHandler APISuccess
+blockCustomer merchantShortId apiTokenInfo customerId = withFlowHandlerAPI $ do
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.BlockCustomerEndpoint apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callRiderApp checkedMerchantId (.customers.customerBlock) customerId

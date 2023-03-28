@@ -200,6 +200,7 @@ buildPerson req bundleVersion clientVersion merchantId = do
         language = Nothing,
         isNew = True,
         enabled = True,
+        blocked = False,
         deviceToken = Nothing,
         description = Nothing,
         merchantId = merchantId,

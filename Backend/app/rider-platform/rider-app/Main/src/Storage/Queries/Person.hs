@@ -249,3 +249,50 @@ findByReferralCode referralCode = do
     where_ $
       person ^. PersonReferralCode ==. val (Just referralCode)
     return person
+
+updateBlockedState :: Id Person -> Bool -> SqlDB ()
+updateBlockedState personId isBlocked = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonBlocked =. val isBlocked,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonId ==. val (getId personId)
+
+findAllCustomers ::
+  Transactionable m =>
+  Id Merchant ->
+  Int ->
+  Int ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe DbHash ->
+  m [Person]
+findAllCustomers merchantId limitVal offsetVal mbEnabled mbBlocked mbSearchPhoneDBHash = do
+  Esq.findAll $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonMerchantId ==. (val . toKey $ merchantId)
+        &&. person ^. PersonRole ==. val USER
+        &&. maybe (val True) (\enabled -> person ^. PersonEnabled ==. val enabled) mbEnabled
+        &&. maybe (val True) (\blocked -> person ^. PersonBlocked ==. val blocked) mbBlocked
+        &&. maybe (val True) (\searchStrDBHash -> person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)) mbSearchPhoneDBHash
+    orderBy [asc (person ^. PersonFirstName)]
+    limit $ fromIntegral limitVal
+    offset $ fromIntegral offsetVal
+    pure person
+
+countCustomers :: Transactionable m => Id Merchant -> m Int
+countCustomers merchantId =
+  mkCount <$> do
+    Esq.findAll $ do
+      person <- from $ table @PersonT
+      where_ $
+        person ^. PersonMerchantId ==. val (toKey merchantId)
+          &&. person ^. PersonRole ==. val USER
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0

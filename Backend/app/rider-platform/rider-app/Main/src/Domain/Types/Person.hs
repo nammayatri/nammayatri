@@ -89,6 +89,7 @@ data PersonE e = Person
     language :: Maybe Maps.Language,
     isNew :: Bool,
     enabled :: Bool,
+    blocked :: Bool,
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,

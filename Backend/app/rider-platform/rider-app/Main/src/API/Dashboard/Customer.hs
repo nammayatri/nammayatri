@@ -32,13 +32,10 @@ type API =
     :> ( CustomerListAPI
            :<|> CustomerUpdateAPI
            :<|> CustomerDeleteAPI
+           :<|> CustomerBlockAPI
        )
 
-type CustomerListAPI =
-  "list"
-    :> QueryParam "limit" Integer
-    :> QueryParam "offset" Integer
-    :> Get '[JSON] Text
+type CustomerListAPI = Common.CustomerListAPI
 
 type CustomerUpdateAPI =
   Capture "customerId" (Id DP.Person)
@@ -48,22 +45,25 @@ type CustomerUpdateAPI =
 
 type CustomerDeleteAPI = Common.CustomerDeleteAPI
 
+type CustomerBlockAPI = Common.CustomerBlockAPI
+
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
-  listCustomer merchantId
+  listCustomers merchantId
     :<|> updateCustomer merchantId
     :<|> deleteCustomer merchantId
+    :<|> blockCustomer merchantId
 
-listCustomer ::
+listCustomers ::
   ShortId DM.Merchant ->
-  Maybe Integer ->
-  Maybe Integer ->
-  FlowHandler Text
-listCustomer merchantShortId _ _ = withFlowHandlerAPI $ do
-  _merchant <-
-    QM.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  pure "To be done"
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Maybe Text ->
+  FlowHandler Common.CustomerListRes
+listCustomers merchantShortId mbLimit mbOffset enabled blocked =
+  withFlowHandlerAPI . DPerson.listCustomers merchantShortId mbLimit mbOffset enabled blocked
 
 updateCustomer ::
   ShortId DM.Merchant ->
@@ -81,3 +81,9 @@ deleteCustomer ::
   Id Common.Customer ->
   FlowHandler APISuccess
 deleteCustomer merchantShortId personId = withFlowHandlerAPI $ DPerson.deleteCustomer merchantShortId personId
+
+blockCustomer ::
+  ShortId DM.Merchant ->
+  Id Common.Customer ->
+  FlowHandler APISuccess
+blockCustomer merchantShortId personId = withFlowHandlerAPI $ DPerson.blockCustomer merchantShortId personId

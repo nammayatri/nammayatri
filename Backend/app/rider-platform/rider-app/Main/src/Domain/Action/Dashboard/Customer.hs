@@ -14,14 +14,18 @@
 
 module Domain.Action.Dashboard.Customer
   ( deleteCustomer,
+    blockCustomer,
+    listCustomers,
   )
 where
 
 import qualified "dashboard-helper-api" Dashboard.Common as Common
+import qualified Dashboard.RiderPlatform.Customer as RiderCommon
 import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
+import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Transactionable (Transactionable' (runTransaction), runInReplica)
 import Kernel.Types.APISuccess
@@ -50,3 +54,52 @@ deleteCustomer merchantShortId customerId = do
     QSRL.deleteAllByRiderId personId
     QP.deleteById personId
   pure Success
+
+blockCustomer :: ShortId DM.Merchant -> Id Common.Customer -> Flow APISuccess
+blockCustomer merchantShortId customerId = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+  let personId = cast @Common.Customer @DP.Person customerId
+  customer <-
+    runInReplica $
+      QP.findById personId
+        >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+  -- merchant access checking
+  let merchantId = customer.merchantId
+  unless (merchant.id == merchantId) $ throwError (PersonDoesNotExist personId.getId)
+
+  runTransaction $ do
+    QP.updateBlockedState personId True
+  logTagInfo "dashboard -> blockCustomer : " (show personId)
+  pure Success
+
+listCustomers :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Flow RiderCommon.CustomerListRes
+listCustomers merchantShortId mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
+      offset = fromMaybe 0 mbOffset
+  mbSearchPhoneDBHash <- getDbHash `traverse` mbSearchPhone
+  customers <- runInReplica $ QP.findAllCustomers merchant.id limit offset mbEnabled mbBlocked mbSearchPhoneDBHash
+  items <- mapM buildCustomerListItem customers
+  let count = length items
+  totalCount <- runInReplica $ QP.countCustomers merchant.id
+  let summary = Common.Summary {totalCount, count}
+  pure RiderCommon.CustomerListRes {totalItems = count, summary, customers = items}
+  where
+    maxLimit = 20
+    defaultLimit = 10
+
+buildCustomerListItem :: EncFlow m r => DP.Person -> m RiderCommon.CustomerListItem
+buildCustomerListItem person = do
+  phoneNo <- mapM decrypt person.mobileNumber
+  pure $
+    RiderCommon.CustomerListItem
+      { customerId = cast @DP.Person @Common.Customer person.id,
+        firstName = person.firstName,
+        middleName = person.middleName,
+        lastName = person.lastName,
+        phoneNo,
+        enabled = person.enabled,
+        blocked = person.blocked
+      }
