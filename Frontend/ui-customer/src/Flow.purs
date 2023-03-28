@@ -275,7 +275,7 @@ currentFlowStatus = do
                             false -> (searchExpiryTime - secondsPassed)
         if secondsLeft > 0 then do
           updateLocalStage FindingQuotes
-          setValueToLocalStore AUTO_SELECTING "true"
+          setValueToLocalStore AUTO_SELECTING ""
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
           _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           case (getFlowStatusData "LazyCheck") of 
@@ -288,7 +288,8 @@ currentFlowStatus = do
                      , currentStage = FindingQuotes
                      , searchExpire = secondsLeft
                      , estimateId = estimateId
-                     , rideRequestFlow = true }
+                     , rideRequestFlow = true 
+                     , selectedQuote = Nothing}
                 , data { source = flowStatusData.source.place
                        , destination = flowStatusData.destination.place 
                        , sourceAddress = flowStatusData.sourceAddress
