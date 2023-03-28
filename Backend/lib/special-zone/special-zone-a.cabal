@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.34.6.
 --
 -- see: https://github.com/sol/hpack
 
-name:           special-zone
+name:           special-zone-a
 version:        0.1.0.0
 description:    Please see the README on GitHub
 homepage:       https://github.com/nammayatri/nammayatri#readme
@@ -28,7 +28,7 @@ library
       Lib.Types.SpecialLocation
       Lib.Types.TagCategoryMapping
   other-modules:
-      Paths_special_zone
+      Paths_special_zone_a
   hs-source-dirs:
       src
   default-extensions:

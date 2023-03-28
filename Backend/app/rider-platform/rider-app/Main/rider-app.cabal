@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.34.6.
 --
 -- see: https://github.com/sol/hpack
 
@@ -342,6 +342,7 @@ library
     , servant-openapi3
     , servant-server
     , special-zone
+    , special-zone-a
     , text
     , text-conversions
     , time

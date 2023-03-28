@@ -41,6 +41,8 @@ if [ $ACTION = seed_file ] ; then
     echo 'mock-registry-seed.sql'
   elif [ $SCHEMA = atlas_public_transport ] ; then
     echo 'public-transport-rider-platform-seed.sql'
+  elif [ $SCHEMA = atlas_special_zone ] ; then
+    echo 'special-zone-seed.sql'
   fi
 fi
 
@@ -55,6 +57,8 @@ if [ $ACTION = migration_dir ] ; then
     echo 'mock-registry'
   elif [ $SCHEMA = atlas_public_transport ] ; then
     echo 'public-transport-rider-platform'
+  elif [ $SCHEMA = atlas_special_zone ] ; then
+    echo "atlas-special-zone"
   fi
 fi
 
