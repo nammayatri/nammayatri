@@ -48,7 +48,69 @@
           echo "#### Hoogle running at: http://localhost:8090"
           hoogle serve --local --port 8090
         '';
+        category = "Backend";
       };
+
+      backend-run = {
+        description = "Run the nammayatri backend components.";
+        exec = ''
+          set +x
+          cd ./Backend
+          ${lib.getExe self'.packages.run-nammayatri}
+        '';
+        category = "Backend";
+      };
+
+    };
+
+    process-compose.configs = {
+      run-nammayatri.processes =
+        let
+          localPackagesStatic = lib.mapAttrs
+            (_: p: pkgs.haskell.lib.justStaticExecutables p)
+            (config.haskellProjects.default.outputs.localPackages);
+          exes = with localPackagesStatic; [
+            static-offer-driver-app-allocator
+            rider-app
+            config.haskellProjects.default.outputs.finalPackages.beckn-gateway
+            static-offer-driver-app
+            driver-tracking-healthcheck
+            mock-fcm
+            config.haskellProjects.default.outputs.finalPackages.mock-registry
+            mock-sms
+            mock-idfy
+            public-transport-rider-platform
+            public-transport-search-consumer
+            search-result-aggregator
+            static-offer-driver-app-scheduler
+            scheduler-example # Provides two executables
+            dynamic-offer-driver-app
+            rider-dashboard
+            provider-dashboard
+            image-api-helper
+            driver-offer-allocator
+            kafka-consumers
+          ];
+        in
+        builtins.listToAttrs
+          (lib.concatMap
+            (exe:
+              # TODO: Upstream executable detection in haskell-flake
+              if exe.pname == "scheduler-example"
+              then [
+                (lib.nameValuePair (exe.pname + "-app-exe") {
+                  command = "${exe}/bin/${exe.pname}-app-exe";
+                })
+                (lib.nameValuePair (exe.pname + "-scheduler-exe") {
+                  command = "${exe}/bin/${exe.pname}-scheduler-exe";
+                })
+              ]
+              else [
+                (lib.nameValuePair exe.pname {
+                  command = lib.getExe exe;
+                })
+              ])
+            exes);
     };
 
     packages =
