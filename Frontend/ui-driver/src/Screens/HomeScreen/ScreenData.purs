@@ -81,6 +81,7 @@ initData = {
         showDottedRoute : true,
         currentStage : HomeScreen,
         mapRendered : false,
-        cancelConfirmationPopup : false
+        cancelConfirmationPopup : false,
+        zoneRideBooking : true
     }
 }

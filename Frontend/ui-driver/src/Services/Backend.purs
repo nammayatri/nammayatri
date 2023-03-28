@@ -675,3 +675,20 @@ getPerformanceBT payload = do
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
+
+---------------------------------------- otpRide ---------------------------------------------
+
+otpRide dummyRideOtp payload = do
+        headers <- getHeaders ""
+        withAPIResult (EP.otpRide dummyRideOtp) unwrapResponse $ callAPI headers ((OTPRideRequest dummyRideOtp payload))
+    where
+        unwrapResponse (x) = x
+
+makeOTPRideReq :: String -> Number -> Number -> OTPRideReq
+makeOTPRideReq otp lat lon = OTPRideReq {
+    specialZoneOtpCode: otp,
+    point: LatLong {
+        lat : lat,
+        lon : lon
+        }
+}

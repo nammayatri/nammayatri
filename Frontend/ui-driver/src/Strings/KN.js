@@ -341,5 +341,6 @@ const kannadaStrings = {
     DRIVER_DETAILS : "ಚಾಲಕ ವಿವರಗಳು",
     FOR_UPDATES_SEE_ALERTS : "ನವೀಕರಣಗಳಿಗಾಗಿ ಘೋಷಣೆಗಳನ್ನು ನೋಡಿ",
     SHARE_OPTIONS : "ಹಂಚಿಕೆ ಆಯ್ಕೆಗಳು",
-    ENTER_PASSWORD : "ಪಾಸ್ವರ್ಡ್ ನಮೂದಿಸಿ"
+    ENTER_PASSWORD : "ಪಾಸ್ವರ್ಡ್ ನಮೂದಿಸಿ",
+    OTP : "OTP"
 }

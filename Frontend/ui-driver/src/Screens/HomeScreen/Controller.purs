@@ -121,6 +121,7 @@ instance loggableAction :: Loggable Action where
     ActiveRideAPIResponseAction resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "active_ride_api_response"
     RecenterButtonAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "recenter_btn"
     NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
+    ZoneOtpAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "zone_otp"
 
 
 
@@ -138,6 +139,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | NotifyDriverArrived ST.HomeScreenState
                     | UpdateStage ST.HomeScreenStage ST.HomeScreenState
                     | GoToNotifications
+                    | StartZoneRide ST.HomeScreenState 
 
 data Action = NoAction
             | BackPressed
@@ -165,6 +167,7 @@ data Action = NoAction
             | StatsModelAction StatsModelController.Action
             | RideActiveAction RidesInfo
             | RecenterButtonAction
+            | ZoneOtpAction
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 eval AfterRender state = do 
@@ -242,9 +245,10 @@ eval (InAppOtpModalAction (InAppOtpModal.OnclickTextBox index)) state = do
 eval (InAppOtpModalAction (InAppOtpModal.BackPressed)) state = do 
   continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false} }
 eval (InAppOtpModalAction (InAppOtpModal.OnClickDone text)) state = do 
-    exit $ StartRide state
+    let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
+    exit exitState
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do 
-  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }
+  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do 
   continue $ (state {props {endRidePopUp = true}, data {route = []}})
 eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
@@ -276,7 +280,7 @@ eval (RideActionModalAction (RideActionModal.ButtonTimer seconds id status timer
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {endRidePopUp = false}})
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do 
   _ <- pure $ removeAllPolylines ""
-  updateAndExit state {props {endRidePopUp = false, rideActionModal = false}} $ EndRide state {props {endRidePopUp = false, rideActionModal = false}}
+  updateAndExit state {props {endRidePopUp = false, rideActionModal = false}} $ EndRide state {props {endRidePopUp = false, rideActionModal = false, zoneRideBooking = true}}
 
 eval (CancelRideModalAction (CancelRide.UpdateIndex indexValue)) state = continue state { data = state.data { cancelRideModal  { activeIndex = Just indexValue, selectedReasonCode =  (fromMaybe {reasonCode : "", description : ""} (((state.data.cancelRideModal).cancelRideReasons)Array.!!indexValue) ).reasonCode } } }
 eval (CancelRideModalAction (CancelRide.TextChanged  valId newVal)) state = continue state { data {cancelRideModal { selectedReasonDescription = newVal, selectedReasonCode = "OTHER"}}}
@@ -294,8 +298,8 @@ eval (CancelRideModalAction (CancelRide.Button2 PrimaryButtonController.OnClick)
     case cancelReasonSelected of 
       Just reason -> do 
         _ <- pure $ printLog "inside Just" reason.reasonCode
-        if (reason.reasonCode == "OTHER") then exit $ CancelRide state { props = state.props { cancelRideModalShow = false , cancelConfirmationPopup = false } } else do
-          let newState = state { data = state.data {cancelRideModal = state.data.cancelRideModal { selectedReasonCode = reason.reasonCode , selectedReasonDescription = reason.description  } }, props = state.props { cancelRideModalShow = false, otpAttemptsExceeded = false, cancelConfirmationPopup = false } }
+        if (reason.reasonCode == "OTHER") then exit $ CancelRide state { props = state.props { cancelRideModalShow = false , cancelConfirmationPopup = false, zoneRideBooking = true} } else do
+          let newState = state { data = state.data {cancelRideModal = state.data.cancelRideModal { selectedReasonCode = reason.reasonCode , selectedReasonDescription = reason.description  } }, props = state.props { cancelRideModalShow = false, otpAttemptsExceeded = false, cancelConfirmationPopup = false, zoneRideBooking = true } }
           exit $ CancelRide newState
       Nothing -> do 
         _ <- pure $ printLog "inside Nothing" "."
@@ -343,6 +347,9 @@ eval (TimeUpdate time lat lng) state = do
 eval (RideActiveAction activeRide) state = updateAndExit state { data {activeRide = activeRideDetail state activeRide}} $ UpdateStage ST.RideAccepted state { data {activeRide = activeRideDetail state activeRide}}
 
 eval RecenterButtonAction state = continue state
+
+eval ZoneOtpAction state = do
+  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }
 
 eval _ state = continue state 
 
