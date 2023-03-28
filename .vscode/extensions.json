@@ -1,0 +1,10 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=827846
+  // for the documentation about the extensions.json format
+  "recommendations": [
+    "haskell.haskell",
+    "arrterian.nix-env-selector",
+    "bbenoist.nix",
+    "jnoortheen.nix-ide"
+  ]
+}
