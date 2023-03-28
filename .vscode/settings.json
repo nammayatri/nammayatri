@@ -1,0 +1,8 @@
+{
+  "editor.formatOnType": true,
+  "editor.formatOnSave": true,
+  "nixEnvSelector.nixFile": "${workspaceRoot}/shell.nix",
+  // "nixEnvSelector.args": "--pure"
+  "haskell.formattingProvider": "ormolu",
+  "haskell.manageHLS": "PATH"
+}
