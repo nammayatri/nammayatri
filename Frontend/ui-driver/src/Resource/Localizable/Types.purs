@@ -353,6 +353,7 @@ data STR = LETS_GET_STARTED
         | ABOUT_TEXT
         | YOUR_VEHICLE
         | BOOKING_OPTIONS
+        | OTP
 
 getStringFromEnum :: STR -> String
 getStringFromEnum key = case key of 
@@ -694,3 +695,4 @@ getStringFromEnum key = case key of
     ABOUT_TEXT -> "ABOUT_TEXT"
     YOUR_VEHICLE -> "YOUR_VEHICLE"
     BOOKING_OPTIONS -> "BOOKING_OPTIONS"
+    OTP -> "OTP"

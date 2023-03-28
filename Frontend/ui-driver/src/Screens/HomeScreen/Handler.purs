@@ -49,6 +49,10 @@ homeScreen = do
       _ <- pure $ printLog "lat handler" startRideCurrentLat
       _ <- pure $ printLog "lon handler" startRideCurrentLong
       App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: state.data.activeRide.id, otp : state.props.rideOtp , lat : startRideCurrentLat, lon : startRideCurrentLong})
+    StartZoneRide  state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
+      (Location startZoneRideCurrentLat startZoneRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : state.props.rideOtp , lat : startZoneRideCurrentLat, lon : startZoneRideCurrentLong})
     EndRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       (Location endRideCurrentLat endRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)

@@ -606,7 +606,8 @@ type HomeScreenProps =  {
   showDottedRoute :: Boolean,
   currentStage :: HomeScreenStage,
   mapRendered :: Boolean,
-  cancelConfirmationPopup :: Boolean
+  cancelConfirmationPopup :: Boolean,
+  zoneRideBooking :: Boolean
  }
 
 type Location = {

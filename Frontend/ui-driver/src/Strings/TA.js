@@ -341,5 +341,6 @@ const tamilStrings = {
     DRIVER_DETAILS : "டிரைவர் விவரங்கள்",
     FOR_UPDATES_SEE_ALERTS : "புதுப்பிப்புகளுக்கு, விழிப்பூட்டல்களைப் பார்க்கவும்",
     SHARE_OPTIONS : "பகிர்வு விருப்பங்கள்",
-    ENTER_PASSWORD : "கடவுச்சொல்லை உள்ளிடவும்"
+    ENTER_PASSWORD : "கடவுச்சொல்லை உள்ளிடவும்",
+    OTP : "OTP"
 }

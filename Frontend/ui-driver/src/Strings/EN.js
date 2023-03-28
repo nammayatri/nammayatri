@@ -343,5 +343,6 @@ const englishStrings = {
     SHARE_OPTIONS : "Share Options",
     ENTER_PASSWORD : "Enter Password",
     YOUR_VEHICLE : "Your Vehicle",
-    BOOKING_OPTIONS : "Booking Options"
+    BOOKING_OPTIONS : "Booking Options",
+    OTP : "OTP"
 }

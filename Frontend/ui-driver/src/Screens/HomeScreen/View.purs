@@ -173,6 +173,7 @@ view push state =
                 ][  googleMap state
                   , if not state.props.statusOnline then showOfflineStatus push state else dummyTextView
                   , if not state.props.rideActionModal && state.props.statusOnline then statsModel push state else dummyTextView
+                  , otpButtonView state push
                   ]
               ]
         , bottomNavBar push state 
@@ -184,6 +185,44 @@ view push state =
       ] <> if state.props.cancelRideModalShow then [cancelRidePopUpView push state] else [] 
         <>  if state.props.cancelConfirmationPopup then [cancelConfirmation push state] else []
         )
+
+otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+otpButtonView state push = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.transparent
+  , visibility if state.props.statusOnline then VISIBLE else GONE
+  , padding (Padding 0 0 20 20)
+  , gravity BOTTOM
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity RIGHT
+      ][ linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , stroke $ "1," <> Color.blue900
+          , cornerRadius 32.0
+          , background Color.blue600
+          , padding (Padding 16 12 16 12)
+          , onClick push $ const $ ZoneOtpAction
+          ][ imageView 
+              [ imageWithFallback "ic_mode_standby,https://assets.juspay.in/nammayatri/images/user/ic_mode_standby.png"
+              , width $ V 20
+              , height $ V 20
+              ]
+            , textView $ 
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , color Color.blue900
+              , padding (PaddingLeft 8)
+              , text (getString OTP)
+              ] <> FontStyle.subHeading2 TypoGraphy
+          ]
+      ]
+  ]
 
 cancelConfirmation :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelConfirmation push state = 

@@ -343,5 +343,6 @@ const hindiStrings = {
     SHARE_OPTIONS : "विकल्प साझा करें",
     ENTER_PASSWORD : "पास वर्ड दर्ज करें",
     YOUR_VEHICLE : "आपका वाहन",
-    BOOKING_OPTIONS : "बुकिंग विकल्प"
+    BOOKING_OPTIONS : "बुकिंग विकल्प",
+    OTP : "OTP"
 }
