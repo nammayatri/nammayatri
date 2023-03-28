@@ -35,7 +35,7 @@ mkPersist
       serverName Domain.ServerName
       createdAt UTCTime
       Primary id
-      Unique MerchantShortId
+      UniqueMerchantShortId shortId
       deriving Generic
     |]
 

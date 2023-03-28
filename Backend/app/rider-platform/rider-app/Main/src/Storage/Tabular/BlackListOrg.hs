@@ -35,7 +35,7 @@ mkPersist
       subscriberId Text
       orgType Domain.BlackListOrgType sql=type
       Primary id
-      Unique OrganizationShortId
+      UniqueBlackListOrgSubscriberId subscriberId
       deriving Generic
     |]
 
