@@ -884,6 +884,21 @@
         "type": "github"
       }
     },
+    "process-compose-flake": {
+      "locked": {
+        "lastModified": 1677180880,
+        "narHash": "sha256-9CmwHK8u3rdJRGaPxqj2mLEhPN03fa85X26zbX8kDMk=",
+        "owner": "Platonic-Systems",
+        "repo": "process-compose-flake",
+        "rev": "63ad787ff713f2b0044aefe53f40dbb068224965",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Platonic-Systems",
+        "repo": "process-compose-flake",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "beckn-gateway": "beckn-gateway",
@@ -894,6 +909,7 @@
         ],
         "mission-control": "mission-control",
         "nixpkgs": "nixpkgs_4",
+        "process-compose-flake": "process-compose-flake",
         "shared-kernel": "shared-kernel"
       }
     },
