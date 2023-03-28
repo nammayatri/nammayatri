@@ -275,10 +275,11 @@ currentFlowStatus = do
                             false -> (searchExpiryTime - secondsPassed)
         if secondsLeft > 0 then do
           updateLocalStage FindingQuotes
-          setValueToLocalStore AUTO_SELECTING "false"
+          setValueToLocalStore AUTO_SELECTING "true"
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
+          _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           case (getFlowStatusData "LazyCheck") of 
-            Just (FlowStatusData flowStatusData) -> do 
+            Just (FlowStatusData flowStatusData) -> do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ 
                 props{ sourceLat = flowStatusData.source.lat
                      , sourceLong = flowStatusData.source.lng
@@ -289,7 +290,9 @@ currentFlowStatus = do
                      , estimateId = estimateId
                      , rideRequestFlow = true }
                 , data { source = flowStatusData.source.place
-                       , destination = flowStatusData.destination.place }
+                       , destination = flowStatusData.destination.place 
+                       , sourceAddress = flowStatusData.sourceAddress
+                       , destinationAddress = flowStatusData.destinationAddress }
                 })
             Nothing -> do 
               res <- Remote.notifyFlowEventBT (Remote.makeNotifyFlowEventReq (show SEARCH_CANCELLED))
@@ -444,7 +447,9 @@ homeScreenFlow = do
           pure unit
         Nothing -> pure unit
       void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : state.props.sourceLat, lng : state.props.sourceLong, place : state.data.source}
-                                                      , destination : {lat : state.props.destinationLat, lng : state.props.destinationLong, place : state.data.destination} })
+                                                      , destination : {lat : state.props.destinationLat, lng : state.props.destinationLong, place : state.data.destination}
+                                                      , sourceAddress : state.data.sourceAddress
+                                                      , destinationAddress : state.data.destinationAddress })
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId,currentStage = FindingEstimate, rideRequestFlow = true, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing}})
       updateLocalStage FindingEstimate
       homeScreenFlow
@@ -525,6 +530,7 @@ homeScreenFlow = do
     GET_QUOTES state -> do
           _ <- pure $ setValueToLocalStore AUTO_SELECTING "false"
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
+          _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           _ <- pure $ firebaseLogEvent "ny_user_request_quotes"
           if(getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
             _ <- pure $ firebaseLogEvent "ny_user_auto_confirm"
@@ -536,7 +542,11 @@ homeScreenFlow = do
     SELECT_ESTIMATE state -> do
         updateLocalStage SettingPrice
         homeScreenFlow
-    GET_SELECT_LIST state -> homeScreenFlow
+    GET_SELECT_LIST state -> do
+      when (isLocalStageOn QuoteList) $ do
+        _ <- Remote.notifyFlowEventBT (Remote.makeNotifyFlowEventReq (show SEARCH_CANCELLED))
+        pure unit
+      homeScreenFlow
     CONFIRM_RIDE state -> do
           _ <- pure $ enableMyLocation false
           if isJust state.props.selectedQuote then do
@@ -586,13 +596,14 @@ homeScreenFlow = do
       _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled_by_user"
       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
       homeScreenFlow
-    FCM_NOTIFICATION notification state-> do 
+    FCM_NOTIFICATION notification state-> do
         let rideID = state.data.driverInfoCardState.rideId
             srcLat = state.data.driverInfoCardState.sourceLat
             srcLon = state.data.driverInfoCardState.sourceLng
             dstLat = state.data.driverInfoCardState.destinationLat
             dstLon = state.data.driverInfoCardState.destinationLng
         _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+        _ <- pure $ setValueToLocalStore FINDING_QUOTES_POLLING "false"
         _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
         if not state.props.isInApp then do 
           _ <- pure $ setValueToLocalStore TRACKING_ENABLED "False"
@@ -636,7 +647,8 @@ homeScreenFlow = do
                                       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
                                       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
                                       homeScreenFlow
-            _              -> homeScreenFlow
+            _                     -> homeScreenFlow
+              
     LOGOUT -> do  
       (LogOutRes resp) <- Remote.logOutBT LogOutReq
       _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
