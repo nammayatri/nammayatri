@@ -11,13 +11,14 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
 
 module Domain.Types.FareParameters where
 
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.GenericPretty (PrettyShow)
+import Kernel.Utils.GenericPretty
 
 data FareParameters = FareParameters
   { id :: Id FareParameters,
@@ -27,6 +28,13 @@ data FareParameters = FareParameters
     driverSelectedFare :: Maybe Money,
     nightShiftRate :: Maybe Centesimal,
     nightCoefIncluded :: Bool,
-    waitingChargePerMin :: Maybe Money
+    waitingChargePerMin :: Maybe Money,
+    waitingOrPickupCharges :: Maybe Money,
+    serviceCharge :: Maybe Money,
+    farePolicyType :: FarePolicyType
   }
   deriving (Generic, Show, Eq, PrettyShow)
+
+data FarePolicyType = SLAB | NORMAL
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (PrettyShow) via Showable FarePolicyType

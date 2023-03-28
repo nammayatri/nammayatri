@@ -39,10 +39,11 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool hiding (lat, lon)
-import SharedLogic.Estimate (EstimateItem, buildEstimate)
+import SharedLogic.Estimate (EstimateItem, buildEstimate, buildEstimateFromSlabFarePolicy)
 import SharedLogic.FareCalculator
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.QuoteSpecialZone as QQuoteSpecialZone
 import qualified Storage.Queries.SearchRequestSpecialZone as QSearchRequestSpecialZone
@@ -114,8 +115,6 @@ handler merchantId sReq = do
   result <- getDistanceAndDuration merchantId fromLocationLatLong toLocationLatLong sReq.routeInfo
   CD.cacheDistance sReq.transactionId (result.distance, result.duration)
   logDebug $ "distance: " <> show result.distance
-  allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
-  let farePolicies = filter (checkTripConstraints result.distance) allFarePolicies
   mbSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
 
   (quotes :: Maybe [SpecialZoneQuoteInfo], estimates' :: Maybe [EstimateItem]) <-
@@ -128,46 +127,88 @@ handler merchantId sReq = do
         Esq.runTransaction $ do
           QSearchRequestSpecialZone.create searchRequestSpecialZone
         now <- getCurrentTime
-        let listOfVehicleVariants =
-              catMaybes $
-                everyPossibleVariant <&> \var ->
-                  find ((== var) . (.vehicleVariant)) farePolicies
-        listOfSpecialZoneQuotes <-
-          for listOfVehicleVariants $ \farePolicy -> do
-            fareParams <- calculateFare org.id farePolicy result.distance sReq.pickupTime Nothing
-            buildSpecialZoneQuote
-              searchRequestSpecialZone
-              fareParams
-              org.id
-              result.distance
-              farePolicy.vehicleVariant
-              result.duration
+        listOfSpecialZoneQuotes <- case org.farePolicyType of
+          SLAB -> do
+            allFarePolicies <- SFarePolicyS.findAllByMerchantId org.id
+            let slabFarePolicies = filter (\fp -> checkTripConstraints result.distance fp.minAllowedTripDistance fp.maxAllowedTripDistance) allFarePolicies
+            let listOfVehicleVariants =
+                  catMaybes $
+                    everyPossibleVariant <&> \var ->
+                      find ((== var) . (.vehicleVariant)) slabFarePolicies
+            for listOfVehicleVariants $ \slabFarePolicy -> do
+              fareParams <- calculateFare org.id Nothing (Just slabFarePolicy) result.distance sReq.pickupTime Nothing
+              buildSpecialZoneQuote
+                searchRequestSpecialZone
+                fareParams
+                org.id
+                result.distance
+                slabFarePolicy.vehicleVariant
+                result.duration
+          -- return listOfSpecialZoneQuotes
+          NORMAL -> do
+            allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
+            let farePolicies = filter (\fp -> checkTripConstraints result.distance fp.minAllowedTripDistance fp.maxAllowedTripDistance) allFarePolicies
+            let listOfVehicleVariants =
+                  catMaybes $
+                    everyPossibleVariant <&> \var ->
+                      find ((== var) . (.vehicleVariant)) farePolicies
+            for listOfVehicleVariants $ \farePolicy -> do
+              fareParams <- calculateFare org.id (Just farePolicy) Nothing result.distance sReq.pickupTime Nothing
+              buildSpecialZoneQuote
+                searchRequestSpecialZone
+                fareParams
+                org.id
+                result.distance
+                farePolicy.vehicleVariant
+                result.duration
         Esq.runTransaction $
           for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
       else do
         estimates <-
-          if null farePolicies
-            then do
-              logDebug "Trip doesnot match any fare policy constraints."
-              return []
-            else do
-              driverPoolCfg <- getDriverPoolConfig merchantId result.distance
-              driverPool <- calculateDriverPool Estimate driverPoolCfg Nothing fromLocation org.id True Nothing
+          case org.farePolicyType of
+            SLAB -> do
+              allFarePolicies <- SFarePolicyS.findAllByMerchantId org.id
+              let slabFarePolicies = filter (\fp -> checkTripConstraints result.distance fp.minAllowedTripDistance fp.maxAllowedTripDistance) allFarePolicies
+              if null slabFarePolicies
+                then do
+                  logDebug "Trip doesnot match any fare policy constraints."
+                  return []
+                else do
+                  driverPoolCfg <- getDriverPoolConfig merchantId result.distance
+                  driverPool <- calculateDriverPool Estimate driverPoolCfg Nothing fromLocation org.id True Nothing
 
-              logDebug $ "Search handler: driver pool " <> show driverPool
+                  logDebug $ "Search handler: driver pool " <> show driverPool
 
-              let listOfProtoQuotes = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
-                  filteredProtoQuotes = zipMatched farePolicies listOfProtoQuotes
-              estimates <- mapM (buildEstimate org sReq.pickupTime result.distance) filteredProtoQuotes
-              logDebug $ "bap uri: " <> show sReq.bapUri
-              return estimates
+                  let listOfProtoQuotes = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
+                      filteredProtoQuotes = zipMatched slabFarePolicies listOfProtoQuotes
+                  estimates <- mapM (buildEstimateFromSlabFarePolicy org sReq.pickupTime result.distance) filteredProtoQuotes
+                  logDebug $ "bap uri: " <> show sReq.bapUri
+                  return estimates
+            NORMAL -> do
+              allFarePolicies <- FarePolicyS.findAllByMerchantId org.id (Just result.distance)
+              let farePolicies = filter (\fp -> checkTripConstraints result.distance fp.minAllowedTripDistance fp.maxAllowedTripDistance) allFarePolicies
+              if null farePolicies
+                then do
+                  logDebug "Trip doesnot match any fare policy constraints."
+                  return []
+                else do
+                  driverPoolCfg <- getDriverPoolConfig merchantId result.distance
+                  driverPool <- calculateDriverPool Estimate driverPoolCfg Nothing fromLocation org.id True Nothing
+
+                  logDebug $ "Search handler: driver pool " <> show driverPool
+
+                  let listOfProtoQuotes = foldl (\m dpr -> M.insertWith (<>) dpr.variant (pure dpr) m) mempty driverPool
+                      filteredProtoQuotes = zipMatched farePolicies listOfProtoQuotes
+                  estimates <- mapM (buildEstimate org sReq.pickupTime result.distance) filteredProtoQuotes
+                  logDebug $ "bap uri: " <> show sReq.bapUri
+                  return estimates
         return (Nothing, Just estimates)
   buildSearchRes org fromLocationLatLong toLocationLatLong estimates' quotes searchMetricsMVar
   where
-    checkTripConstraints tripDistance fp =
-      let cond1 = (<= tripDistance) <$> fp.minAllowedTripDistance
-          cond2 = (>= tripDistance) <$> fp.maxAllowedTripDistance
+    checkTripConstraints tripDistance minAllowedTripDistance maxAllowedTripDistance =
+      let cond1 = (<= tripDistance) <$> minAllowedTripDistance
+          cond2 = (>= tripDistance) <$> maxAllowedTripDistance
        in and $ catMaybes [cond1, cond2]
 
     zipMatched farePolicies driverPools = do

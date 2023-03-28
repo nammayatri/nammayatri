@@ -18,12 +18,14 @@ module SharedLogic.Estimate
     NightShiftRate (..),
     BreakupItem (..),
     buildEstimate,
+    buildEstimateFromSlabFarePolicy,
   )
 where
 
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.FarePolicy
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.SlabFarePolicy
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
@@ -47,7 +49,8 @@ data EstimateItem = EstimateItem
 
 data WaitingCharges = WaitingCharges
   { waitingTimeEstimatedThreshold :: Maybe Seconds,
-    waitingChargePerMin :: Maybe Money
+    waitingChargePerMin :: Maybe Money,
+    waitingOrPickupCharges :: Maybe Money
   }
 
 data NightShiftRate = NightShiftRate
@@ -74,7 +77,7 @@ buildEstimate ::
   (FarePolicy, NonEmpty DriverPoolResult) ->
   m EstimateItem
 buildEstimate org startTime dist (farePolicy, filteredPoolByVehVariant) = do
-  fareParams <- calculateFare org.id farePolicy dist startTime Nothing
+  fareParams <- calculateFare org.id (Just farePolicy) Nothing dist startTime Nothing
   let baseFare = fareSum fareParams
       currency = "INR"
       estimateBreakups = mkBreakupListItems (BreakupPrice currency) BreakupItem farePolicy
@@ -100,7 +103,8 @@ buildEstimate org startTime dist (farePolicy, filteredPoolByVehVariant) = do
         waitingCharges =
           WaitingCharges
             { waitingTimeEstimatedThreshold = farePolicy.waitingTimeEstimatedThreshold,
-              waitingChargePerMin = farePolicy.waitingChargePerMin
+              waitingChargePerMin = farePolicy.waitingChargePerMin,
+              waitingOrPickupCharges = Nothing
             }
       }
 
@@ -131,3 +135,63 @@ mkBreakupListItems mkPrice mkBreakupItem farePolicy = do
       driverMaxExtraFeeItem = mkBreakupItem driverMaxExtraFeeCaption (mkPrice driverMaxExtraFee)
 
   [baseDistanceFareItem, perExtraKmFareItem, deadKmFareItem, driverMinExtraFeeItem, driverMaxExtraFeeItem]
+
+buildEstimateFromSlabFarePolicy ::
+  (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r) =>
+  DM.Merchant ->
+  UTCTime ->
+  Meters ->
+  (SlabFarePolicy, NonEmpty DriverPoolResult) ->
+  m EstimateItem
+buildEstimateFromSlabFarePolicy org startTime dist (slabFarePolicy, filteredPoolByVehVariant) = do
+  fareParams <- calculateFare org.id Nothing (Just slabFarePolicy) dist startTime Nothing
+  let baseFare = fareSum fareParams
+      currency = "INR"
+      estimateBreakups = mkBreakupSlabListItems (BreakupPrice currency) BreakupItem slabFarePolicy fareParams.baseFare fareParams.waitingOrPickupCharges
+  let latlongList = fmap (\x -> LatLong x.lat x.lon) filteredPoolByVehVariant
+  logDebug $ "baseFare: " <> show baseFare
+  let driverMetadata = NE.head filteredPoolByVehVariant
+  logDebug $ "distanceToPickup: " <> show driverMetadata.distanceToPickup
+  pure
+    EstimateItem
+      { vehicleVariant = slabFarePolicy.vehicleVariant,
+        distanceToPickup = driverMetadata.distanceToPickup,
+        minFare = baseFare,
+        maxFare = baseFare,
+        estimateBreakupList = estimateBreakups,
+        driversLatLong = toList latlongList,
+        nightShiftRate =
+          Just $
+            NightShiftRate
+              { nightShiftMultiplier = fareParams.nightShiftRate,
+                nightShiftStart = slabFarePolicy.nightShiftStart,
+                nightShiftEnd = slabFarePolicy.nightShiftEnd
+              },
+        waitingCharges =
+          WaitingCharges
+            { waitingTimeEstimatedThreshold = Nothing,
+              waitingChargePerMin = Nothing,
+              waitingOrPickupCharges = fareParams.waitingOrPickupCharges
+            }
+      }
+
+mkBreakupSlabListItems ::
+  (Money -> breakupItemPrice) ->
+  (Text -> breakupItemPrice -> breakupItem) ->
+  SlabFarePolicy ->
+  Money ->
+  Maybe Money ->
+  [breakupItem]
+mkBreakupSlabListItems mkPrice mkBreakupItem slabFarePolicy baseFare waitingOrPickupCharge = do
+  let baseDistanceFare = baseFare
+      baseDistanceFareCaption = "BASE_DISTANCE_FARE"
+      baseDistanceFareItem = mkBreakupItem baseDistanceFareCaption (mkPrice baseDistanceFare)
+
+      serviceCharge = slabFarePolicy.serviceCharge
+      serviceChargeCaption = "SERVICE_CHARGE"
+      serviceChargeItem = mkBreakupItem serviceChargeCaption (mkPrice serviceCharge)
+
+      waitingOrPickupCharges = fromMaybe 0 waitingOrPickupCharge
+      waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES"
+      waitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption (mkPrice waitingOrPickupCharges)
+  [baseDistanceFareItem, serviceChargeItem, waitingOrPickupChargesItem]

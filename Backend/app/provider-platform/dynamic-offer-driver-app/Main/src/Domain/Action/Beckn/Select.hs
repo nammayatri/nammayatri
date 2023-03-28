@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -19,6 +20,8 @@ import qualified Beckn.Types.Core.Taxi.Common.Address as BA
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
+import qualified Domain.Types.FareParameters as DFareParams (FarePolicyType (..))
+import qualified Domain.Types.FarePolicy as DFarePolicy (ExtraFee (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -41,6 +44,7 @@ import SharedLogic.GoogleMaps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS
 import qualified Storage.Queries.SearchRequest as QSReq
 import Tools.Error (FarePolicyError (NoFarePolicy), MerchantError (MerchantNotFound))
 import Tools.Maps as Maps
@@ -65,6 +69,7 @@ type LanguageDictionary = M.Map Maps.Language DSearchReq.SearchRequest
 handler :: Id DM.Merchant -> DSelectReq -> Flow ()
 handler merchantId sReq = do
   sessiontoken <- generateGUIDText
+  org <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
   toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
   mbDistRes <- CD.getCacheDistance sReq.transactionId
@@ -81,10 +86,16 @@ handler merchantId sReq = do
               }
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
-  farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
-  fareParams <- calculateFare merchantId farePolicy distance sReq.pickupTime Nothing
+  (farePolicy, slabFarePolicy, driverExtraFare) <- case org.farePolicyType of
+    DFareParams.SLAB -> do
+      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant org.id sReq.variant >>= fromMaybeM NoFarePolicy
+      let driverExtraFare = DFarePolicy.ExtraFee {minFee = 0, maxFee = 0}
+      pure (Nothing, Just slabFarePolicy, driverExtraFare)
+    DFareParams.NORMAL -> do
+      farePolicy <- FarePolicyS.findByMerchantIdAndVariant org.id sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
+      pure (Just farePolicy, Nothing, farePolicy.driverExtraFee)
+  fareParams <- calculateFare merchantId farePolicy slabFarePolicy distance sReq.pickupTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration
-  let driverExtraFare = farePolicy.driverExtraFee
   let estimateFare = fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id

@@ -116,7 +116,7 @@ selectResult estimateId = do
   res <- runMaybeT $ do
     estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
     quoteId <- MaybeT $ pure estimate.autoAssignQuoteId
-    _ <- MaybeT $ (Just <$> checkIfEstimateCancelled estimate.id estimate.status)
+    _ <- MaybeT (Just <$> checkIfEstimateCancelled estimate.id estimate.status)
     booking <- MaybeT . runInReplica $ QBooking.findAssignedByQuoteId (Id quoteId)
     return $ QuotesResultResponse {bookingId = Just booking.id, selectedQuotes = Nothing}
   case res of
