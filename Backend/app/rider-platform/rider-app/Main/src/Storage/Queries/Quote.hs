@@ -18,13 +18,14 @@ module Storage.Queries.Quote where
 import Data.Tuple.Extra
 import Domain.Types.DriverOffer
 import Domain.Types.Estimate
+import Domain.Types.FarePolicy.FareProductType
 import Domain.Types.Quote
 import Domain.Types.SearchRequest
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Queries.FullEntityBuilders (buildFullQuote)
-import Storage.Tabular.DriverOffer
+import Storage.Tabular.DriverOffer as DriverOffer
 import Storage.Tabular.Quote
 import Storage.Tabular.Quote.Instances
 import Storage.Tabular.RentalSlab
@@ -64,7 +65,7 @@ fullQuoteTable ::
     ( Table QuoteT
         :& MbTable TripTermsT
         :& MbTable RentalSlabT
-        :& MbTable DriverOfferT
+        :& MbTable DriverOffer.DriverOfferT
         :& MbTable SpecialZoneQuoteT
     )
 fullQuoteTable =
@@ -112,11 +113,40 @@ findAllByRequestId searchRequestId = Esq.buildDType $ do
     pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
   catMaybes <$> mapM buildFullQuote fullQuoteTs
 
-findAllByEstimateId :: Transactionable m => Id Estimate -> m [Quote]
-findAllByEstimateId estimateId = buildDType $ do
-  fullQuoteTs <- Esq.findAll' $ do
-    (quote :& mbTripTerms :& mbRentalSlab :& mbDriverOffer :& mbspecialZoneQuote) <- from fullQuoteTable
-    where_ $
-      mbDriverOffer ?. DriverOfferEstimateId ==. just (val $ toKey estimateId)
-    pure (quote, mbTripTerms, mbRentalSlab, mbDriverOffer, mbspecialZoneQuote)
-  catMaybes <$> mapM buildFullQuote fullQuoteTs
+findAllByEstimateId' :: Transactionable m => Id Estimate -> m [Quote]
+findAllByEstimateId' estimateId = buildDType $ do
+  driverOfferTs <- findDOfferByEstimateId' estimateId
+  (catMaybes <$>) $ mapM buildFullQuote' driverOfferTs
+
+findDOfferByEstimateId' :: Transactionable m => Id Estimate -> DTypeBuilder m [DriverOfferT]
+findDOfferByEstimateId' estimateId =
+  Esq.findAll' $ do
+    driverOffer <- from $ table @DriverOfferT
+    where_ $ driverOffer ^. DriverOfferEstimateId ==. val (toKey estimateId)
+    return driverOffer
+
+findQuotesByDriverOfferId' :: Transactionable m => Id DriverOffer -> DTypeBuilder m (Maybe QuoteT)
+findQuotesByDriverOfferId' driverOfferId = Esq.findOne' $ do
+  quote <- from $ table @QuoteT
+  where_ $
+    quote ^. QuoteDriverOfferId ==. just (val (toKey driverOfferId))
+  return quote
+
+buildFullQuote' :: Transactionable m => DriverOfferT -> DTypeBuilder m (Maybe (SolidType FullQuoteT))
+buildFullQuote' driverOfferT = runMaybeT $ do
+  quoteT <- MaybeT $ findQuotesByDriverOfferId' (Id $ DriverOffer.id driverOfferT)
+  quoteDetailsT <- case fareProductType quoteT of
+    ONE_WAY -> pure OneWayDetailsT
+    RENTAL -> do
+      rentalSlabId <- MaybeT $ pure (fromKey <$> rentalSlabId quoteT)
+      rentalSlab <- MaybeT $ Esq.findById' @RentalSlabT rentalSlabId
+      pure $ RentalDetailsT rentalSlab
+    DRIVER_OFFER -> do
+      pure (DriverOfferDetailsT driverOfferT)
+    ONE_WAY_SPECIAL_ZONE -> do
+      specialZoneQuoteId <- MaybeT $ pure (fromKey <$> specialZoneQuoteId quoteT)
+      specialZoneQuoteT <- MaybeT $ Esq.findById' @SpecialZoneQuoteT specialZoneQuoteId
+      pure (OneWaySpecialZoneDetailsT specialZoneQuoteT)
+  mbTripTermsT <- forM (fromKey <$> tripTermsId quoteT) $ \tripTermsId -> do
+    MaybeT $ Esq.findById' @TripTermsT tripTermsId
+  return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
