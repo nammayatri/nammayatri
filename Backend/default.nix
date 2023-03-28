@@ -13,6 +13,11 @@
         tools = hp: {
           dhall = pkgs.dhall;
         };
+        # TODO: Upstream mkShellArgs as an option in mission-control
+        mkShellArgs = {
+          nativeBuildInputs = [ config.mission-control.wrapper ];
+          shellHook = config.mission-control.banner;
+        };
       };
 
       # Some tests fail under Nix. We shoud probably run them in CI directly.
@@ -24,6 +29,26 @@
           # tries to find dhall files from wrong CWD
           beckn-test = [ dontCheck ];
         };
+    };
+
+    mission-control.scripts = {
+      backend-ghcid = {
+        description = "Compile the given local package using ghcid.";
+        exec = ''
+          set +x
+          cd ./Backend # TODO: https://github.com/Platonic-Systems/mission-control/issues/27
+          ghcid -c "cabal repl $1"
+        '';
+        category = "Backend";
+      };
+
+      backend-hoogle = {
+        description = "Run Hoogle server for Haskell packages.";
+        exec = ''
+          echo "#### Hoogle running at: http://localhost:8090"
+          hoogle serve --local --port 8090
+        '';
+      };
     };
 
     packages =
