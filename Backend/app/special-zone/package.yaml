@@ -1,4 +1,4 @@
-name: special-zone-a
+name: special-zone
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
@@ -90,3 +90,15 @@ library:
     - -Werror
   dependencies:
     - mobility-core
+
+executables:
+  special-zone-exe:
+    main: Main.hs
+    source-dirs: server
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+    dependencies:
+      - mobility-core
+      - special-zone
