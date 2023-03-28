@@ -6,6 +6,7 @@
 
     # TODO: Move to common repo?
     mission-control.url = "github:Platonic-Systems/mission-control";
+    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
 
     shared-kernel.url = "github:nammayatri/shared-kernel";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
@@ -18,6 +19,7 @@
       imports = [
         inputs.common.flakeModules.default
         inputs.mission-control.flakeModule
+        inputs.process-compose-flake.flakeModule
         ./Backend/default.nix
       ];
       perSystem = { self', pkgs, ... }: {
