@@ -12,6 +12,7 @@
       devShell = {
         tools = hp: {
           dhall = pkgs.dhall;
+          docker-compose = pkgs.docker-compose;
         };
         # TODO: Upstream mkShellArgs as an option in mission-control
         mkShellArgs = {
@@ -31,37 +32,93 @@
         };
     };
 
-    mission-control.scripts = {
-      backend-ghcid = {
-        description = "Compile the given local package using ghcid.";
-        exec = ''
-          set +x
-          cd ./Backend # TODO: https://github.com/Platonic-Systems/mission-control/issues/27
-          ghcid -c "cabal repl $1"
-        '';
-        category = "Backend";
-      };
+    mission-control.scripts =
+      let
+        backendScripts = lib.mapAttrs' (n: v:
+          lib.nameValuePair "backend-${n}" (v // { category = "Backend"; }));
+        dockerComposeScript = { description, args }: {
+          inherit description;
+          exec = ''
+            set -x
+            docker-compose -f ./Backend/dev/docker-compose.yml ${args}
+          '';
+        };
+      in
+      backendScripts {
+        ghcid = {
+          description = "Compile the given local package using ghcid.";
+          exec = ''
+            set +x
+            cd ./Backend # TODO: https://github.com/Platonic-Systems/mission-control/issues/27
+            ghcid -c "cabal repl $1"
+          '';
+        };
 
-      backend-hoogle = {
-        description = "Run Hoogle server for Haskell packages.";
-        exec = ''
-          echo "#### Hoogle running at: http://localhost:8090"
-          hoogle serve --local --port 8090
-        '';
-        category = "Backend";
-      };
+        hoogle = {
+          description = "Run Hoogle server for Haskell packages.";
+          exec = ''
+            echo "#### Hoogle running at: http://localhost:8090"
+            hoogle serve --local --port 8090
+          '';
+        };
 
-      backend-run = {
-        description = "Run the nammayatri backend components.";
-        exec = ''
-          set +x
-          cd ./Backend
-          ${lib.getExe self'.packages.run-nammayatri}
-        '';
-        category = "Backend";
-      };
+        run-mobility-stack = {
+          description = ''
+            Run the nammayatri backend components.
+          '';
+          exec = ''
+            set -x
+            cd ./Backend
+            # Note: It is important not to reference self.packages, as that will
+            # slow down the launch of the devshell by having it build the whole
+            # backend.
+            nix run .#run-nammayatri
+          '';
+        };
 
-    };
+        run-svc = dockerComposeScript {
+          description = ''
+            Setup and run DB, redis and passetto instances in docker containers
+          '';
+          args = "up -d --remove-orphans";
+        };
+
+        run-monitoring = dockerComposeScript {
+          description = ''
+            Run monitoring stack - Prometheus and grafana in docker containers
+          '';
+          args = "--profile monitoring up -d";
+        };
+
+        run-pgadmin = dockerComposeScript {
+          description = ''
+            Run pgadmin stack - Pgadmin in a docker container
+          '';
+          args = "--profile pgadmin up -d";
+        };
+
+        stop-all-containers = dockerComposeScript {
+          description = ''
+            Stop all docker containers
+          '';
+          args = "down --remove-orphans";
+        };
+
+        new-service = {
+          description = ''
+            Create a new Haskell package locally
+          '';
+          exec = ''
+            cd ./Backend
+            echo 'Enter the name of a new service (in kebab case):'
+            read -r name
+            cp -r ./app/example-service ./app/"''${name}"
+            echo "''${name}" | sed -i "s/example-service/''${name}/g" ./app/"''${name}"/package.yaml
+            rm ./app/"''${name}"/example-service.cabal
+            ${lib.getExe pkgs.tree} ./app/"''${name}"
+          '';
+        };
+      };
 
     process-compose.configs = {
       run-nammayatri.processes =
