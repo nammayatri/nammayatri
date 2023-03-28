@@ -219,11 +219,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1679425085,
-        "narHash": "sha256-xVWU3bnw3Vis7AjSAA3oo4pg7I2fG1WBAODLrmm57sk=",
+        "lastModified": 1679599934,
+        "narHash": "sha256-Ep5GQHgBK0wBv9LQgctyYTZi1fKVGajW3IGptQxPdXA=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "fef5c3b7aa5073236d3cfac39c3e22150e42bd92",
+        "rev": "19f954f615237703482684ed06ee9575f4a7dfaa",
         "type": "github"
       },
       "original": {
@@ -527,6 +527,21 @@
         "type": "github"
       }
     },
+    "mission-control": {
+      "locked": {
+        "lastModified": 1679674077,
+        "narHash": "sha256-hGz63fsyRGthjE6LLqB08IHApcBvHhI87gWrFN/Uu5w=",
+        "owner": "Platonic-Systems",
+        "repo": "mission-control",
+        "rev": "d07854a616f559370b71c1c440d916ab6869f084",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Platonic-Systems",
+        "repo": "mission-control",
+        "type": "github"
+      }
+    },
     "mysql-haskell": {
       "flake": false,
       "locked": {
@@ -774,11 +789,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1675545634,
-        "narHash": "sha256-TbQeQcM5TA/wIho6xtzG+inUfiGzUXi8ewwttiQWYJE=",
+        "lastModified": 1677932085,
+        "narHash": "sha256-+AB4dYllWig8iO6vAiGGYl0NEgmMgGHpy9gzWJ3322g=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "0591d6b57bfeb55dfeec99a671843337bc2c3323",
+        "rev": "3c5319ad3aa51551182ac82ea17ab1c6b0f0df89",
         "type": "github"
       },
       "original": {
@@ -877,6 +892,7 @@
           "common",
           "flake-parts"
         ],
+        "mission-control": "mission-control",
         "nixpkgs": "nixpkgs_4",
         "shared-kernel": "shared-kernel"
       }
@@ -951,16 +967,15 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1679418601,
+        "lastModified": 1679588014,
         "narHash": "sha256-URkRSunu8HAp2vH2KgLogjAXckiufCDFrBs59g9uiLY=",
-        "owner": "srid",
+        "owner": "numtide",
         "repo": "treefmt-nix",
-        "rev": "34180b128d23d4896a79fa87497bbefd400c6083",
+        "rev": "af75d6efe437858f9ca5535e622cfbedad1ba717",
         "type": "github"
       },
       "original": {
-        "owner": "srid",
-        "ref": "patch-1",
+        "owner": "numtide",
         "repo": "treefmt-nix",
         "type": "github"
       }
