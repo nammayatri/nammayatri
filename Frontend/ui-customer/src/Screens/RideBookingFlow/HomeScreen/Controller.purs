@@ -387,6 +387,7 @@ instance loggableAction :: Loggable Action where
     UpdateLocAndLatLong lat lon-> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_current_loc_lat_and_lon"
     UpdateSavedLoc state -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_saved_loc"
     NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
+    OnResumeCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "on_resume_callback"
 
 data ScreenOutput = LogoutUser
                   | Cancel HomeScreenState
@@ -426,6 +427,7 @@ data ScreenOutput = LogoutUser
                   | CallPolice HomeScreenState
                   | UpdateSosStatus HomeScreenState
                   | FetchContacts HomeScreenState
+                  | OnResumeApp HomeScreenState
 
 data Action = NoAction 
             | BackPressed 
@@ -503,6 +505,7 @@ data Action = NoAction
             | UpdateSavedLoc (Array LocationListItemState)
             | HideLiveDashboard String
             | LiveDashboardAction
+            | OnResumeCallback
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -516,6 +519,8 @@ eval (UpdateCurrentStage stage) state = do
     exit $ NotificationHandler "CANCELLED_PRODUCT" state
   else
     continue state
+
+eval OnResumeCallback state = exit $ OnResumeApp state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 

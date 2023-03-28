@@ -278,6 +278,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public static String invoiceType =null;
     public static boolean permissionCheck = false;
     public static String storeCallBackPopUp = null;
+    public static String storeOnResumeCallback = null;
     private LottieAnimationView animationView;
     public static YouTubePlayerView youTubePlayerView;
     public static YouTubePlayer youtubePlayer;
@@ -726,6 +727,18 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         if (dynamicUII != null && storeCallB !=null) {
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
                     storeCallB, notificationType);
+            dynamicUII.addJsToWebView(javascript);
+        }
+    }
+
+    @JavascriptInterface
+    public void storeOnResumeCallback(String callback) {
+        storeOnResumeCallback = callback;
+    }
+
+    public static void callOnResumeUpdateCallback(DuiCallback dynamicUII) {
+        if (dynamicUII != null && storeOnResumeCallback != null) {
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s');", storeOnResumeCallback);
             dynamicUII.addJsToWebView(javascript);
         }
     }

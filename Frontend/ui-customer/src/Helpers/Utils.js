@@ -540,3 +540,19 @@ exports["goBackPrevWebPage"] = function (id) {
     console.log("goBackPrevWebPage error " + err);
   }
 }
+
+exports["storeOnResumeCallback"] = function (cb) {
+  return function (action) {
+    return function () {
+      try {
+        var callback = callbackMapper.map(function () {
+          cb(action)();
+        });
+        JBridge.storeOnResumeCallback(callback);
+      }
+      catch (error) {
+        console.log("Error occurred in storeOnResumeCallback ------", error);
+      }
+    }
+  }
+}

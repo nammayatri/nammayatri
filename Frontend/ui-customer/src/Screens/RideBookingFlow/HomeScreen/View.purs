@@ -59,7 +59,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, isPreviousVersion, getCurrentLocationMarker, getPreviousVersion, initialWebViewSetUp)
+import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, isPreviousVersion, getCurrentLocationMarker, getPreviousVersion, initialWebViewSetUp, storeOnResumeCallback)
 import JBridge (drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -101,6 +101,7 @@ screen initialState =
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
               _ <- storeCallBackCustomer push NotificationListener
+              _ <- storeOnResumeCallback push OnResumeCallback
               push HandleCallback
               pure unit
             else do

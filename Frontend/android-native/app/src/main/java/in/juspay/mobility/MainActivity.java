@@ -834,6 +834,13 @@ public class MainActivity extends AppCompatActivity {
         MainActivity.this.callingDriverLocationPermission();
         MainActivity.this.callingOverlayPermission();
         MainActivity.this.callingCheckBatteryOptimization();
+        try {
+            if ( juspayServicesGlobal != null && juspayServicesGlobal.getDynamicUI() != null){
+                CommonJsInterface.callOnResumeUpdateCallback(juspayServicesGlobal.getDuiCallback());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         if (stateMonitor != null){
             final SdkTracker sdkTracker = this.hyperServices.getJuspayServices().getSdkTracker();
             new Thread(new Runnable() {
