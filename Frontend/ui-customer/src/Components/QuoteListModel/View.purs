@@ -202,18 +202,24 @@ findingRidesView state push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , gravity CENTER_HORIZONTAL
+  , gravity CENTER
+  , orientation VERTICAL
   , visibility if null state.quoteListModel && getValueToLocalStore LOCAL_STAGE == "FindingQuotes" then VISIBLE else GONE 
-  , margin $ MarginTop 100
+  , margin $ MarginBottom 16 
   , clickable true
-  ][
-    lottieAnimationView 
-      [ id (getNewIDWithTag "lottieLoaderAnim")
-      , afterRender (\action-> do
-                    _ <- pure $ startLottieProcess "finding_rides_loader_with_text" (getNewIDWithTag "lottieLoaderAnim") true 0.6 "Default"
-                    pure unit)(const NoAction)
-      , height $ V 300
-      , width $ V 300
+  ][ imageView 
+      [ height $ V 150
+      , width $ V 150
+      , imageUrl "ic_waiting_image"
+      ]
+    , textView
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , gravity CENTER_HORIZONTAL
+      , text (getString FINDING_RIDES_NEAR_YOU)
+      , color Color.black900
+      , margin $ MarginTop 8
+      , textSize FontSize.a_16
       ]
   ]
 
@@ -362,7 +368,7 @@ noQuotesErrorModel state =
       ][imageView
         [ height $ V 115
         , width $ V 137
-        , imageWithFallback "ic_no_quotes,https://assets.juspay.in/nammayatri/images/user/ny_ic_no_quotes.png"
+        , imageUrl "ny_ic_no_ride"
         , padding (Padding 0 0 0 0)
         ]
       , textView $

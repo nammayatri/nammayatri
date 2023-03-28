@@ -672,7 +672,7 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state
 
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state = 
   do
-    _ <- pure $ shareTextMessage "Share Namma Yatri!" "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen"
+    _ <- pure $ shareTextMessage "Share Jatri Sathi!" "Hey there!\n\nCheck India's first Zero Commission ride hailing app.\n100% Open source | 100% Open Data\n\n Coming Soon! \n\n #beOpen #chooseOpen"
     continue state
 
 eval (SettingSideBarActionController (SettingSideBarController.EditProfile)) state = exit $ GoToMyProfile state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
@@ -1136,7 +1136,7 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
   let
     estimatedQuotes = quotesRes.estimates
 
-    estimatedVarient = filter (\x -> x ^. _vehicleVariant == "AUTO_RICKSHAW") estimatedQuotes
+    estimatedVarient = filter (\x -> x ^. _vehicleVariant == "AUTO_RICKSHAW" || x ^. _vehicleVariant == "SEDAN") estimatedQuotes
 
     estimatedPrice = if (isJust (estimatedVarient !! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimatedFare else 0
 
@@ -1208,7 +1208,7 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
   let
     estimatedQuotes = quotesRes.estimates
 
-    estimatedVarient = filter (\x -> x ^. _vehicleVariant == "AUTO_RICKSHAW") estimatedQuotes
+    estimatedVarient = filter (\x -> x ^. _vehicleVariant == "AUTO_RICKSHAW" || x ^. _vehicleVariant == "SEDAN") estimatedQuotes
 
     estimatedPrice = if (isJust (estimatedVarient !! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimatedFare else 0
 

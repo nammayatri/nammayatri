@@ -259,7 +259,7 @@ mapOptionsView push state =
       , width WRAP_CONTENT
       , orientation VERTICAL
       ][ supportButton push state
-       , locationTrackButton push state
+      --  , locationTrackButton push state
       ]
     ]
 
@@ -577,7 +577,7 @@ driverDetailsView push state =
           , width $ V 172
           , gravity BOTTOM
           ][  imageView
-              [ imageWithFallback "ic_driver_vehicle,https://assets.juspay.in/nammayatri/images/user/ny_ic_driver_auto.png"
+              [ imageUrl "ny_ic_front_car"
               , height $ V 120
               , gravity RIGHT
               , width MATCH_PARENT

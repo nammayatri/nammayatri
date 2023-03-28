@@ -478,8 +478,8 @@ buttonLayout state push =
           , height WRAP_CONTENT
           , orientation HORIZONTAL
           ][
-            referralView push state
-          , recenterButtonView push state
+            -- referralView push state
+           recenterButtonView push state
           ]
         , linearLayout
             [ height $ V 1
@@ -1479,16 +1479,10 @@ separator lineHeight lineColor currentStage =
 
 lottieLoaderView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 lottieLoaderView state push =
-  lottieAnimationView
-    [ id (getNewIDWithTag "lottieLoader")
-    , afterRender
-        ( \action -> do
-            _ <- pure $ startLottieProcess "auto_rickshaw_processing" (getNewIDWithTag "lottieLoader") true 0.6 "Default"
-            pure unit
-        )
-        (const LottieLoaderAction)
-    , height $ V 96
+  imageView
+    [ height $ V 96
     , width $ V 96
+    , imageUrl "ic_waiting_image"
     ]
 
 getEstimate :: forall action. (GetQuotesRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit

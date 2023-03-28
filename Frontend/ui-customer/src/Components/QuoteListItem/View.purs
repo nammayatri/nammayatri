@@ -121,7 +121,7 @@ driverImageView state =
         [ height $ V 37
         , width $ V 40
         , cornerRadius 20.0
-        , imageWithFallback if state.vehicleType == "auto" then "ny_ic_auto_quote_list,https://assets.juspay.in/nammayatri/images/user/ny_ic_auto_quote_list.png" else "ny_ic_auto_quote_list,https://assets.juspay.in/nammayatri/images/user/ny_ic_auto_quote_list.png"
+        , imageUrl "ic_waiting_image"
         , weight 1.0
         ]
       ]
