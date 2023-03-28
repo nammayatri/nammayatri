@@ -27,6 +27,7 @@ module Domain.Action.UI.Profile
   )
 where
 
+import Data.List (nubBy)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import Environment
@@ -158,7 +159,8 @@ updateDefaultEmergencyNumbers personId req = do
   maxEmergencyNumberCount <- asks (.maxEmergencyNumberCount)
   runRequestValidation (validateUpdateProfileDefaultEmergencyNumbersReq maxEmergencyNumberCount) req
   now <- getCurrentTime
-  newPersonDENList <- buildPersonDefaultEmergencyNumber now `mapM` req.defaultEmergencyNumbers
+  let uniqueRecords = getUniquePersonByMobileNumber req
+  newPersonDENList <- buildPersonDefaultEmergencyNumber now `mapM` uniqueRecords
   runTransaction $ QPersonDEN.replaceAll personId newPersonDENList
   pure APISuccess.Success
   where
@@ -178,3 +180,7 @@ getDefaultEmergencyNumbers personId = do
   personENList <- runInReplica $ QPersonDEN.findAllByPersonId personId
   decPersonENList <- decrypt `mapM` personENList
   return . GetProfileDefaultEmergencyNumbersResp $ DPDEN.makePersonDefaultEmergencyNumberAPIEntity <$> decPersonENList
+
+getUniquePersonByMobileNumber :: UpdateProfileDefaultEmergencyNumbersReq -> [PersonDefaultEmergencyNumber]
+getUniquePersonByMobileNumber req =
+  nubBy ((==) `on` mobileNumber) req.defaultEmergencyNumbers
