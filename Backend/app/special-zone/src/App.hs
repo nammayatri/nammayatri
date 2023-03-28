@@ -25,24 +25,48 @@ import Environment
 import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Esqueleto.Logger
 import Kernel.Storage.Esqueleto.Migration
-import Kernel.Types.Flow
+import Kernel.Types.Logging
 import Kernel.Utils.App
-import Kernel.Utils.Dhall
 import Kernel.Utils.Servant.Server
 import Servant
-import Tools.Auth
 
 runSpecialZone :: (AppCfg -> AppCfg) -> IO ()
 runSpecialZone configModifier = do
-  appCfg <- readDhallConfigDefault "special-zone" <&> configModifier
-  appEnv <- buildAppEnv appCfg
+  let config = configModifier defaultConfig
+  appEnv <- buildAppEnv config
   let runMigrations :: LoggerIO ()
       runMigrations = do
-        eithRes <- migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
+        eithRes <- migrateIfNeeded config.migrationPath config.autoMigrate config.esqDBCfg
         handleLeft exitDBMigrationFailure "Couldn't migrate database: " eithRes
   runLoggerIO appEnv.loggerEnv runMigrations
-  runServer appEnv (Proxy @API) handler identity identity context (const identity) releaseAppEnv pure
-  where
-    context = verifyDashboardAction @(FlowR AppEnv) :. EmptyContext
+  runServer appEnv (Proxy @API) handler identity identity EmptyContext (const identity) releaseAppEnv pure
+
+defaultConfig :: AppCfg -- move to dhall if req'd
+defaultConfig =
+  AppCfg
+    { port = 4747,
+      migrationPath = Just "dev/migrations/special-zone",
+      autoMigrate = True,
+      esqDBCfg =
+        EsqDBConfig
+          { connectHost = "localhost",
+            connectPort = 5434,
+            connectUser = "atlas_special_zone_user",
+            connectPassword = "atlas",
+            connectDatabase = "atlas_dev",
+            connectSchemaName = "atlas_special_zone"
+          },
+      loggerConfig =
+        LoggerConfig
+          { level = DEBUG,
+            logToFile = True,
+            logFilePath = "/tmp/special-location.log",
+            logToConsole = True,
+            logRawSql = True,
+            prettyPrinting = True
+          },
+      graceTerminationPeriod = 90
+    }
