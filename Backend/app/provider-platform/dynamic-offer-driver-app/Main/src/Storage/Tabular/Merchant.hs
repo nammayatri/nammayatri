@@ -20,6 +20,7 @@
 
 module Storage.Tabular.Merchant where
 
+import qualified Domain.Types.FareParameters as Domain (FarePolicyType)
 import qualified Domain.Types.Merchant as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
@@ -27,6 +28,7 @@ import Kernel.Types.Geofencing
 import Kernel.Types.Id
 
 derivePersistField "Domain.Status"
+derivePersistField "Domain.FarePolicyType"
 
 mkPersist
   defaultSqlSettings
@@ -53,6 +55,7 @@ mkPersist
       updatedAt UTCTime
       originRestriction GeoRestriction
       destinationRestriction GeoRestriction
+      farePolicyType Domain.FarePolicyType
       info Text Maybe
       Primary id
       UniqueMerchantSubscriberId subscriberId

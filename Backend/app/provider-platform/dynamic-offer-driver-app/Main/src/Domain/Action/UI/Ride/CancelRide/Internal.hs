@@ -11,12 +11,14 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
+import qualified Domain.Types.FareParameters as DFParams (FarePolicyType (..))
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DMerc
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
@@ -24,6 +26,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Domain.Types.SlabFarePolicy as DSFP
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -45,6 +48,7 @@ import qualified Storage.CachedQueries.DriverInformation as CDI
 import qualified Storage.CachedQueries.FarePolicy as QFP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
+import qualified Storage.CachedQueries.SlabFarePolicy as QSFP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
@@ -95,15 +99,25 @@ cancelRideImpl rideId bookingCReason = do
     let searchRepeatLimit = transpConf.searchRepeatLimit
     driverPoolCfg <- getDriverPoolConfig merchant.id searchReq.estimatedDistance
     driverPool <- calculateDriverPool Estimate driverPoolCfg (Just searchReq.vehicleVariant) searchReq.fromLocation merchant.id True Nothing
-    farePolicy <- QFP.findByMerchantIdAndVariant searchReq.providerId searchReq.vehicleVariant (Just searchReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
     now <- getCurrentTime
-    let isRepeatSearch =
-          searchReq.searchRepeatCounter < searchRepeatLimit
-            && bookingCReason.source == SBCR.ByDriver
-            && (isNightShift farePolicy now == booking.fareParams.nightCoefIncluded)
-    case (isRepeatSearch, driverPool) of
-      (True, a : xs) -> repeatSearch merchant farePolicy searchReq booking ride SBCR.ByDriver now driverPoolCfg (a :| xs)
-      _ -> BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+    case merchant.farePolicyType of
+      DFParams.NORMAL -> do
+        farePolicy <- QFP.findByMerchantIdAndVariant searchReq.providerId searchReq.vehicleVariant (Just searchReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
+        let isRepeatSearch = isRepeatSearchFun farePolicy.nightShiftStart farePolicy.nightShiftEnd now booking.fareParams.nightCoefIncluded searchReq.searchRepeatCounter searchRepeatLimit
+        case (isRepeatSearch, driverPool) of
+          (True, a : xs) -> repeatSearch merchant farePolicy searchReq booking ride SBCR.ByDriver now driverPoolCfg (a :| xs)
+          _ -> BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+      DFParams.SLAB -> do
+        slabFarePolicy <- QSFP.findByMerchantIdAndVariant searchReq.providerId searchReq.vehicleVariant >>= fromMaybeM NoFarePolicy
+        let isRepeatSearch = isRepeatSearchFun slabFarePolicy.nightShiftStart slabFarePolicy.nightShiftEnd now booking.fareParams.nightCoefIncluded searchReq.searchRepeatCounter searchRepeatLimit
+        case (isRepeatSearch, driverPool) of
+          (True, a : xs) -> repeatSearchSlabFare merchant slabFarePolicy searchReq booking ride SBCR.ByDriver now driverPoolCfg (a :| xs)
+          _ -> BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+  where
+    isRepeatSearchFun nightShiftStart nightShiftEnd now nightCoefIncluded searchRepeatCounter searchRepeatLimit =
+      searchRepeatCounter < searchRepeatLimit
+        && bookingCReason.source == SBCR.ByDriver
+        && (isNightShift nightShiftStart nightShiftEnd now == nightCoefIncluded)
 
 cancelRideTransaction ::
   ( EsqDBFlow m r,
@@ -127,6 +141,36 @@ cancelRideTransaction bookingId ride bookingCReason = do
       then QDFS.updateStatus ride.driverId DDFS.ACTIVE
       else QDFS.updateStatus ride.driverId DDFS.IDLE
   SRide.clearCache ride.driverId
+
+repeatSearchSlabFare ::
+  ( EsqDBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    TranslateFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasSendSearchRequestToDriverMetrics m r,
+    HasHttpClientOptions r c,
+    HasField "maxShards" r Int,
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r
+  ) =>
+  DMerc.Merchant ->
+  DSFP.SlabFarePolicy ->
+  DSR.SearchRequest ->
+  SRB.Booking ->
+  DRide.Ride ->
+  SBCR.CancellationSource ->
+  UTCTime ->
+  DriverPoolConfig ->
+  NonEmpty DriverPoolResult ->
+  m ()
+repeatSearchSlabFare merchant slabFarePolicy searchReq booking ride cancellationSource now driverPoolConfig driverPool = do
+  newSearchReq <- buildSearchRequest searchReq
+  estimateItem <- buildEstimateFromSlabFarePolicy merchant newSearchReq.startTime newSearchReq.estimatedDistance (slabFarePolicy, driverPool)
+
+  fareParams <- calculateFare searchReq.providerId Nothing (Just slabFarePolicy) searchReq.estimatedDistance now Nothing
+  let driverExtraFare = DFP.ExtraFee {minFee = 0, maxFee = 0}
+  let baseFare = fareSum fareParams
+  repeatSearch' merchant newSearchReq booking ride cancellationSource driverPoolConfig baseFare driverExtraFare estimateItem
 
 repeatSearch ::
   ( EsqDBFlow m r,
@@ -153,10 +197,33 @@ repeatSearch merchant farePolicy searchReq booking ride cancellationSource now d
   newSearchReq <- buildSearchRequest searchReq
   estimateItem <- buildEstimate merchant newSearchReq.startTime newSearchReq.estimatedDistance (farePolicy, driverPool)
 
-  fareParams <- calculateFare searchReq.providerId farePolicy searchReq.estimatedDistance now Nothing
+  fareParams <- calculateFare searchReq.providerId (Just farePolicy) Nothing searchReq.estimatedDistance now Nothing
   let driverExtraFare = farePolicy.driverExtraFee
   let baseFare = fareSum fareParams
+  repeatSearch' merchant newSearchReq booking ride cancellationSource driverPoolConfig baseFare driverExtraFare estimateItem
 
+repeatSearch' ::
+  ( EsqDBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    TranslateFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasSendSearchRequestToDriverMetrics m r,
+    HasHttpClientOptions r c,
+    HasField "maxShards" r Int,
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r
+  ) =>
+  DMerc.Merchant ->
+  DSR.SearchRequest ->
+  SRB.Booking ->
+  DRide.Ride ->
+  SBCR.CancellationSource ->
+  DriverPoolConfig ->
+  Money ->
+  DFP.ExtraFee ->
+  EstimateItem ->
+  m ()
+repeatSearch' merchant newSearchReq booking ride cancellationSource driverPoolConfig baseFare driverExtraFare estimateItem = do
   Esq.runTransaction $ do
     QSR.create newSearchReq
 
@@ -185,45 +252,47 @@ repeatSearch merchant farePolicy searchReq booking ride cancellationSource now d
     _ -> return ()
 
   BP.sendEstimateRepetitionUpdateToBAP booking ride estimateItem cancellationSource
-  where
-    buildSearchRequest ::
-      ( MonadTime m,
-        MonadGuid m,
-        MonadReader r m
-      ) =>
-      DSearchReq.SearchRequest ->
-      m DSearchReq.SearchRequest
-    buildSearchRequest DSearchReq.SearchRequest {..} = do
-      id_ <- Id <$> generateGUID
-      let validTill_ = 120 `addUTCTime` validTill
-      from <- buildSearchReqLocation fromLocation
-      to <- buildSearchReqLocation toLocation
-      pure
-        DSearchReq.SearchRequest
-          { id = id_,
-            startTime = now,
-            validTill = validTill_,
-            fromLocation = from,
-            toLocation = to,
-            status = DSearchReq.ACTIVE,
-            searchRepeatCounter = searchRepeatCounter + 1,
-            updatedAt = now,
-            createdAt = now,
-            ..
-          }
 
-    buildSearchReqLocation ::
-      ( MonadTime m,
-        MonadGuid m
-      ) =>
-      DLoc.SearchReqLocation ->
-      m DLoc.SearchReqLocation
-    buildSearchReqLocation DLoc.SearchReqLocation {..} = do
-      newId <- Id <$> generateGUID
-      pure
-        DLoc.SearchReqLocation
-          { id = newId,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
+buildSearchRequest ::
+  ( MonadTime m,
+    MonadGuid m,
+    MonadReader r m
+  ) =>
+  DSearchReq.SearchRequest ->
+  m DSearchReq.SearchRequest
+buildSearchRequest DSearchReq.SearchRequest {..} = do
+  id_ <- Id <$> generateGUID
+  now <- getCurrentTime
+  let validTill_ = 120 `addUTCTime` validTill
+  from <- buildSearchReqLocation fromLocation
+  to <- buildSearchReqLocation toLocation
+  pure
+    DSearchReq.SearchRequest
+      { id = id_,
+        startTime = now,
+        validTill = validTill_,
+        fromLocation = from,
+        toLocation = to,
+        status = DSearchReq.ACTIVE,
+        searchRepeatCounter = searchRepeatCounter + 1,
+        updatedAt = now,
+        createdAt = now,
+        ..
+      }
+
+buildSearchReqLocation ::
+  ( MonadTime m,
+    MonadGuid m
+  ) =>
+  DLoc.SearchReqLocation ->
+  m DLoc.SearchReqLocation
+buildSearchReqLocation DLoc.SearchReqLocation {..} = do
+  newId <- Id <$> generateGUID
+  now <- getCurrentTime
+  pure
+    DLoc.SearchReqLocation
+      { id = newId,
+        createdAt = now,
+        updatedAt = now,
+        ..
+      }

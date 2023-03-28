@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.1.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 
@@ -179,6 +179,7 @@ library
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchRequestSentToDriverEvent
       Domain.Types.SearchRequestSpecialZone
+      Domain.Types.SlabFarePolicy
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Environment
@@ -225,6 +226,7 @@ library
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.OnboardingDocumentConfig
+      Storage.CachedQueries.SlabFarePolicy
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.BookingCancellationReason
@@ -275,6 +277,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
+      Storage.Queries.SlabFarePolicy
       Storage.Queries.Vehicle
       Storage.Tabular.Booking
       Storage.Tabular.Booking.BookingLocation
@@ -330,6 +333,7 @@ library
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone
+      Storage.Tabular.SlabFarePolicy
       Storage.Tabular.Vehicle
       Tools.Auth
       Tools.Call

@@ -17,6 +17,7 @@ module SharedLogic.FareCalculator.Calculator
     fareSum,
     baseFareSum,
     calculateFareParameters,
+    calculateSlabFareParameters,
     isNightShift,
   )
 where
@@ -31,7 +32,9 @@ import Data.Time
   )
 import Domain.Types.FareParameters
 import Domain.Types.FarePolicy
+import Domain.Types.SlabFarePolicy
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Utils.Common
 
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
@@ -64,9 +67,19 @@ mkBreakupList mkPrice mkBreakupItem fareParams = do
   catMaybes [Just totalFareItem, Just baseFareItem, deadKmFareItem, extraDistanceFareItem, mbSelectedFareItem]
 
 -- TODO: make some tests for it
+
 fareSum :: FareParameters -> Money
-fareSum fareParams = do
+fareSum fareParams = case fareParams.farePolicyType of
+  NORMAL -> normalFareSum fareParams
+  SLAB -> slabFareSum fareParams
+
+normalFareSum :: FareParameters -> Money
+normalFareSum fareParams = do
   baseFareSum fareParams + (fromMaybe 0 fareParams.deadKmFare) + fromMaybe 0 fareParams.driverSelectedFare
+
+slabFareSum :: FareParameters -> Money
+slabFareSum sFareParams = do
+  baseFareSum sFareParams + (fromMaybe 0 sFareParams.serviceCharge) + fromMaybe 0 sFareParams.waitingOrPickupCharges + fromMaybe 0 sFareParams.driverSelectedFare
 
 baseFareSum :: FareParameters -> Money
 baseFareSum fareParams = roundToIntegral $ do
@@ -99,7 +112,7 @@ calculateFareParameters fp distance time mbExtraFare = do
         distance - fp.baseDistanceMeters
           & (\dist -> if dist > 0 then Just dist else Nothing)
       mbExtraKmFare = mbExtraDistance <&> \ex -> roundToIntegral $ realToFrac (distanceToKm ex) * fp.perExtraKmFare
-      nightCoefIncluded = isNightShift fp time
+      nightCoefIncluded = isNightShift fp.nightShiftStart fp.nightShiftEnd time
 
   id <- generateGUID
   pure
@@ -111,20 +124,59 @@ calculateFareParameters fp distance time mbExtraFare = do
         driverSelectedFare = mbExtraFare,
         nightShiftRate = fp.nightShiftRate,
         nightCoefIncluded,
-        waitingChargePerMin = fp.waitingChargePerMin
+        waitingChargePerMin = fp.waitingChargePerMin,
+        waitingOrPickupCharges = Nothing,
+        serviceCharge = Nothing,
+        farePolicyType = NORMAL
       }
+
+calculateSlabFareParameters ::
+  (MonadGuid m, MonadThrow m, Log m) =>
+  SlabFarePolicy ->
+  Meters ->
+  UTCTime ->
+  Maybe Money ->
+  m FareParameters
+calculateSlabFareParameters fp distance time mbExtraFare = do
+  let slabs = filter (selectSlab distance) fp.fareSlabs
+  unless (length slabs == 1) $ throwError (InvalidRequest "Invalid Fare Slab")
+  let slab = head slabs
+
+  let baseDistanceFare = roundToIntegral $ slab.fare
+      waitingOrPickupCharges = roundToIntegral $ slab.waitingCharge
+      nightCoefIncluded = isNightShift fp.nightShiftStart fp.nightShiftEnd time
+
+  id <- generateGUID
+  pure
+    FareParameters
+      { id,
+        baseFare = baseDistanceFare,
+        deadKmFare = Nothing,
+        extraKmFare = Nothing,
+        serviceCharge = Just fp.serviceCharge,
+        driverSelectedFare = mbExtraFare,
+        nightShiftRate = fp.nightShiftRate,
+        nightCoefIncluded,
+        waitingOrPickupCharges = Just waitingOrPickupCharges,
+        waitingChargePerMin = Nothing,
+        farePolicyType = SLAB
+      }
+
+selectSlab :: Meters -> Slab -> Bool
+selectSlab distance slab = distance > slab.startMeters && distance <= slab.endMeters
 
 distanceToKm :: Meters -> Rational
 distanceToKm x = realToFrac x / 1000
 
 isNightShift ::
-  FarePolicy ->
+  Maybe TimeOfDay ->
+  Maybe TimeOfDay ->
   UTCTime ->
   Bool
-isNightShift farePolicy time = do
+isNightShift mbNightShiftStart mbNightShiftEnd time = do
   let timeOfDay = localTimeOfDay $ utcToLocalTime timeZoneIST time
-  let nightShiftStart = fromMaybe midnight $ farePolicy.nightShiftStart
-  let nightShiftEnd = fromMaybe midnight $ farePolicy.nightShiftEnd
+  let nightShiftStart = fromMaybe midnight mbNightShiftStart
+  let nightShiftEnd = fromMaybe midnight mbNightShiftEnd
   isTimeWithinBounds nightShiftStart nightShiftEnd timeOfDay
 
 timeZoneIST :: TimeZone
