@@ -60,6 +60,7 @@ mkPersist
       language Language Maybe
       isNew Bool
       enabled Bool
+      blocked Bool
       deviceToken FCMRecipientToken Maybe
       description Text Maybe
       merchantId SMerchant.MerchantTId

@@ -26,10 +26,11 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
-import Servant
+import Servant hiding (Summary)
 
 data CustomerEndpoint
   = DeleteCustomerEndpoint
+  | BlockCustomerEndpoint
   deriving (Show, Read)
 
 derivePersistField "CustomerEndpoint"
@@ -41,3 +42,43 @@ type CustomerDeleteAPI =
   Capture "customerId" (Id DP.Customer)
     :> "delete"
     :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- customer Block  --------------------------------------
+
+type CustomerBlockAPI =
+  Capture "customerId" (Id DP.Customer)
+    :> "block"
+    :> Post '[JSON] APISuccess
+
+---------------------------------------------------------
+-- customer List ----------------------------------------
+
+type CustomerListAPI =
+  "list"
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "enabled" Bool
+    :> QueryParam "blocked" Bool
+    :> QueryParam "phone" Text
+    :> Get '[JSON] CustomerListRes
+
+data CustomerListRes = CustomerListRes
+  { totalItems :: Int, -- for backward compatibility
+    summary :: Summary,
+    customers :: [CustomerListItem]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CustomerListItem = CustomerListItem
+  { customerId :: Id Customer,
+    firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    phoneNo :: Maybe Text,
+    enabled :: Bool,
+    blocked :: Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
