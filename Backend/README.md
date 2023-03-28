@@ -7,71 +7,25 @@ Getting Started with building and running the project.
 
 ### Pre-requisites
 
-Before we can build the mobility project, there are some pre-requisites in the form of external dependencies which you must install, depending on you OS.
+#### Nix
+We manage dependencies and development environment using Nix. Before proceeding, you need to install Nix. Follow [these instructions](https://haskell.flake.page/nix) to install Nix.
 
-#### Haskell language toolchain
+Once you have Nix installed, configure the binary cache (to avoid compiling locally), by running:
 
-You'd need the Haskell language toolchain (GHC, cabal) installed in order build the project.
-
-[GHCup](https://https://www.haskell.org/ghcup) is the preferred method to install Haskell.
-
+```sh
+nix run nixpkgs#cachix use nammayatri
+```
 
 #### Tools
 
 These tools are required when working with the mobility repository:-
 
 1. [Docker](https://www.docker.com/products/docker-desktop/) - we use docker and docker-compose for containers.
-2. [Stack](https://docs.haskellstack.org/en/stable/install_and_upgrade/) - we use the stack build tool for building and running the entire project. ([GHCup](https://https://www.haskell.org/ghcup) can also be used to install Stack)
 
 For Mac users, some additional tools may be required:-
 
 1. [Xcode](https://developer.apple.com/xcode/)
-2. [Home brew](https://brew.sh)
 
-#### Linters and formatters
-
-Install haskell linter and formatter by running this command in home directory, after you have stack installed.
-
-```
-$ stack install hlint ormolu
-```
-
-#### Extra Dependencies
-
-Depending on your OS, you'd need install these dependencies or their equivalents.
-
-For Mac
-
-```
-$ brew install libpq
-$ brew install librdkafka
-$ brew install postgres
-$ brew install dhall
-$ brew install jq
-$ brew install parallel
-```
-
-For M1 or newer Macs (other dependencies)
-
-```
-arch -x86_64 /usr/local/bin/brew install libpq
-arch -x86_64 /usr/local/bin/brew install librdkafka
-arch -x86_64 /usr/local/bin/brew install postgres
-arch -x86_64 /usr/local/bin/brew install dhall
-arch -x86_64 /usr/local/bin/brew install jq
-arch -x86_64 /usr/local/bin/brew install parallel
-```
-
-For Linux (other dependencies) or your package-manager equivalents
-
-```
-$ sudo apt-get install libpq-dev
-$ sudo apt-get install librdkafka-dev
-$ sudo apt-get install postgresql
-$ sudo apt-get install dhall
-$ sudo apt-get install jq
-$ sudo apt-get install parallel
-```
 
 ### Building and Development
 
@@ -81,52 +35,52 @@ After you've all the pre-requisite tools & dependencies installed, we can build 
 
 To build the project for development, we should compile the project with the command
 
+```sh
+nix build .#nammayatri
 ```
-$ stack build --fast
-```
 
-The `--fast` flag disables some compile-time optimizations for faster compile times and should only be used for development builds.
-
-> **_Note:_**  For deployment, `stack build` command should be used to compile with optimizations.
-
-This should start building the project and all it's dependencies.
+This should produce a `./result` symlink locally containing all backend binaries under `./result/bin`.
 
 #### Development
-
-Once the above build command completes successfully, we can run the project for development.
 
 The `dev/` folder at the project top-level contains all the relevant files and configs, should you need to change or inspect them.
 
 ##### Setting up development environment
 
+TODO: pre-commit hook
+
 To set up your development environment, from project root run
 
+```sh
+nix develop
 ```
-$ ./Backend/dev/setup.sh
-```
+
+This will drop you in a shell environment containing all project dependencies.
 
 
 ##### Running the services
-To run the project, we'd first need to run some services. These are provided via helpful `make` commands.
+To run the project, we'd first need to run some services. These are provided via docker images.
 
 
 For running the database, redis, passetto and kafka run this command
-```
-$ make run-svc
+```sh
+# Make sure you are in 'nix develop' shell first!
+, backend-run-svc
 ```
 
 That should run most of the services required.
 
 More services, if needed, can be run with the following commands.
 
-For running pgadmin run this command
-```
-$ make run-pgadmin
+For running pgadmin run this command:
+
+```sh
+, backend-run-pgadmin
 ```
 
-For running monitoring services like prometheus and grafana use this command
-```
-$ make run-monitoring
+For running monitoring services like prometheus and grafana use this command:
+```sh
+, backend-run-monitoring
 ```
 
 
@@ -138,8 +92,8 @@ To run the test-suite for the project, first ensure you have the services runnin
 
 Run the following command in the project root folder after the services are up and running:-
 
-```
-$ stack test
+```sh
+cabal test all
 ```
 
 
