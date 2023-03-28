@@ -1,4 +1,4 @@
-.vscode/
+.vscode/tasks.json
 
 # Nix files
 .direnv
