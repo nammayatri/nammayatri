@@ -890,6 +890,8 @@ type CurrentLocationDetailsWithDistance =  {
 newtype FlowStatusData = FlowStatusData {
     source :: Location
   , destination :: Location
+  , sourceAddress :: Address
+  , destinationAddress :: Address
 }
 
 derive instance genericFlowStatusData :: Generic FlowStatusData _

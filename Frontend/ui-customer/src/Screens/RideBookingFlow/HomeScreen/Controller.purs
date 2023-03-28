@@ -520,7 +520,10 @@ eval (UpdateCurrentStage stage) state = do
   else
     continue state
 
-eval OnResumeCallback state = exit $ OnResumeApp state
+eval OnResumeCallback state = 
+  if (isLocalStageOn FindingQuotes) then
+    exit $ OnResumeApp state
+  else continue state
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
