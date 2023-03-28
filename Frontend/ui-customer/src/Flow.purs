@@ -139,6 +139,33 @@ forceIOSupdate c_maj c_min c_patch =
   c_min < updatedIOSversion.minorUpdateIndex || 
   c_patch < updatedIOSversion.patchUpdateIndex
 
+currentRideFlow :: Boolean -> FlowBT String Unit
+currentRideFlow rideAssigned = do
+  rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
+  case rideBookingListResponse of 
+    Right (RideBookingListRes listResp) -> do 
+      if not (null listResp.list) then do
+        when (not rideAssigned) $ do
+          void $ pure $ firebaseLogEvent "ny_active_ride_with_idle_state" 
+        (GlobalState state') <- getState
+        let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
+            state = state'.homeScreen
+            status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
+            rideStatus = if status == "NEW" then RideAccepted else RideStarted  
+            newState = state{data{driverInfoCardState = getDriverInfo (RideBookingRes resp)
+                , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)},
+                  props{currentStage = rideStatus
+                  , rideRequestFlow = true
+                  , ratingModal = false
+                  , bookingId = resp.id
+                  }}
+        _ <- pure $ spy "Active api" listResp
+        modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
+        _ <- pure $ setValueToLocalStore TRACKING_ENABLED if status == "NEW" then "True" else "False"
+        updateLocalStage rideStatus
+      else updateLocalStage HomeScreen
+    Left err -> updateLocalStage HomeScreen
+
 currentFlowStatus :: FlowBT String Unit 
 currentFlowStatus = do
   void $ lift $ lift $ toggleLoader false
@@ -150,29 +177,7 @@ currentFlowStatus = do
   case flowStatus.currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
     DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
-    RIDE_ASSIGNED _ -> do
-      rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
-      case rideBookingListResponse of 
-        Right (RideBookingListRes listResp) -> do 
-          if not (null listResp.list) then do 
-            (GlobalState state') <- getState
-            let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
-                state = state'.homeScreen
-                status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
-                rideStatus = if status == "NEW" then RideAccepted else RideStarted  
-                newState = state{data{driverInfoCardState = getDriverInfo (RideBookingRes resp)
-                    , finalAmount = fromMaybe 0 ((fromMaybe dummyRideAPIEntity (resp.rideList !!0) )^. _computedPrice)},
-                      props{currentStage = rideStatus
-                      , rideRequestFlow = true
-                      , ratingModal = false
-                      , bookingId = resp.id
-                      }}
-            _ <- pure $ spy "Active api" listResp
-            modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
-            _ <- pure $ setValueToLocalStore TRACKING_ENABLED if status == "NEW" then "True" else "False"
-            updateLocalStage rideStatus
-          else updateLocalStage HomeScreen
-        Left err -> updateLocalStage HomeScreen
+    RIDE_ASSIGNED _ -> currentRideFlow true
     PENDING_RATING _ -> do
       updateLocalStage HomeScreen
       rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
@@ -227,7 +232,7 @@ currentFlowStatus = do
                 })                         
             _ -> pure unit
         Left err -> updateLocalStage HomeScreen
-    _ -> updateLocalStage HomeScreen
+    _ -> currentRideFlow false
   lift $ lift $ doAff do liftEffect hideSplash
   permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
   permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
@@ -397,6 +402,7 @@ homeScreenFlow = do
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
   flow <- UI.homeScreen
   case flow of
+    ON_RESUME_APP -> currentFlowStatus
     GO_TO_MY_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}})
       _ <- pure $ firebaseLogEvent "ny_user_myrides_click"
