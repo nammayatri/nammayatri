@@ -53,7 +53,7 @@ mkPersist
       createdAt UTCTime
       updatedAt UTCTime
       Primary driverId
-      Unique VehicleRegistrationNo
+      UniqueVehicleRegistrationNo registrationNo
       deriving Generic
     |]
 

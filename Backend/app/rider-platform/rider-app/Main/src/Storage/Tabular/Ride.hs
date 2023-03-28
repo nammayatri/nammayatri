@@ -59,7 +59,7 @@ mkPersist
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
-      Unique RideShortId
+      UniqueRideShortId shortId
       deriving Generic
     |]
 

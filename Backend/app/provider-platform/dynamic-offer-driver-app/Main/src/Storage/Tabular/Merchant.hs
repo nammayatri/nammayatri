@@ -55,8 +55,8 @@ mkPersist
       destinationRestriction GeoRestriction
       info Text Maybe
       Primary id
-      Unique MerchantSubscriberId
-      Unique MerchantShortId
+      UniqueMerchantSubscriberId subscriberId
+      UniqueMerchantShortId shortId
       deriving Generic
     |]
 

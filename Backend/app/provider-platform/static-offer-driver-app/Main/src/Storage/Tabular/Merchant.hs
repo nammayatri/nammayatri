@@ -54,8 +54,8 @@ mkPersist
       originRestriction GeoRestriction
       destinationRestriction GeoRestriction
       Primary id
-      Unique MerchantShortId
-      Unique MerchantSubscriberId
+      UniqueMerchantShortId shortId
+      UniqueMerchantSubscriberId subscriberId
       deriving Generic
     |]
 

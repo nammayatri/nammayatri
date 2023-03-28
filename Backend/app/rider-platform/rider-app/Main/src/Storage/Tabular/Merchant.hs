@@ -50,7 +50,7 @@ mkPersist
       updatedAt UTCTime
       createdAt UTCTime
       Primary id
-      Unique MerchantShortId
+      UniqueMerchantShortId shortId
       deriving Generic
     |]
 

@@ -50,7 +50,7 @@ mkPersist
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
-      Unique IdfyVerificationRequestId
+      UniqueIdfyVerificationRequestId requestId
       deriving Generic
     |]
 
