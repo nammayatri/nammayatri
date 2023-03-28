@@ -693,6 +693,26 @@ homeScreenFlow = do
               void $ lift $ lift $ toggleLoader false
               else pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
           homeScreenFlow
+    GO_TO_START_ZONE_RIDE {otp, lat, lon} -> do
+      void $ lift $ lift $ loaderText (getString PLEASE_WAIT) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
+      startZoneRideResp <- lift $ lift $ Remote.otpRide "" (Remote.makeOTPRideReq otp (fromMaybe 0.0 (fromString lat)) (fromMaybe 0.0 (fromString lon))) -- driver's lat long during starting ride      
+      case startZoneRideResp of
+        Right startZoneRideResp -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false, showDottedRoute = true}, data{ route = [], activeRide{status = INPROGRESS}}})
+          void $ lift $ lift $ toggleLoader false
+          void $ updateStage $ HomeScreenStage RideStarted
+          currentRideFlow
+        Left errorPayload -> do
+          let errResp = errorPayload.response
+          let codeMessage = decodeErrorCode errResp.errorMessage
+          if ( errorPayload.code == 400 && (codeMessage == "BOOKING_NOT_FOUND_FOR_SPECIAL_ZONE_OTP")) then do
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = ""} })
+            else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = ""} })
+              else pure $ toast (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
+          void $ lift $ lift $ toggleLoader false
+          homeScreenFlow
     GO_TO_END_RIDE {id, lat, lon} -> do
       _ <- pure $ printLog "HOME_SCREEN_FLOW GO_TO_END_RIDE" "."
       void $ lift $ lift $ loaderText (getString END_RIDE) ""

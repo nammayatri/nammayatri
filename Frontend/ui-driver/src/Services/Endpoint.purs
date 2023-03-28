@@ -98,3 +98,6 @@ linkReferralCode dummyString = (getBaseUrl "") <> "/driver/linkReferralCode"
 
 getPerformance :: String -> String
 getPerformance dummyString = (getBaseUrl "") <> "/driver/performance"
+
+otpRide :: String -> String
+otpRide dummyRideOtp = (getBaseUrl "") <> "/driver/otpRide/start"

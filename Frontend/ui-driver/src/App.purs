@@ -222,6 +222,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | NOTIFY_CUSTOMER HomeScreenState
                           | UPDATE_STAGE HomeScreenStage
                           | GO_TO_NOTIFICATIONS
+                          | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String} 
                           
 data RIDE_DETAIL_SCREENOUTPUT = GO_TO_HOME_FROM_RIDE_DETAIL | SHOW_ROUTE_IN_RIDE_DETAIL
 data APPLICATION_STATUS_SCREENOUTPUT = GO_TO_HOME_FROM_APPLICATION_STATUS

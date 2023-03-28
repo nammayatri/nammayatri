@@ -349,6 +349,9 @@ inactiveButtonTextPrimary = "#FEF2BD"
 hintText :: Color
 hintText =  "#E5E7E8"
 
+transparent :: Color
+transparent = "#00FFFFFF"
+
 whiteGrey :: Color
 whiteGrey = "#F2F6F9"
 
