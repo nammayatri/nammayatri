@@ -58,7 +58,7 @@ import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import qualified Domain.Types.FareParameters as Fare
-import Domain.Types.FarePolicy (ExtraFee)
+import Domain.Types.FarePolicy (ExtraFee (..))
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person (Person, PersonAPIEntity)
@@ -100,9 +100,10 @@ import SharedLogic.FareCalculator
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QDriverInformation
-import Storage.CachedQueries.FarePolicy (findByMerchantIdAndVariant)
+import qualified Storage.CachedQueries.FarePolicy as FarePolicyS (findByMerchantIdAndVariant)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS (findByMerchantIdAndVariant)
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverQuote as QDrQt
@@ -704,11 +705,18 @@ respondQuote driverId req = do
         quoteLimit <- getQuoteLimit sReq.providerId sReq.estimatedDistance
         quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
         when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-        farePolicy <- findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
+        (farePolicy, slabFarePolicy, driverExtraFee) <- case organization.farePolicyType of
+          Fare.SLAB -> do
+            slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant
+            let driverExtraFee = ExtraFee {minFee = 0, maxFee = 0}
+            pure (Nothing, slabFarePolicy, driverExtraFee)
+          Fare.NORMAL -> do
+            farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
+            pure (Just farePolicy, Nothing, farePolicy.driverExtraFee)
         whenJust mbOfferedFare $ \off ->
-          unless (isAllowedExtraFee farePolicy.driverExtraFee off) $
+          unless (isAllowedExtraFee driverExtraFee off) $
             throwError $ NotAllowedExtraFee $ show off
-        fareParams <- calculateFare organization.id farePolicy sReq.estimatedDistance sReqFD.startTime mbOfferedFare
+        fareParams <- calculateFare organization.id farePolicy slabFarePolicy sReq.estimatedDistance sReqFD.startTime mbOfferedFare
         driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
         Esq.runTransaction $ do
           QDrQt.create driverQuote

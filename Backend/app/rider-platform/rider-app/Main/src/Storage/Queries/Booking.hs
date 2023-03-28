@@ -188,14 +188,17 @@ findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Ma
 findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus = Esq.buildDType $ do
   let isOnlyActive = Just True == mbOnlyActive
   fullBookingsT <- Esq.findAll' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab :& _) <-
+    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab :& mbRide) <-
       from $
-        fullBookingTable `innerJoin` table @R.RideT
-          `Esq.on` (\(booking :& _ :& _ :& _ :& _ :& ride) -> booking ^. RB.BookingTId ==. ride ^. R.RideBookingId)
+        fullBookingTable `leftJoin` table @R.RideT
+          `Esq.on` (\(booking :& _ :& _ :& _ :& _ :& mbRide) -> just (booking ^. RB.BookingTId) ==. mbRide ?. R.RideBookingId)
     where_ $
       booking ^. RB.BookingRiderId ==. val (toKey personId)
         &&. ( whenTrue_ isOnlyActive (not_ (booking ^. RB.BookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
                 &&. whenJust_ mbBookingStatus (\status -> booking ^. RB.BookingStatus ==. val status)
+                &&. ( not_ (Esq.isNothing (mbRide ?. R.RideTId))
+                        ||. (Esq.isNothing (mbRide ?. R.RideTId) &&. not_ (Esq.isNothing (booking ^. RB.BookingOtpCode)))
+                    )
             )
     limit $ fromIntegral $ fromMaybe 10 mbLimit
     offset $ fromIntegral $ fromMaybe 0 mbOffset

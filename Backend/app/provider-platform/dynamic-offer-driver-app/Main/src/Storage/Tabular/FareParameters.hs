@@ -40,6 +40,9 @@ mkPersist
       nightShiftRate Centesimal Maybe
       nightCoefIncluded Bool
       waitingChargePerMin Money Maybe
+      waitingOrPickupCharges Money Maybe
+      serviceCharge Money Maybe
+      farePolicyType Domain.FarePolicyType
 
       Primary id
       deriving Generic

@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 import Domain.Types.Common
+import Domain.Types.FareParameters (FarePolicyType)
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -60,6 +61,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     geofencingConfig :: GeofencingConfig,
+    farePolicyType :: FarePolicyType,
     info :: Maybe Text
   }
   deriving (Generic, Show)

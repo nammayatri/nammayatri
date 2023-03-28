@@ -33,6 +33,7 @@ import qualified Domain.Types.Merchant.TransporterConfig as DTConf
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
+import Domain.Types.SlabFarePolicy (SlabFarePolicy)
 import Domain.Types.Vehicle.Variant (Variant)
 import Environment (Flow)
 import EulerHS.Prelude hiding (pi)
@@ -48,7 +49,9 @@ import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.FareCalculator as Fare
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
+import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTConf
+import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -68,12 +71,14 @@ data DashboardEndRideReq = DashboardEndRideReq
 data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
+    getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
-    getFarePolicy :: Id DM.Merchant -> Variant -> Maybe Meters -> m (Maybe FarePolicy),
+    getFarePolicy :: Id DM.Merchant -> Variant -> Maybe Meters -> m (Maybe FarePolicy, Maybe SlabFarePolicy),
     calculateFare ::
       Id DM.Merchant ->
-      FarePolicy ->
+      Maybe FarePolicy ->
+      Maybe SlabFarePolicy ->
       Meters ->
       UTCTime ->
       Maybe Money ->
@@ -94,7 +99,8 @@ buildEndRideHandle merchantId = do
     ServiceHandle
       { findBookingById = QRB.findById,
         findRideById = QRide.findById,
-        getFarePolicy = FarePolicyS.findByMerchantIdAndVariant,
+        getMerchant = MerchantS.findById,
+        getFarePolicy = getFarePolicyByMerchantIdAndVariant,
         notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
         endRideTransaction = RideEndInt.endRideTransaction,
         calculateFare = Fare.calculateFare,
@@ -106,6 +112,17 @@ buildEndRideHandle merchantId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId
       }
+
+getFarePolicyByMerchantIdAndVariant :: Id DM.Merchant -> Variant -> Maybe Meters -> Flow (Maybe FarePolicy, Maybe SlabFarePolicy)
+getFarePolicyByMerchantIdAndVariant merchantId variant mbDistance = do
+  merchant <- MerchantS.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  case merchant.farePolicyType of
+    Fare.SLAB -> do
+      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant merchantId variant
+      return (Nothing, slabFarePolicy)
+    Fare.NORMAL -> do
+      farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId variant mbDistance
+      return (farePolicy, Nothing)
 
 driverEndRide ::
   (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
@@ -207,9 +224,9 @@ recalculateFareForDistance handle@ServiceHandle {..} booking ride recalcDistance
 
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
-  farePolicy <- getFarePolicy transporterId booking.vehicleVariant (Just booking.estimatedDistance) >>= fromMaybeM NoFarePolicy
-  fareParams <- calculateFare transporterId farePolicy recalcDistance booking.startTime booking.fareParams.driverSelectedFare
-  waitingCharge <- getWaitingFare handle ride.tripStartTime ride.driverArrivalTime farePolicy.waitingChargePerMin
+  (mbFarePolicy, mbSlabFarePolicy) <- getFarePolicy transporterId booking.vehicleVariant (Just booking.estimatedDistance)
+  fareParams <- calculateFare transporterId mbFarePolicy mbSlabFarePolicy recalcDistance booking.startTime booking.fareParams.driverSelectedFare
+  waitingCharge <- getWaitingFare handle ride.tripStartTime ride.driverArrivalTime $ (.waitingChargePerMin) =<< mbFarePolicy
   let updatedFare = Fare.fareSum fareParams
       finalFare = updatedFare + waitingCharge
       distanceDiff = recalcDistance - oldDistance

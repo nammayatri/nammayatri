@@ -74,7 +74,7 @@ getReadyTasks mbMaxShards = do
   now <- getCurrentTime
   shardId <-
     case mbMaxShards of
-      Just maxShards -> ((`mod` maxShards) . fromIntegral) <$> Hedis.incr getShardIdKey
+      Just maxShards -> (`mod` maxShards) . fromIntegral <$> Hedis.incr getShardIdKey
       Nothing -> pure 0 -- wouldn't be used to fetch jobs in case of nothing
   Esq.findAll $ do
     job <- from $ table @SchedulerJobT
