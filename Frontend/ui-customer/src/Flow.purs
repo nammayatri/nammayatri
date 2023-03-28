@@ -692,7 +692,7 @@ homeScreenFlow = do
         _ <- pure $ currentPosition ""
         _ <- updateLocalStage HomeScreen
         modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData)
-        homeScreenFlow
+        currentFlowStatus
     UPDATE_LOCATION_NAME state lat lon -> do
       (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat lon (case (getValueToLocalStore LANGUAGE_KEY) of  
                                                                                                                           "HI_IN" -> "HINDI" 
