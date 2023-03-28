@@ -3,6 +3,9 @@
 # Nix files
 .direnv
 /result
+# Haskell
+dist-newstyle
+
 Frontend/.DS_Store
 Frontend/package-lock.json
 Frontend/android-native/app/driverProd/debug/output-metadata.json
