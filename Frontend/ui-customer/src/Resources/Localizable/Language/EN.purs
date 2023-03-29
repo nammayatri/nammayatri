@@ -384,3 +384,4 @@ getEN script = case script of
   EMERGENCY_CONTACS_ADDED_SUCCESSFULLY -> "Emergency Contacts Added Successfully"
   NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD -> "No contacts found on device to add"
   NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD -> "No contacts left on device to add"
+  PERMISSION_DENIED -> "Permission Denied"

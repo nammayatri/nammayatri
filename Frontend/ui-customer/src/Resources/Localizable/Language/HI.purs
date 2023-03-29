@@ -383,3 +383,4 @@ getHI script = case script of
   EMERGENCY_CONTACS_ADDED_SUCCESSFULLY -> "आपातकालीन संपर्क सफलतापूर्वक जोड़े गए हैं।"
   NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD -> "जोड़ने के लिए कोई संपर्क नहीं मिला।"
   NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD -> "जोड़ने के लिए कोई संपर्क नहीं बचा है।"
+  PERMISSION_DENIED -> "अनुमति नहीं दी गई"

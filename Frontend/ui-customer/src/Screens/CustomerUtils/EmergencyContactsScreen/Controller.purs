@@ -12,7 +12,7 @@ import Screens (ScreenName(..), getScreen)
 import JBridge (toast, loaderText, toggleLoader)
 import Screens.Types (EmergencyContactsScreenState , ContactDetail, NewContacts)
 import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText', toString)
-import Data.Array (length, filter, snoc, elem, null, unionBy, elem, head, tail, catMaybes, (!!), take)
+import Data.Array (length, filter, snoc, elem, null, unionBy, elem, head, tail, catMaybes, (!!), take, last)
 import Log (printLog)
 import Screens.EmergencyContactsScreen.Transformer (getContactList)
 import Components.ContactList as ContactListController
@@ -105,13 +105,14 @@ eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showInfoPopUp = false}}
 
 eval (ContactsCallback allContacts) state = do
-  let flag = case ((fromMaybe [] (tail allContacts)) !! 0) of
+  let flag = case last allContacts of
               Just contact ->  if (contact.name == "beckn_contacts_flag") && (contact.number == "true") then "true" else "NA" -- TODO :: Need to refactor @Chakradhar
               Nothing -> "false"
-      updatedContactList = case ((fromMaybe [] (tail allContacts)) !! 0) of
+      updatedContactList = case (last allContacts) of
               Just contact ->  if (contact.name == "beckn_contacts_flag") then take ((length allContacts) - 1) allContacts else allContacts -- TODO :: Need to refactor @Chakradhar
               Nothing -> allContacts
   if(flag == "false") then do
+    _ <- pure $ toast (getString PERMISSION_DENIED)
     continueWithCmd state
       [do
         _ <- launchAff_ $ flowRunner $ do
@@ -132,11 +133,6 @@ eval (ContactsCallback allContacts) state = do
     let newContacts = getContactList updatedContactList
     localContacts <- pure $ getValueToLocalStore CONTACTS
     contactsInJson <- pure $ parseNewContacts localContacts
-    -- let validContacts = (map (\contact ->
-    --   if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
-    --     contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}
-    --   else contact
-    -- ) newContacts)
     let filteredContacts = filter (\x -> filter (\y -> (validContact x.number) <> x.name == (validContact y.number) <> y.name) contactsInJson == [] ) newContacts
     let unionNewContacts = uniqueContacts [] filteredContacts
     if (null unionNewContacts) then do

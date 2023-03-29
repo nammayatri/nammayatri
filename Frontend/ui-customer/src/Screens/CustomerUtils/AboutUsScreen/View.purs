@@ -96,7 +96,7 @@ topTextView state =
         , orientation VERTICAL
         ][  softwareLicenseView
           , termsAndConditionsView state
-          , privacyPolicyView 
+          , privacyPolicyView state
           ]
       ]
 
@@ -193,8 +193,8 @@ termsAndConditionsView state =
         ]
 
 --------------------------------------------------- privacyPolicyView -----------------------------------------------------
-privacyPolicyView :: forall w . PrestoDOM (Effect Unit) w
-privacyPolicyView =
+privacyPolicyView :: forall w .ST.AboutUsScreenState -> PrestoDOM (Effect Unit) w
+privacyPolicyView state =
   linearLayout
     [ height WRAP_CONTENT
     , orientation VERTICAL
