@@ -74,7 +74,7 @@
             # Note: It is important not to reference self.packages, as that will
             # slow down the launch of the devshell by having it build the whole
             # backend.
-            nix run .#run-nammayatri
+            nix run .#run-nammayatri-dev
           '';
         };
 
@@ -122,55 +122,64 @@
         };
       };
 
-    process-compose.configs = {
-      run-nammayatri.processes =
-        let
-          localPackagesStatic = lib.mapAttrs
-            (_: p: pkgs.haskell.lib.justStaticExecutables p)
-            (config.haskellProjects.default.outputs.localPackages);
-          exes = with localPackagesStatic; [
-            static-offer-driver-app-allocator
-            rider-app
-            config.haskellProjects.default.outputs.finalPackages.beckn-gateway
-            static-offer-driver-app
+    process-compose.configs =
+      let
+        localPackagesStatic = lib.mapAttrs
+          (_: p: pkgs.haskell.lib.justStaticExecutables p)
+          (config.haskellProjects.default.outputs.localPackages);
+
+        components = {
+          beckn-gateway = {
+            nixExe = lib.getExe config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
+            cabalExe = null;
+          };
+          mock-registry = {
+            nixExe = lib.getExe config.haskellProjects.default.outputs.finalPackages.mock-registry;
+            cabalExe = null;
+          };
+          # TODO: haskell-flake does not have a way to parse executables, so we must specify them manually.
+          # See https://github.com/srid/haskell-flake/issues/36
+          scheduler-example-app-exe = {
+            nixExe = "${localPackagesStatic.scheduler-example}/bin/scheduler-example-app-exe";
+            cabalExe = "scheduler-example:exe:scheduler-example-app-exe";
+          };
+          scheduler-example-scheduler-exe = {
+            nixExe = "${localPackagesStatic.scheduler-example}/bin/scheduler-example-scheduler-exe";
+            cabalExe = "scheduler-example:exe:scheduler-example-scheduler-exe";
+          };
+        } // lib.listToAttrs (builtins.map
+          (p: lib.nameValuePair p.pname {
+            nixExe = lib.getExe p;
+            cabalExe = p.pname;
+          })
+          (with localPackagesStatic; [
+            driver-offer-allocator
             driver-tracking-healthcheck
+            dynamic-offer-driver-app
+            image-api-helper
+            kafka-consumers
             mock-fcm
-            config.haskellProjects.default.outputs.finalPackages.mock-registry
-            mock-sms
             mock-idfy
+            mock-sms
+            provider-dashboard
             public-transport-rider-platform
             public-transport-search-consumer
-            search-result-aggregator
-            static-offer-driver-app-scheduler
-            scheduler-example # Provides two executables
-            dynamic-offer-driver-app
+            rider-app
             rider-dashboard
-            provider-dashboard
-            image-api-helper
-            driver-offer-allocator
-            kafka-consumers
-          ];
-        in
-        builtins.listToAttrs
-          (lib.concatMap
-            (exe:
-              # TODO: Upstream executable detection in haskell-flake
-              if exe.pname == "scheduler-example"
-              then [
-                (lib.nameValuePair (exe.pname + "-app-exe") {
-                  command = "${exe}/bin/${exe.pname}-app-exe";
-                })
-                (lib.nameValuePair (exe.pname + "-scheduler-exe") {
-                  command = "${exe}/bin/${exe.pname}-scheduler-exe";
-                })
-              ]
-              else [
-                (lib.nameValuePair exe.pname {
-                  command = lib.getExe exe;
-                })
-              ])
-            exes);
-    };
+            search-result-aggregator
+            static-offer-driver-app
+            static-offer-driver-app-allocator
+            static-offer-driver-app-scheduler
+          ]));
+        getNixExe = _: v: { command = "set -x; ${v.nixExe}"; };
+        getDevExe = n: v: if v.cabalExe == null then getNixExe n v else { command = "set -x; cabal run ${v.cabalExe}"; };
+      in
+      {
+        run-nammayatri.processes =
+          lib.mapAttrs getNixExe components;
+        run-nammayatri-dev.processes =
+          lib.mapAttrs getDevExe components;
+      };
 
     packages =
       let
