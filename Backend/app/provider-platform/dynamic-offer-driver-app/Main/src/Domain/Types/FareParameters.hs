@@ -31,7 +31,8 @@ data FareParameters = FareParameters
     waitingChargePerMin :: Maybe Money,
     waitingOrPickupCharges :: Maybe Money,
     serviceCharge :: Maybe Money,
-    farePolicyType :: FarePolicyType
+    farePolicyType :: FarePolicyType,
+    govtChargesPerc :: Maybe Int
   }
   deriving (Generic, Show, Eq, PrettyShow)
 

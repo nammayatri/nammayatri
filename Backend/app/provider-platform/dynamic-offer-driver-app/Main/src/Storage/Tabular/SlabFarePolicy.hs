@@ -50,6 +50,7 @@ mkPersist
       serviceCharge Money
 
       fareSlabs (PostgresList Domain.Slab)
+      govtChargesPerc Int Maybe
 
       createdAt UTCTime
       updatedAt UTCTime

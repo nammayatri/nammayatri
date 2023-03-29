@@ -13,6 +13,7 @@ max_allowed_trip_distance integer,
 
 service_charge integer NOT NULL,
 fare_slabs text[] NOT NULL,
+govt_charges_perc int,
 
 created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL

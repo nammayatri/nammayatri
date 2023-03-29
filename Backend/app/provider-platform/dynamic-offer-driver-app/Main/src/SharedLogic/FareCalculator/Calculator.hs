@@ -79,7 +79,17 @@ normalFareSum fareParams = do
 
 slabFareSum :: FareParameters -> Money
 slabFareSum sFareParams = do
-  baseFareSum sFareParams + (fromMaybe 0 sFareParams.serviceCharge) + fromMaybe 0 sFareParams.waitingOrPickupCharges + fromMaybe 0 sFareParams.driverSelectedFare
+  addGovtCharges sFareParams + baseSlabFareSum sFareParams + (fromMaybe 0 sFareParams.serviceCharge) + fromMaybe 0 sFareParams.waitingOrPickupCharges + fromMaybe 0 sFareParams.driverSelectedFare
+
+addGovtCharges :: FareParameters -> Money
+addGovtCharges fp =
+  maybe 0 (\govtChargesPerc -> (fp.baseFare * fromIntegral govtChargesPerc) `div` 100) fp.govtChargesPerc
+
+baseSlabFareSum :: FareParameters -> Money
+baseSlabFareSum fareParams = roundToIntegral do
+  if fareParams.nightCoefIncluded
+    then fromIntegral fareParams.baseFare + (fromMaybe 0 fareParams.nightShiftRate) -- using rate as value here
+    else fromIntegral fareParams.baseFare
 
 baseFareSum :: FareParameters -> Money
 baseFareSum fareParams = roundToIntegral $ do
@@ -127,7 +137,8 @@ calculateFareParameters fp distance time mbExtraFare = do
         waitingChargePerMin = fp.waitingChargePerMin,
         waitingOrPickupCharges = Nothing,
         serviceCharge = Nothing,
-        farePolicyType = NORMAL
+        farePolicyType = NORMAL,
+        govtChargesPerc = Nothing
       }
 
 calculateSlabFareParameters ::
@@ -155,11 +166,12 @@ calculateSlabFareParameters fp distance time mbExtraFare = do
         extraKmFare = Nothing,
         serviceCharge = Just fp.serviceCharge,
         driverSelectedFare = mbExtraFare,
-        nightShiftRate = fp.nightShiftRate,
+        nightShiftRate = Just $ fromIntegral (roundToIntegral $ slab.nightCharge :: Money), -- todo: make the name better
         nightCoefIncluded,
         waitingOrPickupCharges = Just waitingOrPickupCharges,
         waitingChargePerMin = Nothing,
-        farePolicyType = SLAB
+        farePolicyType = SLAB,
+        govtChargesPerc = fp.govtChargesPerc
       }
 
 selectSlab :: Meters -> Slab -> Bool
