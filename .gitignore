@@ -1,9 +1,9 @@
 .vscode/tasks.json
 
-# Nix files
+# Backend ignores
 .direnv
 /result
-# Haskell
+/.pre-commit-config.yaml
 dist-newstyle
 
 Frontend/.DS_Store

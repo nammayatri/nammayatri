@@ -7,6 +7,7 @@
     # TODO: Move to common repo?
     mission-control.url = "github:Platonic-Systems/mission-control";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+    pre-commit-hooks-nix.url = "github:terlar/pre-commit-hooks.nix/add-treefmt"; # https://github.com/cachix/pre-commit-hooks.nix/pull/183
 
     shared-kernel.url = "github:nammayatri/shared-kernel";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
@@ -20,10 +21,18 @@
         inputs.common.flakeModules.default
         inputs.mission-control.flakeModule
         inputs.process-compose-flake.flakeModule
+        inputs.pre-commit-hooks-nix.flakeModule
         ./Backend/default.nix
       ];
       perSystem = { self', pkgs, ... }: {
         packages.default = self'.packages.nammayatri;
+
+        pre-commit = {
+          check.enable = true;
+          settings.hooks = {
+            treefmt.enable = true;
+          };
+        };
       };
     };
 }
