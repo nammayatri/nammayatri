@@ -35,7 +35,7 @@ buildOnConfirmMessage now res = do
       currency = "INR"
   fulfillmentDetails <- case booking.bookingType of
     DConfirm.SpecialZoneBooking -> do
-      otpCode <- booking.specialZoneOtpCode & fromMaybeM (RideWithBookingIdNotFound booking.id.getId) --replace me with this err OtpNotFoundForSpecialZoneBooking
+      otpCode <- booking.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
       return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation now otpCode
     DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation now
   return $
