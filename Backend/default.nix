@@ -11,7 +11,6 @@
       ];
       devShell = {
         tools = hp: {
-          dhall = pkgs.dhall;
           docker-compose = pkgs.docker-compose;
         };
         # TODO: Upstream mkShellArgs as an option in mission-control

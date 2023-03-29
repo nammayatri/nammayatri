@@ -8,6 +8,8 @@
     mission-control.url = "github:Platonic-Systems/mission-control";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
     pre-commit-hooks-nix.url = "github:terlar/pre-commit-hooks.nix/add-treefmt"; # https://github.com/cachix/pre-commit-hooks.nix/pull/183
+    treefmt-nix.url = "github:juspay/treefmt-nix/dhall-format"; # https://github.com/numtide/treefmt-nix/pull/56
+    common.inputs.treefmt-nix.follows = "treefmt-nix";
 
     shared-kernel.url = "github:nammayatri/shared-kernel";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
@@ -32,6 +34,13 @@
           settings.hooks = {
             treefmt.enable = true;
           };
+        };
+
+        treefmt.config = {
+          programs.dhall.enable = true;
+          settings.formatter.dhall.excludes = [
+            "Frontend/packages.dhall"
+          ];
         };
       };
     };
