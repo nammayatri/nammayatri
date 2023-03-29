@@ -15,14 +15,15 @@
 module Domain.Action.UI.Whatsapp (module Domain.Action.UI.Whatsapp, module Reexport) where
 
 import qualified Domain.Types.Person as DP
-import Kernel.External.Encryption (decrypt)
-import Kernel.External.Whatsapp.Interface.Types as Reexport
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
+import Lib.Whatsapp.Interface.Types as Reexport
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Person as QP
 import Tools.Metrics (CoreMetrics)

@@ -19,11 +19,11 @@ import Control.Concurrent.MVar (modifyMVar, modifyMVar_)
 import Data.Aeson
 import qualified Data.Map as Map
 import EulerHS.Prelude
-import Kernel.External.FCM.Types
 import Kernel.Types.Error
 import Kernel.Utils.Error
 import Kernel.Utils.Logging
 import Kernel.Utils.Text
+import Lib.FCM.Types
 import Types.API.Fcm
 
 sendFcm ::

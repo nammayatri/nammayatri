@@ -28,8 +28,6 @@ import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
-import Kernel.External.Maps (HasCoordinates (getCoordinates))
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -37,9 +35,12 @@ import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Maps (HasCoordinates (getCoordinates))
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.FareCalculator
 import Storage.CachedQueries.CacheConfig

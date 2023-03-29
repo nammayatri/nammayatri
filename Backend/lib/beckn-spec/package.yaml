@@ -127,6 +127,7 @@ dependencies:
   - transformers
   - extra
   - hw-kafka-client
+  - external-services
 
 ghc-options:
   - -fwrite-ide-info

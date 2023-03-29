@@ -20,9 +20,9 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runTransaction)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PaymentTransaction as PaymentTransactionDB
-import Tools.Error
 
 data OnConfirmMessageD = OnConfirmMessageD
   { bookingId :: Id Domain.Booking,

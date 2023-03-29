@@ -20,9 +20,9 @@ import Data.Time (UTCTime)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
-import Kernel.External.FCM.Types (FCMConfig)
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.FCM.Types (FCMConfig)
 
 data TransporterConfigD u = TransporterConfig
   { merchantId :: Id Merchant,

@@ -19,12 +19,12 @@ import qualified Domain.Types.Message.Message as Msg
 import Domain.Types.Message.MessageReport
 import qualified Domain.Types.Message.MessageTranslation as MTD
 import qualified Domain.Types.Person as P
-import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
+import Lib.Types
 import Storage.Tabular.Message.Instances ()
 import qualified Storage.Tabular.Message.Message as M
 import Storage.Tabular.Message.MessageReport

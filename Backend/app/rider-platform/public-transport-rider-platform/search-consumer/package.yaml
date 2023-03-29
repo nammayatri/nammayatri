@@ -67,6 +67,7 @@ dependencies:
   - template-haskell
   - euler-hs
   - stm
+  - external-services
 
 ghc-options:
   - -Wall

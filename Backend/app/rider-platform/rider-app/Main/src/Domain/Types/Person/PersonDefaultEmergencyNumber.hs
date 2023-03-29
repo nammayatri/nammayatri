@@ -17,9 +17,9 @@
 module Domain.Types.Person.PersonDefaultEmergencyNumber where
 
 import Domain.Types.Person (Person)
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Encryption
 
 data PersonDefaultEmergencyNumberE e = PersonDefaultEmergencyNumber
   { personId :: Id Person,

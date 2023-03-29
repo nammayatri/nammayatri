@@ -42,7 +42,6 @@ import Domain.Types.RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -50,6 +49,8 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
 import qualified SharedLogic.DriverLocation as QDrLoc
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRentalFP

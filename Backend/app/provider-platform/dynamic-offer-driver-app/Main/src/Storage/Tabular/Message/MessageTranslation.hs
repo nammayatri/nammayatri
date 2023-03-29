@@ -22,10 +22,10 @@ module Storage.Tabular.Message.MessageTranslation where
 
 import qualified Domain.Types.Message.Message as Msg
 import qualified Domain.Types.Message.MessageTranslation as Domain
-import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Lib.Types (Language)
 import qualified Storage.Tabular.Message.Message as Msg
 import Storage.Tabular.Person ()
 

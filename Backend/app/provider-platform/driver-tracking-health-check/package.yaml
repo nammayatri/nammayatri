@@ -96,6 +96,7 @@ library:
     - static-offer-driver-app
     - mobility-core
     - beckn-spec
+    - external-services
 
 executables:
   driver-tracking-healthcheck-exe:
@@ -110,3 +111,4 @@ executables:
       - driver-tracking-healthcheck
       - mobility-core
       - beckn-spec
+      - external-services

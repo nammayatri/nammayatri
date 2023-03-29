@@ -24,8 +24,8 @@ where
 
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
-import Kernel.External.Maps.Types
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
 import Kernel.Types.Id (Id)
 import qualified Lib.LocationUpdates.Internal as I
 

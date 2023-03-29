@@ -35,18 +35,18 @@ import qualified Domain.Types.DriverOnboarding.Image as Image
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import Environment
-import Kernel.External.Encryption
-import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Types.APISuccess
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.Validation
 import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
+import Lib.Encryption
+import Lib.Error
+import qualified Lib.Verification.Interface.Idfy as Idfy
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as Query

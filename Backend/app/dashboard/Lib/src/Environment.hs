@@ -14,7 +14,6 @@
 
 module Environment where
 
-import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, disconnectHedis)
@@ -27,6 +26,7 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
+import Lib.Encryption (EncTools)
 import Tools.Client
 import Tools.Metrics
 

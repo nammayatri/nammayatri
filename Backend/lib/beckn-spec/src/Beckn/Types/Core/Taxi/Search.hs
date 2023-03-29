@@ -26,7 +26,7 @@ import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
-import Kernel.External.Maps (RouteInfo)
+import Lib.Maps (RouteInfo)
 
 data SearchMessage = SearchMessage
   { intent :: Intent,

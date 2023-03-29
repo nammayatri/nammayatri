@@ -34,12 +34,12 @@ import qualified EulerHS.Language as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.TransporterConfig as CQTC
-import Tools.Error
 
 ---------------------------------------------------------------------
 updateReferralLinkPassword ::

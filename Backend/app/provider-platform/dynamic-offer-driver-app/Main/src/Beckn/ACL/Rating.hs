@@ -19,10 +19,10 @@ import qualified Domain.Action.Beckn.Rating as DRating
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
-import Tools.Error
 
 buildRatingReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>

@@ -33,7 +33,9 @@ import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.Encryption
 import SharedLogic.FareCalculator
 import Tools.Error
 

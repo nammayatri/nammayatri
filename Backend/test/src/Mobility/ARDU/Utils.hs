@@ -36,13 +36,14 @@ import qualified "dynamic-offer-driver-app" Domain.Types.SearchRequest as ArduSR
 import qualified "rider-app" Domain.Types.SearchRequest as AppSearchReq
 import Domain.Types.SearchRequestForDriver as SearchReqInfo
 import HSpec
-import qualified Kernel.External.Maps as Maps
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common (Money)
+import Kernel.Types.CommonImport
+import qualified Kernel.Types.CommonImport as Maps
 import Kernel.Types.Id
+import qualified Lib.Maps.Interface as Maps
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures as Fixtures
 import Mobility.ARDU.Queries as Queries

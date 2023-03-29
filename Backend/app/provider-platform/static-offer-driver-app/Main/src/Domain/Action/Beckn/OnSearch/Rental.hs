@@ -25,6 +25,7 @@ import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverPool (HasDriverPoolConfig)

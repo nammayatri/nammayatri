@@ -26,14 +26,15 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as C
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
-import qualified Kernel.External.Maps as Maps
-import qualified Kernel.External.SMS as SMS
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.CommonImport as Maps
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import Lib.Error
+import qualified Lib.SMS as SMS
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC

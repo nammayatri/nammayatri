@@ -21,10 +21,10 @@ module Dashboard.ProviderPlatform.Driver
 where
 
 import Dashboard.Common as Reexport
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P

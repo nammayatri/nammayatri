@@ -16,8 +16,8 @@ module App.Routes where
 
 import App.Types
 import EulerHS.Prelude
-import Kernel.External.Verification.Idfy.Client
 import Kernel.Types.App (FlowServerR)
+import Lib.Verification.Idfy.Client
 import qualified Product.Idfy as P
 import Servant hiding (throwError)
 

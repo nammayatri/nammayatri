@@ -30,14 +30,15 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment (Flow)
 import EulerHS.Prelude
-import Kernel.External.Maps.HasCoordinates
-import Kernel.External.Maps.Types
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Lib.LocationUpdates as LocUpd
+import Lib.Maps.HasCoordinates
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as QDrLoc

@@ -29,6 +29,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.APISuccess
+import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import Kernel.Types.Predicate
 import Kernel.Utils.Common

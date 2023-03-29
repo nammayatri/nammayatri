@@ -22,10 +22,10 @@ module Storage.Tabular.DriverOnboarding.DriverLicense where
 
 import qualified Domain.Types.DriverOnboarding.DriverLicense as Domain
 import qualified Domain.Types.DriverOnboarding.IdfyVerification as Domain
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Lib.Encryption
 import Storage.Tabular.DriverOnboarding.Image (ImageTId)
 import Storage.Tabular.Person (PersonTId)
 

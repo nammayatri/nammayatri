@@ -26,32 +26,32 @@ import qualified Domain.Types.Person as SPerson
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import Environment
-import Kernel.External.Encryption
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
+import qualified Lib.Maps as Maps
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
-import Tools.Error
-import qualified Tools.Maps as MapSearch
 import Tools.Metrics
 import qualified Tools.Notifications as Notify
 
-type GetDriverLocResp = MapSearch.LatLong
+type GetDriverLocResp = LatLong
 
 data GetRideStatusResp = GetRideStatusResp
   { fromLocation :: BookingLocationAPIEntity,
     toLocation :: Maybe BookingLocationAPIEntity,
     ride :: RideAPIEntity,
     customer :: SPerson.PersonAPIEntity,
-    driverPosition :: Maybe MapSearch.LatLong
+    driverPosition :: Maybe LatLong
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

@@ -23,10 +23,10 @@ module SharedLogic.MetroOffer
 where
 
 import Domain.Types.SearchRequest (SearchRequest)
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 
 data MetroOffer = MetroOffer

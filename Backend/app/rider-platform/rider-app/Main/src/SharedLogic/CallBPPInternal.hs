@@ -2,11 +2,11 @@ module SharedLogic.CallBPPInternal where
 
 import Environment
 import EulerHS.Types (EulerClient, client)
-import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common hiding (Error)
 import qualified Kernel.Utils.Servant.Client as EC
+import Lib.Slack.Types
 import Servant hiding (throwError)
 import Tools.Metrics (CoreMetrics)
 

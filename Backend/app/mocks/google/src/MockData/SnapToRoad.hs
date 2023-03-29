@@ -19,10 +19,10 @@ import qualified Data.ByteString.Lazy as B
 import qualified Domain.Types.MockPlace as DPlace
 import qualified Domain.Types.MockRoute as DRoute
 import Environment
-import Kernel.External.Maps.Google.MapsClient
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.Maps.Google.MapsClient
 
 getFolderPath :: MockDataFlow m r => m String
 getFolderPath = asks (.mockDataPath) <&> (<> "snap-to-road/")

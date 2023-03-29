@@ -19,7 +19,6 @@ import Domain.Action.Allocation.Internal.DriverPool.Config (DriverPoolBatchesCon
 import Domain.Types.Merchant (Subscriber)
 import qualified "static-offer-driver-app" Environment as App
 import EulerHS.Prelude
-import Kernel.External.Encryption (EncTools)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.AppPrefixes as Redis
@@ -32,6 +31,7 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
 import Kernel.Utils.Shutdown
+import Lib.Encryption (EncTools)
 import SharedLogic.DriverPool (DriverPoolConfig)
 import Storage.CachedQueries.CacheConfig
 import Tools.Metrics

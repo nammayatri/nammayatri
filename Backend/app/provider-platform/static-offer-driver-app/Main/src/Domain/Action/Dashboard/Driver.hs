@@ -40,14 +40,15 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
-import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
+import Lib.Encryption
+import Lib.Error
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.AllocationEvent as QAllocationEvent
 import qualified Storage.Queries.BusinessEvent as QBusinessEvent

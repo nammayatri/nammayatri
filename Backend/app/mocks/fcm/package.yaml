@@ -55,6 +55,7 @@ dependencies:
   - euler-hs
   - record-hasfield
   - record-dot-preprocessor
+  - external-services
 
 ghc-options:
   - -fwrite-ide-info
@@ -83,6 +84,7 @@ library:
     - time-units
     - wai
     - warp
+    - external-services
 
 executables:
   mock-fcm-exe:
@@ -95,3 +97,4 @@ executables:
       - -Wincomplete-uni-patterns
     dependencies:
       - mock-fcm
+      - external-services

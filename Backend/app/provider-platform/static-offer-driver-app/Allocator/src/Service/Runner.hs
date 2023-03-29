@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Logging as Log
 import Kernel.Utils.Shutdown
+import Lib.Error
 import Tools.Error
 import qualified Tools.Metrics as TMetrics
 

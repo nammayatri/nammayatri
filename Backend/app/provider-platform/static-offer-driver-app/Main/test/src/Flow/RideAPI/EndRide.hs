@@ -20,8 +20,8 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures
-import Kernel.External.Maps.Types
 import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator

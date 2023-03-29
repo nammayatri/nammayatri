@@ -25,18 +25,21 @@ where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Kernel.External.Verification as Reexport hiding
+-- getTask,
+
+import Kernel.Prelude
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Verification as Reexport hiding
   ( extractDLImage,
-    -- getTask,
     extractRCImage,
     validateImage,
     verifyDLAsync,
     verifyRCAsync,
   )
-import qualified Kernel.External.Verification as Verification
-import Kernel.Prelude
-import Kernel.Types.Id
-import Kernel.Utils.Common
+import qualified Lib.Verification as Verification
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC

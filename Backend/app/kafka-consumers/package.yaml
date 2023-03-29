@@ -73,6 +73,7 @@ dependencies:
   - hedis
   - esqueleto
   - template-haskell
+  - external-services
 
 ghc-options:
   - -Wall
@@ -103,3 +104,4 @@ executables:
     dependencies:
       - kafka-consumers
       - mobility-core
+      - external-services

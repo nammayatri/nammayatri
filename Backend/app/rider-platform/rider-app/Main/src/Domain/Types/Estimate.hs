@@ -25,9 +25,9 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
-import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
 import Servant.API

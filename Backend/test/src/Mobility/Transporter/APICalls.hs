@@ -23,9 +23,9 @@ import Data.Time
 import qualified "static-offer-driver-app" Domain.Types.Booking as TRB
 import qualified "static-offer-driver-app" Domain.Types.Ride as TRide
 import EulerHS.Prelude
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Types.APISuccess
 import Kernel.Types.App
+import Kernel.Types.CommonImport (LatLong (..))
 import Kernel.Types.Id
 import Servant hiding (Context)
 import Servant.Client

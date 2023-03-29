@@ -16,12 +16,12 @@ module Domain.Types.Merchant.MerchantServiceUsageConfig where
 
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
-import Kernel.External.Maps.Types (MapsService)
-import Kernel.External.SMS.Types
-import Kernel.External.Verification.Types (VerificationService)
-import Kernel.External.Whatsapp.Types
 import Kernel.Prelude
+import Kernel.Types.CommonImport (MapsService)
 import Kernel.Types.Id
+import Lib.SMS.Types
+import Lib.Verification.Types (VerificationService)
+import Lib.Whatsapp.Types
 
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { merchantId :: Id Merchant,

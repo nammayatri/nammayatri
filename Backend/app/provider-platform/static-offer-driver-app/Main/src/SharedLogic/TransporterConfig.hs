@@ -15,12 +15,12 @@
 module SharedLogic.TransporterConfig where
 
 import qualified Domain.Types.Merchant as DM
-import Kernel.External.FCM.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
+import Lib.FCM.Types
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import Storage.CachedQueries.TransporterConfig
 

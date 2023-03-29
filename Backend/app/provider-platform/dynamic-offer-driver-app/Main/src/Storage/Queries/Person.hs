@@ -22,17 +22,19 @@ import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as Vehicle
-import Kernel.External.Encryption
-import Kernel.External.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.FCM.Types as FCM
-import Kernel.External.Maps as Maps
-import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.GenericPretty
+import Lib.Encryption
+import Lib.FCM.Types (FCMRecipientToken)
+import qualified Lib.FCM.Types as FCM
+import Lib.Maps.HasCoordinates
+import qualified Lib.Types as Maps
+import qualified Lib.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.DriverOnboarding.DriverLicense

@@ -18,8 +18,8 @@ import qualified Domain.Types.Booking.Type as DBooking
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import qualified Storage.Queries.Booking as QBooking
-import Tools.Error
 
 data StatusRes = StatusRes
   { bookingId :: Id DBooking.Booking,

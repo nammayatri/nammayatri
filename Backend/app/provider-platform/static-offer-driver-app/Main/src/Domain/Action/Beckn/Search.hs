@@ -26,13 +26,14 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Environment
 import EulerHS.Prelude hiding (id, state)
-import Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude (ToSchema)
 import Kernel.Serviceability
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
+import Lib.Maps.HasCoordinates
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.SearchRequest as QSearchRequest

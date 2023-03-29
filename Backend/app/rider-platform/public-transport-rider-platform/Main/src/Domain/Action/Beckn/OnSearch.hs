@@ -23,6 +23,7 @@ import qualified Kernel.Streaming.Kafka.Topic.PublicTransportQuoteList as Kafka
 import Kernel.Streaming.MonadProducer
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Search as QSearch
 import qualified Storage.Queries.TransportStation as QStation

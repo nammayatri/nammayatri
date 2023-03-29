@@ -21,12 +21,12 @@
 module Storage.Tabular.Merchant where
 
 import qualified Domain.Types.Merchant as Domain
-import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Geofencing (GeoRestriction)
 import qualified Kernel.Types.Geofencing as Geo
 import Kernel.Types.Id
+import qualified Lib.FCM.Types as FCM
 
 mkPersist
   defaultSqlSettings

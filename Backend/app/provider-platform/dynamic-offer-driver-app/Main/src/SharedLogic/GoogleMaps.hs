@@ -19,10 +19,10 @@ import Control.Applicative ((<|>))
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text as T hiding (dropWhile, foldl, head, init, length, map, zip)
-import Kernel.External.Maps.Interface.Types
 import Kernel.Prelude hiding (const, error, getField, setField)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App (MonadFlow)
+import Lib.Maps.Interface.Types
 
 data Address = Address
   { street :: Maybe Text,

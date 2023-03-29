@@ -15,9 +15,9 @@
 module Storage.Queries.Location.SpecialLocation where
 
 import qualified Domain.Types.Location.SpecialLocation as D
-import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.CommonImport (LatLong)
 import Kernel.Types.Id
 import Storage.Tabular.Location.SpecialLocation
 

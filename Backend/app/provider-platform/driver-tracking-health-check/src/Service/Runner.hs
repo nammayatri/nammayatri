@@ -21,19 +21,19 @@ import Data.List.NonEmpty (nonEmpty)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as SP
 import Environment (Flow)
-import Kernel.External.Encryption (decrypt)
-import Kernel.External.FCM.Types (FCMNotificationType (TRIGGER_SERVICE))
-import qualified Kernel.External.FCM.Types as FCM
-import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (lPush, rPop)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
-import Kernel.Types.Error (PersonError (PersonFieldNotPresent, PersonNotFound))
 import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
 import Kernel.Utils.Service
+import Lib.Encryption (decrypt)
+import Lib.Error (PersonError (PersonFieldNotPresent, PersonNotFound))
+import Lib.FCM.Types (FCMNotificationType (TRIGGER_SERVICE))
+import qualified Lib.FCM.Types as FCM
+import qualified Lib.SMS.MyValueFirst.Flow as SF
 import SharedLogic.TransporterConfig
 import qualified Storage.Queries.DriverInformation as DrInfo
 import qualified Storage.Queries.Person as SQP

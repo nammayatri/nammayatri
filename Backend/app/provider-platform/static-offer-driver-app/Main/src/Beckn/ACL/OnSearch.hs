@@ -20,8 +20,8 @@ import qualified Domain.Action.Beckn.OnSearch.OneWay as DOneWaySearch
 import qualified Domain.Action.Beckn.OnSearch.Rental as DRentalSearch
 import qualified Domain.Types.FarePolicy.FareProduct as DFP
 import qualified Domain.Types.Vehicle as Veh
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
+import Kernel.Types.CommonImport (LatLong (..))
 
 mkOnSearchMessage ::
   DOnSearch.DOnSearchRes ->

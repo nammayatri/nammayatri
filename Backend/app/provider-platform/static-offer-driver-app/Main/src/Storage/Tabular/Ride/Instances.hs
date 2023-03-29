@@ -18,9 +18,9 @@ module Storage.Tabular.Ride.Instances (FullRideT) where
 
 import qualified Domain.Types.Person as Domain
 import qualified Domain.Types.Ride as Domain
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.CommonImport (LatLong (..))
 import Kernel.Types.Id
 import Storage.Tabular.Rating
 import Storage.Tabular.Ride.Table

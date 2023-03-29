@@ -33,10 +33,10 @@ import qualified "static-offer-driver-app" App as TransporterBackend
 import qualified "static-offer-driver-app-allocator" App as YatriAllocator
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
-import qualified Kernel.External.Maps as Maps
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Utils.Common hiding (id)
 import qualified "mock-google" Lib.IntegrationTests.Environment as Environment
+import qualified Lib.Maps as Maps
 import qualified Mobility.ARDU.Spec as Mobility.ARDU
 import qualified Mobility.ARDU.Utils as DriverOfferBppUtils
 import qualified Mobility.AppBackend.Fixtures as Fixtures

@@ -29,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
+import Lib.Error
 import Servant hiding (throwError)
 import qualified Storage.Queries.AccessMatrix as QAccessMatrix
 import qualified Storage.Queries.Merchant as QM

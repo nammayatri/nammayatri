@@ -28,9 +28,6 @@ where
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDefCfg
 import EulerHS.Prelude
-import Kernel.External.Encryption (EncTools)
-import Kernel.External.Exotel.Types (ExotelCfg)
-import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
@@ -48,6 +45,9 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Encryption (EncTools)
+import Lib.Exotel.Types (ExotelCfg)
+import Lib.Infobip.Types (InfoBIPConfig, WebengageConfig)
 import SharedLogic.DriverPool (DriverPoolConfig)
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)

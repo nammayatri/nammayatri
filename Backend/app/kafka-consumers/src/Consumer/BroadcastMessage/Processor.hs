@@ -22,9 +22,9 @@ import qualified Domain.Types.Message.Message as Types
 import qualified Domain.Types.Message.MessageReport as Types
 import Environment
 import EulerHS.Prelude
-import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Lib.FCM.Types as FCM
 import qualified Storage.Queries.Message.MessageReport as MRQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Notifications (sendMessageToDriver)

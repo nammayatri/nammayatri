@@ -21,11 +21,11 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Error
+import Lib.Error
 import qualified Storage.Tabular.DriverOffer as SDriverOffer
 import Storage.Tabular.Quote
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
 import qualified Storage.Tabular.TripTerms as STripTerms
-import Tools.Error
 
 data QuoteDetailsT
   = OneWayDetailsT

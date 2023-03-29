@@ -18,13 +18,13 @@ module Domain.Types.Merchant.MerchantServiceConfig where
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
-import qualified Kernel.External.Maps as Maps
-import Kernel.External.Maps.Interface.Types
-import Kernel.External.SMS as Sms
-import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.CommonImport as Maps
 import Kernel.Types.Id
+import Lib.Maps.Interface as Maps
+import Lib.SMS as Sms
+import Lib.Whatsapp.Interface as Whatsapp
 import qualified Text.Show as Show
 
 data ServiceName = MapsService Maps.MapsService | SmsService Sms.SmsService | WhatsappService Whatsapp.WhatsappService

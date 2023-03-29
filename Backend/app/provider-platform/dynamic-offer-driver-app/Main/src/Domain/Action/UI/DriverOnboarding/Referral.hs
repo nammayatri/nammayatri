@@ -18,13 +18,13 @@ module Domain.Action.UI.DriverOnboarding.Referral where
 
 import qualified Domain.Types.Person as Person
 import Environment
-import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Types.Validation (Validate)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation (runRequestValidation, validateField)
+import Lib.Encryption (encrypt)
 import qualified Storage.CachedQueries.DriverInformation as DriverInformation
 
 newtype ReferralReq = ReferralReq

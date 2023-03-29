@@ -25,6 +25,7 @@ import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis.Config (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import qualified SharedLogic.CallBPP as CallBPP
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerch

@@ -23,12 +23,12 @@ import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
-import Kernel.External.Encryption
-import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.CommonImport (LatLong)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
 import Storage.Queries.Booking (baseBookingTable)
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.DriverInformation as DriverInfo

@@ -17,15 +17,15 @@ module Storage.Queries.Person where
 import Control.Applicative ((<|>))
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
-import Kernel.External.Encryption
-import Kernel.External.FCM.Types (FCMRecipientToken)
-import Kernel.External.Maps (Language)
-import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Version
+import Lib.Encryption
+import Lib.FCM.Types (FCMRecipientToken)
+import Lib.Maps (Language)
+import qualified Lib.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Storage.Tabular.Person
 
 create :: Person -> SqlDB ()

@@ -36,8 +36,6 @@ import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Person as Person
 import Domain.Types.SearchRequest (SearchRequest)
 import Environment
-import qualified Kernel.External.Slack.Flow as SF
-import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Hedis (HedisFlow)
@@ -51,6 +49,10 @@ import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
+import Lib.Encryption
+import Lib.Error
+import qualified Lib.Slack.Flow as SF
+import Lib.Slack.Types (SlackConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.PublicTransport as PublicTransport

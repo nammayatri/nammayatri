@@ -24,12 +24,13 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
-import qualified Kernel.External.Maps.Types as MapSearch
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
 import qualified SharedLogic.CacheDistance as CD
 import qualified SharedLogic.DriverPool as DrPool
 import SharedLogic.FareCalculator.OneWayFareCalculator
@@ -48,8 +49,8 @@ data QuoteInfo = QuoteInfo
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     distanceToNearestDriver :: Meters,
-    fromLocation :: MapSearch.LatLong,
-    toLocation :: MapSearch.LatLong,
+    fromLocation :: LatLong,
+    toLocation :: LatLong,
     startTime :: UTCTime
   }
 

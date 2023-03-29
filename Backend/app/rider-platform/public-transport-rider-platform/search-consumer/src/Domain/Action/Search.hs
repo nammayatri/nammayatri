@@ -16,11 +16,11 @@ module Domain.Action.Search where
 
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Search as DSearch
-import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Streaming.Kafka.Topic.PublicTransportSearch (PublicTransportSearch)
 import Kernel.Types.Common hiding (id)
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import qualified Storage.Queries.Search as QSearch
 

@@ -63,13 +63,14 @@ import qualified Domain.Types.RideDetails as SRD
 import qualified Domain.Types.RideRequest as SRR
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption
-import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
+import qualified Lib.FCM.Types as FCM
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as SDrLoc
@@ -91,7 +92,6 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.RideRequest as QRR
 import qualified Storage.Queries.Vehicle as QV
-import Tools.Error
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Metrics.AllocatorMetrics as TMetrics
 import Tools.Notifications

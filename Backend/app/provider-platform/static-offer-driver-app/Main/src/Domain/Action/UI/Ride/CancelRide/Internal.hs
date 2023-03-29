@@ -26,6 +26,8 @@ import Kernel.Types.App
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as SDrLoc
 import SharedLogic.DriverPool
@@ -40,7 +42,6 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideRequest as RideRequest
-import Tools.Error
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 

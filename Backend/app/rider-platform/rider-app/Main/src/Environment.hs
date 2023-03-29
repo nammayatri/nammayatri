@@ -28,10 +28,6 @@ module Environment
 where
 
 import EulerHS.Prelude
-import Kernel.External.Encryption (EncTools)
-import Kernel.External.Exotel.Types (ExotelCfg)
-import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
-import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis
@@ -50,6 +46,10 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Encryption (EncTools)
+import Lib.Exotel.Types (ExotelCfg)
+import Lib.Infobip.Types (InfoBIPConfig, WebengageConfig)
+import Lib.Slack.Types (SlackConfig)
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.BlackListOrg (findByShortId)
 import Storage.CachedQueries.CacheConfig

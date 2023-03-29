@@ -26,13 +26,13 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
-import qualified Kernel.External.FCM.Flow as FCM
-import Kernel.External.FCM.Types as FCM
 import Kernel.Storage.Esqueleto
 import Kernel.Storage.Hedis (HedisFlow)
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
+import qualified Lib.FCM.Flow as FCM
+import Lib.FCM.Types as FCM
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person

@@ -18,11 +18,11 @@ import qualified Beckn.Types.Core.Taxi.Init as Init
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
-import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.CommonImport (LatLong)
 import Kernel.Types.Logging
 import Kernel.Utils.Context (buildTaxiContext)
 

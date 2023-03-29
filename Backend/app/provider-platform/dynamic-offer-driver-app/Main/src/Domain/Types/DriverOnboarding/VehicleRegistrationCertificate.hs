@@ -19,9 +19,9 @@ module Domain.Types.DriverOnboarding.VehicleRegistrationCertificate where
 
 import Domain.Types.DriverOnboarding.IdfyVerification
 import qualified Domain.Types.DriverOnboarding.Image as Image
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Encryption
 
 data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   { id :: Id VehicleRegistrationCertificate,

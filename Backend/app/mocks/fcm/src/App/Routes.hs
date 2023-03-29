@@ -22,8 +22,8 @@ where
 import App.Types
 import Data.Aeson
 import EulerHS.Prelude
-import Kernel.External.FCM.Flow as API
 import Kernel.Types.App (FlowServerR)
+import Lib.FCM.Flow as API
 import qualified Product.Fcm as P
 import Servant hiding (throwError)
 import Types.API.Fcm as API

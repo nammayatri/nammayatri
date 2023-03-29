@@ -18,9 +18,9 @@
 module Domain.Types.Person.Type where
 
 import qualified Domain.Types.Role as DRole
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Encryption
 
 data PersonE e = Person
   { id :: Id Person,

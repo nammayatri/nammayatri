@@ -18,10 +18,10 @@ import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Vehicle as Veh
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.CommonImport
 import qualified Kernel.Types.Registry as Subscriber
 import Kernel.Utils.Common
 import Tools.Error

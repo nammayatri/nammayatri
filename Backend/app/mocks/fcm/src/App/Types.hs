@@ -16,13 +16,13 @@ module App.Types where
 
 import qualified Data.Map as Map
 import EulerHS.Prelude
-import Kernel.External.FCM.Types
 import Kernel.Types.App
 import Kernel.Types.Common hiding (id)
 import Kernel.Utils.App (getPodName)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Shutdown
+import Lib.FCM.Types
 
 data AppCfg = AppCfg
   { port :: Int,

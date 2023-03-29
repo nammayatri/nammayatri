@@ -23,9 +23,9 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import Servant hiding (throwError)
 import qualified Storage.CachedQueries.Merchant as QM
-import Tools.Error
 
 type API =
   "customer"

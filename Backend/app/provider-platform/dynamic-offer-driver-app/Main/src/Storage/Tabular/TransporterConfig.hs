@@ -22,13 +22,13 @@ module Storage.Tabular.TransporterConfig where
 
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.TransporterConfig as Domain
-import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common (Meters)
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Types.Time
+import qualified Lib.FCM.Types as FCM
 import Storage.Tabular.Merchant (MerchantTId)
 
 mkPersist

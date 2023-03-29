@@ -17,8 +17,8 @@
 module RedisAlgorithm where
 
 import qualified Data.List.NonEmpty as NE
-import Kernel.External.Maps.Types (LatLong (LatLong))
 import Kernel.Prelude
+import Kernel.Types.CommonImport (LatLong (LatLong))
 import Kernel.Types.Id (Id (Id))
 import Kernel.Types.MonadGuid
 import Kernel.Utils.CalculateDistance

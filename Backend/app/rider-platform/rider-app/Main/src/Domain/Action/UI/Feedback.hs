@@ -27,6 +27,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Ride as QRide

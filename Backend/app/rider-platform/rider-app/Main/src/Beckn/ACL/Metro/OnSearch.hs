@@ -18,11 +18,11 @@ import qualified Beckn.Types.Core.Metro.API.OnSearch as OnSearch
 import Beckn.Types.Core.Metro.OnSearch
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.SearchRequest (SearchRequest)
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common

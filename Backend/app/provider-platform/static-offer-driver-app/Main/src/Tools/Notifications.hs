@@ -20,13 +20,13 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import EulerHS.Prelude
-import qualified Kernel.External.FCM.Flow as FCM
-import Kernel.External.FCM.Types as FCM
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.FCM.Flow as FCM
+import Lib.FCM.Types as FCM
 
 -- | Send FCM "cancel" notification to driver
 notifyOnCancel ::

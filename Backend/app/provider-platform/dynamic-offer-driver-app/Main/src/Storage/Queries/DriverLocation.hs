@@ -18,10 +18,10 @@ module Storage.Queries.DriverLocation where
 
 import Domain.Types.DriverLocation
 import Domain.Types.Person
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common (MonadTime (getCurrentTime))
+import Kernel.Types.CommonImport (LatLong (..))
 import Kernel.Types.Id
 import Storage.Tabular.DriverLocation
 

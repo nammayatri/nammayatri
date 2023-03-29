@@ -24,6 +24,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth

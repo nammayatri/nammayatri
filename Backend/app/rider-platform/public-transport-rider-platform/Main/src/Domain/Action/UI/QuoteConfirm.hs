@@ -22,6 +22,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty
+import Lib.Error
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Quote as QQuote
 import Tools.Auth

@@ -21,14 +21,14 @@
 module Storage.Tabular.Person where
 
 import qualified Domain.Types.Person as Domain
-import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
-import Kernel.External.FCM.Types (FCMRecipientToken)
-import Kernel.External.Maps (Language)
-import Kernel.External.Whatsapp.Interface.Types (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Version
+import Lib.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
+import Lib.FCM.Types (FCMRecipientToken)
+import Lib.Maps (Language)
+import Lib.Whatsapp.Interface.Types (OptApiMethods)
 import qualified Storage.Tabular.Merchant as SMerchant
 
 derivePersistField "Domain.Role"

@@ -33,17 +33,18 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude (whenNothing_)
-import Kernel.External.Encryption (decrypt, getDbHash)
-import Kernel.External.Maps.HasCoordinates
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Operators
 import qualified Kernel.Storage.Clickhouse.Queries as CH
 import qualified Kernel.Storage.Clickhouse.Types as CH
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
+import Kernel.Types.CommonImport
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
+import Lib.Encryption
+import Lib.Maps.HasCoordinates
 import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Booking as QBooking

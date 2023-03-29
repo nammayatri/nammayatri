@@ -29,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Error
 import Servant
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.DriverPool (incrementTotalRidesCount)

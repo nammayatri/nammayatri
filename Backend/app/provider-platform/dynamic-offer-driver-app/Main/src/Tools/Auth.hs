@@ -19,15 +19,16 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.App
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common as CoreCommon
 import qualified Kernel.Utils.Common as Utils
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
+import Lib.Encryption
 import Servant hiding (throwError)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR

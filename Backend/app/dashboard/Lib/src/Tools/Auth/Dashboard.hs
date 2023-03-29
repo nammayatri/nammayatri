@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
+import Lib.Error
 import Servant hiding (throwError)
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Role as QRole

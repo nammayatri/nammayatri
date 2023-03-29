@@ -26,22 +26,24 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import Domain.Types.Vehicle as VD
-import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
+import Lib.Maps
 import qualified SharedLogic.CallBAP as BP
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
-import Tools.Error
 
 data DriverRideRes = DriverRideRes
   { id :: Id DRide.Ride,

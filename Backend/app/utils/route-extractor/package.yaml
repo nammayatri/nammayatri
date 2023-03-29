@@ -86,6 +86,7 @@ dependencies:
   - xml-conduit
   - cassava
   - vector
+  - external-services
 
 ghc-options:
   - -fwrite-ide-info

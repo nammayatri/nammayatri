@@ -15,8 +15,8 @@
 module Routes where
 
 import qualified Data.List.NonEmpty as NE
-import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Lib.Types
 
 type LocationUpdates = NonEmpty (NonEmpty LatLong)
 

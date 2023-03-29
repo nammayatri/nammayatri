@@ -15,11 +15,11 @@
 module Storage.Queries.RiderDetails where
 
 import Domain.Types.RiderDetails
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.Encryption
 import Storage.Tabular.RiderDetails
 
 create :: RiderDetails -> SqlDB ()

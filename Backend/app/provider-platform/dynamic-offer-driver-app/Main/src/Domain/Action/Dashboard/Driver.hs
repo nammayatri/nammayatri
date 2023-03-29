@@ -48,14 +48,15 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
-import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.CommonImport (LatLong (..))
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
+import Lib.Encryption
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus

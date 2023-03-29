@@ -19,8 +19,8 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import qualified Storage.CachedQueries.Merchant as CQM
-import Tools.Error
 
 findMerchantByShortId :: ShortId DM.Merchant -> Flow DM.Merchant
 findMerchantByShortId merchantShortId = do

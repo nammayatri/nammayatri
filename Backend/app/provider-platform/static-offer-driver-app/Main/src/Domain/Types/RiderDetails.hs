@@ -18,8 +18,8 @@ module Domain.Types.RiderDetails where
 
 import Data.Time
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption
 import Kernel.Types.Id
+import Lib.Encryption
 
 data RiderDetailsE e = RiderDetails
   { id :: Id RiderDetails,

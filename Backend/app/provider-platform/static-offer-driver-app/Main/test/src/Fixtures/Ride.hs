@@ -17,7 +17,7 @@ module Fixtures.Ride where
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
-import Kernel.External.Maps.Types
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Servant.Client
 

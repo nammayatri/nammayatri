@@ -18,8 +18,8 @@ import qualified "static-offer-driver-app" Domain.Types.FarePolicy.FareProduct a
 import "static-offer-driver-app" Domain.Types.Vehicle
 import qualified "static-offer-driver-app" Environment as BecknTransport
 import EulerHS.Prelude
-import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.CommonImport (LatLong (..))
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Utils.Common

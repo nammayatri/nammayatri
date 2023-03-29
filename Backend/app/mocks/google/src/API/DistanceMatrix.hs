@@ -19,9 +19,9 @@ where
 
 import qualified Domain.Types.MockPlace as DPlace
 import Environment
-import Kernel.External.Maps.Google.MapsClient.Types as GoogleMaps
 import Kernel.Prelude
 import Kernel.Utils.Common
+import Lib.Maps.Google.MapsClient.Types as GoogleMaps
 import qualified MockData.Common as Data
 import qualified MockData.DistanceMatrix as Data
 import Tools.Error

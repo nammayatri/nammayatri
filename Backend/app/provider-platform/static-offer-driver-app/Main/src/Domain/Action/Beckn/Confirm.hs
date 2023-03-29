@@ -29,13 +29,14 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RideRequest as RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.RiderDetails as SRD
-import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber (..))
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
 import SharedLogic.Scheduler
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.FarePolicy.RentalFarePolicy as QRFP

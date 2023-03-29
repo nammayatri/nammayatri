@@ -31,9 +31,9 @@ import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant

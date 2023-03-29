@@ -21,8 +21,8 @@ where
 
 import App.Types
 import EulerHS.Prelude
-import qualified Kernel.External.SMS.MyValueFirst.API as API
 import Kernel.Types.App (FlowServerR)
+import qualified Lib.SMS.MyValueFirst.API as API
 import qualified Product.Sms as P
 import Servant hiding (throwError)
 import qualified Types.API.Sms as API

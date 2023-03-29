@@ -18,9 +18,9 @@ module Domain.Types.DriverOnboarding.DriverLicense where
 import Domain.Types.DriverOnboarding.IdfyVerification
 import qualified Domain.Types.DriverOnboarding.Image as Image
 import Domain.Types.Person (Person)
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Encryption
 
 data DriverLicenseE e = DriverLicense
   { id :: Id DriverLicense,

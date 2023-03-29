@@ -20,13 +20,15 @@ where
 
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
-import Kernel.External.SMS as Reexport hiding
-  ( sendSMS,
-  )
-import qualified Kernel.External.SMS as Sms
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.SMS as Reexport hiding
+  ( sendSMS,
+  )
+import qualified Lib.SMS as Sms
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC

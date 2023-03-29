@@ -98,6 +98,7 @@ library:
     - mobility-core
     - beckn-spec
     - static-offer-driver-app
+    - external-services
 
 executables:
   allocation-service-exe:
@@ -112,6 +113,7 @@ executables:
       - static-offer-driver-app-allocator
       - mobility-core
       - beckn-spec
+      - external-services
 
 tests:
   static-offer-driver-app-allocator-tests:

@@ -18,11 +18,11 @@ module Domain.Types.SearchRequest where
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMeters)
 import Kernel.Types.Id
 import Kernel.Types.Version
+import qualified Lib.Maps as Maps
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)

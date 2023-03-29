@@ -89,3 +89,5 @@ library:
   source-dirs: src
   ghc-options:
     - -Wincomplete-uni-patterns
+  dependencies:
+    - external-services

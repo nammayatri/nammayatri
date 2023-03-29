@@ -15,9 +15,9 @@
 module Domain.Types.CallStatus where
 
 import Domain.Types.Ride
-import Kernel.External.Exotel.Types hiding (rideId)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Exotel.Types hiding (rideId)
 
 data CallStatus = CallStatus
   { id :: Id CallStatus,

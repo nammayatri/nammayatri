@@ -20,9 +20,9 @@ where
 import qualified Domain.Types.MockPlace as DPlace
 import qualified Domain.Types.MockRoute as DRoute
 import Environment
-import Kernel.External.Maps.Google.MapsClient.Types as GoogleMaps
 import Kernel.Prelude
 import Kernel.Utils.Common
+import Lib.Maps.Google.MapsClient.Types as GoogleMaps
 import qualified MockData.Common as Data
 import qualified MockData.SnapToRoad as QSnapToRoad
 import Servant.API (FromHttpApiData (..))

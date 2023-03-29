@@ -18,8 +18,8 @@ module Mobility.ARDU.MapsConfig where
 
 import "dynamic-offer-driver-app" Domain.Types.Merchant
 import "dynamic-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
+import qualified Kernel.Types.CommonImport as Maps
 import Kernel.Types.Id
 import qualified Mobility.ARDU.Fixtures as Fixtures
 import qualified "dynamic-offer-driver-app" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
@@ -46,12 +46,12 @@ fetchConfig merchantId serviceProvider getterFunc resultExpected = do
 
 fetchGoogleConfig :: IO ()
 fetchGoogleConfig = do
-  fetchConfig Fixtures.nammaYatriPartnerMerchantId Google func (fromJust $ parseBaseUrl "http://localhost:8019/")
+  fetchConfig Fixtures.nammaYatriPartnerMerchantId Maps.Google func (fromJust $ parseBaseUrl "http://localhost:8019/")
   where
     func (MapsServiceConfig (GoogleConfig cfg)) = cfg.googleMapsUrl
 
 fetchOSRMConfig :: IO ()
 fetchOSRMConfig = do
-  fetchConfig Fixtures.nammaYatriPartnerMerchantId OSRM func (fromJust $ parseBaseUrl "localhost:5000")
+  fetchConfig Fixtures.nammaYatriPartnerMerchantId Maps.OSRM func (fromJust $ parseBaseUrl "localhost:5000")
   where
     func (MapsServiceConfig (OSRMConfig cfg)) = cfg.osrmUrl

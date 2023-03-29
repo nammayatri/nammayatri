@@ -25,6 +25,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as QRating

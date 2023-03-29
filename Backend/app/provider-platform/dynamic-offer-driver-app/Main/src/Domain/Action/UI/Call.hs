@@ -25,13 +25,13 @@ where
 import qualified Data.Text as T
 import Data.Text.Conversions
 import qualified Domain.Types.CallStatus as SCS
-import Kernel.External.Encryption (decrypt, getDbHash)
-import Kernel.External.Exotel.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, runInReplica, runTransaction)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Exotel.Types
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as Merchant
 import qualified Storage.Queries.Booking as QRB

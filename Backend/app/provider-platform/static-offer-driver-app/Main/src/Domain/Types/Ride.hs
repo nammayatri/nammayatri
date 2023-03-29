@@ -24,7 +24,7 @@ import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Person as DPers
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Maps.Types (LatLong)
+import Kernel.Types.CommonImport (LatLong)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.API

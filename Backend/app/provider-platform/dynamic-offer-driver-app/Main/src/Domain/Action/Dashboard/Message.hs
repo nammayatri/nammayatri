@@ -32,7 +32,6 @@ import qualified Domain.Types.Message.MessageReport as Domain
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
-import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Streaming.Kafka.Producer (produceMessage)
@@ -41,6 +40,7 @@ import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime 
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
+import Lib.Encryption (decrypt)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Queries.Message.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery

@@ -18,11 +18,11 @@ import Domain.Types.DriverReferral
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.RiderDetails
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Lib.Encryption
 import Storage.Tabular.RiderDetails
 
 create :: RiderDetails -> SqlDB ()

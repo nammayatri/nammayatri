@@ -22,18 +22,18 @@ module Storage.Tabular.Merchant.MerchantServiceConfig where
 
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
-import qualified Kernel.External.Maps.Interface.Types as Maps
-import qualified Kernel.External.Maps.Types as Maps
-import qualified Kernel.External.SMS.Interface as Sms
-import qualified Kernel.External.Verification.Interface as Verification
-import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import qualified Kernel.Types.CommonImport as Maps
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (decodeFromText, encodeToText)
 import Kernel.Utils.Error
+import qualified Lib.Maps.Interface.Types as Maps
+import qualified Lib.SMS.Interface as Sms
+import qualified Lib.Verification.Interface as Verification
+import qualified Lib.Whatsapp.Interface as Whatsapp
 import Storage.Tabular.Merchant (MerchantTId)
-import Tools.Error
 
 derivePersistField "Domain.ServiceName"
 

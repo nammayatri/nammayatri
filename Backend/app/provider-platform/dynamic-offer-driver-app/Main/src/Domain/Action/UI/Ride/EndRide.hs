@@ -36,14 +36,16 @@ import qualified Domain.Types.TransporterConfig as DTConf
 import Domain.Types.Vehicle.Variant (Variant)
 import Environment (Flow)
 import EulerHS.Prelude hiding (pi)
-import Kernel.External.Maps
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.LocationUpdates as LocUpd
+import Lib.Maps
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.FareCalculator as Fare

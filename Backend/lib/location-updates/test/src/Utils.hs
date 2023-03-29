@@ -16,8 +16,6 @@ module Utils where
 
 import qualified Data.Map as Map
 import qualified EulerHS.Runtime as R
-import Kernel.External.Encryption (EncTools (..))
-import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Hedis.Config
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -27,7 +25,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Encryption (EncTools (..))
 import qualified "mock-google" Lib.IntegrationTests.Environment as Environment
+import Lib.Maps
 import Network.HTTP.Client
 
 data Person

@@ -21,15 +21,15 @@ module SharedLogic.GoogleTranslate
 where
 
 import EulerHS.Prelude
-import Kernel.External.Encryption
-import qualified Kernel.External.GoogleTranslate.Client as ClientGoogleTranslate
-import Kernel.External.GoogleTranslate.Types
-import qualified Kernel.External.GoogleTranslate.Types as GoogleTranslate
 import Kernel.Prelude (HasField (..))
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Utils.Common (BaseUrl, MonadFlow, Seconds, logDebug)
 import Kernel.Utils.Dhall
+import Lib.Encryption
+import qualified Lib.GoogleTranslate.Client as ClientGoogleTranslate
+import Lib.GoogleTranslate.Types
+import qualified Lib.GoogleTranslate.Types as GoogleTranslate
 import Servant (ToHttpApiData (toUrlPiece))
 import qualified Tools.Maps as Maps
 

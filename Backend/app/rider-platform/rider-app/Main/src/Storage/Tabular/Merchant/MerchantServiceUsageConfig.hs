@@ -22,12 +22,12 @@ module Storage.Tabular.Merchant.MerchantServiceUsageConfig where
 
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as Domain
-import Kernel.External.Maps (MapsService)
-import Kernel.External.SMS (SmsService)
-import Kernel.External.Whatsapp.Types (WhatsappService)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.CommonImport (MapsService)
 import Kernel.Types.Id
+import Lib.SMS (SmsService)
+import Lib.Whatsapp.Types (WhatsappService)
 import Storage.Tabular.Merchant (MerchantTId)
 
 mkPersist

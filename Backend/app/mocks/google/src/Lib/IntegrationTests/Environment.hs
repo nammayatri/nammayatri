@@ -14,12 +14,12 @@
 
 module Lib.IntegrationTests.Environment where
 
-import Kernel.External.Encryption (EncTools (..), encrypt')
-import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMeters)
 import Kernel.Utils.Dhall (FromDhall, readDhallConfig)
+import Lib.Encryption (EncTools (..), encrypt')
 import Lib.GoogleConfig (GoogleCfgUnencrypted (..))
+import Lib.Maps
 
 buildGoogleConfig :: MonadIO m => EncTools -> GoogleCfgUnencrypted -> m MapsServiceConfig
 buildGoogleConfig encTools GoogleCfgUnencrypted {..} = do

@@ -30,9 +30,6 @@ where
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import Environment
-import Kernel.External.Encryption
-import qualified Kernel.External.FCM.Types as FCM
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -44,6 +41,10 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.Text as TU
 import Kernel.Utils.Validation
+import Lib.Encryption
+import Lib.Error
+import qualified Lib.FCM.Types as FCM
+import qualified Lib.Maps as Maps
 import SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant as QMerchant

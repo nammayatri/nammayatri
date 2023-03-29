@@ -24,7 +24,6 @@ where
 
 import Data.String.Conversions (cs)
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
-import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, disconnectHedis)
@@ -35,6 +34,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Encryption (EncTools)
 import Lib.Scheduler.Environment (SchedulerConfig (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
 import SharedLogic.DriverPool (CancellationScoreRelatedConfig, DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig)

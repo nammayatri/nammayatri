@@ -27,11 +27,12 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
+import qualified Lib.FCM.Types as FCM
 import SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig

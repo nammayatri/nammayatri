@@ -19,8 +19,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
+import Lib.Error
 import Servant (Get, JSON)
-import Tools.Error
 import Tools.Metrics (CoreMetricsContainer)
 
 type HealthCheckAPI = Get '[JSON] Text

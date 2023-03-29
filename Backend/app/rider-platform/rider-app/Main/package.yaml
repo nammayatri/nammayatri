@@ -99,6 +99,7 @@ library:
   dependencies:
     - mobility-core
     - beckn-spec
+    - external-services
 executables:
   rider-app-exe:
     main: Main.hs
@@ -111,3 +112,4 @@ executables:
       - rider-app
       - mobility-core
       - beckn-spec
+      - external-services

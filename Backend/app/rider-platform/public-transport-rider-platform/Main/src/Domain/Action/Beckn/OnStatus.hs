@@ -21,6 +21,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow)
+import Lib.Error
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Tools.Error

@@ -1,0 +1,166 @@
+name: external-services
+version: 0.1.0.0
+github: "nammayatri/nammayatri"
+license: AllRightsReserved
+author: "nammayatri"
+maintainer: "nammayatri"
+copyright: "2023 Juspay Technologies Private Limited"
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description: Please see the README on GitHub
+
+default-extensions:
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveGeneric
+  - DuplicateRecordFields
+  - ExplicitNamespaces
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedLabels
+  - OverloadedStrings
+  - PatternSynonyms
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - ViewPatterns
+  - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
+
+dependencies:
+  - aeson
+  - aeson-casing
+  - base >= 4.7 && < 5
+  - bytestring
+  - clock
+  - case-insensitive
+  - containers
+  - cryptonite
+  - data-default-class
+  - double-conversion
+  - exceptions
+  - euler-hs
+  - hex-text
+  - hspec
+  - http-api-data
+  - http-client
+  - http-client-tls
+  - http-types
+  - http-media
+  - kleene
+  - lattices
+  - postgresql-simple
+  - postgresql-migration
+  - prometheus-client
+  - prometheus-proc
+  - wai-middleware-prometheus
+  - prometheus-metrics-ghc
+  - jwt
+  - lens
+  - memory
+  - network
+  - parsec
+  - passetto-client
+  - random-strings
+  - safe-exceptions
+  - servant
+  - servant-client
+  - servant-client-core
+  - servant-server
+  - servant-openapi3
+  - text
+  - wai
+  - warp
+  - time
+  - template-haskell
+  - generic-lens
+  - base64-bytestring
+  - unordered-containers
+  - geojson
+  - safe-money
+  - dhall <= 1.35.0
+  - tasty
+  - tasty-hunit
+  - either
+  - mtl
+  - uuid
+  - stm
+  - unix
+  - record-hasfield
+  - record-dot-preprocessor
+  - openapi3
+  - fast-logger
+  - persistent
+  - persistent-postgresql
+  - esqueleto
+  - monad-logger
+  - unliftio-core
+  - resource-pool
+  - universum < 1.8
+  - scientific
+  - vector
+  - unliftio
+  - string-conversions
+  - hedis
+  - transformers
+  - extra
+  - random
+  - hw-kafka-client
+  - fmt
+  - text-conversions
+  - deriving-aeson
+  - base64
+  - safe
+  - tinylog
+  - wai-app-static
+  - servant-multipart
+  - clickhouse-haskell
+
+ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -fhide-source-paths
+  - -Werror
+  - -fplugin=RecordDotPreprocessor
+
+library:
+  source-dirs:
+    - src
+
+  dependencies:
+    - mobility-core
+    - openapi3
+
+# tests:
+#   mobility-core-tests:
+#     main: Main.hs
+#     source-dirs:
+#       - test/app
+#       - test/src
+#     dependencies:
+#       - mobility-core

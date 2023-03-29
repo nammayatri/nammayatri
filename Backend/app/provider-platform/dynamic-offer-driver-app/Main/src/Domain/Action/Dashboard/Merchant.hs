@@ -27,14 +27,17 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as C
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
-import qualified Kernel.External.Maps as Maps
-import qualified Kernel.External.SMS as SMS
+-- import qualified Lib.Maps as Maps
+
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.CommonImport
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import qualified Lib.SMS as SMS
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -118,7 +121,7 @@ mapsServiceUsageConfigUpdate merchantShortId req = do
   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
 
-  forM_ Maps.availableMapsServices $ \service -> do
+  forM_ availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do
       void $
         CQMSC.findByMerchantIdAndService merchant.id (DMSC.MapsService service)

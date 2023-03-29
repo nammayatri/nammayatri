@@ -21,14 +21,14 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Merchant as DMerchant
-import Kernel.External.Encryption
-import qualified Kernel.External.FCM.Types as FCM
-import qualified Kernel.External.Maps as Maps
-import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (maskText)
+import Lib.Encryption
+import qualified Lib.FCM.Types as FCM
+import qualified Lib.Maps as Maps
+import qualified Lib.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Servant.API
 
 data Role

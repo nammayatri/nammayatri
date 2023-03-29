@@ -34,10 +34,6 @@ import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as DCS
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
-import Kernel.External.Encryption
-import Kernel.External.Exotel.Flow
-import Kernel.External.Exotel.Types
-import qualified Kernel.External.Exotel.Types as Call
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica, runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -45,6 +41,11 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
+import Lib.Exotel.Flow
+import Lib.Exotel.Types
+import qualified Lib.Exotel.Types as Call
 import Servant.Client (BaseUrl (..))
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as Merchant

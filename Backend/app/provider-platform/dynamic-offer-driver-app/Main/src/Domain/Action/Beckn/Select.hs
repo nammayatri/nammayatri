@@ -28,8 +28,10 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, logInfo)
+import Lib.Encryption
 import Lib.Scheduler.Types (ExecutionResult (ReSchedule))
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
@@ -153,7 +155,7 @@ buildSearchRequest from to merchantId sReq distance duration = do
       }
 
 buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
-buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
+buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@LatLong {..} = do
   Address {..} <- case address of
     Just loc
       | customerLanguage == Just Maps.ENGLISH && isJust loc.ward ->

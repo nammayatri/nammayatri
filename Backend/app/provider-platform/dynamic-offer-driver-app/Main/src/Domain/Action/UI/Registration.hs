@@ -32,15 +32,13 @@ import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption
-import Kernel.External.FCM.Types (FCMRecipientToken)
-import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common as BC
+import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Predicate as P
 import Kernel.Types.SlidingWindowLimiter
@@ -49,6 +47,9 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
+import Lib.Encryption
+import Lib.FCM.Types (FCMRecipientToken)
+import Lib.Whatsapp.Interface.Types as Whatsapp
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.DriverInformation as QD

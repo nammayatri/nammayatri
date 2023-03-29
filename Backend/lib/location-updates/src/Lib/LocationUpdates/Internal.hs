@@ -31,13 +31,15 @@ where
 import qualified Control.Monad.Catch as C
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
-import Kernel.External.Maps as Maps
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Logging
+import Lib.Encryption
+import Lib.Maps as Maps
 
 data RideInterpolationHandler person m = RideInterpolationHandler
   { batchSize :: Integer,
@@ -190,7 +192,7 @@ interpolatePointsAndCalculateDistanceImplementation isEndRide mapsCfg wps = do
   if isEndRide && isAllPointsEqual wps
     then pure (0, take 1 wps)
     else do
-      res <- Maps.snapToRoad mapsCfg $ Maps.SnapToRoadReq {points = wps}
+      res <- snapToRoad mapsCfg $ SnapToRoadReq {points = wps}
       pure (res.distance, res.snappedPoints)
 
 isAllPointsEqual :: [LatLong] -> Bool

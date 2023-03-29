@@ -55,6 +55,7 @@ dependencies:
   - base >= 4.7 && < 5
   - mobility-core
   - beckn-spec
+  - external-services
   - bytestring
   - euler-hs
   - record-dot-preprocessor
@@ -97,3 +98,4 @@ executables:
       - mock-google
       - mobility-core
       - beckn-spec
+      - external-services

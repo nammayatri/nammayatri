@@ -98,6 +98,7 @@ dependencies:
   - location-updates
   - driver-offer-allocator
   - dashboard-helper-api
+  - external-services
 
 ghc-options:
   - -fwrite-ide-info

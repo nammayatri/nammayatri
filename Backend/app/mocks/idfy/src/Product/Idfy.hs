@@ -17,12 +17,12 @@ module Product.Idfy (verifyDL, verifyRC, validateImage, extractDLImage, extractR
 import App.Types
 import Common
 import EulerHS.Prelude
-import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Types.Error
 import Kernel.Types.Forkable
 import Kernel.Types.GuidLike
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Time
+import qualified Lib.Verification.Interface.Idfy as Idfy
 import Tools.FlowHandling
 import Types.Common
 import Types.Webhook

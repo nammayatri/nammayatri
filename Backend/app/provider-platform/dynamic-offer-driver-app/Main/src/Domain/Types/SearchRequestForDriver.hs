@@ -20,11 +20,11 @@ import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Variant
-import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
+import Lib.Maps.Google.PolyLinePoints
 
 data DriverSearchRequestStatus = Active | Inactive
   deriving (Show, Read, Eq)

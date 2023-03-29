@@ -27,13 +27,13 @@ import qualified Domain.Types.Person as Person
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
-import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption (decrypt)
+import Lib.Error
 import Servant.Multipart
 import SharedLogic.DriverOnboarding
 import qualified Storage.CachedQueries.Merchant as CQM

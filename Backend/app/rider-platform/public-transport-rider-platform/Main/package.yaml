@@ -76,6 +76,7 @@ dependencies:
   - relude
   - wai
   - servant
+  - external-services
 
 ghc-options:
   - -Wall
@@ -104,3 +105,4 @@ executables:
     dependencies:
       - public-transport-rider-platform
       - mobility-core
+      - external-services

@@ -33,6 +33,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common

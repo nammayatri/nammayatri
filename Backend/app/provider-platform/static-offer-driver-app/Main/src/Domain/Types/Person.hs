@@ -24,12 +24,12 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption
-import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Types.Centesimal
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (EsqDBFlow, maskText)
+import Lib.Encryption
+import qualified Lib.FCM.Types as FCM
 import Servant.API
 
 data Role

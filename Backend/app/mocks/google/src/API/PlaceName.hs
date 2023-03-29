@@ -18,11 +18,11 @@ module API.PlaceName
 where
 
 import Environment
-import Kernel.External.Maps.Google.MapsClient.Types as GoogleMaps
-import qualified Kernel.External.Maps.Types as Maps
-import Kernel.External.Types (Language)
 import Kernel.Prelude
+import qualified Kernel.Types.CommonImport as Maps
 import Kernel.Utils.Common
+import Lib.Maps.Google.MapsClient.Types as GoogleMaps
+import Lib.Types (Language)
 import qualified MockData.Common as Data
 import qualified MockData.PlaceName as Data
 import Tools.Error

@@ -23,10 +23,10 @@ where
 import qualified Domain.Action.UI.Route as DRoute
 import qualified Domain.Types.Person as Person
 import Environment
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Maps as Maps
 import Servant
 import Tools.Auth
 

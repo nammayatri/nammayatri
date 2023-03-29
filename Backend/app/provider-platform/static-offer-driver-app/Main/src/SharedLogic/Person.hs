@@ -19,8 +19,8 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import qualified Storage.Queries.Person as QP
-import Tools.Error
 
 findPerson :: Id DP.Person -> Flow DP.Person
 findPerson personId = do

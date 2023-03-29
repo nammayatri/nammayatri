@@ -24,6 +24,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import qualified SharedLogic.DriverLocation as SDrLoc
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
@@ -33,7 +34,6 @@ import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.FarePolicy.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
-import Tools.Error
 import qualified Tools.Metrics as Metrics
 
 endRideTransaction :: (CacheFlow m r, EsqDBFlow m r) => Id Driver -> Id SRB.Booking -> SRide.Ride -> [DFareBreakup.FareBreakup] -> m ()

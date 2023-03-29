@@ -23,9 +23,10 @@ import qualified Domain.Types.Person as DP
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.Queries.Person as QP
-import Tools.Error
 import qualified Tools.Maps as Maps
 import Tools.Metrics (CoreMetrics)
 

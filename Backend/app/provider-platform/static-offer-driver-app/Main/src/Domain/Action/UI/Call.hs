@@ -32,10 +32,6 @@ import Data.Text.Conversions
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
-import Kernel.External.Encryption (decrypt, getDbHash)
-import Kernel.External.Exotel.Flow (initiateCall)
-import Kernel.External.Exotel.Types
-import qualified Kernel.External.Exotel.Types as Call
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runTransaction)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -43,6 +39,11 @@ import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
+import Lib.Exotel.Flow (initiateCall)
+import Lib.Exotel.Types
+import qualified Lib.Exotel.Types as Call
 import Servant.Client (BaseUrl (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus

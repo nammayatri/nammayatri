@@ -15,7 +15,6 @@
 module Environment where
 
 import EulerHS.Prelude
-import Kernel.External.Encryption (EncTools)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
@@ -26,6 +25,7 @@ import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Shutdown
+import Lib.Encryption (EncTools)
 import Storage.CachedQueries.CacheConfig
 import Tools.Metrics
 

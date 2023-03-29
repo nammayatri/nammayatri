@@ -22,9 +22,9 @@ import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.ItemCode as Reexport
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
-import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 data Item = Item

@@ -15,9 +15,9 @@
 module Types.Webhook where
 
 import EulerHS.Prelude
-import Kernel.External.Verification.Interface.Idfy
 import Kernel.Randomizer
 import Kernel.Utils.Time
+import Lib.Verification.Interface.Idfy
 
 buildSuccessRC :: (MonadIO m) => RCVerificationRequest -> Text -> UTCTime -> m VerificationResponse
 buildSuccessRC IdfyRequest {..} request_id now = do

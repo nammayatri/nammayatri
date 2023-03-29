@@ -21,7 +21,6 @@ import Environment
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Kernel.Exit
-import Kernel.External.Verification.Interface.Idfy
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
@@ -31,6 +30,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt)
+import Lib.Verification.Interface.Idfy
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,

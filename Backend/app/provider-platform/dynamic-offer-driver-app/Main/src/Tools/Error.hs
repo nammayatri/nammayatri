@@ -17,8 +17,8 @@
 module Tools.Error (module Tools.Error) where
 
 import EulerHS.Prelude
-import Kernel.Types.Error as Tools.Error hiding (PersonError)
 import Kernel.Types.Error.BaseError.HTTPError
+import Lib.Error as Tools.Error hiding (PersonError)
 
 data FarePolicyError
   = NoFarePolicy

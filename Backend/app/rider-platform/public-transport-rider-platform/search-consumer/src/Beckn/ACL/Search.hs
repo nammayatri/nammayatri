@@ -19,9 +19,9 @@ import qualified Beckn.Spec.Common.Context as Context
 import Beckn.Spec.Common.Gps
 import Beckn.Spec.Search
 import qualified Domain.Action.Search as DSearch
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.Common
 

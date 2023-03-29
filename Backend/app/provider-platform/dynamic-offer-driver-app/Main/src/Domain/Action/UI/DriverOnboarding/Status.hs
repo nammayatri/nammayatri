@@ -30,7 +30,6 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Vehicle
 import Domain.Types.Vehicle.Variant
 import Environment
-import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
@@ -38,6 +37,8 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Error
+import Lib.Encryption
+import Lib.Error
 import qualified Storage.CachedQueries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery

@@ -26,19 +26,20 @@ import Data.Aeson
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
 import Data.OpenApi hiding (description, name, password, url)
-import Kernel.External.Encryption (encrypt)
-import qualified Kernel.External.FCM.Flow as FCM
-import qualified Kernel.External.FCM.Types as FCM
-import qualified Kernel.External.Maps as Maps
-import qualified Kernel.External.SMS as SMS
-import qualified Kernel.External.SMS.ExotelSms.Types as Exotel
-import qualified Kernel.External.Verification as Verification
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common
-import Kernel.Types.Predicate
+import qualified Kernel.Types.CommonImport as Maps
+import Kernel.Types.Predicate (InMaybe (InMaybe), PredicateFunc (PredicateFunc))
 import Kernel.Utils.Validation
+import Lib.Encryption
+import qualified Lib.FCM.Flow as FCM
+import qualified Lib.FCM.Types as FCM
+import qualified Lib.Maps as Maps
+import qualified Lib.SMS as SMS
+import qualified Lib.SMS.ExotelSms.Types as Exotel
+import qualified Lib.Verification as Verification
 import Servant
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs

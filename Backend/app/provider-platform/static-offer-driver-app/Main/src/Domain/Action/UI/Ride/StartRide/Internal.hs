@@ -17,10 +17,10 @@ module Domain.Action.UI.Ride.StartRide.Internal where
 import qualified Domain.Types.Booking.Type as SRB
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
-import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
+import Kernel.Types.CommonImport (LatLong)
 import Kernel.Types.Id
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverLocation as DrLoc

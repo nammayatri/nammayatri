@@ -14,10 +14,10 @@
 
 module Domain.Types.SearchRequest.SearchReqLocation where
 
-import Kernel.External.Maps.HasCoordinates (HasCoordinates)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty (PrettyShow)
+import Lib.Maps.HasCoordinates (HasCoordinates)
 
 data SearchReqLocation = SearchReqLocation
   { id :: Id SearchReqLocation,

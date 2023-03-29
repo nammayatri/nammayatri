@@ -15,9 +15,9 @@
 module Domain.Types.SearchRequest.SearchReqLocation where
 
 import Domain.Types.LocationAddress
-import Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Maps.HasCoordinates
 
 data SearchReqLocation = SearchReqLocation
   { id :: Id SearchReqLocation,

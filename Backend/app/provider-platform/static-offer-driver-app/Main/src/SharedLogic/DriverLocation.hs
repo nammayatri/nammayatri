@@ -17,14 +17,14 @@ module SharedLogic.DriverLocation where
 import Domain.Types.DriverInformation
 import Domain.Types.DriverLocation
 import Domain.Types.Person as Person
-import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Error
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.DriverInformation as Queries
 import qualified Storage.Queries.DriverLocation as DLQueries

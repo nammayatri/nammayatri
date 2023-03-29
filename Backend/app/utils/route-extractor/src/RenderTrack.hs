@@ -19,8 +19,8 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Csv as Csv
 import qualified Data.Map.Strict as Map
 import qualified Data.Vector as Vector
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
+import Kernel.Types.CommonImport (LatLong (..))
 import Kernel.Utils.GenericPretty
 import Text.XML
 

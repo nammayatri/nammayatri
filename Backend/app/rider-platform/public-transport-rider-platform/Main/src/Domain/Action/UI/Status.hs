@@ -20,6 +20,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PaymentTransaction as QPT
 import qualified Storage.Queries.TransportStation as QTransportStation

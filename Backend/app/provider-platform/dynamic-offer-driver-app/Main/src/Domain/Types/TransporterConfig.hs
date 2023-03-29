@@ -18,10 +18,10 @@ import Data.Time (UTCTime)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import EulerHS.Prelude hiding (id)
-import Kernel.External.FCM.Types (FCMConfig)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Lib.FCM.Types (FCMConfig)
 
 -- ProviderConfig?
 data TransporterConfigD u = TransporterConfig

@@ -62,12 +62,6 @@ import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
-import Kernel.External.Encryption
-import Kernel.External.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.FCM.Types as FCM
-import qualified Kernel.External.Maps as Maps
-import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
-import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -76,12 +70,19 @@ import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.APISuccess as APISuccess
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.GenericPretty (PrettyShow)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Lib.Encryption
+import Lib.FCM.Types (FCMRecipientToken)
+import qualified Lib.FCM.Types as FCM
+import qualified Lib.Maps as Maps
+import qualified Lib.SMS.MyValueFirst.Flow as SF
+import qualified Lib.SMS.MyValueFirst.Types as SMS
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator

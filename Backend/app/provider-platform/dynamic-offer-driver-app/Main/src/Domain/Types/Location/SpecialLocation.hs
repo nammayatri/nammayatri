@@ -14,8 +14,8 @@
 
 module Domain.Types.Location.SpecialLocation where
 
-import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
+import Kernel.Types.CommonImport (LatLong)
 import Kernel.Types.Id
 
 data Category

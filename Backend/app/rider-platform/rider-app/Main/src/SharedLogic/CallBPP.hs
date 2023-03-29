@@ -28,14 +28,14 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified EulerHS.Types as Euler
 import GHC.Records.Extra
-import qualified Kernel.External.Maps.Types as MapSearch
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Types.Beckn.ReqTypes
-import Kernel.Types.Error
+import qualified Kernel.Types.CommonImport as MapSearch
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Error
 import Servant hiding (throwError)
 import Tools.Error
 import Tools.Metrics (CoreMetrics)

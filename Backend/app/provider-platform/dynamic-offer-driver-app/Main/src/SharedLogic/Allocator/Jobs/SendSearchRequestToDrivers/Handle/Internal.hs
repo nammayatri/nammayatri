@@ -28,9 +28,9 @@ import Domain.Types.SearchRequest as SR
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Error (SearchRequestError (SearchRequestDoesNotExist))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error (SearchRequestError (SearchRequestDoesNotExist))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as Reexport
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers as Reexport

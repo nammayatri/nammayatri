@@ -23,9 +23,9 @@ import Data.Time
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
 import EulerHS.Prelude
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Types.APISuccess
 import Kernel.Types.App
+import Kernel.Types.CommonImport (LatLong (..))
 import Kernel.Types.Id
 import Servant hiding (Context)
 import Servant.Client

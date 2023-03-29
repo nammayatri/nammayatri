@@ -24,8 +24,8 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
-import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Types.CommonImport
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Tools.Metrics (CoreMetrics)

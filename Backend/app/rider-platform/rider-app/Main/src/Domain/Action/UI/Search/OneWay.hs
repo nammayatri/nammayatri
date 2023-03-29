@@ -33,11 +33,12 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
 import Storage.CachedQueries.CacheConfig
 import Storage.Queries.Geometry
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.SearchRequest as QSearchRequest
-import Tools.Error
 import Tools.Metrics
 import qualified Tools.Metrics as Metrics
 

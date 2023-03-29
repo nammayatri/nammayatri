@@ -16,7 +16,7 @@ module Consumer.AvailabilityTime.Types where
 
 import Data.Time
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Maps.Types (LatLong)
+import Kernel.Types.CommonImport (LatLong)
 import Kernel.Types.Id (Id)
 
 data DriverAvailability = DriverAvailability

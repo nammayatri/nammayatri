@@ -25,13 +25,13 @@ module Storage.Tabular.AllocatorJob where
 import Data.Singletons
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Logging
 import Kernel.Utils.Error
 import Kernel.Utils.Text
 import qualified Lib.Scheduler.Types as ST
 import SharedLogic.Allocator
-import Tools.Error
 import Unsafe.Coerce (unsafeCoerce)
 
 derivePersistField "AllocatorJobType"

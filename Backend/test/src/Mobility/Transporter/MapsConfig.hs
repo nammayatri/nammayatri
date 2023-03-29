@@ -18,13 +18,13 @@ module Mobility.Transporter.MapsConfig where
 
 import "static-offer-driver-app" Domain.Types.Merchant
 import "static-offer-driver-app" Domain.Types.Merchant.MerchantServiceConfig
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
+import qualified Kernel.Types.CommonImport as Maps
 import Kernel.Types.Id
 import qualified Mobility.Transporter.Fixtures as Fixtures
 import qualified "static-offer-driver-app" Storage.Queries.Merchant.MerchantServiceConfig as QMSC
 import Test.Hspec
-import "static-offer-driver-app" Tools.Maps
+import "static-offer-driver-app" Tools.Maps (MapsServiceConfig (GoogleConfig, OSRMConfig))
 import Utils
 
 spec :: Spec
@@ -46,12 +46,12 @@ fetchConfig merchantId serviceProvider getterFunc resultExpected = do
 
 fetchGoogleConfig :: IO ()
 fetchGoogleConfig = do
-  fetchConfig Fixtures.yatriPartnerMerchantId Google func (fromJust $ parseBaseUrl "http://localhost:8019/")
+  fetchConfig Fixtures.yatriPartnerMerchantId Maps.Google func (fromJust $ parseBaseUrl "http://localhost:8019/")
   where
     func (MapsServiceConfig (GoogleConfig cfg)) = cfg.googleMapsUrl
 
 fetchOSRMConfig :: IO ()
 fetchOSRMConfig = do
-  fetchConfig Fixtures.yatriPartnerMerchantId OSRM func (fromJust $ parseBaseUrl "localhost:5000")
+  fetchConfig Fixtures.yatriPartnerMerchantId Maps.OSRM func (fromJust $ parseBaseUrl "localhost:5000")
   where
     func (MapsServiceConfig (OSRMConfig cfg)) = cfg.osrmUrl

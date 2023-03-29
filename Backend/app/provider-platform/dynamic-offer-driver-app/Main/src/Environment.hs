@@ -19,8 +19,6 @@ import AWS.S3
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDefCfg
 import EulerHS.Prelude
-import Kernel.External.Encryption (EncTools)
-import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
@@ -40,6 +38,8 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Encryption (EncTools)
+import Lib.Slack.Types (SlackConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (SendSearchRequestJobConfig)
 import SharedLogic.DriverPool (CancellationScoreRelatedConfig, DriverPoolConfig, IntelligentPoolConfig, OverrideDriverPoolConfig)
 import SharedLogic.GoogleTranslate

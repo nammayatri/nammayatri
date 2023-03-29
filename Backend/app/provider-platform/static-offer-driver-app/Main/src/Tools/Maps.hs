@@ -28,7 +28,15 @@ where
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DOSC
 import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
-import Kernel.External.Maps as Reexport hiding
+-- import qualified Lib.Maps as Maps
+
+import Kernel.Prelude
+import Kernel.Types.CommonImport
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
+import Lib.Maps as Reexport hiding
   ( autoComplete,
     getDistance,
     getDistances,
@@ -37,10 +45,7 @@ import Kernel.External.Maps as Reexport hiding
     getRoutes,
     snapToRoad,
   )
-import qualified Kernel.External.Maps as Maps
-import Kernel.Prelude
-import Kernel.Types.Id
-import Kernel.Utils.Common
+import qualified Lib.Maps.Interface as Maps
 import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC

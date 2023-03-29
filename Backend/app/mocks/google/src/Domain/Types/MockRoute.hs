@@ -17,9 +17,9 @@
 module Domain.Types.MockRoute where
 
 import qualified Domain.Types.MockPlace as DPlace
-import Kernel.External.Maps.Google.MapsClient
-import qualified Kernel.External.Maps.Google.RoadsClient as Roads
 import Kernel.Prelude
+import Lib.Maps.Google.MapsClient
+import qualified Lib.Maps.Google.RoadsClient as Roads
 
 type SnapToRoadResponse = Roads.SnapToRoadResponse' Roads.SPLocation
 

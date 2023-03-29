@@ -35,15 +35,16 @@ import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.Vehicle as Vehicle
 import Environment (Flow)
 import EulerHS.Prelude
-import Kernel.External.Maps.HasCoordinates
-import Kernel.External.Maps.Types
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.Error
 import qualified Lib.LocationUpdates as LocUpd
+import Lib.Maps.HasCoordinates
 import SharedLogic.CallBAP (sendRideCompletedUpdateToBAP)
 import qualified SharedLogic.DriverLocation as DrLoc
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Calculator as Fare

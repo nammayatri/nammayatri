@@ -27,6 +27,7 @@ import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport

@@ -26,14 +26,15 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
-import qualified Kernel.External.Verification.Idfy.WebhookHandler as Idfy
-import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (Value, val)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
+import qualified Lib.Verification.Idfy.WebhookHandler as Idfy
+import qualified Lib.Verification.Interface.Idfy as Idfy
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC

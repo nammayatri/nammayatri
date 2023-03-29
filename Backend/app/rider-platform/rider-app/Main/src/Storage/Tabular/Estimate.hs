@@ -22,11 +22,10 @@ module Storage.Tabular.Estimate where
 
 import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
-import Kernel.External.Maps hiding (status)
-import qualified Kernel.External.Maps as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Common hiding (id)
+import qualified Kernel.Types.CommonImport as Domain
 import Kernel.Types.Id
 import qualified Storage.Tabular.SearchRequest as SSearchRequest
 import qualified Storage.Tabular.TripTerms as STripTerms
@@ -51,7 +50,7 @@ mkPersist
       providerMobileNumber Text
       providerCompletedRidesCount Int
       vehicleVariant VehVar.VehicleVariant
-      driversLocation (PostgresList LatLong)
+      driversLocation (PostgresList Domain.LatLong)
       tripTermsId STripTerms.TripTermsTId Maybe
       nightShiftMultiplier Centesimal Maybe
       nightShiftStart TimeOfDay Maybe

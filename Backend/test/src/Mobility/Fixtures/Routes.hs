@@ -17,8 +17,8 @@ module Mobility.Fixtures.Routes where
 import "rider-app" API.UI.Search
 import Data.List.NonEmpty as NE
 import "rider-app" Domain.Types.LocationAddress
-import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.Types.CommonImport
 
 defaultSearchReq :: SearchReq
 defaultSearchReq =

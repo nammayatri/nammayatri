@@ -19,8 +19,8 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import qualified Storage.CachedQueries.Merchant as CQM
-import Tools.Error
 
 findTransporter :: Id DM.Merchant -> Flow DM.Merchant
 findTransporter transporterId = do

@@ -22,8 +22,8 @@ import Beckn.Types.Core.Taxi.Select.StopInfo
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Types (Language)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+import Lib.Types (Language)
 
 -- If end = Nothing, then bpp sends quotes only for RENTAL
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY

@@ -20,7 +20,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.API as AP
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
-import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -34,6 +33,8 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Lib.Encryption
+import Lib.Error
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.Person as QP

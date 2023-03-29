@@ -21,10 +21,10 @@
 module Storage.Tabular.RiderDetails where
 
 import qualified Domain.Types.RiderDetails as Domain
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Lib.Encryption
 
 mkPersist
   defaultSqlSettings

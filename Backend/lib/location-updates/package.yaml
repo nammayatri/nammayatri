@@ -90,6 +90,7 @@ library:
     - -Werror
   dependencies:
     - mobility-core
+    - external-services
 
 tests:
   location-updates-tests:

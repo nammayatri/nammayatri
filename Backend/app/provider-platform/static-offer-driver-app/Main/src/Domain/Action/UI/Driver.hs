@@ -40,10 +40,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as SV
 import GHC.Records.Extra
-import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
-import qualified Kernel.External.FCM.Types as FCM
-import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
-import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -58,6 +54,11 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common (fromMaybeM, logTagInfo, throwError, (:::))
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Lib.Encryption
+import Lib.Error
+import qualified Lib.FCM.Types as FCM
+import qualified Lib.SMS.MyValueFirst.Flow as SF
+import qualified Lib.SMS.MyValueFirst.Types as SMS
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig

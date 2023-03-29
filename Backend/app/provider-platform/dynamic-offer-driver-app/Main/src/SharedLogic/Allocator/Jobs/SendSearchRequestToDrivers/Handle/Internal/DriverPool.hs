@@ -32,15 +32,16 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Randomizer (randomizeList)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.CommonImport
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Encryption
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool.Config as DP
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.CachedQueries.TransporterConfig as TC
-import Tools.Maps as Maps
 import Tools.Metrics
 
 isBatchNumExceedLimit ::

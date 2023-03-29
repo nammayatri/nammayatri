@@ -28,6 +28,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Error
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.Queries.Booking as QRideB
 

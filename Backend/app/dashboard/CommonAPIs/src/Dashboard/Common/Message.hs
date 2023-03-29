@@ -27,12 +27,12 @@ import Data.ByteString.Lazy as BSL
 import Data.OpenApi hiding (description, name, password, summary, title, url)
 import Data.Text as T
 import Data.Text.Encoding as DT
-import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
+import Lib.Types (Language)
 import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs

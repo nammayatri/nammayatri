@@ -24,13 +24,14 @@ import Domain.Types.RegistrationToken as RegToken
 import Domain.Types.SearchRequest
 import Domain.Types.SearchRequestForDriver
 import EulerHS.Prelude
-import qualified Kernel.External.FCM.Flow as FCM
-import Kernel.External.FCM.Types as FCM
 import Kernel.Storage.Hedis (HedisFlow)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
+import qualified Lib.FCM.Flow as FCM
+import Lib.FCM.Types as FCM
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import Storage.CachedQueries.TransporterConfig
 

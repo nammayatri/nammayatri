@@ -83,6 +83,7 @@ library:
     - time-units
     - wai
     - warp
+    - external-services
 
 executables:
   mock-sms-exe:

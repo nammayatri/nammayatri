@@ -33,13 +33,14 @@ import qualified "rider-app" Domain.Types.Ride as BRide
 import qualified "static-offer-driver-app" Domain.Types.Ride as TRide
 import qualified "rider-app" Domain.Types.SearchRequest as AppSearchReq
 import HSpec
-import qualified Kernel.External.Maps as Maps
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.CommonImport
+import qualified Kernel.Types.CommonImport as Maps
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Kernel.Utils.Common
+import qualified Lib.Maps.Interface as Maps
 import qualified Mobility.AppBackend.APICalls as API
 import Mobility.AppBackend.Fixtures
 import qualified Mobility.Transporter.APICalls as API

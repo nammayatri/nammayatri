@@ -24,16 +24,16 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle as Vehicle
-import Kernel.External.Encryption
-import Kernel.External.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.Maps.HasCoordinates as GoogleMaps
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Centesimal
+import Kernel.Types.CommonImport (LatLong (..))
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common hiding (Value)
+import Lib.Encryption
+import Lib.FCM.Types (FCMRecipientToken)
+import qualified Lib.Maps.HasCoordinates as GoogleMaps
 import Storage.Tabular.DriverInformation
 import Storage.Tabular.DriverLocation
 import Storage.Tabular.Person as TPerson

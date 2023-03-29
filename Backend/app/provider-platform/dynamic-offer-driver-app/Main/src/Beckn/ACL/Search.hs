@@ -21,9 +21,9 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Error
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
-import Tools.Error
 
 buildSearchReq ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>

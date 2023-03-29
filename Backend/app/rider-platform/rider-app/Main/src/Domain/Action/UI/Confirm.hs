@@ -32,13 +32,14 @@ import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Domain.Types.VehicleVariant (VehicleVariant)
-import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisFlow)
+import Kernel.Types.CommonImport (LatLong (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import SharedLogic.Estimate (checkIfEstimateCancelled)
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Booking as QRideB

@@ -27,6 +27,8 @@ import Kernel.Utils.Common as CoreCommon
 import qualified Kernel.Utils.Common as Utils
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
+import Lib.Encryption
+import Lib.Error
 import Servant hiding (throwError)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR

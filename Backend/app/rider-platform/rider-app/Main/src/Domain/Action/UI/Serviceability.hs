@@ -18,17 +18,17 @@ module Domain.Action.UI.Serviceability
 where
 
 import Domain.Types.Person as Person
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Hedis
+import Kernel.Types.CommonImport
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import Storage.Queries.Geometry (someGeometriesContain)
 import qualified Storage.Queries.Person as QP
-import Tools.Error
 
 checkServiceability ::
   ( HasCacheConfig r,

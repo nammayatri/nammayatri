@@ -18,11 +18,11 @@ import qualified Data.Text as T
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.DriverOnboarding.Image as Domain
 import Environment
-import qualified Kernel.External.Slack.Flow as SF
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Slack.Flow as SF
 import qualified Storage.Queries.DriverOnboarding.Image as Query
 
 notifyErrorToSupport ::

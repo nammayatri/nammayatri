@@ -24,10 +24,10 @@ import qualified Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboardi
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude
-import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.HTML
+import qualified Lib.Verification.Interface.Idfy as Idfy
 import Servant hiding (serveDirectoryWebApp)
 import Servant.OpenApi
 

@@ -30,8 +30,8 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
-import Tools.Error
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
   { oldStatus :: Maybe DPFS.FlowStatus,

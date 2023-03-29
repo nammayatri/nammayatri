@@ -18,9 +18,9 @@ import Data.Map as HM
 import Data.OpenApi hiding (description, title)
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Message.MediaFile as MF
-import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Types (Language)
 
 data MessageType = Action Text | Read deriving (Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 

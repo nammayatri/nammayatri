@@ -23,10 +23,10 @@ module Storage.Tabular.RideDetails where
 import qualified Domain.Types.Ride as SR
 import qualified Domain.Types.RideDetails as Domain
 import qualified Domain.Types.Vehicle as SV
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Lib.Encryption
 import Storage.Tabular.Ride (RideTId)
 import Storage.Tabular.Vehicle ()
 

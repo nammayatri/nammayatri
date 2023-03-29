@@ -111,6 +111,7 @@ library:
     - mobility-core
     - beckn-spec
     - location-updates
+    - external-services
 
 executables:
   dynamic-offer-driver-app-exe:

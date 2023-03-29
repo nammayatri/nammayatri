@@ -15,9 +15,9 @@
 module Domain.Types.Message.MessageTranslation where
 
 import qualified Domain.Types.Message.Message as Msg
-import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Types (Language)
 
 data MessageTranslation = MessageTranslation
   { messageId :: Id Msg.Message,

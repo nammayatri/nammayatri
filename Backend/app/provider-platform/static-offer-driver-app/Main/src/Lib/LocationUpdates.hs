@@ -29,6 +29,7 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Error
 import "location-updates" Lib.LocationUpdates as Reexport
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC

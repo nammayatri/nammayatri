@@ -102,6 +102,7 @@ library:
     - dynamic-offer-driver-app
     - mobility-core
     - beckn-spec
+    - external-services
 
 executables:
   driver-offer-allocator-exe:

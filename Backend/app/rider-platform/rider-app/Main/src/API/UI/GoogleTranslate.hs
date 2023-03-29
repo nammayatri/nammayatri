@@ -21,10 +21,10 @@ where
 import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
-import qualified Kernel.External.GoogleTranslate.Types as GoogleTranslate
 import Kernel.Types.App
 import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI, withPersonIdLogTag)
+import qualified Lib.GoogleTranslate.Types as GoogleTranslate
 import Servant
 import qualified SharedLogic.GoogleTranslate as GoogleTranslate
 import Tools.Auth

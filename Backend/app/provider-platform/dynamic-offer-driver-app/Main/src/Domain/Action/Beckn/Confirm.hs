@@ -27,8 +27,6 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as SRD
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequestForDriver as SReqD
-import Kernel.External.Encryption
-import qualified Kernel.External.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
@@ -38,6 +36,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
+import qualified Lib.FCM.Types as FCM
 import Servant.Client (BaseUrl (..))
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc

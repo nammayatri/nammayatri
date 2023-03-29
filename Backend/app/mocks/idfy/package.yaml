@@ -88,6 +88,7 @@ library:
     - warp
     - openapi3
     - beckn-services
+    - external-services
 
 executables:
   mock-idfy-exe:

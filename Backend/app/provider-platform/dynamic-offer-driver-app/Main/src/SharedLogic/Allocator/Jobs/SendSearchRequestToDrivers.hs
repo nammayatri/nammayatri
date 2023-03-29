@@ -19,8 +19,9 @@ import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis (HedisFlow)
-import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.Encryption
+import Lib.Error
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Config (HasSendSearchRequestJobConfig)

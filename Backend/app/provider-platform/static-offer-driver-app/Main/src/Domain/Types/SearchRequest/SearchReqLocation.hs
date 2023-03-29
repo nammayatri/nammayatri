@@ -18,8 +18,8 @@ import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
 import EulerHS.Prelude hiding (id, state)
-import Kernel.External.Maps.HasCoordinates (HasCoordinates)
 import Kernel.Types.Id
+import Lib.Maps.HasCoordinates (HasCoordinates)
 
 data SearchReqLocation = SearchReqLocation
   { id :: Id SearchReqLocation,
