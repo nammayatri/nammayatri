@@ -428,6 +428,7 @@ data ScreenOutput = LogoutUser
                   | UpdateSosStatus HomeScreenState
                   | FetchContacts HomeScreenState
                   | OnResumeApp HomeScreenState
+                  | CheckCurrentStatus
 
 data Action = NoAction 
             | BackPressed 
@@ -521,7 +522,7 @@ eval (UpdateCurrentStage stage) state = do
     continue state
 
 eval OnResumeCallback state = 
-  if (isLocalStageOn FindingQuotes) then
+  if (isLocalStageOn FindingQuotes) && flowWithoutOffers WithoutOffers then
     exit $ OnResumeApp state
   else continue state
 
@@ -1066,7 +1067,7 @@ eval (QuoteListModelActionController (QuoteListModelController.GoBack)) state = 
 
 eval (QuoteListModelActionController (QuoteListModelController.TryAgainButtonActionController  PrimaryButtonController.OnClick)) state = updateAndExit state $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = TryAgain, sourceSelectedOnMap = true}}
 
-eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionController PrimaryButtonController.OnClick)) state = updateAndExit state GoToHome
+eval (QuoteListModelActionController (QuoteListModelController.HomeButtonActionController PrimaryButtonController.OnClick)) state = updateAndExit state CheckCurrentStatus
 
 eval (Restart err) state = exit $ (LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state)
 
