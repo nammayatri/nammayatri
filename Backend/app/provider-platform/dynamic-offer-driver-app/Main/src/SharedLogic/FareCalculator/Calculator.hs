@@ -138,9 +138,9 @@ calculateSlabFareParameters ::
   Maybe Money ->
   m FareParameters
 calculateSlabFareParameters fp distance time mbExtraFare = do
-  let slabs = filter (selectSlab distance) fp.fareSlabs
-  unless (length slabs == 1) $ throwError (InvalidRequest "Invalid Fare Slab")
-  let slab = head slabs
+  let mbSlab = find (selectSlab distance) fp.fareSlabs
+  when (isNothing mbSlab) $ throwError (InvalidRequest "Fare slab not found")
+  let slab = fromJust mbSlab
 
   let baseDistanceFare = roundToIntegral $ slab.fare
       waitingOrPickupCharges = roundToIntegral $ slab.waitingCharge
