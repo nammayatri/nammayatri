@@ -4,5 +4,7 @@
 .direnv
 /result
 
+/.pre-commit-config.yaml
+
 # Haskell
 dist-newstyle
