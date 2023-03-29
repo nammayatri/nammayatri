@@ -414,6 +414,9 @@ getNearestDrivers LatLong {..} radius merchantId mbPoolVariant fareProductType m
         &&. driverInfo ^. DriverInformationOptForRental >=. val isRental
         &&. not_ (driverInfo ^. DriverInformationOnRide)
         &&. not_ (driverInfo ^. DriverInformationBlocked)
+        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
+                ||. (location ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
+            )
         &&. ( Esq.isNothing (val mbPoolVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbPoolVariant -- when mbVariant = Nothing, we use all variants, is it correct?
                 ||. ( case mbPoolVariant of
                         Just SEDAN ->
@@ -422,9 +425,6 @@ getNearestDrivers LatLong {..} radius merchantId mbPoolVariant fareProductType m
                         Just HATCHBACK -> driverInfo ^. DriverInformationCanDowngradeToHatchback ==. val True
                         _ -> val False
                     )
-            )
-        &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
-                ||. (location ^. DriverLocationCoordinatesCalculatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
             )
         &&. buildRadiusWithin (location ^. DriverLocationPoint) (lat, lon) (val radius)
     orderBy [asc (location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon))]
