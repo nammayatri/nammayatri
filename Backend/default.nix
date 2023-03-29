@@ -17,7 +17,10 @@
         # TODO: Upstream mkShellArgs as an option in mission-control
         mkShellArgs = {
           nativeBuildInputs = [ config.mission-control.wrapper ];
-          shellHook = config.mission-control.banner;
+          shellHook = ''
+            ${config.pre-commit.installationScript}
+            ${config.mission-control.banner}
+          '';
         };
       };
 
