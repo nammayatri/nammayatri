@@ -383,3 +383,4 @@ getKN script = case script of
   EMERGENCY_CONTACS_ADDED_SUCCESSFULLY -> "ತುರ್ತು ಸಂಪರ್ಕಗಳನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸೇರಿಸಲಾಗಿದೆ"
   NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD -> "ಸೇರಿಸಲು ಯಾವುದೇ ಸಂಪರ್ಕಗಳು ಯಾವ ಸಾಧನದಲ್ಲಿ ಕಂಡುಬಂದಿಲ್ಲ"
   NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD -> "ಸೇರಿಸಲು ಯಾವುದೇ ಸಂಪರ್ಕಗಳು ಯಾವ ಸಾಧನದಲ್ಲಿ ಕಂಡುಬಂದಿಲ್ಲ"
+  PERMISSION_DENIED -> "ಅನುಮತಿ ನಿರಾಕರಿಸಲಾಗಿದೆ"

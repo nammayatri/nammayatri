@@ -1022,9 +1022,6 @@ public class MainActivity extends AppCompatActivity {
               } catch (JSONException e) {
                   e.printStackTrace();
               }
-              if (!flag){
-                  Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show();
-              }
               break;
           default: return;
       }
