@@ -27,7 +27,7 @@ import Data.Array as Arr
 import Data.Either (Either(..))
 import Data.Int as INT
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.Number (fromString)
 import Data.String (Pattern(..), drop, indexOf, split, toLower, trim, take)
 import Debug.Trace (spy)
@@ -142,14 +142,14 @@ forceIOSupdate c_maj c_min c_patch =
 currentRideFlow :: Boolean -> FlowBT String Unit
 currentRideFlow rideAssigned = do
   rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
+  (GlobalState state') <- getState
+  let state = state'.homeScreen
   case rideBookingListResponse of 
     Right (RideBookingListRes listResp) -> do 
       if not (null listResp.list) then do
         when (not rideAssigned) $ do
           void $ pure $ firebaseLogEvent "ny_active_ride_with_idle_state" 
-        (GlobalState state') <- getState
         let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
-            state = state'.homeScreen
             status = (fromMaybe dummyRideAPIEntity ((resp.rideList) !! 0))^._status
             rideStatus = if status == "NEW" then RideAccepted else RideStarted  
             newState = state{data{driverInfoCardState = getDriverInfo (RideBookingRes resp)
@@ -163,42 +163,25 @@ currentRideFlow rideAssigned = do
         modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
         _ <- pure $ setValueToLocalStore TRACKING_ENABLED if status == "NEW" then "True" else "False"
         updateLocalStage rideStatus
-      else updateLocalStage HomeScreen
-    Left err -> updateLocalStage HomeScreen
-
-currentFlowStatus :: FlowBT String Unit 
-currentFlowStatus = do
-  void $ lift $ lift $ toggleLoader false
-  _ <- pure $ spy "currentFlowStatus" ":::"
-  _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
-  verifyProfile "LazyCheck"
-  (FlowStatusRes flowStatus) <- Remote.flowStatusBT ""
-  void $ pure $ spy "flowStatus" flowStatus
-  case flowStatus.currentStatus of
-    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
-    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
-    RIDE_ASSIGNED _ -> currentRideFlow true
-    PENDING_RATING _ -> do
-      updateLocalStage HomeScreen
-      rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
-      case rideBookingListResponse of
-        Right (RideBookingListRes listResp) -> do
-          let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
-          let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-          let (RideBookingDetails contents) = bookingDetails.contents
-          let (RideAPIEntity currRideListItem) = (fromMaybe dummyRideAPIEntity (resp.rideList !!0))
-          _ <- pure $ spy "CurrentRideListItem" currRideListItem
-          let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - INT.round (fromMaybe 0.0 currRideListItem.chargeableRideDistance)
-          let lastRideDate = (case currRideListItem.rideStartTime of 
-                              Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY") 
-                              Nothing        -> "")
-              currentDate =  getCurrentDate ""
-          if(lastRideDate /= currentDate) then 
-            setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
-            else pure unit
-          
-          case (currRideListItem.rideRating) of
-            Nothing -> do
+      else do
+        updateLocalStage HomeScreen
+        rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
+        case rideBookingListResponse of
+          Right (RideBookingListRes listResp) -> do
+            let (RideBookingRes resp) = (fromMaybe dummyRideBooking (listResp.list !! 0))
+            let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+            let (RideBookingDetails contents) = bookingDetails.contents
+            let (RideAPIEntity currRideListItem) = (fromMaybe dummyRideAPIEntity (resp.rideList !!0))
+            _ <- pure $ spy "CurrentRideListItem" currRideListItem
+            let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - INT.round (fromMaybe 0.0 currRideListItem.chargeableRideDistance)
+            let lastRideDate = (case currRideListItem.rideStartTime of 
+                                Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY") 
+                                Nothing        -> "")
+                currentDate =  getCurrentDate ""
+            if(lastRideDate /= currentDate) then 
+              setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
+              else pure unit
+            when (isNothing currRideListItem.rideRating) $ do
               when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{ 
                     props { ratingModal= true
@@ -229,10 +212,23 @@ currentFlowStatus = do
                                             Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                             Nothing        -> ""
                           }}
-                })                         
-            _ -> pure unit
-        Left err -> updateLocalStage HomeScreen
-    _ -> currentRideFlow false
+                })
+          Left err -> updateLocalStage HomeScreen
+    Left err -> updateLocalStage HomeScreen
+
+currentFlowStatus :: FlowBT String Unit 
+currentFlowStatus = do
+  void $ lift $ lift $ toggleLoader false
+  _ <- pure $ spy "currentFlowStatus" ":::"
+  _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
+  verifyProfile "LazyCheck"
+  (FlowStatusRes flowStatus) <- Remote.flowStatusBT ""
+  void $ pure $ spy "flowStatus" flowStatus
+  case flowStatus.currentStatus of
+    WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
+    DRIVER_OFFERED_QUOTE currentStatus      -> goToFindingQuotesStage currentStatus.estimateId true
+    RIDE_ASSIGNED _                         -> currentRideFlow true
+    _                                       -> currentRideFlow false
   lift $ lift $ doAff do liftEffect hideSplash
   permissionConditionA <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
   permissionConditionB <- lift $ lift $ liftFlow $ isLocationEnabled unit
@@ -711,7 +707,18 @@ homeScreenFlow = do
         _ <- pure $ currentPosition ""
         _ <- updateLocalStage HomeScreen
         modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData)
-        currentFlowStatus
+        homeScreenFlow
+    CHECK_CURRENT_STATUS -> do
+      (GlobalState state) <- getState
+      when (isLocalStageOn FindingQuotes) $ do
+        response <- Remote.cancelEstimateBT state.homeScreen.props.estimateId
+        pure unit
+      _ <- pure $ removeAllPolylines ""
+      _ <- lift $ lift $ liftFlow $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 0.5 0.9
+      _ <- pure $ currentPosition ""
+      _ <- updateLocalStage HomeScreen
+      modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData)
+      currentFlowStatus
     UPDATE_LOCATION_NAME state lat lon -> do
       (GetPlaceNameResp locationName) <- Remote.placeNameBT (Remote.makePlaceNameReq lat lon (case (getValueToLocalStore LANGUAGE_KEY) of  
                                                                                                                           "HI_IN" -> "HINDI" 
