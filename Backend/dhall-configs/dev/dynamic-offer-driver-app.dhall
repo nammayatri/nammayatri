@@ -121,8 +121,6 @@ in  { esqDBCfg
     , broadcastMessageTopic = "broadcast-messages"
     , kafkaProducerCfg
     , snapToRoadSnippetThreshold = +300
-    , mediaFileUrlPattern =
-        "http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>"
     , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
     }

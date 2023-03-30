@@ -13,6 +13,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Storage.Tabular.Issue.IssueReport (IssueReportTId)
+import Storage.Tabular.Person (PersonTId)
 
 mkPersist
   defaultSqlSettings
@@ -20,7 +21,7 @@ mkPersist
     CommentT sql=comment
       id Text
       issueReportId IssueReportTId
-      author Text
+      authorId PersonTId
       comment Text
       createdAt UTCTime
       Primary id
@@ -38,6 +39,7 @@ instance FromTType CommentT Domain.Comment where
       Domain.Comment
         { id = Id id,
           issueReportId = fromKey issueReportId,
+          authorId = fromKey authorId,
           ..
         }
 
@@ -46,5 +48,6 @@ instance ToTType CommentT Domain.Comment where
     CommentT
       { id = getId id,
         issueReportId = toKey issueReportId,
+        authorId = toKey authorId,
         ..
       }

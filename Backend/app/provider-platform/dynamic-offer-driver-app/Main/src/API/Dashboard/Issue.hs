@@ -12,37 +12,52 @@ import Servant hiding (Unauthorized, throwError)
 
 type API =
   "issue"
-    :> ( Common.IssueListAPI
-           :<|> Common.IssueUpdateAPI
-           :<|> Common.IssueAddCommentAPI
+    :> ( Common.IssueCategoryListAPI
+           :<|> Common.IssueListAPI
+           :<|> Common.IssueInfoAPI
+           :<|> Common.IssueUpdateByUserAPI
+           :<|> Common.IssueAddCommentByUserAPI
        )
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
-  issueList merchantId
+  issueCategoryList merchantId
+    :<|> issueList merchantId
+    :<|> issueInfo merchantId
     :<|> issueUpdate merchantId
     :<|> issueAddComment merchantId
+
+issueCategoryList ::
+  ShortId DM.Merchant ->
+  FlowHandler Common.IssueCategoryListRes
+issueCategoryList = withFlowHandlerAPI . DIssue.issueCategoryList
 
 issueList ::
   ShortId DM.Merchant ->
   Maybe Int ->
   Maybe Int ->
   Maybe Common.IssueStatus ->
-  Maybe Text ->
+  Maybe (Id Common.IssueCategory) ->
   Maybe Text ->
   FlowHandler Common.IssueReportListResponse
-issueList merchantShortId mbLimit mbOffset mbStatus mbCategory = withFlowHandlerAPI . DIssue.issueList merchantShortId mbLimit mbOffset mbStatus mbCategory
+issueList merchantShortId mbLimit mbOffset mbStatus mbCategoryId = withFlowHandlerAPI . DIssue.issueList merchantShortId mbLimit mbOffset mbStatus (cast <$> mbCategoryId)
+
+issueInfo ::
+  ShortId DM.Merchant ->
+  Id Common.IssueReport ->
+  FlowHandler Common.IssueInfoRes
+issueInfo merchantShortId issueReportId = withFlowHandlerAPI $ DIssue.issueInfo merchantShortId (cast issueReportId)
 
 issueUpdate ::
   ShortId DM.Merchant ->
   Id Common.IssueReport ->
-  Common.IssueUpdateReq ->
+  Common.IssueUpdateByUserReq ->
   FlowHandler APISuccess
 issueUpdate merchantShortId issueReportId = withFlowHandlerAPI . DIssue.issueUpdate merchantShortId (cast issueReportId)
 
 issueAddComment ::
   ShortId DM.Merchant ->
   Id Common.IssueReport ->
-  Common.IssueAddCommentReq ->
+  Common.IssueAddCommentByUserReq ->
   FlowHandler APISuccess
 issueAddComment merchantShortId issueReportId = withFlowHandlerAPI . DIssue.issueAddComment merchantShortId (cast issueReportId)

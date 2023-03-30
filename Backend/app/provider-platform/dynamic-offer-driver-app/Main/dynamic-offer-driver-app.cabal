@@ -155,6 +155,7 @@ library
       Domain.Types.Issue.IssueOption
       Domain.Types.Issue.IssueReport
       Domain.Types.Issue.IssueTranslation
+      Domain.Types.MediaFile
       Domain.Types.Merchant
       Domain.Types.Merchant.DriverIntelligentPoolConfig
       Domain.Types.Merchant.DriverPoolConfig
@@ -162,7 +163,6 @@ library
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
       Domain.Types.Merchant.TransporterConfig
-      Domain.Types.Message.MediaFile
       Domain.Types.Message.Message
       Domain.Types.Message.MessageReport
       Domain.Types.Message.MessageTranslation
@@ -214,6 +214,8 @@ library
       Storage.CachedQueries.FarePolicy.RestrictedExtraFare
       Storage.CachedQueries.Issue.IssueCategory
       Storage.CachedQueries.Issue.IssueOption
+      Storage.CachedQueries.Issue.IssueReport
+      Storage.CachedQueries.MediaFile
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
       Storage.CachedQueries.Merchant.DriverPoolConfig
@@ -250,6 +252,7 @@ library
       Storage.Queries.Issue.IssueCategory
       Storage.Queries.Issue.IssueOption
       Storage.Queries.Issue.IssueReport
+      Storage.Queries.MediaFile
       Storage.Queries.Merchant
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
       Storage.Queries.Merchant.DriverPoolConfig
@@ -257,7 +260,6 @@ library
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
       Storage.Queries.Merchant.TransporterConfig
-      Storage.Queries.Message.MediaFile
       Storage.Queries.Message.Message
       Storage.Queries.Message.MessageReport
       Storage.Queries.Message.MessageTranslation
@@ -301,6 +303,7 @@ library
       Storage.Tabular.Issue.IssueOption
       Storage.Tabular.Issue.IssueReport
       Storage.Tabular.Issue.IssueTranslation
+      Storage.Tabular.MediaFile
       Storage.Tabular.Merchant
       Storage.Tabular.Merchant.DriverIntelligentPoolConfig
       Storage.Tabular.Merchant.DriverPoolConfig
@@ -309,7 +312,6 @@ library
       Storage.Tabular.Merchant.MerchantServiceUsageConfig
       Storage.Tabular.Merchant.TransporterConfig
       Storage.Tabular.Message.Instances
-      Storage.Tabular.Message.MediaFile
       Storage.Tabular.Message.Message
       Storage.Tabular.Message.MessageReport
       Storage.Tabular.Message.MessageTranslation

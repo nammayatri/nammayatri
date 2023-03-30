@@ -40,7 +40,7 @@ handler = backendBasedCallHandler :<|> frontendBasedCallHandler
 
 -------- Initiate a call (Exotel) APIs --------
 type BackendBasedCallAPI =
-  "ride"
+  "driver" :> "ride"
     :> ( Capture "rideId" (Id SRide.Ride)
            :> "call"
            :> ( "customer"

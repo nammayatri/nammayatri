@@ -27,20 +27,24 @@ type API =
            :<|> "media"
              :> TokenAuth
              :> Common.IssueFetchMediaAPI
-           :<|> Capture "issueId" (Id Domain.IssueReport)
-             :> "update"
-             :> TokenAuth
-             :> Common.IssueUpdateAPI
-           :<|> Capture "issueId" (Id Domain.IssueReport)
-             :> "delete"
-             :> TokenAuth
-             :> Common.IssueDeleteAPI
            :<|> "category"
              :> TokenAuth
              :> Common.IssueCategoryAPI
            :<|> "option"
              :> TokenAuth
              :> Common.IssueOptionAPI
+           :<|> Capture "issueId" (Id Domain.IssueReport)
+             :> "info"
+             :> TokenAuth
+             :> Common.IssueInfoAPI
+           :<|> Capture "issueId" (Id Domain.IssueReport)
+             :> "option"
+             :> TokenAuth
+             :> Common.IssueUpdateAPI
+           :<|> Capture "issueId" (Id Domain.IssueReport)
+             :> "delete"
+             :> TokenAuth
+             :> Common.IssueDeleteAPI
        )
 
 handler :: FlowServer API
@@ -49,13 +53,14 @@ handler =
     :<|> issueReportDriverList
     :<|> issueMediaUpload
     :<|> fetchMedia
-    :<|> updateIssue
-    :<|> deleteIssue
     :<|> getIssueCategory
     :<|> getIssueOption
+    :<|> issueInfo
+    :<|> updateIssueOption
+    :<|> deleteIssue
 
-issueReportDriverList :: Id SP.Person -> FlowHandler Common.IssueReportDriverListRes
-issueReportDriverList = withFlowHandlerAPI . Domain.issueReportDriverList
+issueReportDriverList :: Id SP.Person -> Maybe Language -> FlowHandler Common.IssueReportDriverListRes
+issueReportDriverList driverId = withFlowHandlerAPI . Domain.issueReportDriverList driverId
 
 fetchMedia :: Id SP.Person -> Text -> FlowHandler Text
 fetchMedia driverId = withFlowHandlerAPI . Domain.fetchMedia driverId
@@ -66,8 +71,11 @@ createIssueReport driverId = withFlowHandlerAPI . Domain.createIssueReport drive
 issueMediaUpload :: Id SP.Person -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
 issueMediaUpload driverId = withFlowHandlerAPI . Domain.issueMediaUpload driverId
 
-updateIssue :: Id Domain.IssueReport -> Id SP.Person -> Common.IssueUpdateReq -> FlowHandler APISuccess
-updateIssue issueReportId driverId = withFlowHandlerAPI . Domain.updateIssue issueReportId driverId
+issueInfo :: Id Domain.IssueReport -> Id SP.Person -> Maybe Language -> FlowHandler Common.IssueInfoRes
+issueInfo issueReportId driverId = withFlowHandlerAPI . Domain.issueInfo issueReportId driverId
+
+updateIssueOption :: Id Domain.IssueReport -> Id SP.Person -> Common.IssueUpdateReq -> FlowHandler APISuccess
+updateIssueOption issueReportId driverId = withFlowHandlerAPI . Domain.updateIssueOption issueReportId driverId
 
 deleteIssue :: Id Domain.IssueReport -> Id SP.Person -> FlowHandler APISuccess
 deleteIssue issueReportId = withFlowHandlerAPI . Domain.deleteIssue issueReportId

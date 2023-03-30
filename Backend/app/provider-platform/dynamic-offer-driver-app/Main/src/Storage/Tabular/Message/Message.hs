@@ -24,8 +24,8 @@ import qualified Domain.Types.Message.Message as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import Storage.Tabular.MediaFile (MediaFileTId)
 import Storage.Tabular.Merchant (MerchantTId)
-import Storage.Tabular.Message.MediaFile (MediaFileTId)
 
 derivePersistField "Domain.MessageType"
 

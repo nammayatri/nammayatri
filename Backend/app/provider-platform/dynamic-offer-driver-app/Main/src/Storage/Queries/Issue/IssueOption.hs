@@ -10,6 +10,14 @@ import Kernel.Types.Id
 import Storage.Tabular.Issue.IssueOption
 import Storage.Tabular.Issue.IssueTranslation
 
+findByIdAndCategoryId :: Transactionable m => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
+findByIdAndCategoryId issueOptionId issueCategoryId = Esq.findOne $ do
+  issueOption <- from $ table @IssueOptionT
+  where_ $
+    issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
+      &&. issueOption ^. IssueOptionIssueCategoryId ==. val (toKey issueCategoryId)
+  pure issueOption
+
 fullOptionTable ::
   Language ->
   From
@@ -30,3 +38,17 @@ findAllByCategoryAndLanguage issueCategoryId language = Esq.findAll $ do
   where_ $
     issueOption ^. IssueOptionIssueCategoryId ==. val (toKey issueCategoryId)
   pure (issueOption, mbIssueTranslation)
+
+findByIdAndLanguage :: Transactionable m => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
+findByIdAndLanguage issueOptionId language = Esq.findOne $ do
+  (issueOption :& mbIssueTranslation) <- from $ fullOptionTable language
+  where_ $
+    issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
+  pure (issueOption, mbIssueTranslation)
+
+findById :: Transactionable m => Id IssueOption -> m (Maybe IssueOption)
+findById issueOptionId = Esq.findOne $ do
+  issueOption <- from $ table @IssueOptionT
+  where_ $
+    issueOption ^. IssueOptionTId ==. val (toKey issueOptionId)
+  pure issueOption

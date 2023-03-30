@@ -29,19 +29,76 @@ import qualified Storage.Queries.Issue.IssueOption as Queries
 
 findAllByCategoryAndLanguage :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id IssueCategory -> Language -> m [(IssueOption, Maybe IssueTranslation)]
 findAllByCategoryAndLanguage issueCategoryId language =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueOptionByLanguageKey issueCategoryId language) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueOptionByCategoryAndLanguageKey issueCategoryId language) >>= \case
     Just a -> pure a
-    Nothing -> cacheIssueOption issueCategoryId language /=<< Queries.findAllByCategoryAndLanguage issueCategoryId language
+    Nothing -> cacheAllIssueOptionByCategoryAndLanguage issueCategoryId language /=<< Queries.findAllByCategoryAndLanguage issueCategoryId language
 
---------- Caching logic -------------------
+findById :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id IssueOption -> m (Maybe IssueOption)
+findById issueOptionId =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueOptionByIdKey issueOptionId) >>= \case
+    Just a -> pure a
+    Nothing -> cacheIssueOptionById issueOptionId /=<< Queries.findById issueOptionId
 
-clearIssueOptionCache :: (CacheFlow m r) => Id IssueCategory -> Language -> m ()
-clearIssueOptionCache issueCategoryId = Hedis.withCrossAppRedis . Hedis.del . makeIssueOptionByLanguageKey issueCategoryId
+findByIdAndLanguage :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id IssueOption -> Language -> m (Maybe (IssueOption, Maybe IssueTranslation))
+findByIdAndLanguage issueOptionId language =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueOptionByIdAndLanguageKey issueOptionId language) >>= \case
+    Just a -> pure a
+    Nothing -> cacheIssueOptionByIdAndLanguage issueOptionId language /=<< Queries.findByIdAndLanguage issueOptionId language
 
-cacheIssueOption :: (CacheFlow m r) => Id IssueCategory -> Language -> [(IssueOption, Maybe IssueTranslation)] -> m ()
-cacheIssueOption issueCategoryId language issueOptionTranslation = do
+findByIdAndCategoryId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id IssueOption -> Id IssueCategory -> m (Maybe IssueOption)
+findByIdAndCategoryId issueOptionId issueCategoryId =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueOptionByIdAndIssueCategoryIdKey issueOptionId issueCategoryId) >>= \case
+    Just a -> pure a
+    Nothing -> cacheIssueOptionByIdAndIssueCategoryId issueOptionId issueCategoryId /=<< Queries.findByIdAndCategoryId issueOptionId issueCategoryId
+
+--------- Caching logic for issue option by issueCategoryId & language -------------------
+
+clearIssueOptionByCategoryAndLanguageCache :: (CacheFlow m r) => Id IssueCategory -> Language -> m ()
+clearIssueOptionByCategoryAndLanguageCache issueCategoryId = Hedis.withCrossAppRedis . Hedis.del . makeIssueOptionByCategoryAndLanguageKey issueCategoryId
+
+cacheAllIssueOptionByCategoryAndLanguage :: (CacheFlow m r) => Id IssueCategory -> Language -> [(IssueOption, Maybe IssueTranslation)] -> m ()
+cacheAllIssueOptionByCategoryAndLanguage issueCategoryId language issueOptionTranslation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByLanguageKey issueCategoryId language) issueOptionTranslation expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByCategoryAndLanguageKey issueCategoryId language) issueOptionTranslation expTime
 
-makeIssueOptionByLanguageKey :: Id IssueCategory -> Language -> Text
-makeIssueOptionByLanguageKey issueCategoryId language = "driver-offer:CachedQueries:IssueOption:IssueCategoryId-" <> getId issueCategoryId <> ":Language-" <> show language
+makeIssueOptionByCategoryAndLanguageKey :: Id IssueCategory -> Language -> Text
+makeIssueOptionByCategoryAndLanguageKey issueCategoryId language = "driver-offer:CachedQueries:IssueOption:IssueCategoryId-" <> getId issueCategoryId <> ":Language-" <> show language
+
+--------- Caching logic for issue option by id -------------------
+
+clearIssueOptionByIdCache :: (CacheFlow m r) => Id IssueOption -> m ()
+clearIssueOptionByIdCache = Hedis.withCrossAppRedis . Hedis.del . makeIssueOptionByIdKey
+
+cacheIssueOptionById :: (CacheFlow m r) => Id IssueOption -> Maybe IssueOption -> m ()
+cacheIssueOptionById issueOptionId issueOption = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByIdKey issueOptionId) issueOption expTime
+
+makeIssueOptionByIdKey :: Id IssueOption -> Text
+makeIssueOptionByIdKey id = "driver-offer:CachedQueries:IssueOption:Id-" <> show id
+
+--------- Caching logic for issue option by id and language -------------------
+
+clearIssueOptionByIdAndLanguageCache :: (CacheFlow m r) => Id IssueOption -> Language -> m ()
+clearIssueOptionByIdAndLanguageCache issueOptionId = Hedis.withCrossAppRedis . Hedis.del . makeIssueOptionByIdAndLanguageKey issueOptionId
+
+cacheIssueOptionByIdAndLanguage :: (CacheFlow m r) => Id IssueOption -> Language -> Maybe (IssueOption, Maybe IssueTranslation) -> m ()
+cacheIssueOptionByIdAndLanguage issueOptionId language issueOptionTranslation = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByIdAndLanguageKey issueOptionId language) issueOptionTranslation expTime
+
+makeIssueOptionByIdAndLanguageKey :: Id IssueOption -> Language -> Text
+makeIssueOptionByIdAndLanguageKey id language = "driver-offer:CachedQueries:IssueOption:Id-" <> show id <> ":Language-" <> show language
+
+--------- Caching logic for issue option by id and issueCategoryId -------------------
+
+clearIssueOptionByIdAndIssueCategoryIdCache :: (CacheFlow m r) => Id IssueOption -> Id IssueCategory -> m ()
+clearIssueOptionByIdAndIssueCategoryIdCache issueOptionId = Hedis.withCrossAppRedis . Hedis.del . makeIssueOptionByIdAndIssueCategoryIdKey issueOptionId
+
+cacheIssueOptionByIdAndIssueCategoryId :: (CacheFlow m r) => Id IssueOption -> Id IssueCategory -> Maybe IssueOption -> m ()
+cacheIssueOptionByIdAndIssueCategoryId issueOptionId issueCategoryId issueOptionTranslation = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeIssueOptionByIdAndIssueCategoryIdKey issueOptionId issueCategoryId) issueOptionTranslation expTime
+
+makeIssueOptionByIdAndIssueCategoryIdKey :: Id IssueOption -> Id IssueCategory -> Text
+makeIssueOptionByIdAndIssueCategoryIdKey id issueCategoryId = "driver-offer:CachedQueries:IssueOption:Id-" <> show id <> ":IssueCategoryId-" <> show issueCategoryId

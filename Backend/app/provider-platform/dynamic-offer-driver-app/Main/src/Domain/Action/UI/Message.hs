@@ -17,7 +17,7 @@ module Domain.Action.UI.Message where
 import qualified AWS.S3 as S3
 import Data.OpenApi hiding (description, info, title, url)
 import qualified Data.Text as T
-import qualified Domain.Types.Message.MediaFile as MF
+import qualified Domain.Types.MediaFile as MF
 import qualified Domain.Types.Message.Message as Domain
 import qualified Domain.Types.Person as SP
 import Environment
@@ -28,7 +28,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
-import qualified Storage.Queries.Message.MediaFile as MFQ
+import qualified Storage.Queries.MediaFile as MFQ
 import qualified Storage.Queries.Message.MessageReport as MRQ
 import qualified Storage.Queries.Person as QP
 import Tools.Error

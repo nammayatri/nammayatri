@@ -4,7 +4,9 @@ module Domain.Types.Issue.IssueReport where
 
 import Data.Aeson
 import Data.OpenApi (ToSchema)
-import qualified Domain.Types.Message.MediaFile as D
+import qualified Domain.Types.Issue.IssueCategory as D
+import qualified Domain.Types.Issue.IssueOption as D
+import qualified Domain.Types.MediaFile as D
 import qualified Domain.Types.Person as D
 import qualified Domain.Types.Ride as D
 import EulerHS.Prelude hiding (id)
@@ -25,11 +27,11 @@ data IssueReport = IssueReport
     description :: Text,
     assignee :: Maybe Text,
     status :: IssueStatus,
-    category :: Text,
-    option :: Maybe Text,
+    categoryId :: Id D.IssueCategory,
+    optionId :: Maybe (Id D.IssueOption),
     deleted :: Bool,
     mediaFiles :: [Id D.MediaFile],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
