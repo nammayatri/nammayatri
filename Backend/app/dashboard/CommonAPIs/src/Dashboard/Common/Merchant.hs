@@ -45,6 +45,12 @@ import Servant
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data MerchantEndpoint
   = MerchantUpdateEndpoint
+  | MerchantCommonConfigUpdateEndpoint
+  | DriverPoolConfigUpdateEndpoint
+  | DriverPoolConfigCreateEndpoint
+  | DriverIntelligentPoolConfigUpdateEndpoint
+  | OnboardingDocumentConfigUpdateEndpoint
+  | OnboardingDocumentConfigCreateEndpoint
   | MapsServiceConfigUpdateEndpoint
   | MapsServiceConfigUsageUpdateEndpoint
   | SmsServiceConfigUpdateEndpoint

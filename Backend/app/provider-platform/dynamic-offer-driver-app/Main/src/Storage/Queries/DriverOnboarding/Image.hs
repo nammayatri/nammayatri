@@ -68,15 +68,15 @@ findRecentByPersonIdAndImageType ::
 findRecentByPersonIdAndImageType personId imgtype = do
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   transporterConfig <- QTC.findByMerchantId person.merchantId >>= fromMaybeM (TransporterConfigNotFound person.merchantId.getId)
-  let onboardingRetryTimeinHours = transporterConfig.onboardingRetryTimeinHours
-  let onBoardingRetryTimeinHours = intToNominalDiffTime onboardingRetryTimeinHours
+  let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
+  let onBoardingRetryTimeInHours = intToNominalDiffTime onboardingRetryTimeInHours
   now <- getCurrentTime
   findAll $ do
     images <- from $ table @ImageT
     where_ $
       images ^. ImagePersonId ==. val (toKey personId)
         &&. images ^. ImageImageType ==. val imgtype
-        &&. images ^. ImageCreatedAt >. val (hoursAgo onBoardingRetryTimeinHours now)
+        &&. images ^. ImageCreatedAt >. val (hoursAgo onBoardingRetryTimeInHours now)
     return images
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now

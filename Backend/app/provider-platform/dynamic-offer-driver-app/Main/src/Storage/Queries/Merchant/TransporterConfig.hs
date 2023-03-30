@@ -58,3 +58,25 @@ updateReferralLinkPassword merchantId newPassword = do
         TransporterConfigUpdatedAt =. val now
       ]
     where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey merchantId)
+
+update :: TransporterConfig -> SqlDB ()
+update config = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ TransporterConfigPickupLocThreshold =. val config.pickupLocThreshold,
+        TransporterConfigDropLocThreshold =. val config.dropLocThreshold,
+        TransporterConfigRideTimeEstimatedThreshold =. val config.rideTimeEstimatedThreshold,
+        TransporterConfigDefaultPopupDelay =. val config.defaultPopupDelay,
+        TransporterConfigPopupDelayToAddAsPenalty =. val config.popupDelayToAddAsPenalty,
+        TransporterConfigThresholdCancellationScore =. val config.thresholdCancellationScore,
+        TransporterConfigMinRidesForCancellationScore =. val config.minRidesForCancellationScore,
+        TransporterConfigWaitingTimeEstimatedThreshold =. val config.waitingTimeEstimatedThreshold,
+        TransporterConfigOnboardingTryLimit =. val config.onboardingTryLimit,
+        TransporterConfigOnboardingRetryTimeInHours =. val config.onboardingRetryTimeInHours,
+        TransporterConfigCheckImageExtractionForDashboard =. val config.checkImageExtractionForDashboard,
+        TransporterConfigSearchRepeatLimit =. val config.searchRepeatLimit,
+        TransporterConfigUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. TransporterConfigMerchantId ==. val (toKey config.merchantId)

@@ -20,9 +20,10 @@ module RiderPlatformClient.RiderApp
 where
 
 import qualified "rider-app" API.Dashboard as BAP
-import qualified Dashboard.Common.Booking as Common
-import qualified Dashboard.RiderPlatform.Merchant as Common
-import qualified Dashboard.RiderPlatform.Ride as Common
+import qualified Dashboard.Common as Common
+import qualified Dashboard.Common.Booking as Booking
+import qualified Dashboard.RiderPlatform.Merchant as Merchant
+import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as BAP
 import Domain.Types.ServerName
@@ -50,19 +51,19 @@ data CustomerAPIs = CustomerAPIs
   }
 
 newtype BookingsAPIs = BookingsAPIs
-  { stuckBookingsCancel :: Common.StuckBookingsCancelReq -> Euler.EulerClient Common.StuckBookingsCancelRes
+  { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes
   }
 
 newtype RidesAPIs = RidesAPIs
-  { shareRideInfo :: Id Common.Ride -> Euler.EulerClient Common.ShareRideInfoRes
+  { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes
   }
 
 data MerchantAPIs = MerchantAPIs
-  { merchantUpdate :: Common.MerchantUpdateReq -> Euler.EulerClient APISuccess,
-    mapsServiceConfigUpdate :: Common.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    mapsServiceUsageConfigUpdate :: Common.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceConfigUpdate :: Common.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceUsageConfigUpdate :: Common.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
+  { merchantUpdate :: Merchant.MerchantUpdateReq -> Euler.EulerClient APISuccess,
+    mapsServiceConfigUpdate :: Merchant.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+    smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
   }
 
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> Text -> AppBackendAPIs

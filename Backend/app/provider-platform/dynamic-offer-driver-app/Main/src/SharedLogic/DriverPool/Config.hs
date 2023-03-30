@@ -31,7 +31,11 @@ data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
   }
   deriving (Generic)
 
-getDriverPoolConfig :: (MonadFlow m, MonadReader r m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Meters -> m DriverPoolConfig
+getDriverPoolConfig ::
+  (MonadFlow m, MonadReader r m, CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant ->
+  Meters ->
+  m DriverPoolConfig
 getDriverPoolConfig merchantId dist = do
   configs <- CDP.findAllByMerchantId merchantId
   let applicableConfig = find filterByDist configs

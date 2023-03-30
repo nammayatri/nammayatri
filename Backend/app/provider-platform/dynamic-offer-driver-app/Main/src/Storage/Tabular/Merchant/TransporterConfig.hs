@@ -50,7 +50,7 @@ mkPersist
       fcmServiceAccount Text
       fcmTokenKeyPrefix Text
       onboardingTryLimit Int
-      onboardingRetryTimeinHours Int
+      onboardingRetryTimeInHours Int
       checkImageExtractionForDashboard Bool
       searchRepeatLimit Int
       createdAt UTCTime

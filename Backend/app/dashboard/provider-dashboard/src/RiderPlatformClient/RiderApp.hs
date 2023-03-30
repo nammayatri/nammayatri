@@ -20,7 +20,7 @@ module RiderPlatformClient.RiderApp
 where
 
 import qualified "rider-app" API.Dashboard as BAP
-import qualified Dashboard.Common.Exotel as Common
+import qualified Dashboard.Common.Exotel as Exotel
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
@@ -30,7 +30,7 @@ import Kernel.Utils.Common hiding (callAPI)
 import Tools.Client
 
 newtype ExotelAPIs = ExotelAPIs
-  { exotelHeartbeat :: Common.ExotelHeartbeatReq -> Euler.EulerClient APISuccess
+  { exotelHeartbeat :: Exotel.ExotelHeartbeatReq -> Euler.EulerClient APISuccess
   }
 
 mkRiderAppExotelAPIs :: Text -> ExotelAPIs

@@ -40,6 +40,8 @@ mkPersist
       checkExpiry Bool
       validVehicleClasses (PostgresList Text)
       vehicleClassCheckType Domain.VehicleClassCheckType
+      createdAt UTCTime
+      updatedAt UTCTime
       Primary merchantId documentType
       deriving Generic
     |]

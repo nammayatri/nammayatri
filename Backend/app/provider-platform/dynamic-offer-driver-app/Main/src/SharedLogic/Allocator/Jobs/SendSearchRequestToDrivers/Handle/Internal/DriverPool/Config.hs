@@ -26,7 +26,6 @@ import Kernel.Utils.Dhall (FromDhall)
 data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,
     maxNumberOfBatches :: Int,
-    minDriverBatchSize :: Int,
     poolSortingType :: PoolSortingType
   }
   deriving (Generic, FromDhall)

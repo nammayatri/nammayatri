@@ -33,7 +33,6 @@ data DriverPoolConfigD u = DriverPoolConfig
     driverQuoteLimit :: Int,
     driverRequestCountLimit :: Int,
     driverBatchSize :: Int,
-    minDriverBatchSize :: Int,
     maxNumberOfBatches :: Int,
     maxParallelSearchRequests :: Int,
     poolSortingType :: PoolSortingType,

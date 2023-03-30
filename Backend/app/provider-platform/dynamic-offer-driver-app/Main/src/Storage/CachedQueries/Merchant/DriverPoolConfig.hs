@@ -16,7 +16,11 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.DriverPoolConfig
-  ( findAllByMerchantId,
+  ( clearCache,
+    create,
+    findAllByMerchantId,
+    findByMerchantIdAndTripDistance,
+    update,
   )
 where
 
@@ -25,17 +29,24 @@ import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.Merchant.DriverPoolConfig as Queries
 
+create :: DriverPoolConfig -> Esq.SqlDB ()
+create = Queries.create
+
 findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [DriverPoolConfig]
 findAllByMerchantId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
     Just a -> return $ fmap (coerce @(DriverPoolConfigD 'Unsafe) @DriverPoolConfig) a
     Nothing -> cacheDriverPoolConfigs id /=<< Queries.findAllByMerchantId id
+
+findByMerchantIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
+findByMerchantIdAndTripDistance merchantId tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantId merchantId
 
 cacheDriverPoolConfigs :: (CacheFlow m r) => Id Merchant -> [DriverPoolConfig] -> m ()
 cacheDriverPoolConfigs merchantId cfg = do
@@ -45,3 +56,10 @@ cacheDriverPoolConfigs merchantId cfg = do
 
 makeMerchantIdKey :: Id Merchant -> Text
 makeMerchantIdKey id = "driver-offer:CachedQueries:DriverPoolConfig:MerchantId-" <> id.getId
+
+-- Call it after any update
+clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
+clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
+
+update :: DriverPoolConfig -> Esq.SqlDB ()
+update = Queries.update

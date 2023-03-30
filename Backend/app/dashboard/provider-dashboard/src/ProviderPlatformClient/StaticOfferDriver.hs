@@ -20,11 +20,11 @@ module ProviderPlatformClient.StaticOfferDriver
 where
 
 import "static-offer-driver-app" API.Dashboard as BPP
-import qualified Dashboard.Common.Booking as Common
-import qualified Dashboard.Common.Exotel as Common
-import qualified Dashboard.ProviderPlatform.Driver as Common
-import qualified Dashboard.ProviderPlatform.Merchant as Common
-import qualified Dashboard.ProviderPlatform.Ride as Common
+import qualified Dashboard.Common.Booking as Booking
+import qualified Dashboard.Common.Exotel as Exotel
+import qualified Dashboard.ProviderPlatform.Driver as Driver
+import qualified Dashboard.ProviderPlatform.Merchant as Merchant
+import qualified Dashboard.ProviderPlatform.Ride as Ride
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
@@ -45,41 +45,41 @@ data BecknTransportAPIs = BecknTransportAPIs
   }
 
 data DriversAPIs = DriversAPIs
-  { listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient Common.DriverListRes,
-    driverActivity :: Euler.EulerClient Common.DriverActivityRes,
-    enableDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
-    disableDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
-    blockDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
-    unblockDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
-    driverLocation :: Maybe Int -> Maybe Int -> Common.DriverIds -> Euler.EulerClient Common.DriverLocationRes,
-    driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Common.DriverInfoRes,
-    deleteDriver :: Id Common.Driver -> Euler.EulerClient APISuccess,
-    unlinkVehicle :: Id Common.Driver -> Euler.EulerClient APISuccess,
-    updatePhoneNumber :: Id Common.Driver -> Common.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
-    addVehicle :: Id Common.Driver -> Common.AddVehicleReq -> Euler.EulerClient APISuccess,
-    updateDriverName :: Id Common.Driver -> Common.UpdateDriverNameReq -> Euler.EulerClient APISuccess
+  { listDrivers :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Euler.EulerClient Driver.DriverListRes,
+    driverActivity :: Euler.EulerClient Driver.DriverActivityRes,
+    enableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    disableDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    blockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    unblockDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    driverLocation :: Maybe Int -> Maybe Int -> Driver.DriverIds -> Euler.EulerClient Driver.DriverLocationRes,
+    driverInfo :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Driver.DriverInfoRes,
+    deleteDriver :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    unlinkVehicle :: Id Driver.Driver -> Euler.EulerClient APISuccess,
+    updatePhoneNumber :: Id Driver.Driver -> Driver.UpdatePhoneNumberReq -> Euler.EulerClient APISuccess,
+    addVehicle :: Id Driver.Driver -> Driver.AddVehicleReq -> Euler.EulerClient APISuccess,
+    updateDriverName :: Id Driver.Driver -> Driver.UpdateDriverNameReq -> Euler.EulerClient APISuccess
   }
 
 data RidesAPIs = RidesAPIs
-  { rideList :: Maybe Int -> Maybe Int -> Maybe Common.BookingStatus -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Money -> Euler.EulerClient Common.RideListRes,
-    rideStart :: Id Common.Ride -> Common.StartRideReq -> Euler.EulerClient APISuccess,
-    rideEnd :: Id Common.Ride -> Common.EndRideReq -> Euler.EulerClient APISuccess,
-    rideCancel :: Id Common.Ride -> Common.CancelRideReq -> Euler.EulerClient APISuccess,
-    rideInfo :: Id Common.Ride -> Euler.EulerClient Common.RideInfoRes,
-    rideSync :: Id Common.Ride -> Euler.EulerClient Common.RideSyncRes,
-    rideRoute :: Id Common.Ride -> Euler.EulerClient Common.RideRouteRes
+  { rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Money -> Euler.EulerClient Ride.RideListRes,
+    rideStart :: Id Ride.Ride -> Ride.StartRideReq -> Euler.EulerClient APISuccess,
+    rideEnd :: Id Ride.Ride -> Ride.EndRideReq -> Euler.EulerClient APISuccess,
+    rideCancel :: Id Ride.Ride -> Ride.CancelRideReq -> Euler.EulerClient APISuccess,
+    rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
+    rideSync :: Id Ride.Ride -> Euler.EulerClient Ride.RideSyncRes,
+    rideRoute :: Id Ride.Ride -> Euler.EulerClient Ride.RideRouteRes
   }
 
 newtype BookingsAPIs = BookingsAPIs
-  { stuckBookingsCancel :: Common.StuckBookingsCancelReq -> Euler.EulerClient Common.StuckBookingsCancelRes
+  { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes
   }
 
 data MerchantAPIs = MerchantAPIs
-  { merchantUpdate :: Common.MerchantUpdateReq -> Euler.EulerClient Common.MerchantUpdateRes,
-    mapsServiceConfigUpdate :: Common.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    mapsServiceUsageConfigUpdate :: Common.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceConfigUpdate :: Common.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
-    smsServiceUsageConfigUpdate :: Common.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
+  { merchantUpdate :: Merchant.MerchantUpdateReq -> Euler.EulerClient Merchant.MerchantUpdateRes,
+    mapsServiceConfigUpdate :: Merchant.MapsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    mapsServiceUsageConfigUpdate :: Merchant.MapsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess,
+    smsServiceConfigUpdate :: Merchant.SmsServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
+    smsServiceUsageConfigUpdate :: Merchant.SmsServiceUsageConfigUpdateReq -> Euler.EulerClient APISuccess
   }
 
 mkBecknTransportAPIs :: CheckedShortId DM.Merchant -> Text -> BecknTransportAPIs
@@ -137,7 +137,7 @@ callBecknTransportBPP ::
 callBecknTransportBPP merchantId = callServerAPI @_ @m @r BECKN_TRANSPORT (mkBecknTransportAPIs merchantId) "callBecknTransportBPP"
 
 newtype ExotelAPIs = ExotelAPIs
-  { exotelHeartbeat :: Common.ExotelHeartbeatReq -> Euler.EulerClient APISuccess
+  { exotelHeartbeat :: Exotel.ExotelHeartbeatReq -> Euler.EulerClient APISuccess
   }
 
 mkStaticOfferDriverAppExotelAPIs :: Text -> ExotelAPIs

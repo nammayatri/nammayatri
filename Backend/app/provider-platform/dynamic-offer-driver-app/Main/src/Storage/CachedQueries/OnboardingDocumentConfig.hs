@@ -17,17 +17,23 @@
 module Storage.CachedQueries.OnboardingDocumentConfig
   ( findByMerchantIdAndDocumentType,
     clearCache,
+    create,
+    update,
   )
 where
 
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.OnboardingDocumentConfig as DTO
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.Queries.OnboardingDocumentConfig as Queries
+
+create :: OnboardingDocumentConfig -> Esq.SqlDB ()
+create = Queries.create
 
 findByMerchantIdAndDocumentType :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> DocumentType -> m (Maybe DTO.OnboardingDocumentConfig)
 findByMerchantIdAndDocumentType merchantId documentType =
@@ -47,3 +53,6 @@ makeMerchantDocTypeKey merchantId documentType = "driver-offer:CachedQueries:Onb
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id Merchant -> DTO.DocumentType -> m ()
 clearCache merchantId documentType = Hedis.withCrossAppRedis . Hedis.del $ makeMerchantDocTypeKey merchantId documentType
+
+update :: OnboardingDocumentConfig -> Esq.SqlDB ()
+update = Queries.update

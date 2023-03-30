@@ -24,6 +24,7 @@ import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common (MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Storage.Tabular.Merchant.DriverIntelligentPoolConfig
 
@@ -34,3 +35,22 @@ findByMerchantId merchantId =
     where_ $
       config ^. DriverIntelligentPoolConfigMerchantId ==. val (toKey merchantId)
     return config
+
+update :: DriverIntelligentPoolConfig -> SqlDB ()
+update config = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverIntelligentPoolConfigAvailabilityTimeWeightage =. val config.availabilityTimeWeightage,
+        DriverIntelligentPoolConfigAvailabilityTimeWindowOption =. val config.availabilityTimeWindowOption,
+        DriverIntelligentPoolConfigAcceptanceRatioWeightage =. val config.acceptanceRatioWeightage,
+        DriverIntelligentPoolConfigAcceptanceRatioWindowOption =. val config.acceptanceRatioWindowOption,
+        DriverIntelligentPoolConfigCancellationRatioWeightage =. val config.cancellationRatioWeightage,
+        DriverIntelligentPoolConfigCancellationRatioWindowOption =. val config.cancellationRatioWindowOption,
+        DriverIntelligentPoolConfigMinQuotesToQualifyForIntelligentPool =. val config.minQuotesToQualifyForIntelligentPool,
+        DriverIntelligentPoolConfigMinQuotesToQualifyForIntelligentPoolWindowOption =. val config.minQuotesToQualifyForIntelligentPoolWindowOption,
+        DriverIntelligentPoolConfigIntelligentPoolPercentage =. val config.intelligentPoolPercentage,
+        DriverIntelligentPoolConfigUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverIntelligentPoolConfigMerchantId ==. val (toKey config.merchantId)
