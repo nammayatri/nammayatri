@@ -15,7 +15,10 @@
       devShell = {
         # TODO: Upstream mkShellArgs as an option in mission-control
         mkShellArgs = {
-          nativeBuildInputs = [ config.mission-control.wrapper ];
+          nativeBuildInputs = [
+            config.mission-control.wrapper
+            pkgs.pre-commit
+          ];
           shellHook = ''
             FLAKE_ROOT="''$(${lib.getExe config.flake-root.package})"
             export FLAKE_ROOT
