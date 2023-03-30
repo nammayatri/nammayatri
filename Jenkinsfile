@@ -13,7 +13,7 @@ pipeline {
         }
         stage ('Cabal Build (Development)') {
             steps {
-                sh 'cd ./Backend && nix develop -c cabal build all'
+                sh 'nix develop -c sh -c "cd ./Backend && cabal build all"'
             }
         }
         stage ('Flake check') {
@@ -22,14 +22,16 @@ pipeline {
             }
         }
         stage ('Docker image') {
-            when { branch 'main' }
+            when {
+                branch 'main'
+            }
             steps {
                 dockerPush "dockerImage", "ghcr.io"
             }
         }
         stage ('Cachix push') {
             steps {
-              cachixPush "nammayatri"
+                cachixPush "nammayatri"
             }
         }
     }

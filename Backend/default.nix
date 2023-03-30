@@ -12,24 +12,7 @@
       imports = [
         inputs.beckn-gateway.haskellFlakeProjectModules.output
       ];
-      devShell = {
-        # TODO: Upstream mkShellArgs as an option in mission-control
-        mkShellArgs = {
-          nativeBuildInputs = [
-            config.mission-control.wrapper
-            pkgs.pre-commit
-          ];
-          shellHook = ''
-            FLAKE_ROOT="''$(${lib.getExe config.flake-root.package})"
-            export FLAKE_ROOT
-
-            (cd FLAKE_ROOT && ${config.pre-commit.installationScript})
-
-            ${config.mission-control.banner}
-          '';
-        };
-      };
-
+      autoWire = false;
       # Some tests fail under Nix. We shoud probably run them in CI directly.
       overrides = self: super:
         with pkgs.haskell.lib.compose;

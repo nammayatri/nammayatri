@@ -3,11 +3,15 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     common.url = "github:nammayatri/common";
     flake-parts.follows = "common/flake-parts";
+    haskell-flake.url = "github:srid/haskell-flake";
+    common.inputs.haskell-flake.follows = "haskell-flake";
+    flake-root.url = "github:srid/flake-root";
+    common.inputs.flake-root.follows = "flake-root";
 
     # TODO: Move to common repo?
     mission-control.url = "github:Platonic-Systems/mission-control";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
-    pre-commit-hooks-nix.url = "github:cachix/pre-commit-hooks.nix";
+    pre-commit-hooks-nix.url = "github:juspay/pre-commit-hooks.nix/flake-parts-devShell"; # https://github.com/cachix/pre-commit-hooks.nix/pull/266
     treefmt-nix.url = "github:juspay/treefmt-nix/dhall-format"; # https://github.com/numtide/treefmt-nix/pull/56
     common.inputs.treefmt-nix.follows = "treefmt-nix";
 
@@ -27,7 +31,7 @@
         ./Backend/default.nix
         ./Frontend/default.nix
       ];
-      perSystem = { self', pkgs, ... }: {
+      perSystem = { config, self', pkgs, ... }: {
         packages.default = self'.packages.nammayatri;
 
         # TODO: Move these to common repo.
@@ -43,6 +47,25 @@
         treefmt.config = {
           programs.dhall.enable = true;
         };
+
+        devShells.default =
+          let
+            cdProjectRoot = pkgs.mkShell {
+              shellHook = ''
+                cd $FLAKE_ROOT 
+              '';
+            };
+          in
+          pkgs.mkShell {
+            inputsFrom = [
+              # shellHook is evaluated from reverse order!
+              config.mission-control.devShell
+              config.pre-commit.devShell
+              cdProjectRoot # Because: https://github.com/cachix/pre-commit-hooks.nix/issues/267
+              config.flake-root.devShell
+              config.haskellProjects.default.outputs.devShell
+            ];
+          };
       };
     };
 }
