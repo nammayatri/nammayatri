@@ -11,7 +11,9 @@ import qualified Domain.Types.Issue.IssueReport as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Storage.Tabular.Message.MediaFile (MediaFileTId)
+import Storage.Tabular.Issue.IssueCategory (IssueCategoryTId)
+import Storage.Tabular.Issue.IssueOption (IssueOptionTId)
+import Storage.Tabular.MediaFile (MediaFileTId)
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.Ride (RideTId)
 
@@ -27,8 +29,8 @@ mkPersist
       description Text
       assignee Text Maybe
       status Domain.IssueStatus
-      category Text
-      option Text Maybe
+      categoryId IssueCategoryTId
+      optionId IssueOptionTId Maybe
       deleted Bool
       mediaFiles (PostgresList MediaFileTId)
       createdAt UTCTime
@@ -50,6 +52,8 @@ instance FromTType IssueReportT Domain.IssueReport where
           mediaFiles = map fromKey (unPostgresList mediaFiles),
           driverId = fromKey driverId,
           rideId = fromKey <$> rideId,
+          categoryId = fromKey categoryId,
+          optionId = fromKey <$> optionId,
           ..
         }
 
@@ -60,5 +64,7 @@ instance ToTType IssueReportT Domain.IssueReport where
         mediaFiles = PostgresList (map toKey mediaFiles),
         driverId = toKey driverId,
         rideId = toKey <$> rideId,
+        categoryId = toKey categoryId,
+        optionId = toKey <$> optionId,
         ..
       }

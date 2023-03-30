@@ -263,3 +263,94 @@ instance IsHTTPError OnboardingDocumentError where
     OnboardingDocumentConfigNotFound {} -> E400
 
 instance IsAPIError OnboardingDocumentError
+
+newtype IssueReportError
+  = IssueReportDoNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''IssueReportError
+
+instance IsBaseError IssueReportError where
+  toMessage = \case
+    IssueReportDoNotExist issueReportId -> Just $ "IssueReport with issueReportId \"" <> show issueReportId <> "\" do not exist."
+
+instance IsHTTPError IssueReportError where
+  toErrorCode (IssueReportDoNotExist _) = "ISSUE_REPORT_DO_NOT_EXIST"
+  toHttpCode (IssueReportDoNotExist _) = E400
+
+instance IsAPIError IssueReportError
+
+data IssueOptionError
+  = IssueOptionNotFound Text
+  | IssueOptionDoNotExist Text
+  | IssueOptionInvalid Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''IssueOptionError
+
+instance IsBaseError IssueOptionError where
+  toMessage = \case
+    IssueOptionNotFound issueOptionId -> Just $ "IssueOption with issueOptionId \"" <> show issueOptionId <> "\" not found."
+    IssueOptionDoNotExist issueOptionId -> Just $ "IssueOption with issueOptionId \"" <> show issueOptionId <> "\" do not exist."
+    IssueOptionInvalid issueOptionId issueCategoryId -> Just $ "IssueOption with issueOptionId \"" <> show issueOptionId <> "\" not linked to IssueCategory with issueCategoryId \"" <> show issueCategoryId <> "\"."
+
+instance IsHTTPError IssueOptionError where
+  toErrorCode = \case
+    IssueOptionNotFound _ -> "ISSUE_OPTION_NOT_FOUND"
+    IssueOptionDoNotExist _ -> "ISSUE_OPTION_DO_NOT_EXIST"
+    IssueOptionInvalid _ _ -> "ISSUE_OPTION_INVALID"
+
+  toHttpCode = \case
+    IssueOptionNotFound _ -> E500
+    IssueOptionDoNotExist _ -> E400
+    IssueOptionInvalid _ _ -> E400
+
+instance IsAPIError IssueOptionError
+
+data IssueCategoryError
+  = IssueCategoryNotFound Text
+  | IssueCategoryDoNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''IssueCategoryError
+
+instance IsBaseError IssueCategoryError where
+  toMessage = \case
+    IssueCategoryNotFound issueCategoryId -> Just $ "IssueCategory with issueCategoryId \"" <> show issueCategoryId <> "\" not found."
+    IssueCategoryDoNotExist issueCategoryId -> Just $ "IssueCategory with issueCategoryId \"" <> show issueCategoryId <> "\" do not exist."
+
+instance IsHTTPError IssueCategoryError where
+  toErrorCode = \case
+    IssueCategoryNotFound _ -> "ISSUE_CATEGORY_NOT_FOUND"
+    IssueCategoryDoNotExist _ -> "ISSUE_CATEGORY_DO_NOT_EXIST"
+  toHttpCode = \case
+    IssueCategoryNotFound _ -> E500
+    IssueCategoryDoNotExist _ -> E400
+
+instance IsAPIError IssueCategoryError
+
+data MediaFileError
+  = FileSizeExceededError Text
+  | FileDoNotExist Text
+  | FileFormatNotSupported Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''MediaFileError
+
+instance IsHTTPError MediaFileError where
+  toErrorCode = \case
+    FileSizeExceededError _ -> "FILE_SIZE_EXCEEDED"
+    FileDoNotExist _ -> "FILE_DO_NOT_EXIST"
+    FileFormatNotSupported _ -> "FILE_FORMAT_NOT_SUPPORTED"
+  toHttpCode = \case
+    FileSizeExceededError _ -> E400
+    FileDoNotExist _ -> E400
+    FileFormatNotSupported _ -> E400
+
+instance IsAPIError MediaFileError
+
+instance IsBaseError MediaFileError where
+  toMessage = \case
+    FileSizeExceededError fileSize -> Just $ "Filesize is " <> fileSize <> " Bytes, which is more than the allowed 10MB limit."
+    FileDoNotExist fileId -> Just $ "MediaFile with fileId \"" <> show fileId <> "\" do not exist."
+    FileFormatNotSupported fileFormat -> Just $ "MediaFile with fileFormat \"" <> show fileFormat <> "\" not supported."

@@ -12,17 +12,24 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.Message.MediaFile where
+module Storage.Queries.MediaFile where
 
+import Domain.Types.MediaFile
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Storage.Tabular.MediaFile
 
-data MediaType = Video | Audio | Image | AudioLink | VideoLink | ImageLink deriving (Read, Show, Generic, ToSchema, ToJSON, FromJSON)
+create :: MediaFile -> SqlDB ()
+create = Esq.create
 
-data MediaFile = MediaFile
-  { id :: Id MediaFile,
-    _type :: MediaType,
-    url :: Text,
-    createdAt :: UTCTime
-  }
-  deriving (Generic)
+findById :: Transactionable m => Id MediaFile -> m (Maybe MediaFile)
+findById = Esq.findById
+
+findAllIn :: Transactionable m => [Id MediaFile] -> m [MediaFile]
+findAllIn mfList =
+  Esq.findAll $ do
+    mediaFile <- from $ table @MediaFileT
+    where_ $ mediaFile ^. MediaFileId `in_` valList (map getId mfList)
+    return mediaFile

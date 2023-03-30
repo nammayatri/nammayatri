@@ -21,6 +21,8 @@ data Customer
 
 data Driver
 
+data User
+
 data Image
 
 data Ride
@@ -34,6 +36,8 @@ data Receiver
 data Booking
 
 data IssueReport
+
+data IssueCategory
 
 -- | Hide secrets before storing request (or response) to DB.
 --

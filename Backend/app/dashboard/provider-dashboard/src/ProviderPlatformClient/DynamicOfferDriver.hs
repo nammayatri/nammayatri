@@ -117,9 +117,11 @@ data MessageAPIs = MessageAPIs
   }
 
 data IssueAPIs = IssueAPIs
-  { issueList :: Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe Text -> Maybe Text -> Euler.EulerClient Common.IssueReportListResponse,
-    issueUpdate :: Id Common.IssueReport -> Common.IssueUpdateReq -> Euler.EulerClient APISuccess,
-    issueAddComment :: Id Common.IssueReport -> Common.IssueAddCommentReq -> Euler.EulerClient APISuccess
+  { issueCategoryList :: Euler.EulerClient Common.IssueCategoryListRes,
+    issueList :: Maybe Int -> Maybe Int -> Maybe Common.IssueStatus -> Maybe (Id Common.IssueCategory) -> Maybe Text -> Euler.EulerClient Common.IssueReportListResponse,
+    issueInfo :: Id Common.IssueReport -> Euler.EulerClient Common.IssueInfoRes,
+    issueUpdate :: Id Common.IssueReport -> Common.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
+    issueAddComment :: Id Common.IssueReport -> Common.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess
   }
 
 mkDriverOfferAPIs :: CheckedShortId DM.Merchant -> Text -> DriverOfferAPIs
@@ -194,7 +196,9 @@ mkDriverOfferAPIs merchantId token = do
       :<|> messageDeliveryInfo
       :<|> messageReceiverList = messageClient
 
-    issueList
+    issueCategoryList
+      :<|> issueList
+      :<|> issueInfo
       :<|> issueUpdate
       :<|> issueAddComment = issueClient
 

@@ -26,8 +26,8 @@ import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601Show)
 import Data.Tuple.Extra (secondM)
 import qualified Data.Vector as V
+import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Message.MediaFile as Domain
 import qualified Domain.Types.Message.Message as Domain
 import qualified Domain.Types.Message.MessageReport as Domain
 import Environment
@@ -39,15 +39,16 @@ import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
-import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Queries.Message.MediaFile as MFQuery
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery
 import qualified Storage.Queries.Message.MessageTranslation as MTQuery
 import qualified Storage.Queries.Person as QP
+import Tools.Error
 
 createFilePath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
@@ -103,9 +104,9 @@ uploadFile merchantShortId Common.UploadFileRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
   filePath <- createFilePath merchant.id.getId fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
-  mediaFileUrlPattern <- asks (.mediaFileUrlPattern)
+  transporterConfig <- CQTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
   let fileUrl =
-        mediaFileUrlPattern
+        transporterConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "message"
           & T.replace "<FILE_PATH>" filePath
   _ <- fork "S3 put file" $ S3.put (T.unpack filePath) mediaFile

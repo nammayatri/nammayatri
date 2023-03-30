@@ -29,8 +29,8 @@ type IssueCreateAPI =
 data IssueReportReq = IssueReportReq
   { rideId :: Maybe (Id Ride),
     mediaFiles :: [Id MediaFile],
-    option :: Maybe Text,
-    category :: Text,
+    optionId :: Maybe (Id IssueOption),
+    categoryId :: Id IssueCategory,
     description :: Text
   }
   deriving (Generic, FromJSON, ToSchema)
@@ -44,7 +44,8 @@ newtype IssueReportRes = IssueReportRes
 -------------------------------------------------------------------------
 
 type IssueListAPI =
-  Get '[JSON] IssueReportDriverListRes
+  QueryParam "language" Language
+    :> Get '[JSON] IssueReportDriverListRes
 
 newtype IssueReportDriverListRes = IssueReportDriverListRes
   { issues :: [IssueReportDriverListItem]
@@ -54,25 +55,11 @@ newtype IssueReportDriverListRes = IssueReportDriverListRes
 
 data IssueReportDriverListItem = IssueReportDriverListItem
   { issueReportId :: Id IssueReport,
-    category :: Text,
-    option :: Maybe Text,
-    assignee :: Maybe Text,
-    description :: Text,
     status :: IssueStatus,
-    mediaFiles :: [MediaFile_]
+    category :: Text,
+    createdAt :: UTCTime
   }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data MediaFile_ = MediaFile_
-  { _type :: FileType,
-    url :: Text
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FileType = Audio | Image
-  deriving stock (Eq, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data IssueStatus = NEW | INPROGRESS | RESOLVED
@@ -88,6 +75,36 @@ instance ToHttpApiData IssueStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
+
+-------------------------------------------------------------------------
+
+type IssueInfoAPI =
+  QueryParam "language" Language
+    :> Get '[JSON] IssueInfoRes
+
+data IssueInfoRes = IssueInfoRes
+  { issueReportId :: Id IssueReport,
+    category :: Text,
+    option :: Maybe Text,
+    assignee :: Maybe Text,
+    description :: Text,
+    status :: IssueStatus,
+    mediaFiles :: [MediaFile_],
+    createdAt :: UTCTime
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MediaFile_ = MediaFile_
+  { _type :: FileType,
+    url :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FileType = Audio | Image
+  deriving stock (Eq, Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 -------------------------------------------------------------------------
 
@@ -139,8 +156,9 @@ type IssueUpdateAPI =
   ReqBody '[JSON] IssueUpdateReq
     :> Put '[JSON] APISuccess
 
-newtype IssueUpdateReq = IssueUpdateReq
-  { option :: Maybe Text
+data IssueUpdateReq = IssueUpdateReq
+  { categoryId :: Id IssueCategory,
+    optionId :: Id IssueOption
   }
   deriving (Generic, FromJSON, ToSchema)
 

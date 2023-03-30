@@ -18,9 +18,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Message.MediaFile where
+module Storage.Tabular.MediaFile where
 
-import qualified Domain.Types.Message.MediaFile as Domain
+import qualified Domain.Types.MediaFile as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id

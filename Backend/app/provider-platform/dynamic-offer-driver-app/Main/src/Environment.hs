@@ -88,7 +88,6 @@ data AppCfg = AppCfg
     driverLocationUpdateTopic :: Text,
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
-    mediaFileUrlPattern :: Text,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     maxShards :: Int
   }
@@ -141,7 +140,6 @@ data AppEnv = AppEnv
     driverLocationUpdateTopic :: Text,
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
-    mediaFileUrlPattern :: Text,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     maxShards :: Int
   }

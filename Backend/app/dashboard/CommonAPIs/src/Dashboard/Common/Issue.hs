@@ -22,12 +22,30 @@ import Servant hiding (Summary)
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data IssueEndpoint
-  = IssueListEndpoint
-  | IssueUpdateEndpoint
+  = IssueUpdateEndpoint
   | IssueAddCommentEndpoint
   deriving (Show, Read)
 
 derivePersistField "IssueEndpoint"
+
+---------------------------------------------------------
+-- issue category list --------------------------------
+
+type IssueCategoryListAPI =
+  "category"
+    :> Get '[JSON] IssueCategoryListRes
+
+data IssueCategoryRes = IssueCategoryRes
+  { issueCategoryId :: Id IssueCategory,
+    label :: Text,
+    category :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype IssueCategoryListRes = IssueCategoryListRes
+  { categories :: [IssueCategoryRes]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 ---------------------------------------------------------
 -- issues list --------------------------------------
@@ -37,7 +55,7 @@ type IssueListAPI =
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
     :> QueryParam "status" IssueStatus
-    :> QueryParam "category" Text
+    :> QueryParam "category" (Id IssueCategory)
     :> QueryParam "assignee" Text
     :> Get '[JSON] IssueReportListResponse
 
@@ -50,44 +68,12 @@ data IssueReportListResponse = IssueReportListResponse
 
 data IssueReportListItem = IssueReportListItem
   { issueReportId :: Id IssueReport,
-    driverDetail :: Maybe DriverDetail,
+    driverId :: Id Driver,
     rideId :: Maybe (Id Ride),
     category :: Text,
-    option :: Maybe Text,
     assignee :: Maybe Text,
-    description :: Text,
     status :: IssueStatus,
-    comments :: [IssueReportCommentItem],
-    mediaFiles :: [MediaFile]
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DriverDetail = DriverDetail
-  { id :: Id Driver,
-    firstName :: Text,
-    middleName :: Maybe Text,
-    lastName :: Maybe Text,
-    mobileNumber :: Maybe Text
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data MediaFile = MediaFile
-  { _type :: FileType,
-    url :: Text
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FileType = Audio | Image
-  deriving stock (Eq, Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data IssueReportCommentItem = IssueReportCommentItem
-  { comment :: Text,
-    author :: Text,
-    timestamp :: UTCTime
+    createdAt :: UTCTime
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -105,6 +91,67 @@ instance ToHttpApiData IssueStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
+
+---------------------------------------------------------
+-- issue info --------------------------------
+
+type IssueInfoAPI =
+  Capture "issueId" (Id IssueReport)
+    :> "info"
+    :> Get '[JSON] IssueInfoRes
+
+data IssueInfoRes = IssueInfoRes
+  { issueReportId :: Id IssueReport,
+    driverDetail :: Maybe DriverDetail,
+    rideId :: Maybe (Id Ride),
+    comments :: [IssueReportCommentItem],
+    category :: Text,
+    mediaFiles :: [MediaFile],
+    option :: Maybe Text,
+    description :: Text,
+    status :: IssueStatus,
+    assignee :: Maybe Text,
+    createdAt :: UTCTime
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverDetail = DriverDetail
+  { driverId :: Id Driver,
+    firstName :: Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    mobileNumber :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data IssueReportCommentItem = IssueReportCommentItem
+  { comment :: Text,
+    authorDetail :: AuthorDetail,
+    timestamp :: UTCTime
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AuthorDetail = AuthorDetail
+  { authorId :: Id User,
+    firstName :: Maybe Text,
+    lastName :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MediaFile = MediaFile
+  { _type :: FileType,
+    url :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FileType = Audio | Image
+  deriving stock (Eq, Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- update issue --------------------------------------
@@ -126,6 +173,24 @@ data IssueUpdateReq = IssueUpdateReq
 instance HideSecrets IssueUpdateReq where
   hideSecrets = identity
 
+type IssueUpdateByUserAPI =
+  Capture "issueId" (Id IssueReport)
+    :> ( "update"
+           :> ReqBody '[JSON] IssueUpdateByUserReq
+           :> Put '[JSON] APISuccess
+       )
+
+data IssueUpdateByUserReq = IssueUpdateByUserReq
+  { status :: Maybe IssueStatus,
+    assignee :: Maybe Text,
+    userId :: Id User
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets IssueUpdateByUserReq where
+  hideSecrets = identity
+
 ---------------------------------------------------------
 -- add comment --------------------------------------
 
@@ -136,12 +201,28 @@ type IssueAddCommentAPI =
            :> Post '[JSON] APISuccess
        )
 
-data IssueAddCommentReq = IssueAddCommentReq
-  { comment :: Text,
-    author :: Text
+newtype IssueAddCommentReq = IssueAddCommentReq
+  { comment :: Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets IssueAddCommentReq where
+  hideSecrets = identity
+
+type IssueAddCommentByUserAPI =
+  Capture "issueId" (Id IssueReport)
+    :> ( "comment"
+           :> ReqBody '[JSON] IssueAddCommentByUserReq
+           :> Post '[JSON] APISuccess
+       )
+
+data IssueAddCommentByUserReq = IssueAddCommentByUserReq
+  { comment :: Text,
+    userId :: Id User
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets IssueAddCommentByUserReq where
   hideSecrets = identity
