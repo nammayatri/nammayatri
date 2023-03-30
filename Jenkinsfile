@@ -11,11 +11,6 @@ pipeline {
                 sh 'nix build --no-link --no-update-lock-file -L .#nammayatri'
             }
         }
-        stage ('Cabal Build (Development)') {
-            steps {
-                sh 'nix develop -c sh -c "cd ./Backend && cabal build all"'
-            }
-        }
         stage ('Flake check') {
             steps {
                 sh 'nix build --no-link --no-update-lock-file -L .#check'
