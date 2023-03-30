@@ -979,16 +979,15 @@
         "nixpkgs-stable": "nixpkgs-stable"
       },
       "locked": {
-        "lastModified": 1677799298,
-        "narHash": "sha256-Ua75mQ+KAKxOkBVBZC85Fz3cwsuyhZmDjv6TePh8MpE=",
-        "owner": "terlar",
+        "lastModified": 1680170909,
+        "narHash": "sha256-FtKU/edv1jFRr/KwUxWTYWXEyj9g8GBrHntC2o8oFI8=",
+        "owner": "cachix",
         "repo": "pre-commit-hooks.nix",
-        "rev": "81a4bb23f60e3d43e8ae2c7f2b387523d0b511c2",
+        "rev": "29dbe1efaa91c3a415d8b45d62d48325a4748816",
         "type": "github"
       },
       "original": {
-        "owner": "terlar",
-        "ref": "add-treefmt",
+        "owner": "cachix",
         "repo": "pre-commit-hooks.nix",
         "type": "github"
       }
