@@ -23,6 +23,17 @@
         };
       };
 
+      source-overrides = {
+        hspec = "2.7.6";
+        hspec-meta = "2.6.0";
+        hspec-core = "2.7.6";
+        hspec-discover = "2.7.6";
+        tasty-hspec = "1.1.6";
+
+        #hex-text = "0.1.0.0";
+        #base16-bytestring = "0.1.1.7";
+      };
+
       # Some tests fail under Nix. We shoud probably run them in CI directly.
       overrides = self: super:
         with pkgs.haskell.lib.compose;
@@ -31,6 +42,8 @@
           location-updates = [ dontCheck ];
           # tries to find dhall files from wrong CWD
           beckn-test = [ dontCheck ];
+
+          hex-text = [ dontCheck ];
         };
     };
 
