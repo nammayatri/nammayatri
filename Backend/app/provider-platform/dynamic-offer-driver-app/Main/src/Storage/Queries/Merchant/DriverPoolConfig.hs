@@ -24,8 +24,12 @@ import Domain.Types.Merchant
 import Domain.Types.Merchant.DriverPoolConfig
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Common (Meters, MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Storage.Tabular.Merchant.DriverPoolConfig
+
+create :: DriverPoolConfig -> SqlDB ()
+create = Esq.create
 
 findAllByMerchantId :: Transactionable m => Id Merchant -> m [DriverPoolConfig]
 findAllByMerchantId merchantId =
@@ -35,3 +39,34 @@ findAllByMerchantId merchantId =
       driverPoolConfig ^. DriverPoolConfigMerchantId ==. val (toKey merchantId)
     orderBy [desc $ driverPoolConfig ^. DriverPoolConfigTripDistance]
     return driverPoolConfig
+
+findByMerchantIdAndTripDistance :: Transactionable m => Id Merchant -> Meters -> m (Maybe DriverPoolConfig)
+findByMerchantIdAndTripDistance merchantId tripDistance =
+  Esq.findOne $ do
+    driverPoolConfig <- from $ table @DriverPoolConfigT
+    where_ $
+      driverPoolConfig ^. DriverPoolConfigTId ==. val (toKey (merchantId, tripDistance))
+    return driverPoolConfig
+
+update :: DriverPoolConfig -> SqlDB ()
+update config = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ DriverPoolConfigMinRadiusOfSearch =. val config.minRadiusOfSearch,
+        DriverPoolConfigMaxRadiusOfSearch =. val config.maxRadiusOfSearch,
+        DriverPoolConfigRadiusStepSize =. val config.radiusStepSize,
+        DriverPoolConfigDriverPositionInfoExpiry =. val config.driverPositionInfoExpiry,
+        DriverPoolConfigActualDistanceThreshold =. val config.actualDistanceThreshold,
+        DriverPoolConfigMaxDriverQuotesRequired =. val config.maxDriverQuotesRequired,
+        DriverPoolConfigDriverQuoteLimit =. val config.driverQuoteLimit,
+        DriverPoolConfigDriverRequestCountLimit =. val config.driverRequestCountLimit,
+        DriverPoolConfigDriverBatchSize =. val config.driverBatchSize,
+        DriverPoolConfigMaxNumberOfBatches =. val config.maxNumberOfBatches,
+        DriverPoolConfigMaxParallelSearchRequests =. val config.maxParallelSearchRequests,
+        DriverPoolConfigPoolSortingType =. val config.poolSortingType,
+        DriverPoolConfigSingleBatchProcessTime =. val config.singleBatchProcessTime,
+        DriverPoolConfigUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverPoolConfigTId ==. val (toKey (config.merchantId, config.tripDistance))

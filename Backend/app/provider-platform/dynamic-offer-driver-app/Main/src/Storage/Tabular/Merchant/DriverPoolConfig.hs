@@ -46,7 +46,6 @@ mkPersist
       driverQuoteLimit Int
       driverRequestCountLimit Int
       driverBatchSize Int
-      minDriverBatchSize Int
       maxNumberOfBatches Int
       poolSortingType PoolSortingType
       singleBatchProcessTime Seconds

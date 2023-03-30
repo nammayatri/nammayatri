@@ -21,12 +21,18 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Utils.Common (Meters, withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 
 type API =
   "merchant"
     :> ( Common.MerchantUpdateAPI
+           :<|> Common.MerchantCommonConfigUpdateAPI
+           :<|> Common.DriverPoolConfigUpdateAPI
+           :<|> Common.DriverPoolConfigCreateAPI
+           :<|> Common.DriverIntelligentPoolConfigUpdateAPI
+           :<|> Common.OnboardingDocumentConfigUpdateAPI
+           :<|> Common.OnboardingDocumentConfigCreateAPI
            :<|> Common.MapsServiceConfigUpdateAPI
            :<|> Common.MapsServiceUsageConfigUpdateAPI
            :<|> Common.SmsServiceConfigUpdateAPI
@@ -37,6 +43,12 @@ type API =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   merchantUpdate merchantId
+    :<|> merchantCommonConfigUpdate merchantId
+    :<|> driverPoolConfigUpdate merchantId
+    :<|> driverPoolConfigCreate merchantId
+    :<|> driverIntelligentPoolConfigUpdate merchantId
+    :<|> onboardingDocumentConfigUpdate merchantId
+    :<|> onboardingDocumentConfigCreate merchantId
     :<|> mapsServiceConfigUpdate merchantId
     :<|> mapsServiceUsageConfigUpdate merchantId
     :<|> smsServiceConfigUpdate merchantId
@@ -48,6 +60,46 @@ merchantUpdate ::
   Common.MerchantUpdateReq ->
   FlowHandler Common.MerchantUpdateRes
 merchantUpdate merchantShortId = withFlowHandlerAPI . DMerchant.merchantUpdate merchantShortId
+
+merchantCommonConfigUpdate ::
+  ShortId DM.Merchant ->
+  Common.MerchantCommonConfigUpdateReq ->
+  FlowHandler APISuccess
+merchantCommonConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.merchantCommonConfigUpdate merchantShortId
+
+driverPoolConfigUpdate ::
+  ShortId DM.Merchant ->
+  Meters ->
+  Common.DriverPoolConfigUpdateReq ->
+  FlowHandler APISuccess
+driverPoolConfigUpdate merchantShortId tripDistance = withFlowHandlerAPI . DMerchant.driverPoolConfigUpdate merchantShortId tripDistance
+
+driverPoolConfigCreate ::
+  ShortId DM.Merchant ->
+  Meters ->
+  Common.DriverPoolConfigCreateReq ->
+  FlowHandler APISuccess
+driverPoolConfigCreate merchantShortId tripDistance = withFlowHandlerAPI . DMerchant.driverPoolConfigCreate merchantShortId tripDistance
+
+driverIntelligentPoolConfigUpdate ::
+  ShortId DM.Merchant ->
+  Common.DriverIntelligentPoolConfigUpdateReq ->
+  FlowHandler APISuccess
+driverIntelligentPoolConfigUpdate merchantShortId = withFlowHandlerAPI . DMerchant.driverIntelligentPoolConfigUpdate merchantShortId
+
+onboardingDocumentConfigUpdate ::
+  ShortId DM.Merchant ->
+  Common.DocumentType ->
+  Common.OnboardingDocumentConfigUpdateReq ->
+  FlowHandler APISuccess
+onboardingDocumentConfigUpdate merchantShortId documentType = withFlowHandlerAPI . DMerchant.onboardingDocumentConfigUpdate merchantShortId documentType
+
+onboardingDocumentConfigCreate ::
+  ShortId DM.Merchant ->
+  Common.DocumentType ->
+  Common.OnboardingDocumentConfigCreateReq ->
+  FlowHandler APISuccess
+onboardingDocumentConfigCreate merchantShortId documentType = withFlowHandlerAPI . DMerchant.onboardingDocumentConfigCreate merchantShortId documentType
 
 mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->

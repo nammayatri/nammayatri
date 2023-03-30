@@ -19,6 +19,7 @@ module Tools.Error (module Tools.Error) where
 import EulerHS.Prelude
 import Kernel.Types.Error as Tools.Error hiding (PersonError)
 import Kernel.Types.Error.BaseError.HTTPError
+import Kernel.Utils.Common (Meters)
 
 data FarePolicyError
   = NoFarePolicy
@@ -204,7 +205,7 @@ instance IsBaseError DriverQuoteError where
   toMessage DriverOnRide = Just "Unable to offer a quote while being on ride"
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
-  toMessage QuoteAlreadyRejected = Just "Quote Aready Rejected"
+  toMessage QuoteAlreadyRejected = Just "Quote Already Rejected"
   toMessage UnexpectedResponseValue = Just "The response type is unexpected"
 
 instance IsHTTPError DriverQuoteError where
@@ -247,22 +248,36 @@ instance IsBaseError FareParametersError where
     FareParametersNotFound fareParamsId -> Just $ "FareParameters with fareParametersId \"" <> show fareParamsId <> "\" not found."
     FareParametersDoNotExist rideId -> Just $ "FareParameters for ride \"" <> show rideId <> "\" do not exist."
 
-data OnboardingDocumentError
+data OnboardingDocumentConfigError
   = OnboardingDocumentConfigNotFound Text Text
+  | OnboardingDocumentConfigDoesNotExist Text Text
+  | OnboardingDocumentConfigAlreadyExists Text Text
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''OnboardingDocumentError
+instanceExceptionWithParent 'HTTPException ''OnboardingDocumentConfigError
 
-instance IsBaseError OnboardingDocumentError where
-  toMessage (OnboardingDocumentConfigNotFound merchantId doctype) = Just $ "OnboardingDocumentConfig with merchantId \"" <> show merchantId <> "and " <> show doctype <> "\" not found."
+instance IsBaseError OnboardingDocumentConfigError where
+  toMessage (OnboardingDocumentConfigNotFound merchantId doctype) =
+    Just $
+      "OnboardingDocumentConfig with merchantId \"" <> show merchantId <> "\" and docType \"" <> show doctype <> "\" not found."
+  toMessage (OnboardingDocumentConfigDoesNotExist merchantId doctype) =
+    Just $
+      "OnboardingDocumentConfig with merchantId \"" <> show merchantId <> "\" and docType \"" <> show doctype <> "\" does not exist."
+  toMessage (OnboardingDocumentConfigAlreadyExists merchantId doctype) =
+    Just $
+      "OnboardingDocumentConfig with merchantId \"" <> show merchantId <> "\" and docType \"" <> show doctype <> "\" already exists."
 
-instance IsHTTPError OnboardingDocumentError where
+instance IsHTTPError OnboardingDocumentConfigError where
   toErrorCode = \case
     OnboardingDocumentConfigNotFound {} -> "ONBOARDING_DOCUMENT_CONFIG_NOT_FOUND"
+    OnboardingDocumentConfigDoesNotExist {} -> "ONBOARDING_DOCUMENT_CONFIG_DOES_NOT_EXIST"
+    OnboardingDocumentConfigAlreadyExists {} -> "ONBOARDING_DOCUMENT_CONFIG_ALREADY_EXISTS"
   toHttpCode = \case
-    OnboardingDocumentConfigNotFound {} -> E400
+    OnboardingDocumentConfigNotFound {} -> E500
+    OnboardingDocumentConfigDoesNotExist {} -> E400
+    OnboardingDocumentConfigAlreadyExists {} -> E400
 
-instance IsAPIError OnboardingDocumentError
+instance IsAPIError OnboardingDocumentConfigError
 
 newtype IssueReportError
   = IssueReportDoNotExist Text
@@ -354,3 +369,47 @@ instance IsBaseError MediaFileError where
     FileSizeExceededError fileSize -> Just $ "Filesize is " <> fileSize <> " Bytes, which is more than the allowed 10MB limit."
     FileDoNotExist fileId -> Just $ "MediaFile with fileId \"" <> show fileId <> "\" do not exist."
     FileFormatNotSupported fileFormat -> Just $ "MediaFile with fileFormat \"" <> show fileFormat <> "\" not supported."
+
+newtype DriverIntelligentPoolConfigError
+  = DriverIntelligentPoolConfigNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverIntelligentPoolConfigError
+
+instance IsBaseError DriverIntelligentPoolConfigError where
+  toMessage (DriverIntelligentPoolConfigNotFound merchantId) =
+    Just $
+      "DriverIntelligentPoolConfig with merchantId \"" <> show merchantId <> "\" not found."
+
+instance IsHTTPError DriverIntelligentPoolConfigError where
+  toErrorCode = \case
+    DriverIntelligentPoolConfigNotFound {} -> "DRIVER_INTELLIGENT_POOL_CONFIG_NOT_FOUND"
+  toHttpCode = \case
+    DriverIntelligentPoolConfigNotFound {} -> E500
+
+instance IsAPIError DriverIntelligentPoolConfigError
+
+data DriverPoolConfigError
+  = DriverPoolConfigDoesNotExist Text Meters
+  | DriverPoolConfigAlreadyExists Text Meters
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverPoolConfigError
+
+instance IsBaseError DriverPoolConfigError where
+  toMessage (DriverPoolConfigDoesNotExist merchantId tripDistance) =
+    Just $
+      "DriverPoolConfig with merchantId \"" <> show merchantId <> "\" and tripDistance " <> show tripDistance <> " does not exist."
+  toMessage (DriverPoolConfigAlreadyExists merchantId tripDistance) =
+    Just $
+      "DriverPoolConfig with merchantId \"" <> show merchantId <> "\" and tripDistance " <> show tripDistance <> " already exists."
+
+instance IsHTTPError DriverPoolConfigError where
+  toErrorCode = \case
+    DriverPoolConfigDoesNotExist {} -> "DRIVER_POOL_CONFIG_DOES_NOT_EXIST"
+    DriverPoolConfigAlreadyExists {} -> "DRIVER_POOL_CONFIG_ALREADY_EXISTS"
+  toHttpCode = \case
+    DriverPoolConfigDoesNotExist {} -> E400
+    DriverPoolConfigAlreadyExists {} -> E400
+
+instance IsAPIError DriverPoolConfigError

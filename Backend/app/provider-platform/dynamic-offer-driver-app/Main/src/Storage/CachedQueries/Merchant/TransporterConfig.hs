@@ -18,6 +18,7 @@
 module Storage.CachedQueries.Merchant.TransporterConfig
   ( findByMerchantId,
     clearCache,
+    update,
     updateFCMConfig,
     updateReferralLinkPassword,
   )
@@ -59,3 +60,6 @@ updateFCMConfig = Queries.updateFCMConfig
 
 updateReferralLinkPassword :: Id Merchant -> Text -> Esq.SqlDB ()
 updateReferralLinkPassword = Queries.updateReferralLinkPassword
+
+update :: TransporterConfig -> Esq.SqlDB ()
+update = Queries.update

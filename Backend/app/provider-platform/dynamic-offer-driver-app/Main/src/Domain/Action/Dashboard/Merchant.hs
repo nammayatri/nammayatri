@@ -15,6 +15,12 @@
 module Domain.Action.Dashboard.Merchant
   ( mapsServiceConfigUpdate,
     mapsServiceUsageConfigUpdate,
+    merchantCommonConfigUpdate,
+    driverPoolConfigUpdate,
+    driverPoolConfigCreate,
+    driverIntelligentPoolConfigUpdate,
+    onboardingDocumentConfigUpdate,
+    onboardingDocumentConfigCreate,
     merchantUpdate,
     smsServiceConfigUpdate,
     smsServiceUsageConfigUpdate,
@@ -26,7 +32,9 @@ import Control.Applicative
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.DriverPoolConfig as DDPC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified Domain.Types.OnboardingDocumentConfig as DODC
 import Environment
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.SMS as SMS
@@ -36,12 +44,16 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig as CQDIPC
+import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CQDPC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import qualified Storage.CachedQueries.OnboardingDocumentConfig as CQODC
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -50,9 +62,9 @@ merchantUpdate merchantShortId req = do
   runRequestValidation Common.validateMerchantUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   let updMerchant =
-        merchant{DM.name = fromMaybe (merchant.name) (req.name),
-                 DM.description = (req.description) <|> (merchant.description),
-                 DM.enabled = fromMaybe (merchant.enabled) (req.enabled)
+        merchant{DM.name = fromMaybe merchant.name req.name,
+                 DM.description = req.description <|> merchant.description,
+                 DM.enabled = fromMaybe merchant.enabled req.enabled
                 }
   now <- getCurrentTime
 
@@ -114,6 +126,200 @@ castMerchantStatus = \case
   DM.PENDING_VERIFICATION -> Common.PENDING_VERIFICATION
   DM.APPROVED -> Common.APPROVED
   DM.REJECTED -> Common.REJECTED
+
+---------------------------------------------------------------------
+merchantCommonConfigUpdate :: ShortId DM.Merchant -> Common.MerchantCommonConfigUpdateReq -> Flow APISuccess
+merchantCommonConfigUpdate merchantShortId req = do
+  runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
+  merchant <- findMerchantByShortId merchantShortId
+  config <- CQTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  let updConfig =
+        config{pickupLocThreshold = fromMaybe config.pickupLocThreshold req.pickupLocThreshold,
+               dropLocThreshold = fromMaybe config.dropLocThreshold req.dropLocThreshold,
+               rideTimeEstimatedThreshold = fromMaybe config.rideTimeEstimatedThreshold req.rideTimeEstimatedThreshold,
+               defaultPopupDelay = fromMaybe config.defaultPopupDelay req.defaultPopupDelay,
+               popupDelayToAddAsPenalty = req.popupDelayToAddAsPenalty <|> config.popupDelayToAddAsPenalty, -- FIXME we can't update optional field to Nothing
+               thresholdCancellationScore = req.thresholdCancellationScore <|> config.thresholdCancellationScore,
+               minRidesForCancellationScore = req.minRidesForCancellationScore <|> config.minRidesForCancellationScore,
+               waitingTimeEstimatedThreshold = fromMaybe config.waitingTimeEstimatedThreshold req.waitingTimeEstimatedThreshold,
+               onboardingTryLimit = fromMaybe config.onboardingTryLimit req.onboardingTryLimit,
+               onboardingRetryTimeInHours = fromMaybe config.onboardingRetryTimeInHours req.onboardingRetryTimeInHours,
+               checkImageExtractionForDashboard = fromMaybe config.checkImageExtractionForDashboard req.checkImageExtractionForDashboard,
+               searchRepeatLimit = fromMaybe config.searchRepeatLimit req.searchRepeatLimit
+              }
+  Esq.runTransaction $ do
+    CQTC.update updConfig
+  CQTC.clearCache merchant.id
+  logTagInfo "dashboard -> merchantCommonConfigUpdate : " (show merchant.id)
+  pure Success
+
+---------------------------------------------------------------------
+driverPoolConfigUpdate ::
+  ShortId DM.Merchant ->
+  Meters ->
+  Common.DriverPoolConfigUpdateReq ->
+  Flow APISuccess
+driverPoolConfigUpdate merchantShortId tripDistance req = do
+  runRequestValidation Common.validateDriverPoolConfigUpdateReq req
+  merchant <- findMerchantByShortId merchantShortId
+  config <- CQDPC.findByMerchantIdAndTripDistance merchant.id tripDistance >>= fromMaybeM (DriverPoolConfigDoesNotExist merchant.id.getId tripDistance)
+  let updConfig =
+        config{minRadiusOfSearch = fromMaybe config.minRadiusOfSearch req.minRadiusOfSearch,
+               maxRadiusOfSearch = fromMaybe config.maxRadiusOfSearch req.maxRadiusOfSearch,
+               radiusStepSize = fromMaybe config.radiusStepSize req.radiusStepSize,
+               driverPositionInfoExpiry = req.driverPositionInfoExpiry <|> config.driverPositionInfoExpiry,
+               actualDistanceThreshold = req.actualDistanceThreshold <|> config.actualDistanceThreshold,
+               maxDriverQuotesRequired = fromMaybe config.maxDriverQuotesRequired req.maxDriverQuotesRequired,
+               driverQuoteLimit = fromMaybe config.driverQuoteLimit req.driverQuoteLimit,
+               driverRequestCountLimit = fromMaybe config.driverRequestCountLimit req.driverRequestCountLimit,
+               driverBatchSize = fromMaybe config.driverBatchSize req.driverBatchSize,
+               maxNumberOfBatches = fromMaybe config.maxNumberOfBatches req.maxNumberOfBatches,
+               maxParallelSearchRequests = fromMaybe config.maxParallelSearchRequests req.maxParallelSearchRequests,
+               poolSortingType = maybe config.poolSortingType castPoolSortingType req.poolSortingType,
+               singleBatchProcessTime = fromMaybe config.singleBatchProcessTime req.singleBatchProcessTime
+              }
+  Esq.runTransaction $ do
+    CQDPC.update updConfig
+  CQDPC.clearCache merchant.id
+  logTagInfo "dashboard -> driverPoolConfigUpdate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
+  pure Success
+
+castPoolSortingType :: Common.PoolSortingType -> DriverPool.PoolSortingType
+castPoolSortingType = \case
+  Common.Intelligent -> DriverPool.Intelligent
+  Common.Random -> DriverPool.Random
+
+---------------------------------------------------------------------
+driverPoolConfigCreate ::
+  ShortId DM.Merchant ->
+  Meters ->
+  Common.DriverPoolConfigCreateReq ->
+  Flow APISuccess
+driverPoolConfigCreate merchantShortId tripDistance req = do
+  runRequestValidation Common.validateDriverPoolConfigCreateReq req
+  merchant <- findMerchantByShortId merchantShortId
+  mbConfig <- CQDPC.findByMerchantIdAndTripDistance merchant.id tripDistance
+  whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchant.id.getId tripDistance)
+  newConfig <- buildDriverPoolConfig merchant.id tripDistance req
+  Esq.runTransaction $ do
+    CQDPC.create newConfig
+  -- We should clear cache here, because cache contains list of all configs for current merchantId
+  CQDPC.clearCache merchant.id
+  logTagInfo "dashboard -> driverPoolConfigCreate : " $ show merchant.id <> "tripDistance : " <> show tripDistance
+  pure Success
+
+buildDriverPoolConfig ::
+  MonadTime m =>
+  Id DM.Merchant ->
+  Meters ->
+  Common.DriverPoolConfigCreateReq ->
+  m DDPC.DriverPoolConfig
+buildDriverPoolConfig merchantId tripDistance Common.DriverPoolConfigCreateReq {..} = do
+  now <- getCurrentTime
+  pure
+    DDPC.DriverPoolConfig
+      { merchantId,
+        poolSortingType = castPoolSortingType poolSortingType,
+        updatedAt = now,
+        createdAt = now,
+        ..
+      }
+
+---------------------------------------------------------------------
+driverIntelligentPoolConfigUpdate ::
+  ShortId DM.Merchant ->
+  Common.DriverIntelligentPoolConfigUpdateReq ->
+  Flow APISuccess
+driverIntelligentPoolConfigUpdate merchantShortId req = do
+  runRequestValidation Common.validateDriverIntelligentPoolConfigUpdateReq req
+  merchant <- findMerchantByShortId merchantShortId
+  config <- CQDIPC.findByMerchantId merchant.id >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchant.id.getId)
+  let updConfig =
+        config{availabilityTimeWeightage = fromMaybe config.availabilityTimeWeightage req.availabilityTimeWeightage,
+               availabilityTimeWindowOption = fromMaybe config.availabilityTimeWindowOption req.availabilityTimeWindowOption,
+               acceptanceRatioWeightage = fromMaybe config.acceptanceRatioWeightage req.acceptanceRatioWeightage,
+               acceptanceRatioWindowOption = fromMaybe config.acceptanceRatioWindowOption req.acceptanceRatioWindowOption,
+               cancellationRatioWeightage = fromMaybe config.cancellationRatioWeightage req.cancellationRatioWeightage,
+               cancellationRatioWindowOption = fromMaybe config.cancellationRatioWindowOption req.cancellationRatioWindowOption,
+               minQuotesToQualifyForIntelligentPool = fromMaybe config.minQuotesToQualifyForIntelligentPool req.minQuotesToQualifyForIntelligentPool,
+               minQuotesToQualifyForIntelligentPoolWindowOption = fromMaybe config.minQuotesToQualifyForIntelligentPoolWindowOption req.minQuotesToQualifyForIntelligentPoolWindowOption,
+               intelligentPoolPercentage = req.intelligentPoolPercentage <|> config.intelligentPoolPercentage
+              }
+  Esq.runTransaction $ do
+    CQDIPC.update updConfig
+  CQDIPC.clearCache merchant.id
+  logTagInfo "dashboard -> driverIntelligentPoolConfigUpdate : " (show merchant.id)
+  pure Success
+
+---------------------------------------------------------------------
+onboardingDocumentConfigUpdate ::
+  ShortId DM.Merchant ->
+  Common.DocumentType ->
+  Common.OnboardingDocumentConfigUpdateReq ->
+  Flow APISuccess
+onboardingDocumentConfigUpdate merchantShortId reqDocumentType req = do
+  runRequestValidation Common.validateOnboardingDocumentConfigUpdateReq req
+  merchant <- findMerchantByShortId merchantShortId
+  let documentType = castDocumentType reqDocumentType
+  config <- CQODC.findByMerchantIdAndDocumentType merchant.id documentType >>= fromMaybeM (OnboardingDocumentConfigDoesNotExist merchant.id.getId $ show documentType)
+  let updConfig =
+        config{checkExtraction = fromMaybe config.checkExtraction req.checkExtraction,
+               checkExpiry = fromMaybe config.checkExpiry req.checkExpiry,
+               validVehicleClasses = fromMaybe config.validVehicleClasses req.validVehicleClasses,
+               vehicleClassCheckType = maybe config.vehicleClassCheckType castVehicleClassCheckType req.vehicleClassCheckType
+              }
+  Esq.runTransaction $ do
+    CQODC.update updConfig
+  CQODC.clearCache merchant.id documentType
+  logTagInfo "dashboard -> onboardingDocumentConfigUpdate : " $ show merchant.id <> "documentType : " <> show documentType
+  pure Success
+
+castVehicleClassCheckType :: Common.VehicleClassCheckType -> DODC.VehicleClassCheckType
+castVehicleClassCheckType = \case
+  Common.Infix -> DODC.Infix
+  Common.Prefix -> DODC.Prefix
+  Common.Suffix -> DODC.Suffix
+
+castDocumentType :: Common.DocumentType -> DODC.DocumentType
+castDocumentType = \case
+  Common.RC -> DODC.RC
+  Common.DL -> DODC.DL
+  Common.RCInsurance -> DODC.RCInsurance
+
+---------------------------------------------------------------------
+onboardingDocumentConfigCreate ::
+  ShortId DM.Merchant ->
+  Common.DocumentType ->
+  Common.OnboardingDocumentConfigCreateReq ->
+  Flow APISuccess
+onboardingDocumentConfigCreate merchantShortId reqDocumentType req = do
+  runRequestValidation Common.validateOnboardingDocumentConfigCreateReq req
+  merchant <- findMerchantByShortId merchantShortId
+  let documentType = castDocumentType reqDocumentType
+  mbConfig <- CQODC.findByMerchantIdAndDocumentType merchant.id documentType
+  whenJust mbConfig $ \_ -> throwError (OnboardingDocumentConfigAlreadyExists merchant.id.getId $ show documentType)
+  newConfig <- buildOnboardingDocumentConfig merchant.id documentType req
+  Esq.runTransaction $ do
+    CQODC.create newConfig
+  logTagInfo "dashboard -> onboardingDocumentConfigCreate : " $ show merchant.id <> "documentType : " <> show documentType
+  pure Success
+
+buildOnboardingDocumentConfig ::
+  MonadTime m =>
+  Id DM.Merchant ->
+  DODC.DocumentType ->
+  Common.OnboardingDocumentConfigCreateReq ->
+  m DODC.OnboardingDocumentConfig
+buildOnboardingDocumentConfig merchantId documentType Common.OnboardingDocumentConfigCreateReq {..} = do
+  now <- getCurrentTime
+  pure
+    DODC.OnboardingDocumentConfig
+      { merchantId,
+        vehicleClassCheckType = castVehicleClassCheckType vehicleClassCheckType,
+        updatedAt = now,
+        createdAt = now,
+        ..
+      }
 
 ---------------------------------------------------------------------
 mapsServiceConfigUpdate ::

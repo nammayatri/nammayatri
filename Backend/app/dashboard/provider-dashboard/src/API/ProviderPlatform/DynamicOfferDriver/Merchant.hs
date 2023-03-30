@@ -25,7 +25,7 @@ import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
+import Kernel.Utils.Common (Meters, MonadFlow, withFlowHandlerAPI)
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import Servant hiding (throwError)
@@ -36,6 +36,12 @@ import "lib-dashboard" Tools.Auth.Merchant
 type API =
   "merchant"
     :> ( MerchantUpdateAPI
+           :<|> MerchantCommonConfigUpdateAPI
+           :<|> DriverPoolConfigUpdateAPI
+           :<|> DriverPoolConfigCreateAPI
+           :<|> DriverIntelligentPoolConfigUpdateAPI
+           :<|> OnboardingDocumentConfigUpdateAPI
+           :<|> OnboardingDocumentConfigCreateAPI
            :<|> MapsServiceConfigUpdateAPI
            :<|> MapsServiceUsageConfigUpdateAPI
            :<|> SmsServiceConfigUpdateAPI
@@ -46,6 +52,30 @@ type API =
 type MerchantUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
     :> Common.MerchantUpdateAPI
+
+type MerchantCommonConfigUpdateAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+    :> Common.MerchantCommonConfigUpdateAPI
+
+type DriverPoolConfigUpdateAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+    :> Common.DriverPoolConfigUpdateAPI
+
+type DriverPoolConfigCreateAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+    :> Common.DriverPoolConfigCreateAPI
+
+type DriverIntelligentPoolConfigUpdateAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+    :> Common.DriverIntelligentPoolConfigUpdateAPI
+
+type OnboardingDocumentConfigUpdateAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+    :> Common.OnboardingDocumentConfigUpdateAPI
+
+type OnboardingDocumentConfigCreateAPI =
+  ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
+    :> Common.OnboardingDocumentConfigCreateAPI
 
 type MapsServiceConfigUpdateAPI =
   ApiAuth 'DRIVER_OFFER_BPP 'WRITE_ACCESS 'MERCHANT
@@ -70,6 +100,12 @@ type VerificationServiceConfigUpdateAPI =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   merchantUpdate merchantId
+    :<|> merchantCommonConfigUpdate merchantId
+    :<|> driverPoolConfigUpdate merchantId
+    :<|> driverPoolConfigCreate merchantId
+    :<|> driverIntelligentPoolConfigUpdate merchantId
+    :<|> onboardingDocumentConfigUpdate merchantId
+    :<|> onboardingDocumentConfigCreate merchantId
     :<|> mapsServiceConfigUpdate merchantId
     :<|> mapsServiceUsageConfigUpdate merchantId
     :<|> smsServiceConfigUpdate merchantId
@@ -98,6 +134,82 @@ merchantUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
   transaction <- buildTransaction Common.MerchantUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId (.merchant.merchantUpdate) req
+
+merchantCommonConfigUpdate ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Common.MerchantCommonConfigUpdateReq ->
+  FlowHandler APISuccess
+merchantCommonConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.MerchantCommonConfigUpdateEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.merchantCommonConfigUpdate) req
+
+driverPoolConfigUpdate ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Meters ->
+  Common.DriverPoolConfigUpdateReq ->
+  FlowHandler APISuccess
+driverPoolConfigUpdate merchantShortId apiTokenInfo tripDistance req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateDriverPoolConfigUpdateReq req
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.DriverPoolConfigUpdateEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.driverPoolConfigUpdate) tripDistance req
+
+driverPoolConfigCreate ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Meters ->
+  Common.DriverPoolConfigCreateReq ->
+  FlowHandler APISuccess
+driverPoolConfigCreate merchantShortId apiTokenInfo tripDistance req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateDriverPoolConfigCreateReq req
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.DriverPoolConfigCreateEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.driverPoolConfigCreate) tripDistance req
+
+driverIntelligentPoolConfigUpdate ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Common.DriverIntelligentPoolConfigUpdateReq ->
+  FlowHandler APISuccess
+driverIntelligentPoolConfigUpdate merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateDriverIntelligentPoolConfigUpdateReq req
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.DriverIntelligentPoolConfigUpdateEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.driverIntelligentPoolConfigUpdate) req
+
+onboardingDocumentConfigUpdate ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Common.DocumentType ->
+  Common.OnboardingDocumentConfigUpdateReq ->
+  FlowHandler APISuccess
+onboardingDocumentConfigUpdate merchantShortId apiTokenInfo documentType req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateOnboardingDocumentConfigUpdateReq req
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.OnboardingDocumentConfigUpdateEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.onboardingDocumentConfigUpdate) documentType req
+
+onboardingDocumentConfigCreate ::
+  ShortId DM.Merchant ->
+  ApiTokenInfo ->
+  Common.DocumentType ->
+  Common.OnboardingDocumentConfigCreateReq ->
+  FlowHandler APISuccess
+onboardingDocumentConfigCreate merchantShortId apiTokenInfo documentType req = withFlowHandlerAPI $ do
+  runRequestValidation Common.validateOnboardingDocumentConfigCreateReq req
+  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  transaction <- buildTransaction Common.OnboardingDocumentConfigCreateEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId (.merchant.onboardingDocumentConfigCreate) documentType req
 
 mapsServiceConfigUpdate ::
   ShortId DM.Merchant ->

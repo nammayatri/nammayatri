@@ -89,5 +89,6 @@ newtype ReferralLinkPasswordUpdateAPIReq = ReferralLinkPasswordUpdateAPIReq
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+-- Should we hide password?
 instance HideSecrets ReferralLinkPasswordUpdateAPIReq where
   hideSecrets = identity

@@ -25,7 +25,11 @@ import Domain.Types.OnboardingDocumentConfig
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Tabular.OnboardingDocumentConfig
+
+create :: OnboardingDocumentConfig -> SqlDB ()
+create = Esq.create
 
 findByMerchantIdAndDocumentType :: Transactionable m => Id Merchant -> DocumentType -> m (Maybe OnboardingDocumentConfig)
 findByMerchantIdAndDocumentType merchantId documentType =
@@ -35,3 +39,17 @@ findByMerchantIdAndDocumentType merchantId documentType =
       config ^. OnboardingDocumentConfigMerchantId ==. val (toKey merchantId)
         &&. config ^. OnboardingDocumentConfigDocumentType ==. val documentType
     return config
+
+update :: OnboardingDocumentConfig -> SqlDB ()
+update config = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ OnboardingDocumentConfigCheckExtraction =. val config.checkExtraction,
+        OnboardingDocumentConfigCheckExpiry =. val config.checkExpiry,
+        OnboardingDocumentConfigValidVehicleClasses =. val (PostgresList config.validVehicleClasses),
+        OnboardingDocumentConfigVehicleClassCheckType =. val config.vehicleClassCheckType,
+        OnboardingDocumentConfigUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. OnboardingDocumentConfigTId ==. val (toKey (config.merchantId, config.documentType))

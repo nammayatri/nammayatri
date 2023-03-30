@@ -38,7 +38,7 @@ data TransporterConfigD u = TransporterConfig
     referralLinkPassword :: Text,
     fcmConfig :: FCMConfig,
     onboardingTryLimit :: Int,
-    onboardingRetryTimeinHours :: Int,
+    onboardingRetryTimeInHours :: Int,
     checkImageExtractionForDashboard :: Bool,
     searchRepeatLimit :: Int,
     createdAt :: UTCTime,

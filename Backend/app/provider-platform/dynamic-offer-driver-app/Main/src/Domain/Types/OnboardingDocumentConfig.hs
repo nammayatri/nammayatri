@@ -15,7 +15,7 @@
 module Domain.Types.OnboardingDocumentConfig where
 
 import Domain.Types.Merchant (Merchant)
-import EulerHS.Prelude hiding (id)
+import Kernel.Prelude
 import Kernel.Types.Id
 
 data VehicleClassCheckType = Infix | Prefix | Suffix deriving (Generic, ToJSON, FromJSON, Read, Show)
@@ -29,6 +29,8 @@ data OnboardingDocumentConfig = OnboardingDocumentConfig
     checkExtraction :: Bool,
     checkExpiry :: Bool,
     validVehicleClasses :: [Text],
-    vehicleClassCheckType :: VehicleClassCheckType
+    vehicleClassCheckType :: VehicleClassCheckType,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, Show)
