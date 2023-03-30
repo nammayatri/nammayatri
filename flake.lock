@@ -212,8 +212,12 @@
         "cachix-push": "cachix-push_2",
         "check-flake": "check-flake_2",
         "flake-parts": "flake-parts_2",
-        "flake-root": "flake-root_2",
-        "haskell-flake": "haskell-flake_2",
+        "flake-root": [
+          "flake-root"
+        ],
+        "haskell-flake": [
+          "haskell-flake"
+        ],
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround_2",
         "nixpkgs-21_11": "nixpkgs-21_11_2",
         "treefmt-nix": [
@@ -425,11 +429,11 @@
     },
     "flake-root_2": {
       "locked": {
-        "lastModified": 1671378805,
-        "narHash": "sha256-yqGxyzMN2GuppwG3dTWD1oiKxi+jGYP7D1qUSc5vKhI=",
+        "lastModified": 1680210152,
+        "narHash": "sha256-VgFdqsu2i2oUcId9n8BFlRRc4GJHFvrmprdamcSZR1o=",
         "owner": "srid",
         "repo": "flake-root",
-        "rev": "dc7ba6166e478804a9da6881aa48c45d300075cf",
+        "rev": "6000244701c8ae8cf43263564095fd357d89c328",
         "type": "github"
       },
       "original": {
@@ -521,11 +525,11 @@
     },
     "haskell-flake_2": {
       "locked": {
-        "lastModified": 1678824047,
-        "narHash": "sha256-JoXHrClrhg9K44cxkjO2GtqxNzlP4anQzeDyRzY60uM=",
+        "lastModified": 1680209587,
+        "narHash": "sha256-pkoi6erX5sSrSOIqkbiWP3x5BdvMZuQ9BsrXJB4HxW8=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "65068a52920b96adf9cd8b307aa3d1247dd2191c",
+        "rev": "2fde5d0cab1dd517b71c232053a15dc7cc09017c",
         "type": "github"
       },
       "original": {
@@ -583,11 +587,11 @@
     },
     "mission-control": {
       "locked": {
-        "lastModified": 1680184639,
-        "narHash": "sha256-fyjgbzqCgY/jnBxbXc7QPUjVrrEbShBh0FfNeB//s7U=",
+        "lastModified": 1680209746,
+        "narHash": "sha256-P8Q0mPdeo2SvKQUejvl7nOKO2ahIXb6aintYofCxcP8=",
         "owner": "Platonic-Systems",
         "repo": "mission-control",
-        "rev": "f065a90263e32ffbeb986284e27a39abdcfead69",
+        "rev": "c1bd7344283d4006efb02cc660c5fd9befb73980",
         "type": "github"
       },
       "original": {
@@ -979,15 +983,16 @@
         "nixpkgs-stable": "nixpkgs-stable"
       },
       "locked": {
-        "lastModified": 1680170909,
-        "narHash": "sha256-FtKU/edv1jFRr/KwUxWTYWXEyj9g8GBrHntC2o8oFI8=",
-        "owner": "cachix",
+        "lastModified": 1680210586,
+        "narHash": "sha256-H7BCX7834KmpGR1RQ46hGlr2C/2thAvcDJNWWLiwWK8=",
+        "owner": "juspay",
         "repo": "pre-commit-hooks.nix",
-        "rev": "29dbe1efaa91c3a415d8b45d62d48325a4748816",
+        "rev": "50e03743757c31318c375ca3fe58e4f9261db042",
         "type": "github"
       },
       "original": {
-        "owner": "cachix",
+        "owner": "juspay",
+        "ref": "flake-parts-devShell",
         "repo": "pre-commit-hooks.nix",
         "type": "github"
       }
@@ -1015,6 +1020,8 @@
           "common",
           "flake-parts"
         ],
+        "flake-root": "flake-root_2",
+        "haskell-flake": "haskell-flake_2",
         "mission-control": "mission-control",
         "nixpkgs": "nixpkgs_3",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
