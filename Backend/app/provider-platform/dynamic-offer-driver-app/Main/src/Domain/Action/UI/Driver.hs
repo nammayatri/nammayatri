@@ -661,6 +661,23 @@ offerQuote driverId DriverOfferReq {..} = do
   let response = Accept
   respondQuote driverId DriverRespondReq {..}
 
+incrementSearchReqLockCounter ::
+  ( HasCacheConfig r,
+    Redis.HedisFlow m r
+  ) =>
+  Id DSReq.SearchRequest ->
+  m ()
+incrementSearchReqLockCounter searchId = do
+  _ <- Redis.incr searchLockKey
+  Redis.expire searchLockKey 120
+  searchCancelled <- fromMaybe False <$> Redis.get startedCancelInfomKey
+  if searchCancelled
+    then throwError (InternalError "SEARCH_CANCELLED")
+    else pure ()
+  where
+    startedCancelInfomKey = "SearchRequest:Cancelling:" <> searchId.getId
+    searchLockKey = "LockCounter:SearchRequest:" <> searchId.getId
+
 respondQuote ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
@@ -697,6 +714,7 @@ respondQuote driverId req = do
     case req.response of
       Pulled -> throwError UnexpectedResponseValue
       Accept -> do
+        when sReq.autoAssignEnabled $ incrementSearchReqLockCounter req.searchRequestId
         logDebug $ "offered fare: " <> show req.offeredFare
         whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
         when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)

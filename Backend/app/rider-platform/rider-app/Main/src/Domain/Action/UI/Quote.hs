@@ -21,6 +21,7 @@ where
 
 import Data.Char (toLower)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Domain.Types.Booking as DRB
 import Domain.Types.Estimate (EstimateAPIEntity)
 import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.Quote (QuoteAPIEntity)
@@ -40,6 +41,7 @@ import qualified Kernel.Utils.Schema as S
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import qualified SharedLogic.PublicTransport as PublicTransport
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Quote as QRentalQuote
@@ -72,6 +74,8 @@ instance ToSchema OfferRes where
 getQuotes :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m GetQuotesRes
 getQuotes searchRequestId = do
   searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
+  activeBooking <- runInReplica $ QBooking.findLatestByRiderIdAndStatus searchRequest.riderId DRB.activeBookingStatus
+  whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_ALREADY_PRESENT")
   logDebug $ "search Request is : " <> show searchRequest
   offers <- getOffers searchRequest
   estimates <- getEstimates searchRequestId

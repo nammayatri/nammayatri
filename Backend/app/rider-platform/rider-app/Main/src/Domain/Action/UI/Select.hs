@@ -21,9 +21,13 @@ module Domain.Action.UI.Select
     selectResult,
     QuotesResultResponse (..),
     DEstimateSelectReq (..),
+    CancelAPIResponse (..),
   )
 where
 
+import Data.Aeson ((.:), (.=))
+import qualified Data.Aeson as A
+import Data.Aeson.Types (parseFail, typeMismatch)
 import Domain.Types.Booking.Type
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
@@ -79,6 +83,25 @@ newtype SelectListRes = SelectListRes
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CancelAPIResponse = BookingAlreadyCreated | FailedToCancel | Success
+  deriving stock (Generic, Show)
+  deriving anyclass (ToSchema)
+
+instance ToJSON CancelAPIResponse where
+  toJSON Success = A.object ["result" .= ("Success" :: Text)]
+  toJSON BookingAlreadyCreated = A.object ["result" .= ("BookingAlreadyCreated" :: Text)]
+  toJSON FailedToCancel = A.object ["result" .= ("FailedToCancel" :: Text)]
+
+instance FromJSON CancelAPIResponse where
+  parseJSON (A.Object obj) = do
+    result :: String <- obj .: "result"
+    case result of
+      "FailedToCancel" -> pure FailedToCancel
+      "BookingAlreadyCreated" -> pure BookingAlreadyCreated
+      "Success" -> pure Success
+      _ -> parseFail "Expected \"Success\" in \"result\" field."
+  parseJSON err = typeMismatch "Object APISuccess" err
 
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> Bool -> Bool -> Flow DSelectRes
 select personId estimateId autoAssignEnabled autoAssignEnabledV2 = do

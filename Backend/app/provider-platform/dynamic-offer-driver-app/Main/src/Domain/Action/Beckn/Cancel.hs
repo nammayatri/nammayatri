@@ -30,6 +30,7 @@ import EulerHS.Prelude
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis (HedisFlow)
+import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -119,6 +120,23 @@ cancel transporterId _ req = do
             ..
           }
 
+lockSearchRequest ::
+  ( HasCacheConfig r,
+    HedisFlow m r,
+    CoreMetrics m
+  ) =>
+  Id SR.SearchRequest ->
+  m ()
+lockSearchRequest searchId = do
+  val <- Hedis.incr searchLockKey
+  cancellingSearchRequest <- fromMaybe False <$> (Hedis.get startedCancelInfomKey)
+  Hedis.expire searchLockKey 120
+  when (val > 1 && not cancellingSearchRequest) $ throwError (InternalError "FAILED_TO_CANCEL_SEARCH_REQUEST")
+  Hedis.setExp startedCancelInfomKey True 120
+  where
+    startedCancelInfomKey = "SearchRequest:Cancelling:" <> searchId.getId
+    searchLockKey = "LockCounter:SearchRequest:" <> searchId.getId
+
 cancelSearch ::
   ( HasCacheConfig r,
     HedisFlow m r,
@@ -133,6 +151,7 @@ cancelSearch ::
 cancelSearch transporterId _ req = do
   let transactionId = req.searchId
   searchID <- Esq.runInReplica $ SR.getRequestIdfromTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound transactionId.getId)
+  lockSearchRequest searchID
   driverSearchReqs <- Esq.runInReplica $ QSRD.findAllActiveByRequestId searchID
   for_ driverSearchReqs $ \driverReq -> do
     logTagInfo ("searchId-" <> getId req.searchId) "Search Request Cancellation"

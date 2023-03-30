@@ -103,6 +103,17 @@ fullBookingTable =
                    s ^. RB.BookingRentalSlabId ==. mbRentalSlab ?. RentalSlab.RentalSlabTId
                )
 
+findLatestByRiderIdAndStatus :: Transactionable m => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
+findLatestByRiderIdAndStatus riderId statusList =
+  Esq.findOne $ do
+    booking <- from $ table @BookingT
+    where_ $
+      booking ^. RB.BookingRiderId ==. val (toKey riderId)
+        &&. booking ^. RB.BookingStatus `in_` valList statusList
+    orderBy [desc $ booking ^. RB.BookingCreatedAt]
+    limit 1
+    pure $ booking ^. RB.BookingStatus
+
 findById :: Transactionable m => Id Booking -> m (Maybe Booking)
 findById bookingId = Esq.buildDType $ do
   mbFullBookingT <- Esq.findOne' $ do
