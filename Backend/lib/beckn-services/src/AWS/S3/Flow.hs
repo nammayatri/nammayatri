@@ -19,6 +19,7 @@ import AWS.S3.Types
 import AWS.S3.Utils
 import Data.List (last)
 import Data.String.Conversions
+import qualified Data.List as DL (last)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import EulerHS.Prelude hiding (decodeUtf8, get, put, show)
