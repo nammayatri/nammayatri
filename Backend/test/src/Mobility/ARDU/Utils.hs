@@ -12,6 +12,8 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
+{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
+
 module Mobility.ARDU.Utils (module Mobility.ARDU.Utils) where
 
 import qualified "dynamic-offer-driver-app" API.UI.Driver as TDriver
