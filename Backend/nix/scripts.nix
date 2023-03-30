@@ -39,6 +39,14 @@
           '';
         };
 
+        hpack = {
+          description = "Run hpack to generate cabal files.";
+          exec = ''
+            set -x
+            time ${pkgs.findutils}/bin/find ./Backend -name package.yaml -exec hpack {} \;
+          '';
+        };
+
         run-mobility-stack = {
           description = ''
             Run the nammayatri backend components via "cabal run".
