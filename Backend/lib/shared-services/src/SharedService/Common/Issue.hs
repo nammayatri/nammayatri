@@ -21,6 +21,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedService.Common as Reexport
+import qualified Text.Read as TR (read)
 
 type IssueCreateAPI =
   ReqBody '[JSON] IssueReportReq
@@ -125,7 +126,7 @@ instance FromMultipart Tmp IssueMediaUploadReq where
     IssueMediaUploadReq
       <$> fmap fdPayload (lookupFile "file" form)
       <*> fmap fdFileCType (lookupFile "file" form)
-      <*> fmap (read . T.unpack) (lookupInput "fileType" form)
+      <*> fmap (TR.read . T.unpack) (lookupInput "fileType" form)
 
 instance ToMultipart Tmp IssueMediaUploadReq where
   toMultipart issueMediaUploadReq =
