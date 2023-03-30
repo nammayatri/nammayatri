@@ -99,6 +99,7 @@ library:
     - -Widentities
     - -fhide-source-paths
     - -Werror
+    - -Wwarn=ambiguous-fields
   dependencies:
     - dynamic-offer-driver-app
     - mobility-core
