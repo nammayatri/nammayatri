@@ -3,17 +3,11 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     common.url = "github:nammayatri/common";
     flake-parts.follows = "common/flake-parts";
-    haskell-flake.url = "github:srid/haskell-flake";
-    common.inputs.haskell-flake.follows = "haskell-flake";
-    flake-root.url = "github:srid/flake-root";
-    common.inputs.flake-root.follows = "flake-root";
 
     # TODO: Move to common repo?
     mission-control.url = "github:Platonic-Systems/mission-control";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
     pre-commit-hooks-nix.url = "github:juspay/pre-commit-hooks.nix/flake-parts-devShell"; # https://github.com/cachix/pre-commit-hooks.nix/pull/266
-    treefmt-nix.url = "github:juspay/treefmt-nix/dhall-format"; # https://github.com/numtide/treefmt-nix/pull/56
-    common.inputs.treefmt-nix.follows = "treefmt-nix";
 
     shared-kernel.url = "github:nammayatri/shared-kernel";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
