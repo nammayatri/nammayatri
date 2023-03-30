@@ -108,6 +108,7 @@ library:
     - -Widentities
     - -fhide-source-paths
     - -Werror
+    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:

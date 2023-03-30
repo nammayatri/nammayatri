@@ -143,6 +143,7 @@ ghc-options:
   - -fhide-source-paths
   - -Werror
   - -fplugin=RecordDotPreprocessor
+  - -Wwarn=ambiguous-fields
 
 library:
   source-dirs:
