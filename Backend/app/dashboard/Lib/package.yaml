@@ -99,6 +99,7 @@ library:
   ghc-options:
     - -fhide-source-paths
     - -Wincomplete-uni-patterns
+    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:

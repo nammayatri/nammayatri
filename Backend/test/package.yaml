@@ -119,6 +119,8 @@ ghc-options:
 library:
   source-dirs:
     - src
+  ghc-options:
+    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:
@@ -133,7 +135,6 @@ library:
         ghc-options:
           - -O2
           - -j4
-
 tests:
   beckn-integ-test:
     main: Main.hs
