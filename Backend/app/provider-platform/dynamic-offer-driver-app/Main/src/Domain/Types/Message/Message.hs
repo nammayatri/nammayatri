@@ -30,6 +30,7 @@ data Message = Message
     title :: Text,
     description :: Text,
     label :: Maybe Text,
+    likeCount :: Int,
     mediaFiles :: [Id MF.MediaFile],
     messageTranslations :: [MessageTranslation],
     merchantId :: Id Merchant,
@@ -50,6 +51,7 @@ data RawMessage = RawMessage
     title :: Text,
     description :: Text,
     label :: Maybe Text,
+    likeCount :: Int,
     mediaFiles :: [Id MF.MediaFile],
     merchantId :: Id Merchant,
     createdAt :: UTCTime

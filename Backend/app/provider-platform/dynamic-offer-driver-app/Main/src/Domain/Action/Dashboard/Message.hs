@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
 module Domain.Action.Dashboard.Message where
 
@@ -173,6 +174,7 @@ addMessage merchantShortId Common.AddMessageRequest {..} = do
             _type = toDomainType _type,
             title,
             label,
+            likeCount = 0,
             description,
             mediaFiles = cast <$> mediaFiles,
             messageTranslations = translationToDomainType now <$> translations,
@@ -229,6 +231,7 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
           messageId = Id messageId,
           deliveryStatus = Domain.Queued,
           readStatus = False,
+          likeStatus = False,
           messageDynamicFields = M.empty,
           reply = Nothing,
           createdAt = now,
@@ -275,7 +278,8 @@ messageDeliveryInfo merchantShortId messageId = do
   queued <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Queued
   sending <- Esq.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Sending
   seen <- Esq.runInReplica $ MRQuery.getMessageCountByReadStatus messageId
-  return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending, seen}
+  message <- MQuery.findById messageId >>= fromMaybeM (InvalidRequest "Message Not Found")
+  return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending, seen, liked = message.likeCount}
 
 messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
 messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do
@@ -294,5 +298,6 @@ messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do
           receiverNumber = fromMaybe "" person.mobileNumber,
           reply,
           seen = Just readStatus,
+          liked = Just likeStatus,
           status = toCommonDeliveryStatusType deliveryStatus
         }

@@ -30,6 +30,7 @@ data MessageReport = MessageReport
     driverId :: Id Driver,
     deliveryStatus :: DeliveryStatus,
     readStatus :: Bool,
+    likeStatus :: Bool,
     reply :: Maybe Text,
     messageDynamicFields :: MessageDynamicFieldsType,
     createdAt :: UTCTime,

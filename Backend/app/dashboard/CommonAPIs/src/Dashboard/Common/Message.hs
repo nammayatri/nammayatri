@@ -249,7 +249,8 @@ data MessageDeliveryInfoResponse = MessageDeliveryInfoResponse
     failed :: Int,
     queued :: Int,
     sending :: Int,
-    seen :: Int
+    seen :: Int,
+    liked :: Int
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -279,6 +280,7 @@ data MessageReceiverListItem = MessageReceiverListItem
     receiverNumber :: Text,
     reply :: Maybe Text,
     seen :: Maybe Bool,
+    liked :: Maybe Bool,
     status :: MessageDeliveryStatus
   }
   deriving stock (Eq, Show, Generic)

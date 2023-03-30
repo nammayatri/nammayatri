@@ -37,6 +37,10 @@ type API =
              :> TokenAuth
              :> Put '[JSON] APISuccess
            :<|> Capture "messageId" (Id Message.Message)
+             :> "like"
+             :> TokenAuth
+             :> Put '[JSON] APISuccess
+           :<|> Capture "messageId" (Id Message.Message)
              :> "response"
              :> TokenAuth
              :> ReqBody '[JSON] DMessage.MessageReplyReq
@@ -54,6 +58,7 @@ handler :: FlowServer API
 handler =
   messageList
     :<|> messageSeen
+    :<|> messageLiked
     :<|> messageResponse
     :<|> fetchMedia
     :<|> getMessage
@@ -66,6 +71,9 @@ getMessage msgId driverId = withFlowHandlerAPI $ DMessage.getMessage driverId ms
 
 messageSeen :: Id Message.Message -> Id SP.Person -> FlowHandler APISuccess
 messageSeen msgId driverId = withFlowHandlerAPI $ DMessage.messageSeen driverId msgId
+
+messageLiked :: Id Message.Message -> Id SP.Person -> FlowHandler APISuccess
+messageLiked msgId driverId = withFlowHandlerAPI $ DMessage.messageLiked driverId msgId
 
 messageResponse :: Id Message.Message -> Id SP.Person -> DMessage.MessageReplyReq -> FlowHandler APISuccess
 messageResponse msgId driverId = withFlowHandlerAPI . DMessage.messageResponse driverId msgId

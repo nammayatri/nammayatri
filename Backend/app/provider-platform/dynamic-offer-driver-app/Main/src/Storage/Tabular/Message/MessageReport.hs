@@ -39,6 +39,7 @@ mkPersist
       driverId PersonTId
       deliveryStatus Domain.DeliveryStatus
       readStatus Bool
+      likeStatus Bool
       reply Text Maybe
       messageDynamicFields Domain.MessageDynamicFieldsType
       updatedAt UTCTime

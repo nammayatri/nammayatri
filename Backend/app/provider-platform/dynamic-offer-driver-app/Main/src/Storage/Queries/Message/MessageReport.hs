@@ -153,6 +153,20 @@ updateSeenAndReplyByMessageIdAndDriverId messageId driverId readStatus reply = d
       mr ^. MessageReportMessageId ==. val (toKey messageId)
         &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
 
+updateMessageLikeByMessageIdAndDriverIdAndReadStatus :: Id Msg.Message -> Id P.Driver -> SqlDB ()
+updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId driverId = do
+  now <- getCurrentTime
+  Esq.update $ \mr -> do
+    set
+      mr
+      [ MessageReportLikeStatus =. not_ (mr ^. MessageReportLikeStatus),
+        MessageReportUpdatedAt =. val now
+      ]
+    where_ $
+      mr ^. MessageReportMessageId ==. val (toKey messageId)
+        &&. mr ^. MessageReportDriverId ==. val (toKey $ cast driverId)
+        &&. mr ^. MessageReportReadStatus ==. val True
+
 updateDeliveryStatusByMessageIdAndDriverId :: Id Msg.Message -> Id P.Driver -> DeliveryStatus -> SqlDB ()
 updateDeliveryStatusByMessageIdAndDriverId messageId driverId deliveryStatus = do
   now <- getCurrentTime

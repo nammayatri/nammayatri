@@ -38,6 +38,7 @@ mkPersist
       title Text
       description Text
       label Text Maybe
+      likeCount Int
       mediaFiles (PostgresList MediaFileTId)
       merchantId MerchantTId
       createdAt UTCTime
