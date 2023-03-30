@@ -23,7 +23,7 @@ import Beckn.Types.Core.Taxi.Common.PaymentInstrument as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
 import Data.OpenApi (ToSchema)
-import EulerHS.Prelude hiding (State, (.=))
+import EulerHS.Prelude hiding (State)
 import Kernel.Utils.JSON
 
 data Payment = Payment
