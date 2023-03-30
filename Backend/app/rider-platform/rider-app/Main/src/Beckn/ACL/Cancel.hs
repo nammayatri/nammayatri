@@ -46,7 +46,7 @@ mkCancelMessage res = Cancel.CancelMessage res.bppBookingId.getId "" $ castCance
 
 buildCancelSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
-  DCancel.CancelSearchRes ->
+  DCancel.CancelSearch ->
   m (BecknReq Cancel.CancelMessage)
 buildCancelSearchReq res = do
   bapURIs <- asks (.bapSelfURIs)
@@ -55,5 +55,5 @@ buildCancelSearchReq res = do
   context <- buildTaxiContext Context.CANCEL messageId (Just res.searchReqId.getId) bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl) res.city
   pure $ BecknReq context $ mkCancelSearchMessage res
 
-mkCancelSearchMessage :: DCancel.CancelSearchRes -> Cancel.CancelMessage
+mkCancelSearchMessage :: DCancel.CancelSearch -> Cancel.CancelMessage
 mkCancelSearchMessage res = Cancel.CancelMessage "" res.searchReqId.getId Cancel.ByUser

@@ -35,6 +35,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.CancelSearch as CS
 import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.Ride as SRide
 import Storage.CachedQueries.CacheConfig
@@ -133,6 +134,7 @@ cancelSearch ::
 cancelSearch transporterId _ req = do
   let transactionId = req.searchId
   searchID <- Esq.runInReplica $ SR.getRequestIdfromTransactionId transactionId >>= fromMaybeM (SearchRequestNotFound transactionId.getId)
+  CS.lockSearchRequest searchID
   driverSearchReqs <- Esq.runInReplica $ QSRD.findAllActiveByRequestId searchID
   for_ driverSearchReqs $ \driverReq -> do
     logTagInfo ("searchId-" <> getId req.searchId) "Search Request Cancellation"

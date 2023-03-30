@@ -16,7 +16,8 @@ module Domain.Action.UI.Cancel
   ( cancel,
     CancelReq (..),
     CancelRes (..),
-    CancelSearchRes (..),
+    CancelSearch (..),
+    mkDomainCancelSearch,
     cancelSearch,
   )
 where
@@ -61,11 +62,12 @@ data CancelRes = CancelRes
     city :: Text
   }
 
-data CancelSearchRes = CancelSearchRes
+data CancelSearch = CancelSearch
   { estimateId :: Id DEstimate.Estimate,
     providerUrl :: BaseUrl,
     providerId :: Text,
     city :: Text,
+    estimateStatus :: Maybe DEstimate.EstimateStatus,
     searchReqId :: Id SearchRequest,
     sendToBpp :: Bool
   }
@@ -113,35 +115,43 @@ isBookingCancellable booking
     pure (ride.status == Ride.NEW)
   | otherwise = pure False
 
-cancelSearch ::
+mkDomainCancelSearch ::
   (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, HasCacheConfig r, HedisFlow m r) =>
   Id Person.Person ->
   Id DEstimate.Estimate ->
-  m CancelSearchRes
-cancelSearch personId estimateId = do
+  m CancelSearch
+mkDomainCancelSearch personId estimateId = do
   estStatus <- QEstimate.getStatus estimateId >>= fromMaybeM (EstimateStatusDoesNotExist estimateId.getId)
   let sendToBpp = estStatus /= Just DEstimate.NEW
-  if estStatus == Just DEstimate.GOT_DRIVER_QUOTE
-    then Esq.runTransaction $ do
-      Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
-      QEstimate.updateStatus estimateId $ Just DEstimate.DRIVER_QUOTE_CANCELLED
-    else do
-      Esq.runTransaction $ do
-        Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
-        QEstimate.updateStatus estimateId $ Just DEstimate.CANCELLED
-  buildCancelReq estimateId sendToBpp
+  buildCancelReq estimateId sendToBpp estStatus
   where
-    buildCancelReq estId sendToBpp = do
+    buildCancelReq estId sendToBpp estStatus = do
       estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
       person <- Esq.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       let searchRequestId = estimate.requestId
       pure
-        CancelSearchRes
+        CancelSearch
           { estimateId = estId,
             providerUrl = estimate.providerUrl,
             providerId = estimate.providerId,
             searchReqId = searchRequestId,
             city = merchant.city,
+            estimateStatus = estStatus,
             sendToBpp
           }
+
+cancelSearch ::
+  (EsqDBFlow m r) =>
+  Id Person.Person ->
+  CancelSearch ->
+  m ()
+cancelSearch personId dcr =
+  if dcr.estimateStatus == Just DEstimate.GOT_DRIVER_QUOTE
+    then Esq.runTransaction $ do
+      Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
+      QEstimate.updateStatus dcr.estimateId $ Just DEstimate.DRIVER_QUOTE_CANCELLED
+    else do
+      Esq.runTransaction $ do
+        Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
+        QEstimate.updateStatus dcr.estimateId $ Just DEstimate.CANCELLED
