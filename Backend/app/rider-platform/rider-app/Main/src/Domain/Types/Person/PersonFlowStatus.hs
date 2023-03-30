@@ -14,6 +14,8 @@
 -}
 {-# LANGUAGE TemplateHaskell #-}
 
+{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
+
 module Domain.Types.Person.PersonFlowStatus
   ( FlowStatus (..),
     PersonFlowStatus (..),
