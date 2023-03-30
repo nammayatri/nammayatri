@@ -97,6 +97,7 @@ library:
     - -Widentities
     - -fhide-source-paths
     - -Werror
+    - -Wwarn=ambiguous-fields
   dependencies:
     - mobility-core
     - openapi3
