@@ -83,6 +83,10 @@ nonServiceableSearchRequest appClientEnv = do
           AppBESearch.RentalSearch $
             req
               & #origin . #gps .~ keralaLocation
+        AppBESearch.RecurringSearch req ->
+          AppBESearch.RecurringSearch $
+            req
+              & #origin . #gps .~ keralaLocation
   result <- runClient appClientEnv (searchServices appRegistrationToken updatedSearchReq (Just defaultVersion) (Just defaultVersion))
   verifyError 400 "RIDE_NOT_SERVICEABLE" result
 

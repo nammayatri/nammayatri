@@ -20,7 +20,6 @@ module Domain.Action.Beckn.Search
   )
 where
 
-import Data.List
 import qualified Data.Map as M
 import Domain.Types.FareParameters
 import qualified Domain.Types.Merchant as DM
