@@ -42,6 +42,7 @@ export function getStringKNValue(key) {
 
 const config = {
   "StringKeys": [],
+  "BOOKING_PREFERENCE" : "true" 
 }
 
 const kannadaStrings = {

@@ -3170,7 +3170,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             System.out.println("inside insert marker");
                             List<LatLng> points = polylineOptions.getPoints();
                             LatLng source = points.get(points.size() - 1);
-                            upsertMarker(sourceMarker,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
+                            upsertMarker(sourceMarker,String.valueOf(source.latitude),String.valueOf(source.longitude), 150, 0.5f, 0.5f);
                             Marker currMarker = (Marker) markers.get(sourceMarker);
                             int index = polylines.getPoints().size()-1;
                             float rotation = bearingBetweenLocations(polylines.getPoints().get(index), polylines.getPoints().get(index -1));

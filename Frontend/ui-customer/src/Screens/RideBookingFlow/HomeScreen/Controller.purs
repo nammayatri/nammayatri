@@ -523,7 +523,7 @@ eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
   if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
-    exit $ NotificationHandler "TRIP_STARTED" state { props { isInApp = false } }
+    exit $ NotificationHandler "TRIP_STARTED" state { props { isInApp = true } }
   else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
     exit $ NotificationHandler "TRIP_FINISHED" state
   else if (stage == "CANCELLED") && (not $ isLocalStageOn HomeScreen) then
@@ -1150,7 +1150,7 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
         []
 
 
-    pickUpCharges = case (head (filter (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup)) of
+    pickUpCharges = case (head (filter (\a -> a ^. _title == "DEAD_KILOMETER_FARE" || a ^. _title == "WAITING_OR_PICKUP_CHARGES" ) estimateFareBreakup)) of
       Just a -> a ^. _price
       Nothing -> 0
 
@@ -1175,13 +1175,13 @@ eval (GetEstimates (GetQuotesRes quotesRes)) state = do
       Just a -> fromMaybe 0.0 (a ^. _nightShiftMultiplier)
       Nothing -> 0.0
 
-    nightCharges = withinTimeRange nightShiftStart nightShiftEnd
+    nightCharges = if (nightShiftStart == "") && (nightShiftEnd == "") then false else  withinTimeRange nightShiftStart nightShiftEnd
 
     baseFare = case (head (filter (\a -> a ^. _title == "BASE_DISTANCE_FARE") estimateFareBreakup)) of
       Just a -> round $ (toNumber $ a ^. _price) * (if nightCharges then nightShiftMultiplier else 1.0)
       Nothing -> 0
 
-    extraFare = case (head (filter (\a -> a ^. _title == "EXTRA_PER_KM_FARE") estimateFareBreakup)) of
+    extraFare = case (head (filter (\a -> a ^. _title == "EXTRA_PER_KM_FARE" || a ^. _title == "SERVICE_CHARGE") estimateFareBreakup)) of
       Just a -> round $ (toNumber $ a ^. _price) * (if nightCharges then nightShiftMultiplier else 1.0)
       Nothing -> 0
 
@@ -1290,7 +1290,7 @@ eval (GetRideConfirmation resp) state = do
 
 eval (NotificationListener notificationType) state = do
   _ <- pure $ printLog "storeCallBackCustomer notificationType" notificationType
-  exit $ NotificationHandler notificationType state { props { callbackInitiated = false, isInApp = if notificationType == "DRIVER_ASSIGNMENT" || state.props.currentStage == RideAccepted then true else false } }
+  exit $ NotificationHandler notificationType state { props { callbackInitiated = false, isInApp = true }}--if notificationType == "DRIVER_ASSIGNMENT" || state.props.currentStage == RideAccepted then true else false } }
 
 eval RecenterCurrentLocation state = recenterCurrentLocation state
 

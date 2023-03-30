@@ -28,7 +28,8 @@ export function getStringMLValue(key){
 
 
 const config = {
-    StringKeys : ["WELCOME_TEXT", "ABOUT_TEXT"]
+    StringKeys : ["WELCOME_TEXT", "ABOUT_TEXT"],
+    "BOOKING_PREFERENCE" : "false" 
 }
 
 const malayalamStrings = {

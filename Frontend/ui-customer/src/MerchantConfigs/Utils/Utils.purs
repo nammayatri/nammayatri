@@ -53,3 +53,9 @@ getLanguagesList lazy = case (getMerchant FunctionCall) of
       , subTitle: "Malayalam"
       }
     ]
+
+getBookingPreference :: LazyCheck -> Boolean
+getBookingPreference lazy = case (getMerchant FunctionCall) of
+  NAMMAYATRI -> false
+  JATRISAATHI -> false
+  YATRI -> false

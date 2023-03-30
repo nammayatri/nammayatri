@@ -43,15 +43,18 @@ import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SettingSideBar as SettingSideBar
 import Components.SourceToDestination as SourceToDestination
+import Control.Monad.Except (runExcept)
+import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
-import Data.Array (any, length, mapWithIndex, null, (!!), head, drop) 
+import Control.Transformers.Back.Trans (runBackT)
+import Data.Array (any, length, mapWithIndex, null, (!!), head, drop)
 import Data.Either (Either(..))
 import Data.Int (toNumber, fromString, ceil)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.Number as NUM
 import Data.String (length, split, trim, Pattern(..)) as Str
 import Data.Time.Duration (Milliseconds(..))
-import Data.Number as NUM
 import Debug.Trace (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -64,28 +67,24 @@ import JBridge (drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPe
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (Unit,Ordering,compare, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (>=), (||))
+import Merchant.Utils (getBookingPreference, getValueFromConfig)
+import Prelude (Unit, Ordering, compare, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (>=), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, imageWithFallback, webView, url)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.HomeScreen.Controller (Action(..), ScreenOutput, eval, getCurrentCustomerLocation, flowWithoutOffers, checkCurrentLocation, getNearestCurrentLocation, checkSavedLocations, getNearestSavedLocation, dummySelectedQuotes)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
+import Screens.HomeScreen.Controller (Action(..), ScreenOutput, eval, getCurrentCustomerLocation, flowWithoutOffers, checkCurrentLocation, getNearestCurrentLocation, checkSavedLocations, getNearestSavedLocation, dummySelectedQuotes)
+import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.Types (HomeScreenState, PopupType(..), SearchLocationModelType(..), Stage(..), PreviousCurrentLocations(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), LocationListItemState)
-import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), SavedLocationsListRes(..) )
+import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), SavedLocationsListRes(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
-import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore, isLocalStageOn, updateLocalStage,getValueToLocalNativeStore)
+import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore, isLocalStageOn, updateLocalStage, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (GlobalState)
-import Control.Monad.Except (runExcept)
-import Foreign.Generic (decodeJSON, encodeJSON)
-import Foreign.Class (class Encode)
-import Screens.HomeScreen.Transformer (transformSavedLocations)
-import Control.Monad.Except (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -899,7 +898,8 @@ suggestedPriceView push state =
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , orientation HORIZONTAL
-        , margin (MarginLeft 15)]
+        -- , margin (MarginLeft 15)
+        ]
         [ linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -915,7 +915,7 @@ suggestedPriceView push state =
             , width WRAP_CONTENT
             , height WRAP_CONTENT
             , fontStyle $ FontStyle.bold LanguageStyle
-            , onClick push $ const ShowRateCard
+            -- , onClick push $ const ShowRateCard
             ]
             , estimatedTimeAndDistanceView push state
           ]
@@ -925,13 +925,15 @@ suggestedPriceView push state =
             , height $ V 40
             , gravity BOTTOM
             , margin (MarginTop 13)
-            , onClick push $ const ShowRateCard
+            , visibility GONE
+            -- , onClick push $ const ShowRateCard
             ]
         ]
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation VERTICAL
+          , visibility if (getBookingPreference FunctionCall) then VISIBLE else GONE
           ]
           [ linearLayout
               [ width MATCH_PARENT
