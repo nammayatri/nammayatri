@@ -28,6 +28,7 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Styles.Colors as Color
 import Common.Types.App
+import Engineering.Helpers.Commons (os)
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -75,7 +76,7 @@ sourceToDestinationConfig state = let
     {
       margin = (Margin 0 0 0 0)
     , sourceMargin = (Margin 0 0 0 25)
-    , lineMargin = (Margin 4 4 0 0)
+    , lineMargin = if os == "IOS" then (Margin 4 20 0 0) else (Margin 4 4 0 0)
     , sourceImageConfig {
         imageUrl = "ny_ic_green_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_green_circle.png"
       , margin = (MarginTop 3)

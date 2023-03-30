@@ -32,6 +32,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import PrestoDOM (Length(..) , Margin(..), Orientation(..), Padding(..) , Visibility(..), Gravity(..), PrestoDOM, cornerRadius, height, width, margin, padding, linearLayout, gravity, orientation, fontStyle, textSize, textView, text, background, clickable, color, imageView, imageUrl, ellipsize, maxLines, onClick, lineHeight, visibility, textFromHtml, layoutGravity, imageWithFallback)
 import Common.Types.App
 import Data.Maybe
+import Engineering.Helpers.Commons (os)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -114,7 +115,7 @@ sourceToDestinationConfig state = let
     {
       margin = (Margin 0 0 0 0)
     , sourceMargin = (Margin 0 0 0 24)
-    , lineMargin = (Margin 7 4 0 0)
+    , lineMargin = if os == "IOS" then (Margin 7 16 0 0) else (Margin 7 4 0 0)
     , sourceImageConfig {
         imageUrl = "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
       , margin = (MarginTop 2)

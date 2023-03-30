@@ -161,11 +161,11 @@ sourceAndDestination =
   , PrestoList.visibilityHolder "cardVisibility"
   , margin $ MarginVertical 20 20
   ][  imageView
-      [ imageUrl "ic_line"
+      [ if os == "IOS" then imageWithFallback "ny_ic_line,https://assets.juspay.in/nammayatri/images/common/ny_ic_line.png" else imageUrl "ic_line"
       , height MATCH_PARENT
       , width $ V 2
       , gravity LEFT
-      , margin (Margin 7 12 0 0)
+      , margin if os == "IOS" then (Margin 7 10 0 0) else (Margin 7 12 0 0)
       ]
     , linearLayout
       [ width MATCH_PARENT

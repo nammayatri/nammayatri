@@ -318,7 +318,7 @@ sourceToDestinationConfig state = let
     {
       margin = (Margin 2 0 40 0)
     , sourceMargin = (Margin 0 0 0 14)
-    , lineMargin = (Margin 19 7 0 0)
+    , lineMargin = if os == "IOS" then (Margin 19 16 0 0) else (Margin 19 7 0 0)
     , sourceImageConfig {
         imageUrl = "ny_ic_source_dot,https://assets.juspay.in/nammayatri/images/common/ny_ic_source_dot.png"
       , height = V 33 

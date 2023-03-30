@@ -27,6 +27,8 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
+import Engineering.Helpers.Commons (os)
+import Prelude ((==))
 
 sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let 
@@ -35,7 +37,7 @@ sourceToDestinationConfig state = let
     {
       margin = (Margin 0 13 16 0)
     , width = MATCH_PARENT
-    , lineMargin = (Margin 4 6 0 0)
+    , lineMargin = if os == "IOS" then (Margin 4 3 0 0) else (Margin 4 6 0 0)
     , sourceMargin = (Margin 0 0 0 14)
     , sourceImageConfig {
         imageUrl = "ny_ic_green_circle,https://assets.juspay.in/nammayatri/images/common/ny_ic_green_circle.png"

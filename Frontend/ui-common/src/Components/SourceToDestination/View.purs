@@ -21,6 +21,7 @@ import Components.SourceToDestination.Controller (Action,Config)
 import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), background, color, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback)
 import Styles.Colors as Color
 import Font.Size as FontSize
+import Engineering.Helpers.Commons (os)
 
 view :: forall w .  (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -30,7 +31,7 @@ view push config =
   , gravity LEFT
   , margin config.margin
   ][  imageView
-        [ imageUrl "ic_line"
+        [ if os == "IOS" then imageWithFallback "ny_ic_line,https://assets.juspay.in/nammayatri/images/common/ny_ic_line.png" else imageUrl "ic_line"
         , height MATCH_PARENT
         , margin config.lineMargin
         , width (V 1)

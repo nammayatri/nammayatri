@@ -593,7 +593,7 @@ sourceToDestinationConfig state = let
   sourceToDestinationConfig' = config
     {
       margin = Margin 2 0 40 0
-    , lineMargin = Margin 19 7 0 0
+    , lineMargin = if os=="IOS" then ( Margin 19 16 0 0 ) else ( Margin 19 7 0 0 )
     , destinationMargin = MarginTop 16
     , sourceImageConfig {
         imageUrl = "ny_ic_pickup,https://assets.juspay.in/nammayatri/images/user/ny_ic_pickup.png"
