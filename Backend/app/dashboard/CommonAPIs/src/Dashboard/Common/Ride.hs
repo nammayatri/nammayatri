@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Dashboard.Common.Ride
   ( module Dashboard.Common.Ride,

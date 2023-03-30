@@ -13,6 +13,8 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 
+{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
+
 module Domain.Types.Driver.DriverFlowStatus
   ( FlowStatus (..),
     DriverFlowStatus (..),
