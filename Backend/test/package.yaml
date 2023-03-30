@@ -113,6 +113,8 @@ ghc-options:
 library:
   source-dirs:
     - src
+  ghc-options:
+    - -Wwarn=ambiguous-fields
 
 tests:
   beckn-integ-test:

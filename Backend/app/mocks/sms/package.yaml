@@ -70,6 +70,7 @@ library:
   source-dirs: src
   ghc-options:
     - -Wincomplete-uni-patterns
+    - -Wwarn=ambiguous-fields
   dependencies:
     - aeson
     - mobility-core

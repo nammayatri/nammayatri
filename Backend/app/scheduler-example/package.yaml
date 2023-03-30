@@ -83,6 +83,7 @@ library:
   source-dirs: src
   ghc-options:
     - -Wincomplete-uni-patterns
+    - -Wwarn=ambiguous-fields
 
 executables:
   scheduler-example-app-exe:
