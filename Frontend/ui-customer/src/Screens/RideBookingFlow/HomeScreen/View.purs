@@ -1568,20 +1568,21 @@ driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> a
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
   if ((isLocalStageOn RideAccepted) || (isLocalStageOn RideStarted)) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
-    respBooking <- rideBooking (state.props.bookingId)
-    case respBooking of
-      Right (RideBookingRes respBooking) -> do
-        if (length respBooking.rideList) > 0 then do
-          case (respBooking.rideList !! 0) of
-            Just (RideAPIEntity res) -> do
-              let rideStatus = res.status
-              doAff do liftEffect $ push $ action rideStatus
-              if (os /= "IOS" && res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime) 
-                else pure unit  
-            Nothing -> pure unit
-        else
-          pure unit
-      Left err -> pure unit
+    when (state.props.bookingId /= "") $ do
+      respBooking <- rideBooking (state.props.bookingId)
+      case respBooking of
+        Right (RideBookingRes respBooking) -> do
+          if (length respBooking.rideList) > 0 then do
+            case (respBooking.rideList !! 0) of
+              Just (RideAPIEntity res) -> do
+                let rideStatus = res.status
+                doAff do liftEffect $ push $ action rideStatus
+                if (os /= "IOS" && res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime) 
+                  else pure unit  
+              Nothing -> pure unit
+          else
+            pure unit
+        Left err -> pure unit
     response <- getDriverLocation state.data.driverInfoCardState.rideId
     case response of
       Right (GetDriverLocationResp resp) -> do
@@ -1648,7 +1649,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
 
 confirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 confirmRide action count duration push state = do
-  if (count /= 0) && (isLocalStageOn ConfirmingRide) then do
+  if (count /= 0) && (isLocalStageOn ConfirmingRide) && (state.props.bookingId /= "")then do
     resp <- rideBooking (state.props.bookingId)
     _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
     case resp of
@@ -1669,18 +1670,6 @@ confirmRide action count duration push state = do
         confirmRide action (count - 1) duration push state
   else
     pure unit
-
-updateTripStatus :: forall action. (RideBookingRes -> action) -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-updateTripStatus action duration push state = do
-  void $ delay $ Milliseconds duration
-  resp <- rideBooking (state.props.bookingId)
-  _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
-  case resp of
-    Right response -> do
-      _ <- pure $ printLog "api Results " response
-      let (RideBookingRes resp) = response
-      doAff do liftEffect $ push $ action response
-    Left err -> updateTripStatus action duration push state
 
 cancelRidePopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelRidePopUpView push state =

@@ -628,14 +628,16 @@ homeScreenFlow = do
                                       _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing "pickup"
                                       _ <- pure $ enableMyLocation true
                                       _ <- updateLocalStage HomeScreen
-                                      (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
-                                      let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-                                      let (RideBookingDetails contents) = bookingDetails.contents
-                                      let (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
-                                      let finalAmount =  INT.round $ fromMaybe 0.0 (fromString (getFinalAmount (RideBookingRes resp)))
-                                      let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - INT.round (fromMaybe 0.0 ride.chargeableRideDistance)
-                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = (convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A"), startedAtUTC = ((fromMaybe "" resp.rideStartTime)),endedAt = (convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A"), finalAmount = finalAmount, previousRideRatingState {distanceDifference = differenceOfDistance}},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
-                                      homeScreenFlow
+                                      if (state.props.bookingId /= "") then do
+                                        (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
+                                        let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+                                        let (RideBookingDetails contents) = bookingDetails.contents
+                                        let (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
+                                        let finalAmount =  INT.round $ fromMaybe 0.0 (fromString (getFinalAmount (RideBookingRes resp)))
+                                        let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - INT.round (fromMaybe 0.0 ride.chargeableRideDistance)
+                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = (convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A"), startedAtUTC = ((fromMaybe "" resp.rideStartTime)),endedAt = (convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A"), finalAmount = finalAmount, previousRideRatingState {distanceDifference = differenceOfDistance}},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
+                                        homeScreenFlow
+                                        else homeScreenFlow
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES
                                       _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled"
                                       _ <- pure $ removeAllPolylines ""
