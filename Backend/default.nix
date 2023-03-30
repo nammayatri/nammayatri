@@ -17,7 +17,11 @@
         mkShellArgs = {
           nativeBuildInputs = [ config.mission-control.wrapper ];
           shellHook = ''
-            ${config.pre-commit.installationScript}
+            FLAKE_ROOT="''$(${lib.getExe config.flake-root.package})"
+            export FLAKE_ROOT
+
+            (cd FLAKE_ROOT && ${config.pre-commit.installationScript})
+
             ${config.mission-control.banner}
           '';
         };
