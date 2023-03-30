@@ -21,8 +21,8 @@ import Kernel.ServantMultipart
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant hiding (Summary)
-import Text.Read (read)
+import Servant
+import qualified Text.Read as TR (read)
 
 type IssueCreateAPI =
   QueryParam "language" Language
@@ -130,7 +130,7 @@ instance FromMultipart Tmp IssueMediaUploadReq where
     IssueMediaUploadReq
       <$> fmap fdPayload (lookupFile "file" form)
       <*> fmap fdFileCType (lookupFile "file" form)
-      <*> fmap (read . T.unpack) (lookupInput "fileType" form)
+      <*> fmap (TR.read . T.unpack) (lookupInput "fileType" form)
 
 instance ToMultipart Tmp IssueMediaUploadReq where
   toMultipart issueMediaUploadReq =
