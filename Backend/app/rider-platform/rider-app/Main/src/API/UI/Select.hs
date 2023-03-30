@@ -25,15 +25,18 @@ import qualified Beckn.ACL.Cancel as CACL
 import qualified Beckn.ACL.Select as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Select as DSelect
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant
+import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified Storage.Queries.Booking as QRB
 import Tools.Auth
 
 -------- Select Flow --------
@@ -59,7 +62,7 @@ type API =
            :<|> TokenAuth
              :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "cancel"
-             :> Post '[JSON] APISuccess
+             :> Post '[JSON] DSelect.CancelAPIResponse
        )
 
 handler :: FlowServer API
@@ -93,9 +96,24 @@ selectList personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect
 selectResult :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
 selectResult personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectResult
 
-cancelSearch :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
+cancelSearch :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
 cancelSearch personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  dCancelRes <- DCancel.cancelSearch personId estimateId
-  when (dCancelRes.sendToBpp) $
-    void $ withShortRetry $ CallBPP.cancel dCancelRes.providerUrl =<< CACL.buildCancelSearchReq dCancelRes
-  pure Success
+  activeBooking <- Esq.runInReplica $ QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
+  if isJust activeBooking
+    then do
+      logTagInfo "Booking already created while cancelling estimate." estimateId.getId
+      pure DSelect.BookingAlreadyCreated
+    else do
+      dCancelSearch <- DCancel.mkDomainCancelSearch personId estimateId
+      let sendToBpp = dCancelSearch.estimateStatus /= Just DEstimate.NEW
+      result <-
+        try @_ @SomeException $
+          when sendToBpp . void . withShortRetry $
+            CallBPP.cancel dCancelSearch.providerUrl =<< CACL.buildCancelSearchReq dCancelSearch
+      case result of
+        Left err -> do
+          logTagInfo "Failed to cancel" $ show err
+          pure DSelect.FailedToCancel
+        Right _ -> do
+          DCancel.cancelSearch personId dCancelSearch
+          pure DSelect.Success

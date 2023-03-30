@@ -192,6 +192,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.CacheDistance
       SharedLogic.CallBAP
+      SharedLogic.CancelSearch
       SharedLogic.DriverLocation
       SharedLogic.DriverOnboarding
       SharedLogic.DriverPool

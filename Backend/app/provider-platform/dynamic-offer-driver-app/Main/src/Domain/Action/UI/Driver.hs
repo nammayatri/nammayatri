@@ -94,6 +94,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import SharedLogic.CallBAP (sendDriverOffer)
+import qualified SharedLogic.CancelSearch as CS
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -696,6 +697,7 @@ respondQuote driverId req = do
     case req.response of
       Pulled -> throwError UnexpectedResponseValue
       Accept -> do
+        when sReq.autoAssignEnabled $ CS.incrementSearchReqLockCounter req.searchRequestId
         logDebug $ "offered fare: " <> show req.offeredFare
         whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
         when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
