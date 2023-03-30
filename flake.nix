@@ -25,10 +25,12 @@
         inputs.process-compose-flake.flakeModule
         inputs.pre-commit-hooks-nix.flakeModule
         ./Backend/default.nix
+        ./Frontend/default.nix
       ];
       perSystem = { self', pkgs, ... }: {
         packages.default = self'.packages.nammayatri;
 
+        # TODO: Move these to common repo.
         pre-commit = {
           check.enable = true;
           settings.hooks = {
@@ -38,9 +40,6 @@
 
         treefmt.config = {
           programs.dhall.enable = true;
-          settings.formatter.dhall.excludes = [
-            "Frontend/packages.dhall"
-          ];
         };
       };
     };
