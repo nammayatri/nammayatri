@@ -35,6 +35,7 @@
           check.enable = true;
           settings.hooks = {
             treefmt.enable = true;
+            nil.enable = true;
           };
         };
 
