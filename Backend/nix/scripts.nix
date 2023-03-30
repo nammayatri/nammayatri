@@ -20,9 +20,13 @@
       backendScripts {
         ghcid = {
           description = "Compile the given local package using ghcid.";
+          cdToProjectRoot = false;
           exec = ''
-            set +x
-            cd ./Backend # TODO: https://github.com/Platonic-Systems/mission-control/issues/27
+            if [[ "$(pwd)" != "''${FLAKE_ROOT}/Backend" ]]; then
+              echo "Please run this script from ./Backend directory"
+              exit 1
+            fi
+            set -x
             ghcid -c "cabal repl $1"
           '';
         };
