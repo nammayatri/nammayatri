@@ -36,6 +36,7 @@
           settings.hooks = {
             treefmt.enable = true;
             nil.enable = true;
+            hpack.enable = true;
           };
         };
 
