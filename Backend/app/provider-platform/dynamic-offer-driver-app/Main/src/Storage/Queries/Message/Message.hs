@@ -53,3 +53,9 @@ findAllWithLimitOffset mbLimit mbOffset merchantId = do
   where
     limitVal = min (maybe 10 fromIntegral mbLimit) 10
     offsetVal = maybe 0 fromIntegral mbOffset
+
+updateMessageLikeCount :: Id Message -> Int -> SqlDB ()
+updateMessageLikeCount messageId value = do
+  Esq.update $ \msg -> do
+    set msg [MessageLikeCount =. (msg ^. MessageLikeCount) +. val value]
+    where_ $ msg ^. MessageId ==. val (getId messageId)

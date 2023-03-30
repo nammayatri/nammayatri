@@ -29,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import qualified Storage.Queries.MediaFile as MFQ
+import qualified Storage.Queries.Message.Message as MQ
 import qualified Storage.Queries.Message.MessageReport as MRQ
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -47,6 +48,8 @@ data MessageAPIEntityResponse = MessageAPIEntityResponse
     label :: Maybe Text,
     reply :: Maybe Text,
     readStatus :: Bool,
+    likeStatus :: Bool,
+    likeCount :: Int,
     messageId :: Id Domain.Message,
     mediaFiles :: [MediaFileApiResponse]
   }
@@ -75,6 +78,8 @@ messageList driverId mbLimit mbOffset = do
             reply = messageReport.reply,
             created_at = rawMessage.createdAt,
             readStatus = messageReport.readStatus,
+            likeStatus = messageReport.likeStatus,
+            likeCount = rawMessage.likeCount,
             messageId = rawMessage.id,
             mediaFiles = mediaFilesApiType
           }
@@ -99,6 +104,8 @@ getMessage driverId messageId = do
             reply = messageReport.reply,
             created_at = rawMessage.createdAt,
             readStatus = messageReport.readStatus,
+            likeStatus = messageReport.likeStatus,
+            likeCount = rawMessage.likeCount,
             messageId = rawMessage.id,
             mediaFiles = mediaFilesApiType
           }
@@ -112,6 +119,17 @@ messageSeen :: Id SP.Person -> Id Domain.Message -> Flow APISuccess
 messageSeen driverId messageId = do
   _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   Esq.runTransaction $ MRQ.updateSeenAndReplyByMessageIdAndDriverId messageId (cast driverId) True Nothing
+
+  return Success
+
+messageLiked :: Id SP.Person -> Id Domain.Message -> Flow APISuccess
+messageLiked driverId messageId = do
+  _ <- Esq.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  messageDetails <- Esq.runInReplica $ MRQ.findByMessageIdAndDriverId messageId (cast driverId) >>= fromMaybeM (InvalidRequest "Message not found")
+  let val = if messageDetails.likeStatus then (-1) else 1
+  Esq.runTransaction $ do
+    when messageDetails.readStatus $ MQ.updateMessageLikeCount messageId val
+    MRQ.updateMessageLikeByMessageIdAndDriverIdAndReadStatus messageId (cast driverId)
   return Success
 
 messageResponse :: Id SP.Person -> Id Domain.Message -> MessageReplyReq -> Flow APISuccess
