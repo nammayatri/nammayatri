@@ -22,6 +22,7 @@ source-repository head
 library
   exposed-modules:
       API
+      API.Directions
       API.DistanceMatrix
       API.PlaceName
       API.SnapToRoad
@@ -32,6 +33,7 @@ library
       Lib.GoogleConfig
       Lib.IntegrationTests.Environment
       MockData.Common
+      MockData.Directions
       MockData.DistanceMatrix
       MockData.PlaceName
       MockData.SnapToRoad
