@@ -7,7 +7,7 @@
     # TODO: Move to common repo?
     mission-control.url = "github:Platonic-Systems/mission-control";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
-    pre-commit-hooks-nix.url = "github:terlar/pre-commit-hooks.nix/add-treefmt"; # https://github.com/cachix/pre-commit-hooks.nix/pull/183
+    pre-commit-hooks-nix.url = "github:cachix/pre-commit-hooks.nix";
     treefmt-nix.url = "github:juspay/treefmt-nix/dhall-format"; # https://github.com/numtide/treefmt-nix/pull/56
     common.inputs.treefmt-nix.follows = "treefmt-nix";
 
