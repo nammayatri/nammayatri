@@ -18,6 +18,7 @@ module API
   )
 where
 
+import qualified API.Directions as Directions
 import qualified API.DistanceMatrix as DistanceMatrix
 import qualified API.PlaceName as PlaceName
 import qualified API.SnapToRoad as SnapToRoad
@@ -28,11 +29,13 @@ import Servant
 
 type API =
   Maps.DistanceMatrixAPI
+    :<|> Maps.DirectionsAPI
     :<|> Maps.PlaceNameAPI
     :<|> Roads.SnapToRoadAPI
 
 handler :: FlowServer API
 handler =
   DistanceMatrix.handler
+    :<|> Directions.handler
     :<|> PlaceName.handler
     :<|> SnapToRoad.handler

@@ -1,0 +1,22 @@
+@mock-google-host = http://localhost:8019/
+
+@mock-google-key = mock-google-key
+
+# @name healthcheck
+GET {{mock-google-host}}
+
+# below posted all requests, that used in tests/rest-client requests and implemented in mock
+
+###
+
+# @name route1
+
+GET {{mock-google-host}}directions/json
+  ?origin=12.935200%2C77.624500
+  &destination=12.906300%2C77.585700
+  &key={{mock-google-key}}
+  &alternatives=true
+  &mode=DRIVING
+  &waypoints=
+  &avoid=tolls
+content-type: application/json
