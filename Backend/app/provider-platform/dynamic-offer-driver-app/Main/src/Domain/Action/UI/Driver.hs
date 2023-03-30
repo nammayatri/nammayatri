@@ -660,6 +660,23 @@ offerQuote driverId DriverOfferReq {..} = do
   let response = Accept
   respondQuote driverId DriverRespondReq {..}
 
+incrementSearchReqLockCounter ::
+  ( HasCacheConfig r,
+    Redis.HedisFlow m r
+  ) =>
+  Id DSReq.SearchRequest ->
+  m ()
+incrementSearchReqLockCounter searchId = do
+  _ <- Redis.incr searchLockKey
+  Redis.expire searchLockKey 120
+  searchCancelled <- fromMaybe False <$> Redis.get startedCancelInfomKey
+  if searchCancelled
+    then throwError (InternalError "SEARCH_CANCELLED")
+    else pure ()
+  where
+    startedCancelInfomKey = "SearchRequest:Cancelling:" <> searchId.getId
+    searchLockKey = "LockCounter:SearchRequest:" <> searchId.getId
+
 respondQuote ::
   ( HasCacheConfig r,
     EsqDBFlow m r,
@@ -681,6 +698,7 @@ respondQuote ::
   m APISuccess
 respondQuote driverId req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
+    incrementSearchReqLockCounter req.searchRequestId
     sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
     now <- getCurrentTime
     when (sReq.validTill < now) $ throwError SearchRequestExpired

@@ -22,6 +22,7 @@ module Domain.Action.UI.Frontend
   )
 where
 
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Kernel.Prelude
@@ -30,6 +31,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import Tools.Error
 
@@ -49,7 +51,7 @@ newtype NotifyEventReq = NotifyEventReq
 
 type NotifyEventResp = APISuccess
 
-getPersonFlowStatus :: (EsqDBFlow m r) => Id DP.Person -> m GetPersonFlowStatusRes
+getPersonFlowStatus :: (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id DP.Person -> m GetPersonFlowStatusRes
 getPersonFlowStatus personId = do
   -- should not be run in replica
   personStatus <- QPFS.getStatus personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -69,11 +71,14 @@ getPersonFlowStatus personId = do
           Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE
           return $ GetPersonFlowStatusRes (Just personStatus) DPFS.IDLE
 
-notifyEvent :: (EsqDBFlow m r) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
+notifyEvent :: (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id DP.Person -> NotifyEventReq -> m NotifyEventResp
 notifyEvent personId req = do
   case req.event of
     RATE_DRIVER_SKIPPED -> backToIDLE
-    SEARCH_CANCELLED -> backToIDLE
+    SEARCH_CANCELLED -> do
+      activeBooking <- Esq.runInReplica $ QB.findLatestByRiderIdAndStatus personId DRB.activeBookingStatus
+      whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_EXISTS")
+      backToIDLE
   pure APISuccess.Success
   where
     backToIDLE = Esq.runTransaction $ QPFS.updateStatus personId DPFS.IDLE

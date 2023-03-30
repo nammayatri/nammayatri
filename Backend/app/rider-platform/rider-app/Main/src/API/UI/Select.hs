@@ -25,16 +25,20 @@ import qualified Beckn.ACL.Cancel as CACL
 import qualified Beckn.ACL.Select as ACL
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Select as DSelect
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
 import Environment
 import Kernel.Prelude
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant
+import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified Storage.Queries.Booking as QRB
 import Tools.Auth
+import Tools.Error
 
 -------- Select Flow --------
 type API =
@@ -95,7 +99,10 @@ selectResult personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSele
 
 cancelSearch :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 cancelSearch personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  dCancelRes <- DCancel.cancelSearch personId estimateId
-  when (dCancelRes.sendToBpp) $
-    void $ withShortRetry $ CallBPP.cancel dCancelRes.providerUrl =<< CACL.buildCancelSearchReq dCancelRes
+  activeBooking <- Esq.runInReplica $ QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
+  whenJust activeBooking $ \_ -> throwError (InvalidRequest "ACTIVE_BOOKING_EXISTS")
+  dCancelSearch <- DCancel.mkDomainCancelSearch personId estimateId
+  let sendToBpp = dCancelSearch.estimateStatus /= Just DEstimate.NEW
+  when sendToBpp . void . withShortRetry $ CallBPP.cancel dCancelSearch.providerUrl =<< CACL.buildCancelSearchReq dCancelSearch
+  DCancel.cancelSearch personId dCancelSearch
   pure Success
