@@ -41,8 +41,9 @@ arduDriver2 =
       token = "favorit-auto2-0000000000000000-token"
     }
 
+-- See restricted_extra_fare
 defaultAllowedDriverFee :: Money
-defaultAllowedDriverFee = 30
+defaultAllowedDriverFee = 10
 
 nammaYatriPartnerMerchantId :: Id DM.Merchant
 nammaYatriPartnerMerchantId = "favorit0-0000-0000-0000-00000favorit"
