@@ -19,7 +19,7 @@ module App
 where
 
 import API
-import qualified Data.Map.Strict as Map
+import qualified Data.HashMap.Strict as HMS
 import "lib-dashboard" Environment
 import qualified EulerHS.Runtime as R
 import Kernel.Exit
@@ -40,7 +40,7 @@ runService configModifier = do
   runServerWithHealthCheck appEnv (Proxy @API) handler identity identity context releaseAppEnv \flowRt -> do
     migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-    let flowRt' = flowRt {R._httpClientManagers = Map.singleton "default" (R._defaultHttpClientManager flowRt)}
+    let flowRt' = flowRt {R._httpClientManagers = HMS.singleton "default" (R._defaultHttpClientManager flowRt)}
     pure flowRt'
   where
     context =

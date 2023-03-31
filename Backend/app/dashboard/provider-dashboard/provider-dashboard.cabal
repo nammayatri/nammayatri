@@ -105,6 +105,7 @@ library
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010
 
 executable provider-dashboard-exe
@@ -173,4 +174,5 @@ executable provider-dashboard-exe
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010

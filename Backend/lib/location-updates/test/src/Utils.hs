@@ -14,7 +14,7 @@
 
 module Utils where
 
-import qualified Data.Map as Map
+import qualified Data.HashMap.Strict as HMS
 import qualified EulerHS.Runtime as R
 import Kernel.External.Encryption (EncTools (..))
 import Kernel.External.Maps
@@ -60,7 +60,7 @@ runFlow tag appEnv flow = do
     R.withFlowRuntime Nothing $ \flowRt -> do
       flowRt' <-
         runFlowR flowRt appEnv $
-          addAuthManagersToFlowRt flowRt [(Just defaultHttpClientOptions.timeoutMs, Map.singleton "default" defaultManagerSettings)]
+          addAuthManagersToFlowRt flowRt [(Just defaultHttpClientOptions.timeoutMs, HMS.singleton "default" defaultManagerSettings)]
       -- FIXME: this is a termporary solution, better fix core code relating to these managers
       runFlowR flowRt' appEnv $ withLogTag tag flow
 
