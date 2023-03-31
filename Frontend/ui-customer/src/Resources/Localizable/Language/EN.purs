@@ -277,7 +277,7 @@ getEN script = case script of
   DRIVER_PICKUP_CHARGES -> "Driver Pickup Charges"
   NOMINAL_FARE -> "Nominal Fare*"
   DAY_TIMES_OF -> ""
-  DAYTIME_CHARGES_APPLICABLE_AT_NIGHT -> "x of daytime charges applicable at night from - 10 PM to 5 AM"
+  DAYTIME_CHARGES_APPLICABLE_AT_NIGHT -> "x of daytime charges applicable at night from 10 PM to 5 AM"
   NIGHT_TIMES_OF -> ""
   DAYTIME_CHARGES_APPLIED_AT_NIGHT -> "x of daytime charges applied to fare at night (🌙) from 10 PM to 5 AM"
   DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC -> "* Driver may quote extra to cover for traffic, chance of return trip etc."

@@ -59,6 +59,7 @@ data KeyStore
   | FINDING_QUOTES_START_TIME
   | FINDING_QUOTES_POLLING
   | FLOW_STATUS_DATA
+  | RATING_SKIPPED
 
 derive instance genericKeyStore :: Generic KeyStore _
 

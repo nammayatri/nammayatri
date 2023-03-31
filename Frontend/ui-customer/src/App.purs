@@ -141,6 +141,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_FETCH_CONTACTS HomeScreenState
                         | ON_RESUME_APP
                         | CHECK_CURRENT_STATUS
+                        | CHECK_FLOW_STATUS
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
