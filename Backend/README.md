@@ -10,13 +10,13 @@ Getting Started with building and running the project.
 #### Nix
 We manage dependencies and development environment using Nix. Before proceeding, you need to install Nix. 
 
-1. Follow [these instructions](https://haskell.flake.page/nix) to install Nix.
-1. Once you have Nix installed, configure the binary cache (to avoid compiling locally), by running:
+1. Install **Nix**: https://haskell.flake.page/nix.
+1. Setup the **binary cache** (to avoid compiling locally):
     ```sh
     nix run nixpkgs#cachix use nammayatri
     ```
-1. Install nix-direnv (and, optionally, starship): https://haskell.flake.page/direnv
-    - While this is not strictly required, it is recommended by better IDE integration in VSCode.
+1. If you are also developing the backend, install **nix-direnv** (and, optionally, starship): https://haskell.flake.page/direnv
+    - While this is not strictly required, it is recommended for better IDE integration in VSCode.
 
 #### Tools
 
@@ -29,11 +29,9 @@ For Mac users, some additional tools may be required:-
 1. [Xcode](https://developer.apple.com/xcode/)
 
 
-### Building and Development
+### Building
 
 After you've all the pre-requisite tools & dependencies installed, we can build the project for development.
-
-#### Building
 
 To build the project for development, we should compile the project with the command
 
@@ -49,15 +47,13 @@ This should produce a `./result` symlink locally containing all backend binaries
 docker load -i $(nix build .#dockerImage --print-out-paths)
 ```
 
-#### Development
+### Development
 
 The `dev/` folder at the project top-level contains all the relevant files and configs, should you need to change or inspect them.
 
-##### Setting up development environment
+#### Setting up development environment
 
-TODO: pre-commit hook
-
-To set up your development environment, from project root run
+To set up your development environment, you should run `direnv allow` from the project root. If you do not have nix-direnv setup, run
 
 ```sh
 nix develop
@@ -66,7 +62,7 @@ nix develop
 This will drop you in a shell environment containing all project dependencies.
 
 
-##### Running the services
+#### Running the services
 To run the project, we'd first need to run some services. These are provided via docker images.
 
 
@@ -91,7 +87,19 @@ For running monitoring services like prometheus and grafana use this command:
 , backend-run-monitoring
 ```
 
-##### Updating flake inputs
+#### Running backend
+
+```sh
+, backend-run-mobility-stack
+```
+
+This will run nammayatri components using `cabal run`. If you wish to run using Nix, run:
+
+```sh
+nix run .#run-mobility-stack
+```
+
+#### Updating flake inputs
 
 Nix dependencies specified in `inputs` of `flake.nix`. They point to the Git repos. The specific revision is pinned in the `flake.lock` file. To update the `shared-kernel` input, for instance, run:
 
