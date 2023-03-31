@@ -8,6 +8,7 @@
       name = "trailing-ws";
       description = "Remove trailing spaces";
       types = [ "file" ];
+      files = "Backend/.*$";
       pass_filenames = true;
       entry = lib.getExe (pkgs.writeShellApplication {
         name = "trailing-ws";
@@ -41,7 +42,7 @@
       description = "Check for overlapping migration indices";
       types = [ "file" ];
       pass_filenames = true;
-      files = "\\.sql$";
+      files = "Backend/.*\\.sql$";
       entry = lib.getExe (pkgs.writeShellApplication {
         name = "overlapping-migrations";
         text = ''
