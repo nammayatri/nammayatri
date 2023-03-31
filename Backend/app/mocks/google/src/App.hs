@@ -18,7 +18,7 @@ module App
 where
 
 import API
-import qualified Data.HashMap.Internal as HMap
+import qualified Data.HashMap.Strict as HMS
 import Environment
 import qualified EulerHS.Runtime as R
 import Kernel.Prelude
@@ -31,4 +31,4 @@ runService cfgModifier = do
   appCfg <- cfgModifier <$> readDhallConfigDefault "mock-google" :: IO AppCfg
   appEnv <- buildAppEnv appCfg
   runServerWithHealthCheck appEnv (Proxy @API) handler identity identity EmptyContext releaseAppEnv \flowRt -> do
-    pure flowRt {R._httpClientManagers = HMap.singleton "default" (R._defaultHttpClientManager flowRt)}
+    pure flowRt {R._httpClientManagers = HMS.singleton "default" (R._defaultHttpClientManager flowRt)}
