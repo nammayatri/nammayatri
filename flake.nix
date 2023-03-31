@@ -31,10 +31,15 @@
         # TODO: Move these to common repo.
         pre-commit = {
           check.enable = true;
-          settings.hooks = {
-            treefmt.enable = true;
-            nil.enable = true;
-            hpack.enable = true;
+          settings = {
+            imports = [
+              ./Backend/nix/pre-commit.nix
+            ];
+            hooks = {
+              treefmt.enable = true;
+              nil.enable = true;
+              hpack.enable = true;
+            };
           };
         };
 
@@ -46,7 +51,7 @@
           let
             cdProjectRoot = pkgs.mkShell {
               shellHook = ''
-                cd $FLAKE_ROOT 
+                cd $FLAKE_ROOT
               '';
             };
           in
