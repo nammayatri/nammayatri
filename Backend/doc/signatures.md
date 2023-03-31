@@ -19,7 +19,7 @@ For example let's take the raw input of `"{\"hello\": \"world\"}"` as a body and
 
 1. Generate a `Blake2b_512` hex string from input body: `20cb8f1175aaa3f23f020b3962300c483ba33dda3f1ae32734605db4d834419f874f19963636ff0c79d45a054af895b20fdac745f354c865d938ef6e801b8e33`
 2. Encode the hex string using `Base64` and concatenate `BLAKE-512=` prefix: `BLAKE-512=MjBjYjhmMTE3NWFhYTNmMjNmMDIwYjM5NjIzMDBjNDgzYmEzM2RkYTNmMWFlMzI3MzQ2MDVkYjRkODM0NDE5Zjg3NGYxOTk2MzYzNmZmMGM3OWQ0NWEwNTRhZjg5NWIyMGZkYWM3NDVmMzU0Yzg2NWQ5MzhlZjZlODAxYjhlMzM=`
-3. Apply `(created)` and `(expires)` to final signature message with `digest`: 
+3. Apply `(created)` and `(expires)` to final signature message with `digest`:
 ```
 (created): 1402170695\n
 (expires): 1402170699\n
