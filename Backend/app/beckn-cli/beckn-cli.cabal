@@ -70,6 +70,7 @@ library
     , bytestring
     , directory
     , euler-hs
+    , lens
     , mobility-core
     , optparse-applicative
     , record-dot-preprocessor

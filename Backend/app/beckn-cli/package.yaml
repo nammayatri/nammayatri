@@ -80,6 +80,7 @@ library:
   dependencies:
     - mobility-core
     - beckn-spec
+    - lens
 
 executables:
   beckn-cli-exe:
