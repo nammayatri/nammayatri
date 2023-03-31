@@ -1,30 +1,5 @@
 #!/bin/bash
 
-mac_os_rm_trailing_ws () {
-  BACKUP_EXTENSION=pqmc98hxvymotiyb4rz34
-  sed -i".${BACKUP_EXTENSION}" -e 's/  *$//' $1
-  find ./ -name "*.${BACKUP_EXTENSION}" -exec rm {} +
-}
-
-ALL_CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR HEAD)
-[ -n "$ALL_CHANGED_FILES" ] && FILES_WITH_TRAILING_WS=$(grep -r -l '  *$' $ALL_CHANGED_FILES)
-
-if [ -n "$FILES_WITH_TRAILING_WS" ]; then
-  echo "Trailing spaces found in:"
-  echo "$FILES_WITH_TRAILING_WS"
-
-  if [ -n "$BECKN_DISABLE_AUTOFORMAT" ]; then
-    echo "Fix them with:"
-    echo "sed -e 's/  *$//' ${FILES_WITH_TRAILING_WS}"
-  else
-    echo "Removing trailing spaces, please check and git add the changes"
-    [[ $OSTYPE == 'darwin'* ]] \
-      && mac_os_rm_trailing_ws "${FILES_WITH_TRAILING_WS}" \
-      || sed -i -e 's/  *$//' ${FILES_WITH_TRAILING_WS}
-  fi
-  FAIL="true"
-fi
-
 for MODULE in $(ls Backend/dev/migrations); do
   MIGRATION_DIR="Backend/dev/migrations/${MODULE}"
   if [ $(ls ${MIGRATION_DIR} | cut -c-4 | uniq | wc -l) != $(ls ${MIGRATION_DIR} | wc -l) ]; then
