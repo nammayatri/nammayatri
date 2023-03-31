@@ -175,7 +175,7 @@ instance FromMultipart Tmp SendMessageRequest where
       <*> inputType
       <*> lookupInput "messageId" form
     where
-      helper (Right AllActive) _ = Right Nothing
+      helper (Right AllEnabled) _ = Right Nothing
       helper _ x = Left x
 
 instance ToMultipart Tmp SendMessageRequest where
@@ -186,7 +186,7 @@ instance ToMultipart Tmp SendMessageRequest where
       ]
       (maybe [] (\file -> [FileData "csvFile" (T.pack file) "text/csv" file]) form.csvFile)
 
-data InputType = Include | Exclude | AllActive
+data InputType = Include | Exclude | AllEnabled
   deriving stock (Eq, Read, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

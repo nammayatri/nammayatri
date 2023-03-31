@@ -93,6 +93,8 @@ import Kernel.Utils.GenericPretty (PrettyShow)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
+import qualified Lib.DriverScore as DS
+import qualified Lib.DriverScore.Types as DST
 import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.CancelSearch as CS
 import SharedLogic.DriverPool as DP
@@ -691,47 +693,57 @@ respondQuote driverId req = do
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
     when driverInfo.onRide $ throwError DriverOnRide
-    DP.removeSearchReqIdFromMap sReq.providerId driverId sReq.id
     sReqFD <-
       QSRD.findByDriverAndSearchReq driverId sReq.id
         >>= fromMaybeM NoSearchRequestForDriver
-    case req.response of
-      Pulled -> throwError UnexpectedResponseValue
-      Accept -> do
-        when sReq.autoAssignEnabled $ CS.incrementSearchReqLockCounter req.searchRequestId
-        logDebug $ "offered fare: " <> show req.offeredFare
-        whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
-        when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
-        quoteLimit <- getQuoteLimit sReq.providerId sReq.estimatedDistance
-        quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
-        when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-        (fareParams, driverExtraFee) <- case organization.farePolicyType of
-          Fare.SLAB -> do
-            slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM (InternalError "Slab fare policy not found")
-            let driverExtraFee = ExtraFee {minFee = 0, maxFee = 0}
-            fareParams <- calculateFare organization.id (Right slabFarePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare
-            pure (fareParams, driverExtraFee)
-          Fare.NORMAL -> do
-            farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
-            fareParams <- calculateFare organization.id (Left farePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare
-            pure (fareParams, farePolicy.driverExtraFee)
-        whenJust mbOfferedFare $ \off ->
-          unless (isAllowedExtraFee driverExtraFee off) $
-            throwError $ NotAllowedExtraFee $ show off
-        driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
-        Esq.runTransaction $ do
-          QDrQt.create driverQuote
-          QSRD.updateDriverResponse sReqFD.id req.response
-          QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
-        DP.incrementQuoteAcceptedCount sReq.providerId driverId
-        -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
-        when ((quoteCount + 1) >= quoteLimit || sReq.autoAssignEnabled) $ sendRemoveRideRequestNotification organization.id driverQuote
-        sendDriverOffer organization sReq driverQuote
-      Reject -> do
-        Esq.runTransaction $ do
-          QSRD.updateDriverResponse sReqFD.id req.response
+    driverFCMPulledList <-
+      case req.response of
+        Pulled -> throwError UnexpectedResponseValue
+        Accept -> do
+          when sReq.autoAssignEnabled $ CS.incrementSearchReqLockCounter req.searchRequestId
+          logDebug $ "offered fare: " <> show req.offeredFare
+          whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
+          when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
+          quoteLimit <- getQuoteLimit sReq.providerId sReq.estimatedDistance
+          quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
+          when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
+          (fareParams, driverExtraFee) <- case organization.farePolicyType of
+            Fare.SLAB -> do
+              slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM (InternalError "Slab fare policy not found")
+              let driverExtraFee = ExtraFee {minFee = 0, maxFee = 0}
+              fareParams <- calculateFare organization.id (Right slabFarePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare
+              pure (fareParams, driverExtraFee)
+            Fare.NORMAL -> do
+              farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
+              fareParams <- calculateFare organization.id (Left farePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare
+              pure (fareParams, farePolicy.driverExtraFee)
+          whenJust mbOfferedFare $ \off ->
+            unless (isAllowedExtraFee driverExtraFee off) $
+              throwError $ NotAllowedExtraFee $ show off
+          driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
+          Esq.runTransaction $ do
+            QDrQt.create driverQuote
+            QSRD.updateDriverResponse sReqFD.id req.response
+            QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
+          let shouldPullFCMForOthers = (quoteCount + 1) >= quoteLimit || sReq.autoAssignEnabled
+          driverFCMPulledList <- if shouldPullFCMForOthers then QSRD.findAllActiveWithoutRespByRequestId req.searchRequestId else pure []
+          -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
+          sendRemoveRideRequestNotification driverFCMPulledList organization.id driverQuote
+          sendDriverOffer organization sReq driverQuote
+          pure driverFCMPulledList
+        Reject -> do
+          Esq.runTransaction $ QSRD.updateDriverResponse sReqFD.id req.response
+          pure []
+    DS.driverScoreEventHandler $ buildDriverRespondEventPayload sReq.id sReq.providerId driverFCMPulledList
   pure Success
   where
+    buildDriverRespondEventPayload searchReqId merchantId restActiveDriverSearchReqs =
+      DST.OnDriverAcceptingSearchRequest
+        { restDriverIds = map (.driverId) restActiveDriverSearchReqs,
+          response = req.response,
+          ..
+        }
+
     buildDriverQuote ::
       (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime) =>
       SP.Person ->
@@ -772,11 +784,8 @@ respondQuote driverId req = do
     getQuoteLimit merchantId dist = do
       driverPoolCfg <- DP.getDriverPoolConfig merchantId dist
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
-    sendRemoveRideRequestNotification orgId driverQuote = do
-      driverSearchReqs <- QSRD.findAllActiveWithoutRespByRequestId req.searchRequestId
+    sendRemoveRideRequestNotification driverSearchReqs orgId driverQuote = do
       for_ driverSearchReqs $ \driverReq -> do
-        DP.decrementTotalQuotesCount orgId (cast driverReq.driverId) driverReq.searchRequestId
-        DP.removeSearchReqIdFromMap orgId driverReq.driverId driverReq.searchRequestId
         Esq.runTransaction $ do
           QSRD.updateDriverResponse driverReq.id Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)

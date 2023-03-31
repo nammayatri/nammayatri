@@ -183,6 +183,8 @@ library
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Environment
+      Lib.DriverScore
+      Lib.DriverScore.Types
       Lib.LocationUpdates
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers

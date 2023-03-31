@@ -30,6 +30,8 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (addUTCTime, logInfo)
+import qualified Lib.DriverScore as DS
+import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate
@@ -61,8 +63,14 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchReq.id
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
-  forM_ driverPool $ \dPoolRes -> do
-    incrementTotalQuotesCount searchReq.providerId (cast dPoolRes.driverPoolResult.driverId) searchReq validTill (fromIntegral driverPoolConfig.singleBatchProcessTime)
+  DS.driverScoreEventHandler
+    DST.OnNewSearchRequestForDrivers
+      { driverPool = driverPool,
+        merchantId = searchReq.providerId,
+        searchReq = searchReq,
+        validTill = validTill,
+        batchProcessTime = fromIntegral driverPoolConfig.singleBatchProcessTime
+      }
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   Esq.runTransaction $ do
