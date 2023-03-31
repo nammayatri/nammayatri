@@ -181,23 +181,8 @@ Each package has clear separation of focuses w.r.t the functionality it provides
 
 ## FAQs
 
-1. My project doesn't build.
-
-    This could be because of a number of reasons. Most commonly though, we've found that more often than not it's because of the following reasons:-
-
-    * We're missing a (OS specific) dependency.
-    * Have an older or really new version of a required dependency.
-    * Missing a required tool like stack or GHC.
-    * Have incompatible version of the above tools like stack or GHC (though using stack minimizes this)
-    * Our PATH environment/shell variable is not correctly configured.
-    * We're running an incompatible, older or unsupported OS or OS version.
-
-2. I can't run the services correctly.
-
-    To make sure you can run the services correctly for development and testing, please ensure that you have Docker & Docker-compose installed correctly, are configured correctly in you PATH variable and you have the required permissions to run them.
-
-3. I can't figure out the project structure.
+1. I can't figure out the project structure.
 
     Please refer to the [Project Structure Section](#project-structure)
 
-4. TBD...
+2. TBD...
