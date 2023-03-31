@@ -7,7 +7,10 @@
     # TODO: Move to common repo?
     mission-control.url = "github:Platonic-Systems/mission-control";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
-    pre-commit-hooks-nix.url = "github:juspay/pre-commit-hooks.nix/flake-parts-devShell"; # https://github.com/cachix/pre-commit-hooks.nix/pull/266
+    # Pending merge of these PRs
+    # - https://github.com/cachix/pre-commit-hooks.nix/pull/266
+    # - https://github.com/cachix/pre-commit-hooks.nix/pull/268
+    pre-commit-hooks-nix.url = "github:juspay/pre-commit-hooks.nix/nammayatri";
 
     shared-kernel.url = "github:nammayatri/shared-kernel";
     shared-kernel.inputs.nixpkgs.follows = "nixpkgs";
@@ -47,24 +50,15 @@
           programs.dhall.enable = true;
         };
 
-        devShells.default =
-          let
-            cdProjectRoot = pkgs.mkShell {
-              shellHook = ''
-                cd $FLAKE_ROOT
-              '';
-            };
-          in
-          pkgs.mkShell {
-            inputsFrom = [
-              # shellHook is evaluated from reverse order!
-              config.mission-control.devShell
-              config.pre-commit.devShell
-              cdProjectRoot # Because: https://github.com/cachix/pre-commit-hooks.nix/issues/267
-              config.flake-root.devShell
-              config.haskellProjects.default.outputs.devShell
-            ];
-          };
+        devShells.default = pkgs.mkShell {
+          inputsFrom = [
+            # Note: shellHook is evaluated from reverse order!
+            config.mission-control.devShell
+            config.pre-commit.devShell
+            config.flake-root.devShell
+            config.haskellProjects.default.outputs.devShell
+          ];
+        };
       };
     };
 }
