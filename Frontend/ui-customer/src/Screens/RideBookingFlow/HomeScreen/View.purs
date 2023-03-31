@@ -59,8 +59,8 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, isPreviousVersion, getCurrentLocationMarker, getPreviousVersion, initialWebViewSetUp, storeOnResumeCallback)
-import JBridge (drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute)
+import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, isPreviousVersion, getCurrentLocationMarker, getPreviousVersion, initialWebViewSetUp, storeOnResumeCallback, decodeErrorMessage)
+import JBridge (drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -120,7 +120,7 @@ screen initialState =
                   pure unit
               FindingEstimate -> do
                 _ <- removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                launchAff_ $ flowRunner $ getEstimate GetEstimates 10 1000.0 push initialState
+                launchAff_ $ flowRunner $ getEstimate GetEstimates CheckFlowStatusAction 10 1000.0 push initialState
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do 
                   _ <- pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
@@ -153,7 +153,7 @@ screen initialState =
                 _ <- storeCallBackLocateOnMap push UpdatePickupLocation
                 pure unit
               TryAgain -> do
-                launchAff_ $ flowRunner $ getEstimate EstimatesTryAgain 10 1000.0 push initialState
+                launchAff_ $ flowRunner $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState
               _ -> pure unit
             if ((initialState.props.sourceLat /= (-0.1)) && (initialState.props.sourceLong /= (-0.1))) then do
               case initialState.props.sourceLat, initialState.props.sourceLong of
@@ -1118,12 +1118,12 @@ locationTrackingPopUp push state =
                           [ height $ V 1
                           , width MATCH_PARENT
                           , background Color.grey900
-                          , visibility if (state.props.currentStage == RideAccepted && item.type == "GOOGLE_MAP") || (idx == (length locationTrackingData) - 1) then GONE else VISIBLE
+                          , visibility if (state.props.currentStage == RideAccepted && item.type == "GOOGLE_MAP") || (idx == (length (locationTrackingData "lazyCheck")) - 1) then GONE else VISIBLE
                           ]
                           []
                       ]
                 )
-                locationTrackingData
+                (locationTrackingData "LazyCheck")
             )
         ]
     ]
@@ -1175,8 +1175,8 @@ trackingCardView push state item =
         ]
     ]
 
-locationTrackingData :: Array { text :: String, imageWithFallback :: String, type :: String }
-locationTrackingData =
+locationTrackingData :: String -> Array { text :: String, imageWithFallback :: String, type :: String }
+locationTrackingData lazyCheck =
   [ { text: (getString GOOGLE_MAP_)
     , imageWithFallback: "ny_ic_track_google_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_track_google_map.png"
     , type: "GOOGLE_MAP"
@@ -1491,8 +1491,8 @@ lottieLoaderView state push =
     , width $ V 96
     ]
 
-getEstimate :: forall action. (GetQuotesRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-getEstimate action count duration push state = do
+getEstimate :: forall action. (GetQuotesRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+getEstimate action flowStatusAction count duration push state = do
   if (isLocalStageOn FindingEstimate) || (isLocalStageOn TryAgain) then
     if (count > 0) then do
       resp <- getQuotes (state.props.searchId)
@@ -1510,16 +1510,22 @@ getEstimate action count duration push state = do
               doAff do liftEffect $ push $ action response
             else do
               void $ delay $ Milliseconds duration
-              getEstimate action (count - 1) duration push state
+              getEstimate action flowStatusAction (count - 1) duration push state
         Left err -> do
-          _ <- pure $ printLog "api error " err
-          void $ delay $ Milliseconds duration
-          if (count == 1) then do
-            let response = GetQuotesRes { quotes: [], estimates: [], fromLocation: SearchReqLocationAPIEntity { lat: 0.0, lon: 0.0 }, toLocation: Nothing }
-            _ <- pure $ updateLocalStage SearchLocationModel
-            doAff do liftEffect $ push $ action response
+          let errResp = err.response
+              codeMessage = decodeErrorMessage errResp.errorMessage
+          if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_ALREADY_PRESENT" ) then do
+            _ <- pure $ firebaseLogEvent "ny_fs_active_booking_found_on_search"
+            void $ pure $ toast "ACTIVE BOOKING ALREADY PRESENT"
+            doAff do liftEffect $ push $ flowStatusAction
           else do
-            getEstimate action (count - 1) duration push state
+            void $ delay $ Milliseconds duration
+            if (count == 1) then do
+              let response = GetQuotesRes { quotes: [], estimates: [], fromLocation: SearchReqLocationAPIEntity { lat: 0.0, lon: 0.0 }, toLocation: Nothing }
+              _ <- pure $ updateLocalStage SearchLocationModel
+              doAff do liftEffect $ push $ action response
+            else do
+              getEstimate action flowStatusAction (count - 1) duration push state
     else
       pure unit
   else
@@ -1540,7 +1546,7 @@ getQuotesPolling pollingId action retryAction count duration push state = do
           Right response -> do
             _ <- pure $ printLog "Quote api Results " response
             let (SelectListRes resp) = response
-            if (resp.bookingId /= Nothing) then do 
+            if (resp.bookingId /= Nothing && resp.bookingId /= Just "") then do 
                doAff do liftEffect $ push $ action response
             else if not (null ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)) then do
               if (getValueToLocalStore GOT_ONE_QUOTE == "FALSE") then do
@@ -1568,20 +1574,21 @@ driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> a
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
   if ((isLocalStageOn RideAccepted) || (isLocalStageOn RideStarted)) && ((getValueToLocalStore TRACKING_ID) == trackingId) then do
-    respBooking <- rideBooking (state.props.bookingId)
-    case respBooking of
-      Right (RideBookingRes respBooking) -> do
-        if (length respBooking.rideList) > 0 then do
-          case (respBooking.rideList !! 0) of
-            Just (RideAPIEntity res) -> do
-              let rideStatus = res.status
-              doAff do liftEffect $ push $ action rideStatus
-              if (os /= "IOS" && res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime) 
-                else pure unit  
-            Nothing -> pure unit
-        else
-          pure unit
-      Left err -> pure unit
+    when (state.props.bookingId /= "") $ do
+      respBooking <- rideBooking (state.props.bookingId)
+      case respBooking of
+        Right (RideBookingRes respBooking) -> do
+          if (length respBooking.rideList) > 0 then do
+            case (respBooking.rideList !! 0) of
+              Just (RideAPIEntity res) -> do
+                let rideStatus = res.status
+                doAff do liftEffect $ push $ action rideStatus
+                if (os /= "IOS" && res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime) 
+                  else pure unit  
+              Nothing -> pure unit
+          else
+            pure unit
+        Left err -> pure unit
     response <- getDriverLocation state.data.driverInfoCardState.rideId
     case response of
       Right (GetDriverLocationResp resp) -> do
@@ -1648,7 +1655,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
 
 confirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 confirmRide action count duration push state = do
-  if (count /= 0) && (isLocalStageOn ConfirmingRide) then do
+  if (count /= 0) && (isLocalStageOn ConfirmingRide) && (state.props.bookingId /= "")then do
     resp <- rideBooking (state.props.bookingId)
     _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
     case resp of
@@ -1669,18 +1676,6 @@ confirmRide action count duration push state = do
         confirmRide action (count - 1) duration push state
   else
     pure unit
-
-updateTripStatus :: forall action. (RideBookingRes -> action) -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
-updateTripStatus action duration push state = do
-  void $ delay $ Milliseconds duration
-  resp <- rideBooking (state.props.bookingId)
-  _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
-  case resp of
-    Right response -> do
-      _ <- pure $ printLog "api Results " response
-      let (RideBookingRes resp) = response
-      doAff do liftEffect $ push $ action response
-    Left err -> updateTripStatus action duration push state
 
 cancelRidePopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelRidePopUpView push state =

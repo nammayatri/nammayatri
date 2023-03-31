@@ -52,7 +52,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
 import Global (readFloat)
-import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts, goBackPrevWebPage, getCurrentUTC)
+import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts, goBackPrevWebPage)
 import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, removeAllPolylines, requestKeyboardShow, requestLocation, showDialer, toast, toggleBtnLoader, shareTextMessage, firebaseLogEventWithTwoParams, removeMarker, openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -350,7 +350,7 @@ instance loggableAction :: Loggable Action where
     NotificationListener notificationType -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "notification_listener"
     GetEstimates quotesRes -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_estimates"
     GetRideConfirmation resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_ride_confirmation"
-    GetQuotesList resp -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "get_quotes_list"
+    GetQuotesList (SelectListRes resp) -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" ("get_quotes_list -" <> fromMaybe "" resp.bookingId)
     MAPREADY key latitude longitude -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "map_ready"
     CurrentLocation lat lng -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "current_location"
     SourceToDestinationActionController act -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "source_to_destination"
@@ -388,6 +388,7 @@ instance loggableAction :: Loggable Action where
     UpdateSavedLoc state -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_saved_loc"
     NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
     OnResumeCallback -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "on_resume_callback"
+    CheckFlowStatusAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "check_flow_status"
 
 data ScreenOutput = LogoutUser
                   | Cancel HomeScreenState
@@ -429,6 +430,7 @@ data ScreenOutput = LogoutUser
                   | FetchContacts HomeScreenState
                   | OnResumeApp HomeScreenState
                   | CheckCurrentStatus
+                  | CheckFlowStatus HomeScreenState
 
 data Action = NoAction 
             | BackPressed 
@@ -507,9 +509,13 @@ data Action = NoAction
             | HideLiveDashboard String
             | LiveDashboardAction
             | OnResumeCallback
+            | CheckFlowStatusAction
 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval CheckFlowStatusAction state = exit $ CheckFlowStatus state
+
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
   if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
@@ -720,7 +726,6 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
         updateAndExit updatedState $  (UpdatedSource updatedState)
       SettingPrice -> do 
                         _ <- pure $ updateLocalStage FindingQuotes
-                        _ <- pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "")
                         let updatedState = state{props{currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime "LazyCheck")}}
                         updateAndExit (updatedState) (GetQuotes updatedState) 
       _            -> continue state
@@ -741,6 +746,7 @@ eval (RateRideButtonActionController (PrimaryButtonController.OnClick)) state = 
 
 eval (SkipButtonActionController (PrimaryButtonController.OnClick)) state = do
   _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
+  _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
   updateAndExit state GoToHome
 
 eval OpenSettings state = continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
@@ -1076,11 +1082,11 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { pro
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
   Logout -> exit LogoutUser
   ConfirmBack -> case state.props.currentStage of
-    QuoteList -> exit $ GoToHome
-    FindingQuotes -> exit $ GoToHome
+    QuoteList -> exit $ CheckCurrentStatus
+    FindingQuotes -> exit $ CheckCurrentStatus
     _ -> continue state
   NoPopUp -> continue state
-  ActiveQuotePopUp -> exit $ GoToHome
+  ActiveQuotePopUp -> exit $ CheckCurrentStatus
 
 eval (DistanceOutsideLimitsActionController (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ updateLocalStage SearchLocationModel
@@ -1236,11 +1242,14 @@ eval (GetQuotesList (SelectListRes resp)) state = do
                 continue newState{props{selectedQuote = if value then Nothing else newState.props.selectedQuote}}
 
 eval (ContinueWithoutOffers (SelectListRes resp)) state = do
-  let bookingId = (fromMaybe "" resp.bookingId)
-  if bookingId /= "" then do
-    _ <- pure $ updateLocalStage ConfirmingRide
-    exit $ ConfirmRide state{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}} 
-  else continue state
+  case resp.bookingId of
+    Just bookingId -> 
+      case STR.trim bookingId of
+        "" -> continue state
+        _  -> do
+          _ <- pure $ updateLocalStage ConfirmingRide
+          exit $ ConfirmRide state{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp, selectedQuote = Nothing}}                       
+    Nothing -> continue state
 
 
 eval (GetRideConfirmation resp) state = do

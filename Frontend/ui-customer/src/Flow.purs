@@ -35,7 +35,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, bundleVersion, getExpiryTime)
 import Foreign.Class (encode)
-import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, convertUTCtoISC, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts)
+import Helpers.Utils (hideSplash, getDistanceBwCordinates, adjustViewWithKeyboard, decodeErrorCode, getObjFromLocal, convertUTCtoISC, differenceOfLocationLists, filterRecentSearches, setText', seperateByWhiteSpaces, getNewTrackingId, checkPrediction, getRecentSearches, addToRecentSearches, saveRecents, clearWaitingTimer, toString, parseFloat, getCurrentLocationsObjFromLocal, addToPrevCurrLoc, saveCurrentLocations, getCurrentDate, getPrediction, getCurrentLocationMarker, parseNewContacts, getCurrentUTC)
 import JBridge (currentPosition, drawRoute, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getVersionCode, getVersionName, hideKeyboardOnNavigation, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, loaderText, locateOnMap, openNavigation, reallocateMapFragment, removeAllPolylines, toast, toggleBtnLoader, toggleLoader, updateRoute, launchInAppRatingPopup, firebaseUserID, addMarker)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -59,7 +59,7 @@ import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (CardType(..), AddNewAddressScreenState(..),CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..))
-import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), ConfirmRes(..), DeleteSavedLocationReq(..), Geometry(..), GetDriverLocationResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), TriggerOTPResp(..), VerifyTokenResp(..), UserSosRes(..),  GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), FlowStatusRes(..), FlowStatus(..))
+import Services.API (AddressGeometry(..), BookingLocationAPIEntity(..), ConfirmRes(..), DeleteSavedLocationReq(..), Geometry(..), GetDriverLocationResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), TriggerOTPResp(..), VerifyTokenResp(..), UserSosRes(..),  GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), FlowStatusRes(..), FlowStatus(..), CancelEstimateRes(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..))
@@ -86,6 +86,7 @@ baseAppFlow gPayload = do
   _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "9"
   _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "3000.0"
   _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "30"
+  _ <- pure $ setValueToLocalStore RATING_SKIPPED "false"
   _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
   _ <- lift $ lift $ setLogField "app_version" $ encode (show versionCode)
   _ <- lift $ lift $ setLogField "bundle_version" $ encode (bundle)
@@ -163,7 +164,7 @@ currentRideFlow rideAssigned = do
         modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
         _ <- pure $ setValueToLocalStore TRACKING_ENABLED if status == "NEW" then "True" else "False"
         updateLocalStage rideStatus
-      else do
+      else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
         rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
         case rideBookingListResponse of
@@ -214,6 +215,8 @@ currentRideFlow rideAssigned = do
                           }}
                 })
           Left err -> updateLocalStage HomeScreen
+      else do 
+        updateLocalStage HomeScreen
     Left err -> updateLocalStage HomeScreen
 
 currentFlowStatus :: FlowBT String Unit 
@@ -222,7 +225,7 @@ currentFlowStatus = do
   _ <- pure $ spy "currentFlowStatus" ":::"
   _ <- pure $ setValueToLocalStore DRIVER_ARRIVAL_ACTION "TRIGGER_DRIVER_ARRIVAL"
   verifyProfile "LazyCheck"
-  (FlowStatusRes flowStatus) <- Remote.flowStatusBT ""
+  (FlowStatusRes flowStatus) <- Remote.flowStatusBT "LazyCheck"
   void $ pure $ spy "flowStatus" flowStatus
   case flowStatus.currentStatus of
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId false
@@ -261,8 +264,7 @@ currentFlowStatus = do
     goToFindingQuotesStage :: String -> Boolean -> FlowBT String Unit
     goToFindingQuotesStage estimateId driverOfferedQuote = do
       if any (_ == (getValueToLocalStore FINDING_QUOTES_START_TIME)) ["__failed", ""] then do 
-        _ <- Remote.notifyFlowEventBT (Remote.makeNotifyFlowEventReq (show SEARCH_CANCELLED))
-        updateLocalStage HomeScreen
+        updateFlowStatus SEARCH_CANCELLED
       else do 
         let secondsPassed = spy "secondsPassed" (getExpiryTime (getValueToLocalStore FINDING_QUOTES_START_TIME) true)
         let searchExpiryTime = getSearchExpiryTime "LazyCheck"
@@ -270,6 +272,7 @@ currentFlowStatus = do
                             true  -> if (searchExpiryTime - secondsPassed) < 30 then (searchExpiryTime - secondsPassed) else 30
                             false -> (searchExpiryTime - secondsPassed)
         if secondsLeft > 0 then do
+          _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
           updateLocalStage FindingQuotes
           setValueToLocalStore AUTO_SELECTING ""
           setValueToLocalStore FINDING_QUOTES_POLLING "false"
@@ -292,11 +295,9 @@ currentFlowStatus = do
                        , destinationAddress = flowStatusData.destinationAddress }
                 })
             Nothing -> do 
-              res <- Remote.notifyFlowEventBT (Remote.makeNotifyFlowEventReq (show SEARCH_CANCELLED))
-              updateLocalStage HomeScreen
+              updateFlowStatus SEARCH_CANCELLED
         else do 
-          res <- Remote.notifyFlowEventBT (Remote.makeNotifyFlowEventReq (show SEARCH_CANCELLED))
-          updateLocalStage HomeScreen
+          updateFlowStatus SEARCH_CANCELLED
   
 
 chooseLanguageScreenFlow :: FlowBT String Unit
@@ -402,6 +403,7 @@ homeScreenFlow = do
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{hasTakenRide = if (getValueToLocalStore REFERRAL_STATUS == "HAS_TAKEN_RIDE") then true else false, isReferred = if (getValueToLocalStore REFERRAL_STATUS == "REFERRED_NOT_TAKEN_RIDE") then true else false }})
   flow <- UI.homeScreen
   case flow of
+    CHECK_FLOW_STATUS -> currentFlowStatus
     ON_RESUME_APP -> currentFlowStatus
     GO_TO_MY_RIDES -> do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}})
@@ -534,6 +536,7 @@ homeScreenFlow = do
             pure unit
           else do
             pure unit
+          void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
           _ <- Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers)) (state.props.estimateId)
           homeScreenFlow
     SELECT_ESTIMATE state -> do
@@ -541,8 +544,7 @@ homeScreenFlow = do
         homeScreenFlow
     GET_SELECT_LIST state -> do
       when (isLocalStageOn QuoteList) $ do
-        _ <- Remote.notifyFlowEventBT (Remote.makeNotifyFlowEventReq (show SEARCH_CANCELLED))
-        pure unit
+        updateFlowStatus SEARCH_CANCELLED
       homeScreenFlow
     CONFIRM_RIDE state -> do
           _ <- pure $ enableMyLocation false
@@ -628,14 +630,16 @@ homeScreenFlow = do
                                       _ <- Remote.drawMapRoute srcLat srcLon dstLat dstLon (Remote.normalRoute "") "NORMAL" "" "" Nothing "pickup"
                                       _ <- pure $ enableMyLocation true
                                       _ <- updateLocalStage HomeScreen
-                                      (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
-                                      let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-                                      let (RideBookingDetails contents) = bookingDetails.contents
-                                      let (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
-                                      let finalAmount =  INT.round $ fromMaybe 0.0 (fromString (getFinalAmount (RideBookingRes resp)))
-                                      let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - INT.round (fromMaybe 0.0 ride.chargeableRideDistance)
-                                      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = (convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A"), startedAtUTC = ((fromMaybe "" resp.rideStartTime)),endedAt = (convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A"), finalAmount = finalAmount, previousRideRatingState {distanceDifference = differenceOfDistance}},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
-                                      homeScreenFlow
+                                      if (state.props.bookingId /= "") then do
+                                        (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
+                                        let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+                                        let (RideBookingDetails contents) = bookingDetails.contents
+                                        let (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
+                                        let finalAmount =  INT.round $ fromMaybe 0.0 (fromString (getFinalAmount (RideBookingRes resp)))
+                                        let differenceOfDistance = fromMaybe 0 contents.estimatedDistance - INT.round (fromMaybe 0.0 ride.chargeableRideDistance)
+                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = (convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A"), startedAtUTC = ((fromMaybe "" resp.rideStartTime)),endedAt = (convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A"), finalAmount = finalAmount, previousRideRatingState {distanceDifference = differenceOfDistance}},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance}})
+                                        homeScreenFlow
+                                        else homeScreenFlow
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES
                                       _ <- pure $ firebaseLogEvent "ny_user_ride_cancelled"
                                       _ <- pure $ removeAllPolylines ""
@@ -644,6 +648,11 @@ homeScreenFlow = do
                                       modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
                                       _ <- pure $ clearWaitingTimer state.props.waitingTimeTimerId
                                       homeScreenFlow
+            "DRIVER_ASSIGNMENT"   -> if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted )) then do
+                                        _ <- pure $ firebaseLogEvent "ny_fs_driver_assignment"                                
+                                        currentRideFlow true
+                                        homeScreenFlow
+                                     else homeScreenFlow
             _                     -> homeScreenFlow
               
     LOGOUT -> do  
@@ -695,13 +704,10 @@ homeScreenFlow = do
           sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
       modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{props{sourceLat = sourceLat, sourceLong = sourceLong, isSrcServiceable =sourceServiceabilityResp.serviceable , showlocUnserviceablePopUp = (not sourceServiceabilityResp.serviceable)}})
       homeScreenFlow
-    HOME_SCREEN -> do 
-        (GlobalState state) <- getState
-        if isLocalStageOn FindingQuotes
-          then do 
-            response <- Remote.cancelEstimateBT state.homeScreen.props.estimateId
-            pure unit
-          else pure unit
+    HOME_SCREEN -> do
+        when (isLocalStageOn FindingQuotes) $ do
+          (GlobalState state) <- getState
+          cancelEstimate state.homeScreen.props.estimateId
         _ <- pure $ removeAllPolylines ""
         _ <- lift $ lift $ liftFlow $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 0.5 0.9
         _ <- pure $ currentPosition ""
@@ -709,10 +715,9 @@ homeScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen ->  HomeScreenData.initData)
         homeScreenFlow
     CHECK_CURRENT_STATUS -> do
-      (GlobalState state) <- getState
       when (isLocalStageOn FindingQuotes) $ do
-        response <- Remote.cancelEstimateBT state.homeScreen.props.estimateId
-        pure unit
+        (GlobalState state) <- getState
+        cancelEstimate state.homeScreen.props.estimateId
       _ <- pure $ removeAllPolylines ""
       _ <- lift $ lift $ liftFlow $ addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) 9.9 9.9 160 0.5 0.9
       _ <- pure $ currentPosition ""
@@ -963,14 +968,17 @@ rideSearchFlow flowType = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingLocation,rideRequestFlow = true}})
           _ <- pure $ updateLocalStage ConfirmingLocation
           void $ lift $ lift $ toggleLoader false   
-        true -> do 
+        true -> do
+          (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress)
+          void $ pure $ setFlowStatusData (FlowStatusData { source : {lat : finalState.props.sourceLat, lng : finalState.props.sourceLong, place : finalState.data.source}
+                                                          , destination : {lat : finalState.props.destinationLat, lng : finalState.props.destinationLong, place : finalState.data.destination}
+                                                          , sourceAddress : finalState.data.sourceAddress
+                                                          , destinationAddress : finalState.data.destinationAddress })
           case finalState.props.currentStage of
             TryAgain -> do
-              (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress)
               _ <- pure $ updateLocalStage TryAgain
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{searchId = rideSearchRes.searchId, currentStage = TryAgain, rideRequestFlow = true}})
             _        -> do
-              (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong finalState.data.sourceAddress finalState.data.destinationAddress)
               routeResponse <- Remote.drawMapRoute finalState.props.sourceLat finalState.props.sourceLong finalState.props.destinationLat finalState.props.destinationLong (Remote.normalRoute "") "NORMAL" finalState.data.source finalState.data.destination rideSearchRes.routeInfo "pickup"
               case rideSearchRes.routeInfo of 
                 Just (Route response) -> do 
@@ -1618,3 +1626,52 @@ getFlowStatusData dummy =
   case runExcept (decodeJSON (getValueToLocalStore FLOW_STATUS_DATA) :: _ FlowStatusData) of 
     Right res -> Just res 
     Left err -> Nothing
+
+updateFlowStatus :: NotifyFlowEventType -> FlowBT String Unit
+updateFlowStatus eventType = do
+  (FlowStatusRes flowStatus) <- Remote.flowStatusBT "LazyCheck"
+  case flowStatus.currentStatus of
+    RIDE_ASSIGNED _ -> do
+      currentRideFlow true
+      homeScreenFlow
+    _               -> do
+      res <- lift $ lift $ Remote.notifyFlowEvent (Remote.makeNotifyFlowEventReq (show eventType))
+      case res of
+        Right _  -> homeScreenFlow
+        Left err -> do
+          let errResp = err.response
+              codeMessage = decodeErrorCode errResp.errorMessage
+          when ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") $ do
+            void $ pure $ toast "ACTIVE BOOKING EXISTS"
+          currentFlowStatus
+
+cancelEstimate :: String -> FlowBT String Unit
+cancelEstimate bookingId = do
+  res <- lift $ lift $ Remote.cancelEstimate bookingId
+  case res of
+    Right res -> do
+      -- TODO : to be removed after new bundle is 100% available (replace with pure unit)
+      let (CancelEstimateRes resp) = res
+      case resp.result of
+        "Success" -> pure unit
+        "BookingAlreadyCreated" -> do
+          void $ pure $ toast "ACTIVE BOOKING EXISTS"
+          _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_booking_exists_right"
+          currentRideFlow true
+          homeScreenFlow
+        _ -> do
+          void $ pure $ toast "CANCEL FAILED"
+          _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_failed_right"
+          homeScreenFlow
+    Left err -> do
+      let errResp = err.response
+          codeMessage = decodeErrorCode errResp.errorMessage
+      if ( err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") then do
+        void $ pure $ toast "ACTIVE BOOKING EXISTS"
+        _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_booking_exists_left"
+        currentRideFlow true
+        homeScreenFlow
+      else do
+        void $ pure $ toast "CANCEL FAILED"
+        _ <- pure $ firebaseLogEvent "ny_fs_cancel_estimate_failed_left"
+        homeScreenFlow

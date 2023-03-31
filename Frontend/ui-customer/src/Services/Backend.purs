@@ -755,7 +755,7 @@ makeServiceabilityReq latitude longitude = ServiceabilityReq {
 
 ---------------------------------------------------------------- flowStatus function -------------------------------------------------------------------
 flowStatusBT :: String -> FlowBT String FlowStatusRes
-flowStatusBT _ = do 
+flowStatusBT dummy = do 
         headers <- getHeaders' ""
         withAPIResultBT (EP.flowStatus "") (\x → x) errorHandler (lift $ lift $ callAPI headers FlowStatusReq)
     where
@@ -763,6 +763,12 @@ flowStatusBT _ = do
             BackT $ pure GoBack
 
 ---------------------------------------------------------------- notifyFlowEvent function -------------------------------------------------------------------            
+
+notifyFlowEvent requestBody = do
+    headers <- getHeaders ""
+    withAPIResult (EP.notifyFlowEvent "") unwrapResponse $ callAPI headers requestBody
+    where
+        unwrapResponse (x) = x
 
 notifyFlowEventBT :: NotifyFlowEventReq -> FlowBT String NotifyFlowEventRes
 notifyFlowEventBT requestBody = do
@@ -775,6 +781,12 @@ makeNotifyFlowEventReq :: String -> NotifyFlowEventReq
 makeNotifyFlowEventReq event = NotifyFlowEventReq { "event" : event }
 
 ------------------------------------------------------------------------ CancelEstimate Function ------------------------------------------------------------------------------------
+
+cancelEstimate estimateId = do
+    headers <- getHeaders ""
+    withAPIResult (EP.cancelEstimate estimateId) unwrapResponse $ callAPI headers (CancelEstimateReq estimateId)
+    where
+        unwrapResponse (x) = x
 
 cancelEstimateBT :: String -> FlowBT String CancelEstimateRes
 cancelEstimateBT estimateId = do 
