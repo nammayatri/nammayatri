@@ -28,8 +28,9 @@ import qualified "public-transport-rider-platform" App as PublicTransport
 import qualified "public-transport-search-consumer" App as PublicTransportSearchConsumer
 import qualified "rider-app" App as AppBackend
 import qualified "search-result-aggregator" App as SearchResultAggregator
+import Control.Lens ((.~))
 import qualified Data.Text as T (replace, toUpper, unpack)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding ((.~))
 import qualified Kernel.External.Maps as Maps
 import Kernel.Utils.Common hiding (id)
 import qualified "mock-google" Lib.IntegrationTests.Environment as Environment

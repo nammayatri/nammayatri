@@ -145,6 +145,7 @@ test-suite location-updates-tests
     , exceptions
     , http-client
     , http-types
+    , lens
     , location-updates
     , mobility-core
     , mock-google
