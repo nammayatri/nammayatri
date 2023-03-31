@@ -109,6 +109,7 @@ tests:
       - QuickCheck
       - tasty-quickcheck
       - mock-google
+      - unordered-containers
     ghc-options:
       - -Wall
       - -Werror
