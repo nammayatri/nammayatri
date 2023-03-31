@@ -31,6 +31,8 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.DriverScore as DS
+import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Queries (createJobIn)
 import SharedLogic.Allocator
@@ -38,7 +40,6 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverLocation as DLoc
 import SharedLogic.DriverPool
-import qualified SharedLogic.DriverPool as DP
 import SharedLogic.Estimate
 import SharedLogic.FareCalculator
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -89,7 +90,7 @@ cancelRideImpl rideId bookingCReason = do
   fork "cancelRide - Notify driver" $ do
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     when (bookingCReason.source == SBCR.ByDriver) $
-      DP.incrementCancellationCount merchantId driver.id
+      DS.driverScoreEventHandler DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id}
     Notify.notifyOnCancel merchantId booking driver.id driver.deviceToken bookingCReason.source
 
   fork "cancelRide - Notify BAP" $ do

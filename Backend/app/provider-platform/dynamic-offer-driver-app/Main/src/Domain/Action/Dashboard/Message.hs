@@ -191,7 +191,7 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
   message <- Esq.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
   allDriverIds <- case _type of
-    AllActive -> Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
+    AllEnabled -> Esq.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
     Include -> readCsv
     Exclude -> do
       driverIds <- readCsv
