@@ -60,6 +60,7 @@ dependencies:
   - text
   - time
   - servant-server
+  - euler-hs
 
 ghc-options:
   - -Wall

@@ -68,6 +68,7 @@ library
       aeson
     , base >=4.7 && <5
     , bytestring
+    , euler-hs
     , mobility-core
     , record-dot-preprocessor
     , record-hasfield
@@ -122,6 +123,7 @@ executable mock-rider-platform-exe
     , base >=4.7 && <5
     , beckn-spec
     , bytestring
+    , euler-hs
     , mobility-core
     , mock-rider-platform
     , record-dot-preprocessor
