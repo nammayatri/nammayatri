@@ -8,13 +8,15 @@ Getting Started with building and running the project.
 ### Pre-requisites
 
 #### Nix
-We manage dependencies and development environment using Nix. Before proceeding, you need to install Nix. Follow [these instructions](https://haskell.flake.page/nix) to install Nix.
+We manage dependencies and development environment using Nix. Before proceeding, you need to install Nix. 
 
-Once you have Nix installed, configure the binary cache (to avoid compiling locally), by running:
-
-```sh
-nix run nixpkgs#cachix use nammayatri
-```
+1. Follow [these instructions](https://haskell.flake.page/nix) to install Nix.
+1. Once you have Nix installed, configure the binary cache (to avoid compiling locally), by running:
+    ```sh
+    nix run nixpkgs#cachix use nammayatri
+    ```
+1. Install nix-direnv (and, optionally, starship): https://haskell.flake.page/direnv
+    - While this is not strictly required, it is recommended by better IDE integration in VSCode.
 
 #### Tools
 
@@ -40,6 +42,12 @@ nix build .#nammayatri
 ```
 
 This should produce a `./result` symlink locally containing all backend binaries under `./result/bin`.
+
+#### Building the docker image 
+
+```sh
+docker load -i $(nix build .#dockerImage --print-out-paths)
+```
 
 #### Development
 
@@ -83,6 +91,15 @@ For running monitoring services like prometheus and grafana use this command:
 , backend-run-monitoring
 ```
 
+##### Updating flake inputs
+
+Nix dependencies specified in `inputs` of `flake.nix`. They point to the Git repos. The specific revision is pinned in the `flake.lock` file. To update the `shared-kernel` input, for instance, run:
+
+```sh
+nix flake lock --update-input shared-kernel
+```
+
+If you update the `inputs` section of `flake.nix` file, be sure to run `nix flake lock` so also update the `flake.lock` file.
 
 ### Testing
 
