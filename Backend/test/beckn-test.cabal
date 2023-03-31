@@ -115,6 +115,7 @@ library
     , http-client
     , http-client-tls
     , http-types
+    , lens
     , location-updates
     , mobility-core
     , mock-fcm
