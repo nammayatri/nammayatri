@@ -18,7 +18,7 @@ import qualified Beckn.Spec.API.Confirm as Confirm
 import qualified Beckn.Spec.API.Status as Status
 import Beckn.Spec.Confirm
 import qualified Beckn.Spec.Status as Status
-import EulerHS.Types as ET
+import qualified EulerHS.Types as ET
 import GHC.Records.Extra
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
