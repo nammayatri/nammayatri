@@ -54,7 +54,7 @@ mkPersist
       validTill UTCTime
       estimatedFare Common.Money
       fareParametersId Fare.FareParametersTId
-      providerId MerchantTId 
+      providerId MerchantTId
       createdAt UTCTime
       updatedAt UTCTime
 
