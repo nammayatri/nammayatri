@@ -135,6 +135,10 @@ library:
         ghc-options:
           - -O2
           - -j4
+
+  dependencies:
+    - lens
+
 tests:
   beckn-integ-test:
     main: Main.hs

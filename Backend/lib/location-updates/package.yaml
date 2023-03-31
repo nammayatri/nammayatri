@@ -122,6 +122,7 @@ tests:
       - location-updates
       - mobility-core
       - beckn-spec
+      - lens
       - tasty
       - tasty-hunit
       - tasty-hspec
