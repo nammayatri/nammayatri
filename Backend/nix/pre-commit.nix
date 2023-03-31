@@ -7,7 +7,7 @@
       enable = true;
       name = "trailing-ws";
       description = "Remove trailing spaces";
-      types = [ "file" ];
+      types = [ "text" ];
       files = "Backend/.*$";
       pass_filenames = true;
       entry = lib.getExe (pkgs.writeShellApplication {

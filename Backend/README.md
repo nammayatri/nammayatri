@@ -8,7 +8,7 @@ Getting Started with building and running the project.
 ### Pre-requisites
 
 #### Nix
-We manage dependencies and development environment using Nix. Before proceeding, you need to install Nix. 
+We manage dependencies and development environment using Nix. Before proceeding, you need to install Nix.
 
 1. Install **Nix**: https://haskell.flake.page/nix.
 1. Setup the **binary cache** (to avoid compiling locally):
@@ -41,7 +41,7 @@ nix build .#nammayatri
 
 This should produce a `./result` symlink locally containing all backend binaries under `./result/bin`.
 
-#### Building the docker image 
+#### Building the docker image
 
 ```sh
 docker load -i $(nix build .#dockerImage --print-out-paths)
