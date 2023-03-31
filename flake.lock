@@ -977,16 +977,16 @@
         "nixpkgs-stable": "nixpkgs-stable"
       },
       "locked": {
-        "lastModified": 1680210586,
-        "narHash": "sha256-H7BCX7834KmpGR1RQ46hGlr2C/2thAvcDJNWWLiwWK8=",
+        "lastModified": 1680288580,
+        "narHash": "sha256-+j9kbMnp6WjCUcy88RRYKe2Z0EH1ALii1j0pvXhOi1M=",
         "owner": "juspay",
         "repo": "pre-commit-hooks.nix",
-        "rev": "50e03743757c31318c375ca3fe58e4f9261db042",
+        "rev": "a9566f322f9d6bb45e926861fe72195922aff5b6",
         "type": "github"
       },
       "original": {
         "owner": "juspay",
-        "ref": "flake-parts-devShell",
+        "ref": "nammayatri",
         "repo": "pre-commit-hooks.nix",
         "type": "github"
       }
