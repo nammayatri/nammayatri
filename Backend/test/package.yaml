@@ -115,6 +115,8 @@ library:
     - src
   ghc-options:
     - -Wwarn=ambiguous-fields
+  dependencies:
+    - lens
 
 tests:
   beckn-integ-test:
