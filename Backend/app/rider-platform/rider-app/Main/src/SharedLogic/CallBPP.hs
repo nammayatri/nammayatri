@@ -180,7 +180,7 @@ callBecknAPIWithSignature ::
   BaseUrl ->
   req ->
   m res
-callBecknAPIWithSignature a = callBecknAPI (Just $ Euler.ManagerSelector (getHttpManagerKey a)) Nothing
+callBecknAPIWithSignature a = callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing
 
 callBecknAPIWithSignatureMetro ::
   ( MonadFlow m,
@@ -196,7 +196,7 @@ callBecknAPIWithSignatureMetro ::
 callBecknAPIWithSignatureMetro a b c d = do
   -- bapId <- asks (.bapSelfIds.metro)
   callBecknAPI
-    Nothing -- (Just $ getHttpManagerKey bapId)
+    Nothing -- (Just $ Euler.ManagerSelector $ getHttpManagerKey bapId)
     Nothing
     a
     b

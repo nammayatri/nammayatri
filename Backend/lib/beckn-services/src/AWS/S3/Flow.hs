@@ -96,7 +96,7 @@ callS3API :: CallAPI env api a
 callS3API =
   callApiUnwrappingApiError
     (identity @S3Error)
-    (Just $ ET.ManagerSelector $ T.pack s3AuthManagerKey)
+    (Just $ ET.ManagerSelector s3AuthManagerKey)
     (Just "S3_NOT_AVAILABLE")
 
 get'' ::
