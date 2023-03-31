@@ -187,7 +187,7 @@ callBecknAPIWithSignature,
     m res
 callBecknAPIWithSignature a b c d = do
   bapId <- asks (.bapSelfIds.cabs)
-  callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
+  callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c d
 callBecknAPIWithSignatureMetro a b c d = do
   bapId <- asks (.bapSelfIds.metro)
-  callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
+  callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c d

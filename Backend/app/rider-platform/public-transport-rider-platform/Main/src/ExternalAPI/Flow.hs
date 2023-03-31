@@ -18,6 +18,7 @@ import qualified Beckn.Spec.API.Confirm as Confirm
 import qualified Beckn.Spec.API.Status as Status
 import Beckn.Spec.Confirm
 import qualified Beckn.Spec.Status as Status
+import qualified EulerHS.Types as ET
 import GHC.Records.Extra
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
@@ -66,4 +67,4 @@ callBecknAPIWithSignature ::
   m ()
 callBecknAPIWithSignature a b c d = do
   bapId <- asks (.selfId)
-  void $ callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
+  void $ callBecknAPI (Just $ ET.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c d
