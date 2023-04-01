@@ -977,11 +977,11 @@
         "nixpkgs-stable": "nixpkgs-stable"
       },
       "locked": {
-        "lastModified": 1680288580,
-        "narHash": "sha256-+j9kbMnp6WjCUcy88RRYKe2Z0EH1ALii1j0pvXhOi1M=",
+        "lastModified": 1680369672,
+        "narHash": "sha256-lA6PRY01x02boZwB1vdAGti00ifZHPlt9n5cFHopO3M=",
         "owner": "juspay",
         "repo": "pre-commit-hooks.nix",
-        "rev": "a9566f322f9d6bb45e926861fe72195922aff5b6",
+        "rev": "b48bbac35f392f9200f389f4099ec9612668cb74",
         "type": "github"
       },
       "original": {
