@@ -1,30 +1,30 @@
 #!/bin/bash
 echo " ---------- Customer prod:android :- --------------"
-cd atlas-ui-customer
+cd ./../ui-customer
 bower i
 npm run prod:android
-cd ..
+cd ./../android-native
 
 echo " ---------- Copy index_bundle.js Customer :- --------------"
 
 mkdir -p "app/src/user/js/juspay"
 rm -rf app/src/user/js/juspay/index_bundle.js
-cp atlas-ui-customer/dist/android/index_bundle.js app/src/user/js/juspay
+cp ./../ui-customer/dist/android/index_bundle.js app/src/user/js/juspay
 rm -rf app/src/user/assets/juspay/juspay_assets.json
 sh userJuspayAssets.sh
 
 echo " ---------- Driver prod:android :- --------------"
 
-cd atlas-ui-driver
+cd ./../ui-driver
 bower i
 npm run prod:android
-cd ..
+cd ./../android-native
 
 echo " ---------- Copy index_bundle.js Driver :- --------------"
 
 mkdir -p "app/src/driver/js/juspay"
 rm -rf app/src/driver/js/juspay/index_bundle.js
-cp atlas-ui-driver/dist/android/index_bundle.js app/src/driver/js/juspay
+cp ./../ui-driver/dist/android/index_bundle.js app/src/driver/js/juspay
 rm -rf app/src/driver/assets/juspay/juspay_assets.json
 sh driverJuspayAssets.sh
 
