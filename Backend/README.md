@@ -13,7 +13,7 @@ Before we can build the mobility project, there are some pre-requisites in the f
 
 You'd need the Haskell language toolchain (GHC, cabal) installed in order build the project.
 
-[GHCup](https://https://www.haskell.org/ghcup) is the preferred method to install Haskell.
+[GHCup](https://www.haskell.org/ghcup) is the preferred method to install Haskell.
 
 
 #### Tools
@@ -21,7 +21,7 @@ You'd need the Haskell language toolchain (GHC, cabal) installed in order build 
 These tools are required when working with the mobility repository:-
 
 1. [Docker](https://www.docker.com/products/docker-desktop/) - we use docker and docker-compose for containers.
-2. [Stack](https://docs.haskellstack.org/en/stable/install_and_upgrade/) - we use the stack build tool for building and running the entire project. ([GHCup](https://https://www.haskell.org/ghcup) can also be used to install Stack)
+2. [Stack](https://docs.haskellstack.org/en/stable/install_and_upgrade/) - we use the stack build tool for building and running the entire project. ([GHCup](https://www.haskell.org/ghcup) can also be used to install Stack)
 
 For Mac users, some additional tools may be required:-
 
