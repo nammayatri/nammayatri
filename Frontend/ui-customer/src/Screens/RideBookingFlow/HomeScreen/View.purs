@@ -56,8 +56,8 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (decodeErrorMessage, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getLocationName, getNewTrackingId, getPreviousVersion, initialWebViewSetUp, isPreviousVersion, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, storeOnResumeCallback, toString, waitingCountdownTimer)
-import JBridge (enableMyLocation, drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, toast, getExtendedPath)
+import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, isPreviousVersion, getCurrentLocationMarker, getPreviousVersion, initialWebViewSetUp, storeOnResumeCallback, decodeErrorMessage)
+import JBridge (enableMyLocation, drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, toast, getExtendedPath, generateSessionId)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -123,6 +123,7 @@ screen initialState =
                   launchAff_ $ flowRunner $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
               ConfirmingRide -> launchAff_ $ flowRunner $ confirmRide GetRideConfirmation 5 1000.0 push initialState
               HomeScreen -> do
+                _ <- pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
                 _ <- pure $ removeAllPolylines ""
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
               RideAccepted -> do

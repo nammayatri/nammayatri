@@ -34,7 +34,7 @@ import Engineering.Helpers.Commons (liftFlow, getNewIDWithTag, bundleVersion, os
 import Foreign.Class (class Encode, encode, decode)
 import Global (readFloat)
 import Helpers.Utils (hideSplash, getTime, convertUTCtoISC, decodeErrorCode, toString, secondsLeft, decodeErrorMessage, parseFloat, getCorrespondingErrorMessage, getcurrentdate)
-import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader)
+import JBridge (drawRoute, factoryResetApp, firebaseLogEvent, firebaseUserID, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, loaderText, openNavigation, removeAllPolylines, removeMarker, showMarker, startLocationPollingAPI, stopLocationPollingAPI, toast, toggleLoader, generateSessionId)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, discard, pure, unit, unless, void, when, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-))
@@ -82,6 +82,8 @@ baseAppFlow = do
       setValueToLocalNativeStore BUNDLE_VERSION bundle
       setValueToLocalNativeStore GPS_METHOD "CURRENT"
       setValueToLocalNativeStore MAKE_NULL_API_CALL "NO"
+      when ((getValueToLocalStore SESSION_ID == "__failed") || (getValueToLocalStore SESSION_ID == "(null)")) $ do
+        setValueToLocalStore SESSION_ID (generateSessionId unit)
       void $ lift $ lift $ setLogField "driver_id" $ encode (driverId)
       void $ lift $ lift $ setLogField "app_version" $ encode (show versionCode)
       void $ lift $ lift $ setLogField "bundle_version" $ encode (bundle)

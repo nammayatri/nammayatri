@@ -605,6 +605,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         baseUrl = sharedPref.getString("BASE_URL", "null");
         String bundle_version = sharedPref.getString("BUNDLE_VERSION", "null");
         String version = sharedPref.getString("VERSION_NAME", "null");
+        String sessionToken = sharedPref.getString("SESSION_ID", "null");
         try {
             String orderUrl = baseUrl + "/driver/searchRequest/quote/respond";
             HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
@@ -615,6 +616,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             connection.setRequestProperty("x-client-version", version);
             connection.setRequestProperty("token", regToken);
             connection.setRequestProperty("x-bundle-version", bundle_version);
+            connection.setRequestProperty("session_id", sessionToken);
             connection.setDoOutput(true);
             connection.setConnectTimeout(20000);
             connection.setReadTimeout(20000);

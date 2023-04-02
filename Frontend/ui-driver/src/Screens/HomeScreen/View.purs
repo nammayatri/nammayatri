@@ -118,6 +118,7 @@ screen initialState =
             _                -> do 
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
+                                _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
                                 _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
                                 _ <- checkPermissionAndUpdateDriverMarker initialState
                                 _ <- launchAff_ $ EHC.flowRunner $ checkCurrentRide push Notification
