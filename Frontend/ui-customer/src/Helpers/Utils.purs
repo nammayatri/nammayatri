@@ -15,39 +15,39 @@
 
 module Helpers.Utils where
 
+import Components.LocationListItem.Controller (dummyLocationListState)
+import Control.Monad.Except (runExcept)
+import Data.Array (length, filter, cons, deleteAt, sortWith, drop, head, tail, (!!))
+import Data.Array.NonEmpty (fromArray)
 import Data.Date (Date)
+import Data.Either (Either(..), hush)
+import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Effect (Effect)
-import Prelude (class Show, class Ord, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=),(/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
-import Data.Traversable (traverse)
-import Effect.Aff (error, killFiber, launchAff, launchAff_)
-import Juspay.OTP.Reader (initiateSMSRetriever)
-import Juspay.OTP.Reader.Flow as Reader
-import Juspay.OTP.Reader as Readers
-import Data.Array.NonEmpty (fromArray)
-import Effect.Class (liftEffect)
-import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
-import Foreign.Class (class Decode, class Encode)
-import Data.Maybe (Maybe(..), fromMaybe)
-import Presto.Core.Flow (Flow, doAff)
-import Types.App (GlobalState)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts)
-import Engineering.Helpers.Commons (liftFlow, os)
-import Control.Monad.Except (runExcept)
-import Foreign.Generic (decodeJSON, encodeJSON)
-import Data.Either (Either(..), hush)
-import Effect.Console (logShow)
-import Data.Array(length,filter,cons,deleteAt, sortWith, drop, head, (!!))
-import Debug.Trace(spy)
-import Math(pi, sin, cos, sqrt, asin)
-import Data.Number (fromString)
-import Data.Foldable ( or )
-import Data.String as DS
-import Components.LocationListItem.Controller (dummyLocationListState)
 import Data.Int as INT
--- import Effect.Random (random)
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Number (fromString)
+import Data.Profunctor.Strong (first)
+import Data.String as DS
+import Data.Traversable (traverse)
+import Debug.Trace (spy)
 import Effect (Effect)
+import Effect (Effect)
+import Effect.Aff (error, killFiber, launchAff, launchAff_)
+import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
+import Effect.Class (liftEffect)
+import Effect.Console (logShow)
+import Engineering.Helpers.Commons (liftFlow, os)
+import Foreign.Class (class Decode, class Encode)
+import Foreign.Generic (decodeJSON, encodeJSON)
+import Juspay.OTP.Reader (initiateSMSRetriever)
+import Juspay.OTP.Reader as Readers
+import Juspay.OTP.Reader.Flow as Reader
+import Math (pi, sin, cos, sqrt, asin)
+import Prelude (class Show, class Ord, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
+import Presto.Core.Flow (Flow, doAff)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts)
+import Types.App (GlobalState)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
 -- shuffle' array = do 
@@ -334,3 +334,19 @@ getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (g
 
 getPreviousVersion :: String -> String 
 getPreviousVersion _ = if os == "IOS" then "1.2.5" else "1.2.0"
+
+rotateArray :: forall a. Array a -> Int -> Array a
+rotateArray arr times =
+  if times > 0 then case head arr of
+    Just ele ->
+      rotateArray
+        ( ( case tail arr of
+              Just tailArray -> tailArray
+              Nothing -> []
+          )
+            <> [ ele ]
+        )
+        (times - 1)
+    Nothing -> arr
+  else
+    arr

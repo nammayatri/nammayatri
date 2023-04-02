@@ -357,7 +357,8 @@ type IndividualRideCardState =
     sourceLocation :: BookingLocationAPIEntity,
     destinationLocation :: BookingLocationAPIEntity,
     alpha :: String,
-    fareBreakUpList :: Fares,
+    fareBreakUpList :: Fares, -- Added only For Backward Compatibility 
+    faresList :: Array FareComponent ,
     baseFare :: String -- Added only For Backward Compatibility
   , pickupCharges :: String
   , extraFare :: String
@@ -863,7 +864,12 @@ type Fares = {
 , waitingCharges :: String
 }
 
-data FareTypes = BASE_FARE | EXTRA_DISTANCE_FARE | DRIVER_SELECTED_FARE | TOTAL_FARE | PICKUP_CHARGES | WAITING_CHARGES
+type FareComponent = {
+  fareType :: FareTypes
+, price :: Number
+}
+
+data FareTypes = BASE_FARE | EXTRA_DISTANCE_FARE | DRIVER_SELECTED_FARE | TOTAL_FARE | PICKUP_CHARGES | WAITING_CHARGES | DEAD_KILOMETER_FARE
 
 derive instance genericFareTypes :: Generic FareTypes _
 instance eqFareTypes :: Eq FareTypes where eq = genericEq
