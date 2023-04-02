@@ -26,7 +26,7 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
-import Helpers.Utils (convertUTCtoISC, parseFloat, setEnabled, setRefreshing, toString)
+import Helpers.Utils (convertUTCtoISC, parseFloat, rotateArray, setEnabled, setRefreshing, toString)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), negate)
@@ -35,7 +35,7 @@ import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress)
 import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
-import Screens.Types (AnimationState(..), FareTypes(..), Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..))
+import Screens.Types (AnimationState(..), FareComponent, FareTypes(..), Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn)
 
@@ -220,6 +220,7 @@ myRideListTransformer listRes = filter (\item -> (item.status == "COMPLETED" || 
     destinationLocation : ((ride.bookingDetails)^._contents)^._toLocation,
     alpha : if isLocalStageOn HomeScreen then "1.0" else "0.5"
   , fareBreakUpList : fares
+  , faresList : getFaresList ride.fareBreakup
   , baseFare : fares.baseFare
   , pickupCharges : fares.pickupCharges
   , extraFare : "₹ " <> show (getFareFromArray ride.fareBreakup EXTRA_DISTANCE_FARE)
@@ -245,5 +246,31 @@ getFares fares = {
 getFareFromArray :: Array FareBreakupAPIEntity -> FareTypes -> Number
 getFareFromArray fareBreakUp fareType = (fromMaybe dummyFareBreakUp (head (filter (\fare -> fare^._description == (show fareType)) fareBreakUp)))^._amount
 
+getFareFromFareEntity :: String -> FareTypes
+getFareFromFareEntity fareType = case fareType of 
+  "BASE_FARE" -> BASE_FARE 
+  "EXTRA_DISTANCE_FARE" -> EXTRA_DISTANCE_FARE 
+  "DRIVER_SELECTED_FARE" -> DRIVER_SELECTED_FARE 
+  "TOTAL_FARE" -> TOTAL_FARE 
+  "PICKUP_CHARGES" -> PICKUP_CHARGES 
+  "WAITING_CHARGES" -> WAITING_CHARGES
+  "DEAD_KILOMETER_FARE" -> DEAD_KILOMETER_FARE
+  _ -> BASE_FARE
+
 getKmMeter :: Number -> String
 getKmMeter distance = if (distance < 1000.0) then toString distance <> " m" else (parseFloat (distance / 1000.0)) 2 <> " km"
+
+getFaresList :: Array FareBreakupAPIEntity -> Array FareComponent
+getFaresList fares =
+  map
+    ( \(FareBreakupAPIEntity item) ->
+        let
+          fareComponentType = getFareFromFareEntity item.description
+        in
+          { fareType: fareComponentType
+          , price: if fareComponentType == BASE_FARE then (item.amount + getFareFromArray fares EXTRA_DISTANCE_FARE) - (getFareFromArray fares DEAD_KILOMETER_FARE) else item.amount
+          }
+    )
+    (getFilteredFares fares)
+getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
+getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (getFareFromFareEntity item.description) /= EXTRA_DISTANCE_FARE && (getFareFromFareEntity item.description) /= TOTAL_FARE)

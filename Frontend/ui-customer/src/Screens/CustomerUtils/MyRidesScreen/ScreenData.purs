@@ -86,6 +86,7 @@ dummyIndividualCard = {
     , nominalFare : "₹ 0"
     , waitingCharges : "₹ 0"
     }
+  , faresList : []
   , baseFare : "₹ 0"
   , pickupCharges : "₹ 0"
   , extraFare : "₹ 0"

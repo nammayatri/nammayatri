@@ -12,25 +12,25 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.InvoiceScreen.View where
 
+import Common.Types.App (LazyCheck(..))
+import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig)
+import Animation as Anim
+import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
-import Prelude (Unit, ($), (<>), show, (==), map, (<<<), const)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle,lineHeight, gravity, height, layoutGravity, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, weight, imageWithFallback)
-import Screens.Types as ST
+import Data.Array as DA
 import Effect (Effect)
-import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Animation as Anim
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Components.GenericHeader as GenericHeader
-import Engineering.Helpers.Commons as EHC 
+import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width)
+import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.Types as ST
 import Styles.Colors as Color
-import Common.Types.App
-import Screens.CustomerUtils.InvoiceScreen.ComponentConfig
 
 screen :: ST.InvoiceScreenState -> Screen Action ST.InvoiceScreenState ScreenOutput
 screen initialState =
@@ -101,10 +101,12 @@ view push state =
 
 referenceList :: ST.InvoiceScreenState -> Array String
 referenceList state =
-  [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
-  , (getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO)
-  , (getString WAITING_CHARGE_DESCRIPTION)
-  ]
+  [ "1.5" <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) ]
+    <> if (isHaveFare ST.DRIVER_SELECTED_FARE state.data.selectedItem.faresList) then
+        [ (getString DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) ]
+      else
+        []
+          <> if (isHaveFare ST.WAITING_CHARGES state.data.selectedItem.faresList) then [ (getString WAITING_CHARGE_DESCRIPTION) ] else []
 
 ---------------------- amountBreakupView -------------------
 amountBreakupView :: forall w. ST.InvoiceScreenState -> PrestoDOM (Effect Unit) w
@@ -124,11 +126,12 @@ amountBreakupView state =
               , margin (MarginBottom 16)
               ]
               [ textView
-                  [ text case item of
+                  [ text case item.fareType of
                       ST.BASE_FARE -> ((getString BASE_FARES) <> " (" <> state.data.selectedItem.baseDistance <> ")")
                       ST.EXTRA_DISTANCE_FARE -> (getString NOMINAL_FARE)
                       ST.DRIVER_SELECTED_FARE -> (getString NOMINAL_FARE)
                       ST.TOTAL_FARE -> (getString TOTAL_PAID)
+                      ST.DEAD_KILOMETER_FARE -> (getString PICKUP_CHARGE)
                       ST.PICKUP_CHARGES -> (getString PICKUP_CHARGE)
                       ST.WAITING_CHARGES -> (getString WAITING_CHARGE)
                   , textSize FontSize.a_14
@@ -144,13 +147,7 @@ amountBreakupView state =
                   , orientation HORIZONTAL
                   ]
                   [ textView
-                      [ text case item of
-                          ST.BASE_FARE -> state.data.selectedItem.fareBreakUpList.baseFare
-                          ST.EXTRA_DISTANCE_FARE -> state.data.selectedItem.fareBreakUpList.nominalFare
-                          ST.DRIVER_SELECTED_FARE -> state.data.selectedItem.fareBreakUpList.nominalFare
-                          ST.TOTAL_FARE -> state.data.selectedItem.totalAmount
-                          ST.PICKUP_CHARGES -> state.data.selectedItem.fareBreakUpList.pickupCharges
-                          ST.WAITING_CHARGES -> state.data.selectedItem.fareBreakUpList.waitingCharges
+                      [ text $ "₹ " <> (show item.price)
                       , fontStyle $ FontStyle.medium LanguageStyle
                       , alignParentRight "true,-1"
                       , color Color.black800
@@ -162,7 +159,7 @@ amountBreakupView state =
                   ]
               ]
         )
-        [ ST.BASE_FARE, ST.PICKUP_CHARGES, ST.DRIVER_SELECTED_FARE, ST.WAITING_CHARGES ]
+        state.data.selectedItem.faresList
     )
 
 --------------------------- TotalAmountView --------------------
@@ -228,3 +225,6 @@ localTextView textValue colorValue =
     , width MATCH_PARENT
     , lineHeight "16"
     ]
+
+isHaveFare :: ST.FareTypes -> Array ST.FareComponent -> Boolean
+isHaveFare fare = not DA.null <<< DA.filter (\item -> item.fareType == fare)
