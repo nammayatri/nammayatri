@@ -47,13 +47,13 @@ import Language.Types (STR(..))
 import Debug.Trace (spy)
 
 getHeaders :: String -> Flow GlobalState Headers
-getHeaders _ = do if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") then pure $ (Headers [Header "Content-Type" "application/json", Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),  Header "x-client-version" (getValueToLocalStore VERSION_NAME)]) else pure $ (Headers [Header "Content-Type" "application/json", Header "token" (getValueToLocalStore REGISTERATION_TOKEN) , Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),  Header "x-client-version" (getValueToLocalStore VERSION_NAME)])
+getHeaders _ = do if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") then pure $ (Headers [Header "Content-Type" "application/json", Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),  Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "session_id" (getValueToLocalStore SESSION_ID)]) else pure $ (Headers [Header "Content-Type" "application/json", Header "token" (getValueToLocalStore REGISTERATION_TOKEN) , Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION),  Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "session_id" (getValueToLocalStore SESSION_ID)])
 
 getHeaders' :: String -> FlowBT String Headers
 getHeaders' _ = do 
         if ((getValueToLocalStore REGISTERATION_TOKEN) == "__failed") then 
-          lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json", Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION)]) 
-          else lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",Header "token" (getValueToLocalStore REGISTERATION_TOKEN),  Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION)])
+          lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json", Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)]) 
+          else lift $ lift $ pure $ (Headers [Header "Content-Type" "application/json",Header "token" (getValueToLocalStore REGISTERATION_TOKEN),  Header "x-client-version" (getValueToLocalStore VERSION_NAME), Header "x-bundle-version" (getValueToLocalStore BUNDLE_VERSION), Header "session_id" (getValueToLocalStore SESSION_ID)])
 ----------------------------------------------------------- API Results & BT Functions-------------------------------------------------------------------------------------------------
 
 withAPIResult url f flow = do

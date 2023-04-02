@@ -61,6 +61,7 @@ data KeyStore
   | FLOW_STATUS_DATA
   | RATING_SKIPPED
   | POINTS_FACTOR
+  | SESSION_ID
 
 derive instance genericKeyStore :: Generic KeyStore _
 

@@ -164,7 +164,7 @@ foreign import toggleBtnLoader :: String -> Boolean -> Unit
 foreign import getBtnLoader :: String -> Boolean
 foreign import launchInAppRatingPopup :: Unit -> Effect Unit
 foreign import getExtendedPath :: Locations -> Locations
-
+foreign import generateSessionId :: Unit -> String
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
