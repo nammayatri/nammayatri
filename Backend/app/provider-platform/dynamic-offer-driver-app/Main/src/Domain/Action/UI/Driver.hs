@@ -705,18 +705,19 @@ respondQuote driverId req = do
         quoteLimit <- getQuoteLimit sReq.providerId sReq.estimatedDistance
         quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
         when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-        (farePolicy, slabFarePolicy, driverExtraFee) <- case organization.farePolicyType of
+        (fareParams, driverExtraFee) <- case organization.farePolicyType of
           Fare.SLAB -> do
-            slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant
+            slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM (InternalError "Slab fare policy not found")
             let driverExtraFee = ExtraFee {minFee = 0, maxFee = 0}
-            pure (Nothing, slabFarePolicy, driverExtraFee)
+            fareParams <- calculateFare organization.id (Right slabFarePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare
+            pure (fareParams, driverExtraFee)
           Fare.NORMAL -> do
             farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
-            pure (Just farePolicy, Nothing, farePolicy.driverExtraFee)
+            fareParams <- calculateFare organization.id (Left farePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare
+            pure (fareParams, farePolicy.driverExtraFee)
         whenJust mbOfferedFare $ \off ->
           unless (isAllowedExtraFee driverExtraFee off) $
             throwError $ NotAllowedExtraFee $ show off
-        fareParams <- calculateFare organization.id farePolicy slabFarePolicy sReq.estimatedDistance sReqFD.startTime mbOfferedFare
         driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
         Esq.runTransaction $ do
           QDrQt.create driverQuote
