@@ -42,5 +42,5 @@ hmacSHA256_64 = hmac SHA256.hash 64
 hex :: DB.ByteString -> DB.ByteString
 hex = Base16.encode
 
-s3AuthManagerKey :: String
+s3AuthManagerKey :: Text
 s3AuthManagerKey = "s3-auth-signature"

@@ -103,3 +103,4 @@ library:
   dependencies:
     - mobility-core
     - openapi3
+    - unordered-containers
