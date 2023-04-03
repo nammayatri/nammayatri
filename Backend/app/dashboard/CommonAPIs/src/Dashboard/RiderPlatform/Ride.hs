@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Dashboard.RiderPlatform.Ride
   ( module Dashboard.RiderPlatform.Ride,
@@ -21,12 +22,17 @@ where
 
 import Dashboard.Common as Reexport
 import qualified Dashboard.Common as DP
+import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import Kernel.External.Maps
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto
 import Kernel.Types.Centesimal
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant
+import Servant hiding (Summary)
 
 ---------------------------------------------------------
 -- share ride info--------------------------------------
@@ -83,3 +89,55 @@ data LocationAddress = LocationAddress
     area :: Maybe Text
   }
   deriving (Generic, Show, Eq, ToSchema, FromJSON, ToJSON)
+
+---------------------------------------------------------
+-- ride list --------------------------------------------
+
+type RideListAPI =
+  "list"
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "bookingStatus" BookingStatus
+    :> QueryParam "rideShortId" (ShortId Ride)
+    :> QueryParam "customerPhoneNo" Text
+    :> QueryParam "driverPhoneNo" Text
+    :> Get '[JSON] RideListRes
+
+data RideListRes = RideListRes
+  { totalItems :: Int, -- for backward compatibility
+    summary :: Summary,
+    rides :: [RideListItem]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RideListItem = RideListItem
+  { rideShortId :: ShortId Ride,
+    rideCreatedAt :: UTCTime,
+    rideId :: Id Ride,
+    customerName :: Maybe Text,
+    customerPhoneNo :: Maybe Text,
+    driverName :: Text,
+    driverPhoneNo :: Text,
+    vehicleNo :: Text,
+    bookingStatus :: BookingStatus
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | RCOMPLETED | RCANCELLED
+  deriving stock (Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+derivePersistField "BookingStatus"
+
+-- TODO move similar instances to Lib
+instance FromHttpApiData BookingStatus where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = left T.pack . eitherDecode . BSL.fromStrict
+
+instance ToHttpApiData BookingStatus where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode

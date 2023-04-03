@@ -14,15 +14,18 @@
 
 module Storage.Queries.Ride where
 
+import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Domain.Types.Booking.Type (Booking)
 import Domain.Types.Merchant
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Storage.Tabular.Booking as Booking
+import Storage.Tabular.Person as Person
 import Storage.Tabular.Ride as Ride
 
 create :: Ride -> SqlDB ()
@@ -161,3 +164,82 @@ cancelRides rideIds now = do
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId `in_` valList (toKey <$> rideIds)
+
+data RideItem = RideItem
+  { person :: Person,
+    ride :: Ride,
+    bookingStatus :: Common.BookingStatus
+  }
+
+findAllRideItems ::
+  Transactionable m =>
+  Id Merchant ->
+  Int ->
+  Int ->
+  Maybe Common.BookingStatus ->
+  Maybe (ShortId Ride) ->
+  Maybe DbHash ->
+  Maybe Text ->
+  UTCTime ->
+  m [RideItem]
+findAllRideItems merchantId limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhone now = do
+  res <- Esq.findAll $ do
+    booking :& ride :& person <-
+      from $
+        table @BookingT
+          `innerJoin` table @RideT
+            `Esq.on` ( \(booking :& ride) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                     )
+          `innerJoin` table @PersonT
+            `Esq.on` ( \(booking :& _ :& person) ->
+                         booking ^. Booking.BookingRiderId ==. person ^. Person.PersonTId
+                     )
+    let bookingStatusVal = mkBookingStatusVal ride
+    where_ $
+      booking ^. BookingMerchantId ==. val (toKey merchantId)
+        &&. whenJust_ mbBookingStatus (\bookingStatus -> bookingStatusVal ==. val bookingStatus)
+        &&. whenJust_ mbRideShortId (\rideShortId -> ride ^. Ride.RideShortId ==. val rideShortId.getShortId)
+        &&. whenJust_ mbCustomerPhoneDBHash (\hash -> person ^. Person.PersonMobileNumberHash ==. val (Just hash))
+        &&. whenJust_ mbDriverPhone (\driverMobileNumber -> ride ^. Ride.RideDriverMobileNumber ==. val driverMobileNumber)
+    orderBy [desc $ ride ^. RideCreatedAt]
+    limit $ fromIntegral limitVal
+    offset $ fromIntegral offsetVal
+    return
+      ( person,
+        ride,
+        bookingStatusVal
+      )
+  pure $ mkRideItem <$> res
+  where
+    mkBookingStatusVal ride = do
+      -- ride considered as ONGOING_6HRS if ride.status = INPROGRESS, but somehow ride.rideStartTime = Nothing
+      let ongoing6HrsCond =
+            ride ^. Ride.RideRideStartTime +. just (Esq.interval [Esq.HOUR 6]) <=. val (Just now)
+      case_
+        [ when_ (ride ^. Ride.RideStatus ==. val Ride.NEW &&. not_ (upcoming6HrsCond ride now)) then_ $ val Common.UPCOMING,
+          when_ (ride ^. Ride.RideStatus ==. val Ride.NEW &&. upcoming6HrsCond ride now) then_ $ val Common.UPCOMING_6HRS,
+          when_ (ride ^. Ride.RideStatus ==. val Ride.INPROGRESS &&. not_ ongoing6HrsCond) then_ $ val Common.ONGOING,
+          when_ (ride ^. Ride.RideStatus ==. val Ride.COMPLETED) then_ $ val Common.RCOMPLETED,
+          when_ (ride ^. Ride.RideStatus ==. val Ride.CANCELLED) then_ $ val Common.RCANCELLED
+        ]
+        (else_ $ val Common.ONGOING_6HRS)
+    mkRideItem (person, ride, bookingStatus) = do
+      RideItem {..}
+
+countRides :: Transactionable m => Id Merchant -> m Int
+countRides merchantId =
+  mkCount <$> do
+    Esq.findAll $ do
+      (_ride :& booking) <-
+        from $
+          table @RideT
+            `innerJoin` table @BookingT
+              `Esq.on` ( \(ride :& booking) ->
+                           ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
+                       )
+      where_ $ booking ^. BookingMerchantId ==. val (toKey merchantId)
+      return (countRows :: SqlExpr (Esq.Value Int))
+  where
+    mkCount [counter] = counter
+    mkCount _ = 0

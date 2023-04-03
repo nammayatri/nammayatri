@@ -54,8 +54,9 @@ newtype BookingsAPIs = BookingsAPIs
   { stuckBookingsCancel :: Booking.StuckBookingsCancelReq -> Euler.EulerClient Booking.StuckBookingsCancelRes
   }
 
-newtype RidesAPIs = RidesAPIs
-  { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes
+data RidesAPIs = RidesAPIs
+  { shareRideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.ShareRideInfoRes,
+    rideList :: Maybe Int -> Maybe Int -> Maybe Ride.BookingStatus -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.RideListRes
   }
 
 data MerchantAPIs = MerchantAPIs
@@ -85,7 +86,8 @@ mkAppBackendAPIs merchantId token = do
 
     stuckBookingsCancel = bookingsClient
 
-    shareRideInfo = ridesClient
+    shareRideInfo
+      :<|> rideList = ridesClient
 
     merchantUpdate
       :<|> mapsServiceConfigUpdate
