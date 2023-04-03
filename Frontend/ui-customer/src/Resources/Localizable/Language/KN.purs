@@ -189,7 +189,7 @@ getKN script = case script of
   GRANT_ACCESS -> "ಪ್ರವೇಶವನ್ನು ನೀಡಿ"
   ENTER_A_LOCATION -> "ಒಂದು ಸ್ಥಳವನ್ನು ನಮೂದಿಸಿ"
   NEARBY -> "ಹತ್ತಿರದಲ್ಲಿದೆ"
-  MINS_AWAY -> "ನಿಮಿಷಗಳ ದೂರ"
+  MINS_AWAY -> " ನಿಮಿಷಗಳ ದೂರ"
   PAID -> "ಪಾವತಿಸಲಾಗಿದೆ"
   BY_CASH -> "ನಗದು ಮೂಲಕ"
   ONLINE_ -> "ಆನ್ಲೈನ್"
