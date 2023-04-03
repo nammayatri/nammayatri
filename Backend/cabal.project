@@ -15,6 +15,7 @@ packages:
   app/dashboard/Lib
   app/dashboard/CommonAPIs
   app/example-service
+  app/special-zone
   app/mocks/rider-platform
   app/kafka-consumers
   app/mocks/idfy

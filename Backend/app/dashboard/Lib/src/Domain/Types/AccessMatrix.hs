@@ -114,13 +114,17 @@ data UserActionType
   | FLOW_STATUS
   | NOTIFYEVENT
   | CANCEL_BOOKING
+  | SPECIAL_ZONE_CREATE
+  | SPECIAL_ZONE_DELETE
+  | SPECIAL_ZONE_UPDATE
+  | SPECIAL_ZONE_LOOKUP
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
 
 -------- Required access levels for helper api --------
 
-data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER
+data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''ApiEntity]

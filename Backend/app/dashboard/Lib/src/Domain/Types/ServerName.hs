@@ -20,7 +20,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Utils.Dhall
 
-data ServerName = APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP
+data ServerName = APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP | SPECIAL_ZONE
   deriving (Generic, FromDhall, Eq, Show, Read, FromJSON, ToJSON, ToSchema)
 
 genSingletons [''ServerName]

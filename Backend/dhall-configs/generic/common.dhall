@@ -38,7 +38,8 @@ let shortDurationRetryCfg = { maxRetries = +3, baseCoefficient = +2 }
 
 let longDurationRetryCfg = { maxRetries = +3, baseCoefficient = +4 }
 
-let ServerName = < APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP >
+let ServerName =
+      < APP_BACKEND | BECKN_TRANSPORT | DRIVER_OFFER_BPP | SPECIAL_ZONE >
 
 in  { smsSessionConfig
     , autoMigrate = False

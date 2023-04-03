@@ -18,53 +18,53 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Tabular.SpecialLocation where
+module Storage.Tabular.EntryExit where
 
-import Kernel.External.Maps
+import qualified Domain.Types.SpecialZone as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import qualified Types.SpecialLocation as Domain
+import Storage.Tabular.SpecialZone (SpecialZoneTId)
 
-derivePersistField "Domain.Category"
-derivePersistField "LatLong"
-derivePersistField "Domain.GatesInfo"
-
-deriving instance Read LatLong
-
-deriving instance Read Domain.GatesInfo
+derivePersistField "Domain.EntryExitType"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    SpecialLocationT sql=special_location
+    EntryExitT sql=entry_exit
       id Text
-      locationName Text
-      category Domain.Category
-      gates (PostgresList Domain.GatesInfo)
+      specialZoneId SpecialZoneTId
+      entryExitType Domain.EntryExitType
+      lat Double
+      lon Double
+      area Text Maybe
+      address Text Maybe
       createdAt UTCTime
+      updatedAt UTCTime
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey SpecialLocationT where
-  type DomainKey SpecialLocationT = Id Domain.SpecialLocation
-  fromKey (SpecialLocationTKey _id) = Id _id
-  toKey (Id id) = SpecialLocationTKey id
+instance TEntityKey EntryExitT where
+  type DomainKey EntryExitT = Id Domain.EntryExit
+  fromKey (EntryExitTKey _id) = Id _id
+  toKey (Id id) = EntryExitTKey id
 
-instance FromTType SpecialLocationT Domain.SpecialLocation where
-  fromTType SpecialLocationT {..} =
+instance FromTType EntryExitT Domain.EntryExit where
+  fromTType EntryExitT {..} =
     return $
-      Domain.SpecialLocation
+      Domain.EntryExit
         { id = Id id,
-          gates = unPostgresList gates,
+          specialZoneId = fromKey specialZoneId,
+          _type = entryExitType,
           ..
         }
 
-instance ToTType SpecialLocationT Domain.SpecialLocation where
-  toTType Domain.SpecialLocation {..} =
-    SpecialLocationT
+instance ToTType EntryExitT Domain.EntryExit where
+  toTType Domain.EntryExit {..} =
+    EntryExitT
       { id = getId id,
-        gates = PostgresList gates,
+        specialZoneId = toKey specialZoneId,
+        entryExitType = _type,
         ..
       }

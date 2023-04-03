@@ -11,25 +11,21 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TypeApplications #-}
 
-module Queries.SpecialLocation where
+module Storage.Queries.EntryExit where
 
-import Kernel.External.Maps.Types (LatLong)
+import Domain.Types.SpecialZone
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
-import Tabular.SpecialLocation
-import qualified Types.SpecialLocation as D
+import Storage.Tabular.EntryExit
 
-create :: D.SpecialLocation -> SqlDB ()
-create = Esq.create
+createMany :: [EntryExit] -> SqlDB ()
+createMany = Esq.createMany
 
-findById :: Transactionable m => Id D.SpecialLocation -> m (Maybe D.SpecialLocation)
-findById = Esq.findById
-
-findSpecialLocationByLatLong :: Transactionable m => LatLong -> m [D.SpecialLocation]
-findSpecialLocationByLatLong point = do
-  Esq.findAll $ do
-    specialLocation <- from $ table @SpecialLocationT
-    where_ $ containsPoint (point.lon, point.lat)
-    return specialLocation
+deleteBySpecialZoneId :: Id SpecialZone -> SqlDB ()
+deleteBySpecialZoneId specialZoneId = do
+  Esq.delete $ do
+    entryExit <- from $ table @EntryExitT
+    where_ $ entryExit ^. EntryExitSpecialZoneId ==. val (toKey specialZoneId)
