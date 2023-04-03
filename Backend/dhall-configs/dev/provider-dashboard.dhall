@@ -64,6 +64,12 @@ let rccfg =
       , connectTimeout = None Integer
       }
 
+let specialZone =
+      { name = common.ServerName.SPECIAL_ZONE
+      , url = "http://localhost:8032/"
+      , token = sec.specialZoneToken
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -88,5 +94,5 @@ in  { esqDBCfg
     , registrationTokenExpiry = +365
     , encTools
     , exotelToken = sec.exotelToken
-    , dataServers = [ becknTransport, driverOfferBpp, appBackend ]
+    , dataServers = [ becknTransport, driverOfferBpp, appBackend, specialZone ]
     }

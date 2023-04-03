@@ -92,5 +92,6 @@ exotelHeartbeat incomingExotelToken req = withFlowHandlerAPI $ do
     callExotelHeartbeat DSN.APP_BACKEND = Client.callRiderAppExotelApi (.exotelHeartbeat) req
     callExotelHeartbeat DSN.BECKN_TRANSPORT = Client.callStaticOfferDriverAppExotelApi (.exotelHeartbeat) req
     callExotelHeartbeat DSN.DRIVER_OFFER_BPP = Client.callDynamicOfferDriverAppExotelApi (.exotelHeartbeat) req
+    callExotelHeartbeat _ = throwError $ InternalError "Exotel is not configured with Special Zone server"
 
     getAffectedPhoneNumberSids req' = nub . sort . (<&> (.phoneNumberSid)) $ req'.incomingAffected <> req'.outgoingAffected

@@ -43,6 +43,7 @@ _:
           search-result-aggregator-exe.command = getExe "search-result-aggregator-exe";
           static-offer-driver-app-exe.command = getExe "static-offer-driver-app-exe";
           transporter-scheduler-exe.command = getExe "transporter-scheduler-exe";
+          special-zone-exe.command = self'.apps.special-zone-exe.program;
         };
     in
     {

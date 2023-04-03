@@ -35,6 +35,8 @@ let
           "${../dev/local-testing-data/rider-dashboard.sql}:/docker-entrypoint-initdb.d/2-rider-dashboard-testing-data.sql:Z"
           "${../dev/sql-seed/provider-dashboard-seed.sql}:/docker-entrypoint-initdb.d/1-provider-dashboard-seed.sql:Z"
           "${../dev/local-testing-data/provider-dashboard.sql}:/docker-entrypoint-initdb.d/2-provider-dashboard-testing-data.sql:Z"
+          "${../dev/sql-seed/special-zone-seed.sql}:/docker-entrypoint-initdb.d/1-special-zone-seed.sql:Z"
+          "${../dev/local-testing-data/special-zone.sql}:/docker-entrypoint-initdb.d/2-special-zone-testing-data.sql:Z"
         ];
         environment = {
           BITNAMI_DEBUG = "true";

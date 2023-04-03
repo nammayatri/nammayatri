@@ -21,6 +21,7 @@ where
 import qualified "lib-dashboard" API.Dashboard as Dashboard
 import qualified API.Exotel as Exotel
 import qualified API.ProviderPlatform as BPP
+import qualified API.SpecialZone as SpecialZone
 import qualified Data.ByteString as BS
 import Data.OpenApi
 import "lib-dashboard" Environment
@@ -40,6 +41,7 @@ type MainAPI =
   Dashboard.API
     :<|> BPP.API
     :<|> Exotel.API
+    :<|> SpecialZone.API
 
 handler :: FlowServer API
 handler =
@@ -53,6 +55,7 @@ mainServer =
   Dashboard.handler
     :<|> BPP.handler
     :<|> Exotel.handler
+    :<|> SpecialZone.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString
 

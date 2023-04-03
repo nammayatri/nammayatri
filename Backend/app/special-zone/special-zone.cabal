@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.0.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -24,13 +24,14 @@ library
       API.Handler
       API.Types
       App
+      Domain.Action.SpecialZone
+      Domain.Types.SpecialZone
       Environment
-      Queries.SpecialLocation
-      Queries.TagCategoryMapping
-      Tabular.SpecialLocation
-      Tabular.TagCategoryMapping
-      Types.SpecialLocation
-      Types.TagCategoryMapping
+      Storage.Queries.EntryExit
+      Storage.Queries.SpecialZone
+      Storage.Tabular.EntryExit
+      Storage.Tabular.SpecialZone
+      Tools.Auth
   other-modules:
       Paths_special_zone
   hs-source-dirs:

@@ -14,14 +14,52 @@
 
 module API.Types where
 
+import Domain.Types.SpecialZone
 import Kernel.External.Maps (LatLong)
-import Kernel.Types.App (MandatoryQueryParam)
+import Kernel.Types.APISuccess
+import Kernel.Types.App
+import Kernel.Types.Id
 import Servant
-import Types.SpecialLocation
+import Tools.Auth (DashboardTokenAuth)
 
-type API = LookupSpecialLocationsAPI
+---------------------------------------------------------
+-- crud special zone --------------------------------------
 
-type LookupSpecialLocationsAPI =
+type RegionLookupAPI =
   "lookup"
+    :> "regions"
+    :> MandatoryQueryParam "minLatLng" LatLong
+    :> MandatoryQueryParam "maxLatLng" LatLong
+    :> Get '[JSON] [SpecialZone]
+
+type CreateSpecialZoneAPI =
+  "create"
+    :> ReqBody '[JSON] SpecialZoneAPIEntity
+    :> Post '[JSON] APISuccess
+
+type UpdateSpecialZoneAPI =
+  "update"
+    :> ReqBody '[JSON] SpecialZone
+    :> Post '[JSON] APISuccess
+
+type DeleteSpecialZoneAPI =
+  "delete"
+    :> MandatoryQueryParam "id" (Id SpecialZone)
+    :> Delete '[JSON] APISuccess
+
+type API = SpecialZoneAPIs :<|> SpecialZoneDashboardAPIs
+
+type SpecialZoneDashboardAPIs =
+  DashboardTokenAuth
+    :> "specialZone"
+    :> ( RegionLookupAPI
+           :<|> CreateSpecialZoneAPI
+           :<|> UpdateSpecialZoneAPI
+           :<|> DeleteSpecialZoneAPI
+       )
+
+type SpecialZoneAPIs =
+  "specialZone"
+    :> "lookup"
     :> MandatoryQueryParam "latLng" LatLong
-    :> Get '[JSON] [SpecialLocation]
+    :> Get '[JSON] SpecialZone

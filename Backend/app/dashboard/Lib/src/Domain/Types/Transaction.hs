@@ -28,6 +28,7 @@ import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
+import qualified "dashboard-helper-api" Dashboard.Common.SpecialZone as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Registration as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.DriverReferral as Common
@@ -76,4 +77,5 @@ data Endpoint
   | MapsAPI BAP.MapEndPoints
   | FlowStatusAPI BAP.RideNotifyEventEndPoint
   | CancelAPI BAP.RideCancelEndPoint
+  | SpecialZoneAPI Common.SpecialZoneEndpoint
   deriving (Show, Read)
