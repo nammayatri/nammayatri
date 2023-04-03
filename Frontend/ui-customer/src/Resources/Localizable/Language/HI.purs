@@ -189,7 +189,7 @@ getHI script = case script of
   GRANT_ACCESS -> "पहुँच प्रदान करें"
   ENTER_A_LOCATION -> "एक स्थान दर्ज करें"
   NEARBY -> "नज़दीक"
-  MINS_AWAY -> "मिनट दूर"
+  MINS_AWAY -> " मिनट दूर"
   PAID -> "प्रदत्त"
   BY_CASH -> "नकद द्वारा"
   ONLINE_ -> "ऑनलाइन"

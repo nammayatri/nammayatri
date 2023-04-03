@@ -191,7 +191,7 @@ getEN script = case script of
   GRANT_ACCESS -> "Grant Access"
   ENTER_A_LOCATION -> "Enter a location"
   NEARBY -> "Nearby"
-  MINS_AWAY -> "mins Away"
+  MINS_AWAY -> " Mins Away"
   PAID -> "Paid"
   BY_CASH -> "by Cash"
   ONLINE_ -> "Online"
