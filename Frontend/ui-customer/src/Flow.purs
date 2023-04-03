@@ -524,7 +524,7 @@ homeScreenFlow = do
                         lon = item.lon,                
                         locationItemType = item.locationItemType,
                         postfixImageUrl = "ny_ic_fav,https://assets.juspay.in/nammayatri/images/user/ny_ic_fav.png" } 
-            ) ((filteredPredictionList) <> filteredRecentsList) }})
+            ) ((filteredRecentsList) <> filteredPredictionList) }})
       homeScreenFlow
     GET_QUOTES state -> do
           _ <- pure $ setValueToLocalStore AUTO_SELECTING "false"
