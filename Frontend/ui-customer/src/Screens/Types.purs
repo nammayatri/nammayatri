@@ -486,11 +486,11 @@ type HomeScreenStateProps =
   , locationRequestCount :: Int
   , searchId :: String
   , bookingId :: String
-  , merchantExoPhone :: String
   , expiredQuotes :: Array String
   , isCancelRide :: Boolean
   , cancellationReasons :: Array CancellationReasons
   , cancelRideActiveIndex :: Maybe Int
+  , merchantExoPhone :: String
   , cancelDescription :: String
   , cancelReasonCode :: String
   , isPopUp :: PopupType
