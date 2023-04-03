@@ -24,7 +24,7 @@ import Kernel.Utils.Error.Throwing
 import Lib.LocationUpdates as API
 import Lib.LocationUpdates.Internal as I
 import Routes
-import Test.Tasty.Hspec
+import Test.Hspec
 import Utils
 
 resetRedis :: AppEnv -> Id Person -> IO ()
