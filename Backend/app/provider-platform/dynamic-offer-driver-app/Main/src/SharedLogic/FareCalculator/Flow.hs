@@ -27,7 +27,7 @@ import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.SlabFarePolicy (SlabFarePolicy)
 import EulerHS.Prelude hiding (id)
-import Kernel.Types.Error
+import Kernel.Types.Error ()
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator.Calculator
@@ -42,24 +42,20 @@ import SharedLogic.FareCalculator.Calculator
 calculateFare ::
   (Monad m, Log m, MonadGuid m, MonadThrow m) =>
   Id Merchant ->
-  Maybe FarePolicy ->
-  Maybe SlabFarePolicy ->
+  Either FarePolicy SlabFarePolicy ->
   Meters ->
   UTCTime ->
   Maybe Money ->
   m FareParameters
-calculateFare merchantId (Just farePolicy) _ distance time driverSelectedFare = do
-  logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| merchantId ||+ " and vehicle variant " +|| farePolicy.vehicleVariant ||+ ""
-  fareParams <- calculateFareParameters farePolicy distance time driverSelectedFare
-  logTagInfo
-    "FareCalculator"
-    $ "Fare parameters calculated: " +|| fareParams ||+ ""
+calculateFare merchantId policy distance time driverSelectedFare = do
+  fareParams <- case policy of
+    Left farePolicy -> do
+      logFareCalculatorInfo farePolicy.vehicleVariant
+      calculateFareParameters farePolicy distance time driverSelectedFare
+    Right slabFarePolicy -> do
+      logFareCalculatorInfo slabFarePolicy.vehicleVariant
+      calculateSlabFareParameters slabFarePolicy distance time driverSelectedFare
+  logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
   pure fareParams
-calculateFare merchantId _ (Just slabFarePolicy) distance time driverSelectedFare = do
-  logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| merchantId ||+ " and vehicle variant " +|| slabFarePolicy.vehicleVariant ||+ ""
-  fareParams <- calculateSlabFareParameters slabFarePolicy distance time driverSelectedFare
-  logTagInfo
-    "FareCalculator"
-    $ "Fare parameters calculated: " +|| fareParams ||+ ""
-  pure fareParams
-calculateFare _ _ _ _ _ _ = throwError $ InternalError "Fare Policy not found"
+  where
+    logFareCalculatorInfo vehicleVariant = logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| merchantId ||+ " and vehicle variant " +|| vehicleVariant ||+ ""

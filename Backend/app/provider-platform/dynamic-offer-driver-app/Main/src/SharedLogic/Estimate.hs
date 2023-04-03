@@ -77,7 +77,7 @@ buildEstimate ::
   (FarePolicy, NonEmpty DriverPoolResult) ->
   m EstimateItem
 buildEstimate org startTime dist (farePolicy, filteredPoolByVehVariant) = do
-  fareParams <- calculateFare org.id (Just farePolicy) Nothing dist startTime Nothing
+  fareParams <- calculateFare org.id (Left farePolicy) dist startTime Nothing
   let baseFare = fareSum fareParams
       currency = "INR"
       estimateBreakups = mkBreakupListItems (BreakupPrice currency) BreakupItem farePolicy
@@ -144,7 +144,7 @@ buildEstimateFromSlabFarePolicy ::
   (SlabFarePolicy, NonEmpty DriverPoolResult) ->
   m EstimateItem
 buildEstimateFromSlabFarePolicy org startTime dist (slabFarePolicy, filteredPoolByVehVariant) = do
-  fareParams <- calculateFare org.id Nothing (Just slabFarePolicy) dist startTime Nothing
+  fareParams <- calculateFare org.id (Right slabFarePolicy) dist startTime Nothing
   let baseFare = fareSum fareParams
       currency = "INR"
       estimateBreakups = mkBreakupSlabListItems (BreakupPrice currency) BreakupItem slabFarePolicy fareParams.baseFare fareParams.waitingOrPickupCharges

@@ -46,7 +46,7 @@ import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS
 import qualified Storage.Queries.SearchRequest as QSReq
-import Tools.Error (FarePolicyError (NoFarePolicy), MerchantError (MerchantNotFound))
+import Tools.Error (FarePolicyError (NoFarePolicy), GenericError (InternalError), MerchantError (MerchantNotFound))
 import Tools.Maps as Maps
 
 data DSelectReq = DSelectReq
@@ -86,15 +86,16 @@ handler merchantId sReq = do
               }
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
-  (farePolicy, slabFarePolicy, driverExtraFare) <- case org.farePolicyType of
+  (fareParams, driverExtraFare) <- case org.farePolicyType of
     DFareParams.SLAB -> do
-      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant org.id sReq.variant >>= fromMaybeM NoFarePolicy
+      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant org.id sReq.variant >>= fromMaybeM (InternalError "Slab fare policy not found")
       let driverExtraFare = DFarePolicy.ExtraFee {minFee = 0, maxFee = 0}
-      pure (Nothing, Just slabFarePolicy, driverExtraFare)
+      fareParams <- calculateFare merchantId (Right slabFarePolicy) distance sReq.pickupTime Nothing
+      pure (fareParams, driverExtraFare)
     DFareParams.NORMAL -> do
       farePolicy <- FarePolicyS.findByMerchantIdAndVariant org.id sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
-      pure (Just farePolicy, Nothing, farePolicy.driverExtraFee)
-  fareParams <- calculateFare merchantId farePolicy slabFarePolicy distance sReq.pickupTime Nothing
+      fareParams <- calculateFare merchantId (Left farePolicy) distance sReq.pickupTime Nothing
+      pure (fareParams, farePolicy.driverExtraFee)
   searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration
   let estimateFare = fareSum fareParams
   logDebug $
