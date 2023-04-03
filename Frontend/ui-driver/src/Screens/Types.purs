@@ -614,12 +614,12 @@ type ActiveRide = {
   actualRideDistance :: Number,
   status :: Status,
   distance :: Number,
+  exoPhone :: String,
   duration :: Int,
   riderName :: String,
   estimatedFare :: Int,
   isDriverArrived :: Boolean,
-  notifiedCustomer :: Boolean,
-  exoPhone :: String
+  notifiedCustomer :: Boolean
 }
 
 type HomeScreenProps =  {

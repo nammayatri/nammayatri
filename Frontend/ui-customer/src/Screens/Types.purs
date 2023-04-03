@@ -508,6 +508,7 @@ type HomeScreenStateProps =
   , isCancelRide :: Boolean
   , cancellationReasons :: Array CancellationReasons
   , cancelRideActiveIndex :: Maybe Int
+  , merchantExoPhone :: String
   , cancelDescription :: String
   , cancelReasonCode :: String
   , isPopUp :: PopupType
