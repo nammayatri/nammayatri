@@ -31,6 +31,7 @@ data SlabFarePolicyD (s :: UsageSafety) = SlabFarePolicy
     nightShiftEnd :: Maybe TimeOfDay,
     maxAllowedTripDistance :: Maybe Meters,
     minAllowedTripDistance :: Maybe Meters,
+    govtChargesPerc :: Maybe Int,
     fareSlabs :: [Slab],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -47,7 +48,8 @@ data Slab = Slab
   { startMeters :: Meters,
     endMeters :: Meters,
     fare :: HighPrecMoney,
-    waitingCharge :: HighPrecMoney
+    waitingCharge :: HighPrecMoney,
+    nightCharge :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

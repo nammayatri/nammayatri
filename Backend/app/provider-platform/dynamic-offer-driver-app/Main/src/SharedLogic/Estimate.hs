@@ -194,4 +194,9 @@ mkBreakupSlabListItems mkPrice mkBreakupItem slabFarePolicy baseFare waitingOrPi
       waitingOrPickupCharges = fromMaybe 0 waitingOrPickupCharge
       waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES"
       waitingOrPickupChargesItem = mkBreakupItem waitingOrPickupChargesCaption (mkPrice waitingOrPickupCharges)
-  [baseDistanceFareItem, serviceChargeItem, waitingOrPickupChargesItem]
+
+      mbFixedGovtRate = slabFarePolicy.govtChargesPerc
+      mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
+      mbFixedGovtRateItem = (\fixedGovtRate -> mkBreakupItem mbFixedGovtRateCaption (mkPrice $ fromIntegral ((fixedGovtRate * fromIntegral baseFare) `div` 100))) <$> mbFixedGovtRate
+
+  [baseDistanceFareItem, serviceChargeItem, waitingOrPickupChargesItem] <> catMaybes [mbFixedGovtRateItem]

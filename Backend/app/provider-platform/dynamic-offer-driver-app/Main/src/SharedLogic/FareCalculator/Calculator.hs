@@ -39,6 +39,32 @@ import Kernel.Utils.Common
 
 mkBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
+  case fareParams.farePolicyType of
+    SLAB -> mkSlabBreakupList mkPrice mkBreakupItem fareParams
+    NORMAL -> mkNormalBreakupList mkPrice mkBreakupItem fareParams
+
+mkSlabBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
+mkSlabBreakupList mkPrice mkBreakupItem fareParams = do
+  let baseDistanceFareCaption = "BASE_FARE"
+      baseDistanceFareItem = mkBreakupItem baseDistanceFareCaption (mkPrice fareParams.baseFare)
+
+      serviceChargeCaption = "SERVICE_CHARGE"
+      mbServiceChargeItem = fmap (mkBreakupItem serviceChargeCaption) (mkPrice <$> fareParams.serviceCharge)
+
+      waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES"
+      mbWaitingOrPickupChargesItem = fmap (mkBreakupItem waitingOrPickupChargesCaption) (mkPrice <$> fareParams.waitingOrPickupCharges)
+
+      mbFixedGovtRateCaption = "FIXED_GOVERNMENT_RATE"
+      mbFixedGovtRateItem = (\fixedGovtRate -> mkBreakupItem mbFixedGovtRateCaption (mkPrice $ fromIntegral ((fixedGovtRate * fromIntegral fareParams.baseFare) `div` 100))) <$> fareParams.govtChargesPerc
+
+      totalFareFinalRounded = fareSum fareParams
+      totalFareCaption = "TOTAL_FARE"
+      totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinalRounded
+
+  [baseDistanceFareItem, totalFareItem] <> catMaybes [mbFixedGovtRateItem, mbServiceChargeItem, mbWaitingOrPickupChargesItem]
+
+mkNormalBreakupList :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
+mkNormalBreakupList mkPrice mkBreakupItem fareParams = do
   -- TODO: what should be here?
   let dayPartRate = calculateDayPartRate fareParams
       baseFareFinalRounded = roundToIntegral $ fromIntegral fareParams.baseFare * dayPartRate + (maybe 0.0 fromIntegral fareParams.deadKmFare) -- TODO: Remove later part once UI start consuming DEAD_KILOMETER_FARE
@@ -78,19 +104,34 @@ normalFareSum fareParams = do
   baseFareSum fareParams + (fromMaybe 0 fareParams.deadKmFare) + fromMaybe 0 fareParams.driverSelectedFare
 
 slabFareSum :: FareParameters -> Money
-slabFareSum sFareParams = do
-  baseFareSum sFareParams + (fromMaybe 0 sFareParams.serviceCharge) + fromMaybe 0 sFareParams.waitingOrPickupCharges + fromMaybe 0 sFareParams.driverSelectedFare
+slabFareSum = baseFareSum
+
+addGovtCharges :: FareParameters -> Money
+addGovtCharges fp =
+  maybe 0 (\govtChargesPerc -> (fp.baseFare * fromIntegral govtChargesPerc) `div` 100) fp.govtChargesPerc
 
 baseFareSum :: FareParameters -> Money
-baseFareSum fareParams = roundToIntegral $ do
-  let dayPartCoef = calculateDayPartRate fareParams
-  dayPartCoef
-    * sum
-      ( catMaybes
-          [ Just $ fromIntegral fareParams.baseFare,
-            fmap fromIntegral fareParams.extraKmFare
-          ]
-      )
+baseFareSum fareParams =
+  case fareParams.farePolicyType of
+    SLAB -> baseSlabFareSum
+    NORMAL -> baseNormalFareSum
+  where
+    baseSlabFareSum = do
+      let fareAmount = addGovtCharges fareParams + (fromMaybe 0 fareParams.serviceCharge) + fromMaybe 0 fareParams.waitingOrPickupCharges + fromMaybe 0 fareParams.driverSelectedFare
+      (fareAmount +) . roundToIntegral $
+        if fareParams.nightCoefIncluded
+          then fromIntegral fareParams.baseFare + (fromMaybe 0 fareParams.nightShiftRate) -- using rate as value here
+          else fromIntegral fareParams.baseFare
+
+    baseNormalFareSum = roundToIntegral $ do
+      let dayPartCoef = calculateDayPartRate fareParams
+      dayPartCoef
+        * sum
+          ( catMaybes
+              [ Just $ fromIntegral fareParams.baseFare,
+                fmap fromIntegral fareParams.extraKmFare
+              ]
+          )
 
 calculateDayPartRate :: FareParameters -> Centesimal
 calculateDayPartRate fareParams = do
@@ -127,7 +168,8 @@ calculateFareParameters fp distance time mbExtraFare = do
         waitingChargePerMin = fp.waitingChargePerMin,
         waitingOrPickupCharges = Nothing,
         serviceCharge = Nothing,
-        farePolicyType = NORMAL
+        farePolicyType = NORMAL,
+        govtChargesPerc = Nothing
       }
 
 calculateSlabFareParameters ::
@@ -138,9 +180,9 @@ calculateSlabFareParameters ::
   Maybe Money ->
   m FareParameters
 calculateSlabFareParameters fp distance time mbExtraFare = do
-  let slabs = filter (selectSlab distance) fp.fareSlabs
-  unless (length slabs == 1) $ throwError (InvalidRequest "Invalid Fare Slab")
-  let slab = head slabs
+  let mbSlab = find (selectSlab distance) fp.fareSlabs
+  when (isNothing mbSlab) $ throwError (InvalidRequest "Fare slab not found")
+  let slab = fromJust mbSlab
 
   let baseDistanceFare = roundToIntegral $ slab.fare
       waitingOrPickupCharges = roundToIntegral $ slab.waitingCharge
@@ -155,15 +197,16 @@ calculateSlabFareParameters fp distance time mbExtraFare = do
         extraKmFare = Nothing,
         serviceCharge = Just fp.serviceCharge,
         driverSelectedFare = mbExtraFare,
-        nightShiftRate = fp.nightShiftRate,
+        nightShiftRate = Just $ fromIntegral (roundToIntegral $ slab.nightCharge :: Money), -- todo: make the name better
         nightCoefIncluded,
         waitingOrPickupCharges = Just waitingOrPickupCharges,
         waitingChargePerMin = Nothing,
-        farePolicyType = SLAB
+        farePolicyType = SLAB,
+        govtChargesPerc = fp.govtChargesPerc
       }
 
 selectSlab :: Meters -> Slab -> Bool
-selectSlab distance slab = distance > slab.startMeters && distance <= slab.endMeters
+selectSlab distance slab = distance >= slab.startMeters && distance <= slab.endMeters
 
 distanceToKm :: Meters -> Rational
 distanceToKm x = realToFrac x / 1000
