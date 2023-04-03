@@ -23,6 +23,7 @@ We manage dependencies and development environment using Nix. Before proceeding,
 These tools are required when working with the mobility repository:-
 
 1. [Docker](https://www.docker.com/products/docker-desktop/) - we use docker and docker-compose for containers.
+    - If you are on macOS, open Docker -> Preferences... -> Resources -> File Sharing in Docker Desktop and add `/nix/store` to the list of shared folders.
 
 For Mac users, some additional tools may be required:-
 
