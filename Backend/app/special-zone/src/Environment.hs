@@ -19,7 +19,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Flow
-import Kernel.Utils.App (getPodName)
+import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Shutdown
@@ -28,6 +28,9 @@ data AppCfg = AppCfg
   { migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     esqDBCfg :: EsqDBConfig,
+    esqDBReplicaCfg :: EsqDBConfig,
+    apiKey :: ApiKey,
+    dashboardToken :: Text,
     port :: Int,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds
@@ -39,8 +42,12 @@ data AppEnv = AppEnv
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     esqDBEnv :: EsqDBEnv,
+    esqDBReplicaEnv :: EsqDBEnv,
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
+    apiKey :: ApiKey,
+    version :: DeploymentVersion,
+    dashboardToken :: Text,
     loggerEnv :: LoggerEnv
   }
   deriving (Generic)
@@ -50,13 +57,19 @@ buildAppEnv AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
+  version <- lookupDeploymentVersion
   isShuttingDown <- mkShutdown
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} =
   releaseLoggerEnv loggerEnv
+
+type ApiKey = Text
+
+type Env = EnvR AppEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 

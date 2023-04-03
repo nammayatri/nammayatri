@@ -14,8 +14,8 @@
 
 module Main where
 
-import App (runService)
+import qualified "provider-dashboard" App
 import Kernel.Prelude
 
 main :: IO ()
-main = runService identity
+main = App.runService identity

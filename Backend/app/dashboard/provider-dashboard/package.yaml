@@ -95,6 +95,7 @@ library:
     - static-offer-driver-app
     - dynamic-offer-driver-app
     - rider-app
+    - special-zone
 
 executables:
   provider-dashboard-exe:
@@ -109,3 +110,4 @@ executables:
       - provider-dashboard
       - mobility-core
       - beckn-spec
+      - special-zone

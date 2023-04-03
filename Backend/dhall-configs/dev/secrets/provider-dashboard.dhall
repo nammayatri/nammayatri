@@ -6,4 +6,5 @@
 , driverOfferBppToken = "some-secret-dashboard-token-for-driver-offer-bpp"
 , appBackendToken = "some-secret-dashboard-token-for-rider-app"
 , exotelToken = "some-secret-exotel-token"
+, specialZoneToken = "some-secret-dashboard-token-for-special-zone"
 }

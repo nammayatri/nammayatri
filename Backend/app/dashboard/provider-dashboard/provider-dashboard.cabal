@@ -39,8 +39,10 @@ library
       API.ProviderPlatform.StaticOfferDriver.Driver
       API.ProviderPlatform.StaticOfferDriver.Merchant
       API.ProviderPlatform.StaticOfferDriver.Ride
+      API.SpecialZone
       App
       ProviderPlatformClient.DynamicOfferDriver
+      ProviderPlatformClient.SpecialZone
       ProviderPlatformClient.StaticOfferDriver
       RiderPlatformClient.RiderApp
   other-modules:
@@ -105,6 +107,7 @@ library
     , servant-client
     , servant-openapi3
     , servant-server
+    , special-zone
     , static-offer-driver-app
     , template-haskell
     , text
@@ -173,6 +176,7 @@ executable provider-dashboard-exe
     , servant-client
     , servant-openapi3
     , servant-server
+    , special-zone
     , template-haskell
     , text
     , time

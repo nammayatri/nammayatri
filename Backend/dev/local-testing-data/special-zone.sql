@@ -1,28 +1,40 @@
-CREATE TABLE atlas_special_zone.special_location (
-id character(36) NOT NULL PRIMARY KEY,
-location_name character varying(255) NOT NULL,
-category character varying(255) NOT NULL,
-gates text[] NOT NULL,
-geom public.geometry(MultiPolygon), -- make it 4326
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
+INSERT INTO atlas_special_zone.special_zone (id, name, category_code, city, state, geom, geo_json, created_at, updated_at)
+	VALUES ('9h8016d0-f9cd-4f9f-886f-bc4cbh6a8641', 'Random triangular shape', 'Airport', 'Bangalore', 'Karnataka' , (ST_SetSRID(ST_GeomFromGeoJSON(
+'{
+  "coordinates": [
+    [
+      [
+        [
+          26.74111671238296,
+          -1.3083724031948663
+        ],
+        [
+          26.75062111299397,
+          -1.6029134155718907
+        ],
+        [
+          27.01991246364392,
+          -1.3432125421878993
+        ],
+        [
+          26.74111671238296,
+          -1.3083724031948663
+        ]
+      ]
+    ]
+  ],
+  "type": "MultiPolygon"
+}'),4326)),
+'ShapeFile (ShapeFileType {_type = "FeatureCollection", features = [LocationFeature {_type = "Feature", properties = SzType {_type = Nothing, area = Nothing, address = Nothing}, geometry = Geometry {_type = MultiPolygon, coordinates = MPolyCoords [[[[26.74111671238296,-1.3083724031948663],[26.75062111299397,-1.6029134155718907],[27.01991246364392,-1.3432125421878993],[26.74111671238296,-1.3083724031948663]]]]}}]})', now(), now());
 
-CREATE TABLE atlas_special_zone.tag_category_mapping (
-id character(36) NOT NULL,
-tag character varying(255) NOT NULL PRIMARY KEY,
-category character varying(255) NOT NULL,
-created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
+-- INSERT INTO atlas_bpp_dashboard.merchant (id, short_id, server_name, created_at) VALUES
+--     ('sz2db186-39d3-48a4-ad1f-78a0c3f840fd', 'SPECIAL_ZONE', 'SPECIAL_ZONE', now ());
 
-ALTER TABLE atlas_special_zone.special_location OWNER TO atlas_special_zone_user;
-ALTER TABLE atlas_special_zone.tag_category_mapping OWNER TO atlas_special_zone_user;
+-- INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, created_at, updated_at) VALUES
+--     ('2t4eb898-1410-40d3-8c1e-27c1087f4132', 'd5644e83-ffa3-4e0d-ae81-c3155eedb8fd', 'SPECIAL_ZONES', 'USER_FULL_ACCESS', now(), now());
 
-INSERT INTO atlas_special_zone.special_location (id, location_name, category, gates, geom, created_at) -- add geom in type and table struct too
-VALUES
-  ( '9h8016d0-f9cd-4f9f-886f-bc4cbh6a86e5'
-  , 'An Airport'
-  , 'SureAirport'
-  , '{}'
-  , '01060000000100000001030000000100000013000000B4608E3E446B5340C8C9FABD1F6C2A4074CDBEC1846B5340000D098D14602A408A862A854A6D53407408A29AEF5F2A407FF5F8FE916D53403CB8DA9807602A4074C08F9EE96D53400434E9F4B25F2A407974C3755A6E534054974421175F2A40CAC438DD986E534055165D92DB5E2A40B6FA0F06156F53401A0435D1045E2A403674F00A436F5340A085F718AB5D2A40B5DA5EA8506F534076FF8CA8AF5D2A4096FD518F546F5340430EE3021E5E2A40DB6B54755B6F5340D64D4BC948602A4038C195D8766F5340602074892D612A40AE4D89A6496F5340283EE6ED35652A402CAD16C8226F534088543211016A2A4030E9746C086E5340889658540D6C2A4054F56E39326C534008E4B2D27B6C2A40F023E2EC5C6B5340B84A8C67696C2A40B4608E3E446B5340C8C9FABD1F6C2A40'
-  , '2022-04-12 15:15:42.225349+00'
-  );
+-- INSERT INTO atlas_bpp_dashboard.registration_token (id, token, person_id, created_at, merchant_id) VALUES
+--     ('8k666614-c6f1-48a8-ab16-23873b93f452', '141e0a7b-e521-4d6b-a0c4-8713ae345154', 'a77b0507-ae01-42dd-a075-264f59d89049', now (), 'sz2db186-39d3-48a4-ad1f-78a0c3f840fd');
+
+-- INSERT INTO atlas_bpp_dashboard.merchant_access(id, person_id, created_at, merchant_id)
+-- 	VALUES ('8k666614-c6f1-48a8-ab16-23267b93f452','a77b0507-ae01-42dd-a075-264f59d89049' , now(), 'sz2db186-39d3-48a4-ad1f-78a0c3f840fd' );

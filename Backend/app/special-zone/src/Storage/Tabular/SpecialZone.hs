@@ -18,44 +18,54 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Tabular.TagCategoryMapping where
+module Storage.Tabular.SpecialZone where
 
+import qualified Domain.Types.SpecialZone as Domain
+import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import qualified Types.SpecialLocation as Domain
-import qualified Types.TagCategoryMapping as Domain
 
 derivePersistField "Domain.Category"
+derivePersistField "Domain.ShapeFile"
+derivePersistField "LatLong"
+
+deriving instance Read LatLong
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    TagCategoryMappingT sql=tag_category_mapping
+    SpecialZoneT sql=special_zone
       id Text
-      category Domain.Category
-      tag Text
+      name Text
+      categoryCode Domain.Category
+      geoJson Domain.ShapeFile
+      geom Geom
+      city Text
+      state Text
       createdAt UTCTime
-      Primary tag
+      updatedAt UTCTime
+      Primary id
       deriving Generic
     |]
 
-instance TEntityKey TagCategoryMappingT where
-  type DomainKey TagCategoryMappingT = Id Domain.TagCategoryMapping
-  fromKey (TagCategoryMappingTKey _id) = Id _id
-  toKey (Id id) = TagCategoryMappingTKey id
+instance TEntityKey SpecialZoneT where
+  type DomainKey SpecialZoneT = Id Domain.SpecialZone
+  fromKey (SpecialZoneTKey _id) = Id _id
+  toKey (Id id) = SpecialZoneTKey id
 
-instance FromTType TagCategoryMappingT Domain.TagCategoryMapping where
-  fromTType TagCategoryMappingT {..} =
-    return
-      Domain.TagCategoryMapping
+instance FromTType SpecialZoneT Domain.SpecialZone where
+  fromTType SpecialZoneT {..} =
+    return $
+      Domain.SpecialZone
         { id = Id id,
           ..
         }
 
-instance ToTType TagCategoryMappingT Domain.TagCategoryMapping where
-  toTType Domain.TagCategoryMapping {..} =
-    TagCategoryMappingT
+instance ToTType SpecialZoneT Domain.SpecialZone where
+  toTType Domain.SpecialZone {..} =
+    SpecialZoneT
       { id = getId id,
+        geom = Geom,
         ..
       }

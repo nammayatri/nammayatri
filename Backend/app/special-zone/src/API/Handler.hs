@@ -15,19 +15,40 @@
 module API.Handler where
 
 import qualified API.Types as API
+import qualified Domain.Action.SpecialZone as DSpecialZone
+import qualified Domain.Types.SpecialZone as Domain
 import Environment
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps (LatLong)
-import Kernel.Types.Common
+import Kernel.Types.APISuccess
+import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
-import Queries.SpecialLocation
-import Types.SpecialLocation
+import Servant hiding (throwError)
+
+dashboardHandler :: FlowServer API.SpecialZoneDashboardAPIs
+dashboardHandler _dashboard =
+  lookupSpecialZonesByRegion
+    :<|> createSpecialZone
+    :<|> updateSpecialZone
+    :<|> deleteSpecialZone
+
+specialZoneHandler :: FlowServer API.SpecialZoneAPIs
+specialZoneHandler = lookupSpecialZone
 
 handler :: FlowServer API.API
-handler = lookupSpecialLocations
+handler = specialZoneHandler :<|> dashboardHandler
 
-lookupSpecialLocations :: LatLong -> FlowHandler [SpecialLocation]
-lookupSpecialLocations latLng = withFlowHandlerAPI $ findSpecialLocations latLng
+lookupSpecialZone :: LatLong -> FlowHandler Domain.SpecialZone
+lookupSpecialZone latLng = withFlowHandlerAPI $ DSpecialZone.lookupSpecialZone latLng
 
-findSpecialLocations :: (MonadFlow m, MonadReader r m, EsqDBFlow m r) => LatLong -> m [SpecialLocation]
-findSpecialLocations = findSpecialLocationByLatLong
+lookupSpecialZonesByRegion :: LatLong -> LatLong -> FlowHandler [Domain.SpecialZone]
+lookupSpecialZonesByRegion minLatLng maxLatLng = withFlowHandlerAPI $ DSpecialZone.lookupSpecialZonesByRegion minLatLng maxLatLng
+
+createSpecialZone :: Domain.SpecialZoneAPIEntity -> FlowHandler APISuccess
+createSpecialZone specialZone = withFlowHandlerAPI $ DSpecialZone.createSpecialZone specialZone
+
+updateSpecialZone :: Domain.SpecialZone -> FlowHandler APISuccess
+updateSpecialZone specialZone = withFlowHandlerAPI $ DSpecialZone.updateSpecialZone specialZone
+
+deleteSpecialZone :: Id Domain.SpecialZone -> FlowHandler APISuccess
+deleteSpecialZone specialZoneId = withFlowHandlerAPI $ DSpecialZone.deleteSpecialZone specialZoneId

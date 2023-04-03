@@ -11,23 +11,23 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Queries.TagCategoryMapping where
+module Dashboard.Common.SpecialZone
+  ( module Dashboard.Common.SpecialZone,
+    module Reexport,
+  )
+where
 
+import Dashboard.Common as Reexport
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
-import Kernel.Types.Id
-import Tabular.TagCategoryMapping
-import qualified Types.TagCategoryMapping as D
+import Kernel.Storage.Esqueleto hiding (Point)
 
-create :: D.TagCategoryMapping -> SqlDB ()
-create = Esq.create
+data SpecialZoneEndpoint
+  = CreateSpecialZoneEndpoint
+  | UpdateSpecialZoneEndpoint
+  | DeleteSpecialZoneEndpoint
+  deriving (Show, Read)
 
-findById :: Transactionable m => Id D.TagCategoryMapping -> m (Maybe D.TagCategoryMapping)
-findById = Esq.findById
-
-findByTag :: Transactionable m => Text -> m (Maybe D.TagCategoryMapping)
-findByTag tag = findOne $ do
-  tagCatMapping <- from $ table @TagCategoryMappingT
-  where_ $ tagCatMapping ^. TagCategoryMappingTag ==. val tag
-  pure tagCatMapping
+derivePersistField "SpecialZoneEndpoint"
