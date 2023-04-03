@@ -11,10 +11,7 @@
           lib.nameValuePair "backend-${n}" (v // { category = "Backend"; }));
         dockerComposeScript = { description, args }: {
           inherit description;
-          exec = ''
-            set -x
-            ${lib.getExe pkgs.docker-compose} -f ./Backend/dev/docker-compose.yml ${args}
-          '';
+          exec = "${lib.getExe self'.packages.run-docker-compose} ${args}";
         };
       in
       backendScripts {
