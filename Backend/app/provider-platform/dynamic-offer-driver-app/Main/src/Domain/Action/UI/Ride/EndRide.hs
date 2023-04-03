@@ -74,11 +74,10 @@ data ServiceHandle m = ServiceHandle
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> Id SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> m (),
-    getFarePolicy :: Id DM.Merchant -> Variant -> Maybe Meters -> m (Maybe FarePolicy, Maybe SlabFarePolicy),
+    getFarePolicy :: Id DM.Merchant -> Variant -> Maybe Meters -> m (Either FarePolicy SlabFarePolicy),
     calculateFare ::
       Id DM.Merchant ->
-      Maybe FarePolicy ->
-      Maybe SlabFarePolicy ->
+      Either FarePolicy SlabFarePolicy ->
       Meters ->
       UTCTime ->
       Maybe Money ->
@@ -113,16 +112,16 @@ buildEndRideHandle merchantId = do
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId
       }
 
-getFarePolicyByMerchantIdAndVariant :: Id DM.Merchant -> Variant -> Maybe Meters -> Flow (Maybe FarePolicy, Maybe SlabFarePolicy)
+getFarePolicyByMerchantIdAndVariant :: Id DM.Merchant -> Variant -> Maybe Meters -> Flow (Either FarePolicy SlabFarePolicy)
 getFarePolicyByMerchantIdAndVariant merchantId variant mbDistance = do
   merchant <- MerchantS.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   case merchant.farePolicyType of
     Fare.SLAB -> do
-      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant merchantId variant
-      return (Nothing, slabFarePolicy)
+      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant merchantId variant >>= fromMaybeM (InternalError "Slab fare policy not found")
+      return $ Right slabFarePolicy
     Fare.NORMAL -> do
-      farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId variant mbDistance
-      return (farePolicy, Nothing)
+      farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchantId variant mbDistance >>= fromMaybeM (InternalError "Normal fare policy not found")
+      return $ Left farePolicy
 
 driverEndRide ::
   (MonadThrow m, Log m, MonadTime m, MonadGuid m) =>
@@ -224,9 +223,11 @@ recalculateFareForDistance handle@ServiceHandle {..} booking ride recalcDistance
 
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
-  (mbFarePolicy, mbSlabFarePolicy) <- getFarePolicy transporterId booking.vehicleVariant (Just booking.estimatedDistance)
-  fareParams <- calculateFare transporterId mbFarePolicy mbSlabFarePolicy recalcDistance booking.startTime booking.fareParams.driverSelectedFare
-  waitingCharge <- getWaitingFare handle ride.tripStartTime ride.driverArrivalTime $ (.waitingChargePerMin) =<< mbFarePolicy
+  farePolicy <- getFarePolicy transporterId booking.vehicleVariant (Just booking.estimatedDistance)
+  fareParams <- calculateFare transporterId farePolicy recalcDistance booking.startTime booking.fareParams.driverSelectedFare
+  waitingCharge <- case farePolicy of
+    Left normalFarePolicy -> getWaitingFare handle ride.tripStartTime ride.driverArrivalTime normalFarePolicy.waitingChargePerMin
+    Right _ -> pure 0
   let updatedFare = Fare.fareSum fareParams
       finalFare = updatedFare + waitingCharge
       distanceDiff = recalcDistance - oldDistance
