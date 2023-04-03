@@ -14,22 +14,22 @@
 -}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
-module Domain.Action.Beckn.Select where
+module Domain.Action.Beckn.Select
+  ( DSelectReq (..),
+    handler,
+  )
+where
 
-import qualified Beckn.Types.Core.Taxi.Common.Address as BA
-import qualified Data.Map as M
-import qualified Data.Text as T
 import Data.Time.Clock (addUTCTime)
+import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as DFareParams (FarePolicyType (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy (ExtraFee (..))
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchStep as DSS
-import Domain.Types.Vehicle.Variant (Variant)
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, logInfo)
@@ -40,11 +40,11 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import qualified SharedLogic.CacheDistance as CD
 import SharedLogic.DriverPool (getDriverPoolConfig)
 import SharedLogic.FareCalculator
-import SharedLogic.GoogleMaps
-import Storage.CachedQueries.CacheConfig (CacheFlow)
 import qualified Storage.CachedQueries.FarePolicy as FarePolicyS
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.SlabFarePolicy as SFarePolicyS
+import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchStep as QSS
 import Tools.Error
 import Tools.Maps as Maps
@@ -54,25 +54,17 @@ data DSelectReq = DSelectReq
     transactionId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
-    pickupLocation :: LatLong,
     pickupTime :: UTCTime,
-    dropLocation :: LatLong,
-    pickupAddress :: Maybe BA.Address,
-    dropAddrress :: Maybe BA.Address,
-    variant :: Variant,
-    autoAssignEnabled :: Bool,
-    customerLanguage :: Maybe Maps.Language
+    estimateId :: Id DEst.Estimate
   }
-
-type LanguageDictionary = M.Map Maps.Language DSS.SearchStep
 
 handler :: Id DM.Merchant -> DSelectReq -> Flow ()
 handler merchantId sReq = do
   sessiontoken <- generateGUIDText
-  org <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  fromLocation <- buildSearchReqLocation merchantId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-  toLocation <- buildSearchReqLocation merchantId sessiontoken sReq.dropAddrress sReq.customerLanguage sReq.dropLocation
+  merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mbDistRes <- CD.getCacheDistance sReq.transactionId
+  estimate <- QEst.findById sReq.estimateId >>= fromMaybeM (EstimateDoesNotExist sReq.estimateId.getId)
+  searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
   logInfo $ "Fetching cached distance and duration" <> show mbDistRes
   (distance, duration) <-
     case mbDistRes of
@@ -80,44 +72,43 @@ handler merchantId sReq = do
         res <-
           Maps.getDistance merchantId $
             Maps.GetDistanceReq
-              { origin = fromLocation,
-                destination = toLocation,
+              { origin = searchReq.fromLocation,
+                destination = searchReq.toLocation,
                 travelMode = Just Maps.CAR
               }
         pure (res.distance, res.duration)
       Just distRes -> pure distRes
-  (fareParams, driverExtraFare) <- case org.farePolicyType of
+  (fareParams, driverExtraFare) <- case merchant.farePolicyType of
     DFareParams.SLAB -> do
-      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant org.id sReq.variant >>= fromMaybeM (InternalError "Slab fare policy not found")
+      slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant merchant.id estimate.vehicleVariant >>= fromMaybeM (InternalError "Slab fare policy not found")
       let driverExtraFare = DFarePolicy.ExtraFee {minFee = 0, maxFee = 0}
       fareParams <- calculateFare merchantId (Right slabFarePolicy) distance sReq.pickupTime Nothing
       pure (fareParams, driverExtraFare)
     DFareParams.NORMAL -> do
-      farePolicy <- FarePolicyS.findByMerchantIdAndVariant org.id sReq.variant (Just distance) >>= fromMaybeM NoFarePolicy
+      farePolicy <- FarePolicyS.findByMerchantIdAndVariant merchant.id estimate.vehicleVariant (Just distance) >>= fromMaybeM NoFarePolicy
       fareParams <- calculateFare merchantId (Left farePolicy) distance sReq.pickupTime Nothing
       pure (fareParams, farePolicy.driverExtraFee)
-  searchReq <- buildSearchRequest fromLocation toLocation merchantId sReq distance duration
+  searchStep <- buildSearchStep merchantId searchReq.id estimate sReq distance duration
   let estimateFare = fareSum fareParams
   logDebug $
-    "search request id=" <> show searchReq.id
+    "search step id=" <> show searchStep.id
       <> "; estimated distance = "
       <> show distance
       <> "; estimated base fare:"
       <> show estimateFare
-  merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverPoolConfig <- getDriverPoolConfig merchantId distance
   let inTime = fromIntegral driverPoolConfig.singleBatchProcessTime
   Esq.runTransaction $ do
-    QSS.create searchReq
+    QSS.create searchStep
 
-  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq merchant estimateFare driverExtraFare.minFee driverExtraFare.maxFee
+  res <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchStep merchant estimateFare driverExtraFare.minFee driverExtraFare.maxFee
   case res of
     ReSchedule _ -> do
       maxShards <- asks (.maxShards)
       Esq.runTransaction $ do
         createJobIn @_ @'SendSearchRequestToDriver inTime maxShards $
           SendSearchRequestToDriverJobData
-            { requestId = searchReq.id,
+            { searchStepId = searchStep.id,
               baseFare = estimateFare,
               estimatedRideDistance = distance,
               driverMinExtraFee = driverExtraFare.minFee,
@@ -125,20 +116,20 @@ handler merchantId sReq = do
             }
     _ -> return ()
 
-buildSearchRequest ::
+buildSearchStep ::
   ( MonadTime m,
     MonadGuid m,
     MonadReader r m,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
-  DLoc.SearchReqLocation ->
-  DLoc.SearchReqLocation ->
   Id DM.Merchant ->
+  Id DSR.SearchRequest ->
+  DEst.Estimate ->
   DSelectReq ->
   Meters ->
   Seconds ->
   m DSS.SearchStep
-buildSearchRequest from to merchantId sReq distance duration = do
+buildSearchStep merchantId searchReqId estimate sReq distance duration = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -146,65 +137,14 @@ buildSearchRequest from to merchantId sReq distance duration = do
   pure
     DSS.SearchStep
       { id = id_,
-        transactionId = sReq.transactionId,
+        requestId = searchReqId,
+        estimateId = estimate.id,
         messageId = sReq.messageId,
         startTime = sReq.pickupTime,
         validTill = validTill_,
-        providerId = merchantId,
-        fromLocation = from,
-        toLocation = to,
-        bapId = sReq.bapId,
-        bapUri = sReq.bapUri,
-        estimatedDistance = distance,
-        estimatedDuration = duration,
-        createdAt = now,
-        vehicleVariant = sReq.variant,
+        vehicleVariant = estimate.vehicleVariant,
         status = DSS.ACTIVE,
-        autoAssignEnabled = sReq.autoAssignEnabled,
         searchRepeatCounter = 0,
+        createdAt = now,
         updatedAt = now
       }
-
-buildSearchReqLocation :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.SearchReqLocation
-buildSearchReqLocation merchantId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do
-  Address {..} <- case address of
-    Just loc
-      | customerLanguage == Just Maps.ENGLISH && isJust loc.ward ->
-        pure $
-          Address
-            { areaCode = loc.area_code,
-              street = loc.street,
-              city = loc.city,
-              state = loc.state,
-              country = loc.country,
-              building = loc.building,
-              area = loc.ward,
-              full_address = decodeAddress loc
-            }
-    _ -> getAddressByGetPlaceName merchantId sessionToken latLong
-  id <- Id <$> generateGUID
-  now <- getCurrentTime
-  let createdAt = now
-      updatedAt = now
-  pure DLoc.SearchReqLocation {..}
-
-getAddressByGetPlaceName :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, CoreMetrics m) => Id DM.Merchant -> Text -> LatLong -> m Address
-getAddressByGetPlaceName merchantId sessionToken latLong = do
-  pickupRes <-
-    Maps.getPlaceName merchantId $
-      Maps.GetPlaceNameReq
-        { getBy = Maps.ByLatLong latLong,
-          sessionToken = Just sessionToken,
-          language = Nothing
-        }
-  mkLocation pickupRes
-
-decodeAddress :: BA.Address -> Maybe Text
-decodeAddress BA.Address {..} = do
-  let strictFields = catMaybes $ filter (not . isEmpty) [door, building, street, locality, city, state, area_code, country]
-  if null strictFields
-    then Nothing
-    else Just $ T.intercalate ", " strictFields
-
-isEmpty :: Maybe Text -> Bool
-isEmpty = maybe True (T.null . T.replace " " "")

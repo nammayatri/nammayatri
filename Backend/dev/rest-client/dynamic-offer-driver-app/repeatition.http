@@ -12,7 +12,7 @@ GET {{app-host}}
 
 ###
 
-# @name updateInitial
+# @name updateInitial1
 POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{token1}}
 content-type: application/json
@@ -22,7 +22,6 @@ content-type: application/json
         "pt": {
             "lat": 14.445332,
             "lon": 75.919028
-
         },
         "ts": "{{$localDatetime iso8601}}"
     }
@@ -30,11 +29,32 @@ content-type: application/json
 
 ###
 
-# @name setActive
+# @name updateInitial2
+POST {{driver-offer-bpp-host}}/ui/driver/location
+token: {{token2}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445332,
+            "lon": 75.919028
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    }
+]
+###
+
+# @name setActive1
 POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
 content-type: application/json
 token: {{token1}}
+###
 
+# @name setActive2
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
+content-type: application/json
+token: {{token2}}
 ###
 
 # @name createDriver
@@ -127,36 +147,36 @@ token: {{app-token}}
 
 ###
 
-# @name nearbySearchRequest
+# @name nearbySearchRequest1
 GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
 token: {{token1}}
 
 ###
 
-# @name offerQuote
+# @name offerQuote1
 POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
 token: {{token1}}
 content-type: application/json
 
 {
     "offeredFare": 10,
-    "searchStepId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchStepId}}"
+    "searchStepId": "{{nearbySearchRequest1.response.body.searchRequestsForDriver[0].searchStepId}}"
 }
 
 ###
 
-# @name selectedQuotes
+# @name selectedQuotes1
 GET {{app-host}}/estimate/{{estimateId}}/quotes
 content-type: application/json
 token: {{app-token}}
 
 ###
 
-@selectedQuoteId = {{selectedQuotes.response.body.selectedQuotes[0].id}}
+@selectedQuoteId1 = {{selectedQuotes1.response.body.selectedQuotes[0].id}}
 
-# @name confirmQuote
+# @name confirmQuote1
 
-POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm
+POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId1}}/confirm
 content-type: application/json
 token: {{app-token}}
 
@@ -171,7 +191,84 @@ token: {{app-token}}
 }
 
 ###
-@bookingId = {{confirmQuote.response.body.bookingId}}
+@bookingId1 = {{confirmQuote1.response.body.bookingId}}
+
+# @name list1
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{app-token}}
+
+###
+
+# @name driverList1
+GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
+token: {{token1}}
+
+###
+
+# @name rideCancelByDriver1
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/cancel
+token: {{token1}}
+content-type: application/json
+
+{
+  "reasonCode": "OTHER",
+  "additionalInfo" : "Rider is too cute"
+}
+
+###
+
+@rideId = {{driverList1.response.body.list[0].id}}
+@otp = {{list1.response.body.list[0].rideList[0].rideOtp}}
+
+# @name nearbySearchRequest2
+GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
+token: {{token2}}
+
+###
+
+# @name offerQuote2
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
+token: {{token2}}
+content-type: application/json
+
+{
+    "offeredFare": 10,
+    "searchStepId": "{{nearbySearchRequest2.response.body.searchRequestsForDriver[0].searchStepId}}"
+}
+
+###
+
+# @name selectedQuotes2
+GET {{app-host}}/estimate/{{estimateId}}/quotes
+content-type: application/json
+token: {{app-token}}
+
+###
+
+@selectedQuoteId2 = {{selectedQuotes2.response.body.selectedQuotes[0].id}}
+
+# @name confirmQuote2
+
+POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId2}}/confirm
+content-type: application/json
+token: {{app-token}}
+
+{
+  "selected": true,
+  "fromLocation": {
+    "door": "2"
+  },
+  "toLocation": {
+    "door": "3"
+  }
+}
+
+###
+@bookingId2 = {{confirmQuote2.response.body.bookingId}}
 
 # @name list2
 GET {{app-host}}/rideBooking/list
@@ -183,32 +280,22 @@ token: {{app-token}}
 
 ###
 
-# @name listOfCompleted
-GET {{app-host}}/rideBooking/list
-  ?offset=0
-  &limit=50
-  &status="COMPLETED"
-content-type: application/json
-token: {{app-token}}
-
-###
-
-# @name driverList
+# @name driverList2
 GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
-token: {{token1}}
+token: {{token2}}
 
 ###
 
-@rideId = {{driverList.response.body.list[0].id}}
-@otp = {{list2.response.body.list[0].rideList[0].rideOtp}}
+@rideId2 = {{driverList2.response.body.list[0].id}}
+@otp2 = {{list2.response.body.list[0].rideList[0].rideOtp}}
 
 # @name startRide
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/start
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 {
-    "rideOtp": "{{otp}}",
+    "rideOtp": "{{otp2}}",
     "point": {
             "lat": 14.445332,
             "lon": 75.919028
@@ -221,7 +308,7 @@ content-type: application/json
 
 # @name update1
 POST {{driver-offer-bpp-host}}/ui/driver/location
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 [
@@ -264,7 +351,7 @@ content-type: application/json
 
 # @name update2
 POST {{driver-offer-bpp-host}}/ui/driver/location
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 [
@@ -296,14 +383,9 @@ content-type: application/json
 
 ###
 
-# for testing thresholds specific for bpp, run
-# INSERT INTO atlas_driver_offer_bpp.transporter_config (organization_id, pickup_loc_threshold, drop_loc_threshold, created_at, updated_at) VALUES
-# 	('favorit0-0000-0000-0000-00000favorit', 500, 500, '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00'),
-# 	('nearest-drivers-testing-organization', 500, 500, '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00');
-
 # @name rideEnd
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
-token: {{token1}}
+token: {{token2}}
 content-type: application/json
 
 {
@@ -315,9 +397,9 @@ content-type: application/json
 
 ###
 
-# @name rideCancelByDriver
-POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/cancel
-token: {{token1}}
+# @name rideCancelByDriver2
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId2}}/cancel
+token: {{token2}}
 content-type: application/json
 
 {
@@ -328,7 +410,7 @@ content-type: application/json
 ###
 
 # @name rideCancelByUser
-POST {{app-host}}/rideBooking/{{bookingId}}/cancel
+POST {{app-host}}/rideBooking/{{bookingId2}}/cancel
 content-type: application/json
 token: {{app-token}}
 

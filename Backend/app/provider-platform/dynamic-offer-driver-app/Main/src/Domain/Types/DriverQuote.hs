@@ -18,6 +18,7 @@ module Domain.Types.DriverQuote where
 import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person
+import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.SearchStep
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -33,8 +34,9 @@ data DriverQuoteStatus = Active | Inactive
 data DriverQuote = DriverQuote
   { id :: Id DriverQuote,
     status :: DriverQuoteStatus,
-    searchRequestId :: Id SearchStep,
-    searchRequestForDriverId :: Maybe (Id SearchRequestForDriver),
+    requestId :: Id SearchRequest,
+    searchStepId :: Id SearchStep,
+    searchRequestForDriverId :: Maybe (Id SearchRequestForDriver), -- TODO :: Remove Maybe
     driverId :: Id Person,
     driverName :: Text,
     driverRating :: Maybe Centesimal,
@@ -42,11 +44,11 @@ data DriverQuote = DriverQuote
     distance :: Meters,
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
     validTill :: UTCTime,
     estimatedFare :: Money,
     fareParams :: Params.FareParameters,
-    providerId :: Id DMerchant.Merchant
+    providerId :: Id DMerchant.Merchant,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show, PrettyShow)

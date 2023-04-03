@@ -38,12 +38,15 @@ import Storage.Queries.Geometry
 import qualified Storage.Queries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
+import qualified Tools.Maps as Maps
 import Tools.Metrics
 import qualified Tools.Metrics as Metrics
 
 data OneWaySearchReq = OneWaySearchReq
   { origin :: DSearch.SearchReqLocation,
-    destination :: DSearch.SearchReqLocation
+    destination :: DSearch.SearchReqLocation,
+    autoAssignEnabled :: Bool,
+    autoAssignEnabledV2 :: Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -54,7 +57,9 @@ data OneWaySearchRes = OneWaySearchRes
     now :: UTCTime,
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
-    city :: Text
+    city :: Text,
+    autoAssignEnabled :: Bool,
+    customerLanguage :: Maybe Maps.Language
   }
 
 oneWaySearch ::
@@ -79,7 +84,17 @@ oneWaySearch person merchant req bundleVersion clientVersion distance = do
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   toLocation <- DSearch.buildSearchReqLoc req.destination
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest person fromLocation (Just toLocation) (metersToHighPrecMeters <$> distance) now bundleVersion clientVersion
+  searchRequest <-
+    DSearch.buildSearchRequest
+      person
+      fromLocation
+      (Just toLocation)
+      (metersToHighPrecMeters <$> distance)
+      now
+      bundleVersion
+      clientVersion
+      req.autoAssignEnabled
+      req.autoAssignEnabledV2
   Metrics.incrementSearchRequestCount merchant.name
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
@@ -94,7 +109,9 @@ oneWaySearch person merchant req bundleVersion clientVersion distance = do
             now = now,
             gatewayUrl = merchant.gatewayUrl,
             searchRequestExpiry = searchRequest.validTill,
-            city = merchant.city
+            city = merchant.city,
+            autoAssignEnabled = req.autoAssignEnabled,
+            customerLanguage = searchRequest.language
           }
   return dSearchRes
   where

@@ -42,6 +42,7 @@ import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchStep as DSS
 import Kernel.Prelude
 import Kernel.Storage.Hedis
@@ -52,7 +53,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
-import qualified SharedLogic.Estimate as DEstimate
+import qualified SharedLogic.Estimate as DEst
 import Storage.CachedQueries.CacheConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Person as QPerson
@@ -67,16 +68,17 @@ callOnSelect ::
     HasShortDurationRetryCfg r c
   ) =>
   DM.Merchant ->
+  DSR.SearchRequest ->
   DSS.SearchStep ->
   OnSelect.OnSelectMessage ->
   m ()
-callOnSelect transporter searchRequest content = do
+callOnSelect transporter searchRequest searchStep content = do
   let bapId = searchRequest.bapId
       bapUri = searchRequest.bapUri
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
-  let msgId = searchRequest.messageId
+  let msgId = searchStep.estimateId.getId
   context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) transporter.city
   logDebug $ "on_select request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
@@ -233,16 +235,17 @@ sendDriverOffer ::
     HasPrettyLogger m r
   ) =>
   DM.Merchant ->
+  DSR.SearchRequest ->
   DSS.SearchStep ->
   DDQ.DriverQuote ->
   m ()
-sendDriverOffer transporter searchReq driverQuote = do
-  callOnSelect transporter searchReq =<< (buildOnSelectReq transporter searchReq [driverQuote] <&> ACL.mkOnSelectMessage)
+sendDriverOffer transporter searchReq searchStep driverQuote = do
+  callOnSelect transporter searchReq searchStep =<< (buildOnSelectReq transporter searchReq [driverQuote] <&> ACL.mkOnSelectMessage)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>
       DM.Merchant ->
-      DSS.SearchStep ->
+      DSR.SearchRequest ->
       [DDQ.DriverQuote] ->
       m ACL.DOnSelectReq
     buildOnSelectReq org searchRequest quotes = do
@@ -303,14 +306,14 @@ sendEstimateRepetitionUpdateToBAP ::
   ) =>
   DRB.Booking ->
   SRide.Ride ->
-  DEstimate.EstimateItem ->
+  Id DEst.Estimate ->
   SRBCR.CancellationSource ->
   m ()
-sendEstimateRepetitionUpdateToBAP booking ride estimateItem cancellationSource = do
+sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq {cancellationSource, booking, estimateItem, ride}
+  let estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq {cancellationSource, booking, estimateId, ride}
   estimateRepMsg <- ACL.buildOnUpdateMessage estimateRepetitionBuildReq
   retryConfig <- asks (.shortDurationRetryCfg)
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.transactionId estimateRepMsg retryConfig

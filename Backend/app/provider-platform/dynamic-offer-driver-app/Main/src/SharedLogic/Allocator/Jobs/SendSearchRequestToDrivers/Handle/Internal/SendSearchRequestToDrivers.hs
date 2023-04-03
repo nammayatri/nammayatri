@@ -20,6 +20,7 @@ where
 import qualified Data.Map as M
 import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import Domain.Types.Merchant.DriverPoolConfig
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchStep as DSS
@@ -38,7 +39,7 @@ import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
 
-type LanguageDictionary = M.Map Maps.Language DSS.SearchStep
+type LanguageDictionary = M.Map Maps.Language DSR.SearchRequest
 
 sendSearchRequestToDrivers ::
   ( Log m,
@@ -48,6 +49,7 @@ sendSearchRequestToDrivers ::
     EncFlow m r,
     Redis.HedisFlow m r
   ) =>
+  DSR.SearchRequest ->
   DSS.SearchStep ->
   Money ->
   Money ->
@@ -55,20 +57,21 @@ sendSearchRequestToDrivers ::
   DriverPoolConfig ->
   [DriverPoolWithActualDistResult] ->
   m ()
-sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFee driverPoolConfig driverPool = do
+sendSearchRequestToDrivers searchReq searchStep baseFare driverMinExtraFee driverMaxExtraFee driverPoolConfig driverPool = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchReq.id
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   forM_ driverPool $ \dPoolRes -> do
     incrementTotalQuotesCount searchReq.providerId (cast dPoolRes.driverPoolResult.driverId) searchReq validTill (fromIntegral driverPoolConfig.singleBatchProcessTime)
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber searchReq baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber baseFare validTill driverMinExtraFee driverMaxExtraFee) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   Esq.runTransaction $ do
-    QSRD.setInactiveByRequestId searchReq.id -- inactive previous request by drivers so that they can make new offers.
+    QSRD.setInactiveBySSId searchStep.id -- inactive previous request by drivers so that they can make new offers.
     QSRD.createMany searchRequestsForDrivers
     forM_ driverPoolZipSearchRequests $ \(_, sReqFD) -> do
-      QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = sReqFD.searchRequestId, validTill = sReqFD.searchRequestValidTill}
+      -- TODO: Do not forget to migrate requestId to searchStepId
+      QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {searchStepId = searchStep.id, validTill = sReqFD.searchRequestValidTill}
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
@@ -86,14 +89,13 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
         MonadReader r m
       ) =>
       Int ->
-      DSS.SearchStep ->
       Money ->
       UTCTime ->
       Money ->
       Money ->
       DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver batchNumber searchRequest baseFare_ validTill driverMinExtraCharge driverMaxExtraCharge dpwRes = do
+    buildSearchRequestForDriver batchNumber baseFare_ validTill driverMinExtraCharge driverMaxExtraCharge dpwRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let dpRes = dpwRes.driverPoolResult
@@ -101,8 +103,9 @@ sendSearchRequestToDrivers searchReq baseFare driverMinExtraFee driverMaxExtraFe
       let searchRequestForDriver =
             SearchRequestForDriver
               { id = guid,
-                searchRequestId = searchRequest.id,
-                startTime = searchRequest.startTime,
+                requestId = searchReq.id,
+                searchStepId = searchStep.id,
+                startTime = searchStep.startTime,
                 searchRequestValidTill = validTill,
                 driverId = cast dpRes.driverId,
                 vehicleVariant = dpRes.variant,
@@ -145,14 +148,14 @@ translateSearchReq ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  DSS.SearchStep ->
+  DSR.SearchRequest ->
   Maps.Language ->
-  m DSS.SearchStep
-translateSearchReq DSS.SearchStep {..} language = do
+  m DSR.SearchRequest
+translateSearchReq DSR.SearchRequest {..} language = do
   from <- buildTranslatedSearchReqLocation fromLocation (Just language)
   to <- buildTranslatedSearchReqLocation toLocation (Just language)
   pure
-    DSS.SearchStep
+    DSR.SearchRequest
       { fromLocation = from,
         toLocation = to,
         ..
@@ -163,7 +166,7 @@ addLanguageToDictionary ::
     CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  DSS.SearchStep ->
+  DSR.SearchRequest ->
   LanguageDictionary ->
   DriverPoolWithActualDistResult ->
   m LanguageDictionary

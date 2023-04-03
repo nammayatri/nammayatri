@@ -38,6 +38,7 @@ instance FromTType FullEstimateT Domain.Estimate where
     return $
       Domain.Estimate
         { id = Id id,
+          bppEstimateId = Id bppEstimateId,
           requestId = fromKey requestId,
           providerUrl = pUrl,
           estimatedFare = roundToIntegral estimatedFare,
@@ -58,10 +59,10 @@ instance FromTType FullEstimateT Domain.Estimate where
 
 instance ToTType FullEstimateT Domain.Estimate where
   toTType Domain.Estimate {..} = do
-    let estimateId = getId id
     let estimateT =
           SEstimate.EstimateT
-            { id = estimateId,
+            { id = getId id,
+              bppEstimateId = getId bppEstimateId,
               requestId = toKey requestId,
               providerUrl = showBaseUrl providerUrl,
               tripTermsId = toKey <$> (tripTerms <&> (.id)),

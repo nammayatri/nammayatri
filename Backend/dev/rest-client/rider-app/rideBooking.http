@@ -41,7 +41,9 @@ token: {{token}}
           "lon": 76.3388894,
           "lat": 10.0792806
       }
-    }
+    },
+    "autoAssignEnabled" : false,
+    "autoAssignEnabledV2" : false
   }
 }
 

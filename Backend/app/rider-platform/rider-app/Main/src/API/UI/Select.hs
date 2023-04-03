@@ -16,6 +16,7 @@ module API.UI.Select
   ( DSelect.DSelectRes (..),
     DSelect.SelectListRes (..),
     DSelect.QuotesResultResponse (..),
+    DSelect.CancelAPIResponse (..),
     API,
     handler,
   )
@@ -48,11 +49,6 @@ type API =
            :> Post '[JSON] APISuccess
            :<|> TokenAuth
              :> Capture "estimateId" (Id DEstimate.Estimate)
-             :> "select2" -- TODO will replace "select" once 100% rolled out
-             :> ReqBody '[JSON] DSelect.DEstimateSelectReq
-             :> Post '[JSON] APISuccess
-           :<|> TokenAuth
-             :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "quotes"
              :> Get '[JSON] DSelect.SelectListRes
            :<|> TokenAuth
@@ -68,28 +64,18 @@ type API =
 handler :: FlowServer API
 handler =
   select
-    :<|> select2
     :<|> selectList
     :<|> selectResult
     :<|> cancelSearch
 
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
 select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  let autoAssignFlag = False
-  let req = DSelect.DEstimateSelectReq {autoAssignEnabled = autoAssignFlag, autoAssignEnabledV2 = Nothing}
-  dSelectReq <- DSelect.select personId estimateId autoAssignFlag autoAssignFlag
-  becknReq <- ACL.buildSelectReq dSelectReq req.autoAssignEnabled
+  dSelectReq <- DSelect.select personId estimateId
+  becknReq <- ACL.buildSelectReq dSelectReq
   void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
-select2 :: Id DPerson.Person -> Id DEstimate.Estimate -> DSelect.DEstimateSelectReq -> FlowHandler APISuccess
-select2 personId estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  let autoAssignV2Flag = fromMaybe False req.autoAssignEnabledV2
-  dSelectReq <- DSelect.select personId estimateId req.autoAssignEnabled autoAssignV2Flag
-  becknReq <- ACL.buildSelectReq dSelectReq req.autoAssignEnabled
-  void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
-  pure Success
-
+--DEPRECATED
 selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 selectList personId = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectList
 

@@ -25,11 +25,11 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
 where
 
 import Domain.Types.Merchant.DriverPoolConfig
+import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchStep as DSS
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Error (SearchRequestError (SearchRequestDoesNotExist))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as Reexport
@@ -38,6 +38,7 @@ import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.SearchStep as QSS
+import Tools.Error
 
 ifSearchRequestIsCancelled ::
   ( HasCacheConfig r,
@@ -59,8 +60,8 @@ ifSearchRequestIsExpired ::
   ) =>
   Id SearchStep ->
   m Bool
-ifSearchRequestIsExpired searchReqId = do
-  searchReqValidTill <- QSS.getValidTill searchReqId >>= fromMaybeM (SearchRequestDoesNotExist searchReqId.getId)
+ifSearchRequestIsExpired searchStepId = do
+  searchReqValidTill <- QSS.getValidTill searchStepId >>= fromMaybeM (SearchStepDoesNotExist searchStepId.getId)
   now <- getCurrentTime
   pure $ searchReqValidTill <= now
 
@@ -70,7 +71,7 @@ isRideAlreadyAssigned ::
     EsqDBFlow m r,
     Log m
   ) =>
-  Id SearchStep ->
+  Id SearchRequest ->
   m Bool
 isRideAlreadyAssigned searchReqId = isJust <$> QB.findBySearchReq searchReqId
 
@@ -83,8 +84,8 @@ isReceivedMaxDriverQuotes ::
   DriverPoolConfig ->
   Id SearchStep ->
   m Bool
-isReceivedMaxDriverQuotes driverPoolCfg searchReqId = do
-  totalQuotesRecieved <- length <$> QDQ.findAllByRequestId searchReqId
+isReceivedMaxDriverQuotes driverPoolCfg searchStepId = do
+  totalQuotesRecieved <- length <$> QDQ.findAllBySSId searchStepId
   pure (totalQuotesRecieved >= driverPoolCfg.maxDriverQuotesRequired)
 
 getRescheduleTime ::

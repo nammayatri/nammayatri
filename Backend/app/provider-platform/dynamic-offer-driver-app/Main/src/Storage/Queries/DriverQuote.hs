@@ -53,10 +53,10 @@ findById dQuoteId = buildDType $
       where_ $ dQuote ^. DriverQuoteTId ==. val (toKey dQuoteId)
       pure (dQuote, farePars)
 
-setInactiveByRequestId :: Id DSS.SearchStep -> SqlDB ()
-setInactiveByRequestId searchReqId = Esq.update $ \p -> do
+setInactiveBySSId :: Id DSS.SearchStep -> SqlDB ()
+setInactiveBySSId searchStepId = Esq.update $ \p -> do
   set p [DriverQuoteStatus =. val Domain.Inactive]
-  where_ $ p ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+  where_ $ p ^. DriverQuoteSearchStepId ==. val (toKey searchStepId)
 
 findActiveQuotesByDriverId :: (Transactionable m, MonadTime m) => Id Person -> Seconds -> m [Domain.DriverQuote]
 findActiveQuotesByDriverId driverId driverUnlockDelay = do
@@ -73,8 +73,8 @@ findActiveQuotesByDriverId driverId driverUnlockDelay = do
             &&. dQuote ^. DriverQuoteValidTill >. val (addUTCTime delayToAvoidRaces now)
         pure (dQuote, farePars)
 
-findAllByRequestId :: Transactionable m => Id DSS.SearchStep -> m [Domain.DriverQuote]
-findAllByRequestId searchReqId = do
+findAllBySSId :: Transactionable m => Id DSS.SearchStep -> m [Domain.DriverQuote]
+findAllBySSId searchStepId = do
   buildDType $ do
     fmap (fmap $ extractSolidType @Domain.DriverQuote) $
       Esq.findAll' $ do
@@ -82,17 +82,17 @@ findAllByRequestId searchReqId = do
           from baseDriverQuoteQuery
         where_ $
           dQuote ^. DriverQuoteStatus ==. val Domain.Active
-            &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+            &&. dQuote ^. DriverQuoteSearchStepId ==. val (toKey searchStepId)
         pure (dQuote, farePars)
 
-countAllByRequestId :: Transactionable m => Id DSS.SearchStep -> m Int32
-countAllByRequestId searchReqId = do
+countAllBySSId :: Transactionable m => Id DSS.SearchStep -> m Int32
+countAllBySSId searchStepId = do
   fmap (fromMaybe 0) $
     Esq.findOne $ do
       dQuote <- from $ table @DriverQuoteT
       where_ $
         dQuote ^. DriverQuoteStatus ==. val Domain.Active
-          &&. dQuote ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+          &&. dQuote ^. DriverQuoteSearchStepId ==. val (toKey searchStepId)
       pure (countRows @Int32)
 
 deleteByDriverId :: Id Person -> SqlDB ()

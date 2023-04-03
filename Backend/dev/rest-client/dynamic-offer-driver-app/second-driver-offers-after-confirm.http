@@ -93,7 +93,9 @@ token: {{app-token}}
           "lon": 76.3388894,
           "lat": 10.0792806
       }
-    }
+    },
+    "autoAssignEnabled" : false,
+    "autoAssignEnabledV2" : false
   }
 }
 
@@ -130,7 +132,7 @@ content-type: application/json
 
 {
     "offeredFare": 30.5,
-    "searchRequestId": "{{nearbySearchRequest1.response.body.searchRequests[0].searchRequestId}}"
+    "searchStepId": "{{nearbySearchRequest1.response.body.searchRequests[0].searchStepId}}"
 }
 
 ###
@@ -188,7 +190,7 @@ content-type: application/json
 
 {
     "offeredFare": 30.5,
-    "searchRequestId": "{{nearbySearchRequest2.response.body.searchRequests[0].searchRequestId}}"
+    "searchStepId": "{{nearbySearchRequest2.response.body.searchRequests[0].searchStepId}}"
 }
 ###
 

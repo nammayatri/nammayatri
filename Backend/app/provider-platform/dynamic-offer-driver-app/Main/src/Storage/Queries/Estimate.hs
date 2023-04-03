@@ -12,9 +12,19 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Select.StopInfo
-  ( module Reexport,
-  )
-where
+module Storage.Queries.Estimate where
 
-import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
+import Domain.Types.Estimate as Domain
+import Kernel.Prelude
+import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import Storage.Tabular.Estimate ()
+
+create :: Estimate -> SqlDB ()
+create = Esq.create
+
+createMany :: [Estimate] -> SqlDB ()
+createMany = Esq.createMany
+
+findById :: Transactionable m => Id Estimate -> m (Maybe Estimate)
+findById = Esq.findById

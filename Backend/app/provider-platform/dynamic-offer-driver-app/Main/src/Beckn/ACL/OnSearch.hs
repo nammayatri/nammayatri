@@ -20,7 +20,7 @@ import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
-import qualified SharedLogic.Estimate as DEstimate
+import qualified SharedLogic.Estimate as DEst
 
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =
@@ -116,25 +116,26 @@ data QuoteEntities = QuoteEntities
 currency' :: Text
 currency' = "INR"
 
-mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DEstimate.EstimateItem -> QuoteEntities
-mkQuoteEntities start end it = do
-  let variant = castVariant it.vehicleVariant
-      minPriceDecimalValue = OS.DecimalValue $ toRational it.minFare
-      maxPriceDecimalValue = OS.DecimalValue $ toRational it.maxFare
-      estimateBreakupList = buildEstimateBreakUpList <$> it.estimateBreakupList
+mkQuoteEntities :: OS.StartInfo -> OS.StopInfo -> DSearch.EstimateInfo -> QuoteEntities
+mkQuoteEntities start end estInfo = do
+  let estimate = estInfo.estimate
+      variant = castVariant estimate.vehicleVariant
+      minPriceDecimalValue = OS.DecimalValue $ toRational estimate.minFare
+      maxPriceDecimalValue = OS.DecimalValue $ toRational estimate.maxFare
+      estimateBreakupList = buildEstimateBreakUpList <$> estimate.estimateBreakupList
       fulfillment =
         OS.FulfillmentInfo
           { start,
             end = Just end,
-            id = "ARDU_" <> show it.vehicleVariant,
-            vehicle = OS.FulfillmentVehicle {category = castVariant it.vehicleVariant}
+            id = "ARDU_" <> show estimate.vehicleVariant,
+            vehicle = OS.FulfillmentVehicle {category = castVariant estimate.vehicleVariant}
           }
       item =
         OS.Item
-          { category_id = autoOneWayCategory.id,
+          { id = estInfo.estimate.id.getId,
+            category_id = autoOneWayCategory.id,
             fulfillment_id = fulfillment.id,
             offer_id = Nothing,
-            id = show autoOneWayCategory.id,
             price =
               OS.ItemPrice
                 { currency = currency',
@@ -153,13 +154,13 @@ mkQuoteEntities start end it = do
             tags =
               Just $
                 OS.ItemTags
-                  { distance_to_nearest_driver = Just $ OS.DecimalValue $ toRational it.distanceToPickup,
-                    night_shift_multiplier = OS.DecimalValue . toRational <$> ((.nightShiftMultiplier) =<< it.nightShiftRate),
-                    night_shift_start = (.nightShiftStart) =<< it.nightShiftRate,
-                    night_shift_end = (.nightShiftEnd) =<< it.nightShiftRate,
-                    waiting_charge_per_min = it.waitingCharges.waitingChargePerMin,
-                    waiting_time_estimated_threshold = it.waitingCharges.waitingTimeEstimatedThreshold,
-                    drivers_location = it.driversLatLong
+                  { distance_to_nearest_driver = Just $ realToFrac estInfo.distanceToNearestDriver,
+                    night_shift_multiplier = OS.DecimalValue . toRational <$> (estimate.nightShiftRate.nightShiftMultiplier),
+                    night_shift_start = estimate.nightShiftRate.nightShiftStart,
+                    night_shift_end = estimate.nightShiftRate.nightShiftEnd,
+                    waiting_charge_per_min = estimate.waitingCharges.waitingChargePerMin,
+                    waiting_time_estimated_threshold = estimate.waitingCharges.waitingTimeEstimatedThreshold,
+                    drivers_location = toList estInfo.driverLatLongs
                   },
             base_distance = Nothing,
             base_duration = Nothing
@@ -221,9 +222,9 @@ mkQuoteEntitiesSpecialZone start end it = do
     }
 
 buildEstimateBreakUpList ::
-  DEstimate.BreakupItem ->
+  DEst.EstimateBreakup ->
   BreakupItem
-buildEstimateBreakUpList DEstimate.BreakupItem {..} = do
+buildEstimateBreakUpList DEst.EstimateBreakup {..} = do
   BreakupItem
     { title = title,
       price =

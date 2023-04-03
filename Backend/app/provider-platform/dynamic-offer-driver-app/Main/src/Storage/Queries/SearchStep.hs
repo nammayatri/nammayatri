@@ -14,33 +14,34 @@
 
 module Storage.Queries.SearchStep where
 
+import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchStep as Domain
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.SearchRequest.SearchReqLocation
 import Storage.Tabular.SearchStep
 
 create :: SearchStep -> SqlDB ()
-create dsReq = Esq.runTransaction $
-  withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
-    Esq.create' fromLoc
-    Esq.create' toLoc
-    Esq.create' sReq
+create = Esq.create
 
 findById :: Transactionable m => Id SearchStep -> m (Maybe SearchStep)
-findById searchRequestId = buildDType $
-  fmap (fmap $ extractSolidType @Domain.SearchStep) $
-    Esq.findOne' $ do
-      (sReq :& sFromLoc :& sToLoc) <-
-        from
-          ( table @SearchStepT
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchStepFromLocationId ==. loc1 ^. SearchReqLocationTId)
-              `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchStepToLocationId ==. loc2 ^. SearchReqLocationTId)
-          )
-      where_ $ sReq ^. SearchStepTId ==. val (toKey searchRequestId)
-      pure (sReq, sFromLoc, sToLoc)
+findById = Esq.findById
+
+cancelActiveStepsByRequestId ::
+  Id SearchRequest ->
+  SqlDB ()
+cancelActiveStepsByRequestId searchId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ SearchStepUpdatedAt =. val now,
+        SearchStepStatus =. val CANCELLED
+      ]
+    where_ $
+      tbl ^. SearchStepRequestId ==. val (toKey searchId)
+        &&. tbl ^. SearchStepStatus ==. val ACTIVE
 
 updateStatus ::
   Id SearchStep ->
@@ -56,23 +57,12 @@ updateStatus searchId status_ = do
       ]
     where_ $ tbl ^. SearchStepTId ==. val (toKey searchId)
 
-getRequestIdfromTransactionId ::
-  (Transactionable m) =>
-  Id SearchStep ->
-  m (Maybe (Id SearchStep))
-getRequestIdfromTransactionId tId = do
-  findOne $ do
-    searchT <- from $ table @SearchStepT
-    where_ $
-      searchT ^. SearchStepTransactionId ==. val (getId tId)
-    return $ searchT ^. SearchStepTId
-
 getStatus ::
   (Transactionable m) =>
   Id SearchStep ->
   m (Maybe SearchStepStatus)
 getStatus searchRequestId = do
-  findOne $ do
+  Esq.findOne $ do
     searchT <- from $ table @SearchStepT
     where_ $
       searchT ^. SearchStepTId ==. val (toKey searchRequestId)
@@ -83,7 +73,7 @@ getValidTill ::
   Id SearchStep ->
   m (Maybe UTCTime)
 getValidTill searchRequestId = do
-  findOne $ do
+  Esq.findOne $ do
     searchT <- from $ table @SearchStepT
     where_ $
       searchT ^. SearchStepTId ==. val (toKey searchRequestId)

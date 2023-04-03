@@ -354,3 +354,59 @@ instance IsBaseError MediaFileError where
     FileSizeExceededError fileSize -> Just $ "Filesize is " <> fileSize <> " Bytes, which is more than the allowed 10MB limit."
     FileDoNotExist fileId -> Just $ "MediaFile with fileId \"" <> show fileId <> "\" do not exist."
     FileFormatNotSupported fileFormat -> Just $ "MediaFile with fileFormat \"" <> show fileFormat <> "\" not supported."
+
+data SearchStepError
+  = SearchStepNotFound Text
+  | SearchStepDoesNotExist Text
+  | SearchStepExpired
+  | SearchStepCancelled Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SearchStepError
+
+instance IsBaseError SearchStepError where
+  toMessage = \case
+    SearchStepNotFound searchStepId -> Just $ "Search step with searchStepId \"" <> show searchStepId <> "\"not found. "
+    SearchStepDoesNotExist searchStepId -> Just $ "No search step matches passed data \"<>" <> show searchStepId <> "\"."
+    SearchStepCancelled searchStepId -> Just $ "Search step with searchStepId \"<>" <> show searchStepId <> "\" was cancelled. "
+    _ -> Nothing
+
+instance IsHTTPError SearchStepError where
+  toErrorCode = \case
+    SearchStepNotFound _ -> "SEARCH_STEP_NOT_FOUND"
+    SearchStepDoesNotExist _ -> "SEARCH_STEP_DOES_NOT_EXIST"
+    SearchStepExpired -> "SEARCH_STEP_EXPIRED"
+    SearchStepCancelled _ -> "SEARCH_STEP_CANCELLED"
+  toHttpCode = \case
+    SearchStepNotFound _ -> E500
+    SearchStepDoesNotExist _ -> E400
+    SearchStepExpired -> E400
+    SearchStepCancelled _ -> E403
+
+instance IsAPIError SearchStepError
+
+data EstimateError
+  = EstimateNotFound Text
+  | EstimateDoesNotExist Text
+  | EstimateCancelled Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''EstimateError
+
+instance IsBaseError EstimateError where
+  toMessage = \case
+    EstimateNotFound estimateId -> Just $ "Estimate with estimateId \"" <> show estimateId <> "\"not found. "
+    EstimateDoesNotExist estimateId -> Just $ "No estimate matches passed data \"<>" <> show estimateId <> "\"."
+    EstimateCancelled estimateId -> Just $ "Estimate with estimateId \"<>" <> show estimateId <> "\" was cancelled. "
+
+instance IsHTTPError EstimateError where
+  toErrorCode = \case
+    EstimateNotFound _ -> "ESTIMATE_NOT_FOUND"
+    EstimateDoesNotExist _ -> "ESTIMATE_DOES_NOT_EXIST"
+    EstimateCancelled _ -> "ESTIMATE_CANCELLED"
+  toHttpCode = \case
+    EstimateNotFound _ -> E500
+    EstimateDoesNotExist _ -> E400
+    EstimateCancelled _ -> E403
+
+instance IsAPIError EstimateError

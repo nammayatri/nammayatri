@@ -21,14 +21,13 @@ import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
-import qualified Domain.Types.Vehicle.Variant as Veh
+import qualified Domain.Types.Vehicle as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBAP as BP
@@ -39,8 +38,10 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.QuoteSpecialZone as QSZoneQuote
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestSpecialZone as QSRSpecialZone
 import qualified Storage.Queries.SearchStep as QSS
+import Tools.Error
 
 data InitReq = InitReq
   { driverQuoteId :: Text,
@@ -112,9 +113,10 @@ handler merchantId req = do
       driverQuote <- QDQuote.findById (Id req.driverQuoteId) >>= fromMaybeM (QuoteNotFound req.driverQuoteId)
       when (driverQuote.validTill < now) $
         throwError $ QuoteExpired driverQuote.id.getId
-      searchRequest <- QSS.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
+      searchStep <- QSS.findById driverQuote.searchStepId >>= fromMaybeM (SearchStepNotFound driverQuote.searchStepId.getId)
+      searchRequest <- QSR.findById searchStep.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchStepId.getId)
       -- do we need to check searchRequest.validTill?
-      booking <- buildBooking searchRequest driverQuote DRB.NormalBooking now
+      booking <- buildBooking searchRequest driverQuote searchStep.startTime DRB.NormalBooking now
       Esq.runTransaction $
         QRB.create booking
       pure InitRes {..}
@@ -123,7 +125,7 @@ handler merchantId req = do
       when (specialZoneQuote.validTill < now) $
         throwError $ QuoteExpired specialZoneQuote.id.getId
       searchRequest <- QSRSpecialZone.findById specialZoneQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound specialZoneQuote.searchRequestId.getId)
-      booking <- buildBooking searchRequest specialZoneQuote DRB.SpecialZoneBooking now
+      booking <- buildBooking searchRequest specialZoneQuote searchRequest.startTime DRB.SpecialZoneBooking now
       Esq.runTransaction $
         QRB.create booking
       pure InitRes {..}
@@ -134,7 +136,6 @@ handler merchantId req = do
         HasField "transactionId" sr Text,
         HasField "fromLocation" sr DLoc.SearchReqLocation,
         HasField "toLocation" sr DLoc.SearchReqLocation,
-        HasField "startTime" sr UTCTime,
         HasField "estimatedDuration" sr Seconds,
         HasField "vehicleVariant" q Veh.Variant,
         HasField "distance" q Meters,
@@ -143,10 +144,11 @@ handler merchantId req = do
       ) =>
       sr ->
       q ->
+      UTCTime ->
       DRB.BookingType ->
       UTCTime ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote bookingType now = do
+    buildBooking searchRequest driverQuote startTime bookingType now = do
       id <- Id <$> generateGUID
       fromLocation <- buildBookingLocation searchRequest.fromLocation
       toLocation <- buildBookingLocation searchRequest.toLocation
@@ -160,7 +162,6 @@ handler merchantId req = do
             primaryExophone = exophone.primaryPhone,
             bapId = req.bapId,
             bapUri = req.bapUri,
-            startTime = searchRequest.startTime,
             riderId = Nothing,
             vehicleVariant = driverQuote.vehicleVariant,
             estimatedDistance = driverQuote.distance,

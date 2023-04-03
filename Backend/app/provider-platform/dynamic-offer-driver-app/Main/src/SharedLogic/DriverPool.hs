@@ -45,6 +45,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DIPC
 import Domain.Types.Merchant.DriverPoolConfig
 import qualified Domain.Types.Person as DP
+import Domain.Types.SearchRequest
 import Domain.Types.SearchStep
 import Domain.Types.Vehicle.Variant (Variant)
 import qualified EulerHS.Language as L
@@ -150,7 +151,7 @@ incrementTotalQuotesCount ::
   ) =>
   Id DM.Merchant ->
   Id DP.Person ->
-  SearchStep ->
+  SearchRequest ->
   UTCTime ->
   ExpirationTime ->
   m ()
@@ -171,7 +172,7 @@ addSearchRequestInfoToCache ::
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
-  Id SearchStep ->
+  Id SearchRequest ->
   Id DM.Merchant ->
   Id DP.Driver ->
   (UTCTime, Bool) ->

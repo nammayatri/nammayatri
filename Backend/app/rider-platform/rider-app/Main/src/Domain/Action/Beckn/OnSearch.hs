@@ -69,7 +69,8 @@ data ProviderInfo = ProviderInfo
   }
 
 data EstimateInfo = EstimateInfo
-  { vehicleVariant :: VehicleVariant,
+  { bppEstimateId :: Id DEstimate.BPPEstimate,
+    vehicleVariant :: VehicleVariant,
     estimatedFare :: Money,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
@@ -166,9 +167,6 @@ buildEstimate requestId providerInfo now EstimateInfo {..} = do
   pure
     DEstimate.Estimate
       { id = uid,
-        autoAssignEnabled = False,
-        autoAssignQuoteId = Nothing,
-        autoAssignEnabledV2 = False,
         providerMobileNumber = providerInfo.mobileNumber,
         providerName = providerInfo.name,
         providerCompletedRidesCount = providerInfo.ridesCompleted,

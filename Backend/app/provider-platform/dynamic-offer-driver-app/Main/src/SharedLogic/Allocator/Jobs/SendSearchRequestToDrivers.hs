@@ -16,6 +16,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
+import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchStep (SearchStep)
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
@@ -30,7 +31,9 @@ import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchStep as QSS
+import Tools.Error
 import qualified Tools.Metrics as Metrics
 
 sendSearchRequestToDrivers ::
@@ -48,11 +51,12 @@ sendSearchRequestToDrivers ::
   m ExecutionResult
 sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
-  let searchReqId = jobData.requestId
-  searchReq <- QSS.findById searchReqId >>= fromMaybeM (SearchRequestNotFound searchReqId.getId)
+  let searchStepId = jobData.searchStepId
+  searchStep <- QSS.findById searchStepId >>= fromMaybeM (SearchStepNotFound searchStepId.getId)
+  searchReq <- QSR.findById searchStep.requestId >>= fromMaybeM (SearchRequestNotFound searchStep.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig merchant.id jobData.estimatedRideDistance
-  sendSearchRequestToDrivers' driverPoolConfig searchReq merchant jobData.baseFare jobData.driverMinExtraFee jobData.driverMaxExtraFee
+  sendSearchRequestToDrivers' driverPoolConfig searchReq searchStep merchant jobData.baseFare jobData.driverMinExtraFee jobData.driverMaxExtraFee
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
@@ -65,25 +69,26 @@ sendSearchRequestToDrivers' ::
     Log m
   ) =>
   DriverPoolConfig ->
+  SearchRequest ->
   SearchStep ->
   Merchant ->
   Money ->
   Money ->
   Money ->
   m ExecutionResult
-sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverMinExtraCharge driverMaxExtraCharge = do
+sendSearchRequestToDrivers' driverPoolConfig searchReq searchStep merchant baseFare driverMinExtraCharge driverMaxExtraCharge = do
   handler handle
   where
     handle =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchReq.id,
           isRideAlreadyAssigned = I.isRideAlreadyAssigned searchReq.id,
-          isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchReq.id,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq,
+          isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchStep.id,
+          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchStep,
           cleanupDriverPoolBatches = I.cleanupDriverPoolBatches searchReq.id,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq baseFare driverMinExtraCharge driverMaxExtraCharge driverPoolConfig,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchStep baseFare driverMinExtraCharge driverMaxExtraCharge driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
-          setBatchDurationLock = I.setBatchDurationLock searchReq.id driverPoolConfig.singleBatchProcessTime,
+          setBatchDurationLock = I.setBatchDurationLock searchStep.id driverPoolConfig.singleBatchProcessTime,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,
           metrics =
             MetricsHandle
@@ -91,5 +96,9 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq merchant baseFare driverM
                 incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter merchant.name,
                 putTaskDuration = Metrics.putTaskDuration merchant.name
               },
-          ifSearchRequestIsValid = IfSearchRequestIsValid {cancelled = I.ifSearchRequestIsCancelled searchReq.id, expired = I.ifSearchRequestIsExpired searchReq.id}
+          ifSearchRequestIsValid =
+            IfSearchRequestIsValid
+              { cancelled = I.ifSearchRequestIsCancelled searchStep.id,
+                expired = I.ifSearchRequestIsExpired searchStep.id
+              }
         }

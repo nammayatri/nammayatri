@@ -11,36 +11,30 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DerivingVia #-}
 
 module Domain.Types.SearchRequest where
 
-import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
-import Kernel.Types.Common (HighPrecMeters)
+import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Version
-
-data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+import Kernel.Utils.GenericPretty
+import qualified Tools.Maps as Maps
 
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
-    startTime :: UTCTime,
-    validTill :: UTCTime,
-    riderId :: Id DP.Person,
+    transactionId :: Text,
+    providerId :: Id DM.Merchant,
     fromLocation :: DLoc.SearchReqLocation,
-    toLocation :: Maybe DLoc.SearchReqLocation,
-    distance :: Maybe HighPrecMeters,
-    merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
-    bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version,
-    language :: Maybe Maps.Language,
+    toLocation :: DLoc.SearchReqLocation,
+    bapId :: Text,
+    bapUri :: BaseUrl,
+    estimatedDistance :: Meters,
+    estimatedDuration :: Seconds,
     autoAssignEnabled :: Bool,
-    autoAssignEnabledV2 :: Bool,
+    customerLanguage :: Maybe Maps.Language,
     createdAt :: UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, PrettyShow, Show)

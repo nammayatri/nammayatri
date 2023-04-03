@@ -20,7 +20,6 @@ module Domain.Action.UI.Select
     selectList,
     selectResult,
     QuotesResultResponse (..),
-    DEstimateSelectReq (..),
     CancelAPIResponse (..),
   )
 where
@@ -37,7 +36,6 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Environment
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runInReplica)
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -55,20 +53,12 @@ import Tools.Error
 
 data DSelectRes = DSelectRes
   { searchRequest :: DSearchReq.SearchRequest,
-    estimateId :: Id DEstimate.Estimate,
+    estimate :: DEstimate.Estimate,
     providerId :: Text,
     providerUrl :: BaseUrl,
     variant :: VehicleVariant,
-    customerLanguage :: Maybe Maps.Language,
     city :: Text
   }
-
-data DEstimateSelectReq = DEstimateSelectReq
-  { autoAssignEnabled :: Bool,
-    autoAssignEnabledV2 :: Maybe Bool
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data QuotesResultResponse = QuotesResultResponse
   { selectedQuotes :: Maybe SelectListRes,
@@ -102,8 +92,8 @@ instance FromJSON CancelAPIResponse where
       _ -> parseFail "Expected \"Success\" in \"result\" field."
   parseJSON err = typeMismatch "Object APISuccess" err
 
-select :: Id DPerson.Person -> Id DEstimate.Estimate -> Bool -> Bool -> Flow DSelectRes
-select personId estimateId autoAssignEnabled autoAssignEnabledV2 = do
+select :: Id DPerson.Person -> Id DEstimate.Estimate -> Flow DSelectRes
+select personId estimateId = do
   now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   when (DEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
@@ -115,17 +105,16 @@ select personId estimateId autoAssignEnabled autoAssignEnabledV2 = do
   Esq.runTransaction $ do
     QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, validTill = searchRequest.validTill}
     QEstimate.updateStatus estimateId DEstimate.DRIVER_QUOTE_REQUESTED
-    QEstimate.updateAutoAssign estimateId autoAssignEnabled autoAssignEnabledV2
   pure
     DSelectRes
       { providerId = estimate.providerId,
         providerUrl = estimate.providerUrl,
         variant = estimate.vehicleVariant,
-        customerLanguage = searchRequest.language,
         city = merchant.city,
         ..
       }
 
+--DEPRECATED
 selectList :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m SelectListRes
 selectList estimateId = do
   estimate <- runInReplica $ QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
@@ -137,9 +126,8 @@ selectResult :: (EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResul
 selectResult estimateId = do
   res <- runMaybeT $ do
     estimate <- MaybeT . runInReplica $ QEstimate.findById estimateId
-    quoteId <- MaybeT $ pure estimate.autoAssignQuoteId
     when (DEstimate.isCancelled estimate.status) $ MaybeT $ throwError $ EstimateCancelled estimate.id.getId
-    booking <- MaybeT . runInReplica $ QBooking.findAssignedByQuoteId (Id quoteId)
+    booking <- MaybeT . runInReplica $ QBooking.findAssignedByEstimateId estimate.id
     return $ QuotesResultResponse {bookingId = Just booking.id, selectedQuotes = Nothing}
   case res of
     Just r -> pure r

@@ -42,8 +42,10 @@ buildSearchRequest ::
   UTCTime ->
   Maybe Version ->
   Maybe Version ->
+  Bool ->
+  Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest person pickup mbDrop mbDistance now bundleVersion clientVersion = do
+buildSearchRequest person pickup mbDrop mbDistance now bundleVersion clientVersion autoAssignEnabled autoAssignEnabledV2 = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -59,7 +61,9 @@ buildSearchRequest person pickup mbDrop mbDistance now bundleVersion clientVersi
         createdAt = now,
         bundleVersion = bundleVersion,
         clientVersion = clientVersion,
-        language = person.language
+        language = person.language,
+        autoAssignEnabled,
+        autoAssignEnabledV2
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

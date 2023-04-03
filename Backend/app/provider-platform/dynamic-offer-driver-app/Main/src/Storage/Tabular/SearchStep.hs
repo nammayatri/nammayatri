@@ -25,9 +25,8 @@ import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
-import Kernel.Utils.Common hiding (id)
-import Storage.Tabular.Merchant (MerchantTId)
-import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
+import Storage.Tabular.Estimate (EstimateTId)
+import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.SearchStepStatus"
@@ -37,24 +36,18 @@ mkPersist
   [defaultQQ|
     SearchStepT sql=search_step
       id Text
-      transactionId Text
+      requestId SearchRequestTId
+      estimateId EstimateTId
       messageId Text
       startTime UTCTime
       validTill UTCTime
-      providerId MerchantTId
-      fromLocationId SearchReqLocationTId
-      toLocationId SearchReqLocationTId
-      bapId Text
-      bapUri Text
-      estimatedDistance Meters
-      estimatedDuration Seconds
       status Domain.SearchStepStatus
       searchRepeatCounter Int
       vehicleVariant Variant.Variant
       createdAt UTCTime
       updatedAt UTCTime
+
       Primary id
-      autoAssignEnabled Bool
       deriving Generic
     |]
 
@@ -63,34 +56,21 @@ instance TEntityKey SearchStepT where
   fromKey (SearchStepTKey _id) = Id _id
   toKey (Id id) = SearchStepTKey id
 
-type FullSearchStepT = (SearchStepT, SearchReqLocationT, SearchReqLocationT)
-
-instance FromTType FullSearchStepT Domain.SearchStep where
-  fromTType (SearchStepT {..}, fromLoc, toLoc) = do
-    pUrl <- parseBaseUrl bapUri
-    let fromLoc_ = mkDomainSearchReqLocation fromLoc
-        toLoc_ = mkDomainSearchReqLocation toLoc
-
+instance FromTType SearchStepT Domain.SearchStep where
+  fromTType SearchStepT {..} = do
     return $
       Domain.SearchStep
         { id = Id id,
-          providerId = fromKey providerId,
-          fromLocation = fromLoc_,
-          toLocation = toLoc_,
-          bapUri = pUrl,
+          requestId = fromKey requestId,
+          estimateId = fromKey estimateId,
           ..
         }
 
-instance ToTType FullSearchStepT Domain.SearchStep where
+instance ToTType SearchStepT Domain.SearchStep where
   toTType Domain.SearchStep {..} =
-    ( SearchStepT
-        { id = getId id,
-          providerId = toKey providerId,
-          fromLocationId = toKey fromLocation.id,
-          toLocationId = toKey toLocation.id,
-          bapUri = showBaseUrl bapUri,
-          ..
-        },
-      mkTabularSearchReqLocation fromLocation,
-      mkTabularSearchReqLocation toLocation
-    )
+    SearchStepT
+      { id = getId id,
+        requestId = toKey requestId,
+        estimateId = toKey estimateId,
+        ..
+      }

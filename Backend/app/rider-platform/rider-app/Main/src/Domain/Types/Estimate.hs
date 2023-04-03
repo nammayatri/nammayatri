@@ -34,11 +34,9 @@ import Servant.API
 
 data Estimate = Estimate
   { id :: Id Estimate,
+    bppEstimateId :: Id BPPEstimate,
     requestId :: Id DSearchRequest.SearchRequest,
     estimatedFare :: Money,
-    autoAssignEnabled :: Bool,
-    autoAssignEnabledV2 :: Bool,
-    autoAssignQuoteId :: Maybe Text,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     totalFareRange :: FareRange,
@@ -49,13 +47,13 @@ data Estimate = Estimate
     providerCompletedRidesCount :: Int,
     vehicleVariant :: VehicleVariant,
     tripTerms :: Maybe DTripTerms.TripTerms,
-    createdAt :: UTCTime,
     estimateBreakupList :: [EstimateBreakup],
     nightShiftRate :: Maybe NightShiftRate,
     status :: EstimateStatus,
-    updatedAt :: UTCTime,
     waitingCharges :: WaitingCharges,
-    driversLocation :: [LatLong]
+    driversLocation :: [LatLong],
+    updatedAt :: UTCTime,
+    createdAt :: UTCTime
   }
   deriving (Generic, Show)
 
@@ -99,11 +97,11 @@ data EstimateAPIEntity = EstimateAPIEntity
     agencyNumber :: Text,
     agencyCompletedRidesCount :: Int,
     tripTerms :: [Text],
-    createdAt :: UTCTime,
     estimateFareBreakup :: [EstimateBreakupAPIEntity],
     nightShiftRate :: Maybe NightShiftRate,
     waitingCharges :: WaitingCharges,
-    driversLatLong :: [LatLong]
+    driversLatLong :: [LatLong],
+    createdAt :: UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -155,3 +153,5 @@ isCancelled ::
   EstimateStatus ->
   Bool
 isCancelled status = status == CANCELLED || status == DRIVER_QUOTE_CANCELLED
+
+data BPPEstimate

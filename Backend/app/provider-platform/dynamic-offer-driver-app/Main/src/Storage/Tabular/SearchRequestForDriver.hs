@@ -28,6 +28,7 @@ import Kernel.Types.Common (Meters, Money)
 import Kernel.Types.Id
 import Kernel.Types.Time
 import Storage.Tabular.Person (PersonTId)
+import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.SearchStep (SearchStepTId)
 import Storage.Tabular.Vehicle ()
 
@@ -39,7 +40,8 @@ mkPersist
   [defaultQQ|
     SearchRequestForDriverT sql=search_request_for_driver
       id Text
-      searchRequestId SearchStepTId
+      requestId SearchRequestTId
+      searchStepId SearchStepTId
       startTime UTCTime
       actualDistanceToPickup Meters
       straightLineDistanceToPickup Meters
@@ -52,7 +54,6 @@ mkPersist
       searchRequestValidTill UTCTime
       driverId PersonTId
       status Domain.DriverSearchRequestStatus
-      createdAt UTCTime
       response Domain.SearchRequestForDriverResponse Maybe
       driverMinExtraFee Money
       driverMaxExtraFee Money
@@ -62,6 +63,8 @@ mkPersist
       acceptanceRatio Double Maybe
       driverAvailableTime Double Maybe
       parallelSearchRequestCount Int Maybe
+      createdAt UTCTime
+
       Primary id
       deriving Generic
     |]
@@ -77,7 +80,8 @@ instance FromTType SearchRequestForDriverT Domain.SearchRequestForDriver where
       Domain.SearchRequestForDriver
         { id = Id id,
           driverId = fromKey driverId,
-          searchRequestId = fromKey searchRequestId,
+          requestId = fromKey requestId,
+          searchStepId = fromKey searchStepId,
           ..
         }
 
@@ -86,6 +90,7 @@ instance ToTType SearchRequestForDriverT Domain.SearchRequestForDriver where
     SearchRequestForDriverT
       { id = getId id,
         driverId = toKey driverId,
-        searchRequestId = toKey searchRequestId,
+        requestId = toKey requestId,
+        searchStepId = toKey searchStepId,
         ..
       }

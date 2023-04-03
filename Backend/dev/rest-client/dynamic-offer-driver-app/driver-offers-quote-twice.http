@@ -72,7 +72,9 @@ token: {{custToken}}
           "lon": 76.3388894,
           "lat": 10.0792806
       }
-    }
+    },
+    "autoAssignEnabled" : false,
+    "autoAssignEnabledV2" : false
   }
 }
 
@@ -137,7 +139,9 @@ token: {{custToken2}}
           "lon": 76.3388894,
           "lat": 10.0792806
       }
-    }
+    },
+    "autoAssignEnabled" : false,
+    "autoAssignEnabledV2" : false
   }
 }
 
@@ -174,7 +178,7 @@ content-type: application/json
 
 {
     "offeredFare": 30,
-    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequests[0].searchRequestId}}"
+    "searchStepId": "{{nearbySearchRequest.response.body.searchRequests[0].searchStepId}}"
 }
 
 ###
@@ -185,5 +189,5 @@ content-type: application/json
 
 {
     "offeredFare": 30,
-    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequests[1].searchRequestId}}"
+    "searchStepId": "{{nearbySearchRequest.response.body.searchRequests[1].searchStepId}}"
 }

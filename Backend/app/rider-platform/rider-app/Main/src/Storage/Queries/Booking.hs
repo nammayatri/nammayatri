@@ -16,9 +16,9 @@
 module Storage.Queries.Booking where
 
 import Domain.Types.Booking as DRB
+import Domain.Types.Estimate (Estimate)
 import Domain.Types.Merchant
 import Domain.Types.Person (Person)
-import Domain.Types.Quote
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
@@ -27,6 +27,8 @@ import Storage.Queries.FullEntityBuilders (buildFullBooking)
 import Storage.Tabular.Booking
 import qualified Storage.Tabular.Booking as RB
 import qualified Storage.Tabular.Booking.BookingLocation as Loc
+import qualified Storage.Tabular.DriverOffer as DrOff
+import qualified Storage.Tabular.Quote as Quote
 import qualified Storage.Tabular.RentalSlab as RentalSlab
 import qualified Storage.Tabular.Ride as R
 import qualified Storage.Tabular.TripTerms as TripTerms
@@ -174,12 +176,22 @@ findAssignedByRiderId personId = Esq.buildDType $ do
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   join <$> mapM buildFullBooking fullBookingsT
 
-findAssignedByQuoteId :: Transactionable m => Id Quote -> m (Maybe Booking)
-findAssignedByQuoteId quoteId = Esq.buildDType $ do
+findAssignedByEstimateId :: Transactionable m => Id Estimate -> m (Maybe Booking)
+findAssignedByEstimateId estimateId = Esq.buildDType $ do
   fullBookingsT <- Esq.findOne' $ do
-    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab) <- from fullBookingTable
+    (booking :& fromLoc :& mbToLoc :& mbTripTerms :& mbRentalSlab :& _ :& driverOffer) <-
+      from $
+        fullBookingTable
+          `innerJoin` table @Quote.QuoteT
+            `Esq.on` ( \(rb :& _ :& _ :& _ :& _ :& quote) ->
+                         rb ^. RB.BookingQuoteId ==. quote ^. Quote.QuoteTId
+                     )
+          `innerJoin` table @DrOff.DriverOfferT
+            `Esq.on` ( \(_ :& _ :& _ :& _ :& _ :& quote :& driverOffer) ->
+                         quote ^. Quote.QuoteDriverOfferId ==. Esq.just (driverOffer ^. DrOff.DriverOfferTId)
+                     )
     where_ $
-      booking ^. RB.BookingQuoteId ==. val (Just $ toKey quoteId)
+      driverOffer ^. DrOff.DriverOfferEstimateId ==. val (toKey estimateId)
         &&. booking ^. RB.BookingStatus ==. val TRIP_ASSIGNED
     pure (booking, fromLoc, mbToLoc, mbTripTerms, mbRentalSlab)
   join <$> mapM buildFullBooking fullBookingsT

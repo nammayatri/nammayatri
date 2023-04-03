@@ -33,13 +33,31 @@ buildOneWaySearchReq ::
   DOneWaySearch.OneWaySearchRes ->
   Maybe Maps.RouteInfo ->
   m (BecknReq Search.SearchMessage)
-buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} routeInto = buildSearchReq origin (Just destination) searchId now routeInto city
+buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} routeInto =
+  buildSearchReq
+    origin
+    (Just destination)
+    searchId
+    now
+    routeInto
+    city
+    autoAssignEnabled
+    customerLanguage
 
 buildRentalSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
-buildRentalSearchReq DRentalSearch.RentalSearchRes {..} = buildSearchReq origin Nothing searchId startTime Nothing city
+buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
+  buildSearchReq
+    origin
+    Nothing
+    searchId
+    startTime
+    Nothing
+    city
+    False
+    Nothing
 
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
@@ -49,14 +67,16 @@ buildSearchReq ::
   UTCTime ->
   Maybe Maps.RouteInfo ->
   Text ->
+  Bool ->
+  Maybe Maps.Language ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId startTime mbRouteInfo city = do
+buildSearchReq origin mbDestination searchId startTime mbRouteInfo city autoAssignEnabled customerLanguage = do
   let transactionId = getId searchId
       messageId = transactionId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) bapIDs.cabs bapURIs.cabs Nothing Nothing city
-  let intent = mkIntent origin mbDestination startTime
+  let intent = mkIntent origin mbDestination startTime autoAssignEnabled customerLanguage
   let searchMessage = Search.SearchMessage intent mbRouteInfo
   pure $ BecknReq context searchMessage
 
@@ -64,8 +84,10 @@ mkIntent ::
   DSearchCommon.SearchReqLocation ->
   Maybe DSearchCommon.SearchReqLocation ->
   UTCTime ->
+  Bool ->
+  Maybe Maps.Language ->
   Search.Intent
-mkIntent origin mbDestination startTime = do
+mkIntent origin mbDestination startTime autoAssignEnabled customerLanguage = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin,
@@ -80,7 +102,12 @@ mkIntent origin mbDestination startTime = do
       fulfillment =
         Search.FulfillmentInfo
           { start = startLocation,
-            end = mbEndLocation
+            end = mbEndLocation,
+            tags =
+              Search.Tags
+                { auto_assign_enabled = autoAssignEnabled,
+                  customer_language = customerLanguage
+                }
           }
   Search.Intent
     { ..

@@ -145,6 +145,7 @@ library
       Domain.Types.DriverQuote
       Domain.Types.DriverReferral
       Domain.Types.DriverStats
+      Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
@@ -174,6 +175,7 @@ library
       Domain.Types.Ride
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
+      Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchRequestSpecialZone
@@ -245,6 +247,7 @@ library
       Storage.Queries.DriverQuote
       Storage.Queries.DriverReferral
       Storage.Queries.DriverStats
+      Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareParameters
       Storage.Queries.FarePolicy
@@ -273,6 +276,7 @@ library
       Storage.Queries.Ride
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails
+      Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchStep
@@ -296,6 +300,7 @@ library
       Storage.Tabular.DriverQuote
       Storage.Tabular.DriverReferral
       Storage.Tabular.DriverStats
+      Storage.Tabular.Estimate
       Storage.Tabular.Exophone
       Storage.Tabular.FareParameters
       Storage.Tabular.FarePolicy
@@ -328,6 +333,7 @@ library
       Storage.Tabular.Ride.Table
       Storage.Tabular.RideDetails
       Storage.Tabular.RiderDetails
+      Storage.Tabular.SearchRequest
       Storage.Tabular.SearchRequest.SearchReqLocation
       Storage.Tabular.SearchRequestForDriver
       Storage.Tabular.SearchRequestSpecialZone

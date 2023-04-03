@@ -14,14 +14,10 @@
 
 module Beckn.ACL.OnUpdate (buildOnUpdateReq) where
 
-import Beckn.ACL.Common (validatePrices)
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as OnUpdate
-import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.EstimateRepetitionEvent as EstRepUpd
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (state)
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Product.Validation.Context (validateContext)
@@ -114,79 +110,14 @@ parseEvent _ (OnUpdate.DriverArrived daEvent) =
         arrivalTime = daEvent.arrival_time
       }
 parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
-  estimateInfo <- buildEstimateInfo erEvent.item
   return $
     DOnUpdate.EstimateRepetitionReq
       { searchRequestId = Id transactionId,
-        estimateInfo = estimateInfo,
+        bppEstimateId = Id erEvent.item.id,
         bppBookingId = Id $ erEvent.id,
         bppRideId = Id erEvent.fulfillment.id,
         cancellationSource = castCancellationSource erEvent.cancellation_reason
       }
-
-buildEstimateInfo ::
-  (MonadThrow m, Log m) =>
-  EstRepUpd.Item ->
-  m DOnUpdate.EstimateRepetitionEstimateInfo
-buildEstimateInfo item = do
-  let itemCode = item.descriptor.code
-      vehicleVariant = castVehicleVariant itemCode.vehicleVariant
-      estimatedFare = roundToIntegral item.price.value
-      estimatedTotalFare = roundToIntegral item.price.offered_value
-      estimateBreakupList = buildEstimateBreakUpList <$> item.price.value_breakup
-      descriptions = item.quote_terms
-      nightShiftRate = buildNightShiftRate <$> item.tags
-      waitingCharges = buildWaitingChargeInfo <$> item.tags
-      driversLocation = fromMaybe [] $ item.tags <&> (.drivers_location)
-  validatePrices estimatedFare estimatedTotalFare
-
-  let totalFareRange =
-        DEstimate.FareRange
-          { minFare = roundToIntegral item.price.minimum_value,
-            maxFare = roundToIntegral item.price.maximum_value
-          }
-  validateFareRange estimatedTotalFare totalFareRange
-
-  -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
-  let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
-  case item.category_id of
-    EstRepUpd.DRIVER_OFFER_ESTIMATE -> pure DOnUpdate.EstimateRepetitionEstimateInfo {..}
-    _ -> throwError $ InvalidRequest "category_id is not supported, use DRIVER_OFFER_ESTIMATE"
-  where
-    castVehicleVariant = \case
-      EstRepUpd.SEDAN -> VehVar.SEDAN
-      EstRepUpd.SUV -> VehVar.SUV
-      EstRepUpd.HATCHBACK -> VehVar.HATCHBACK
-      EstRepUpd.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
-
-    validateFareRange totalFare DEstimate.FareRange {..} = do
-      when (minFare < 0) $ throwError $ InvalidRequest "Minimum discounted price is less than zero"
-      when (maxFare < 0) $ throwError $ InvalidRequest "Maximum discounted price is less than zero"
-      when (maxFare < minFare) $ throwError $ InvalidRequest "Maximum discounted price is less than minimum discounted price"
-      when (totalFare > maxFare || totalFare < minFare) $ throwError $ InvalidRequest "Discounted price outside of range"
-
-    buildEstimateBreakUpList EstRepUpd.BreakupItem {..} = do
-      DOnUpdate.EstimateBreakupInfo
-        { title = title,
-          price =
-            DOnUpdate.BreakupPriceInfo
-              { currency = price.currency,
-                value = roundToIntegral price.value
-              }
-        }
-
-    buildNightShiftRate itemTags = do
-      DOnUpdate.NightShiftInfo
-        { nightShiftMultiplier = realToFrac <$> itemTags.night_shift_multiplier,
-          nightShiftStart = itemTags.night_shift_start,
-          nightShiftEnd = itemTags.night_shift_end
-        }
-
-    buildWaitingChargeInfo itemTags = do
-      DOnUpdate.WaitingChargesInfo
-        { waitingChargePerMin = itemTags.waiting_charge_per_min,
-          waitingTimeEstimatedThreshold = itemTags.waiting_time_estimated_threshold
-        }
 
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
 castCancellationSource = \case

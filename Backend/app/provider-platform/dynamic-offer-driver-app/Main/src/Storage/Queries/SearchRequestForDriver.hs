@@ -15,6 +15,7 @@
 module Storage.Queries.SearchRequestForDriver where
 
 import Domain.Types.Person
+import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchRequestForDriver as Domain
 import Domain.Types.SearchStep
 import Kernel.Prelude
@@ -26,30 +27,39 @@ import Storage.Tabular.SearchRequestForDriver
 createMany :: [SearchRequestForDriver] -> SqlDB ()
 createMany = Esq.createMany
 
-findAllActiveByRequestId :: (Transactionable m, MonadTime m) => Id SearchStep -> m [SearchRequestForDriver]
-findAllActiveByRequestId searchReqId = do
+findAllActiveBySRId :: (Transactionable m, MonadTime m) => Id SearchRequest -> m [SearchRequestForDriver]
+findAllActiveBySRId searchReqId = do
   Esq.findAll $ do
     sReq <- from $ table @SearchRequestForDriverT
     where_ $
-      sReq ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
+      sReq ^. SearchRequestForDriverRequestId ==. val (toKey searchReqId)
         &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
     pure sReq
 
-findAllActiveWithoutRespByRequestId :: (Transactionable m, MonadTime m) => Id SearchStep -> m [SearchRequestForDriver]
-findAllActiveWithoutRespByRequestId searchReqId = do
+findAllActiveBySSId :: (Transactionable m, MonadTime m) => Id SearchStep -> m [SearchRequestForDriver]
+findAllActiveBySSId searchStepId = do
   Esq.findAll $ do
     sReq <- from $ table @SearchRequestForDriverT
     where_ $
-      sReq ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
+      sReq ^. SearchRequestForDriverSearchStepId ==. val (toKey searchStepId)
+        &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
+    pure sReq
+
+findAllActiveWithoutRespBySearchStepId :: (Transactionable m, MonadTime m) => Id SearchStep -> m [SearchRequestForDriver]
+findAllActiveWithoutRespBySearchStepId searchStepId = do
+  Esq.findAll $ do
+    sReq <- from $ table @SearchRequestForDriverT
+    where_ $
+      sReq ^. SearchRequestForDriverSearchStepId ==. val (toKey searchStepId)
         &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
         &&. Esq.isNothing (sReq ^. SearchRequestForDriverResponse)
     pure sReq
 
-findByDriverAndSearchReq :: Transactionable m => Id Person -> Id SearchStep -> m (Maybe SearchRequestForDriver)
-findByDriverAndSearchReq driverId searchReqId = Esq.findOne $ do
+findByDriverAndSearchStepId :: Transactionable m => Id Person -> Id SearchStep -> m (Maybe SearchRequestForDriver)
+findByDriverAndSearchStepId driverId searchStepId = Esq.findOne $ do
   sReq <- from $ table @SearchRequestForDriverT
   where_ $
-    sReq ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
+    sReq ^. SearchRequestForDriverSearchStepId ==. val (toKey searchStepId)
       &&. sReq ^. SearchRequestForDriverDriverId ==. val (toKey driverId)
       &&. sReq ^. SearchRequestForDriverStatus ==. val Domain.Active
   pure sReq
@@ -66,20 +76,20 @@ findByDriver driverId = do
     orderBy [desc $ sReq ^. SearchRequestForDriverSearchRequestValidTill]
     pure sReq
 
-removeAllBySearchId :: Id SearchStep -> SqlDB ()
-removeAllBySearchId searchReqId = Esq.delete $ do
-  sReqForDriver <- from $ table @SearchRequestForDriverT
-  where_ $ sReqForDriver ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
-
 deleteByDriverId :: Id Person -> SqlDB ()
 deleteByDriverId personId = Esq.delete $ do
   sReqForDriver <- from $ table @SearchRequestForDriverT
   where_ $ sReqForDriver ^. SearchRequestForDriverDriverId ==. val (toKey personId)
 
-setInactiveByRequestId :: Id SearchStep -> SqlDB ()
-setInactiveByRequestId searchReqId = Esq.update $ \p -> do
+setInactiveBySSId :: Id SearchStep -> SqlDB ()
+setInactiveBySSId searchStepId = Esq.update $ \p -> do
   set p [SearchRequestForDriverStatus =. val Domain.Inactive]
-  where_ $ p ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)
+  where_ $ p ^. SearchRequestForDriverSearchStepId ==. val (toKey searchStepId)
+
+setInactiveBySRId :: Id SearchRequest -> SqlDB ()
+setInactiveBySRId searchRequestId = Esq.update $ \p -> do
+  set p [SearchRequestForDriverStatus =. val Domain.Inactive]
+  where_ $ p ^. SearchRequestForDriverRequestId ==. val (toKey searchRequestId)
 
 updateDriverResponse :: Id SearchRequestForDriver -> SearchRequestForDriverResponse -> SqlDB ()
 updateDriverResponse id response = Esq.update $ \p -> do

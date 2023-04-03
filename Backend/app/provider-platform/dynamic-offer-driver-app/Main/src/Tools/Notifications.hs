@@ -21,6 +21,7 @@ import Domain.Types.Merchant
 import Domain.Types.Message.Message as Message
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
+import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.SearchStep
 import EulerHS.Prelude
@@ -56,7 +57,7 @@ notifyOnNewSearchRequestAvailable merchantId personId mbDeviceToken entityData =
         { fcmNotificationType = notifType,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.SearchRequest,
-          fcmEntityIds = entityData.searchRequestId.getId,
+          fcmEntityIds = entityData.searchStepId.getId,
           fcmEntityData = Just entityData,
           fcmNotificationJSON = FCM.createAndroidNotification title body notifType
         }
@@ -411,7 +412,7 @@ notifyOnCancelSearchRequest ::
   Id Merchant ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
-  Id SearchStep ->
+  Id DSR.SearchRequest ->
   m ()
 notifyOnCancelSearchRequest merchantId personId mbDeviceToken searchRequestId = do
   transporterConfig <- findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)

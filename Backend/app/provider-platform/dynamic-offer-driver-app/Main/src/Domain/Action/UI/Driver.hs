@@ -63,6 +63,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person (Person, PersonAPIEntity)
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchStep as DSS
 import Domain.Types.Vehicle (VehicleAPIEntity)
@@ -113,6 +114,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.RegistrationToken as QRegister
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchStep as QSS
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -251,14 +253,14 @@ newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
 
 data DriverOfferReq = DriverOfferReq
   { offeredFare :: Maybe Money,
-    searchRequestId :: Id DSS.SearchStep
+    searchStepId :: Id DSS.SearchStep
   }
   deriving stock (Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data DriverRespondReq = DriverRespondReq
   { offeredFare :: Maybe Money,
-    searchRequestId :: Id DSS.SearchStep,
+    searchStepId :: Id DSS.SearchStep,
     response :: SearchRequestForDriverResponse
   }
   deriving stock (Generic)
@@ -622,8 +624,9 @@ getNearbySearchRequests driverId = do
   return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
   where
     buildSearchRequestForDriverAPIEntity merchantId cancellationRatio nearbyReq = do
-      let sId = nearbyReq.searchRequestId
-      searchRequest <- runInReplica $ QSS.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
+      let searchStepId = nearbyReq.searchStepId
+      searchStep <- runInReplica $ QSS.findById searchStepId >>= fromMaybeM (SearchStepNotFound searchStepId.getId)
+      searchRequest <- runInReplica $ QSR.findById searchStep.requestId >>= fromMaybeM (SearchStepNotFound searchStep.requestId.getId)
       transporterConfig <- CQTC.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
       let cancellationScoreRelatedConfig = mkCancellationScoreRelatedConfig transporterConfig
       popupDelaySeconds <- DP.getPopupDelay searchRequest.providerId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
@@ -683,50 +686,51 @@ respondQuote ::
   m APISuccess
 respondQuote driverId req = do
   Redis.whenWithLockRedis (offerQuoteLockKey driverId) 60 $ do
-    sReq <- QSS.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
+    searchStep <- QSS.findById req.searchStepId >>= fromMaybeM (SearchStepNotFound req.searchStepId.getId)
     now <- getCurrentTime
-    when (sReq.validTill < now) $ throwError SearchRequestExpired
+    when (searchStep.validTill < now) $ throwError SearchRequestExpired
+    searchReq <- QSR.findById searchStep.requestId >>= fromMaybeM (SearchStepNotFound req.searchStepId.getId)
     let mbOfferedFare = req.offeredFare
-    organization <- CQM.findById sReq.providerId >>= fromMaybeM (MerchantDoesNotExist sReq.providerId.getId)
+    organization <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
     when driverInfo.onRide $ throwError DriverOnRide
-    DP.removeSearchReqIdFromMap sReq.providerId driverId sReq.id
+    DP.removeSearchReqIdFromMap searchReq.providerId driverId searchStep.id
     sReqFD <-
-      QSRD.findByDriverAndSearchReq driverId sReq.id
+      QSRD.findByDriverAndSearchStepId driverId searchStep.id
         >>= fromMaybeM NoSearchRequestForDriver
     case req.response of
       Pulled -> throwError UnexpectedResponseValue
       Accept -> do
-        when sReq.autoAssignEnabled $ CS.incrementSearchStepLockCounter req.searchRequestId
+        when searchReq.autoAssignEnabled $ CS.incrementSearchRequestLockCounter searchReq.id
         logDebug $ "offered fare: " <> show req.offeredFare
         whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
         when (sReqFD.response == Just Reject) (throwError QuoteAlreadyRejected)
-        quoteLimit <- getQuoteLimit sReq.providerId sReq.estimatedDistance
-        quoteCount <- runInReplica $ QDrQt.countAllByRequestId sReq.id
+        quoteLimit <- getQuoteLimit searchReq.providerId searchReq.estimatedDistance
+        quoteCount <- QDrQt.countAllBySSId searchStep.id
         when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
         (fareParams, driverExtraFee) <- case organization.farePolicyType of
           Fare.SLAB -> do
             slabFarePolicy <- SFarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM (InternalError "Slab fare policy not found")
             let driverExtraFee = ExtraFee {minFee = 0, maxFee = 0}
-            fareParams <- calculateFare organization.id (Right slabFarePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare
+            fareParams <- calculateFare organization.id (Right slabFarePolicy) searchReq.estimatedDistance sReqFD.startTime mbOfferedFare
             pure (fareParams, driverExtraFee)
           Fare.NORMAL -> do
-            farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just sReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
-            fareParams <- calculateFare organization.id (Left farePolicy) sReq.estimatedDistance sReqFD.startTime mbOfferedFare
+            farePolicy <- FarePolicyS.findByMerchantIdAndVariant organization.id sReqFD.vehicleVariant (Just searchReq.estimatedDistance) >>= fromMaybeM NoFarePolicy
+            fareParams <- calculateFare organization.id (Left farePolicy) searchReq.estimatedDistance searchStep.startTime mbOfferedFare
             pure (fareParams, farePolicy.driverExtraFee)
         whenJust mbOfferedFare $ \off ->
           unless (isAllowedExtraFee driverExtraFee off) $
             throwError $ NotAllowedExtraFee $ show off
-        driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
+        driverQuote <- buildDriverQuote driver searchReq sReqFD fareParams
         Esq.runTransaction $ do
           QDrQt.create driverQuote
           QSRD.updateDriverResponse sReqFD.id req.response
           QDFS.updateStatus sReqFD.driverId DDFS.OFFERED_QUOTE {quoteId = driverQuote.id, validTill = driverQuote.validTill}
-        DP.incrementQuoteAcceptedCount sReq.providerId driverId
+        DP.incrementQuoteAcceptedCount searchReq.providerId driverId
         -- Adding +1 in quoteCount because one more quote added above (QDrQt.create driverQuote)
-        when ((quoteCount + 1) >= quoteLimit || sReq.autoAssignEnabled) $ sendRemoveRideRequestNotification organization.id driverQuote
-        sendDriverOffer organization sReq driverQuote
+        when ((quoteCount + 1) >= quoteLimit || searchReq.autoAssignEnabled) $ sendRemoveRideRequestNotification organization.id driverQuote
+        sendDriverOffer organization searchReq searchStep driverQuote
       Reject -> do
         Esq.runTransaction $ do
           QSRD.updateDriverResponse sReqFD.id req.response
@@ -735,11 +739,11 @@ respondQuote driverId req = do
     buildDriverQuote ::
       (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime) =>
       SP.Person ->
-      DSS.SearchStep ->
+      DSR.SearchRequest ->
       SearchRequestForDriver ->
       Fare.FareParameters ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver s sd fareParams = do
+    buildDriverQuote driver searchReq sd fareParams = do
       guid <- generateGUID
       now <- getCurrentTime
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
@@ -748,19 +752,20 @@ respondQuote driverId req = do
         DDrQuote.DriverQuote
           { id = guid,
             status = DDrQuote.Active,
-            searchRequestId = s.id,
+            requestId = sd.requestId,
+            searchStepId = sd.searchStepId,
+            searchRequestForDriverId = Just sd.id,
             driverId,
             driverName = driver.firstName,
             driverRating = driver.rating,
             vehicleVariant = sd.vehicleVariant,
-            searchRequestForDriverId = Just sd.id,
-            distance = s.estimatedDistance,
+            distance = searchReq.estimatedDistance,
             distanceToPickup = sd.actualDistanceToPickup,
             durationToPickup = sd.durationToPickup,
             createdAt = now,
             updatedAt = now,
             validTill = addUTCTime driverQuoteExpirationSeconds now,
-            providerId = s.providerId,
+            providerId = searchReq.providerId,
             estimatedFare,
             fareParams
           }
@@ -773,14 +778,14 @@ respondQuote driverId req = do
       driverPoolCfg <- DP.getDriverPoolConfig merchantId dist
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification orgId driverQuote = do
-      driverSearchReqs <- QSRD.findAllActiveWithoutRespByRequestId req.searchRequestId
+      driverSearchReqs <- QSRD.findAllActiveWithoutRespBySearchStepId req.searchStepId
       for_ driverSearchReqs $ \driverReq -> do
-        DP.decrementTotalQuotesCount orgId (cast driverReq.driverId) driverReq.searchRequestId
-        DP.removeSearchReqIdFromMap orgId driverReq.driverId driverReq.searchRequestId
+        DP.decrementTotalQuotesCount orgId (cast driverReq.driverId) driverReq.searchStepId
+        DP.removeSearchReqIdFromMap orgId driverReq.driverId driverReq.searchStepId
         Esq.runTransaction $ do
           QSRD.updateDriverResponse driverReq.id Pulled
         driver_ <- runInReplica $ QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-        Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
+        Notify.notifyDriverClearedFare orgId driverReq.driverId driverReq.searchStepId driverQuote.estimatedFare driver_.deviceToken
 
 getStats ::
   (EsqDBReplicaFlow m r, EncFlow m r) =>

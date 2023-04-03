@@ -117,7 +117,7 @@ handler subscriber transporterId req = do
       (riderDetails, isNewRider) <- getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now
       ride <- buildRide driver.id booking
       rideDetails <- buildRideDetails ride driver
-      driverSearchReqs <- QSRD.findAllActiveByRequestId driverQuote.searchRequestId
+      driverSearchReqs <- QSRD.findAllActiveBySSId driverQuote.searchStepId
       Esq.runTransaction $ do
         when isNewRider $ QRD.create riderDetails
         QRB.updateRiderId booking.id riderDetails.id
@@ -130,19 +130,19 @@ handler subscriber transporterId req = do
         QRideD.create rideDetails
         QBE.logRideConfirmedEvent booking.id
         QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
-        QDQ.setInactiveByRequestId driverQuote.searchRequestId
-        QSRD.setInactiveByRequestId driverQuote.searchRequestId
+        QDQ.setInactiveBySSId driverQuote.searchStepId
+        QSRD.setInactiveBySSId driverQuote.searchStepId
       DLoc.updateOnRide (cast driver.id) True
 
       for_ driverSearchReqs $ \driverReq -> do
         let driverId = driverReq.driverId
         unless (driverId == driver.id) $ do
-          DP.decrementTotalQuotesCount transporter.id (cast driverReq.driverId) driverReq.searchRequestId
-          DP.removeSearchReqIdFromMap transporter.id driverId driverReq.searchRequestId
+          DP.decrementTotalQuotesCount transporter.id (cast driverReq.driverId) driverReq.searchStepId
+          DP.removeSearchReqIdFromMap transporter.id driverId driverReq.searchStepId
           Esq.runTransaction $ do
             QSRD.updateDriverResponse driverReq.id SReqD.Pulled
           driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-          Notify.notifyDriverClearedFare transporter.id driverId driverReq.searchRequestId driverQuote.estimatedFare driver_.deviceToken
+          Notify.notifyDriverClearedFare transporter.id driverId driverReq.searchStepId driverQuote.estimatedFare driver_.deviceToken
 
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken

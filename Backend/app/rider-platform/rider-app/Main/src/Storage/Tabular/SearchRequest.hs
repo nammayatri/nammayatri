@@ -43,10 +43,12 @@ mkPersist
       toLocationId SLoc.SearchReqLocationTId Maybe
       distance Centesimal Maybe
       merchantId SMerchant.MerchantTId
-      createdAt UTCTime
       bundleVersion Text Maybe
       clientVersion Text Maybe
       language Language Maybe
+      autoAssignEnabled Bool
+      autoAssignEnabledV2 Bool
+      createdAt UTCTime
       Primary id
       deriving Generic
     |]

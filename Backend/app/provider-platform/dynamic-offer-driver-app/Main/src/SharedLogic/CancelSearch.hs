@@ -13,12 +13,12 @@
 -}
 
 module SharedLogic.CancelSearch
-  ( lockSearchStep,
-    incrementSearchStepLockCounter,
+  ( lockSearchRequest,
+    incrementSearchRequestLockCounter,
   )
 where
 
-import qualified Domain.Types.SearchStep as SS
+import qualified Domain.Types.SearchRequest as SR
 import Kernel.Prelude
 import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -28,39 +28,39 @@ import Kernel.Utils.Common
 import Storage.CachedQueries.CacheConfig (HasCacheConfig)
 import Tools.Error
 
-incrementSearchStepLockCounter ::
+incrementSearchRequestLockCounter ::
   ( HasCacheConfig r,
     HedisFlow m r
   ) =>
-  Id SS.SearchStep ->
+  Id SR.SearchRequest ->
   m ()
-incrementSearchStepLockCounter searchStepId = do
-  let searchLockKey = mkSearchLockKey searchStepId
+incrementSearchRequestLockCounter searchRequestId = do
+  let searchLockKey = mkSearchLockKey searchRequestId
   _ <- Hedis.incr searchLockKey
   Hedis.expire searchLockKey 120
-  searchCancelled <- fromMaybe False <$> Hedis.get (mkStartedCancelInfomKey searchStepId)
+  searchCancelled <- fromMaybe False <$> Hedis.get (mkStartedCancelInfomKey searchRequestId)
   if searchCancelled
-    then throwError (InternalError "SEARCH_STEP_CANCELLED")
+    then throwError (InternalError "SEARCH_REQUEST_CANCELLED")
     else pure ()
 
-lockSearchStep ::
+lockSearchRequest ::
   ( HasCacheConfig r,
     HedisFlow m r,
     CoreMetrics m
   ) =>
-  Id SS.SearchStep ->
+  Id SR.SearchRequest ->
   m ()
-lockSearchStep searchStepId = do
-  let searchLockKey = mkSearchLockKey searchStepId
-      startedCancelInfomKey = mkStartedCancelInfomKey searchStepId
+lockSearchRequest searchRequestId = do
+  let searchLockKey = mkSearchLockKey searchRequestId
+      startedCancelInfomKey = mkStartedCancelInfomKey searchRequestId
   val <- Hedis.incr searchLockKey
-  cancellingSearchStep <- fromMaybe False <$> Hedis.get startedCancelInfomKey
+  cancellingSearchReq <- fromMaybe False <$> Hedis.get startedCancelInfomKey
   Hedis.expire searchLockKey 120
-  when (val > 1 && not cancellingSearchStep) $ throwError (InternalError "FAILED_TO_CANCEL_SEARCH_STEP")
+  when (val > 1 && not cancellingSearchReq) $ throwError (InternalError "FAILED_TO_CANCEL_SEARCH_REQUEST")
   Hedis.setExp startedCancelInfomKey True 120
 
-mkStartedCancelInfomKey :: Id SS.SearchStep -> Text
-mkStartedCancelInfomKey searchStepId = "SearchStep:Cancelling:" <> searchStepId.getId
+mkStartedCancelInfomKey :: Id SR.SearchRequest -> Text
+mkStartedCancelInfomKey searchRequestId = "SearchStep:Cancelling:" <> searchRequestId.getId
 
-mkSearchLockKey :: Id SS.SearchStep -> Text
-mkSearchLockKey searchStepId = "LockCounter:SearchStep:" <> searchStepId.getId
+mkSearchLockKey :: Id SR.SearchRequest -> Text
+mkSearchLockKey searchRequestId = "LockCounter:SearchRequest:" <> searchRequestId.getId

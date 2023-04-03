@@ -32,7 +32,7 @@ data FlowStatus
   = IDLE
   | ACTIVE
   | GOT_SEARCH_REQUEST
-      { requestId :: Id DSS.SearchStep,
+      { searchStepId :: Id DSS.SearchStep,
         validTill :: UTCTime
       }
   | OFFERED_QUOTE

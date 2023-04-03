@@ -101,7 +101,12 @@ generateSearchRequest = do
                                   },
                               time = API.TimeTimestamp example
                             },
-                        end = Nothing
+                        end = Nothing,
+                        tags =
+                          API.Tags
+                            { auto_assign_enabled = False,
+                              customer_language = Nothing
+                            }
                       }
                 },
             routeInfo = Nothing

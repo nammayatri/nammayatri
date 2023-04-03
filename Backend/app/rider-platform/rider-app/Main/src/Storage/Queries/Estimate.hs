@@ -17,7 +17,6 @@ module Storage.Queries.Estimate where
 
 import Data.Tuple.Extra
 import Domain.Types.Estimate
-import Domain.Types.Quote
 import Domain.Types.SearchRequest
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
@@ -65,27 +64,21 @@ findById estimateId = Esq.buildDType $ do
     pure (estimate, mbTripTerms)
   mapM buildFullEstimate mbFullEstimateT
 
-findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Estimate]
-findAllByRequestId searchRequestId = Esq.buildDType $ do
+findAllBySRId :: Transactionable m => Id SearchRequest -> m [Estimate]
+findAllBySRId searchRequestId = Esq.buildDType $ do
   fullEstimateTs <- Esq.findAll' $ do
     (estimate :& mbTripTerms) <- from fullEstimateTable
     where_ $ estimate ^. EstimateRequestId ==. val (toKey searchRequestId)
     pure (estimate, mbTripTerms)
   mapM buildFullEstimate fullEstimateTs
 
-updateQuote ::
-  Id Estimate ->
-  Id Quote ->
-  SqlDB ()
-updateQuote estimateId quoteId = do
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ EstimateUpdatedAt =. val now,
-        EstimateAutoAssignQuoteId =. val (Just quoteId.getId)
-      ]
-    where_ $ tbl ^. EstimateId ==. val (getId estimateId)
+findByBPPEstimateId :: Transactionable m => Id BPPEstimate -> m (Maybe Estimate)
+findByBPPEstimateId bppEstimateId_ = Esq.buildDType $ do
+  mbFullEstimateT <- Esq.findOne' $ do
+    (estimate :& mbTripTerms) <- from fullEstimateTable
+    where_ $ estimate ^. EstimateBppEstimateId ==. val (getId bppEstimateId_)
+    pure (estimate, mbTripTerms)
+  mapM buildFullEstimate mbFullEstimateT
 
 updateStatus ::
   Id Estimate ->
@@ -98,20 +91,6 @@ updateStatus estimateId status_ = do
       tbl
       [ EstimateUpdatedAt =. val now,
         EstimateStatus =. val status_
-      ]
-    where_ $ tbl ^. EstimateId ==. val (getId estimateId)
-
-updateAutoAssign ::
-  Id Estimate ->
-  Bool ->
-  Bool ->
-  SqlDB ()
-updateAutoAssign estimateId autoAssignedEnabled autoAssignedEnabledV2 = do
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ EstimateAutoAssignEnabled =. val autoAssignedEnabled,
-        EstimateAutoAssignEnabledV2 =. val autoAssignedEnabledV2
       ]
     where_ $ tbl ^. EstimateId ==. val (getId estimateId)
 

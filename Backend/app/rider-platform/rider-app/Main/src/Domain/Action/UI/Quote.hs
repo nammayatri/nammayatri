@@ -92,14 +92,14 @@ getOffers searchRequest = do
   logDebug $ "search Request is : " <> show searchRequest
   case searchRequest.toLocation of
     Just _ -> do
-      quoteList <- runInReplica $ QQuote.findAllByRequestId searchRequest.id
+      quoteList <- runInReplica $ QQuote.findAllBySRId searchRequest.id
       logDebug $ "quotes are : " <> show quoteList
       let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByNearestDriverDistance quoteList
       metroOffers <- map Metro <$> Metro.getMetroOffers searchRequest.id
       publicTransportOffers <- map PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
     Nothing -> do
-      quoteList <- runInReplica $ QRentalQuote.findAllByRequestId searchRequest.id
+      quoteList <- runInReplica $ QRentalQuote.findAllBySRId searchRequest.id
       let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
       return . sortBy (compare `on` creationTime) $ quotes
   where
@@ -119,7 +119,7 @@ getOffers searchRequest = do
 
 getEstimates :: EsqDBReplicaFlow m r => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
 getEstimates searchRequestId = do
-  estimateList <- runInReplica $ QEstimate.findAllByRequestId searchRequestId
+  estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
   let estimates = DEstimate.mkEstimateAPIEntity <$> sortByEstimatedFare estimateList
   return . sortBy (compare `on` (.createdAt)) $ estimates
 

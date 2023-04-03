@@ -18,7 +18,7 @@ module Storage.Queries.Booking where
 import Domain.Types.Booking
 import Domain.Types.Merchant
 import Domain.Types.RiderDetails (RiderDetails)
-import qualified Domain.Types.SearchStep as DSS
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (findById, isNothing)
 import Kernel.Types.Id
@@ -61,7 +61,7 @@ findById bookingId = buildDType $
       where_ $ rb ^. BookingTId ==. val (toKey bookingId)
       pure (rb, bFromLoc, bToLoc, farePars)
 
-findBySearchReq :: Transactionable m => Id DSS.SearchStep -> m (Maybe Booking)
+findBySearchReq :: Transactionable m => Id DSR.SearchRequest -> m (Maybe Booking)
 findBySearchReq searchReqId = buildDType $
   fmap (fmap $ extractSolidType @Booking) $
     Esq.findOne' $ do
@@ -73,7 +73,7 @@ findBySearchReq searchReqId = buildDType $
                            rb ^. BookingQuoteId ==. dq ^. DriverQuoteId
                        )
           )
-      where_ $ dq ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
+      where_ $ dq ^. DriverQuoteRequestId ==. val (toKey searchReqId)
       pure (rb, bFromLoc, bToLoc, farePars)
 
 updateStatus :: Id Booking -> BookingStatus -> SqlDB ()

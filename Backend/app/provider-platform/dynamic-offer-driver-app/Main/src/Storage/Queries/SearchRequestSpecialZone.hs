@@ -24,11 +24,10 @@ import Storage.Tabular.SearchRequest.SearchReqLocation
 import Storage.Tabular.SearchRequestSpecialZone
 
 create :: SearchRequestSpecialZone -> SqlDB ()
-create dsReq = Esq.runTransaction $
-  withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
-    Esq.create' fromLoc
-    Esq.create' toLoc
-    Esq.create' sReq
+create dsReq = withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
+  Esq.create' fromLoc
+  Esq.create' toLoc
+  Esq.create' sReq
 
 findById :: Transactionable m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 findById searchRequestSpecialZoneId = buildDType $
@@ -54,11 +53,11 @@ fullSearchRequestTable =
     `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& loc1) -> s ^. SearchRequestSpecialZoneFromLocationId ==. loc1 ^. SearchReqLocationTId)
     `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestSpecialZoneToLocationId ==. loc2 ^. SearchReqLocationTId)
 
-getRequestIdfromTransactionId ::
+findByTransactionId ::
   (Transactionable m) =>
   Id SearchRequestSpecialZone ->
   m (Maybe (Id SearchRequestSpecialZone))
-getRequestIdfromTransactionId tId = do
+findByTransactionId tId = do
   findOne $ do
     searchT <- from $ table @SearchRequestSpecialZoneT
     where_ $

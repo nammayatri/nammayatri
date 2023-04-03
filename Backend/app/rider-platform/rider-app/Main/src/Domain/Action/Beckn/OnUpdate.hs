@@ -31,7 +31,6 @@ import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
-import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import Environment
 import Kernel.Prelude
@@ -95,7 +94,7 @@ data OnUpdateReq
       }
   | EstimateRepetitionReq
       { searchRequestId :: Id DSR.SearchRequest,
-        estimateInfo :: EstimateRepetitionEstimateInfo,
+        bppEstimateId :: Id DEstimate.BPPEstimate,
         bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
         cancellationSource :: SBCR.CancellationSource
@@ -282,95 +281,20 @@ onUpdate DriverArrivedReq {..} = do
     isValidRideStatus status = status == SRide.NEW
 onUpdate EstimateRepetitionReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
-  searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
+  searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
   bookingCancellationReason <- buildBookingCancellationReason booking.id (Just ride.id) cancellationSource
-
-  newEstimate <- buildEstimate searchReq.id booking estimateInfo
+  logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
   DB.runTransaction $ do
+    QEstimate.updateStatus estimate.id DEstimate.DRIVER_QUOTE_REQUESTED
     QRB.updateStatus booking.id SRB.REALLOCATED
     QRide.updateStatus ride.id SRide.CANCELLED
     QBCR.upsert bookingCancellationReason
-    QEstimate.create newEstimate
-    QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = newEstimate.id, validTill = searchReq.validTill}
+    QPFS.updateStatus searchReq.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimate.id, validTill = searchReq.validTill}
   -- notify customer
-  Notify.notifyOnEstimatedReallocated booking newEstimate.id
-  where
-    buildEstimate ::
-      MonadFlow m =>
-      Id DSR.SearchRequest ->
-      SRB.Booking ->
-      EstimateRepetitionEstimateInfo ->
-      m DEstimate.Estimate
-    buildEstimate requestId booking EstimateRepetitionEstimateInfo {..} = do
-      now <- getCurrentTime
-      uid <- generateGUID
-      tripTerms <- buildTripTerms descriptions
-      estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
-      pure
-        DEstimate.Estimate
-          { id = uid,
-            autoAssignEnabled = False,
-            autoAssignEnabledV2 = False,
-            autoAssignQuoteId = Nothing,
-            providerMobileNumber = booking.providerMobileNumber,
-            providerName = booking.providerName,
-            providerCompletedRidesCount = 0, -- FIXME
-            providerId = booking.providerId,
-            providerUrl = booking.providerUrl,
-            createdAt = now,
-            updatedAt = now,
-            status = DEstimate.NEW,
-            estimateBreakupList = estimateBreakupList',
-            driversLocation = driversLocation,
-            nightShiftRate =
-              Just $
-                DEstimate.NightShiftRate
-                  { nightShiftMultiplier = nightShiftRate >>= (.nightShiftMultiplier),
-                    nightShiftStart = nightShiftRate >>= (.nightShiftStart),
-                    nightShiftEnd = nightShiftRate >>= (.nightShiftEnd)
-                  },
-            waitingCharges =
-              DEstimate.WaitingCharges
-                { waitingChargePerMin = waitingCharges >>= (.waitingChargePerMin),
-                  waitingTimeEstimatedThreshold = waitingCharges >>= (.waitingTimeEstimatedThreshold)
-                },
-            ..
-          }
-
-    buildTripTerms ::
-      MonadFlow m =>
-      [Text] ->
-      m (Maybe DTripTerms.TripTerms)
-    buildTripTerms [] = pure Nothing
-    buildTripTerms descriptions = do
-      id <- generateGUID
-      pure . Just $ DTripTerms.TripTerms {..}
-
-    buildEstimateBreakUp ::
-      MonadFlow m =>
-      [EstimateBreakupInfo] ->
-      Id DEstimate.Estimate ->
-      m [DEstimate.EstimateBreakup]
-    buildEstimateBreakUp estimatesItems estId =
-      estimatesItems
-        `for` \estimateItem -> do
-          id <- generateGUID
-          price' <- mkEstimatePrice estimateItem.price
-          pure
-            DEstimate.EstimateBreakup
-              { title = estimateItem.title,
-                price = price',
-                estimateId = estId,
-                ..
-              }
-
-    mkEstimatePrice ::
-      MonadFlow m =>
-      BreakupPriceInfo ->
-      m DEstimate.EstimateBreakupPrice
-    mkEstimatePrice BreakupPriceInfo {..} = pure DEstimate.EstimateBreakupPrice {..}
+  Notify.notifyOnEstimatedReallocated booking estimate.id
 
 buildBookingCancellationReason ::
   (HasCacheConfig r, EsqDBFlow m r, HedisFlow m r, CoreMetrics m) =>

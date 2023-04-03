@@ -15,9 +15,7 @@
 
 module Storage.Queries.QuoteSpecialZone where
 
-import Data.Int (Int32)
 import Domain.Types.QuoteSpecialZone
-import Domain.Types.SearchRequestSpecialZone
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
@@ -29,15 +27,6 @@ create quote = Esq.runTransaction $
   withFullEntity quote $ \(quoteT, fareParamsT) -> do
     Esq.create' fareParamsT
     Esq.create' quoteT
-
-countAllByRequestId :: Transactionable m => Id SearchRequestSpecialZone -> m Int32
-countAllByRequestId searchReqId = do
-  fmap (fromMaybe 0) $
-    Esq.findOne $ do
-      dQuote <- from $ table @QuoteSpecialZoneT
-      where_ $
-        dQuote ^. QuoteSpecialZoneSearchRequestId ==. val (toKey searchReqId)
-      pure (countRows @Int32)
 
 baseQuoteSpecialZoneQuery ::
   From
