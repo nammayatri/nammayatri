@@ -24,7 +24,6 @@ import Data.Either (Either(..), hush)
 import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Int as INT
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number (fromString)
 import Data.Profunctor.Strong (first)
@@ -37,7 +36,7 @@ import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
-import Engineering.Helpers.Commons (liftFlow, os)
+import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import Juspay.OTP.Reader (initiateSMSRetriever)
@@ -150,9 +149,6 @@ foreign import parseFloat :: forall a. a -> Int -> String
 
 foreign import clearWaitingTimer :: String -> Unit
 foreign import contactPermission :: Unit -> Effect Unit
-
-foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
-foreign import goBackPrevWebPage ::  String -> Effect Unit
 foreign import adjustViewWithKeyboard :: String -> Effect Unit
 foreign import storeOnResumeCallback :: forall action. (action -> Effect Unit) -> action -> Effect Unit
 -- foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
@@ -318,16 +314,6 @@ getDistanceBwCordinates lat1 long1 lat2 long2 = do
 toRad :: Number -> Number
 toRad n = (n * pi) / 180.0
 
-isPreviousVersion :: String -> String -> Boolean 
-isPreviousVersion currentVersion previousVersion = numericVersion currentVersion <= numericVersion previousVersion
-
-numericVersion :: String -> Int 
-numericVersion versionName = do 
-  let versionArray = (DS.split (DS.Pattern ".") versionName)
-      majorUpdateIndex = fromMaybe (0) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 0
-      minorUpdateIndex = fromMaybe (0) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 1
-      patchUpdateIndex = fromMaybe (0) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 2
-  (majorUpdateIndex * 100 + minorUpdateIndex * 10 + patchUpdateIndex)
   
 getCurrentLocationMarker :: String -> String
 getCurrentLocationMarker currentVersion = if isPreviousVersion currentVersion (getPreviousVersion "") then "ic_customer_current_location" else "ny_ic_customer_current_location"

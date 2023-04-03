@@ -38,11 +38,12 @@ initData = {
     },
 
   props: {
-    logoutModalView: false
+    logoutModalView: false,
+    showLiveDashboard : false
    }
 }
 
-data MenuOptions = DRIVER_PRESONAL_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BANK_DETAILS | REFER | APP_INFO_SETTINGS
+data MenuOptions = DRIVER_PRESONAL_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BANK_DETAILS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD
 derive instance genericMenuoptions :: Generic MenuOptions _
 instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
 
@@ -60,6 +61,7 @@ optionList dummy =
       {menuOptions: DRIVER_BANK_DETAILS , icon:"ny_ic_bank_profile,https://assets.juspay.in/nammayatri/images/driver/ny_ic_bank_profile.png"},
       {menuOptions: MULTI_LANGUAGE , icon:"ny_ic_language,https://assets.juspay.in/nammayatri/images/driver/ny_ic_language.png"},
       {menuOptions: HELP_AND_FAQS , icon:"ny_ic_head_phones,https://assets.juspay.in/nammayatri/images/driver/ny_ic_head_phones.png"},
+      {menuOptions: LIVE_STATS_DASHBOARD , icon:"ic_graph_black,https://assets.juspay.in/nammayatri/images/common/ic_graph_black.png"},
       {menuOptions: ABOUT_APP , icon:"ny_ic_about,https://assets.juspay.in/nammayatri/images/driver/ny_ic_about.png"},
       {menuOptions: REFER , icon:"ic_add_person,https://assets.juspay.in/nammayatri/images/driver/ic_add_person.png"},
       {menuOptions: DRIVER_LOGOUT , icon:"ny_ic_logout_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_logout_grey.png"}

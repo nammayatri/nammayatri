@@ -22,7 +22,7 @@ import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Foreign.Generic (encode)
-import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString, getTime, isPreviousVersion, getPreviousVersion)
+import Helpers.Utils (decodeErrorCode, decodeErrorMessage, toString, getTime, getPreviousVersion)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, toggleLoader, drawRoute, toggleBtnLoader)
 import Juspay.OTP.Reader as Readers
 import Log (printLog)
@@ -40,7 +40,7 @@ import Tracker.Labels (Label(..))
 import Tracker.Types as Tracker
 import Types.App (GlobalState, FlowBT, ScreenType(..))
 import Types.EndPoint as EP
-import Engineering.Helpers.Commons (liftFlow, os, bundleVersion)
+import Engineering.Helpers.Commons (liftFlow, os, bundleVersion, isPreviousVersion)
 import Data.Array ((!!), take)
 import Language.Strings (getString)
 import Language.Types (STR(..))

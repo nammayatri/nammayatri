@@ -34,8 +34,8 @@ import Components.GenericHeader.Controller as GenericHeaderConfig
 import Components.GenericHeader.View as GenericHeader
 import Common.Types.App
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os)
-import Helpers.Utils (isPreviousVersion, getPreviousVersion)
+import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, isPreviousVersion)
+import Helpers.Utils (getPreviousVersion)
 import Storage (getValueToLocalStore, KeyStore(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w

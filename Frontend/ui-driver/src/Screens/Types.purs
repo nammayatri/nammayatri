@@ -250,7 +250,8 @@ type DriverProfileScreenData = {
 }
 
 type DriverProfileScreenProps = {
-  logoutModalView :: Boolean
+  logoutModalView :: Boolean,
+  showLiveDashboard :: Boolean
 }
 -----------------------------------------------ApplicationStatusScreen --------------------------------------- 
 type ApplicationStatusScreenState = {

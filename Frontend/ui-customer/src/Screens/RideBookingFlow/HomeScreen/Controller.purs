@@ -54,8 +54,8 @@ import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os)
 import Global (readFloat)
-import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts, goBackPrevWebPage)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, removeAllPolylines, requestKeyboardShow, requestLocation, showDialer, toast, toggleBtnLoader, shareTextMessage, firebaseLogEventWithTwoParams, removeMarker,  sendMessage, stopChatListenerService, openUrlInApp)
+import Helpers.Utils (addToRecentSearches, getLocationName, saveRecents, setText', updateInputString, withinTimeRange, getExpiryTime, getDistanceBwCordinates, getCurrentLocationMarker, parseNewContacts)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, removeAllPolylines, requestKeyboardShow, requestLocation, showDialer, toast, toggleBtnLoader, shareTextMessage, firebaseLogEventWithTwoParams, removeMarker,  sendMessage, stopChatListenerService, openUrlInApp, goBackPrevWebPage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -692,7 +692,7 @@ eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard =f
 eval LiveDashboardAction state =
   if os == "IOS" then do
       continueWithCmd state [do
-        _ <- openUrlInApp "https://nammayatri.in/open/"
+        _ <- openUrlInApp "https://nammayatri.in/open?source=in-app"
         pure NoAction
       ]
   else continue state {props {showLiveDashboard = true}}
@@ -791,7 +791,7 @@ eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboar
   _ <- pure $ setValueToLocalStore LIVE_DASHBOARD "LIVE_DASHBOARD_SELECTED"
   if os == "IOS" then do
     continueWithCmd state [do
-      _ <- openUrlInApp "https://nammayatri.in/open/"
+      _ <- openUrlInApp "https://nammayatri.in/open?source=in-app"
       pure NoAction
     ]
   else continue state {props {showLiveDashboard = true}}

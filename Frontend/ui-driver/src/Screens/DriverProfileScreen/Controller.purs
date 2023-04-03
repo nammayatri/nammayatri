@@ -20,12 +20,12 @@ import Components.BottomNavBar.Controller as BottomNavBar
 import Components.PopUpModal.Controller as PopUpModal
 import Data.Maybe (fromMaybe)
 import Helpers.Utils (launchAppSettings)
-import JBridge (firebaseLogEvent)
+import JBridge (firebaseLogEvent, goBackPrevWebPage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress)
 import Prelude (class Show, pure, unit, ($), discard, bind)
-import PrestoDOM (Eval, continue, exit)
+import PrestoDOM (Eval, continue, exit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
@@ -34,6 +34,7 @@ import Screens.Types (DriverProfileScreenState)
 import Services.APITypes (GetDriverInfoResp(..), Vehicle(..))
 import Services.Backend (dummyVehicleObject)
 import Storage (setValueToLocalNativeStore, KeyStore(..))
+import Engineering.Helpers.Commons (getNewIDWithTag)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -60,6 +61,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.CountDown seconds id status timerID -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "countdown_updated"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "popup_modal_logout" "image_onclick"
     GetDriverInfoResponse resp -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "get_driver_info_response"
+    HideLiveDashboard val -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "hide_live_stats_dashboard"
     NoAction -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "no_action"
 
 data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
@@ -83,12 +85,19 @@ data Action = BackPressed Boolean
             | GetDriverInfoResponse GetDriverInfoResp
             | PopUpModalAction PopUpModal.Action
             | AfterRender
+            | HideLiveDashboard String
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
 eval AfterRender state = continue state
 
-eval (BackPressed flag) state = if state.props.logoutModalView then continue $ state { props{ logoutModalView = false}} else exit GoBack
+eval (BackPressed flag) state = if state.props.logoutModalView then continue $ state { props{ logoutModalView = false}}
+                                else if state.props.showLiveDashboard then do
+                                continueWithCmd state [do
+                                  _ <- pure $ goBackPrevWebPage (getNewIDWithTag "webview")
+                                  pure NoAction
+                                ]
+                                else exit GoBack
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do 
   case screen of
@@ -116,6 +125,9 @@ eval (OptionClick optionIndex) state = do
     APP_INFO_SETTINGS -> do
       _ <- pure $ launchAppSettings unit
       continue state
+    LIVE_STATS_DASHBOARD -> continue state {props {showLiveDashboard = true}}
+
+eval (HideLiveDashboard val) state = continue state {props {showLiveDashboard = false}}
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue $ (state {props {logoutModalView = false}}) -- [do
 
@@ -147,3 +159,4 @@ getTitle menuOption =
     REFER -> (getString ADD_YOUR_FRIEND)
     DRIVER_LOGOUT -> (getString LOGOUT)
     APP_INFO_SETTINGS -> (getString APP_INFO)
+    LIVE_STATS_DASHBOARD -> (getString LIVE_DASHBOARD)

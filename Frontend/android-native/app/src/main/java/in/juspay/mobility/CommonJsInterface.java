@@ -86,7 +86,9 @@ import android.view.WindowManager;
 import android.view.animation.LinearInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -100,6 +102,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -286,6 +289,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public static ArrayList<MediaPlayerView> audioPlayers = new ArrayList<>();
     public static String webViewCallBack = null;
     public static int debounceAnimateCamera = 0;
+    Toast toast = null;
+
 
     public CommonJsInterface(){
         super();
@@ -1723,7 +1728,6 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             });
         }
     }
-
     @JavascriptInterface
     public void initialWebViewSetUp(String callback, String id) {
         webViewCallBack = callback;
@@ -1732,10 +1736,22 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             public void run() {
                 WebView webView= (WebView) activity.findViewById(Integer.parseInt(id));
                 if(webView == null) return;
+                webView.setWebChromeClient(new WebChromeClient() {
+                    @Override
+                    public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                        String message = consoleMessage.message();
+                        if (message.contains("Write permission denied")) {
+                            // Handle the error here
+                            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                            ClipData clip = ClipData.newPlainText("MyLbl", "https://nammayatri.in/link/rider/SJ8D");
+                            clipboard.setPrimaryClip(clip);
+                        }
+                        return super.onConsoleMessage(consoleMessage);
+                    }
+                });
                 webView.setWebViewClient(new WebViewClient(){
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView view, String url) {
-
                         if (url.startsWith("intent://")) {
                             try {
                                 Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
@@ -1752,6 +1768,23 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                 e.printStackTrace();
                             }
                         }
+                        if (url.startsWith("tg:") || url.startsWith("https://www.facebook.com") || url.startsWith("https://www.twitter.com/") || url.startsWith("https://www.linkedin.com") || url.startsWith("https://api.whatsapp.com") || url.contains("YATRI.pdf") || url.startsWith("https://telegram.me/"))
+                            {
+                                try {
+                                    CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+                                    CustomTabsIntent customTabsIntent = builder.build();
+                                    customTabsIntent.intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    customTabsIntent.launchUrl(context, Uri.parse(url));
+                                    return true;
+                                } catch (Exception e) {
+                                    if(toast!=null){
+                                        toast.cancel();
+                                    }
+                                    toast = Toast.makeText(context, "Looks like there is no app or web browser installed on your device", Toast.LENGTH_SHORT);
+                                    toast.show();
+                                    return true;
+                                }
+                            }
                         return false;
                     }
                 });

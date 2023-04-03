@@ -171,6 +171,9 @@ foreign import launchInAppRatingPopup :: Unit -> Effect Unit
 foreign import getExtendedPath :: Locations -> Locations
 foreign import generateSessionId :: Unit -> String
 
+foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
+foreign import goBackPrevWebPage ::  String -> Effect Unit
+
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
 
