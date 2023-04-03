@@ -152,6 +152,7 @@ test-suite location-updates-tests
     , cryptohash
     , euler-hs
     , exceptions
+    , hspec
     , http-client
     , http-types
     , lens
