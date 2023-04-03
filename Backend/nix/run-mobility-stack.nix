@@ -10,6 +10,11 @@
     process-compose.configs =
       let
         components = {
+          osrm-server = {
+            nixExe = lib.getExe self'.packages.osrm-server;
+            cabalExe = null;
+          };
+
           # External Haskell packages cannot be run via `cabal run`.
           beckn-gateway = {
             nixExe = lib.getExe config.haskellProjects.default.outputs.finalPackages.beckn-gateway;

@@ -5,6 +5,8 @@
     ./nix/docker.nix
     ./nix/scripts.nix
     ./nix/run-mobility-stack.nix
+    ./nix/arion.nix
+    ./nix/osrm.nix
   ];
   perSystem = { config, self', pkgs, lib, ... }: {
     haskellProjects.default = {
@@ -13,6 +15,10 @@
         inputs.beckn-gateway.haskellFlakeProjectModules.output
       ];
       autoWire = false;
+      devShell.tools = _: {
+        inherit (self'.packages)
+          run-docker-compose;
+      };
       # Some tests fail under Nix. We shoud probably run them in CI directly.
       overrides = self: super:
         with pkgs.haskell.lib.compose;
