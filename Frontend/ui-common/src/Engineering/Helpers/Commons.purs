@@ -39,7 +39,9 @@ import Presto.Core.Types.Language.Flow (Flow, doAff,defaultState)
 import Presto.Core.Utils.Encoding (defaultDecodeJSON, defaultEncodeJSON)
 import Types.App (FlowBT, GlobalState, defaultGlobalState)
 import Effect.Aff.AVar (new)
-import Data.String(toLower)
+import Data.String as DS
+import Data.Int as INT
+import Data.Array ((!!))
 
 
 foreign import showUI' :: Fn2 (String -> Effect  Unit) String (Effect Unit)
@@ -162,7 +164,18 @@ safeMarginBottom :: Int
 safeMarginBottom = safeMarginBottom' unit
 
 strToBool :: String -> Maybe Boolean 
-strToBool value = case (toLower value) of 
+strToBool value = case (DS.toLower value) of 
                     "true"  -> Just true 
                     "false" -> Just false
                     _       -> Nothing
+
+isPreviousVersion :: String -> String -> Boolean 
+isPreviousVersion currentVersion previousVersion = numericVersion currentVersion <= numericVersion previousVersion
+
+numericVersion :: String -> Int 
+numericVersion versionName = do 
+  let versionArray = (DS.split (DS.Pattern ".") versionName)
+      majorUpdateIndex = fromMaybe (0) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 0
+      minorUpdateIndex = fromMaybe (0) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 1
+      patchUpdateIndex = fromMaybe (0) $ INT.fromString $ fromMaybe "NA" $ versionArray !! 2
+  (majorUpdateIndex * 100 + minorUpdateIndex * 10 + patchUpdateIndex)

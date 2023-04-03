@@ -368,6 +368,7 @@ data STR = LETS_GET_STARTED
         | GO_SILENT
         | GO_ONLINE
         | GO_ONLINE_PROMPT
+        | LIVE_DASHBOARD
 
 type LETS_GET_STARTED = String
 type SELECT_LANGUAGE = String
@@ -774,3 +775,4 @@ type SILENT_MODE_PROMPT = String
 type GO_SILENT = String
 type GO_ONLINE = String
 type GO_ONLINE_PROMPT = String
+type LIVE_DASHBOARD = String

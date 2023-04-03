@@ -1258,3 +1258,30 @@ exports["generateSessionId"] = function () {
     console.log("generateSessionId error " + err);
   }
 }
+exports["initialWebViewSetUp"] = function (cb) {
+  return function (id) {
+      return function (action) {
+        return function () {
+          try {
+            var callback = callbackMapper.map(function (val) {
+              cb(action(val))();
+            });
+
+            return JBridge.initialWebViewSetUp(callback,id);
+          } catch (err) {
+            console.log("initialWebViewSetUp error " + err);
+          }
+        };
+      };
+  };
+};
+
+exports["goBackPrevWebPage"] = function (id) {
+  try {
+    if (JBridge.goBackPrevWebPage){
+      return JBridge.goBackPrevWebPage(id);
+    }
+  } catch (err) {
+    console.log("goBackPrevWebPage error " + err);
+  }
+}

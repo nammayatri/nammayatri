@@ -24,7 +24,7 @@ import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
 import Data.Array (filter, head, null, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
-import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginTop, screenWidth,safeMarginBottom)
+import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginTop, screenWidth,safeMarginBottom, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge (getBtnLoader, startLottieProcess)
@@ -34,7 +34,7 @@ import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (/), (/=), (
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, text, textSize, textView, visibility, weight, width, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (KeyStore(..), getValueToLocalStore)
-import Helpers.Utils (isPreviousVersion, getPreviousVersion)
+import Helpers.Utils (getPreviousVersion)
 import Styles.Colors as Color
 import Common.Types.App
 

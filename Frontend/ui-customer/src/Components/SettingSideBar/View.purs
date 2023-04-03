@@ -18,7 +18,7 @@ module Components.SettingSideBar.View where
 import Animation (translateInXSidebarAnim, translateOutXSidebarAnim)
 import Components.SettingSideBar.Controller (Action(..), SettingSideBarState, Status(..), Tag(..), Item)
 import Effect (Effect)
-import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os)
+import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
@@ -30,7 +30,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Debug.Trace (spy)
 import Common.Types.App
-import Helpers.Utils (isPreviousVersion, getPreviousVersion)
+import Helpers.Utils (getPreviousVersion)
 import Data.Maybe (Maybe(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
@@ -98,7 +98,7 @@ settingsView state push =
       ][]
     , settingsMenuView {imageUrl : "ic_share,https://assets.juspay.in/nammayatri/images/user/ic_share.png", text : (getString SHARE_APP), tag : SETTINGS_SHARE_APP, iconUrl : ""} push
     , if (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyLayout 
-      else settingsMenuView {imageUrl : "ic_graph_black,https://assets.juspay.in/nammayatri/images/user/ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon,https://assets.juspay.in/nammayatri/images/user/ic_red_icon.png"} push
+      else settingsMenuView {imageUrl : "ic_graph_black,https://assets.juspay.in/nammayatri/images/common/ic_graph_black.png", text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : "ic_red_icon,https://assets.juspay.in/nammayatri/images/user/ic_red_icon.png"} push
     , settingsMenuView {imageUrl : "ic_info,https://assets.juspay.in/nammayatri/images/user/ic_info.png", text : (getString ABOUT), tag : SETTINGS_ABOUT, iconUrl : ""} push
     , logoutView state push
   ]

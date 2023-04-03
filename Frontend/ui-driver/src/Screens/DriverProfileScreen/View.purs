@@ -16,7 +16,7 @@
 module Screens.DriverProfileScreen.View where
 
 import Prelude (Unit, ($), const, map, (==), (||), (/), unit, bind, (-), (<>), (<<<), pure, discard, show)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, alpha, scrollView, cornerRadius, onBackPressed, visibility, id, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, alpha, scrollView, cornerRadius, onBackPressed, visibility, id, afterRender, imageWithFallback, webView, url)
 import Effect (Effect)
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle)
 import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), optionList)
@@ -44,6 +44,7 @@ import Data.Maybe (fromMaybe)
 import Components.PopUpModal as PopUpModal
 import Common.Types.App
 import Screens.DriverProfileScreen.ComponentConfig
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion)
 
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
@@ -95,9 +96,28 @@ view push state =
         , background Color.lightBlack900
         , visibility if state.props.logoutModalView == true then VISIBLE else GONE
         ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]
+      , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView
     ]
 
 
+showLiveStatsDashboard :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+showLiveStatsDashboard push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.grey800
+  , afterRender
+        ( \action -> do
+            JB.initialWebViewSetUp push (getNewIDWithTag "webview") HideLiveDashboard
+            pure unit
+        )
+        (const NoAction)
+  ] [ webView 
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , id (getNewIDWithTag "webview")
+      , url if (isPreviousVersion (getValueToLocalStore VERSION_NAME) ("1.2.8")) then "https://nammayatri.in/open/" else "https://nammayatri.in/open?source=in-app"
+      ]]
 
 ------------------------------------------------- profilePictureLayout ------------------------------
 profilePictureLayout :: ST.DriverProfileScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w

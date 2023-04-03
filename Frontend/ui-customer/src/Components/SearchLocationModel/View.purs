@@ -28,10 +28,10 @@ import Data.Function (flip)
 import Data.Maybe (Maybe(..))
 import Debug.Trace (spy)
 import Effect (Effect)
-import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth)
+import Engineering.Helpers.Commons (getNewIDWithTag, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, debounceFunction, isPreviousVersion, getPreviousVersion)
+import Helpers.Utils (getLocationName, debounceFunction, getPreviousVersion)
 import JBridge (getBtnLoader, requestKeyboardShow, getCurrentPosition, firebaseLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))

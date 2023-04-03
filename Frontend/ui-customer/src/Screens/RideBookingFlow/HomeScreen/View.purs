@@ -54,11 +54,11 @@ import Debug.Trace (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight)
+import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, isPreviousVersion, getCurrentLocationMarker, getPreviousVersion, initialWebViewSetUp, storeOnResumeCallback, decodeErrorMessage)
-import JBridge (enableMyLocation, drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, storeCallBackMessageUpdated, startChatListenerService, stopChatListenerService, updateRoute, toast, getExtendedPath, generateSessionId)
+import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, getCurrentLocationMarker, getPreviousVersion, storeOnResumeCallback, decodeErrorMessage)
+import JBridge (enableMyLocation, drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, storeCallBackMessageUpdated, startChatListenerService, stopChatListenerService, updateRoute, toast, getExtendedPath, generateSessionId, initialWebViewSetUp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -323,7 +323,7 @@ showLiveStatsDashboard push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , id (getNewIDWithTag "webview")
-      , url "https://nammayatri.in/open/"
+      , url if (isPreviousVersion (getValueToLocalStore VERSION_NAME) ("1.2.4")) then "https://nammayatri.in/open/" else "https://nammayatri.in/open?source=in-app"
       ]]
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
