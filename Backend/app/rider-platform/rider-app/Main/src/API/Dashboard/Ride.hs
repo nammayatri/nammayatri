@@ -25,15 +25,31 @@ import Servant hiding (throwError)
 
 type API =
   "ride"
-    :> ShareRideInfoAPI
+    :> ( ShareRideInfoAPI
+           :<|> Common.RideListAPI
+       )
 
 type ShareRideInfoAPI = Common.ShareRideInfoAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
-handler = shareRideInfo
+handler merchantId =
+  shareRideInfo merchantId
+    :<|> rideList merchantId
 
 shareRideInfo ::
   ShortId DM.Merchant ->
   Id Common.Ride ->
   FlowHandler Common.ShareRideInfoRes
 shareRideInfo merchantShortId reqRideId = withFlowHandlerAPI $ DRide.shareRideInfo merchantShortId reqRideId
+
+rideList ::
+  ShortId DM.Merchant ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Common.BookingStatus ->
+  Maybe (ShortId Common.Ride) ->
+  Maybe Text ->
+  Maybe Text ->
+  FlowHandler Common.RideListRes
+rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone =
+  withFlowHandlerAPI $ DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone

@@ -18,7 +18,7 @@ module API.RiderPlatform.Ride
   )
 where
 
-import qualified Dashboard.RiderPlatform.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Kernel.Prelude
@@ -31,12 +31,18 @@ import Tools.Auth.Merchant
 
 type API =
   "ride"
-    :> ShareRideInfoAPI
+    :> ( ShareRideInfoAPI
+           :<|> RideListAPI
+       )
+
+type RideListAPI = Common.RideListAPI
 
 type ShareRideInfoAPI = Common.ShareRideInfoAPI
 
 handler :: ShortId DM.Merchant -> FlowServer API
-handler = shareRideInfo
+handler merchantId =
+  shareRideInfo merchantId
+    :<|> rideList merchantId
 
 rideInfoHitsCountKey :: Id Common.Ride -> Text
 rideInfoHitsCountKey rideId = "RideInfoHits:" <> getId rideId <> ":hitsCount"
@@ -50,3 +56,17 @@ shareRideInfo merchantShortId rideId = withFlowHandlerAPI $ do
   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey rideId) shareRideApiRateLimitOptions
   checkedMerchantId <- merchantAccessCheck merchantShortId merchantShortId
   Client.callRiderApp checkedMerchantId (.rides.shareRideInfo) rideId
+
+rideList ::
+  ShortId DM.Merchant ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Common.BookingStatus ->
+  Maybe (ShortId Common.Ride) ->
+  Maybe Text ->
+  Maybe Text ->
+  FlowHandler Common.RideListRes
+rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone =
+  withFlowHandlerAPI $ do
+    checkedMerchantId <- merchantAccessCheck merchantShortId merchantShortId
+    Client.callRiderApp checkedMerchantId (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone
