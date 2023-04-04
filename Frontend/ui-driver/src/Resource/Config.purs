@@ -41,6 +41,9 @@ getEnv = case spy "Selected Environment :- " (environment "") of
   "prod"        -> PROD
   _             -> PROD
 
+getMerchantId :: String
+getMerchantId = "NA"
+
 getConfig :: Config
 getConfig = do
   case getEnv of
