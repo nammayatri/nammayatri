@@ -25,7 +25,6 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as Domain
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
-import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.Verification.Interface as Verification
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
@@ -33,6 +32,7 @@ import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common (decodeFromText, encodeToText)
 import Kernel.Utils.Error
+import qualified SMS.Interface as Sms
 import Storage.Tabular.Merchant (MerchantTId)
 import Tools.Error
 

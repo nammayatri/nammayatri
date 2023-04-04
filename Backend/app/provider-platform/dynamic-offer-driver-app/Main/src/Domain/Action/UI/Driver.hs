@@ -75,10 +75,7 @@ import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
 import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
-import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
-import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude (NominalDiffTime)
-import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
@@ -93,6 +90,9 @@ import Kernel.Utils.GenericPretty (PrettyShow)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
+import SMS.Config
+import qualified SMS.MyValueFirst.Flow as SF
+import qualified SMS.MyValueFirst.Types as SMS
 import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator

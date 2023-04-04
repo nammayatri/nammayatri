@@ -30,7 +30,6 @@ import qualified Domain.Action.UI.Ride.EndRide.DefaultConfig as EndRideDefCfg
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
-import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis
@@ -47,6 +46,7 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
+import SMS.Config
 import SharedLogic.DriverPool (DriverPoolConfig)
 import Storage.CachedQueries.CacheConfig
 import System.Environment (lookupEnv)

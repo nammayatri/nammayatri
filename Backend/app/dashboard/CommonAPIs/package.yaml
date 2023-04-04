@@ -53,6 +53,7 @@ default-extensions:
 dependencies:
   - aeson
   - base >= 4.7 && < 5
+  - beckn-services
   - mobility-core
   - beckn-spec
   - bytestring

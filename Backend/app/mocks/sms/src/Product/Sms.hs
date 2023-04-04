@@ -18,8 +18,8 @@ import App.Types
 import Control.Concurrent.MVar (modifyMVar, modifyMVar_)
 import qualified Data.Map as Map
 import EulerHS.Prelude
-import Kernel.External.SMS.MyValueFirst.Types
 import Kernel.Utils.Error.FlowHandling (withFlowHandler)
+import SMS.MyValueFirst.Types
 import Types.API.Sms
 
 sendSms :: Text -> Text -> Text -> Text -> Text -> FlowHandler SubmitSmsRes

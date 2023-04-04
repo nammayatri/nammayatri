@@ -66,6 +66,7 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers
@@ -139,6 +140,7 @@ executable driver-tracking-healthcheck-exe
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers

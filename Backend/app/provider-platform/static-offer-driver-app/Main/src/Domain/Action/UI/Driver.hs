@@ -42,10 +42,7 @@ import qualified Domain.Types.Vehicle as SV
 import GHC.Records.Extra
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Kernel.External.FCM.Types as FCM
-import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
-import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import Kernel.Prelude
-import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
@@ -58,6 +55,9 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common (fromMaybeM, logTagInfo, throwError, (:::))
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import SMS.Config
+import qualified SMS.MyValueFirst.Flow as SF
+import qualified SMS.MyValueFirst.Types as SMS
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig

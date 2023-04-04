@@ -24,10 +24,10 @@ import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as Domain
 import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types
-import Kernel.External.SMS.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
+import SMS.Types
 import Storage.Tabular.Merchant (MerchantTId)
 
 mkPersist

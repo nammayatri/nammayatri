@@ -5,16 +5,16 @@
 
 packages:
 - completed:
-    commit: ff1acd87fae574c8906837f018a71daaf0e72ad9
+    commit: 2a4455f273ab5a5a4d19307f48bb3ba82bc93eea
     git: https://github.com/nammayatri/shared-kernel.git
     name: mobility-core
     pantry-tree:
-      sha256: 135c2d32c851c70d68a2b24c84bd61822e3da8df211921ffedcaa96d89322a24
-      size: 18496
+      sha256: cf7ea4d48a9b087b9e157d02373d424bf30691e6aa95ec36fcdf29fc61607406
+      size: 17283
     subdir: lib/mobility-core
     version: 0.1.0.0
   original:
-    commit: ff1acd87fae574c8906837f018a71daaf0e72ad9
+    commit: 2a4455f273ab5a5a4d19307f48bb3ba82bc93eea
     git: https://github.com/nammayatri/shared-kernel.git
     subdir: lib/mobility-core
 - completed:

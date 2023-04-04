@@ -22,13 +22,13 @@ import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
-import Kernel.External.SMS as Sms
 import qualified Kernel.External.Verification as Verification
 import Kernel.External.Verification.Interface.Types
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import SMS as Sms
 import qualified Text.Show
 
 data ServiceName

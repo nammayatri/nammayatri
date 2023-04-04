@@ -321,6 +321,7 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers
@@ -400,6 +401,7 @@ executable static-offer-driver-app-exe
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers
@@ -505,6 +507,7 @@ test-suite static-offer-driver-app-tests
       QuickCheck
     , aeson
     , base >=4.7 && <5
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers

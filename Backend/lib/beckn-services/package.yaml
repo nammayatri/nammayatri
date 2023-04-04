@@ -60,6 +60,7 @@ dependencies:
   - text
   - time
   - aeson
+  - aeson-casing
   - servant-client
   - servant
   - servant-server
@@ -68,6 +69,7 @@ dependencies:
   - case-insensitive
   - http-client-tls
   - http-client
+  - http-api-data
   - containers
   - http-media
   - servant-openapi3
@@ -77,6 +79,9 @@ dependencies:
   - unix
   - string-conversions
   - filepath
+  - lens
+  - text-conversions
+  - deriving-aeson
 
 ghc-options:
   - -fwrite-ide-info

@@ -18,9 +18,9 @@ import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
 import Kernel.External.Call.Types (CallService)
 import Kernel.External.Maps.Types
-import Kernel.External.SMS.Types
 import Kernel.Prelude
 import Kernel.Types.Id
+import SMS.Types
 
 data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { merchantId :: Id Merchant,

@@ -27,13 +27,13 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
 import qualified Kernel.External.Maps as Maps
-import qualified Kernel.External.SMS as SMS
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import qualified SMS as SMS
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM

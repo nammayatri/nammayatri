@@ -73,6 +73,7 @@ library:
   dependencies:
     - aeson
     - mobility-core
+    - beckn-services
     - bytestring
     - clock
     - containers

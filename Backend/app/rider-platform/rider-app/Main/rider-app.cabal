@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.0.
+-- This file has been generated from package.yaml by hpack version 0.35.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -296,6 +296,7 @@ library
     , amazonka-ses
     , base >=4.7 && <5
     , base64-bytestring
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers
@@ -375,6 +376,7 @@ executable rider-app-exe
     , amazonka-ses
     , base >=4.7 && <5
     , base64-bytestring
+    , beckn-services
     , beckn-spec
     , bytestring
     , containers

@@ -30,8 +30,6 @@ import Kernel.External.Encryption (encrypt)
 import qualified Kernel.External.FCM.Flow as FCM
 import qualified Kernel.External.FCM.Types as FCM
 import qualified Kernel.External.Maps as Maps
-import qualified Kernel.External.SMS as SMS
-import qualified Kernel.External.SMS.ExotelSms.Types as Exotel
 import qualified Kernel.External.Verification as Verification
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
@@ -40,6 +38,8 @@ import Kernel.Types.Common
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified SMS
+import qualified SMS.ExotelSms.Types as Exotel
 import Servant
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs

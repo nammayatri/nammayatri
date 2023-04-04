@@ -33,7 +33,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
 import Kernel.External.FCM.Types (FCMRecipientToken)
-import Kernel.Sms.Config
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -47,6 +46,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
+import SMS.Config
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.TransporterConfig
 import Storage.CachedQueries.CacheConfig (CacheFlow, HasCacheConfig)

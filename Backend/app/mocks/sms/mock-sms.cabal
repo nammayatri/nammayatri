@@ -68,6 +68,7 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beckn-services
     , bytestring
     , clock
     , containers
