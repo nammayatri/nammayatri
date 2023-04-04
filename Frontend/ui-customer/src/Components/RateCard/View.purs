@@ -23,13 +23,10 @@ import Data.Maybe as DM
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Data.Int as DI
-import Data.Maybe as DM
-import Data.String as DS
 import Helpers.Utils (Merchant(..), getMerchant)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, ($), const, (<>), (>), (==))
+import Prelude (Unit, ($), const, (<>), (>), (==), (&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
