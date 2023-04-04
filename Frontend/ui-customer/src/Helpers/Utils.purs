@@ -15,38 +15,37 @@
 
 module Helpers.Utils where
 
+import Common.Types.App (LazyCheck)
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
-import Data.Array (length, filter, cons, deleteAt, sortWith, drop, head, tail, (!!))
+import Data.Array (cons, deleteAt, filter, head, length, tail, (!!))
 import Data.Array.NonEmpty (fromArray)
 import Data.Date (Date)
 import Data.Either (Either(..), hush)
 import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Int as INT
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Number (fromString)
-import Data.Profunctor.Strong (first)
 import Data.String as DS
 import Data.Traversable (traverse)
-import Debug.Trace (spy)
-import Effect (Effect)
 import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Engineering.Helpers.Commons (liftFlow, os)
-import Foreign.Class (class Decode, class Encode)
-import Foreign.Generic (decodeJSON, encodeJSON)
+import Foreign.Class (class Decode, class Encode, decode)
+import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Math (pi, sin, cos, sqrt, asin)
-import Prelude (class Show, class Ord, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
+import Prelude (class Eq, class Show, Unit, bind, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (==), (>), (>>>))
 import Presto.Core.Flow (Flow, doAff)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject)
 import Types.App (GlobalState)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
