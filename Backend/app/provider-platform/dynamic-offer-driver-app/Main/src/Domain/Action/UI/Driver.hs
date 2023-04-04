@@ -69,6 +69,7 @@ import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Veh
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Environment
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Encryption
@@ -95,6 +96,7 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import SharedLogic.CallBAP (sendDriverOffer)
 import qualified SharedLogic.CancelSearch as CS
+import qualified SharedLogic.DeleteDriver as DeleteDriverOnCheck
 import SharedLogic.DriverPool as DP
 import SharedLogic.FareCalculator
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -854,7 +856,15 @@ validate personId phoneNumber = do
   altNoAttempt <- runInReplica $ QRegister.getAlternateNumberAttempts personId
   runRequestValidation validationCheck phoneNumber
   mobileNumberHash <- getDbHash phoneNumber.alternateNumber
-  duplicateCheck (QPerson.findByMobileNumberAndMerchant phoneNumber.mobileCountryCode mobileNumberHash person.merchantId) "Person with this mobile number already exists"
+  merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  mbPerson <- QPerson.findByMobileNumberAndMerchant phoneNumber.mobileCountryCode mobileNumberHash person.merchantId
+  deleteOldPersonCheck <- case mbPerson of
+    Nothing -> return False
+    Just oldPerson -> do
+      when (oldPerson.id == person.id) $ throwError $ InvalidRequest "Alternate number already linked"
+      DeleteDriverOnCheck.validateDriver merchant oldPerson
+  logDebug $ "Delete Driver Check" <> show deleteOldPersonCheck
+  when deleteOldPersonCheck $ throwError $ InvalidRequest "Alternate number can't be validated"
   smsCfg <- asks (.smsCfg)
   let useFakeOtpM = useFakeSms smsCfg
   otpCode <- maybe generateOTPCode return (show <$> useFakeOtpM)
@@ -874,8 +884,6 @@ validate personId phoneNumber = do
   let verified = False
   cacheAlternateNumberInfo personId phoneNumber.alternateNumber otpCode altNoAttempt verified
   return $ DriverAlternateNumberRes {attempts = altNoAttempt}
-  where
-    duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
 
 validateAuthVerifyReq :: Validate DriverAlternateNumberOtpReq
 validateAuthVerifyReq DriverAlternateNumberOtpReq {..} =
@@ -887,17 +895,9 @@ verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "Driver:AlternateNumberOtp:verify:" <> getId id <> ":hitsCount"
 
 verifyAuth ::
-  ( HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
-    EncFlow m r,
-    CoreMetrics m,
-    HasCacheConfig r
-  ) =>
   Id SP.Person ->
   DriverAlternateNumberOtpReq ->
-  m APISuccess
+  Flow APISuccess
 verifyAuth personId req = do
   Redis.whenWithLockRedis (makeAlternatePhoneNumberKey personId) 60 $ do
     runRequestValidation validateAuthVerifyReq req
@@ -917,10 +917,16 @@ verifyAuth personId req = do
             { SP.unencryptedAlternateMobileNumber = Just altMobNo,
               SP.alternateMobileNumber = Just encNewNum
             }
+        mobileCountryCode = fromMaybe "+91" person.mobileCountryCode
+    mobileNumberHash <- getDbHash altMobNo
+    mbPerson <- QPerson.findByMobileNumberAndMerchant mobileCountryCode mobileNumberHash person.merchantId
     Esq.runTransaction $ do
       QPerson.updateAlternateMobileNumberAndCode driver
     expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
     Redis.setExp (makeAlternateNumberVerifiedKey personId) True expTime
+    whenJust mbPerson $ \oldPerson -> do
+      merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+      void $ DeleteDriverOnCheck.deleteDriver merchant.shortId (cast oldPerson.id)
     invalidateAlternateNoCache personId
   return Success
 

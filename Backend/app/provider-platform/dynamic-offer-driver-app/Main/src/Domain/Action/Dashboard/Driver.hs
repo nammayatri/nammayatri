@@ -57,24 +57,15 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
+import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.DriverInformation as CQDriverInfo
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDriverFlowStatus
-import qualified Storage.Queries.DriverInformation as QDriverInfo
-import qualified Storage.Queries.DriverLocation as QDriverLocation
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as QRCAssociation
-import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
-import qualified Storage.Queries.DriverOnboarding.Image as QImage
 import qualified Storage.Queries.DriverOnboarding.Status as QDocStatus
-import qualified Storage.Queries.DriverQuote as QDriverQuote
-import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Message.MessageReport as QMessage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
-import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SearchRequestForDriver as QSearchReqForDriver
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
@@ -404,47 +395,7 @@ castVerificationStatus = \case
 
 ---------------------------------------------------------------------
 deleteDriver :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
-deleteDriver merchantShortId reqDriverId = do
-  merchant <- findMerchantByShortId merchantShortId
-  let driverId = cast @Common.Driver @DP.Driver reqDriverId
-  let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <-
-    QPerson.findById personId
-      >>= fromMaybeM (PersonDoesNotExist personId.getId)
-
-  -- merchant access checking
-  unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
-
-  unless (driver.role == DP.DRIVER) $ throwError Unauthorized
-
-  ride <- QRide.findOneByDriverId personId
-  unless (isNothing ride) $
-    throwError $ InvalidRequest "Unable to delete driver, which have at least one ride"
-
-  driverInformation <- CQDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when driverInformation.enabled $
-    throwError $ InvalidRequest "Driver should be disabled before deletion"
-
-  -- this function uses tokens from db, so should be called before transaction
-  Auth.clearDriverSession personId
-  Esq.runTransaction $ do
-    QIV.deleteByPersonId personId
-    QImage.deleteByPersonId personId
-    QDriverLicense.deleteByDriverId personId
-    QRCAssociation.deleteByDriverId personId
-    QDriverQuote.deleteByDriverId personId
-    QSearchReqForDriver.deleteByDriverId personId
-    QDriverStats.deleteById driverId
-    QDriverLocation.deleteById personId
-    QR.deleteByPersonId personId
-    QVehicle.deleteById personId
-    QDriverInfo.deleteById driverId
-    QDriverFlowStatus.deleteById personId
-    QMessage.deleteByPersonId personId
-    QPerson.deleteById personId
-  CQDriverInfo.clearDriverInfoCache driverId
-  logTagInfo "dashboard -> deleteDriver : " (show driverId)
-  return Success
+deleteDriver merchantShortId = DeleteDriver.deleteDriver merchantShortId . cast
 
 ---------------------------------------------------------------------
 unlinkVehicle :: ShortId DM.Merchant -> Id Common.Driver -> Flow APISuccess
