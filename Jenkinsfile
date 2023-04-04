@@ -8,7 +8,9 @@ pipeline {
         }
         stage ('Nix Build') {
             steps {
-                sh 'nix build --no-link --no-update-lock-file -L .#nammayatri'
+                sh 'nix build -L .#nammayatri'
+                sh 'nix build -L .#run-docker-compose'
+                sh 'nix build -L .#run-mobility-stack'
             }
         }
         stage ('Flake check') {
