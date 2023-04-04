@@ -196,6 +196,7 @@ library
       SharedLogic.CacheDistance
       SharedLogic.CallBAP
       SharedLogic.CancelSearch
+      SharedLogic.DeleteDriver
       SharedLogic.DriverLocation
       SharedLogic.DriverOnboarding
       SharedLogic.DriverPool
