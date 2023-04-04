@@ -1178,6 +1178,12 @@ exports["launchInAppRatingPopup"] = function (unit) {
     JBridge.launchInAppRatingPopup();
   }
 };
+exports["getExtendedPath"] = function (path) {
+  if (JBridge.getExtendedPath) {
+    var extendedPath = JBridge.getExtendedPath(JSON.stringify(path));
+    return JSON.parse(extendedPath);
+  }
+};
 
 exports ["startTimerWithTime"] = function (time) {
   return function (qouteId) {

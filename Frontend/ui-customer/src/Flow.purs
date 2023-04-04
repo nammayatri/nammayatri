@@ -87,6 +87,7 @@ baseAppFlow gPayload = do
   _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "1500.0"
   _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "113"
   _ <- pure $ setValueToLocalStore RATING_SKIPPED "false"
+  _ <- pure $ setValueToLocalStore POINTS_FACTOR "50"
   _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
   _ <- lift $ lift $ setLogField "app_version" $ encode (show versionCode)
   _ <- lift $ lift $ setLogField "bundle_version" $ encode (bundle)

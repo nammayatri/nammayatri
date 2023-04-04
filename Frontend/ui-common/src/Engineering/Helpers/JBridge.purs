@@ -163,6 +163,8 @@ foreign import generateSessionToken :: String -> String
 foreign import toggleBtnLoader :: String -> Boolean -> Unit
 foreign import getBtnLoader :: String -> Boolean
 foreign import launchInAppRatingPopup :: Unit -> Effect Unit
+foreign import getExtendedPath :: Locations -> Locations
+
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
 -- -- keyStoreEntryPresent = liftFlow <<< _keyStoreEntryPresent
@@ -279,8 +281,7 @@ setEnvInNativeSharedPrefKeys key val = liftFlow (setEnvInNativeSharedPrefKeys' k
 --     pure nonCanceler)
 
 type Locations = {
-    journeyCoordinates :: Coordinates
-  , points :: Coordinates
+    points :: Coordinates
 }
 
 type Coordinates = Array Paths

@@ -60,6 +60,7 @@ data KeyStore
   | FINDING_QUOTES_POLLING
   | FLOW_STATUS_DATA
   | RATING_SKIPPED
+  | POINTS_FACTOR
 
 derive instance genericKeyStore :: Generic KeyStore _
 

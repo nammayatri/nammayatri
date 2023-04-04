@@ -534,16 +534,6 @@ makeGetRouteReq slat slng dlat dlng = GetRouteReq {
 
 walkCoordinate :: Number -> Number -> Number -> Number -> Locations
 walkCoordinate srcLat srcLon destLat destLong = {
-    "journeyCoordinates": [
-      {
-        "lat": srcLat,
-        "lng": srcLon
-      },
-      {
-        "lat": destLat,
-        "lng": destLong
-      }
-    ],
     "points": [
       {
         "lat": srcLat,
@@ -556,29 +546,10 @@ walkCoordinate srcLat srcLon destLat destLong = {
     ]
 }
 
-walkCoordinates :: Snapped -> Maybe (Array Number) -> Maybe Locations
-walkCoordinates (Snapped points) Nothing = Nothing
-walkCoordinates (Snapped points) (Just boundingBox) = do 
-    case take 4 boundingBox of 
-        [srcLatBound, srcLonBound, destLatBound, destLonBound] -> 
-            Just $ 
-                {
-                    "journeyCoordinates": [
-                    {
-                        "lat": srcLatBound,
-                        "lng": srcLonBound
-                    },
-                    {
-                        "lat": destLatBound,
-                        "lng": destLonBound
-                    }
-                    ],
-                    "points": map (\(LatLong item) -> {"lat": item.lat, "lng": item.lon}) points
-                }
-        _ -> Nothing
-
-dummySnapped :: Snapped
-dummySnapped = Snapped[LatLong{"lat": 0.0, "lon": 0.0}]
+walkCoordinates :: Snapped -> Locations
+walkCoordinates (Snapped points) =
+  { "points": map (\(LatLong item) -> { "lat": item.lat, "lng": item.lon }) points
+  }
 
 postContactsReq :: (Array NewContacts) -> EmergContactsReq
 postContactsReq contacts = EmergContactsReq {
@@ -685,14 +656,11 @@ drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddr
             case route of
                 Just (Route routes) ->
                     if (routes.distance <= 50000) then do
-                        _ <- maybe 
-                                (pure unit)
-                                (\walkCoordinatesPath -> lift $ lift $ liftFlow $ drawRoute walkCoordinatesPath "LineString" "#323643" true markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress)
-                                (walkCoordinates routes.points routes.boundingBox)
-                        pure route
+                      lift $ lift $ liftFlow $ drawRoute (walkCoordinates routes.points) "LineString" "#323643" true markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress
+                      pure route
                     else do
-                        _ <- lift $ lift $ liftFlow $ drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress
-                        pure route
+                      lift $ lift $ liftFlow $ drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress
+                      pure route
                 Nothing -> pure route
 
 type Markers = {

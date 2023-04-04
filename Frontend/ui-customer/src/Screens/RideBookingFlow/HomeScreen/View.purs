@@ -43,8 +43,11 @@ import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.SearchLocationModel as SearchLocationModel
 import Components.SettingSideBar as SettingSideBar
 import Components.SourceToDestination as SourceToDestination
+import Control.Monad.Except (runExcept)
+import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
-import Data.Array (any, length, mapWithIndex, null, (!!), head, drop) 
+import Control.Transformers.Back.Trans (runBackT)
+import Data.Array (any, length, mapWithIndex, null, (!!), head, drop)
 import Data.Either (Either(..))
 import Data.Int (toNumber, fromString, ceil)
 import Data.Lens ((^.))
@@ -60,7 +63,7 @@ import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, lift
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName, getNewTrackingId, parseFloat, storeCallBackCustomer, storeCallBackLocateOnMap, toString, waitingCountdownTimer, getDistanceBwCordinates, fetchAndUpdateCurrentLocation, isPreviousVersion, getCurrentLocationMarker, getPreviousVersion, initialWebViewSetUp, storeOnResumeCallback, decodeErrorMessage)
-import JBridge (drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, toast)
+import JBridge (drawRoute, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, updateRoute, toast, getExtendedPath)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -74,18 +77,14 @@ import PrestoDOM.Properties (cornerRadii, sheetState)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.HomeScreen.Controller (Action(..), ScreenOutput, eval, getCurrentCustomerLocation, flowWithoutOffers, checkCurrentLocation, getNearestCurrentLocation, checkSavedLocations, getNearestSavedLocation, dummySelectedQuotes)
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
+import Screens.HomeScreen.Controller (Action(..), ScreenOutput, eval, getCurrentCustomerLocation, flowWithoutOffers, checkCurrentLocation, getNearestCurrentLocation, checkSavedLocations, getNearestSavedLocation)
+import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.Types (HomeScreenState, PopupType(..), SearchLocationModelType(..), Stage(..), PreviousCurrentLocations(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), LocationListItemState)
-import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), SavedLocationsListRes(..) )
+import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, driverTracking, rideTracking, walkCoordinates, walkCoordinate, getSavedLocationList)
-import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore, isLocalStageOn, updateLocalStage,getValueToLocalNativeStore)
+import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore, isLocalStageOn, updateLocalStage, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (GlobalState)
-import Control.Monad.Except (runExcept)
-import Foreign.Generic (decodeJSON, encodeJSON)
-import Foreign.Class (class Encode)
-import Screens.HomeScreen.Transformer (transformSavedLocations)
-import Control.Monad.Except (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -1611,40 +1610,30 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
           routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
           case routeResponse of
             Right (GetRouteResp routeResp) -> do
-              let route = ((routeResp) !! 0)
-              case route of
+              case ((routeResp) !! 0) of
                 Just (Route routes) -> do
-                  let mWalkCoordinatesPath = walkCoordinates routes.points routes.boundingBox
-                  _ <- case mWalkCoordinatesPath of
-                    Just walkCoordinatesPath -> do
-                      _ <- pure $ removeAllPolylines ""
-                      liftFlow $ drawRoute walkCoordinatesPath "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance state)
-                    Nothing -> pure unit
+                  _ <- pure $ removeAllPolylines ""
+                  let newPoints = getExtendedPath (walkCoordinates routes.points)
+                      newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
+                  liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance state)
                   _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
                   void $ delay $ Milliseconds duration
-                  driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = (routeResp !! 0), speed = routes.distance / routes.duration } } routeState
+                  driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState
                 Nothing -> pure unit
             Left err -> pure unit
         else do
           case state.data.route of
-            Just (Route routes) -> do
-              let mWalkCoordinatesPath = walkCoordinates routes.points routes.boundingBox
-              case mWalkCoordinatesPath of
-                Just walkCoordinatesPath -> do
-                  locationResp <- liftFlow $ isCoordOnPath walkCoordinatesPath (resp ^. _lat) (resp ^. _lon) (state.data.speed)
+            Just (Route route) -> do
+                  locationResp <- liftFlow $ isCoordOnPath (walkCoordinates route.points) (resp ^. _lat) (resp ^. _lon) (state.data.speed)
                   if locationResp.isInPath then do
-                    let newRoute = (routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) locationResp.points) })
-                    _ <-
-                      maybe (pure unit)
-                        (\walkCoordinatesPath -> liftFlow $ updateRoute walkCoordinatesPath markers.destMarker (metersToKm locationResp.distance state))
-                        (walkCoordinates newRoute.points newRoute.boundingBox)
+                    let newPoints = { points : locationResp.points}
+                    liftFlow $ updateRoute newPoints markers.destMarker (metersToKm locationResp.distance state)
                     _ <- doAff do liftEffect $ push $ updateState locationResp.eta locationResp.distance
                     void $ delay $ Milliseconds duration
-                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
+                    driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState 
                   else do
                     driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
-                Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
-            Nothing -> pure unit
+            Nothing -> driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
       Left err -> do
         void $ delay $ Milliseconds (duration * 2.0)
         driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Nothing } } routeState
