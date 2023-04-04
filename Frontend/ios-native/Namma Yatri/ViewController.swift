@@ -45,6 +45,27 @@ class ViewController: UIViewController {
         animationView.loopMode = .loop
         animationView.play()
         view.addSubview(animationView)
+        
+        updateConfigUrl()
+    }
+    
+    func updateConfigUrl() {
+        if let path = Bundle.main.path(forResource: "ConfigUrls", ofType: "plist"),
+           let plist = NSDictionary(contentsOfFile: path),
+           let baseUrl = plist["baseUrl"],
+           let merchantId = plist["merchantId"] {
+            updatKeyInSharedPref(key: "BASE_URL", value: baseUrl)
+            updatKeyInSharedPref(key: "MERCHANT_ID", value: merchantId)
+           }
+    }
+    
+    func updatKeyInSharedPref(key: String, value: Any) {
+        let userDefault = UserDefaults.standard
+        if let hyperSDKStore = userDefault.value(forKey: "HyperSDK") as? Dictionary<String, AnyObject> {
+            let rootStore = NSMutableDictionary(dictionary: hyperSDKStore)
+            rootStore.setValue(value, forKey: key)
+            userDefault.setValue(rootStore, forKey: "HyperSDK")
+        }
     }
     
     override func viewDidAppear(_ animated: Bool) {
