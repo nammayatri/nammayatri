@@ -15,6 +15,7 @@
 
 module Services.Backend where
 
+import Services.Config as SC
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Data.Either (Either(..), either)
@@ -179,7 +180,7 @@ makeTriggerOTPReq    mobileNumber = TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : "+91",
-      "merchantId" : getValueToLocalNativeStore MERCHANT_ID
+      "merchantId" : if SC.getMerchantId == "NA" then getValueToLocalNativeStore MERCHANT_ID else SC.getMerchantId
     }
 
 
