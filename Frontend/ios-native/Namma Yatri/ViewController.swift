@@ -50,7 +50,7 @@ class ViewController: UIViewController {
     }
     
     func updateConfigUrl() {
-        if let path = Bundle.main.path(forResource: "ConfigUrls", ofType: "plist"),
+        if let path = Bundle.main.path(forResource: "NYConfig", ofType: "plist"),
            let plist = NSDictionary(contentsOfFile: path),
            let baseUrl = plist["baseUrl"],
            let merchantId = plist["merchantId"] {
