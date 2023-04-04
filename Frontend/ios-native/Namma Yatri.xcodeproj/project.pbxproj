@@ -30,6 +30,8 @@
 		60A354D929C8581E00182D29 /* becknbase.html in Resources */ = {isa = PBXBuildFile; fileRef = 60A354D529C8581E00182D29 /* becknbase.html */; };
 		60A354DA29C8581E00182D29 /* v1-index_bundle.jsa in Resources */ = {isa = PBXBuildFile; fileRef = 60A354D629C8581E00182D29 /* v1-index_bundle.jsa */; };
 		60A354DB29C8581E00182D29 /* v1-index_bundle.jsa in Resources */ = {isa = PBXBuildFile; fileRef = 60A354D629C8581E00182D29 /* v1-index_bundle.jsa */; };
+		60C3088A29DB459C00A65E76 /* ConfigUrls.plist in Resources */ = {isa = PBXBuildFile; fileRef = 60C3088929DB459C00A65E76 /* ConfigUrls.plist */; };
+		60C3088B29DB459C00A65E76 /* ConfigUrls.plist in Resources */ = {isa = PBXBuildFile; fileRef = 60C3088929DB459C00A65E76 /* ConfigUrls.plist */; };
 		60C605EF29CD7EEB0018F4FA /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 60C605EE29CD7EEB0018F4FA /* GoogleService-Info.plist */; };
 		7FE03F7E61F94085D3132FF1 /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 		AB3ACECD111D39438F04513F /* Pods_NammaYatri_Release.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77B8915276FEDDEDFABCB59F /* Pods_NammaYatri_Release.framework */; };
@@ -339,6 +341,7 @@
 		6065914A2980FF4F00CD7613 /* ic_shared_rides_empty.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = ic_shared_rides_empty.png; sourceTree = "<group>"; };
 		60A354D529C8581E00182D29 /* becknbase.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = becknbase.html; sourceTree = "<group>"; };
 		60A354D629C8581E00182D29 /* v1-index_bundle.jsa */ = {isa = PBXFileReference; lastKnownFileType = file; path = "v1-index_bundle.jsa"; sourceTree = "<group>"; };
+		60C3088929DB459C00A65E76 /* ConfigUrls.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = ConfigUrls.plist; sourceTree = "<group>"; };
 		60C605EE29CD7EEB0018F4FA /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		67EF66086A7AC66364C89D43 /* Pods-NammaYatri-Release.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NammaYatri-Release.debug.xcconfig"; path = "Target Support Files/Pods-NammaYatri-Release/Pods-NammaYatri-Release.debug.xcconfig"; sourceTree = "<group>"; };
 		6878170007F8A73F1BA82F34 /* Pods-NammaYatri-Debug.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NammaYatri-Debug.release.xcconfig"; path = "Target Support Files/Pods-NammaYatri-Debug/Pods-NammaYatri-Debug.release.xcconfig"; sourceTree = "<group>"; };
@@ -539,6 +542,7 @@
 		DC14E50628A50A2500305899 /* Plist */ = {
 			isa = PBXGroup;
 			children = (
+				60C3088929DB459C00A65E76 /* ConfigUrls.plist */,
 				DC14E50728A50A2500305899 /* Release */,
 				DC14E50A28A50A2500305899 /* Debug */,
 			);
@@ -877,6 +881,7 @@
 				DC2BA16028AA0A5E005D9E92 /* ny_ic_auto.png in Resources */,
 				DC2BA1D228AA0A5E005D9E92 /* ny_ic_offline.png in Resources */,
 				DC2BA1D028AA0A5E005D9E92 /* ny_ic_no_quotes.png in Resources */,
+				60C3088B29DB459C00A65E76 /* ConfigUrls.plist in Resources */,
 				DC2BA11E28AA0A5E005D9E92 /* ny_ic_star_active.png in Resources */,
 				F337481928AE0367008FD7EC /* ny_ic_error_404.png in Resources */,
 				DC5B84E6295EE47E00947C98 /* ny_ic_splash_bg.png in Resources */,
@@ -1026,6 +1031,7 @@
 				2FEA5AC129A0A73D0035A39D /* ny_ic_chevron_right_white.png in Resources */,
 				F380D1FE29509BF100C5AB58 /* ny_ic_loc_grey.png in Resources */,
 				BF151C24297E828E0022EB3B /* ny_ic_no_commision.png in Resources */,
+				60C3088A29DB459C00A65E76 /* ConfigUrls.plist in Resources */,
 				DCEE59C228C71101003D3B7D /* ny_ic_current_location.png in Resources */,
 				DC2BA1D328AA0A5E005D9E92 /* ny_ic_pay_driver.png in Resources */,
 				DC2BA15F28AA0A5E005D9E92 /* ny_ic_auto.png in Resources */,
