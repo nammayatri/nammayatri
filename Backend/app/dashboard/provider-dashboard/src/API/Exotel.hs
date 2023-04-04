@@ -27,7 +27,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
-import Kernel.Utils.Common (MandatoryQueryParam, MonadFlow, decodeFromText, fork, throwError, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, decodeFromText, fork, throwError, withFlowHandlerAPI)
 import qualified ProviderPlatformClient.DynamicOfferDriver as Client
 import qualified ProviderPlatformClient.StaticOfferDriver as Client
 import qualified RiderPlatformClient.RiderApp as Client
@@ -37,7 +37,7 @@ import qualified Storage.Queries.Transaction as QT
 
 type API =
   "exotel"
-    :> MandatoryQueryParam "exotelToken" Text
+    :> Capture "exotelToken" Text
     :> Common.ExotelHeartbeatAPI
 
 handler :: FlowServer API
