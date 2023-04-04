@@ -1008,20 +1008,28 @@ public class MainActivity extends AppCompatActivity {
               break;
           case CommonJsInterface.REQUEST_CONTACTS:
               boolean flag = ContextCompat.checkSelfPermission(MainActivity.getInstance(), Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED;
-              String contacts = null;
-              try {
-                  if (flag){
-                      contacts = getPhoneContacts();
-                  } else {
-                      JSONArray flagArray = new JSONArray();
-                      contacts = flagArray.toString();
-                  }
-                  if (juspayServicesGlobal.getDynamicUI() != null) {
-                      CommonJsInterface.contactsStoreCall(juspayServicesGlobal.getDuiCallback(), contacts);
-                  }
-              } catch (JSONException e) {
-                  e.printStackTrace();
-              }
+
+              new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    String contacts = null;
+                    try {
+                        if (flag){
+                            contacts = getPhoneContacts();
+                        } else {
+                            JSONArray flagArray = new JSONArray();
+                            contacts = flagArray.toString();
+                        }
+                        if (juspayServicesGlobal.getDynamicUI() != null) {
+                            CommonJsInterface.contactsStoreCall(juspayServicesGlobal.getDuiCallback(), contacts);
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+                }).start();
+
+              
               break;
           default: return;
       }
@@ -1039,7 +1047,8 @@ public class MainActivity extends AppCompatActivity {
                 String contactNameStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
                 String contactStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
                 String contactNumber = contactStr.replaceAll("[^0-9]", "");
-                String contactName = contactNameStr.replaceAll("'","");
+                String contactName = contactNameStr.replaceAll("[\n\r\t']","");
+
                 JSONObject tempPoints = new JSONObject();
                 tempPoints.put("name",contactName);
                 tempPoints.put("number",contactNumber);

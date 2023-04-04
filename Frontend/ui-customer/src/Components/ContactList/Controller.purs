@@ -24,14 +24,15 @@ type ContactsState = {
   contactsData :: Array NewContacts,
   count :: Int,
   contactList :: Array NewContacts,
-  editedText :: String
+  editedText :: String,
+  selectedContacts :: Array NewContacts
 }
 
 aToz :: Array String
 aToz = [ "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" ]
 
 sortedContactData :: String -> Array NewContacts -> Array NewContacts
-sortedContactData x config = sortBy (\a b -> compare (a.name) (b.name)) (filter (\item -> DS.take 1 item.name == x) config)
+sortedContactData x config = sortBy (\a b -> compare (a.name) (b.name)) (filter (\item -> DS.toLower (DS.take 1 item.name) == DS.toLower x) config)
 
 searchContacts :: String -> Array NewContacts -> Array NewContacts
 searchContacts value config =

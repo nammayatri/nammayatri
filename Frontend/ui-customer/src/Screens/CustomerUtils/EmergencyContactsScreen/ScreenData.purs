@@ -15,6 +15,7 @@ initData = {
                               , number : ""
                               }
     , editedText : ""
+    , selectedContacts : []
     },
     props:{
         showContactList : false

@@ -12,7 +12,7 @@ import Screens (ScreenName(..), getScreen)
 import JBridge (toast, loaderText, toggleLoader)
 import Screens.Types (EmergencyContactsScreenState , ContactDetail, NewContacts)
 import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText', toString)
-import Data.Array (length, filter, snoc, elem, null, unionBy, elem, head, tail, catMaybes, (!!), take, last)
+import Data.Array (length, filter, snoc, elem, notElem, null, unionBy, head, tail, catMaybes, (!!), take, last, delete)
 import Log (printLog)
 import Screens.EmergencyContactsScreen.Transformer (getContactList)
 import Components.ContactList as ContactListController
@@ -109,7 +109,7 @@ eval (ContactsCallback allContacts) state = do
               Just contact ->  if (contact.name == "beckn_contacts_flag") && (contact.number == "true") then "true" else "NA" -- TODO :: Need to refactor @Chakradhar
               Nothing -> "false"
       updatedContactList = case (last allContacts) of
-              Just contact ->  if (contact.name == "beckn_contacts_flag") then take ((length allContacts) - 1) allContacts else allContacts -- TODO :: Need to refactor @Chakradhar
+              Just contact ->  if (contact.name == "beckn_contacts_flag") then take ((length allContacts) - 1) allContacts else allContacts -- TODO :: Need to refactor @Chakradhar (there is an inbuilt function to remove last element in array)
               Nothing -> allContacts
   if(flag == "false") then do
     _ <- pure $ toast (getString PERMISSION_DENIED)
@@ -166,7 +166,7 @@ eval (RemoveButtonClicked contactDetail) state = continue state{props{showInfoPo
 
 eval BackPressed state =
   if(state.props.showContactList) then do
-    let newState = state { data = state.data { editedText = "", contactsNewList = map (\x ->
+    let newState = state { data = state.data { selectedContacts = [], editedText = "", contactsNewList = map (\x ->
       if (x.isSelected == true) then x { isSelected = not (x.isSelected) }
       else x
     ) state.data.contactsNewList
@@ -178,7 +178,7 @@ eval BackPressed state =
     exit $ GoToHomeScreen
 
 eval (ContactListAction(ContactListController.GenericHeaderActionController GenericHeader.PrefixImgOnClick)) state = do
-  let newState = state { data = state.data { editedText = "", contactsNewList = map (\x ->
+  let newState = state { data = state.data { selectedContacts = [], editedText = "", contactsNewList = map (\x ->
       if (x.isSelected == true) then x { isSelected = not (x.isSelected) }
       else x
     ) state.data.contactsNewList
@@ -197,23 +197,19 @@ eval (ContactListAction(ContactListController.ContactSelected contact)) state = 
   let item = if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
     contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}
   else contact
-  if ((state.data.contactsCount >= (3 - (length state.data.contactsList))) && (item.isSelected == false)) then do
+  if ((state.data.contactsCount >= (3 - (length state.data.contactsList))) && (notElem contact state.data.selectedContacts)) then do
     _ <- pure $ toast (getString MAXIMUM_CONTACTS_LIMIT_REACHED)
     continue state
   else if((DS.length item.number) /= 10 || (fromMaybe 0 (fromString (DS.take 1 item.number)) < 6)) then do
     _ <- pure $ toast (getString SELECTED_CONTACT_IS_INVALID)
     continue state
   else do
-    let newState = state { data = state.data { contactsNewList = map (\x ->
-      if ((x.number <> x.name  == contact.number <> contact.name) && (state.data.contactsCount < (3 - (length state.data.contactsList)) || x.isSelected == true)) then x { isSelected = not (x.isSelected) }
-      else x
-      ) state.data.contactsNewList
-    }}
-    let selectedContactsCount = spy "contactsCount" (length $ filter (\x -> x.isSelected) newState.data.contactsNewList)
-    continue newState{data{contactsCount = selectedContactsCount}}
+    let selectedContacts = if(notElem contact state.data.selectedContacts) then state.data.selectedContacts <> [contact] 
+                            else delete contact state.data.selectedContacts    
+    continue state{data{contactsCount = (length selectedContacts), selectedContacts = selectedContacts}}
 
 eval (ContactListAction(ContactListController.PrimaryButtonActionController PrimaryButton.OnClick)) state = do
-  let selectedContacts = (filter (\x -> x.isSelected) state.data.contactsNewList) <> state.data.contactsList
+  let selectedContacts = state.data.selectedContacts <> state.data.contactsList
   let validSelectedContacts = (map (\contact ->
     if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
       contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}
@@ -222,7 +218,7 @@ eval (ContactListAction(ContactListController.PrimaryButtonActionController Prim
   contactsInString <- pure $ toString validSelectedContacts
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
   _ <- pure $ toast (getString EMERGENCY_CONTACS_ADDED_SUCCESSFULLY)
-  updateAndExit state $ PostContacts state{data{editedText = "", contactsList = validSelectedContacts}, props{showContactList = false}}
+  updateAndExit state $ PostContacts state{data{ selectedContacts = [],editedText = "", contactsList = validSelectedContacts}, props{showContactList = false}}
 
 eval CheckingContactList state = do
   contacts <- pure $ getValueToLocalStore CONTACTS

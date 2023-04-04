@@ -384,3 +384,4 @@ getKN script = case script of
   NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD -> "ಸೇರಿಸಲು ಯಾವುದೇ ಸಂಪರ್ಕಗಳು ಯಾವ ಸಾಧನದಲ್ಲಿ ಕಂಡುಬಂದಿಲ್ಲ"
   PERMISSION_DENIED -> "ಅನುಮತಿ ನಿರಾಕರಿಸಲಾಗಿದೆ"
   PERCENTAGE_OF_NOMINAL_FARE -> "~ ಮೂಲ ದರದ 10%"
+  SELECTED_CONTACTS_WILL_APPEAR_HERE -> "ಆಯ್ಕೆಮಾಡಿದ ಸಂಪರ್ಕಗಳು ಇಲ್ಲಿ ತೋರಿಸಲಾಗುತ್ತವೆ"

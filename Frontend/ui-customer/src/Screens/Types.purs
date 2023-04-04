@@ -596,7 +596,8 @@ type EmergencyContactsScreenData = {
   contactsList :: Array NewContacts,
   contactsNewList :: Array NewContacts,
   removedContactDetail :: NewContacts,
-  editedText :: String
+  editedText :: String,
+  selectedContacts :: Array NewContacts
 }
 
 type EmergencyContactsScreenProps = {

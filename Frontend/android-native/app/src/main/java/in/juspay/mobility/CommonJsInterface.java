@@ -3746,18 +3746,25 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void contactPermission() {
-        try {
             if (ContextCompat.checkSelfPermission(MainActivity.getInstance(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(MainActivity.getInstance(), new String[]{Manifest.permission.READ_CONTACTS}, REQUEST_CONTACTS);
             } else {
-                String contacts = MainActivity.getInstance().getPhoneContacts();
-                if (MainActivity.getInstance().getJuspayServices().getDynamicUI() != null) {
-                    contactsStoreCall(MainActivity.getInstance().getJuspayServices().getDuiCallback(), contacts);
-                }
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try{
+                            String contacts = MainActivity.getInstance().getPhoneContacts();
+                            if (MainActivity.getInstance().getJuspayServices().getDynamicUI() != null) {
+                                contactsStoreCall(MainActivity.getInstance().getJuspayServices().getDuiCallback(), contacts);
+                            }
+                        }
+                        catch (Exception e){
+                            Log.e("error inside contactPermission", String.valueOf(e));
+                        }
+
+                    }
+                }).start();
             }
-        } catch (Exception e) {
-            Log.e("error inside contactPermission", String.valueOf(e));
-        }
     }
 
 

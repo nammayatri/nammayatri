@@ -7,12 +7,12 @@ import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (length, null)
 import Effect (Effect)
-import Engineering.Helpers.Commons (os)
+import Engineering.Helpers.Commons (os, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((<>), (==))
+import Prelude ((<>), (==), unit, (-))
 import PrestoDOM (Length(..), Margin(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, height, margin, padding, text, textSize, width, imageUrl, visibility, stroke)
 import Screens.Types (EmergencyContactsScreenState)
 import Styles.Colors as Color
@@ -30,7 +30,7 @@ genericHeaderConfig state =
           { height = V 25
           , width = V 25
           , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
-          , margin = (Margin 12 12 12 12)
+          , margin = if os == "IOS" then (Margin 32 12 12 12) else (Margin 12 12 12 12)
           }
         , padding = (Padding 0 5 0 5)
         , textConfig
@@ -58,8 +58,8 @@ primaryButtonConfig state =
           { text = if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)
           }
         , isClickable = true
-        , width = if os == "IOS" then (V 360) else (MATCH_PARENT)
-        , margin = if os == "IOS" then (Margin 0 0 0 70) else (Margin 0 0 0 24)
+        , width = if os == "IOS" then (V ((screenWidth unit) - 20)) else (MATCH_PARENT)
+        , margin = if os == "IOS" then (Margin 10 0 10 70) else (Margin 0 0 0 24)
         , visibility = if ((length state.data.contactsList) == 3) then GONE else VISIBLE
         }
   in

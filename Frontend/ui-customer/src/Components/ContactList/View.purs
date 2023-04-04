@@ -20,7 +20,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Data.Show (show)
 import Data.String as DS
-import Data.Array (sortBy, mapWithIndex, filter, (!!), length)
+import Data.Array (sortBy, mapWithIndex, filter, (!!), length, elem, null)
 import Data.Ord (compare)
 import Common.Types.App
 import Data.Map (Map, empty, insert)
@@ -49,6 +49,63 @@ view push config =
         [ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig config)
         , horizontalLine
         ]
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.blue600
+        , orientation VERTICAL
+        ][
+          textView
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , padding (Padding 20 12 0 8)
+            , color Color.black900
+            , textSize FontSize.a_14
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            , text ((show (config.count)) <> "/" <> show (3 - (length config.contactList)) <> " " <> (getString CONTACTS_SELECTED))
+            ]
+          , linearLayout
+              [ height $ V 28
+              , width MATCH_PARENT
+              , padding (Padding 20 0 0 12)
+              ]
+              if(null (config.selectedContacts)) then 
+                [textView
+                  [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , color Color.black600
+                  , textSize FontSize.a_12
+                  , fontStyle $ FontStyle.semiBold LanguageStyle
+                  , text $ getString SELECTED_CONTACTS_WILL_APPEAR_HERE
+                  ]
+                ]
+              else 
+                (mapWithIndex (\index item -> (
+                linearLayout[
+                  height MATCH_PARENT
+                , width WRAP_CONTENT
+                ][
+                  linearLayout
+                  [ height $ V 4
+                  , width $ V 4
+                  , cornerRadius 2.0
+                  , background Color.black600
+                  , visibility if index > 0 then VISIBLE else GONE
+                  , margin (Margin 8 6 8 0)
+                  , gravity CENTER_VERTICAL
+                  ][]
+                , textView
+                  [ height WRAP_CONTENT
+                  , width WRAP_CONTENT
+                  , textSize FontSize.a_12
+                  , fontStyle $ FontStyle.semiBold LanguageStyle
+                  , color Color.black900
+                  , text item.name
+                  ]  
+                ]
+                )) config.selectedContacts)
+                
+            ]
     , linearLayout
         [ width MATCH_PARENT
         , height $ V 44
@@ -122,7 +179,7 @@ genericHeaderConfig state =
           }
         , padding = (Padding 0 5 0 5)
         , textConfig
-          { text = ((show (state.count)) <> "/" <> show (3 - (length state.contactList)) <> " " <> (getString CONTACTS_SELECTED))
+          { text = getString EMERGENCY_CONTACTS
           , textSize = FontSize.a_18
           , color = Color.darkDescriptionText
           , fontStyle = FontStyle.semiBold LanguageStyle
@@ -155,17 +212,7 @@ showEmergencyContact push config =
         , width MATCH_PARENT
         , orientation VERTICAL
         , background Color.blue600
-        , margin (Margin 0 0 0 0)
-        -- , visibility if (config.contactsData /= []) then VISIBLE else GONE
-        ]
-        (
-          
-          -- if (config.contactsData == []) then 
-          --   []
-          -- else showEmergencyContactData push config
-          showEmergencyContactData push config
-          
-        )
+        ] (showEmergencyContactData push config)
     ]
 
 showEmergencyContactData :: forall w. (Action -> Effect Unit) -> ContactsState -> Array (PrestoDOM (Effect Unit) w)
@@ -203,7 +250,7 @@ showEmergencyContactData push config =
                             , width MATCH_PARENT
                             , orientation VERTICAL
                             , weight 1.0
-                            , if item.isSelected then background Color.grey900 else background Color.white900
+                            , background if (elem item config.selectedContacts) then Color.grey900 else Color.white900
                             , onClick push $ (const (ContactSelected item))
                             ]
                             [ linearLayout
@@ -252,9 +299,9 @@ showEmergencyContactData push config =
                                     , gravity CENTER
                                     ]
                                     [ imageView
-                                        [ height if item.isSelected then V 24 else V 17
-                                        , width if item.isSelected then V 24 else V 17
-                                        , imageWithFallback if item.isSelected then "ny_ic_selected_icon,https://assets.juspay.in/nammayatri/images/user/ny_ic_selected_icon.png" else "ny_ic_outer_circle,https://assets.juspay.in/nammayatri/images/user/ny_ic_outer_circle.png"
+                                        [ height if (elem item config.selectedContacts) then V 24 else V 17
+                                        , width if (elem item config.selectedContacts) then V 24 else V 17
+                                        , imageWithFallback if (elem item config.selectedContacts) then "ny_ic_selected_icon,https://assets.juspay.in/nammayatri/images/user/ny_ic_selected_icon.png" else "ny_ic_outer_circle,https://assets.juspay.in/nammayatri/images/user/ny_ic_outer_circle.png"
                                         ]
                                     ]
                                 ]
