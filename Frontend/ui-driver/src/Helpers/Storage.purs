@@ -56,6 +56,7 @@ data KeyStore = USER_NAME
                 | ALERT_RECEIVED
                 | REFERRAL_ACTIVATED
                 | MERCHANT_ID
+                | RIDE_REQUEST_BUFFER
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

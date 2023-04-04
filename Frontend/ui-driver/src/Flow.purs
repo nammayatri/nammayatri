@@ -66,6 +66,7 @@ baseAppFlow = do
     checkVersion versionCode
     setValueToLocalStore VERSION_NAME versionName
     setValueToLocalStore BUNDLE_VERSION bundle
+    setValueToLocalStore RIDE_REQUEST_BUFFER "-3"
     setValueToLocalNativeStore BUNDLE_VERSION bundle
     setValueToLocalNativeStore GPS_METHOD "CURRENT"
     setValueToLocalNativeStore MAKE_NULL_API_CALL "NO"

@@ -83,9 +83,9 @@ baseAppFlow gPayload = do
   _ <- pure $ setValueToLocalStore TRACKING_DRIVER "False"
   _ <- pure $ setValueToLocalStore TRACKING_ENABLED "False"
   _ <- pure $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
-  _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "9"
-  _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "3000.0"
-  _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "30"
+  _ <- pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "15"
+  _ <- pure $ setValueToLocalStore TEST_POLLING_INTERVAL "1500.0"
+  _ <- pure $ setValueToLocalStore TEST_POLLING_COUNT "113"
   _ <- pure $ setValueToLocalStore RATING_SKIPPED "false"
   _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
   _ <- lift $ lift $ setLogField "app_version" $ encode (show versionCode)
