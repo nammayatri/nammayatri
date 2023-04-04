@@ -1206,7 +1206,7 @@ newtype Route = Route
   {
     points :: Snapped
   , boundingBox :: Maybe (Array Number)
-  , snappedWaypoints :: Array (Snapped)
+  , snappedWaypoints :: Snapped
   , duration :: Int
   , distance :: Int
   }

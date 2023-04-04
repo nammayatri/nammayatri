@@ -38,6 +38,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Interpolator;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
@@ -158,6 +159,7 @@ import com.google.android.gms.tasks.Task;
 //import com.google.android.material.snackbar.Snackbar;
 //import com.google.firebase.installations.FirebaseInstallations;
 import com.google.android.libraries.places.api.model.AutocompleteSessionToken;
+import com.google.android.material.math.MathUtils;
 import com.google.android.play.core.review.ReviewInfo;
 import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
@@ -282,7 +284,6 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     private LottieAnimationView animationView;
     public static YouTubePlayerView youTubePlayerView;
     public static YouTubePlayer youtubePlayer;
-    private int distanceRemaining = -1;
     private static final int DATEPICKER_SPINNER_COUNT = 3;
     private static String storeMapCallBack = null;
     CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
@@ -2114,8 +2115,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                     try {
                         JSONObject jsonObject = new JSONObject(json);
                         JSONArray coordinates = jsonObject.getJSONArray("points");
-                        JSONArray journeyCoordinates = jsonObject.getJSONArray("journeyCoordinates");
-                        JSONObject sourceCoordinates = (JSONObject) journeyCoordinates.get(0);
+                        JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
                         JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
                         double sourceLat = sourceCoordinates.getDouble("lat");
                         double sourceLong = sourceCoordinates.getDouble("lng");
@@ -2695,8 +2695,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         JSONObject jsonObject = null;
         jsonObject = new JSONObject(json);
         JSONArray coordinates = jsonObject.getJSONArray("points");
-        JSONArray journeyCoordinates = jsonObject.getJSONArray("journeyCoordinates");
-        JSONObject sourceCoordinates = (JSONObject) journeyCoordinates.get(0);
+        JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
         JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
         double sourceLat = sourceCoordinates.getDouble("lat");
         double sourceLong = sourceCoordinates.getDouble("lng");
@@ -2759,8 +2758,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public String isCoordOnPath(String json , double currLat, double currLng, int speed) throws JSONException {
         LatLng currPoint = new LatLng(currLat,currLng);
         ArrayList<LatLng> path = new ArrayList<>();
-        JSONObject jsonObject = null;
-        jsonObject = new JSONObject(json);
+        JSONObject jsonObject = new JSONObject(json);
+        int distanceRemaining;
         JSONArray coordinates = jsonObject.getJSONArray("points");
         int eta = 0;
         int resultIndex;
@@ -2780,11 +2779,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             result.put("isInPath",false);
             return result.toString();
         }
-        if (distanceRemaining > 300 || distanceRemaining == -1) {
-            resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, 30.0);
-        } else {
-            resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, 50.0);
-        }
+        resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, 30.0);
         if (resultIndex == -1) {
             result.put("points",coordinates);
             result.put("eta",0);
@@ -2868,11 +2863,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
         if (marker != null) {
 
-            final LatLng startPosition = marker.getPosition();
-            final LatLng endPosition = destination;
+            LatLng startPosition = marker.getPosition();
+            LatLng endPosition = destination;
 
-            final float startRotation = marker.getRotation();
-            final LatLngInterpolatorNew latLngInterpolator = new LatLngInterpolatorNew.LinearFixed();
 
             ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
             valueAnimator.setDuration(2000); // duration 3 second
@@ -2882,13 +2875,13 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                 public void onAnimationUpdate(ValueAnimator animation) {
                     try {
                         float v = animation.getAnimatedFraction();
-                        LatLng newPosition = latLngInterpolator.interpolate(v, startPosition, endPosition);
+                        LatLng newPosition = SphericalUtil.interpolate(startPosition, endPosition,v);
 //                        googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder()
 //                                .target(newPosition)
 //                                .zoom(15.5f)
 //                                .build()
 //                                ));
-                        float rotation = bearingBetweenLocations(startPosition, endPosition);
+                        float rotation = (float) SphericalUtil.computeHeading(startPosition,endPosition);
                         if (rotation > 1.0)
                             marker.setRotation(rotation);
                         marker.setPosition(newPosition);
@@ -2926,6 +2919,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         }
     }
 
+
     @JavascriptInterface
     public void launchInAppRatingPopup(){
         ReviewManager manager = ReviewManagerFactory.create(context);
@@ -2946,6 +2940,60 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     }
 
     @JavascriptInterface
+    public String getExtendedPath (String json) throws JSONException {
+        ArrayList<LatLng> path = new ArrayList<>();
+        ArrayList<LatLng> extendedPath = new ArrayList<>();
+        JSONObject jsonObject = new JSONObject(json);
+        JSONArray coordinates = jsonObject.getJSONArray("points");
+        if (coordinates.length() <= 1) return json;
+        for (int i = coordinates.length() -1 ; i >= 0   ; i--) {
+            JSONObject coordinate = (JSONObject) coordinates.get(i);
+            double lng = coordinate.getDouble("lng");
+            double lat = coordinate.getDouble("lat");
+            LatLng tempPoints = new LatLng(lat, lng);
+            path.add(tempPoints);
+        }
+        for (int i=0,j=1;i<path.size()-1 && j<=path.size()-1;i++,j++){
+            LatLng point1 = path.get(i);
+            LatLng point2 = path.get(j);
+            extendedPath.add(point1);
+            double distanceBtw = SphericalUtil.computeDistanceBetween(point1,point2);
+            SharedPreferences sharedPref = context.getSharedPreferences(
+                    activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            int pointsFactor = Integer.parseInt(sharedPref.getString("POINTS_FACTOR","50"));
+            int noOfPoints = (int)Math.ceil(distanceBtw/pointsFactor);
+            float fraction = 1.0f/(noOfPoints+1);
+            for (int k = 1; k<= noOfPoints;k++) {
+                LatLng point = getNewLatLng(fraction*k,point1,point2);
+                extendedPath.add(point);
+            }
+        }
+        extendedPath.add(path.get(path.size()-1));
+        JSONObject newPoints = new JSONObject();
+        JSONArray remainingPoints = new JSONArray();
+        for (int i = extendedPath.size() - 1 ; i >= 0   ; i--) {
+            LatLng point = extendedPath.get(i);
+            JSONObject tempPoints = new JSONObject();
+            tempPoints.put("lat",point.latitude);
+            tempPoints.put("lng",point.longitude);
+            remainingPoints.put(tempPoints);
+        }
+        newPoints.put("points",remainingPoints);
+        return newPoints.toString();
+    }
+
+    private LatLng getNewLatLng(float fraction, LatLng a, LatLng b){
+        double lat = (b.latitude - a.latitude) * fraction + a.latitude;
+        double lngDelta = b.longitude - a.longitude;
+        // Take the shortest path across the 180th meridian.
+        if (Math.abs(lngDelta) > 180) {
+            lngDelta -= Math.signum(lngDelta) * 360;
+        }
+        double lng = lngDelta * fraction + a.longitude;
+        return new LatLng(lat, lng);
+    }
+
+    @JavascriptInterface
     public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName) {
 //        ArrayList<Polyline> lines = new ArrayList<>();
 //        polylines.add(lines);
@@ -2959,8 +3007,15 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         System.out.println("inside_drawRoute_try");
                         JSONObject jsonObject = new JSONObject(json);
                         JSONArray coordinates = jsonObject.getJSONArray("points");
-                        JSONArray journeyCoordinates = jsonObject.getJSONArray("journeyCoordinates");
-                        JSONObject sourceCoordinates = (JSONObject) journeyCoordinates.get(0);
+                        if(coordinates.length() <= 1){
+                            JSONObject coordinate = (JSONObject) coordinates.get(0);
+                            double lng = coordinate.getDouble("lng");
+                            double lat = coordinate.getDouble("lat");
+                            upsertMarker("ny_ic_auto_map",String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
+                            animateCamera(lat,lng,20.0f);
+                            return;
+                        }
+                        JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
                         JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length()-1);
                         double sourceLat = sourceCoordinates.getDouble("lat");
                         double sourceLong = sourceCoordinates.getDouble("lng");
@@ -2969,13 +3024,6 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0)
                         {
                             moveCamera(sourceLat, sourceLong, destLat, destLong, coordinates);
-                        }
-                        if(coordinates.length() == 1){
-                            JSONObject coordinate = (JSONObject) coordinates.get(0);
-                            double lng = coordinate.getDouble("lng");
-                            double lat = coordinate.getDouble("lat");
-                            upsertMarker("ny_ic_auto_map",String.valueOf(lat), String.valueOf(lng), 90, 0.5f, 0.5f);
-                            return;
                         }
                         if(isActual){
                             for (int i = coordinates.length() -1 ; i >= 0 ; i--) {
@@ -3015,8 +3063,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                             upsertMarker("ny_ic_auto_map",String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
                             Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
                             int index = polylines.getPoints().size()-1;
-                            float rotation = bearingBetweenLocations(polylines.getPoints().get(index), polylines.getPoints().get(index -1));
-                            if (rotation > 1.0) currMarker.setRotation(rotation);
+                            float rotation = (float) SphericalUtil.computeHeading(polylines.getPoints().get(index), polylines.getPoints().get(index -1));
+                            if (rotation != 0.0) currMarker.setRotation(rotation);
                             currMarker.setAnchor(0.5f,0.5f);
                             markers.put("ny_ic_auto_map",currMarker);
                         } else if(sourceMarker != null && !sourceMarker.equals("")) {
