@@ -15,7 +15,7 @@
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool
   ( isBatchNumExceedLimit,
-    cleanupDriverPoolBatches,
+    -- cleanupDriverPoolBatches,
     getNextDriverPoolBatch,
     getPoolBatchNum,
     module Reexport,
@@ -312,17 +312,17 @@ poolBatchNumKey searchReqId = "Driver-Offer:Allocator:PoolBatchNum:SearchReqId-"
 poolRadiusStepKey :: Id DSR.SearchRequest -> Text
 poolRadiusStepKey searchReqId = "Driver-Offer:Allocator:PoolRadiusStep:SearchReqId-" <> searchReqId.getId
 
-cleanupDriverPoolBatches ::
-  ( Redis.HedisFlow m r
-  ) =>
-  Id DSR.SearchRequest ->
-  m ()
-cleanupDriverPoolBatches searchReqId = do
-  Redis.withCrossAppRedis $ do
-    Redis.delByPattern (driverPoolKey searchReqId <> "*")
-    Redis.del (poolRadiusStepKey searchReqId)
-    Redis.del (poolBatchNumKey searchReqId)
-  logInfo "Cleanup redis."
+-- cleanupDriverPoolBatches ::
+--   ( Redis.HedisFlow m r
+--   ) =>
+--   Id DSR.SearchRequest ->
+--   m ()
+-- cleanupDriverPoolBatches searchReqId = do
+--   Redis.withCrossAppRedis $ do
+--     Redis.delByPattern (driverPoolKey searchReqId <> "*")
+--     Redis.del (poolRadiusStepKey searchReqId)
+--     Redis.del (poolBatchNumKey searchReqId)
+--   logInfo "Cleanup redis."
 
 getNextDriverPoolBatch ::
   ( EncFlow m r,

@@ -63,7 +63,7 @@ instance FromTType EstimateT Domain.Estimate where
   fromTType EstimateT {..} = do
     let nightShiftRate = Domain.NightShiftRate {..}
         waitingCharges = Domain.WaitingCharges {..}
-    estimateBreakupListDec <- (decodeFromText `mapM` unPostgresList estimateBreakupList) & fromMaybeM (InternalError "")
+    estimateBreakupListDec <- (decodeFromText `mapM` unPostgresList estimateBreakupList) & fromMaybeM (InternalError "Unable to decode EstimateBreakup")
     return $
       Domain.Estimate
         { id = Id id,

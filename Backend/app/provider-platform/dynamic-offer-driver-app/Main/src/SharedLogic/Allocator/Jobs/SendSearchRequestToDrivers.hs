@@ -85,7 +85,6 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchStep merchant baseF
           isRideAlreadyAssigned = I.isRideAlreadyAssigned searchReq.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchStep.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq searchStep,
-          cleanupDriverPoolBatches = I.cleanupDriverPoolBatches searchReq.id,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchStep baseFare driverMinExtraCharge driverMaxExtraCharge driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           setBatchDurationLock = I.setBatchDurationLock searchStep.id driverPoolConfig.singleBatchProcessTime,
