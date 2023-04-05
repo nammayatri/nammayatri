@@ -25,7 +25,6 @@ import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
@@ -34,17 +33,13 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Interpolator;
 import android.graphics.Paint;
-import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
-import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -66,9 +61,6 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
-import android.print.PrintAttributes;
-import android.print.pdf.PrintedPdfDocument;
-import android.provider.ContactsContract;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Base64;
@@ -78,8 +70,6 @@ import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.PixelCopy;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -147,8 +137,6 @@ import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PatternItem;
-import com.google.android.gms.maps.model.Polygon;
-import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.CancellationTokenSource;
@@ -210,7 +198,6 @@ import java.lang.Math;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.zip.Inflater;
 
 import in.juspay.mobility.utils.ChatBroadCastReceiver;
 import in.juspay.mobility.utils.ChatService;
@@ -222,7 +209,6 @@ import in.juspay.mobility.utils.MediaPlayerView;
 import in.juspay.mobility.utils.NotificationUtils;
 import in.juspay.mobility.utils.OtpUtils;
 import in.juspay.mobility.utils.mediaPlayer.DefaultMediaPlayerControl;
-import in.juspay.mobility.utils.mediaPlayer.MediaPlayerControl;
 import in.juspay.hypersdk.core.HyperFragment;
 import in.juspay.hypersdk.core.JBridge;
 import in.juspay.hypersdk.core.JuspayDuiHook;
@@ -232,15 +218,11 @@ import in.juspay.hypersdk.utils.network.JuspayHttpResponse;
 import in.juspay.hypersdk.utils.network.NetUtils;
 import in.juspay.hypersdk.core.DuiCallback;
 
-import static android.Manifest.permission.ACCESS_BACKGROUND_LOCATION;
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static androidx.core.app.ActivityCompat.startActivityForResult;
-import static androidx.core.content.ContextCompat.getCodeCacheDir;
 import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
-import static android.content.Context.WINDOW_SERVICE;
-import static android.content.Context.ACTIVITY_SERVICE;
 import static android.view.View.LAYER_TYPE_SOFTWARE;
 import java.net.URISyntaxException;
 import android.webkit.WebView;
@@ -301,6 +283,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public static List<LatLng> zoneLatLngPoints = new ArrayList<LatLng>();
     private String regToken, baseUrl;
     private SharedPreferences sharedPref;
+    private String zoneName = "";
 
     public CommonJsInterface(){
         super();
@@ -2297,7 +2280,9 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
         }
     }
 
-    public Location getNearestPoint(double lat, double lng, JSONArray path) throws JSONException {
+    public JSONObject getNearestPoint(double lat, double lng, JSONArray path) throws JSONException {
+
+        JSONObject jsonObject = new JSONObject();
 
         Location locationA = new Location("point A");
         locationA.setLatitude(lat);
@@ -2321,9 +2306,13 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
             if(distance<minDist){
                 minDist = distance;
                 location = locationB;
+                zoneName = a.getString("place");
             }
         }
-        return location;
+        jsonObject.put("place", zoneName);
+        jsonObject.put("lat", location.getLatitude());
+        jsonObject.put("long", location.getLongitude());
+        return jsonObject;
     }
 
     public void drawMarkers(double lat , double lng, String name) {
@@ -2362,6 +2351,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
     @JavascriptInterface
     public void locateOnMap (boolean goToCurrentLocation, final String lat, final String lon, String geoJson, String points){
+        if (geoJson.equals("")){
+            locateOnMap(goToCurrentLocation,lat,lon);
+            return;
+        }
         try {
             activity.runOnUiThread(new Runnable() {
                 @Override
@@ -2398,7 +2391,10 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                                 try {
                                                     if(res){
                                                         JSONArray zonePoints = new JSONArray(points);
-                                                        Location nearestPickupPoint = getNearestPoint(lat, lng, zonePoints);
+                                                        JSONObject nearestPickupPointObj = getNearestPoint(lat, lng, zonePoints);
+                                                        Location nearestPickupPoint = new Location("");
+                                                        nearestPickupPoint.setLatitude(nearestPickupPointObj.getDouble("lat"));
+                                                        nearestPickupPoint.setLongitude(nearestPickupPointObj.getDouble("long"));
 
                                                         for (Marker m : pickupPointsZoneMarkers) {
                                                             m.setVisible(false);
@@ -2406,7 +2402,8 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
 
                                                         for(int i=0;i<zonePoints.length();i++){
                                                             if(SphericalUtil.computeDistanceBetween(CommonJsInterface.this.googleMap.getCameraPosition().target, new LatLng((Double)zonePoints.getJSONObject(i).get("lat"), (Double) zonePoints.getJSONObject(i).get("lng")))<=1){
-                                                                drawMarkers((Double) zonePoints.getJSONObject(i).get("lat"),(Double) zonePoints.getJSONObject(i).get("lng"),  (String)zonePoints.getJSONObject(i).get("name"));
+                                                                drawMarkers((Double) zonePoints.getJSONObject(i).get("lat"),(Double) zonePoints.getJSONObject(i).get("lng"),  (String)zonePoints.getJSONObject(i).get("place"));
+                                                                zoneName = (String)zonePoints.getJSONObject(i).get("place");
                                                             }
                                                             else{
                                                                 drawMarkers((Double) zonePoints.getJSONObject(i).get("lat"),(Double) zonePoints.getJSONObject(i).get("lng"), "");
@@ -2422,8 +2419,13 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                                             m.setVisible(false);
                                                         }
                                                     }
+                                                    if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null){
+                                                        String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, zoneName, lat, lng);
+                                                        Log.e(LOG_TAG, javascript);
+                                                        dynamicUI.addJsToWebView(javascript);
+                                                    }
                                                 } catch (JSONException e) {
-                                                    e.printStackTrace();
+                                                    System.out.println("Exception " + e);
                                                 }
                                                 executor.shutdown();
                                             });
@@ -2433,11 +2435,11 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                                     Log.e ("api response error",e.toString());
                                 }
                             });
-                            if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null){
-                                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, "LatLon", lat, lng);
-                                Log.e(LOG_TAG, javascript);
-                                dynamicUI.addJsToWebView(javascript);
-                            }
+//                            if (storeMapCallBack != null && dynamicUI!=null && juspayServices.getDynamicUI() != null){
+//                                String javascript = String.format("window.callUICallback('%s','%s','%s','%s');", storeMapCallBack, zoneName, lat, lng);
+//                                Log.e(LOG_TAG, javascript);
+//                                dynamicUI.addJsToWebView(javascript);
+//                            }
                         }
                     });
                     if ((lastLatitudeValue != 0.0 && lastLongitudeValue != 0.0) && goToCurrentLocation) {
@@ -3158,26 +3160,28 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
                         markers.put(destMarker, tempmarker);
 
                     }
-                    if (type.equals("DRIVER_LOCATION_UPDATE"))
-                    {
-                        List<LatLng> points = polylineOptions.getPoints();
-                        LatLng source = points.get(points.size() - 1);
-                        upsertMarker("ny_ic_auto_map",String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
-                        Marker currMarker = (Marker) markers.get("ny_ic_auto_map");
-                        int index = polylines.getPoints().size()-1;
-                        float rotation = (float) SphericalUtil.computeHeading(polylines.getPoints().get(index), polylines.getPoints().get(index -1));
-                        if (rotation != 0.0) currMarker.setRotation(rotation);
-                        currMarker.setAnchor(0.5f,0.5f);
-                        markers.put("ny_ic_auto_map",currMarker);
-                    } else if(sourceMarker != null && !sourceMarker.equals("")) {
-                        List<LatLng> points = polylineOptions.getPoints();
-                        LatLng source = points.get(points.size() - 1);
-                        MarkerOptions markerObj = new MarkerOptions()
-                                .title(sourceMarker)
-                                .position(source)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName,sourceMarker)));
-                        Marker tempmarker = googleMap.addMarker(markerObj);
-                        markers.put(sourceMarker, tempmarker);
+                    if((sourceMarker != null && !sourceMarker.equals(""))){
+                        if (type.equals("DRIVER_LOCATION_UPDATE"))
+                        {
+                            List<LatLng> points = polylineOptions.getPoints();
+                            LatLng source = points.get(points.size() - 1);
+                            upsertMarker(sourceMarker,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f);
+                            Marker currMarker = (Marker) markers.get(sourceMarker);
+                            int index = polylines.getPoints().size()-1;
+                            float rotation = (float) SphericalUtil.computeHeading(polylines.getPoints().get(index), polylines.getPoints().get(index -1));
+                            if (rotation != 0.0) currMarker.setRotation(rotation);
+                            currMarker.setAnchor(0.5f,0.5f);
+                            markers.put(sourceMarker,currMarker);
+                        } else {
+                            List<LatLng> points = polylineOptions.getPoints();
+                            LatLng source = points.get(points.size() - 1);
+                            MarkerOptions markerObj = new MarkerOptions()
+                                    .title(sourceMarker)
+                                    .position(source)
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName,sourceMarker)));
+                            Marker tempmarker = googleMap.addMarker(markerObj);
+                            markers.put(sourceMarker, tempmarker);
+                        }
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();

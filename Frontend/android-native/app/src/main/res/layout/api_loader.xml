@@ -56,7 +56,7 @@
                         app:lottie_autoPlay="true"
                         app:lottie_loop="true"
                         android:layout_gravity="center_horizontal"
-                        app:lottie_rawRes="@raw/auto_rickshaw_processing"/>
+                        app:lottie_rawRes="@raw/ic_vehicle_processing"/>
 
 
                     <TextView

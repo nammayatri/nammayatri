@@ -30,32 +30,19 @@ exports["getString'"] = function (key) {
   return getStringFromCommon(key);
 }
 
-exports["getValueFromConfig"] = function (key) {
-  switch (window.merchantID) {
-    case "JATRISAATHI":
-      if (JatriConfig.isMerchantConfig(key)) {
-        return JatriConfig.config[key];
-      } else {
-        console.error("No value found for key -> " + key)
-      }
-      break;
-    case "NAMMAYATRI":
-      if (NammaYatriConfig.isMerchantConfig(key)) {
-        return NammaYatriConfig.config[key];
-      } else {
-        console.error("No value found for key -> " + key)
-      }
-      break;
-    case "YATRI":
-      if (YatriConfig.isMerchantConfig(key)) {
-        return YatriConfig.config[key];
-      } else {
-        console.error("No value found for key -> " + key)
-      }
-      break;
-    default:
-      console.error("No merchant found");
-  }
+exports["getValueFromConfig"] = function (constructorKey){
+  let key = constructorKey.trim(); 
+  switch(window.merchantID) {
+      case "JATRISAATHI" :
+          return JatriConfig.getMerchantConfig(key);
+      case "NAMMAYATRI" :
+          return NammaYatriConfig.getMerchantConfig(key);
+      case "YATRI" :
+          return YatriConfig.getMerchantConfig(key);
+      default:
+          console.error("no value found for key "+ key);
+          return "";
+    }
 }
 
 function getStringFromCommon(key) {

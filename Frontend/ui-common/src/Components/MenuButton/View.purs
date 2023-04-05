@@ -15,7 +15,7 @@
 
 module Components.MenuButton.View where
 
-import Prelude (Unit , (/=) ,const,(<>),($))
+import Prelude (Unit , (/=) ,const,(<>),($),not)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Styles.Colors as Color
@@ -35,14 +35,15 @@ view push config =
         , stroke config.stroke
         , onClick push  (const (OnClick config))
         , clickable true
-        ][linearLayout
+        ][  if config.leftsidebutton then buttonLayout config else linearLayout[][],
+            linearLayout
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , orientation VERTICAL
             ][  titleView config
                 ,subTitleView config
               ]
-              , buttonLayout config
+              , if not config.leftsidebutton then buttonLayout config else linearLayout[][]
             ]
 titleView :: forall w . Config -> PrestoDOM (Effect Unit) w
 titleView config = 
@@ -51,7 +52,7 @@ titleView config =
     , width WRAP_CONTENT
     , text config.titleConfig.text
     , color if config.isSelected then Color.black900 else config.titleConfig.color
-    , fontStyle if config.isSelected then FontStyle.medium LanguageStyle else config.titleConfig.fontStyle
+    , fontStyle if config.isSelected then config.titleConfig.selectedFontStyle else config.titleConfig.unselectedFontStyle
     , gravity LEFT
     , singleLine config.titleConfig.singleLine
     , lineHeight "24"
@@ -68,7 +69,7 @@ subTitleView config =
     , textSize config.subTitleConfig.textSize
     , text config.subTitleConfig.text
     , color config.subTitleConfig.color
-    , fontStyle config.subTitleConfig.fontStyle
+    , fontStyle config.subTitleConfig.selectedFontStyle
     , gravity LEFT
     , lineHeight "23"
     , singleLine config.subTitleConfig.singleLine
@@ -79,8 +80,8 @@ buttonLayout :: forall w . Config -> PrestoDOM (Effect Unit) w
 buttonLayout config =
   linearLayout
     [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , gravity RIGHT
+    , width if config.leftsidebutton then WRAP_CONTENT  else MATCH_PARENT
+    , gravity if config.leftsidebutton then LEFT else  RIGHT
     , margin config.radioButtonConfig.buttonMargin 
     , padding config.radioButtonConfig.buttonPadding
     ][  linearLayout

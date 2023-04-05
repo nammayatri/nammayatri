@@ -546,7 +546,7 @@ public class NotificationUtils extends AppCompatActivity {
                     notificationCallback.get(i).triggerPop((data.getString("entity_ids")),(data.getString("notification_type")));
                 }
             }
-            if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_CHANNEL_ID.equals(notificationType)) && (key.equals("nammayatri") || key.equals("jatrisaathi"))) {
+            if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_CHANNEL_ID.equals(notificationType)) && (key.equals("USER"))) {
                 for(int i =0;i<notificationCallback.size();i++) {
                     notificationCallback.get(i).callFlowCustomer(notificationType);
                 }
