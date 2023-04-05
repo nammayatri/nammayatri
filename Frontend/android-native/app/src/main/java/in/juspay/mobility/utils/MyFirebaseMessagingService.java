@@ -34,6 +34,8 @@ import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.net.ssl.HttpsURLConnection;
+
+import in.juspay.mobility.BuildConfig;
 import in.juspay.mobility.MainActivity;
 import in.juspay.mobility.R;
 import com.google.firebase.analytics.FirebaseAnalytics;
@@ -106,10 +108,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             if (notification_payload != null || notification != null) {
                 SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 String notificationType = (String) payload.get("notification_type");
-
+                String merchantType = BuildConfig.MERCHANT_TYPE;
                 switch (notificationType) {
                     case NotificationTypes.TRIGGER_SERVICE :
-                        if (getString(R.string.service).equals(getString(R.string.nammayatripartner))) {
+                        if (merchantType.equals("DRIVER")) {
                             FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service", new Bundle());
                             restartLocationService();
                         }
@@ -149,7 +151,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                     case NotificationTypes.TRIP_FINISHED :
                         NotificationUtils.showNotification(this, title, body, payload, imageUrl);
-                        if (getResources().getString(R.string.service).equals("nammayatri")) {
+                        if (merchantType.equals("USER")){
                             sharedPref.edit().putInt("RIDE_COUNT", sharedPref.getInt("RIDE_COUNT", 0) + 1).apply();
                             sharedPref.edit().putString("COMPLETED_RIDE_COUNT", String.valueOf(sharedPref.getInt("RIDE_COUNT", 0))).apply();
                         }
@@ -230,13 +232,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String token = sharedPref.getString("REGISTERATION_TOKEN", "null");
         String baseUrl = sharedPref.getString("BASE_URL", "null");
+        String merchantType = BuildConfig.MERCHANT_TYPE;
         ExecutorService executor = Executors.newSingleThreadExecutor();
         Handler handler = new Handler(Looper.getMainLooper());
         executor.execute(() -> {
                 StringBuilder result = new StringBuilder();
                 try {
                     String orderUrl ;
-                    if (getString(R.string.service).equals("nammayatripartner")) {
+                    if (merchantType.equals("DRIVER")) {
                         orderUrl = baseUrl + "/driver/profile";
                     } 
                     else {
@@ -303,7 +306,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private void startWidgetService(String widgetMessage, JSONObject data, JSONObject payload){
         SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         Intent widgetService = new Intent(getApplicationContext(), WidgetService.class);
-        if (getResources().getString(R.string.service).equals(getString(R.string.nammayatripartner)) && Settings.canDrawOverlays(getApplicationContext())  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+        String merchantType = BuildConfig.MERCHANT_TYPE;
+        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(getApplicationContext())  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             widgetService.putExtra(getResources().getString(R.string.WIDGET_MESSAGE),widgetMessage);
             widgetService.putExtra("payload", payload!=null ? payload.toString(): null);
             widgetService.putExtra("data", data!=null ? data.toString(): null);
@@ -317,7 +321,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void startMainActivity() {
         SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        if (getResources().getString(R.string.service).equals(getString(R.string.nammayatripartner)) && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
+        String merchantType = BuildConfig.MERCHANT_TYPE;
+        if (merchantType.equals("DRIVER") && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             Intent intent = new Intent(getApplicationContext(), MainActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
             try {

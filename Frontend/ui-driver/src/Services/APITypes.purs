@@ -1331,3 +1331,30 @@ instance standardEncodeRemoveAlternateNumberRequest :: StandardEncode RemoveAlte
 instance encodeRemoveAlternateNumberRequest :: Encode RemoveAlternateNumberRequest where encode = defaultEncode
 
 
+--------------------------------------------------- rideOtp ---------------------------------------------------- 
+
+newtype OTPRideReq = OTPRideReq
+    {
+      specialZoneOtpCode :: String,
+      point :: LatLong
+    }
+
+data OTPRideRequest = OTPRideRequest String OTPRideReq
+
+instance makeOTPRideReq :: RestEndpoint OTPRideRequest RidesInfo where
+    makeRequest reqBody@(OTPRideRequest dummyRideOtp (OTPRideReq rqBody)) headers = defaultMakeRequest POST (EP.otpRide dummyRideOtp) headers reqBody
+    decodeResponse = decodeJSON
+    encodeRequest req = standardEncode req
+
+derive instance genricOTPRideReq :: Generic OTPRideReq _
+instance showOTPRideReq :: Show OTPRideReq where show = genericShow
+instance standardEncodeOTPRideReq :: StandardEncode OTPRideReq where standardEncode (OTPRideReq req) = standardEncode req
+instance decodeOTPRideReq :: Decode OTPRideReq where decode = defaultDecode
+instance encodeOTPRideReq :: Encode OTPRideReq where encode = defaultEncode
+
+
+derive instance genericOTPRideRequest :: Generic OTPRideRequest _
+instance standardEncodeOTPRideRequest :: StandardEncode OTPRideRequest where standardEncode (OTPRideRequest dummyRideOtp req) = standardEncode req
+instance showOTPRideRequest :: Show OTPRideRequest where show = genericShow
+instance decodeOTPRideRequest :: Decode OTPRideRequest where decode = defaultDecode
+instance encodeOTPRideRequest :: Encode OTPRideRequest where encode = defaultEncode

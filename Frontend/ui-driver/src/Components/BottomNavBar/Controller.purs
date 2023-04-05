@@ -15,9 +15,11 @@
 
 module Components.BottomNavBar.Controller where
 
+import Data.Maybe as Maybe
+import Helpers.Utils (getMerchant, Merchant(..))
+import Prelude (unit, (<>), (==))
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
-import Prelude((==))
 
 data Action = OnNavigate String 
 
@@ -34,13 +36,13 @@ navData activeIndex = {
       activeIcon: "ny_ic_rides_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_rides_active.png",
       defaultIcon: "ny_ic_rides_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_rides_inactive.png",
       text: "Rides"
-    },
-    {
+    }] <> 
+    (if (getMerchant unit == NAMMAYATRIPARTNER) then [{
       activeIcon: "ic_referral_active,https://assets.juspay.in/nammayatri/images/driver/ic_referral_active.png",
       defaultIcon: if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert,https://assets.juspay.in/nammayatri/images/driver/ny_ic_contest_alert.png" else "ic_referral_inactive,https://assets.juspay.in/nammayatri/images/driver/ic_referral_inactive.png",
       text: "Contest"
-    },
-    {
+    }] else []) <> 
+    [{
       activeIcon: "ny_ic_alerts_active",
       defaultIcon: "ny_ic_alerts_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_alerts_inactive.png",
       text: "Alert"

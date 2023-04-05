@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ride_rejected">যাত্রা প্রত্যাখ্যান</string>
+    <string name="request">অনুরোধ</string>
+    <string name="decline">পতন</string>
+    <string name="pickup">পিকআপ</string>
+    <string name="trip">ট্রিপ</string>
+    <string name="new_ride_assigned">নতুন যাত্রা নির্ধারিত</string>
+    <string name="waiting_for_customer_response">গ্রাহকের প্রতিক্রিয়ার জন্য অপেক্ষা করছি</string>
+    <string name="sending_request_to_customer">গ্রাহকের কাছে অনুরোধ প্রেরণ</string>
+    <string name="ride_assigned">আপনাকে বরাদ্দ দেওয়া!</string>
+    <string name="ride_cancelled">যাত্রা বাতিল</string>
+    <string name="please_allow_permission_to_capture_the_image">চিত্রটি ক্যাপচার করার অনুমতি দিন দয়া করে</string>
+    <string name="we_have_updated_your_app_kindly_relaunch">আমরা আপনার অ্যাপ্লিকেশন আপডেট করেছি, অ্যাপ্লিকেশনটি এখন পুনরায় লোড হবে।</string>
+    <string name="okay_got_it">আচ্ছা আমি বুঝে গেছি</string>
+    <string name="upload_image">চিত্র আপলোড</string>
+    <string name="not_interested">আগ্রহী নই</string>
+    <string name="too_far">অনেক দূরে</string>
+    <string name="on_another_ride">অন্য যাত্রায়</string>
+    <string name="extra">অতিরিক্ত</string>
+    <string name="accept_offer">প্রস্তাব গ্রহণ</string>
+    <string name="open_settings">1. ওপেন সেটিং</string>
+    <string name="tap_on_permission">2. অনুমতিগুলিতে আলতো চাপুন</string>
+    <string name="required_permission">3. প্রয়োজনীয় অনুমতি উপর আলতো চাপুন</string>
+    <string name="select_allow">4. অনুমতি নির্বাচন করুন</string>
+    <string name="tap_on">3. আলতো চাপুন</string>
+    <string name="location">অবস্থান</string>
+    <string name="phone">ফোন</string>
+    <string name="includes_pickup_charges_10">পিকআপ চার্জ ₹ 10 অন্তর্ভুক্ত</string>
+    <string name="away" >দূরে</string>
+    <string name="we_made_you_online">আমরা আপনাকে অনলাইনে তৈরি করেছি</string>
+    <string name="location_is_turned_on">অবস্থান চালু করা হয়</string>
+    <string name="waiting_for_gps_signal">জিপিএস সিগন্যালের জন্য অপেক্ষা করছি</string>
+    <string name="your_location_is_being_updated">আপনার অবস্থান আপডেট করা হচ্ছে</string>
+    <string name="we_made_you_offline">আমরা আপনাকে অফলাইন তৈরি করেছি</string>
+    <string name="location_is_turned_off_permission_is_disabled">অবস্থান বন্ধ করা হয় / অনুমতি অক্ষম করা হয়</string>
+    <string name="ride_assigned_to_another_driver">অন্য চালকের কাছে যাত্রা করা</string>
+    <string name="select_date">তারিখ নির্বাচন করুন</string>
+
+</resources>

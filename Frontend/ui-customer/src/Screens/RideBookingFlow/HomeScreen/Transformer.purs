@@ -108,6 +108,7 @@ getDriverInfo (RideBookingRes resp) =
       , destinationLat : (resp.bookingDetails ^._contents^._toLocation ^._lat)
       , destinationLng : (resp.bookingDetails ^._contents^._toLocation ^._lon)
       , estimatedDistance : parseFloat ((toNumber (fromMaybe 0 (resp.bookingDetails ^._contents ^._estimatedDistance)))/1000.0) 2
+      , createdAt : resp.createdAt
       , driverLat : 0.0
       , driverLng : 0.0
       , distance : 0

@@ -19,7 +19,7 @@ import Control.Transformers.Back.Trans (BackT)
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
-import Screens.Types (SplashScreenState, ChooseLanguageScreenState, UploadDrivingLicenseState, RegistrationScreenState, EnterMobileNumberScreenState, UploadAdhaarScreenState, EnterOTPScreenState, ApplicationStatusScreenState, AddVehicleDetailsScreenState, DriverDetailsScreenState, VehicleDetailsScreenState, DriverProfileScreenState, AboutUsScreenState, SelectLanguageScreenState, HelpAndSupportScreenState, WriteToUsScreenState, BankDetailScreenState, RideHistoryScreenState, HomeScreenState, RideDetailScreenState, TripDetailsScreenState, PermissionsScreenState, EditBankDetailsScreenState, EditAadhaarDetailsScreenState, IndividualRideCardState, ActiveRide, NoInternetScreenState, PopUpScreenState, DriverRideRatingScreenState, AppUpdatePopUpScreenState , ReferralScreenState, NotificationsScreenState, DriverStatus)
+import Screens.Types (SplashScreenState, ChooseLanguageScreenState, UploadDrivingLicenseState, RegistrationScreenState, EnterMobileNumberScreenState, UploadAdhaarScreenState, EnterOTPScreenState, ApplicationStatusScreenState, AddVehicleDetailsScreenState, DriverDetailsScreenState, VehicleDetailsScreenState, DriverProfileScreenState, AboutUsScreenState, SelectLanguageScreenState, HelpAndSupportScreenState, WriteToUsScreenState, BankDetailScreenState, RideHistoryScreenState, HomeScreenState, RideDetailScreenState, TripDetailsScreenState, PermissionsScreenState, EditBankDetailsScreenState, EditAadhaarDetailsScreenState, IndividualRideCardState, ActiveRide, NoInternetScreenState, PopUpScreenState, DriverRideRatingScreenState, AppUpdatePopUpScreenState , ReferralScreenState, NotificationsScreenState, DriverStatus, BookingOptionsScreenState)
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.EnterOTPScreen.ScreenData as  EnterOTPScreenData
@@ -47,6 +47,7 @@ import Screens.PopUpScreen.ScreenData as PopUpScreenData
 import Screens.DriverRideRatingScreen.ScreenData as DriverRideRatingScreenData
 import Screens.NotificationsScreen.ScreenData as NotificationsScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
+import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.Types (HomeScreenStage(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
@@ -82,6 +83,7 @@ newtype GlobalState = GlobalState {
   , appUpdatePopUpScreen :: AppUpdatePopUpScreenState
   , notificationScreen :: NotificationsScreenState
   , referralScreen :: ReferralScreenState
+  , bookingOptionsScreen :: BookingOptionsScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -116,6 +118,7 @@ defaultGlobalState = GlobalState{
 , appUpdatePopUpScreen : {version : 1}
 , notificationScreen : NotificationsScreenData.initData
 , referralScreen : ReferralScreenData.initData
+, bookingOptionsScreen : BookingOptionsScreenData.initData
 }
 
 data ScreenType =
@@ -147,6 +150,7 @@ data ScreenType =
   | DriverRideRatingScreenStateType (DriverRideRatingScreenState -> DriverRideRatingScreenState)
   | NotificationsScreenStateType (NotificationsScreenState -> NotificationsScreenState)
   | ReferralScreenStateType (ReferralScreenState -> ReferralScreenState)
+  | BookingOptionsScreenType (BookingOptionsScreenState -> BookingOptionsScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -224,6 +228,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | UPDATE_STAGE HomeScreenStage
                           | GO_TO_NOTIFICATIONS
                           | ADD_ALTERNATE_HOME 
+                          | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String} 
                           
 data RIDE_DETAIL_SCREENOUTPUT = GO_TO_HOME_FROM_RIDE_DETAIL | SHOW_ROUTE_IN_RIDE_DETAIL
 data APPLICATION_STATUS_SCREENOUTPUT = GO_TO_HOME_FROM_APPLICATION_STATUS
@@ -246,3 +251,5 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | GO_REFERRAL_SCREEN 
                                     | GO_RIDE_HISTORY_SCREEN 
                                     | GO_PROFILE_SCREEN
+
+data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState
