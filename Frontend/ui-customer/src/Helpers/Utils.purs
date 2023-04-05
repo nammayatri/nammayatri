@@ -15,6 +15,7 @@
 
 module Helpers.Utils where
 
+import Common.Types.App (LazyCheck)
 import Components.LocationListItem.Controller (dummyLocationListState)
 import Control.Monad.Except (runExcept)
 import Data.Array (length, filter, cons, deleteAt, sortWith, drop, head, tail, (!!), null)
@@ -23,14 +24,11 @@ import Data.Date (Date)
 import Data.Either (Either(..), hush)
 import Data.Foldable (or)
 import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Eq (genericEq)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Number (fromString)
-import Data.Profunctor.Strong (first)
 import Data.String as DS
 import Data.Traversable (traverse)
-import Debug.Trace (spy)
-import Effect (Effect)
 import Effect (Effect)
 import Effect.Aff (error, killFiber, launchAff, launchAff_)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
@@ -38,14 +36,15 @@ import Effect.Class (liftEffect)
 import Effect.Console (logShow)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion)
 import Foreign.Class (class Decode, class Encode)
-import Foreign.Generic (decodeJSON, encodeJSON)
+import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Math (pi, sin, cos, sqrt, asin)
-import Prelude (class Show, class Ord, Unit, bind, discard, pure, unit, void, identity, not, (<*>), (<#>), (<<<), (>>>), ($), (<>), (>), show, (==), (/=), (/), (*), (-), (+), map, compare, (<), (=<<), (<=), ($))
+import Prelude (class Eq, class Show, Unit, bind, discard, identity, map, not, pure, show, unit, void, ($), (*), (+), (-), (/), (/=), (<), (<#>), (<*>), (<<<), (<=), (<>), (==), (>), (>>>))
 import Presto.Core.Flow (Flow, doAff)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, FareComponent)
 import Types.App (GlobalState)
 
 -- shuffle' :: forall a. Array a -> Effect (Array a)
@@ -118,6 +117,8 @@ foreign import decodeErrorMessage :: String -> String
 foreign import toString :: forall a. a -> String
 
 foreign import waitingCountdownTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
+
+foreign import zoneOtpExpiryTimer :: forall action. Int -> Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
 
 foreign import convertUTCtoISC :: String -> String -> String
 
@@ -339,3 +340,21 @@ rotateArray arr times =
 
 isHaveFare :: String -> Array FareComponent -> Boolean
 isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
+
+
+foreign import getMerchantId :: String -> Foreign
+
+data Merchant = NAMMAYATRI | JATRISAATHI | YATRI
+
+derive instance genericMerchant :: Generic Merchant _
+instance eqMerchant :: Eq Merchant where eq = genericEq
+instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
+instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
+
+getMerchant :: LazyCheck -> Merchant
+getMerchant lazy = case (decodeMerchantId (getMerchantId "")) of 
+  Just merchant -> merchant
+  Nothing -> NAMMAYATRI
+
+decodeMerchantId :: Foreign -> Maybe Merchant
+decodeMerchantId = hush <<< runExcept <<< decode

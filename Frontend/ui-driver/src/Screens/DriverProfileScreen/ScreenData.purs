@@ -19,9 +19,9 @@ import Data.Maybe
 
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Eq (genericEq)
-import Language.Types (STR(..))
-import Prelude (class Eq)
-import Screens.Types (DriverProfileScreenState, BottomNavBarState)
+import Helpers.Utils (getMerchant, Merchant(..))
+import Prelude (class Eq, (<>), (==), (||))
+import Screens.Types (DriverProfileScreenState)
 
 initData :: DriverProfileScreenState
 initData = {
@@ -45,7 +45,7 @@ initData = {
    }
 }
 
-data MenuOptions = DRIVER_PRESONAL_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BANK_DETAILS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD
+data MenuOptions = DRIVER_PRESONAL_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD
 derive instance genericMenuoptions :: Generic MenuOptions _
 instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
 
@@ -58,14 +58,14 @@ optionList :: String -> Array Listtype
 optionList dummy = 
     [
       {menuOptions: DRIVER_PRESONAL_DETAILS , icon:"ny_ic_profile,https://assets.juspay.in/nammayatri/images/driver/ny_ic_profile.png"},
-      {menuOptions: DRIVER_VEHICLE_DETAILS , icon:"ny_ic_car_profile,https://assets.juspay.in/nammayatri/images/driver/ny_ic_car_profile.png"},
+      {menuOptions: DRIVER_VEHICLE_DETAILS , icon:"ny_ic_car_profile,https://assets.juspay.in/nammayatri/images/driver/ny_ic_car_profile.png"}
+    ] <> [] <> --TODO:once API is ready --(if (getMerchant unit == Just YATRIPARTNER || getMerchant unit == Just JATRISAATHIDRIVER)  then [{menuOptions: DRIVER_BOOKING_OPTIONS , icon:"ic_booking_options,https://assets.juspay.in/nammayatri/images/driver/ic_booking_options.png"}] else []) <>
+    [
       {menuOptions: APP_INFO_SETTINGS , icon:"ny_ic_app_info,https://assets.juspay.in/nammayatri/images/driver/ny_ic_app_info.png"},
-      {menuOptions: DRIVER_BANK_DETAILS , icon:"ny_ic_bank_profile,https://assets.juspay.in/nammayatri/images/driver/ny_ic_bank_profile.png"},
       {menuOptions: MULTI_LANGUAGE , icon:"ny_ic_language,https://assets.juspay.in/nammayatri/images/driver/ny_ic_language.png"},
       {menuOptions: HELP_AND_FAQS , icon:"ny_ic_head_phones,https://assets.juspay.in/nammayatri/images/driver/ny_ic_head_phones.png"},
       {menuOptions: LIVE_STATS_DASHBOARD , icon:"ic_graph_black,https://assets.juspay.in/nammayatri/images/common/ic_graph_black.png"},
       {menuOptions: ABOUT_APP , icon:"ny_ic_about,https://assets.juspay.in/nammayatri/images/driver/ny_ic_about.png"},
-      {menuOptions: REFER , icon:"ic_add_person,https://assets.juspay.in/nammayatri/images/driver/ic_add_person.png"},
       {menuOptions: DRIVER_LOGOUT , icon:"ny_ic_logout_grey,https://assets.juspay.in/nammayatri/images/driver/ny_ic_logout_grey.png"}
     ]
 

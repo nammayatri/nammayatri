@@ -646,6 +646,7 @@ type HomeScreenProps =  {
   updatedArrivalInChat :: Boolean,
   driverStatusSet :: DriverStatus,
   silentPopUpView :: Boolean
+  zoneRideBooking :: Boolean
  }
 
 data DriverStatus = Online | Offline | Silent
@@ -1055,3 +1056,20 @@ data ReferralType = SuccessScreen | ComingSoonScreen | ReferralFlow | QRScreen
 
 derive instance genericReferralType :: Generic ReferralType _
 instance eqReferralType :: Eq ReferralType where eq = genericEq
+
+
+type BookingOptionsScreenState = {
+  data :: BookingOptionsScreenData,
+  props :: BookingOptionsScreenProps
+}
+
+type BookingOptionsScreenData = {
+  vehicleType :: String,
+  vehicleNumber :: String,
+  vehicleName :: String,
+  vehicleCapacity :: String
+}
+
+type BookingOptionsScreenProps = {
+  
+}
