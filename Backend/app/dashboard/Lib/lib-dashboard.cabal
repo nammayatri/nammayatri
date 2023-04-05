@@ -135,6 +135,7 @@ library
     , servant-server
     , shared-services
     , singletons
+    , singletons-th
     , template-haskell
     , text
     , time

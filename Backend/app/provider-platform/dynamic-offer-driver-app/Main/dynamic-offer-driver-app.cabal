@@ -625,6 +625,7 @@ library
     , sessionizer-metrics
     , shared-services
     , singletons
+    , singletons-th
     , special-zone-a
     , stm
     , string-conversions
@@ -735,6 +736,7 @@ executable dynamic-offer-driver-app-exe
     , servant-server
     , shared-services
     , singletons
+    , singletons-th
     , stm
     , string-conversions
     , template-haskell
