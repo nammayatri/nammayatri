@@ -1,5 +1,5 @@
 {
-	"fonts" : {
+   "fonts" : {
       "NotoSansKannada-Black" : true,
       "NotoSansKannada-Bold" : true,
       "NotoSansKannada-ExtraBold" : true,
@@ -34,15 +34,12 @@
       "ic_agency_offline" : true,
       "ic_app_update" : true,
       "ic_audio_loader" : true,
-<<<<<<< HEAD:Frontend/android-native/app/src/user/assets/juspay/juspay_assets.json
       "ic_change_language" : true,
+      "ic_driver_vehicle" : true,
       "ic_fav" : true,
+      "ic_floating_widget" : true,
       "ic_graph_black" : true,
       "ic_graph_blue" : true,
-=======
-      "ic_driver_vehicle" : true,
-      "ic_floating_widget" : true,
->>>>>>> 365fb687 (frontend/feat: #218 Multiple Merchant Support in Native Side):Frontend/android-native/app/src/user/nammaYatri/assets/juspay/juspay_assets.json
       "ic_grey_border" : true,
       "ic_help" : true,
       "ic_info" : true,
@@ -52,20 +49,15 @@
       "ic_launcher_background" : true,
       "ic_line" : true,
       "ic_loader" : true,
-<<<<<<< HEAD:Frontend/android-native/app/src/user/assets/juspay/juspay_assets.json
       "ic_logout" : true,
       "ic_menu_notify" : true,
+      "ic_no_quotes" : true,
+      "ic_ny_logo" : true,
       "ic_past_rides" : true,
       "ic_pause" : true,
       "ic_play" : true,
       "ic_red_icon" : true,
-=======
-      "ic_no_quotes" : true,
-      "ic_ny_logo" : true,
-      "ic_pause" : true,
-      "ic_play" : true,
       "ic_ride_assigned" : true,
->>>>>>> 365fb687 (frontend/feat: #218 Multiple Merchant Support in Native Side):Frontend/android-native/app/src/user/nammaYatri/assets/juspay/juspay_assets.json
       "ic_ride_not_found" : true,
       "ic_roundcorner_overlay" : true,
       "ic_share" : true,
@@ -188,6 +180,7 @@
       "ny_ic_welcome_customer" : true,
       "ny_ic_work" : true,
       "ny_ic_work_blue" : true,
+      "ny_ic_zone_pickup_marker" : true,
       "popup_background" : true,
       "progress_circle" : true,
       "progress_loader" : true,

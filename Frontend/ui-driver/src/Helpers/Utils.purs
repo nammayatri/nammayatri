@@ -440,8 +440,10 @@ instance showMerchant :: Show Merchant where show = genericShow
 instance encodeMerchant :: Encode Merchant where encode = defaultEnumEncode
 instance decodeMerchant:: Decode Merchant where decode = defaultEnumDecode
 
-getMerchant :: Unit -> Maybe Merchant
-getMerchant unit = decodeMerchantId (getMerchantId "")
+getMerchant :: Unit -> Merchant
+getMerchant unit = case (decodeMerchantId (getMerchantId "")) of
+  Nothing -> NAMMAYATRIPARTNER
+  Just merchant -> merchant
 
 
 decodeMerchantId :: Foreign -> Maybe Merchant

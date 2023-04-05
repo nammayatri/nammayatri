@@ -27,9 +27,6 @@ app/src/user/assets/juspay/index_bundle.js
 app/src/dev/google-services.json
 app/src/release/
 app/src/debug/
-app/src/transporter/
-app/transporterProd/debug/
-app/transporterProd/release/
 app/userProd/release/
 app/userProd/debug/
 **/build/

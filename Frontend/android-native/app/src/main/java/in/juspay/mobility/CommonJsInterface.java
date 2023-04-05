@@ -362,7 +362,7 @@ public class CommonJsInterface extends JBridge implements in.juspay.hypersdk.cor
     public void setKeysInSharedPrefs(String key, String value) {
         KeyValueStore.write(juspayServices, key, value);
         setEnvInNativeSharedPrefKeys(key, value);
-        if (MainActivity.getInstance().getResources().getString(R.string.service).equals("nammayatripartner") || MainActivity.getInstance().getResources().getString(R.string.service).equals("jatrisaathidriver")){
+        if (BuildConfig.MERCHANT_TYPE.equals("DRIVER")){
             if (key.equals(context.getResources().getString(R.string.LANGUAGE_KEY))){
                 updateLocaleResource(value);
             }

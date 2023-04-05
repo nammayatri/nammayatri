@@ -92,26 +92,8 @@ public class JsInterface extends CommonJsInterface implements in.juspay.hypersdk
             } catch (Exception e) {
                 e.printStackTrace();
             }
-//        polylines = new ArrayList<>();
 
     }
-
-//     @JavascriptInterface
-//     public void showDialer(String phoneNum) {
-//         Intent intent = new Intent();
-//         intent.setAction(Intent.ACTION_DIAL);
-//         String phoneNumber;
-//         phoneNumber = "tel:" + phoneNum;
-//         intent.setData(Uri.parse(phoneNumber));
-//         activity.startActivity(intent);
-// //        Intent sendIntent = new Intent();
-// //        sendIntent.setAction(Intent.ACTION_SEND);
-// //        sendIntent.putExtra(Intent.EXTRA_TEXT, phoneNum);
-// //        sendIntent.setType("text/plain");
-// //
-// //        Intent shareIntent = Intent.createChooser(sendIntent, null);
-// //        activity.startActivity(shareIntent);
-//     }
 
     @JavascriptInterface
     public void scheduleNotification(final String title, final String content, final String data, final int delay) {

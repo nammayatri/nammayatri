@@ -12,7 +12,7 @@ rm -rf app/src/user/$1/assets/juspay/index_bundle.js
 cp ./../ui-customer/dist/android/index_bundle.js app/src/user/$1/assets/juspay
 rm -rf app/src/user/$1/assets/juspay/juspay_assets.json
 cd ..
-sh userJuspayAssets.sh
+sh userJuspayAssets.sh $1
 
 echo " ---------- Driver prod:android :- --------------"
 
@@ -28,5 +28,5 @@ rm -rf app/src/driver/$2/assets/juspay/index_bundle.js
 cp ./../ui-driver/dist/android/index_bundle.js app/src/driver/$2/assets/juspay
 rm -rf app/src/driver/$2/assets/juspay/juspay_assets.json
 cd ..
-sh driverJuspayAssets.sh
+sh driverJuspayAssets.sh $2
 

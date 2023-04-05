@@ -61,6 +61,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.TimeZone;
 
+import in.juspay.mobility.BuildConfig;
 import in.juspay.mobility.MainActivity;
 import in.juspay.mobility.R;
 
@@ -360,7 +361,7 @@ public class NotificationUtils extends AppCompatActivity {
             PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId , intent, PendingIntent.FLAG_IMMUTABLE);
             String notificationType = new String(data.getString("notification_type"));
             String channelId;
-            String key = context.getString(R.string.service);
+            String key = BuildConfig.MERCHANT_TYPE;
             System.out.println("key"+key);
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("showNotification:- "+ notificationType);
@@ -434,7 +435,7 @@ public class NotificationUtils extends AppCompatActivity {
             if (TRIP_CHANNEL_ID.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri") || key.equals("jatrisaathi"))
+                if (key.equals("USER"))
                     mFirebaseAnalytics.logEvent("ny_user_ride_started",params);
                 else
                     mFirebaseAnalytics.logEvent("ride_started",params);
@@ -442,7 +443,7 @@ public class NotificationUtils extends AppCompatActivity {
             if (TRIP_FINISHED.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri") || key.equals("jatrisaathi"))
+                if (key.equals("USER"))
                     mFirebaseAnalytics.logEvent("ny_user_ride_completed",params);
                 else
                     mFirebaseAnalytics.logEvent("ride_completed",params);
@@ -450,11 +451,11 @@ public class NotificationUtils extends AppCompatActivity {
             if (CANCELLED_PRODUCT.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri") || key.equals("jatrisaathi"))
+                if (key.equals("USER"))
                     mFirebaseAnalytics.logEvent("ny_user_ride_cancelled",params);
                 else
                     mFirebaseAnalytics.logEvent("ride_cancelled",params);
-                if (key.equals("nammayatripartner") || key.equals("jatrisaathipartner") && msg.contains("Customer had to cancel your ride")){
+                if (key.equals("DRIVER") && msg.contains("Customer had to cancel your ride")){
                     startMediaPlayer(context, R.raw.ride_cancelled_media);
                 }else{
                     startMediaPlayer(context, R.raw.cancel_notification_sound);
@@ -463,11 +464,11 @@ public class NotificationUtils extends AppCompatActivity {
             if (DRIVER_ASSIGNMENT.equals(notificationType) ) {
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
-                if (key.equals("nammayatri") || key.equals("jatrisaathi"))
+                if (key.equals("USER"))
                     mFirebaseAnalytics.logEvent("ny_user_ride_assigned",params);
                 else
                     mFirebaseAnalytics.logEvent("driver_assigned",params);
-                if (key.equals("nammayatripartner") || key.equals("jatrisaathipartner")) {
+                if (key.equals("DRIVER")) {
                     startMediaPlayer(context, R.raw.ride_assigned);
                 }
             }

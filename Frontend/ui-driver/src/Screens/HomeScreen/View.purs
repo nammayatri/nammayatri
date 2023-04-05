@@ -118,7 +118,6 @@ screen initialState =
             _                -> do 
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
-                                _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
                                 _ <- checkPermissionAndUpdateDriverMarker initialState
                                 _ <- launchAff_ $ EHC.flowRunner $ checkCurrentRide push Notification
                                 pure unit 
@@ -173,7 +172,7 @@ view push state =
                 ][  googleMap state
                   , if not state.props.statusOnline then showOfflineStatus push state else dummyTextView
                   , if not state.props.rideActionModal && state.props.statusOnline then statsModel push state else dummyTextView
-                  , otpButtonView state push
+                  , if (HU.getMerchant unit) == HU.JATRISAATHIDRIVER then otpButtonView state push else dummyTextView
                   ]
               ]
         , bottomNavBar push state 

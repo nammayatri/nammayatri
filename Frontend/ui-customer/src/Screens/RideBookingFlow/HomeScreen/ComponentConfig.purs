@@ -510,7 +510,7 @@ driverInfoTransformer state =
     , estimatedDistance : cardState.estimatedDistance
     , driverArrivalTime : cardState.driverArrivalTime
     , estimatedDropTime : ""
-    , isSpecialZone : true
+    , isSpecialZone : false
     , isLocationTracking : state.props.isLocationTracking
     , bookingCreatedAt : cardState.createdAt
     }

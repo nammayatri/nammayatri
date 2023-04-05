@@ -78,8 +78,6 @@ import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.widget.Autocomplete;
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 import com.google.android.material.snackbar.Snackbar;
-//import com.google.firebase.iid.FirebaseInstanceId;
-//import com.google.firebase.iid.InstanceIdResult;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.common.BitMatrix;
@@ -145,8 +143,6 @@ public class JsInterface extends CommonJsInterface implements in.juspay.hypersdk
         this.dynamicUI = juspayServices.getDuiCallback();
         this.activity = activity;
         this.juspayServices = juspayServices;
-        // TODO :: Clarify with Daya
-        //client = LocationServices.getFusedLocationProviderClient(context);
     }
 
 
@@ -163,7 +159,6 @@ public class JsInterface extends CommonJsInterface implements in.juspay.hypersdk
         this.dynamicUI = juspayServices.getDuiCallback();
         this.activity = activity;
         this.juspayServices = juspayServices;
-//        polylines = new ArrayList<>();
         try {
             JSONObject headerObj = new JSONObject();
             headerObj.put("x-client-id", "nammayatripartner");

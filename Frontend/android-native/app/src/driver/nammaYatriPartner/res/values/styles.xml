@@ -6,22 +6,10 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorAccent</item>
         <item name="colorAccent">@color/colorAccent</item>
-<!--        <item name="materialAlertDialogTheme">@style/MaterialAppTheme</item>-->
-<!--        <item name="colorSurface">@color/colorWhite</item>-->
-<!--        <item name = "colorOnSurface">@color/colorAccent</item>-->
     </style>
-<!--    <style name="MaterialAppTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog.Centered">-->
-<!--        &lt;!&ndash; Customize your theme here. &ndash;&gt;-->
-<!--        <item name="colorSurface">@color/colorWhite</item>-->
-<!--&lt;!&ndash;        <item name="materialAlertDialogTheme">@style/MaterialAppTheme</item>&ndash;&gt;-->
-<!--        <item name = "colorOnSurface">@color/colorAccent</item>-->
-<!--    </style>-->
 
 
 
-
-
-<!--    ThemeOverlay.MaterialComponents.MaterialAlertDialog-->
     <style name="MaterialAppTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
         <item name="buttonBarPositiveButtonStyle">@style/Alert.Button.Positive</item>
         <item name="buttonBarNegativeButtonStyle">@style/Alert.Button.Neutral</item>
@@ -33,7 +21,6 @@
         <item name="materialAlertDialogBodyTextStyle">@style/Material.App.Theme.Body</item>
     </style>
     <style name="Material.App.Theme.Title.Icon" parent = "MaterialAlertDialog.MaterialComponents.Title.Icon">
-<!--        <item name="backgroundColor">@color/colorIconBackground</item>-->
         <item name="android:layout_gravity">center</item>
     </style>
 

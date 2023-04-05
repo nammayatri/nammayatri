@@ -382,7 +382,7 @@ public class MainActivity extends AppCompatActivity {
             } catch (Settings.SettingNotFoundException e) {
                 isSystemAnimEnabled = false;
             }
-        } else if (key != null && key.equals("nammayatripartner")) {
+        } else if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("DRIVER")) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             CommonJsInterface.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"));
         }
@@ -474,9 +474,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateConfigURL() {
-        String key = getResources().getString(R.string.service);
-        String merchantId = (key.equals("nammayatri") || key.equals("jatrisaathi")) ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
-        String baseUrl = (key.equals("nammayatri") || key.equals("jatrisaathi")) ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
+        String key = in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
+        String merchantId = key.equals("USER") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
+        String baseUrl = key.equals("USER") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
         SharedPreferences sharedPreff = this.getSharedPreferences(
                 activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreff.edit();
@@ -621,20 +621,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-//        try {
-//            String key = "net.openkochi." + getResources().getString(R.string.service);
-//            json.put("requestId", "123");
-//            json.put("service", key);
-//            json.put("betaAssets", false);
-//            payload.put("clientId", "open-kochi");
-//            payload.put("action", "initiate");
-//            payload.put("service", key);
-//            payload.put(PaymentConstants.ENV, "prod");
-//
-//            json.put(PaymentConstants.PAYLOAD, payload);
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
 
         hyperServices.initiate(json, new HyperPaymentsCallbackAdapter() {
             @Override
@@ -851,7 +837,7 @@ public class MainActivity extends AppCompatActivity {
             }).start();
             stateMonitor.enable(this);
         }
-        if (getResources().getString(R.string.service).equals("nammayatripartner") || getResources().getString(R.string.service).equals("jatrisaathidriver")){
+        if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("DRIVER")){
             if (NotificationUtils.overlayFeatureNotAvailable(this)){
                 checkRideRequest();
             }
@@ -880,7 +866,7 @@ public class MainActivity extends AppCompatActivity {
             }).start();
             stateMonitor.disable(this);
         }
-        if (getResources().getString(R.string.service).equals("nammayatripartner") || getResources().getString(R.string.service).equals("jatrisaathidriver") && widgetService != null && Settings.canDrawOverlays(this)  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null")) {
+        if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("DRIVER") && widgetService != null && Settings.canDrawOverlays(this)  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null")) {
             startService(widgetService);
         }
     }

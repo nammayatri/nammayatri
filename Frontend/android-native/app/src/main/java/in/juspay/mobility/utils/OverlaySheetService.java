@@ -136,7 +136,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.buttonIncreasePrice.setVisibility(View.GONE);
                 holder.buttonDecreasePrice.setVisibility(View.GONE);
             }
-            if (key.equals("jatrisaathidriver")){
+            if (key != null && key.equals("jatrisaathidriver")){
                 holder.extraFareIndication.setVisibility(View.GONE);
             }
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(),model.getStartTime(), getString(R.string.accept_offer));
@@ -549,7 +549,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         LayoutInflater inflater = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
         floatyView = inflater.inflate(R.layout.viewpager_layout_view,null);
-        if (getApplicationContext().getResources().getString(R.string.service).equals("jatrisaathidriver")){
+        if (key != null && key.equals("jatrisaathidriver")){
             TextView merchantLogo = (TextView) floatyView.findViewById(R.id.merchantLogo);
             merchantLogo.setText("Jatri Saathi");
         }
@@ -788,7 +788,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             public void run() {
                 if (progressDialog!=null){
                     TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
-                    if(key.equals("jatrisaathidriver")) {
+                    if (key != null && key.equals("jatrisaathidriver")) {
                         ImageView loader = progressDialog.findViewById(R.id.image_view_waiting);
                         loader.setImageResource(R.drawable.ic_ride_assigned);
                     }

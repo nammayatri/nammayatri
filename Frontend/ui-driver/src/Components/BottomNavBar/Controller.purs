@@ -38,7 +38,7 @@ navData activeIndex = {
       defaultIcon: "ny_ic_cab_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_cab_inactive.png",
       text: "Rides"
     }] <> 
-    (if (getMerchant unit == Maybe.Just NAMMAYATRIPARTNER) then [{
+    (if (getMerchant unit == NAMMAYATRIPARTNER) then [{
       activeIcon: "ny_ic_contest_active,https://assets.juspay.in/nammayatri/images/driver/ny_ic_contest_active.png",
       defaultIcon: if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert,https://assets.juspay.in/nammayatri/images/driver/ny_ic_contest_alert.png" else "ny_ic_contest_inactive,https://assets.juspay.in/nammayatri/images/driver/ny_ic_contest_alert.png",
       text: "Contest"

@@ -243,7 +243,7 @@ mapOptionsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> Pr
 mapOptionsView push state =
   linearLayout
   [ width MATCH_PARENT
-  , height $ V 50
+  , height WRAP_CONTENT
   , background Color.transparent
   , orientation HORIZONTAL
   , gravity CENTER_VERTICAL
