@@ -3,6 +3,8 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     common.url = "github:nammayatri/common";
     flake-parts.follows = "common/flake-parts";
+    haskell-flake.url = "github:sbh69840/haskell-flake/poc-localapps";
+    common.inputs.haskell-flake.follows = "haskell-flake";
 
     # TODO: Move to common repo?
     mission-control.url = "github:Platonic-Systems/mission-control";
