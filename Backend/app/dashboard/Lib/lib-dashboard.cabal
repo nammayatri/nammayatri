@@ -127,6 +127,7 @@ library
     , servant-openapi3
     , servant-server
     , singletons
+    , singletons-th
     , template-haskell
     , text
     , time

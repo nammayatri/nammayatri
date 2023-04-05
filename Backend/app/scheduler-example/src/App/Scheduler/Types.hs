@@ -13,6 +13,8 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module App.Scheduler.Types where
@@ -20,7 +22,7 @@ module App.Scheduler.Types where
 -- FIXME: This entire module is just for example
 -- TODO: move it to the integration tests when real usage of the scheduler library appears.
 
-import Data.Singletons.TH
+import Data.Singletons.Base.TH
 import Kernel.Prelude
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.GenericPretty (PrettyShow, Showable (..))

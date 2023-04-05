@@ -69,6 +69,7 @@ dependencies:
   - template-haskell
   - wai
   - singletons
+  - singletons-th
   - euler-hs
   - http-types
   - dashboard-helper-api
