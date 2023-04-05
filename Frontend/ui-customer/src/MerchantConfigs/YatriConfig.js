@@ -8,6 +8,14 @@ export function getMerchantString(key){
       }
 }
 
+export function getMerchantConfig(key){
+    if (key in config){
+        return config[key];
+    }
+    console.error("no value found for key "+ key);
+    return "";
+  }
+
 export function isMerchantString(key){
     return config.StringKeys.includes(key);
 }
@@ -28,7 +36,13 @@ export function getStringMLValue(key){
 
 
 const config = {
-    StringKeys : ["WELCOME_TEXT", "ABOUT_TEXT"]
+    "StringKeys" : ["WELCOME_TEXT", "ABOUT_TEXT"],
+    "isReferralEnabled" : "false",
+    "showBookingPreference" : "false",
+    "showRateCard" : "false",
+    "showDashboard" : "false",
+    "shareAppTitle" : "Share Yatri!",
+    "shareAppContent" : "Hey there!\n\nYatri is Coming soon"
 }
 
 const malayalamStrings = {

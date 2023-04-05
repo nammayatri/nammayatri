@@ -373,5 +373,14 @@ const hindiStrings = {
   "PERCENTAGE_OF_NOMINAL_FARE": "~ बेस फेयर का 10%",
   "PAY_VIA_CASH_OR_UPI": "नकद / यूपीआई के माध्यम से भुगतान करें",
   "BOARD_THE_FIRST_TAXI": "जात्री साथी अंचल से पहली टैक्सी में सवार हों",
-  "REQUEST_CALLBACK": "कॉलबैक का अनुरोध करें"
+  "REQUEST_CALLBACK": "कॉलबैक का अनुरोध करें",
+  "BOARD_THE_FIRST_TAXI": "जात्री साथी अंचल से पहली टैक्सी में सवार हों",
+  "CHOOSE_YOUR_RIDE" : "अपनी सवारी चुनें",
+  "PAY_VIA_CASH_OR_UPI" : "नकद / यूपीआई के माध्यम से भुगतान करें",
+  "ECONOMICAL" : "किफ़ायती",
+  "COMFY" : "आरामदायक",
+  "NAVIGATE" : "नेविगेट",
+  "GOVERNMENT_CHAGRES" : "सरकारी शुल्क",
+  "SERVICE_CHARGES" : "सेवा शुल्क",
+  "CONFIRM_AND_BOOK" : "पुष्टि करें और बुक करें"
 }

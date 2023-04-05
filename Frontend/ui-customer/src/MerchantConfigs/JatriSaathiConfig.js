@@ -14,8 +14,12 @@ export function isMerchantString(key) {
   return config.StringKeys.includes(key);
 }
 
-export function isMerchantConfig(key) {
-  return config.includes(key);
+export function getMerchantConfig(key){
+  if (key in config){
+      return config[key];
+  }
+  console.error("no value found for key "+ key);
+  return "";
 }
 
 export function getStringENValue(key) {
@@ -41,7 +45,13 @@ export function getStringBNValue(key) {
 
 
 const config = {
-  StringKeys: ["ABOUT_APP_DESCRIPTION", "WELCOME_TEXT", "REQUEST_AUTO_RIDE", "CURRENTLY_WE_ARE_LIVE_IN_", "DRIVER_PICKUP_CHARGES", "YOU_ARE_ABOUT_TO_CALL_JATRI_SATHI_SUPPORT", "SUCCESSFUL_ONBOARD", "ABOUT_REFERRAL_PROGRAM_DISCRIPTION", "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER"],
+  "StringKeys": ["ABOUT_APP_DESCRIPTION", "WELCOME_TEXT", "REQUEST_AUTO_RIDE", "CURRENTLY_WE_ARE_LIVE_IN_", "DRIVER_PICKUP_CHARGES", "YOU_ARE_ABOUT_TO_CALL_JATRI_SATHI_SUPPORT", "SUCCESSFUL_ONBOARD", "ABOUT_REFERRAL_PROGRAM_DISCRIPTION", "YOU_CAN_GET_REFERRAL_CODE_FROM_DRIVER"],
+  "isReferralEnabled" : "false",
+  "showBookingPreference" : "false",
+  "showRateCard" : "false",
+  "showDashboard" : "false",
+  "shareAppTitle" : "Share Jatri Saathi!",
+  "shareAppContent" : "Hey there!\n\n Jatri Saathi is Coming Soon"
 }
 
 const bengaliStrings = {

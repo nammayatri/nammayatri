@@ -371,9 +371,15 @@ const englishStrings = {
   "NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD": "No contacts left on device to add",
   "PERMISSION_DENIED": "Permission Denied",
   "PERCENTAGE_OF_NOMINAL_FARE": "~10% of base fare",
-  "PAY_VIA_CASH_OR_UPI": "",
-  "BOARD_THE_FIRST_TAXI": "",
   "PAY_VIA_CASH_OR_UPI": "Pay via Cash / UPI",
   "BOARD_THE_FIRST_TAXI": "Board the first taxi from Jatri Sathi zone",
-  "REQUEST_CALLBACK": "Request Callback"
+  "REQUEST_CALLBACK": "Request Callback",
+  "CHOOSE_YOUR_RIDE" : "Choose Your Ride", 
+  "BOARD_THE_FIRST_TAXI" : "Board the first taxi from Jatri Sathi \nzone",
+  "ECONOMICAL" : "Economical",
+  "COMFY" : "Comfy",
+  "NAVIGATE" : "Navigate",
+  "GOVERNMENT_CHAGRES" : "Government Charges",
+  "SERVICE_CHARGES" : "Service Charges",
+  "CONFIRM_AND_BOOK" : "Confirm & Book"
 }

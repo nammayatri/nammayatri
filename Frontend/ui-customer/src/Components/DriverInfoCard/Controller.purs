@@ -28,6 +28,7 @@ data Action = NoAction
             | OpenEmergencyHelp
             | MessageDriver
             | ZoneOTPExpiryAction String String Int
+            | OnNavigate
 
 type DriverInfoCardState = 
   { props :: DriverInfoCardProps
@@ -39,6 +40,8 @@ type DriverInfoCardProps =
     currentStage :: Stage,
     trackingEnabled :: Boolean,
     unReadMessages :: Boolean
+    isSpecialZone :: Boolean,
+    estimatedTime :: String
   }
 
 type DriverInfoCardData = 

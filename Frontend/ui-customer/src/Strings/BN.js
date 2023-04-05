@@ -367,6 +367,19 @@ const bengaliStrings = {
   "CALL_EMERGENCY_CONTACTS": "জরুরী পরিচিতি কল করুন",
   "LIVE_STATS_DASHBOARD": "লাইভ পরিসংখ্যান ড্যাশবোর্ড",
   "CHECK_OUT_LIVE_STATS": "লাইভ পরিসংখ্যান দেখুন",
-  "PAY_VIA_CASH_OR_UPI" : "CASH / UPI এর মাধ্যমে অর্থ প্রদান করুন",
-  "BOARD_THE_FIRST_TAXI" : "যাত্রী সাথী জোন থেকে প্রথম ট্যাক্সিতে চড়ুন"
+  "CHOOSE_YOUR_RIDE" : "আপনার রাইড চয়ন করুন",
+  "BOARD_THE_FIRST_TAXI" : "যাত্রী সাথী \nজোন থেকে প্রথম ট্যাক্সিতে চড়ুন್ತಿ",
+  "PAY_VIA_CASH_OR_UPI" : "নগদ / UPI এর মাধ্যমে অর্থ প্রদান করুন",
+  "LET_TRY_THAT_AGAIN": "Let's try that again...",
+  "EMERGENCY_CONTACS_ADDED_SUCCESSFULLY": "জরুরী যোগাযোগ সফলভাবে যোগ করা হয়েছে",
+  "NO_CONTACTS_FOUND_ON_DEVICE_TO_ADD": "যোগ করার জন্য ডিভাইসে কোনো পরিচিতি পাওয়া যায়নি",
+  "NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD": "যোগ করার জন্য ডিভাইসে কোনো পরিচিতি অবশিষ্ট নেই",
+  "PERMISSION_DENIED": "অনুমতি অস্বীকার করা হয়েছে",
+  "PERCENTAGE_OF_NOMINAL_FARE": "~বেস ভাড়ার 10%",
+  "ECONOMICAL" : "অর্থনৈতিক",
+  "COMFY" : "আরামদায়ক",
+  "NAVIGATE" : "নেভিগেট করুন",
+  "GOVERNMENT_CHAGRES" : "সরকারী চার্জ",
+  "SERVICE_CHARGES" : "সেবা মূল্য",
+  "CONFIRM_AND_BOOK" : "নিশ্চিত করুন এবং বুক করুন"
 }
