@@ -261,7 +261,7 @@ ridesView rideListItem push state =
                 , visibility $ case state.shimmerLoader of
                           ST.AnimatedOut ->  if DA.length (prestoListFilter state.currentTab state.prestoListArrayItems) > 0 then GONE else VISIBLE
                           _ -> GONE
-                ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig)]
+                ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
           ])
         ]
 

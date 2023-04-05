@@ -65,5 +65,6 @@ updateRideDetails state = do
     , destinationLong = state.data.selectedItem.destinationLocation^._lon
     , currentStage = FindingEstimate
     , rideRequestFlow = true
+    , isSpecialZone = state.data.selectedItem.isSpecialZone
     }
     })

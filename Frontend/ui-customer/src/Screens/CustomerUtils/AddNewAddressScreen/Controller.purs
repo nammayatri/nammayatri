@@ -135,7 +135,7 @@ eval (AddressChanged input) state = do
     else continue state
 
 eval (MAPREADY key latitude longitude) state = do 
-  _ <- pure $ locateOnMap true 0.0 0.0
+  _ <- pure $ locateOnMap true 0.0 0.0 "" []
   case key of 
     _ -> continueWithCmd state[ do
       _ <- checkPermissionAndUpdatePersonMarker state
@@ -147,7 +147,7 @@ eval (ClearEditText) state = do
   continue state{props{isSearchedLocationServiceable = true}}
 
 eval SetLocationOnMap state = do 
-  _ <- pure $ locateOnMap true 0.0 0.0 
+  _ <- pure $ locateOnMap true 0.0 0.0 "" []
   _ <- pure $ currentPosition ""
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true 
