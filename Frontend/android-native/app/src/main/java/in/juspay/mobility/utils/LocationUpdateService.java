@@ -69,6 +69,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -429,7 +430,7 @@ public class LocationUpdateService extends Service {
                     String orderUrl = baseUrl + "/driver/location";
                     System.out.println("LOCATION_UPDATE: Log by " + log + "baseUrl - " + orderUrl);
 
-                    final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                    final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                     f.setTimeZone(TimeZone.getTimeZone("UTC"));
                     String getCurrTime = f.format(new Date());
 
@@ -646,7 +647,7 @@ public class LocationUpdateService extends Service {
                     lastLatitudeValue = lat;
                     lastLongitudeValue = lng;
                     long locTimeMilliSeconds = lastLocation.getTime();
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                     sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
                     Date locTime = new Date(locTimeMilliSeconds);
                     String thisLocationTimeStamp = sdf.format(locTime);
@@ -725,7 +726,7 @@ public class LocationUpdateService extends Service {
                                 .addOnSuccessListener(new OnSuccessListener<Location>() {
                                     @Override
                                     public void onSuccess(Location location) {
-                                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                                         sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
                                         if (location != null) {
                                             long locTimeMilliSeconds = location.getTime();
@@ -761,7 +762,7 @@ public class LocationUpdateService extends Service {
                                             updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                                             updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
                                             long locTimeMilliSeconds = location.getTime();
-                                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+                                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
                                             sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
                                             Date locTime = new Date(locTimeMilliSeconds);
                                             String thisLocationTimeStamp = sdf.format(locTime);

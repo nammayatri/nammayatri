@@ -16,15 +16,17 @@
 module Screens.RideHistoryScreen.ComponentConfig where
 
 
-import Components.ErrorModal as ErrorModal
 import Common.Types.App
+import Language.Strings
+import PrestoDOM
+
+import Components.ErrorModal as ErrorModal
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Language.Strings
 import Language.Types (STR(..))
-import PrestoDOM
-import Styles.Colors as Color
+import Screens.Types (RideHistoryScreenState)
 import Screens.Types as ST
+import Styles.Colors as Color
 
 errorModalConfig :: ST.RideHistoryScreenState -> ErrorModal.Config 
 errorModalConfig state = let 

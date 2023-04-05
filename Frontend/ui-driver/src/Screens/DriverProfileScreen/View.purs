@@ -26,7 +26,7 @@ import Components.PopUpModal as PopUpModal
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (mapWithIndex, length)
+import Data.Array (length, mapWithIndex)
 import Data.Maybe (fromMaybe)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -90,7 +90,7 @@ view push state =
           ][ profilePictureLayout state push
            , profileOptionsLayout state push
            ]
-        , BottomNavBar.view (push <<< BottomNavBarAction) (navData 4)
+        , BottomNavBar.view (push <<< BottomNavBarAction) (navData ((length (navData 0).navButton)-1))
       ]
       , linearLayout 
         [ width MATCH_PARENT

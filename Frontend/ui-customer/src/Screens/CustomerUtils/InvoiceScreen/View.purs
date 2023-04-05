@@ -136,6 +136,9 @@ amountBreakupView state =
                       "WAITING_CHARGES" -> getString WAITING_CHARGE
                       "EARLY_END_RIDE_PENALTY" -> getString EARLY_END_RIDE_CHARGES
                       "CUSTOMER_SELECTED_FARE" -> getString CUSTOMER_SELECTED_FARE
+                      "SERVICE_CHARGE" -> getString SERVICE_CHARGES
+                      "FIXED_GOVERNMENT_RATE" -> getString GOVERNMENT_CHAGRES
+                      "WAITING_OR_PICKUP_CHARGES"  -> getString PICKUP_CHARGE
                       _ -> "BASE_FARE"
                   , textSize FontSize.a_14
                   , color Color.black800

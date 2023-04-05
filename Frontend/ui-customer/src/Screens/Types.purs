@@ -16,6 +16,7 @@
 module Screens.Types where
 
 import Common.Types.App (CancellationReasons)
+import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
 import Components.ChatView.Controller (ChatComponent)
@@ -377,6 +378,7 @@ type IndividualRideCardState =
   , baseDistance :: String
   , extraDistance :: String
   , referenceString :: String
+  , isSpecialZone :: Boolean
   }
 
 type ItemState =
@@ -484,6 +486,10 @@ type HomeScreenStateData =
   , suggestionsList :: Array String
   , messageToBeSent :: String
   , bannerViewState :: BannerViewState
+  , nearByPickUpPoints :: Array Location
+  , polygonCoordinates :: String
+  , specialZoneQuoteList :: Array ChooseVehicle.Config
+  , specialZoneSelectedQuote :: Maybe String
   }
 
 type HomeScreenStateProps =
@@ -532,7 +538,7 @@ type HomeScreenStateProps =
   , sendMessageActive :: Boolean
   , chatcallbackInitiated :: Boolean
   , estimatedDistance :: Maybe Int
-  , waitingTimeTimerId :: String
+  , waitingTimeTimerIds :: Array String
   , tagType :: Maybe CardType
   , isSaveFavourite :: Boolean
   , showShareAppPopUp :: Boolean
@@ -544,6 +550,8 @@ type HomeScreenStateProps =
   , emergencyHelpModelState :: EmergencyHelpModelState
   , showLiveDashboard :: Boolean
   , isbanner :: Boolean
+  , defaultPickUpPoint :: String
+  , isSpecialZone :: Boolean
   }
 
 type CustomerTipProps = {

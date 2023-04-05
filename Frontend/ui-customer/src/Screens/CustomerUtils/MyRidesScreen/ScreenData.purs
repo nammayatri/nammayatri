@@ -94,4 +94,5 @@ dummyIndividualCard = {
   , baseDistance : "0 km"
   , extraDistance : "0 km"
   , referenceString : ""
+  , isSpecialZone : false
 }

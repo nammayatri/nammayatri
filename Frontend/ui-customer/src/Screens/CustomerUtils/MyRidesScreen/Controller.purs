@@ -15,7 +15,7 @@
 
 module Screens.MyRidesScreen.Controller where
 
-import Accessor (_amount, _computedPrice, _contents, _description, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber)
+import Accessor (_amount, _computedPrice, _contents, _description, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber, _otpCode)
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard.Controller as IndividualRideCardController
@@ -23,7 +23,7 @@ import Components.PrimaryButton as PrimaryButton
 import Data.Array (union, (!!), length, filter, unionBy, head, all)
 import Data.Int (fromString, round, toNumber)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
 import Helpers.Utils (convertUTCtoISC, parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare)
@@ -237,6 +237,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
                         <> if (isHaveFare "EARLY_END_RIDE_PENALTY" updatedFareList) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else ""
 
 
+  , isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode))
 }) (listRes))
 
 
@@ -275,6 +276,9 @@ getFaresList fares state =
                       "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
                       "WAITING_CHARGES" -> getEN WAITING_CHARGE
                       "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
+                      "WAITING_OR_PICKUP_CHARGES" -> getEN WAITING_OR_PICKUP_CHARGES 
+                      "SERVICE_CHARGE" -> getEN SERVICE_CHARGE 
+                      "FIXED_GOVERNMENT_RATE" -> getEN FIXED_GOVERNMENT_RATE
                       _ -> getEN BASE_FARES
           }
     )

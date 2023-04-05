@@ -29,6 +29,9 @@ import Components.ErrorModal as ErrorModal
 import Components.FareBreakUp as FareBreakUp
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Components.SearchLocationModel as SearchLocationModel
+import Components.ChooseYourRide as ChooseYourRide
+import Components.MenuButton as MenuButton
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
@@ -64,10 +67,10 @@ shareAppConfig state = let
       buttonLayoutMargin = (Margin 16 0 16 20),
       primaryText {
         text = getString(YOUR_RIDE_HAS_STARTED) 
-      , margin = (Margin 16 0 16 0)},
+      , margin = (MarginHorizontal 16 16)},
       secondaryText { 
         text = getString(ENJOY_RIDING_WITH_US)
-      , margin = Margin 0 12 0 24 
+      , margin = MarginVertical 12 24  
       , fontSize = FontSize.a_14
       , color = Color.black700},
       option1 {
@@ -556,6 +559,8 @@ driverInfoCardViewState state = { props:
                                   { currentStage: state.props.currentStage
                                   , trackingEnabled: state.props.isInApp
                                   , unReadMessages : state.props.unReadMessages
+                                  , isSpecialZone: state.props.isSpecialZone
+                                  , estimatedTime : state.data.rideDuration
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -644,7 +649,7 @@ driverInfoTransformer state =
     , estimatedDistance : cardState.estimatedDistance
     , driverArrivalTime : cardState.driverArrivalTime
     , estimatedDropTime : ""
-    , isSpecialZone : false
+    , isSpecialZone : state.props.isSpecialZone
     , isLocationTracking : state.props.isLocationTracking
     , bookingCreatedAt : cardState.createdAt
     }
@@ -738,3 +743,40 @@ autoAnimConfig =
         }
   in
     autoAnimConfig'
+
+menuButtonConfig :: ST.HomeScreenState -> ST.Location -> MenuButton.Config
+menuButtonConfig state item = let  
+    config = MenuButton.config
+    menuButtonConfig' = config {
+      titleConfig{
+          text = item.place
+          ,selectedFontStyle = FontStyle.bold LanguageStyle
+          ,unselectedFontStyle = FontStyle.regular LanguageStyle
+      }
+      , radioButtonConfig {
+        height = V 16
+        , width = V 16
+        , imageHeight = V 10
+        , imageWidth = V 10
+        , imageUrl = "ny_ic_pickup"
+        , cornerRadius = 10.0
+        , buttonMargin = (MarginRight 15)
+        , activeStroke = ("2," <> Color.positive)
+      }
+      , height = V 40
+      , id = item.place
+      , lat = item.lat
+      , lng = item.lng
+      , leftsidebutton = true
+      , padding = PaddingBottom 10 
+      , isSelected = item.place == state.props.defaultPickUpPoint
+    }
+    in menuButtonConfig'
+
+chooseYourRideConfig :: ST.HomeScreenState -> ChooseYourRide.Config
+chooseYourRideConfig state = ChooseYourRide.config
+  { 
+    rideDistance = state.data.rideDistance,
+    rideDuration = state.data.rideDuration,
+    quoteList = state.data.specialZoneQuoteList
+  }
