@@ -96,6 +96,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private ArrayList<LinearLayout> indicatorList ;
     private ArrayList<ImageView> dotsList;
     private Handler mainLooper = new Handler(Looper.getMainLooper());
+    private String key = "";
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        key = getApplicationContext().getResources().getString(R.string.service);
+    }
 
     public class OverlayBinder extends Binder {
         public OverlaySheetService getService () {
@@ -137,6 +144,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
             }
             updateTipView(holder, model);
+            
+            if (key != null && key.equals("jatrisaathidriver")){
+                holder.extraFareIndication.setVisibility(View.GONE);
+            }
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(),model.getStartTime(), getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             holder.reqButton.setOnClickListener(new View.OnClickListener() {
@@ -567,6 +578,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
         LayoutInflater inflater = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
         floatyView = inflater.inflate(R.layout.viewpager_layout_view,null);
+        if (key != null && key.equals("jatrisaathidriver")){
+            TextView merchantLogo = (TextView) floatyView.findViewById(R.id.merchantLogo);
+            merchantLogo.setText("Jatri Saathi");
+        }
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);
         View dismissLoader = progressDialog.findViewById(R.id.loaderOverlay);
@@ -804,12 +819,18 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             public void run() {
                 if (progressDialog!=null){
                     TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
+                    if (key != null && key.equals("jatrisaathidriver")) {
+                        ImageView loader = progressDialog.findViewById(R.id.image_view_waiting);
+                        loader.setImageResource(R.drawable.ic_ride_assigned);
+                    }
                     LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
                     loaderText.setText(ackText);
-                    lottieAnimationView.setAnimation(rawResource);
-                    lottieAnimationView.setProgress(0);
-                    lottieAnimationView.setSpeed(1.2f);
-                    lottieAnimationView.playAnimation();
+                    if (lottieAnimationView.getVisibility() != View.GONE){
+                        lottieAnimationView.setAnimation(rawResource);
+                        lottieAnimationView.setProgress(0);
+                        lottieAnimationView.setSpeed(1.2f);
+                        lottieAnimationView.playAnimation();
+                    }
                     rideStatusListener.cancel();
                 }
             }

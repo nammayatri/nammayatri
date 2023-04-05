@@ -2411,3 +2411,7 @@ exports["getImageUrl"] = function (url) {
     console.log("error in getImageUrl " + e);
   }
 };
+
+exports["getMerchantId"] = function(id) {
+  return window.merchantID;
+}

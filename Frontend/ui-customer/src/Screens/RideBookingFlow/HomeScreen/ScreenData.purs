@@ -253,6 +253,7 @@ dummyDriverInfo =
   , estimatedDistance : ""
   , driverArrivalTime : 0
   , bppRideId : ""
+  , createdAt : ""
   }
 
 dummySettingBar :: SettingSideBarState

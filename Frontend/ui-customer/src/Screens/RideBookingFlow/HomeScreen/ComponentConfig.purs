@@ -15,38 +15,45 @@
 
 module Screens.RideBookingFlow.HomeScreen.Config where
 
+import Common.Types.App
+import Language.Strings
 import Prelude
-import Screens.Types as ST
-import Components.PopUpModal as PopUpModal
-import Components.PrimaryButton as PrimaryButton
-import Components.SourceToDestination as SourceToDestination
+import PrestoDOM
+
+import Animation.Config as AnimConfig
 import Components.CancelRide as CancelRidePopUpConfig
-import Components.FareBreakUp as FareBreakUp
-import Components.ErrorModal as ErrorModal
-import Components.RateCard as RateCard
+import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
-import Components.SearchLocationModel as SearchLocationModel
+import Components.ErrorModal as ErrorModal
+import Components.FareBreakUp as FareBreakUp
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel as QuoteListModel
+import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.ChatView as ChatView
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Data.String as DS
 import Animation.Config as AnimConfig
+import Components.SearchLocationModel as SearchLocationModel
+import Components.SourceToDestination as SourceToDestination
 import Data.Array as DA
 import Data.Maybe (Maybe(..), fromMaybe)
-import Language.Strings
-import Language.Types (STR(..))
-import Helpers.Utils as HU
+import Data.String as DS
 import Engineering.Helpers.Commons as EHC
-import JBridge as JB
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils as HU
+import JBridge as JB
+import Language.Types (STR(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.Types (DriverInfoCard)
+import Screens.Types as ST
 import Styles.Colors as Color
-import Common.Types.App
-import PrestoDOM
 import Data.Int as INT
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn)
+
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -550,7 +557,7 @@ driverInfoCardViewState state = { props:
                                   , trackingEnabled: state.props.isInApp
                                   , unReadMessages : state.props.unReadMessages
                                   }
-                              , data: state.data.driverInfoCardState
+                              , data: driverInfoTransformer state
                             }
 
 chatViewConfig :: ST.HomeScreenState -> ChatView.Config
@@ -607,6 +614,40 @@ metersToKm distance state =
   if (distance <= 10) then
     (if (state.props.currentStage == ST.RideStarted) then (getString AT_DROP) else (getString AT_PICKUP))
   else if (distance < 1000) then (HU.toString distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((INT.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
+
+
+driverInfoTransformer :: ST.HomeScreenState -> DriverInfoCardData
+driverInfoTransformer state =
+  let cardState = state.data.driverInfoCardState
+  in
+    { otp : cardState.otp
+    , driverName : cardState.driverName
+    , eta : cardState.eta
+    , vehicleDetails : cardState.vehicleDetails
+    , registrationNumber : cardState.registrationNumber
+    , rating : cardState.rating
+    , startedAt : cardState.startedAt
+    , endedAt : cardState.endedAt
+    , source : cardState.source
+    , destination : cardState.destination
+    , rideId : cardState.rideId
+    , price : cardState.price
+    , sourceLat : cardState.sourceLat
+    , sourceLng : cardState.sourceLng
+    , destinationLat : cardState.destinationLat
+    , destinationLng : cardState.destinationLng
+    , driverLat : cardState.driverLat
+    , driverLng : cardState.driverLng
+    , distance : cardState.distance
+    , waitingTime : cardState.waitingTime
+    , driverArrived : cardState.driverArrived
+    , estimatedDistance : cardState.estimatedDistance
+    , driverArrivalTime : cardState.driverArrivalTime
+    , estimatedDropTime : ""
+    , isSpecialZone : false
+    , isLocationTracking : state.props.isLocationTracking
+    , bookingCreatedAt : cardState.createdAt
+    }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
 emergencyHelpModelViewState state = { showContactSupportPopUp: state.props.emergencyHelpModelState.showContactSupportPopUp

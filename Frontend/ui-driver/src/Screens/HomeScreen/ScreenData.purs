@@ -92,5 +92,6 @@ initData = {
         sendMessageActive : false,
         unReadMessages : false,
         silentPopUpView : false
+        zoneRideBooking : true
     }
 }

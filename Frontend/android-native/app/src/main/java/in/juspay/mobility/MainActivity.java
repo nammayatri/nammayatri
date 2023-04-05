@@ -124,11 +124,9 @@ import java.util.concurrent.TimeUnit;
 import in.juspay.mobility.utils.ConnectionStateMonitor;
 import in.juspay.mobility.utils.LocationUpdateService;
 import in.juspay.mobility.utils.MediaPlayerView;
-import in.juspay.mobility.utils.MyFirebaseMessagingService;
 import in.juspay.mobility.utils.NetworkBroadcastReceiver;
 import in.juspay.mobility.utils.NotificationUtils;
 import in.juspay.mobility.utils.RideRequestActivity;
-import in.juspay.mobility.utils.RideRequestUtils;
 import in.juspay.mobility.utils.WidgetService;
 import in.juspay.mobility.utils.mediaPlayer.DefaultMediaPlayerControl;
 import in.juspay.hypersdk.core.JuspayServices;
@@ -353,9 +351,7 @@ public class MainActivity extends AppCompatActivity {
         webView.getSettings().setLoadWithOverviewMode(true);
         webView.getSettings().setUseWideViewPort(true);
         CommonJsInterface.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"));
-        if (key != null && key.equals("nammayatripartner")) {
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        } else {
+        if (key != null && key.equals("nammayatri")) {
             LottieAnimationView splashLottieView = findViewById(R.id.splash_lottie);
             try {
                 if (Settings.Global.getFloat(getContentResolver(), Settings.Global.ANIMATOR_DURATION_SCALE) == 0f){
@@ -388,6 +384,9 @@ public class MainActivity extends AppCompatActivity {
             } catch (Settings.SettingNotFoundException e) {
                 isSystemAnimEnabled = false;
             }
+        } else if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("DRIVER")) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            CommonJsInterface.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"));
         }
 //        mobileNetworkCheck();
         appUpdateManager = AppUpdateManagerFactory.create(this);
@@ -485,8 +484,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateConfigURL() {
-        String merchantId = getResources().getString(R.string.service).equals("nammayatri") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
-        String baseUrl = getResources().getString(R.string.service).equals("nammayatri") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
+        String key = in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
+        String merchantId = key.equals("USER") ? in.juspay.mobility.BuildConfig.MERCHANT_ID_USER : in.juspay.mobility.BuildConfig.MERCHANT_ID_DRIVER;
+        String baseUrl = key.equals("USER") ? in.juspay.mobility.BuildConfig.CONFIG_URL_USER : in.juspay.mobility.BuildConfig.CONFIG_URL_DRIVER;
         SharedPreferences sharedPreff = this.getSharedPreferences(
                 activity.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreff.edit();
@@ -631,20 +631,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-//        try {
-//            String key = "net.openkochi." + getResources().getString(R.string.service);
-//            json.put("requestId", "123");
-//            json.put("service", key);
-//            json.put("betaAssets", false);
-//            payload.put("clientId", "open-kochi");
-//            payload.put("action", "initiate");
-//            payload.put("service", key);
-//            payload.put(PaymentConstants.ENV, "prod");
-//
-//            json.put(PaymentConstants.PAYLOAD, payload);
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
 
         hyperServices.initiate(json, new HyperPaymentsCallbackAdapter() {
             @Override
@@ -861,7 +847,7 @@ public class MainActivity extends AppCompatActivity {
             }).start();
             stateMonitor.enable(this);
         }
-        if (getResources().getString(R.string.service).equals("nammayatripartner")){
+        if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("DRIVER")){
             if (NotificationUtils.overlayFeatureNotAvailable(this)){
                 checkRideRequest();
             }
@@ -890,7 +876,7 @@ public class MainActivity extends AppCompatActivity {
             }).start();
             stateMonitor.disable(this);
         }
-        if (getResources().getString(R.string.service).equals("nammayatripartner") && widgetService != null && Settings.canDrawOverlays(this)  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null")) {
+        if (in.juspay.mobility.BuildConfig.MERCHANT_TYPE.equals("DRIVER") && widgetService != null && Settings.canDrawOverlays(this)  && !sharedPref.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null")) {
             widgetService.putExtra("payload","{}");
             widgetService.putExtra("data", "{}");
             startService(widgetService);
@@ -903,13 +889,13 @@ public class MainActivity extends AppCompatActivity {
         String role = sharedPref.getString("ROLE_KEY", "null");
         String location_status = sharedPref.getString("LOCATION_STATUS", "PAUSE");
         System.out.println("Outside onDestroy Driver" + role);
-       if (role.equals("DRIVER") && location_status.equals("START") && !(ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
-           System.out.println("Inside onDestroy Driver" + role);
-           Intent broadcastIntent = new Intent();
-           broadcastIntent.setAction("restartservice");
-           broadcastIntent.setClass(this, BootUpReceiver.class);
-           this.sendBroadcast(broadcastIntent);
-       }
+        if (role.equals("DRIVER") && location_status.equals("START") && !(ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+            System.out.println("Inside onDestroy Driver" + role);
+            Intent broadcastIntent = new Intent();
+            broadcastIntent.setAction("restartservice");
+            broadcastIntent.setClass(this, BootUpReceiver.class);
+            this.sendBroadcast(broadcastIntent);
+        }
         if (hyperServices != null) {
             JuspayServices juspayServices = this.hyperServices.getJuspayServices();
             if (juspayServices!= null){
@@ -980,7 +966,7 @@ public class MainActivity extends AppCompatActivity {
                   Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                   String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
                   sharedPref.edit().putString(getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), timeStamp).apply();
-                  Uri photoFile = FileProvider.getUriForFile(this.getApplicationContext(),this.getResources().getString(R.string.fileProviderPath), new File(this.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
+                  Uri photoFile = FileProvider.getUriForFile(this.getApplicationContext(), getApplicationInfo().packageName + ".fileProvider", new File(this.getApplicationContext().getFilesDir(), "IMG_" + timeStamp+".jpg"));
                   takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoFile);
                   Intent chooseFromFile = new Intent(Intent.ACTION_GET_CONTENT);
                   chooseFromFile.setType("image/*");
@@ -1109,34 +1095,34 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-  private String getImageName(Uri uri){
-      Cursor returnCursor = getContentResolver().query(uri, null, null, null, null);
-      int nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-      returnCursor.moveToFirst();
-      return returnCursor.getString(nameIndex);
-  }
+    private String getImageName(Uri uri){
+        Cursor returnCursor = getContentResolver().query(uri, null, null, null, null);
+        int nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+        returnCursor.moveToFirst();
+        return returnCursor.getString(nameIndex);
+    }
 
-  private long getImageSizeKB(Uri uri){
-      Cursor returnCursor = getContentResolver().query(uri, null, null, null, null);
-      int sizeIndex = returnCursor.getColumnIndex(OpenableColumns.SIZE);
-      returnCursor.moveToFirst();
-      return returnCursor.getLong(sizeIndex)/1000;
-  }
+    private long getImageSizeKB(Uri uri){
+        Cursor returnCursor = getContentResolver().query(uri, null, null, null, null);
+        int sizeIndex = returnCursor.getColumnIndex(OpenableColumns.SIZE);
+        returnCursor.moveToFirst();
+        return returnCursor.getLong(sizeIndex)/1000;
+    }
 
-  public JuspayServices getJuspayServices(){
+    public JuspayServices getJuspayServices(){
         return juspayServicesGlobal;
-  }
+    }
 
-  public void hideSplash (){
-      View v = findViewById(R.id.cl_dui_container);
-      if (v != null) {
-          findViewById(R.id.cl_dui_container).setVisibility(View.VISIBLE);
-      }
-      View splashView = findViewById(R.id.splash);
-      if (splashView != null) {
-          splashView.setVisibility(View.GONE);
-      }
-  }
+    public void hideSplash (){
+        View v = findViewById(R.id.cl_dui_container);
+        if (v != null) {
+            findViewById(R.id.cl_dui_container).setVisibility(View.VISIBLE);
+        }
+        View splashView = findViewById(R.id.splash);
+        if (splashView != null) {
+            splashView.setVisibility(View.GONE);
+        }
+    }
 
     private void countAppUsageDays() {
         Date currentDate = new Date();
@@ -1160,7 +1146,7 @@ public class MainActivity extends AppCompatActivity {
             Uri imageUri;
             if (data == null || data.getData() == null) { //Camera
                 File image = new File(this.getApplicationContext().getFilesDir(), "IMG_" + sharedPref.getString(getResources().getString(R.string.TIME_STAMP_FILE_UPLOAD), "null") + ".jpg");
-                imageUri = FileProvider.getUriForFile(this.getApplicationContext(), this.getResources().getString(R.string.fileProviderPath), image);
+                imageUri = FileProvider.getUriForFile(this.getApplicationContext(), getApplicationInfo().packageName + ".fileProvider", image);
             }
             else { // storage
                 imageUri = data.getData();

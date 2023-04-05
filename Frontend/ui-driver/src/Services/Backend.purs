@@ -479,6 +479,23 @@ walkCoordinates (Snapped points) =
   }
 
 --------------------------------- onBoardingFlow  ---------------------------------------------------------------------------------------------------------------------------------
+getCorrespondingErrorMessage :: String -> String
+getCorrespondingErrorMessage errorCode = case errorCode of
+  "IMAGE_VALIDATION_FAILED" -> (getString IMAGE_VALIDATION_FAILED)
+  "IMAGE_NOT_READABLE" -> (getString IMAGE_NOT_READABLE)
+  "IMAGE_LOW_QUALITY" -> (getString IMAGE_LOW_QUALITY)
+  "IMAGE_INVALID_TYPE" -> (getString IMAGE_INVALID_TYPE)
+  "IMAGE_DOCUMENT_NUMBER_MISMATCH" -> (getString IMAGE_DOCUMENT_NUMBER_MISMATCH)
+  "IMAGE_EXTRACTION_FAILED" -> (getString IMAGE_EXTRACTION_FAILED)
+  "IMAGE_NOT_FOUND" -> (getString IMAGE_NOT_FOUND)
+  "IMAGE_NOT_VALID" -> (getString IMAGE_NOT_VALID)
+  "DRIVER_ALREADY_LINKED" -> (getString DRIVER_ALREADY_LINKED)
+  "DL_ALREADY_UPDATED" -> (getString DL_ALREADY_UPDATED)
+  "DL_ALREADY_LINKED"  -> (getString DL_ALREADY_LINKED)
+  "RC_ALREADY_LINKED" -> (getString RC_ALREADY_LINKED)
+  "RC_ALREADY_UPDATED" -> (getString RC_ALREADY_UPDATED)
+  "UNPROCESSABLE_ENTITY" -> (getString PLEASE_CHECK_FOR_IMAGE_IF_VALID_DOCUMENT_IMAGE_OR_NOT)
+  _                      -> (getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER)
 
 registerDriverRCBT :: DriverRCReq -> FlowBT String  DriverRCResp 
 registerDriverRCBT payload = do 
@@ -665,8 +682,6 @@ makeValidateAlternateNumberRequest number = DriverAlternateNumberReq {
 
  }
 
-
-
 ---------------------------------- ResendAlternateNumberOtp ------------------------------------------
 resendAlternateNumberOTP payload = do
     headers <- getHeaders ""
@@ -679,6 +694,7 @@ makeResendAlternateNumberOtpRequest number = AlternateNumberResendOTPRequest {
     "alternateNumber" : number,
     "mobileCountryCode" : "+91"
  }
+
 ---------------------------verifyAlternateNumber------------------------------------
 verifyAlternateNumberOTP payload = do
     headers <- getHeaders ""
@@ -701,5 +717,19 @@ removeAlternateNumber payload = do
         unwrapResponse (x) = x
 
 
+---------------------------------------- otpRide ---------------------------------------------
 
+otpRide dummyRideOtp payload = do
+        headers <- getHeaders ""
+        withAPIResult (EP.otpRide dummyRideOtp) unwrapResponse $ callAPI headers ((OTPRideRequest dummyRideOtp payload))
+    where
+        unwrapResponse (x) = x
 
+makeOTPRideReq :: String -> Number -> Number -> OTPRideReq
+makeOTPRideReq otp lat lon = OTPRideReq {
+    specialZoneOtpCode: otp,
+    point: LatLong {
+        lat : lat,
+        lon : lon
+        }
+}
