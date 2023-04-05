@@ -83,6 +83,7 @@ library
     , scheduler
     , servant-server
     , singletons
+    , singletons-base
     , template-haskell
     , text
     , time
@@ -145,6 +146,7 @@ executable scheduler-example-app-exe
     , scheduler-example
     , servant-server
     , singletons
+    , singletons-base
     , template-haskell
     , text
     , time
@@ -208,6 +210,7 @@ executable scheduler-example-scheduler-exe
     , scheduler-example
     , servant-server
     , singletons
+    , singletons-base
     , template-haskell
     , text
     , time

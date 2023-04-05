@@ -67,6 +67,7 @@ dependencies:
   - template-haskell
   - exceptions
   - singletons
+  - singletons-base
   - containers
 
 ghc-options:
